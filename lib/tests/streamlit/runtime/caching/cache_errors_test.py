@@ -29,6 +29,7 @@ from streamlit.runtime.caching.cache_utils import UNEVALUATED_DATAFRAME_TYPES
 from tests import testutil
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit import pyspark_mocks, snowpark_mocks
+from tests.testutil import should_skip_pyspark_tests
 
 
 class CacheErrorsTest(DeltaGeneratorTestCase):
@@ -45,7 +46,7 @@ class CacheErrorsTest(DeltaGeneratorTestCase):
     maxDiff = None
 
     def test_unhashable_type(self):
-        @st.experimental_memo
+        @st.cache_data
         def unhashable_type_func(lock: threading.Lock):
             return str(lock)
 
@@ -64,7 +65,7 @@ To address this, you can tell Streamlit not to hash this argument by adding a
 leading underscore to the argument's name in the function signature:
 
 ```
-@st.experimental_memo
+@st.cache_data
 def unhashable_type_func(_lock, ...):
     ...
 ```
@@ -79,7 +80,7 @@ def unhashable_type_func(_lock, ...):
         self.assertEqual(ep.is_warning, False)
 
     def test_unserializable_return_value_error(self):
-        @st.experimental_memo
+        @st.cache_data
         def unserializable_return_value_func():
             return threading.Lock()
 
@@ -111,6 +112,10 @@ def unhashable_type_func(_lock, ...):
         elif "snowpark.dataframe.DataFrame" in type_name:
             to_return = snowpark_mocks.DataFrame()
         else:
+            if should_skip_pyspark_tests():
+                # Python 3.11 is incompatible with Pyspark
+                return
+
             to_return = (
                 pyspark_mocks.create_pyspark_dataframe_with_mocked_personal_data()
             )

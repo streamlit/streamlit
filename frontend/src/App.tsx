@@ -66,7 +66,7 @@ import {
   PageProfile,
   SessionEvent,
   WidgetStates,
-  SessionState,
+  SessionStatus,
   Config,
   IGitInfo,
   GitInfo,
@@ -352,6 +352,23 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  componentWillUnmount(): void {
+    // Needing to disconnect our connection manager + websocket connection is
+    // only needed here to handle the case in dev mode where react hot-reloads
+    // the client as a result of a source code change. In this scenario, the
+    // previous websocket connection is still connected, and the client and
+    // server end up in a reconnect loop because the server rejects attempts to
+    // connect to an already-connected session.
+    //
+    // This situation doesn't exist outside of dev mode because the whole App
+    // unmounting is either a page refresh or the browser tab closing.
+    //
+    // The optional chaining on connectionManager is needed to make typescript
+    // happy since connectionManager's type is `ConnectionManager | null`,
+    // but at this point it should always be set.
+    this.connectionManager?.disconnect()
+  }
+
   showError(title: string, errorNode: ReactNode): void {
     logError(errorNode)
     const newDialog: DialogProps = {
@@ -444,8 +461,8 @@ export class App extends PureComponent<Props, State> {
       dispatchProto(msgProto, "type", {
         newSession: (newSessionMsg: NewSession) =>
           this.handleNewSession(newSessionMsg),
-        sessionStateChanged: (msg: SessionState) =>
-          this.handleSessionStateChanged(msg),
+        sessionStatusChanged: (msg: SessionStatus) =>
+          this.handleSessionStatusChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
           this.handleSessionEvent(evtMsg),
         delta: (deltaMsg: Delta) =>
@@ -573,17 +590,17 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.sessionStateChanged messages
-   * @param stateChangeProto a SessionState protobuf
+   * Handler for ForwardMsg.sessionStatusChanged messages
+   * @param statusChangeProto a SessionStatus protobuf
    */
-  handleSessionStateChanged = (stateChangeProto: SessionState): void => {
+  handleSessionStatusChanged = (statusChangeProto: SessionStatus): void => {
     this.setState((prevState: State) => {
       // Determine our new ScriptRunState
       let { scriptRunState } = prevState
       let { dialog } = prevState
 
       if (
-        stateChangeProto.scriptIsRunning &&
+        statusChangeProto.scriptIsRunning &&
         prevState.scriptRunState !== ScriptRunState.STOP_REQUESTED
       ) {
         // If the script is running, we change our ScriptRunState only
@@ -599,7 +616,7 @@ export class App extends PureComponent<Props, State> {
           dialog = undefined
         }
       } else if (
-        !stateChangeProto.scriptIsRunning &&
+        !statusChangeProto.scriptIsRunning &&
         prevState.scriptRunState !== ScriptRunState.RERUN_REQUESTED &&
         prevState.scriptRunState !== ScriptRunState.COMPILATION_ERROR
       ) {
@@ -634,7 +651,7 @@ export class App extends PureComponent<Props, State> {
       return {
         userSettings: {
           ...prevState.userSettings,
-          runOnSave: Boolean(stateChangeProto.runOnSave),
+          runOnSave: Boolean(statusChangeProto.runOnSave),
         },
         dialog,
         scriptRunState,
@@ -799,7 +816,7 @@ export class App extends PureComponent<Props, State> {
       pythonVersion: SessionInfo.current.pythonVersion,
     })
 
-    this.handleSessionStateChanged(initialize.sessionState)
+    this.handleSessionStatusChanged(initialize.sessionStatus)
   }
 
   /**

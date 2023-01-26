@@ -234,7 +234,6 @@ def run_test(
         # Loop until the test succeeds or is skipped.
         while result not in (SUCCESS, SKIP, QUIT):
             cypress_command = ["yarn", "cy:run", "--spec", specpath]
-            cypress_command.extend(["--reporter", "cypress-circleci-reporter"])
             cypress_command.extend(ctx.cypress_flags)
 
             click.echo(

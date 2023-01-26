@@ -24,4 +24,5 @@ message DownloadButton {
   string form_id = 5;
   string url = 6;
   bool disabled = 7;
+  bool use_container_width = 8;
 }

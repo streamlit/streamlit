@@ -140,15 +140,15 @@ class AppSessionTest(unittest.TestCase):
         self.assertTrue("foo" not in session._session_state)
 
     @patch("streamlit.runtime.legacy_caching.clear_cache")
-    @patch("streamlit.runtime.caching.memo.clear")
-    @patch("streamlit.runtime.caching.singleton.clear")
+    @patch("streamlit.runtime.caching.cache_data.clear")
+    @patch("streamlit.runtime.caching.cache_resource.clear")
     def test_clear_cache_all_caches(
-        self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
+        self, clear_resource_caches, clear_data_caches, clear_legacy_cache
     ):
         session = _create_test_session()
         session._handle_clear_cache_request()
-        clear_singleton_cache.assert_called_once()
-        clear_memo_cache.assert_called_once()
+        clear_resource_caches.assert_called_once()
+        clear_data_caches.assert_called_once()
         clear_legacy_cache.assert_called_once()
 
     @patch(
@@ -403,7 +403,7 @@ class AppSessionTest(unittest.TestCase):
         session = _create_test_session()
         session._local_sources_watcher = None
 
-        session._register_file_watchers()
+        session.register_file_watchers()
         self.assertIsNotNone(session._local_sources_watcher)
 
     @patch(
@@ -419,7 +419,7 @@ class AppSessionTest(unittest.TestCase):
         ) as patched_stop_config_listener, patch.object(
             session, "_stop_pages_listener"
         ) as patched_stop_pages_listener:
-            session._disconnect_file_watchers()
+            session.disconnect_file_watchers()
 
             patched_close_local_sources_watcher.assert_called_once()
             patched_stop_config_listener.assert_called_once()
@@ -433,7 +433,7 @@ class AppSessionTest(unittest.TestCase):
             self.assertIsNone(session._stop_pages_listener)
 
     def test_disconnect_file_watchers_removes_refs(self):
-        """Test that calling _disconnect_file_watchers on the AppSession
+        """Test that calling disconnect_file_watchers on the AppSession
         removes references to it so it is eligible to be garbage collected after the
         method is called.
         """
@@ -443,7 +443,7 @@ class AppSessionTest(unittest.TestCase):
         # handlers.
         self.assertGreater(len(gc.get_referrers(session)), 0)
 
-        session._disconnect_file_watchers()
+        session.disconnect_file_watchers()
         # Ensure that we don't count refs to session from an object that would have been
         # garbage collected along with it.
         gc.collect(2)
@@ -653,7 +653,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
                     ),
                     CLEAR_QUEUE,
                     session._create_new_session_message(page_script_hash=""),
-                    session._create_session_state_changed_message(),
+                    session._create_session_status_changed_message(),
                 ]
             )
 
@@ -663,7 +663,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
                     session._create_script_finished_message(
                         ForwardMsg.FINISHED_SUCCESSFULLY
                     ),
-                    session._create_session_state_changed_message(),
+                    session._create_session_status_changed_message(),
                     session._create_exception_message(FAKE_EXCEPTION),
                 ]
             )

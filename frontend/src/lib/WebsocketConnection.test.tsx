@@ -15,18 +15,19 @@
  */
 
 import axios from "axios"
-import React, { Fragment } from "react"
 import WS from "jest-websocket-mock"
+import { zip } from "lodash"
+import React, { Fragment } from "react"
 
 import { BackMsg } from "src/autogen/proto"
 import { ConnectionState } from "src/lib/ConnectionState"
+import { SessionInfo } from "src/lib/SessionInfo"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   StyledBashCode,
   WebsocketConnection,
   doInitPings,
 } from "src/lib/WebsocketConnection"
-import { zip } from "lodash"
 
 const MOCK_ALLOWED_ORIGINS_RESPONSE = {
   data: {
@@ -34,6 +35,8 @@ const MOCK_ALLOWED_ORIGINS_RESPONSE = {
     useExternalAuthToken: false,
   },
 }
+
+const MOCK_HEALTH_RESPONSE = { status: "ok" }
 
 describe("doInitPings", () => {
   const MOCK_PING_DATA = {
@@ -64,13 +67,12 @@ describe("doInitPings", () => {
     Promise.all = originalPromiseAll
   })
 
-  // NOTE: Temporary test until we're able to rename the /healthz endpoint
-  it("does not call the /healthz endpoint when pinging server", async () => {
+  it("does call the /_stcore/health endpoint when pinging server", async () => {
     axios.get = jest.fn().mockImplementation(url => {
-      if (url.endsWith("/healthz")) {
-        throw Error("kaboom")
+      if (url.endsWith("_stcore/health")) {
+        return MOCK_HEALTH_RESPONSE
       }
-      if (url.endsWith("/st-allowed-message-origins")) {
+      if (url.endsWith("_stcore/allowed-message-origins")) {
         return MOCK_ALLOWED_ORIGINS_RESPONSE
       }
       return {}
@@ -560,8 +562,20 @@ describe("WebsocketConnection", () => {
     Promise.all = originalPromiseAll
 
     // @ts-ignore
-    client.websocket.close()
+    if (client.websocket) {
+      // @ts-ignore
+      client.websocket.close()
+    }
     server.close()
+  })
+
+  it("disconnect closes connection and sets state to DISCONNECTED_FOREVER", () => {
+    client.disconnect()
+
+    // @ts-ignore
+    expect(client.state).toBe(ConnectionState.DISCONNECTED_FOREVER)
+    // @ts-ignore
+    expect(client.websocket).toBe(undefined)
   })
 
   it("increments message cache run count", () => {
@@ -635,6 +649,8 @@ describe("WebsocketConnection auth token handling", () => {
 
   afterEach(() => {
     axios.get = originalAxiosGet
+
+    SessionInfo.lastSessionInfo = undefined
   })
 
   it("always sets first Sec-WebSocket-Protocol option to 'streamlit'", async () => {
@@ -646,9 +662,10 @@ describe("WebsocketConnection auth token handling", () => {
     // @ts-ignore
     await ws.connectToWebSocket()
 
-    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
-      "streamlit",
-    ])
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit"]
+    )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
 
@@ -659,13 +676,49 @@ describe("WebsocketConnection auth token handling", () => {
       claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
       resetHostAuthToken,
     })
+
     // @ts-ignore
     await ws.connectToWebSocket()
 
-    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
-      "streamlit",
-      "iAmAnAuthToken",
-    ])
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "iAmAnAuthToken"]
+    )
+  })
+
+  it("sets second Sec-WebSocket-Protocol option to lastSessionId", async () => {
+    // @ts-ignore
+    SessionInfo.lastSessionInfo = { sessionId: "sessionId" }
+
+    const ws = new WebsocketConnection(MOCK_SOCKET_DATA)
+
+    // @ts-ignore
+    await ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "sessionId"]
+    )
+  })
+
+  it("prioritizes host provided auth token over lastSessionId if both set", async () => {
+    // @ts-ignore
+    SessionInfo.lastSessionInfo = { sessionId: "sessionId" }
+
+    const resetHostAuthToken = jest.fn()
+    const ws = new WebsocketConnection({
+      ...MOCK_SOCKET_DATA,
+      claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
+      resetHostAuthToken,
+    })
+
+    // @ts-ignore
+    await ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "iAmAnAuthToken"]
+    )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
 })

@@ -119,7 +119,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> Union[T, Tuple[T, T]]:
-        """
+        r"""
         Display a slider widget to select items from a list.
 
         This also allows you to render a range slider by passing a two-element
@@ -150,6 +150,10 @@ class SelectSliderMixin:
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
@@ -281,6 +285,7 @@ class SelectSliderMixin:
         slider_value = as_index_list(value)
 
         slider_proto = SliderProto()
+        slider_proto.type = SliderProto.Type.SELECT_SLIDER
         slider_proto.label = label
         slider_proto.format = "%s"
         slider_proto.default[:] = slider_value

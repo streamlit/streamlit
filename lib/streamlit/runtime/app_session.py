@@ -87,7 +87,7 @@ class AppSession:
             Object storing parameters related to running a script
 
         uploaded_file_manager : UploadedFileManager
-            The server's UploadedFileManager.
+            Used to manage files uploaded by users via the Streamlit web client.
 
         message_enqueued_callback : Callable[[], None]
             After enqueuing a message, this callable notification will be invoked.
@@ -132,7 +132,7 @@ class AppSession:
         self._stop_config_listener: Optional[Callable[[], bool]] = None
         self._stop_pages_listener: Optional[Callable[[], bool]] = None
 
-        self._register_file_watchers()
+        self.register_file_watchers()
 
         self._run_on_save = config.get_option("server.runOnSave")
 
@@ -152,7 +152,20 @@ class AppSession:
         """Ensure that we call shutdown() when an AppSession is garbage collected."""
         self.shutdown()
 
-    def _register_file_watchers(self) -> None:
+    def register_file_watchers(self) -> None:
+        """Register handlers to be called when various files are changed.
+
+        Files that we watch include:
+          * source files that already exist (for edits)
+          * `.py` files in the the main script's `pages/` directory (for file additions
+            and deletions)
+          * project and user-level config.toml files
+          * the project-level secrets.toml files
+
+        This method is called automatically on AppSession construction, but it may be
+        called again in the case when a session is disconnected and is being reconnect
+        to.
+        """
         if self._local_sources_watcher is None:
             self._local_sources_watcher = LocalSourcesWatcher(
                 self._script_data.main_script_path
@@ -169,7 +182,8 @@ class AppSession:
         )
         secrets_singleton._file_change_listener.connect(self._on_secrets_file_changed)
 
-    def _disconnect_file_watchers(self) -> None:
+    def disconnect_file_watchers(self) -> None:
+        """Disconnect the file watcher handlers registered by register_file_watchers."""
         if self._local_sources_watcher is not None:
             self._local_sources_watcher.close()
         if self._stop_config_listener is not None:
@@ -226,7 +240,7 @@ class AppSession:
 
             # Disconnect all file watchers if we haven't already, although we will have
             # generally already done so by the time we get here.
-            self._disconnect_file_watchers()
+            self.disconnect_file_watchers()
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
@@ -569,13 +583,13 @@ class AppSession:
         app_was_running = prev_state == AppSessionState.APP_IS_RUNNING
         app_is_running = self._state == AppSessionState.APP_IS_RUNNING
         if app_is_running != app_was_running:
-            self._enqueue_forward_msg(self._create_session_state_changed_message())
+            self._enqueue_forward_msg(self._create_session_status_changed_message())
 
-    def _create_session_state_changed_message(self) -> ForwardMsg:
-        """Create and return a session_state_changed ForwardMsg."""
+    def _create_session_status_changed_message(self) -> ForwardMsg:
+        """Create and return a session_status_changed ForwardMsg."""
         msg = ForwardMsg()
-        msg.session_state_changed.run_on_save = self._run_on_save
-        msg.session_state_changed.script_is_running = (
+        msg.session_status_changed.run_on_save = self._run_on_save
+        msg.session_status_changed.script_is_running = (
             self._state == AppSessionState.APP_IS_RUNNING
         )
         return msg
@@ -610,8 +624,8 @@ class AppSession:
         imsg.environment_info.streamlit_version = STREAMLIT_VERSION_STRING
         imsg.environment_info.python_version = ".".join(map(str, sys.version_info))
 
-        imsg.session_state.run_on_save = self._run_on_save
-        imsg.session_state.script_is_running = (
+        imsg.session_status.run_on_save = self._run_on_save
+        imsg.session_status.script_is_running = (
             self._state == AppSessionState.APP_IS_RUNNING
         )
 
@@ -694,8 +708,8 @@ class AppSession:
 
         """
         legacy_caching.clear_cache()
-        caching.memo.clear()
-        caching.singleton.clear()
+        caching.cache_data.clear()
+        caching.cache_resource.clear()
         self._session_state.clear()
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
@@ -710,7 +724,7 @@ class AppSession:
 
         """
         self._run_on_save = new_value
-        self._enqueue_forward_msg(self._create_session_state_changed_message())
+        self._enqueue_forward_msg(self._create_session_status_changed_message())
 
 
 def _populate_config_msg(msg: Config) -> None:

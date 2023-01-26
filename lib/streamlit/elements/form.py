@@ -11,18 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import textwrap
-from typing import NamedTuple, Optional, cast
+from typing import TYPE_CHECKING, NamedTuple, cast
 
 from typing_extensions import Literal
 
-import streamlit
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 class FormData(NamedTuple):
@@ -32,9 +36,7 @@ class FormData(NamedTuple):
     form_id: str
 
 
-def _current_form(
-    this_dg: "streamlit.delta_generator.DeltaGenerator",
-) -> Optional[FormData]:
+def _current_form(this_dg: DeltaGenerator) -> FormData | None:
     """Find the FormData for the given DeltaGenerator.
 
     Forms are blocks, and can have other blocks nested inside them.
@@ -67,7 +69,7 @@ def _current_form(
     return None
 
 
-def current_form_id(dg: "streamlit.delta_generator.DeltaGenerator") -> str:
+def current_form_id(dg: DeltaGenerator) -> str:
     """Return the form_id for the current form, or the empty string if we're
     not inside an `st.form` block.
 
@@ -80,12 +82,12 @@ def current_form_id(dg: "streamlit.delta_generator.DeltaGenerator") -> str:
     return form_data.form_id
 
 
-def is_in_form(dg: "streamlit.delta_generator.DeltaGenerator") -> bool:
+def is_in_form(dg: DeltaGenerator) -> bool:
     """True if the DeltaGenerator is inside an st.form block."""
     return current_form_id(dg) != ""
 
 
-def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
+def _build_duplicate_form_message(user_key: str | None = None) -> str:
     if user_key is not None:
         message = textwrap.dedent(
             f"""
@@ -114,7 +116,7 @@ def _build_duplicate_form_message(user_key: Optional[str] = None) -> str:
 
 class FormMixin:
     @gather_metrics("form")
-    def form(self, key: str, clear_on_submit: bool = False):
+    def form(self, key: str, clear_on_submit: bool = False) -> DeltaGenerator:
         """Create a form that batches elements together with a "Submit" button.
 
         A form is a container that visually groups other elements and
@@ -210,13 +212,14 @@ class FormMixin:
     def form_submit_button(
         self,
         label: str = "Submit",
-        help: Optional[str] = None,
-        on_click=None,
-        args=None,
-        kwargs=None,
+        help: str | None = None,
+        on_click: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
+        use_container_width: bool = False,
     ) -> bool:
         """Display a form submit button.
 
@@ -250,6 +253,9 @@ class FormMixin:
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False. This argument can only be supplied by keyword.
+        use_container_width: bool
+            An optional boolean, which makes the button stretch its width to match the parent container.
+
 
         Returns
         -------
@@ -273,20 +279,22 @@ class FormMixin:
             kwargs=kwargs,
             type=type,
             disabled=disabled,
+            use_container_width=use_container_width,
             ctx=ctx,
         )
 
     def _form_submit_button(
         self,
         label: str = "Submit",
-        help: Optional[str] = None,
-        on_click=None,
-        args=None,
-        kwargs=None,
+        help: str | None = None,
+        on_click: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
-        ctx: Optional[ScriptRunContext] = None,
+        use_container_width: bool = False,
+        ctx: ScriptRunContext | None = None,
     ) -> bool:
         form_id = current_form_id(self.dg)
         submit_button_key = f"FormSubmitter:{form_id}-{label}"
@@ -300,10 +308,11 @@ class FormMixin:
             kwargs=kwargs,
             type=type,
             disabled=disabled,
+            use_container_width=use_container_width,
             ctx=ctx,
         )
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

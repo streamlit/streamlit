@@ -34,3 +34,10 @@ st.download_button(
     file_name="archive.rar",
     mime="application/vnd.rar",
 )
+
+st.download_button(
+    "Download button with use_container_width=True",
+    data="Hello world!",
+    file_name="hello.txt",
+    use_container_width=True,
+)

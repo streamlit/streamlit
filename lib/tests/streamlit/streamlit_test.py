@@ -142,6 +142,8 @@ class StreamlitTest(unittest.TestCase):
                 "cache",
                 "secrets",
                 "session_state",
+                "cache_data",
+                "cache_resource",
                 # Beta APIs:
                 "beta_container",
                 "beta_expander",
@@ -525,13 +527,6 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.markdown.body, "some markdown")
         self.assertTrue(el.markdown.allow_html)
-
-    def test_st_progress(self):
-        """Test st.progress."""
-        st.progress(51)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.progress.value, 51)
 
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""

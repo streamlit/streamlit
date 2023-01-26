@@ -441,13 +441,14 @@ _create_option(
 _create_option(
     "client.showErrorDetails",
     description="""
-        Controls whether uncaught app exceptions are displayed in the browser.
-        By default, this is set to True and Streamlit displays app exceptions
-        and associated tracebacks in the browser.
+        Controls whether uncaught app exceptions and deprecation warnings
+        are displayed in the browser. By default, this is set to True and
+        Streamlit displays app exceptions and associated tracebacks, and
+        deprecation warnings, in the browser.
 
-        If set to False, an exception will result in a generic message being
-        shown in the browser, and exceptions and tracebacks will be printed to
-        the console only.""",
+        If set to False, an exception or deprecation warning will result in
+        a generic message being shown in the browser, and exceptions, tracebacks,
+        and deprecation warnings will be printed to the console only.""",
     default_val=True,
     type_=bool,
     scriptable=True,

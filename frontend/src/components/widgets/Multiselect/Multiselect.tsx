@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+import { isMobile } from "react-device-detect"
 import without from "lodash/without"
 import { withTheme } from "@emotion/react"
 import { FormClearHelper } from "src/components/widgets/Form"
@@ -230,6 +231,10 @@ class Multiselect extends React.PureComponent<Props, State> {
       this.onFormCleared
     )
 
+    // Check if we have more than 10 options in the selectbox.
+    // If that's true, we show the keyboard on mobile. If not, we hide it.
+    const showKeyboardOnMobile = options.length > 10
+
     return (
       <div className="row-widget stMultiSelect" style={style}>
         <WidgetLabel
@@ -279,7 +284,11 @@ class Multiselect extends React.PureComponent<Props, State> {
                   borderBottomWidth: "1px",
                 },
               },
-
+              Placeholder: {
+                style: () => ({
+                  flex: "inherit",
+                }),
+              },
               ValueContainer: {
                 style: () => ({
                   /*
@@ -364,6 +373,15 @@ class Multiselect extends React.PureComponent<Props, State> {
                       },
                     },
                   },
+                },
+              },
+              Input: {
+                props: {
+                  // Change the 'readonly' prop to hide the mobile keyboard if options < 10
+                  readOnly:
+                    isMobile && showKeyboardOnMobile === false
+                      ? "readonly"
+                      : null,
                 },
               },
               Dropdown: { component: VirtualDropdown },

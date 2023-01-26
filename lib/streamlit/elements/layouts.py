@@ -87,8 +87,10 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
+        Columns can only be placed inside other columns up to one level of nesting.
+
         .. warning::
-            Currently, you may not put columns inside another column.
+            Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app.
 
         Parameters
         ----------
@@ -205,7 +207,7 @@ class LayoutsMixin:
 
     @gather_metrics("tabs")
     def tabs(self, tabs: Sequence[str]) -> Sequence["DeltaGenerator"]:
-        """Insert containers separated into tabs.
+        r"""Insert containers separated into tabs.
 
         Inserts a number of multi-element containers as tabs.
         Tabs are a navigational element that allows users to easily
@@ -227,6 +229,9 @@ class LayoutsMixin:
             supporting the following elements: Bold, Italics, Strikethroughs, Inline Code,
             Emojis, and Links.
 
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
 
         Returns
         -------
@@ -319,6 +324,10 @@ class LayoutsMixin:
             A string to use as the header for the expander. The label can optionally
             contain Markdown and supports the following elements: Bold, Italics,
             Strikethroughs, Inline Code, Emojis, and Links.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).

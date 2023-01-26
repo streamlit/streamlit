@@ -63,16 +63,25 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         parts[0] = "ws"
         return urllib.parse.urlunparse(tuple(parts))
 
-    async def ws_connect(self) -> WebSocketClientConnection:
+    async def ws_connect(self, existing_session_id=None) -> WebSocketClientConnection:
         """Open a websocket connection to the server.
 
         Returns
         -------
         WebSocketClientConnection
             The connected websocket client.
-
         """
-        return await tornado.websocket.websocket_connect(self.get_ws_url("/stream"))
+        # See the comment in WebsocketConnection.tsx about how we repurpose the
+        # Sec-WebSocket-Protocol header for more information on how this works.
+        if existing_session_id is None:
+            subprotocols = ["streamlit"]
+        else:
+            subprotocols = ["streamlit", existing_session_id]
+
+        return await tornado.websocket.websocket_connect(
+            self.get_ws_url("/_stcore/stream"),
+            subprotocols=subprotocols,
+        )
 
     async def read_forward_msg(
         self, ws_client: WebSocketClientConnection
@@ -102,7 +111,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         """
 
         return mock.patch(
-            "streamlit.runtime.runtime.AppSession",
+            "streamlit.runtime.websocket_session_manager.AppSession",
             # new_callable must return a function, not an object, or else
             # there will only be a single AppSession mock. Hence the lambda.
             new_callable=lambda: self._create_mock_app_session,

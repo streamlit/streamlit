@@ -13,15 +13,25 @@
 # limitations under the License.
 from __future__ import annotations
 
+from abc import ABC
 from dataclasses import dataclass, field
-from typing import Any, Generic, Sequence, TypeVar, Union, cast, overload
+from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
 from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
 
+from streamlit.elements.heading import HEADER_TAG, SUBHEADER_TAG, TITLE_TAG
+from streamlit.elements.select_slider import SelectSliderSerde
+from streamlit.elements.slider import SliderScalar, SliderScalarT, SliderSerde, Step
 from streamlit.proto.Block_pb2 import Block as BlockProto
+from streamlit.proto.Button_pb2 import Button as ButtonProto
+from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Heading_pb2 import Heading as HeadingProto
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
+from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.session_state import SessionState
@@ -42,7 +52,7 @@ class Element:
     type: str
     proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
-    key: str | None = None
+    key: str | None
 
     def __init__(self, proto: ElementProto, root: ElementTree):
         self.proto = proto
@@ -50,6 +60,7 @@ class Element:
         ty = proto.WhichOneof("type")
         assert ty is not None
         self.type = ty
+        self.key = None
 
     def __iter__(self):
         yield self
@@ -88,6 +99,91 @@ class Text(Element):
     @property
     def value(self) -> str:
         return self.proto.body
+
+
+@dataclass(init=False)
+class HeadingBase(Element, ABC):
+    proto: HeadingProto
+
+    type: str
+    tag: str
+    anchor: str | None
+    root: ElementTree = field(repr=False)
+    key: None
+
+    def __init__(self, proto: HeadingProto, root: ElementTree, type_: str):
+        self.proto = proto
+        self.key = None
+        self.tag = proto.tag
+        self.anchor = proto.anchor
+        self.root = root
+        self.type = type_
+
+    @property
+    def value(self) -> str:
+        return self.proto.body
+
+
+@dataclass(init=False)
+class Title(HeadingBase):
+    def __init__(self, proto: HeadingProto, root: ElementTree):
+        super().__init__(proto, root, "title")
+
+
+@dataclass(init=False)
+class Header(HeadingBase):
+    def __init__(self, proto: HeadingProto, root: ElementTree):
+        super().__init__(proto, root, "header")
+
+
+@dataclass(init=False)
+class Subheader(HeadingBase):
+    def __init__(self, proto: HeadingProto, root: ElementTree):
+        super().__init__(proto, root, "subheader")
+
+
+@dataclass(init=False)
+class Markdown(Element):
+    proto: MarkdownProto
+
+    type: str
+    is_caption: bool
+    allow_html: bool
+    root: ElementTree = field(repr=False)
+    key: None
+
+    def __init__(self, proto: MarkdownProto, root: ElementTree):
+        self.proto = proto
+        self.key = None
+        self.is_caption = proto.is_caption
+        self.allow_html = proto.allow_html
+        self.root = root
+        self.type = "markdown"
+
+    @property
+    def value(self) -> str:
+        return self.proto.body
+
+
+@dataclass(init=False)
+class Caption(Markdown):
+    def __init__(self, proto: MarkdownProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "caption"
+
+
+@dataclass(init=False)
+class Latex(Markdown):
+    def __init__(self, proto: MarkdownProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "latex"
+
+
+@dataclass(init=False)
+class Code(Markdown):
+    def __init__(self, proto: MarkdownProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "code"
 
 
 @runtime_checkable
@@ -164,6 +260,322 @@ class Radio(Element, Widget, Generic[T]):
 
 
 @dataclass(init=False)
+class Checkbox(Element, Widget):
+    _value: bool | None
+
+    proto: CheckboxProto
+    type: str
+    id: str
+    label: str
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: CheckboxProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "checkbox"
+        self.id = proto.id
+        self.label = proto.label
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        ws.bool_value = self.value
+        return ws
+
+    @property
+    def value(self) -> bool:
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return cast(bool, state[self.id])
+
+    def set_value(self, v: bool) -> Checkbox:
+        self._value = v
+        return self
+
+    def check(self) -> Checkbox:
+        return self.set_value(True)
+
+    def uncheck(self) -> Checkbox:
+        return self.set_value(False)
+
+
+@dataclass(init=False)
+class Multiselect(Element, Widget, Generic[T]):
+    _value: list[T] | None
+
+    proto: MultiSelectProto
+    type: str
+    id: str
+    label: str
+    options: list[str]
+    help: str
+    form_id: str
+    disabled: bool
+    max_selections: int
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: MultiSelectProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "multiselect"
+        self.id = proto.id
+        self.label = proto.label
+        self.options = list(proto.options)
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.max_selections = proto.max_selections
+        self.key = user_key_from_widget_id(self.id)
+
+    def widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+        """
+        ws = WidgetState()
+        ws.id = self.id
+        ws.int_array_value.data[:] = self.indices
+        return ws
+
+    @property
+    def value(self) -> list[T]:
+        """The currently selected values from the options."""
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return cast(List[T], state[self.id])
+
+    @property
+    def indices(self) -> Sequence[int]:
+        return [self.options.index(str(v)) for v in self.value]
+
+    def set_value(self, v: list[T]) -> Multiselect[T]:
+        self._value = v
+        return self
+
+    def select(self, v: T) -> Multiselect[T]:
+        current = self.value
+        if v in current:
+            return self
+        else:
+            new = current.copy()
+            new.append(v)
+            self.set_value(new)
+            return self
+
+    def unselect(self, v: T) -> Multiselect[T]:
+        current = self.value
+        if v not in current:
+            return self
+        else:
+            new = current.copy()
+            while v in new:
+                new.remove(v)
+            self.set_value(new)
+            return self
+
+
+@dataclass(init=False)
+class Button(Element, Widget):
+    _value: bool
+
+    proto: ButtonProto
+    type: str
+    id: str
+    label: str
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: ButtonProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = False
+
+        self.type = "button"
+        self.id = proto.id
+        self.label = proto.label
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        ws.trigger_value = self._value
+        return ws
+
+    @property
+    def value(self) -> bool:
+        if self._value:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return cast(bool, state[self.id])
+
+    def set_value(self, v: bool) -> Button:
+        self._value = v
+        return self
+
+    def click(self) -> Button:
+        return self.set_value(True)
+
+
+@dataclass(init=False)
+class Slider(Element, Widget, Generic[SliderScalarT]):
+    _value: SliderScalarT | Sequence[SliderScalarT] | None
+
+    proto: SliderProto
+    type: str
+    data_type: SliderProto.DataType.ValueType
+    id: str
+    label: str
+    min_value: SliderScalar
+    max_value: SliderScalar
+    step: Step
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: SliderProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "slider"
+        self.data_type = proto.data_type
+        self.id = proto.id
+        self.label = proto.label
+        self.min_value = proto.min
+        self.max_value = proto.max
+        self.step = proto.step
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def set_value(
+        self, v: SliderScalarT | Sequence[SliderScalarT]
+    ) -> Slider[SliderScalarT]:
+        self._value = v
+        return self
+
+    def widget_state(self) -> WidgetState:
+        data_type = self.proto.data_type
+        serde = SliderSerde([], data_type, True, None)
+        v = serde.serialize(self.value)
+
+        ws = WidgetState()
+        ws.id = self.id
+        ws.double_array_value.data[:] = v
+        return ws
+
+    @property
+    def value(self) -> SliderScalarT | Sequence[SliderScalarT]:
+        """The currently selected value or range."""
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            # Awkward to do this with `cast`
+            return state[self.id]  # type: ignore
+
+    def set_range(
+        self, lower: SliderScalarT, upper: SliderScalarT
+    ) -> Slider[SliderScalarT]:
+        return self.set_value([lower, upper])
+
+
+@dataclass(init=False)
+class SelectSlider(Element, Widget, Generic[T]):
+    _value: T | Sequence[T] | None
+
+    proto: SliderProto
+    type: str
+    data_type: SliderProto.DataType.ValueType
+    id: str
+    label: str
+    options: list[str]
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: SliderProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "select_slider"
+        self.data_type = proto.data_type
+        self.id = proto.id
+        self.label = proto.label
+        self.options = list(proto.options)
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def set_value(self, v: T | Sequence[T]) -> SelectSlider[T]:
+        self._value = v
+        return self
+
+    def widget_state(self) -> WidgetState:
+        serde = SelectSliderSerde(self.options, [], False)
+        v = serde.serialize(self.value)
+
+        ws = WidgetState()
+        ws.id = self.id
+        ws.double_array_value.data[:] = v
+        return ws
+
+    @property
+    def value(self) -> T | Sequence[T]:
+        """The currently selected value or range."""
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            # Awkward to do this with `cast`
+            return state[self.id]  # type: ignore
+
+    def set_range(self, lower: T, upper: T) -> SelectSlider[T]:
+        return self.set_value([lower, upper])
+
+
+@dataclass(init=False)
 class Block:
     type: str
     children: dict[int, Node]
@@ -210,7 +622,57 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["markdown"]) -> Sequence[Markdown]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["caption"]) -> Sequence[Caption]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["latex"]) -> Sequence[Latex]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["code"]) -> Sequence[Code]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["title"]) -> Sequence[Title]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["header"]) -> Sequence[Header]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["subheader"]) -> Sequence[Subheader]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["radio"]) -> Sequence[Radio[Any]]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["checkbox"]) -> Sequence[Checkbox]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["multiselect"]) -> Sequence[Multiselect[Any]]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["slider"]) -> Sequence[Slider[Any]]:
+        ...
+
+    @overload
+    def get(
+        self, element_type: Literal["select_slider"]
+    ) -> Sequence[SelectSlider[Any]]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["button"]) -> Sequence[Button]:
         ...
 
     def get(self, element_type: str) -> Sequence[Node]:
@@ -261,10 +723,10 @@ class ElementTree(Block):
     the rerun.
     """
 
+    type: str
+
     script_path: str | None = field(repr=False, default=None)
     _session_state: SessionState | None = field(repr=False, default=None)
-
-    type: str
 
     def __init__(self):
         # Expect script_path and session_state to be filled in afterwards
@@ -318,8 +780,43 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             new_node: Node
             if elt.WhichOneof("type") == "text":
                 new_node = Text(elt.text, root=root)
+            elif elt.WhichOneof("type") == "markdown":
+                if elt.markdown.element_type == MarkdownProto.Type.NATIVE:
+                    new_node = Markdown(elt.markdown, root=root)
+                elif elt.markdown.element_type == MarkdownProto.Type.CAPTION:
+                    new_node = Caption(elt.markdown, root=root)
+                elif elt.markdown.element_type == MarkdownProto.Type.LATEX:
+                    new_node = Latex(elt.markdown, root=root)
+                elif elt.markdown.element_type == MarkdownProto.Type.CODE:
+                    new_node = Code(elt.markdown, root=root)
+                else:
+                    raise ValueError(
+                        f"Unknown markdown type {elt.markdown.element_type}"
+                    )
+            elif elt.WhichOneof("type") == "heading":
+                if elt.heading.tag == TITLE_TAG:
+                    new_node = Title(elt.heading, root=root)
+                elif elt.heading.tag == HEADER_TAG:
+                    new_node = Header(elt.heading, root=root)
+                elif elt.heading.tag == SUBHEADER_TAG:
+                    new_node = Subheader(elt.heading, root=root)
+                else:
+                    raise ValueError(f"Unknown heading type with tag {elt.heading.tag}")
             elif elt.WhichOneof("type") == "radio":
                 new_node = Radio(elt.radio, root=root)
+            elif elt.WhichOneof("type") == "checkbox":
+                new_node = Checkbox(elt.checkbox, root=root)
+            elif elt.WhichOneof("type") == "multiselect":
+                new_node = Multiselect(elt.multiselect, root=root)
+            elif elt.WhichOneof("type") == "slider":
+                if elt.slider.type == SliderProto.Type.SLIDER:
+                    new_node = Slider(elt.slider, root=root)
+                elif elt.slider.type == SliderProto.Type.SELECT_SLIDER:
+                    new_node = SelectSlider(elt.slider, root=root)
+                else:
+                    raise ValueError(f"Slider with unknown type {elt.slider}")
+            elif elt.WhichOneof("type") == "button":
+                new_node = Button(elt.button, root=root)
             else:
                 new_node = Element(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":

@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-8-cores
 
     defaults:
       run:
@@ -42,10 +42,12 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: 'recursive'
-      - name: Set up Python 3.10
+      - name: Set Python version vars
+        uses: ./.github/actions/set_python_versions
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
         uses: actions/setup-python@v4
         with:
-            python-version: "3.10"
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Install Cypress dependencies
@@ -72,21 +74,21 @@ jobs:
           js_specs=(e2e/specs/*)
 
           # get how many specs to be split up into $TOTAL_WORKERS runs
-          (( totalTests = ${#js_specs[@]} ))
-          (( testsPerWorker = totalTests / TOTAL_WORKERS ))
+          totalTests=$(( ${#js_specs[@]} ))
+          testsPerWorker=$(( totalTests / TOTAL_WORKERS ))
           # get the remainder of tests to be split up into the first $remainder workers
-          (( remainder = totalTests % TOTAL_WORKERS ))
+          remainder=$(( totalTests % TOTAL_WORKERS ))
 
           # We handle $CURRENT_RUN = 1 separately because bash interprets 0 as empty string in this case
           if [ "$CURRENT_RUN" -eq 1 ]; then
             startIndex=0
-            (( currentIntervalLength = testsPerWorker + (remainder > 0 ? 1 : 0) ))
+            currentIntervalLength=$(( testsPerWorker + (remainder > 0 ? 1 : 0) ))
           elif [ $CURRENT_RUN -le $remainder ]; then
-            (( startIndex = (CURRENT_RUN - 1) * (testsPerWorker + 1) ))
-            (( currentIntervalLength = testsPerWorker + 1 ))
+            startIndex=$(( (CURRENT_RUN - 1) * (testsPerWorker + 1) ))
+            currentIntervalLength=$(( testsPerWorker + 1 ))
           else
-            (( startIndex = remainder * (testsPerWorker + 1) + (CURRENT_RUN - remainder - 1) * testsPerWorker ))
-            (( currentIntervalLength = testsPerWorker ))
+            startIndex=$(( remainder * (testsPerWorker + 1) + (CURRENT_RUN - remainder - 1) * testsPerWorker ))
+            currentIntervalLength=$(( testsPerWorker ))
           fi
 
           # ensure no blank specs list (which causes every spec to run)
