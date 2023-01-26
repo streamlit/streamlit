@@ -371,6 +371,13 @@ class Multiselect(Element, Widget, Generic[T]):
         return [self.options.index(str(v)) for v in self.value]
 
     def set_value(self, v: list[T]) -> Multiselect[T]:
+        """
+        Set the value of the multiselect widget.
+        Implementation note: set_value not work correctly if `format_func` is also
+        passed to the multiselect. This is because we send options via proto with
+        applied `format_func`, but keep original values in session state
+        as widget value.
+        """
         self._value = v
         return self
 
@@ -443,11 +450,20 @@ class Selectbox(Element, Widget, Generic[T]):
             return cast(T, state[self.id])
 
     def set_value(self, v: T) -> Selectbox[T]:
+        """
+        Set the value of the selectbox.
+        Implementation note: set_value not work correctly if `format_func` is also
+        passed to the selectbox. This is because we send options via proto with applied
+        `format_func`, but keep original values in session state as widget value.
+        """
         self._value = v
         return self
 
     def select(self, v: T) -> Selectbox[T]:
         return self.set_value(v)
+
+    def select_index(self, index: int) -> Selectbox[T]:
+        return self.set_value(self.options[index])
 
     def widget_state(self) -> WidgetState:
         """Protobuf message representing the state of the widget, including

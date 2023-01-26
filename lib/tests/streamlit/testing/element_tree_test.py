@@ -359,3 +359,14 @@ class SelectboxTest(InteractiveScriptTests):
         assert sr4.get("selectbox")[1].value == "female"
         assert sr4.get("selectbox")[2].value is None
         assert sr4.get("selectbox")[3].value == "JavaScript"
+
+        sr5 = sr4.get("selectbox")[0].select_index(0).run()
+        sr6 = sr5.get("selectbox")[3].select_index(5).run()
+        assert sr6.get("selectbox")[0].value == "male"
+        assert sr6.get("selectbox")[3].value == "Lisp"
+
+        with pytest.raises(ValueError):
+            sr6.get("selectbox")[0].select("invalid").run()
+
+        with pytest.raises(IndexError):
+            sr6.get("selectbox")[0].select_index(42).run()
