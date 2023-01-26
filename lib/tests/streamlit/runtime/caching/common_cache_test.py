@@ -24,15 +24,15 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.runtime.caching import (
-    CACHE_DATA_CALL_STACK,
-    CACHE_RESOURCE_CALL_STACK,
+    CACHE_DATA_MESSAGE_REPLAY_CTX,
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
     cache_data,
     cache_resource,
 )
 from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.caching.cache_type import CacheType
-from streamlit.runtime.caching.cache_utils import (
-    CachedResult,
+from streamlit.runtime.caching.cache_utils import CachedResult
+from streamlit.runtime.caching.cached_message_replay import (
     MultiCacheResults,
     _make_widget_key,
 )
@@ -207,8 +207,8 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("cache_data", cache_data, CACHE_DATA_CALL_STACK),
-            ("cache_resource", cache_resource, CACHE_RESOURCE_CALL_STACK),
+            ("cache_data", cache_data, CACHE_DATA_MESSAGE_REPLAY_CTX),
+            ("cache_resource", cache_resource, CACHE_RESOURCE_MESSAGE_REPLAY_CTX),
         ]
     )
     def test_cached_st_function_warning(self, _, cache_decorator, call_stack):
@@ -794,10 +794,10 @@ class CommonCacheThreadingTest(unittest.TestCase):
     def tearDown(self):
         # Some of these tests reach directly into CALL_STACK data and twiddle it.
         # Reset default values on teardown.
-        CACHE_DATA_CALL_STACK._cached_func_stack = []
-        CACHE_DATA_CALL_STACK._suppress_st_function_warning = 0
-        CACHE_RESOURCE_CALL_STACK._cached_func_stack = []
-        CACHE_RESOURCE_CALL_STACK._suppress_st_function_warning = 0
+        CACHE_DATA_MESSAGE_REPLAY_CTX._cached_func_stack = []
+        CACHE_DATA_MESSAGE_REPLAY_CTX._suppress_st_function_warning = 0
+        CACHE_RESOURCE_MESSAGE_REPLAY_CTX._cached_func_stack = []
+        CACHE_RESOURCE_MESSAGE_REPLAY_CTX._suppress_st_function_warning = 0
 
         # Clear caches
         st.cache_data.clear()
@@ -886,8 +886,8 @@ class CommonCacheThreadingTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("cache_data", CACHE_DATA_CALL_STACK),
-            ("cache_resource", CACHE_RESOURCE_CALL_STACK),
+            ("cache_data", CACHE_DATA_MESSAGE_REPLAY_CTX),
+            ("cache_resource", CACHE_RESOURCE_MESSAGE_REPLAY_CTX),
         ]
     )
     def test_multithreaded_call_stack(self, _, call_stack):

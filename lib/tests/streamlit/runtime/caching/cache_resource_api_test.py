@@ -28,7 +28,7 @@ from streamlit.runtime.caching import (
     get_resource_cache_stats_provider,
 )
 from streamlit.runtime.caching.cache_type import CacheType
-from streamlit.runtime.caching.cache_utils import MultiCacheResults
+from streamlit.runtime.caching.cached_message_replay import MultiCacheResults
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
 from tests.streamlit.runtime.caching.common_cache_test import (
@@ -50,8 +50,10 @@ class CacheResourceTest(unittest.TestCase):
         st.cache_resource.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        cache_resource_api.CACHE_RESOURCE_CALL_STACK._cached_func_stack = []
-        cache_resource_api.CACHE_RESOURCE_CALL_STACK._suppress_st_function_warning = 0
+        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._cached_func_stack = []
+        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._suppress_st_function_warning = (
+            0
+        )
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
@@ -140,8 +142,10 @@ class CacheResourceValidateTest(unittest.TestCase):
         st.cache_resource.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        cache_resource_api.CACHE_RESOURCE_CALL_STACK._cached_func_stack = []
-        cache_resource_api.CACHE_RESOURCE_CALL_STACK._suppress_st_function_warning = 0
+        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._cached_func_stack = []
+        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._suppress_st_function_warning = (
+            0
+        )
 
     def test_validate_success(self):
         """If we have a validate function and it returns True, we don't recompute our cached value."""
