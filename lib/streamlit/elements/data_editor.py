@@ -267,11 +267,11 @@ def _apply_cell_edits(
             # instead of a single value
             df.index.values[row_pos] = _parse_value(value, df.index)
         else:
-            # We need to subtract the number of index levels from the column index
-            # to get the correct column index for pandas dataframes
-            column_idx = col_pos - index_count
-            df.iat[row_pos, column_idx] = _parse_value(
-                value, df[df.columns[column_idx]]
+            # We need to subtract the number of index levels from col_pos
+            # to get the correct column position for Pandas DataFrames
+            mapped_column = col_pos - index_count
+            df.iat[row_pos, mapped_column] = _parse_value(
+                value, df[df.iloc[mapped_column]]
             )
 
 
@@ -315,9 +315,7 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
                 # We need to subtract the number of index levels from the col_pos
                 # to get the correct column position for Pandas DataFrames
                 mapped_column = col_pos - index_count
-                new_row[mapped_column] = _parse_value(
-                    value, df[df.columns[mapped_column]]
-                )
+                new_row[mapped_column] = _parse_value(value, df[df.iloc[mapped_column]])
         # Append the new row to the dataframe
         if range_index_stop is not None:
             df.loc[range_index_stop, :] = new_row
