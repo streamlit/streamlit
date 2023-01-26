@@ -1,10 +1,11 @@
 # Welcome to Streamlit :wave:
 
-**The fastest way to build and share data apps.**
+**A faster way to build and share data apps.**
 
 Streamlit lets you turn data scripts into shareable web apps in minutes, not weeks. It’s all Python, open-source, and free! And once you’ve created an app you can use our [Community Cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app!
 
-![Example of live coding an app in Streamlit|635x380](https://raw.githubusercontent.com/streamlit/docs/main/public/images/Streamlit_overview.gif)
+![Example of live coding an app in Streamlit|635x380](https://user-images.githubusercontent.com/7164864/214894747-884ea546-b8dc-492c-8b49-e4d619181cc7.gif)
+
 
 ## Installation
 
@@ -13,7 +14,7 @@ pip install streamlit
 streamlit hello
 ```
 
-Streamlit can also be installed in a virtual environment on [Windows](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment#on-windows), [Mac](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment#on-mac--linux), and [Linux](https://github.com/streamlit/streamlit/wiki/Installing-in-a-virtual-environment#on-mac--linux).
+Read more on getting started with Streamlit in our [documentation](https://docs.streamlit.io/library/get-started)
 
 ## A little example
 
@@ -26,7 +27,7 @@ x = st.slider('Select a value')
 st.write(x, 'squared is', x * x)
 ```
 
-<img src="https://raw.githubusercontent.com/streamlit/docs/main/public/images/simple_example.png"/>
+<img width="612" alt="CleanShot 2023-01-26 at 17 43 57@2x" src="https://user-images.githubusercontent.com/7164864/214896062-8c4f336e-55c9-47e9-84c0-2c816af10933.png">
 
 ## A bigger example
 
@@ -54,7 +55,7 @@ Once you deploy your app, you can embed this badge right into your GitHub readme
 - Our [Community Cloud platform announcement](https://blog.streamlit.io/introducing-streamlit-cloud)
 - Our amazing [community](https://discuss.streamlit.io/) where Streamlit users share apps, ask questions, and help each other out
 - Streamlit [documentation](https://docs.streamlit.io/) and [blog](https://blog.streamlit.io) for the latest Streamlit info
-- More [demo projects](https://github.com/streamlit/) to inspire you
+- More [demo projects](https://streamlit.io/gallery) to inspire you
 - And if you would like to contribute, see [instructions here](https://github.com/streamlit/streamlit/wiki/Contributing)
 
 ## Community Cloud
