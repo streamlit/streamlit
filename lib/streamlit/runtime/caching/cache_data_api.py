@@ -468,6 +468,7 @@ class DataCache(Cache):
         display_name: str,
         allow_widgets: bool = False,
     ):
+        super().__init__()
         self.key = key
         self.display_name = display_name
         self.persist = persist
@@ -584,7 +585,7 @@ class DataCache(Cache):
         if self.persist == "disk":
             self._write_to_disk_cache(key, pickled_entry)
 
-    def clear(self) -> None:
+    def _clear(self) -> None:
         with self._mem_cache_lock:
             # We keep a lock for the entirety of the clear operation to avoid
             # disk cache race conditions.

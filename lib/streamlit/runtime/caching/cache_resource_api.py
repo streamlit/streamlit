@@ -419,6 +419,7 @@ class ResourceCache(Cache):
         display_name: str,
         allow_widgets: bool,
     ):
+        super().__init__()
         self.key = key
         self.display_name = display_name
         self._mem_cache: TTLCache[str, MultiCacheResults] = TTLCache(
@@ -497,7 +498,7 @@ class ResourceCache(Cache):
             multi_results.results[widget_key] = result
             self._mem_cache[key] = multi_results
 
-    def clear(self) -> None:
+    def _clear(self) -> None:
         with self._mem_cache_lock:
             self._mem_cache.clear()
 

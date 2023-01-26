@@ -20,9 +20,11 @@ import functools
 import hashlib
 import inspect
 import math
+import threading
 import time
 import types
 from abc import abstractmethod
+from collections import defaultdict
 from datetime import timedelta
 from typing import Any
 
@@ -77,6 +79,10 @@ UNEVALUATED_DATAFRAME_TYPES = (
 class Cache:
     """Function cache interface. Caches persist across script runs."""
 
+    def __init__(self):
+        self._value_locks: dict[str, threading.Lock] = defaultdict(threading.Lock)
+        self._value_locks_lock = threading.Lock()
+
     @abstractmethod
     def read_result(self, value_key: str) -> CachedResult:
         """Read a value and associated messages from the cache.
@@ -94,11 +100,32 @@ class Cache:
         """Write a value and associated messages to the cache, overwriting any existing
         result that uses the value_key.
         """
+        # We *could* `del self._value_locks[value_key]` here, since nobody will be taking
+        # a value_lock for this value_key after the result is written. Not sure if it's
+        # worthwhile?
         raise NotImplementedError
 
+    def compute_value_lock(self, value_key: str) -> threading.Lock:
+        """Return the lock that should be held while computing a new cached value.
+        In a popular app with a cache that hasn't been pre-warmed, many sessions may try
+        to access a not-yet-cached value simultaneously. We use a lock to ensure that
+        only one of those sessions computes the value, and the others block until
+        the value is computed.
+        """
+        # We use a different lock for each value_key, as opposed to a single lock for
+        # the entire cache, so that unrelated value computations don't block on each other.
+        with self._value_locks_lock:
+            return self._value_locks[value_key]
+
+    def clear(self):
+        """Clear all values from this cache."""
+        with self._value_locks_lock:
+            self._value_locks.clear()
+        self._clear()
+
     @abstractmethod
-    def clear(self) -> None:
-        """Clear all values from this function cache."""
+    def _clear(self) -> None:
+        """Subclasses must implement this to perform cache-clearing logic."""
         raise NotImplementedError
 
 
