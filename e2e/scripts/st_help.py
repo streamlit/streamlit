@@ -12,12 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
-
-import pandas as pd
-
 import streamlit as st
-from streamlit.elements.doc_string import _get_scriptrunner_frame
 
 if _get_scriptrunner_frame() is None:
     st.warning(
@@ -34,15 +29,47 @@ st.help(st.net_util)
 st.help(globals)
 
 # Test case where there the docs need to scroll,
-# and test case where some member doesn't have docs.
-st.help(re)
-
-
+# and test case where some members doesn't have docs.
 class Foo:
-    """My docstring"""
+    """My docstring.
+
+    This is a very long one! You probably need to scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll.
+
+    Scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll.
+
+    Scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll.
+
+    Scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll.
+
+    Scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll.
+    """
 
     def __init__(self):
-        self.mymember = 123
+        self.my_var_1 = 123
+
+    def my_func_1(self, a, b=False):
+        "Func with doc."
+
+    def my_func_2(self):
+        # Func without doc.
+        pass
 
 
 f = Foo()
