@@ -101,8 +101,7 @@ class Cache:
         result that uses the value_key.
         """
         # We *could* `del self._value_locks[value_key]` here, since nobody will be taking
-        # a value_lock for this value_key after the result is written. Not sure if it's
-        # worthwhile?
+        # a compute_value_lock for this value_key after the result is written.
         raise NotImplementedError
 
     def compute_value_lock(self, value_key: str) -> threading.Lock:
@@ -112,8 +111,6 @@ class Cache:
         only one of those sessions computes the value, and the others block until
         the value is computed.
         """
-        # We use a different lock for each value_key, as opposed to a single lock for
-        # the entire cache, so that unrelated value computations don't block on each other.
         with self._value_locks_lock:
             return self._value_locks[value_key]
 
@@ -236,16 +233,31 @@ class CallableCachedFunc:
         and return that newly-computed value.
         """
 
-        # We take a "compute_value_lock" before computing our value. This ensures that
-        # multiple sessions don't try to compute the same value simultaneously.
+        # Implementation notes:
+        # - We take a "compute_value_lock" before computing our value. This ensures that
+        #   multiple sessions don't try to compute the same value simultaneously.
+        #
+        # - We use a different lock for each value_key, as opposed to a single lock for
+        #   the entire cache, so that unrelated value computations don't block on each other.
+        #
+        # - When retrieving a cache entry that may not yet exist, we use a "double-checked locking"
+        #   strategy: first we try to retrieve the cache entry without taking a value lock. (This
+        #   happens in `_get_or_create_cached_value()`.) If that fails because the value hasn't
+        #   been computed yet, we take the value lock and then immediately try to retrieve cache entry
+        #   *again*, while holding the lock. If the cache entry exists at this point, it means that
+        #   another thread computed the value before us.
+        #
+        #   This means that the happy path ("cache entry exists") is a wee bit faster because
+        #   no lock is acquired. But the unhappy path ("cache entry needs to be recomputed") is
+        #   a wee bit slower, because we do two lookups for the entry.
+
         with cache.compute_value_lock(value_key):
             # We've acquired the lock - but another thread may have acquired it first
             # and already computed the value. So we need to test for a cache hit again,
             # before computing.
             try:
                 cached_result = cache.read_result(value_key)
-                # Another thread computed the value before us. Early exit with the cached value;
-                # don't compute it ourselves.
+                # Another thread computed the value before us. Early exit!
                 return self._handle_cache_hit(cached_result)
 
             except CacheKeyNotFoundError:
