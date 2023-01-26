@@ -27,7 +27,7 @@ from streamlit.testing.local_script_runner import LocalScriptRunner
 
 
 class InteractiveScriptTests(unittest.TestCase):
-    tmp_script_dir: tempfile.TemporaryDirectory
+    tmp_script_dir: tempfile.TemporaryDirectory[str]
 
     def setUp(self) -> None:
         super().setUp()
