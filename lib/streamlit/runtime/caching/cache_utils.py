@@ -189,11 +189,13 @@ class CallableCachedFunc:
             self._cached_func.show_spinner, str
         ):
             with spinner(message):
-                return self._get_or_create_cached_value(*args, **kwargs)
+                return self._get_or_create_cached_value(args, kwargs)
         else:
-            return self._get_or_create_cached_value(*args, **kwargs)
+            return self._get_or_create_cached_value(args, kwargs)
 
-    def _get_or_create_cached_value(self, *args, **kwargs) -> Any:
+    def _get_or_create_cached_value(
+        self, func_args: tuple[Any, ...], func_kwargs: dict[str, Any]
+    ) -> Any:
         # Retrieve the function's cache object. We must do this "just-in-time"
         # (as opposed to in the constructor), because caches can be invalidated
         # at any time.
@@ -204,49 +206,80 @@ class CallableCachedFunc:
         value_key = _make_value_key(
             cache_type=self._cached_func.cache_type,
             func=self._cached_func.func,
-            func_args=args,
-            func_kwargs=kwargs,
+            func_args=func_args,
+            func_kwargs=func_kwargs,
         )
 
         try:
-            result = cache.read_result(value_key)
-            _LOGGER.debug("Cache hit: %s", self._cached_func.func)
-
-            replay_cached_messages(
-                result, self._cached_func.cache_type, self._cached_func.func
-            )
-
-            return_value = result.value
-
+            cached_result = cache.read_result(value_key)
+            return self._handle_cache_hit(cached_result)
         except CacheKeyNotFoundError:
-            _LOGGER.debug("Cache miss: %s", self._cached_func.func)
+            return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
 
-            with self._cached_func.cached_message_replay_ctx.calling_cached_function(
-                self._cached_func.func, self._cached_func.allow_widgets
-            ):
-                return_value = self._cached_func.func(*args, **kwargs)
+    def _handle_cache_hit(self, result: CachedResult) -> Any:
+        """Handle a cache hit: replay the result's cached messages, and return its value."""
+        replay_cached_messages(
+            result,
+            self._cached_func.cache_type,
+            self._cached_func.func,
+        )
+        return result.value
 
-            messages = self._cached_func.cached_message_replay_ctx._most_recent_messages
+    def _handle_cache_miss(
+        self,
+        cache: Cache,
+        value_key: str,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+    ) -> Any:
+        """Handle a cache miss: compute a new cached value, write it back to the cache,
+        and return that newly-computed value.
+        """
+
+        # We take a "compute_value_lock" before computing our value. This ensures that
+        # multiple sessions don't try to compute the same value simultaneously.
+        with cache.compute_value_lock(value_key):
+            # We've acquired the lock - but another thread may have acquired it first
+            # and already computed the value. So we need to test for a cache hit again,
+            # before computing.
             try:
-                cache.write_result(value_key, return_value, messages)
-            # RuntimeError will be raised by Apache Spark if we do not collect dataframe
-            # before using `st.cache_data`.
-            except (CacheError, RuntimeError):
-                if True in [
-                    type_util.is_type(return_value, type_name)
-                    for type_name in UNEVALUATED_DATAFRAME_TYPES
-                ]:
-                    raise UnevaluatedDataFrameError(
-                        f"""
-                        The function {get_cached_func_name_md(self._cached_func.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
-                        of type `{type_util.get_fqn_type(return_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
-                        so `st.cache_data` can serialize and cache it."""
-                    )
-                raise UnserializableReturnValueError(
-                    return_value=return_value, func=self._cached_func.func
-                )
+                cached_result = cache.read_result(value_key)
+                # Another thread computed the value before us. Early exit with the cached value;
+                # don't compute it ourselves.
+                return self._handle_cache_hit(cached_result)
 
-        return return_value
+            except CacheKeyNotFoundError:
+                # We acquired the lock before any other thread. Compute the value!
+                with self._cached_func.cached_message_replay_ctx.calling_cached_function(
+                    self._cached_func.func, self._cached_func.allow_widgets
+                ):
+                    computed_value = self._cached_func.func(*func_args, **func_kwargs)
+
+                # We've computed our value, and now we need to write it back to the cache
+                # along with any "replay messages" that were generated during value computation.
+                messages = (
+                    self._cached_func.cached_message_replay_ctx._most_recent_messages
+                )
+                try:
+                    cache.write_result(value_key, computed_value, messages)
+                    return computed_value
+                except (CacheError, RuntimeError):
+                    # An exception was thrown while we tried to write to the cache. Report it to the user.
+                    # (We catch `RuntimeError` here because it will be raised by Apache Spark if we do not
+                    # collect dataframe before using `st.cache_data`.)
+                    if True in [
+                        type_util.is_type(computed_value, type_name)
+                        for type_name in UNEVALUATED_DATAFRAME_TYPES
+                    ]:
+                        raise UnevaluatedDataFrameError(
+                            f"""
+                            The function {get_cached_func_name_md(self._cached_func.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
+                            of type `{type_util.get_fqn_type(computed_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
+                            so `st.cache_data` can serialize and cache it."""
+                        )
+                    raise UnserializableReturnValueError(
+                        return_value=computed_value, func=self._cached_func.func
+                    )
 
     def clear(self):
         """Clear the wrapped function's associated cache."""
