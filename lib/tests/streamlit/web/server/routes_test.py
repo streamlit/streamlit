@@ -91,6 +91,17 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
         self.assertEqual(response.headers["deprecation"], "True")
 
+    def test_new_health_endpoint_should_not_display_deprecation_warning(self):
+        with self.assertRaisesRegex(
+            AssertionError,
+            "no logs of level INFO or higher triggered on "
+            r"streamlit\.web\.server\.server\_util",
+        ), self.assertLogs("streamlit.web.server.server_util") as logs:
+            response = self.fetch("/_stcore/health")
+        self.assertEqual(len(logs.records), 0)
+        self.assertNotIn("link", response.headers)
+        self.assertNotIn("deprecation", response.headers)
+
 
 class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
