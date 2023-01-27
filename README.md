@@ -1,6 +1,9 @@
-![Streamlit logo|200x200](https://i.ibb.co/5FdSr1V/streamlit.png)
+<br>
 
-# Streamlit
+<img src="https://i.ibb.co/5FdSr1V/streamlit.png" alt="Streamlit logo" style="margin-top:50px"></img>
+
+
+# Welcome to Streamlit 👋
 
 **A faster way to build and share data apps.**
 
@@ -15,14 +18,13 @@ $ pip install streamlit
 $ streamlit hello
 ```
 
-This should open our sweet _Streamlit Hello_ app right in your browser. It features a bunch of examples of what you can do with Streamlit!
+If this opens our sweet _Streamlit Hello_ app in your browser, you're all set! If not, head over to [our docs](https://docs.streamlit.io/library/get-started) for specific installs. 
+
+The app features a bunch of examples of what you can do with Streamlit! Jump to the [quickstart](#quickstart) section to understand how that all works.
 
 <img src="https://media.cleanshot.cloud/media/55064/9RAuEZKubvrlrlPVua50xuhyPIiD8MBdvzi7Pa3s.gif?Expires=1674790062&Signature=fqIRLW0tMXntC1vCrSq3yLPTtA58SRLiO1i0y~7YshYuOfQQokc0OI6uxWg6IBL8rw2gGnzA4ML-OdGWPgK6WSulyLR-wNbQAPiKX4LF0vXS9F6AmZ8V39Tze5Fo9TWfA3JZF3mnu7q6JrkssCk~6614xuugx9gojkOJMtsbFrOiM2kNLkje2OepBbxromYKVLLEQGwuPcFvUiA3Hb6ZuSHtNX~99wLu94PAKpXfPUf21sCt4vfmYItkl0z6BuHWYP5Zs5SlvPo8iXvdrb-dKL-~-kbTRjpcTFgWhFT1zg8iNZNCeR0Q~QvpS8rzfQPMMeIiBiRJFmTm4RC7~FRktA__&Key-Pair-Id=K269JMAT9ZF4GZ" alt="Streamlit Hello" width=500 href="none"></img>
 
-Read more on getting started with Streamlit in our [documentation](https://docs.streamlit.io/library/get-started).
-
-
-## Quick start
+## Quickstart
 
 #### A little example
 
@@ -34,7 +36,7 @@ x = st.slider("Select a value")
 st.write(x, "squared is", x * x)
 ```
 
-<img src="https://user-images.githubusercontent.com/7164864/214900507-1c89fc6b-e196-4f5c-890f-7e0be62d5d9d.png" width=300 alt="Little example"></img>
+<img src="https://user-images.githubusercontent.com/7164864/215172915-cf087c56-e7ae-449a-83a4-b5fa0328d954.gif" width=300 alt="Little example"></img>
 
 #### Give me more!
 
@@ -44,9 +46,9 @@ Streamlit comes in with [a ton of additional powerful elements](https://docs.str
    <tr>
      <td><img src="https://docs.streamlit.io/images/api/date_input.jpg" style="max-height:150; width:auto; display:block;"></td>
      <td><img src="https://user-images.githubusercontent.com/7164864/215110064-5eb4e294-8f30-4933-9563-0275230e52b5.gif"  style="max-height:150; width:auto; display:block;"></td>
-     <td><img src="https://docs.streamlit.io/images/api/line_chart.jpg" style="max-height:150; width:auto; display:block;"></td>
+     <td><img src="https://user-images.githubusercontent.com/7164864/215174472-bca8a0d7-cf4b-4268-9c3b-8c03dad50bcd.gif" style="max-height:150; width:auto; display:block;"></td>
      <td><img src="https://docs.streamlit.io/images/api/tabs.jpg" style="max-height:150; width:auto; display:block;"></td>
-     <td><img src="https://docs.streamlit.io/images/mpa-add-pages.png" style="max-height:150; width:auto; display:block;"></td>
+     <td><img src="https://user-images.githubusercontent.com/7164864/215173883-eae0de69-7c1d-4d78-97d0-3bc1ab865e5b.gif" style="max-height:150; width:auto; display:block;"></td>
      <td><img src="https://user-images.githubusercontent.com/7164864/215109229-6ae9111f-e5c1-4f0b-b3a2-87a79268ccc9.gif" style="max-height:150; width:auto; display:block;"></td>
 
   </tr>
