@@ -100,6 +100,17 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self.assertEqual(expected_body, response.body)
 
+    def test_new_metrics_endpoint_should_not_display_deprecation_warning(self):
+        with self.assertRaisesRegex(
+            AssertionError,
+            "no logs of level INFO or higher triggered on "
+            r"streamlit\.web\.server\.server\_util",
+        ), self.assertLogs("streamlit.web.server.server_util") as logs:
+            response = self.fetch("/_stcore/metrics")
+        self.assertEqual(len(logs.records), 0)
+        self.assertNotIn("link", response.headers)
+        self.assertNotIn("deprecation", response.headers)
+
     def test_protobuf_stats(self):
         """Stats requests are returned in OpenMetrics protobuf format
         if the request's Content-Type header is protobuf.

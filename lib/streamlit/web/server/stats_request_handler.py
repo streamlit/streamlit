@@ -39,7 +39,7 @@ class StatsRequestHandler(tornado.web.RequestHandler):
         self.finish()
 
     def get(self) -> None:
-        if self.request.uri and not self.request.uri.startswith("_stcore/"):
+        if self.request.uri and "_stcore/" not in self.request.uri:
             emit_endpoint_deprecation_notice(self, new_path="/_stcore/metrics")
 
         stats = self._manager.get_stats()
