@@ -42,12 +42,12 @@ Streamlit comes in with [a ton of additional powerful elements](https://docs.str
 
 <table border="0">
    <tr>
-     <td><img src="https://docs.streamlit.io/images/api/date_input.jpg" height="150"></td>
-     <td><img src="https://user-images.githubusercontent.com/7164864/215105644-b77445fa-2668-41dc-b560-d4b80e347664.png" height="150"></td>
-     <td><img src="https://docs.streamlit.io/images/api/line_chart.jpg" height="150"></td>
-     <td><img src="https://docs.streamlit.io/images/api/tabs.jpg" height="150"></td>
-     <td><img src="https://docs.streamlit.io/images/mpa-add-pages.png" height="150"></td>
-     <td><img src="https://docs.streamlit.io/images/api/balloons.jpg" height="150"></td>
+     <td><img src="https://docs.streamlit.io/images/api/date_input.jpg" style="max-height:150; width:auto; display:block;"></td>
+     <td><img src="https://user-images.githubusercontent.com/7164864/215105644-b77445fa-2668-41dc-b560-d4b80e347664.png"  style="max-height:150; width:auto; display:block;"></td>
+     <td><img src="https://docs.streamlit.io/images/api/line_chart.jpg" style="max-height:150; width:auto; display:block;"></td>
+     <td><img src="https://docs.streamlit.io/images/api/tabs.jpg" style="max-height:150; width:auto; display:block;"></td>
+     <td><img src="https://docs.streamlit.io/images/mpa-add-pages.png" style="max-height:150; width:auto; display:block;"></td>
+     <td><img src="https://docs.streamlit.io/images/api/balloons.jpg" style="max-height:150; width:auto; display:block;"></td>
   </tr>
     <tr>
       <td>Input widgets</td>
