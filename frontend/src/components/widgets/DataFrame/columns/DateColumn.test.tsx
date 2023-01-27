@@ -16,11 +16,11 @@
 
 import { Type as QuiverType } from "src/lib/Quiver"
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import strftime from "strftime"
 import { DatePickerCell } from "src/components/widgets/DataFrame/customCells/DatePickerCell"
 import { DatetimeLocalPickerCell } from "src/components/widgets/DataFrame/customCells/DatetimeLocalPickerCell"
-import { addDST, addTimezoneOffset, BaseColumnProps } from "./utils"
+import { BaseColumnProps } from "./utils"
 import DateColumn, { DateColumnParams } from "./DateColumn"
+import moment from "moment"
 
 const MOCK_DATE_QUIVER_TYPE: QuiverType = {
   pandas_type: "datetime",
@@ -51,10 +51,7 @@ function getDateColumn(
 const constantDate = new Date("05 October 2011 14:48")
 
 // deal with machines in different timezones
-const constantDisplayDate = strftime(
-  "%Y / %m / %d",
-  new Date(addDST(addTimezoneOffset(constantDate)))
-)
+const constantDisplayDate = moment.utc(constantDate).format(format)
 
 describe("DateColumn", () => {
   it("creates a valid column instance", () => {

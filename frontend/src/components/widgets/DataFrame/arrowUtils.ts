@@ -28,17 +28,17 @@ import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 import {
   BaseColumn,
   BaseColumnProps,
-  ColumnCreator,
-  DateColumn,
-  DateTimeColumn,
-  TimeColumn,
   ObjectColumn,
   BooleanColumn,
   NumberColumn,
+  DateColumn,
+  TimeColumn,
+  DateTimeColumn,
   TextColumn,
   CategoricalColumn,
   ListColumn,
   isErrorCell,
+  ColumnCreator,
 } from "./columns"
 
 /**

@@ -14,105 +14,31 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-
-import { isNullOrUndefined, notNullOrUndefined } from "src/lib/utils"
-import strftime from "strftime"
-import { DatetimeLocalPickerCell } from "src/components/widgets/DataFrame/customCells/DatetimeLocalPickerCell"
+import { GridCell } from "@glideapps/glide-data-grid"
 
 import {
-  addDST,
-  addTimezoneOffset,
   BaseColumn,
   BaseColumnProps,
-  getErrorCell,
-  isValidDate,
-  removeTInIsoString,
-  removeZeroMillisecondsInISOString,
+  getDateCell,
+  getDateCellContent,
 } from "src/components/widgets/DataFrame/columns/utils"
+import { DatetimePickerCell } from "../customCells/DatetimePickerCell"
 
 export interface DateTimeColumnParams {
   readonly format?: string
 }
 
 function DateTimeColumn(props: BaseColumnProps): BaseColumn {
-  const parameters = {
-    ...(props.columnTypeMetadata || {}),
-  } as DateTimeColumnParams
-
-  const cellTemplate = {
-    kind: GridCellKind.Custom,
-    allowOverlay: true,
-    copyData: "",
-    contentAlign: props.contentAlignment,
-    data: {
-      kind: "DatetimeLocalPickerCell",
-      date: undefined,
-      displayDate: "NA",
-      format: parameters.format ?? "%Y-%m-%dT%H:%M:%S.%L",
-    },
-  } as DatetimeLocalPickerCell
-
   return {
     ...props,
     kind: "datetime",
     sortMode: "smart",
     isEditable: true,
     getCell(data?: any): GridCell {
-      if (isNullOrUndefined(data)) {
-        return {
-          ...cellTemplate,
-          allowOverlay: true,
-          // missing value
-          copyData: "",
-          isMissingValue: true,
-          data: {
-            kind: "DatetimeLocalPickerCell",
-            date: undefined,
-            displayDate: "",
-            format: cellTemplate.data.format,
-          },
-        } as DatetimeLocalPickerCell
-      }
-
-      try {
-        if (!isValidDate(data)) {
-          return getErrorCell(`Incompatible time value: ${data}`)
-        }
-        if (typeof data === "bigint") {
-          data = Number(data) / 1000
-        }
-
-        // safe to do new Date() because checked through isValidDate()
-        const dataDate = new Date(data)
-        const displayDate = removeTInIsoString(
-          removeZeroMillisecondsInISOString(
-            // TODO (willhuang1997): Check if we want to use strftime
-            strftime(
-              cellTemplate.data.format,
-              addDST(addTimezoneOffset(dataDate))
-            )
-          )
-        )
-        return {
-          ...cellTemplate,
-          allowOverlay: true,
-          copyData: dataDate.toISOString(),
-          data: {
-            kind: "DatetimeLocalPickerCell",
-            date: dataDate,
-            displayDate,
-            format: cellTemplate.data.format,
-          },
-        } as DatetimeLocalPickerCell
-      } catch (error) {
-        return getErrorCell(`Incompatible time value: ${data}`)
-      }
+      return getDateCell(props, data, "datetime-local")
     },
-    getCellValue(cell: DatetimeLocalPickerCell): string | null {
-      return !notNullOrUndefined(cell.data.date)
-        ? null
-        : cell.data.date.toISOString()
+    getCellValue(cell: DatetimePickerCell): string | null {
+      return getDateCellContent(cell)
     },
   }
 }

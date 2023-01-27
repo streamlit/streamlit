@@ -53,9 +53,7 @@ import {
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
-import DatePickerCell from "./customCells/DatePickerCell"
-import TimePickerCell from "./customCells/TimePickerCell"
-import DatetimeLocalPickerCell from "./customCells/DatetimeLocalPickerCell"
+import DatetimePickerCell from "./customCells/DatetimePickerCell"
 
 // Min column width used for manual and automatic resizing
 const MIN_COLUMN_WIDTH = 50
@@ -421,9 +419,7 @@ function DataFrame({
           // Add support for additional cells:
           customRenderers={[
             ...extraCellArgs.customRenderers,
-            DatePickerCell,
-            TimePickerCell,
-            DatetimeLocalPickerCell,
+            DatetimePickerCell,
           ]}
           // If element is editable, add additional properties:
           {...(!showEmptyState &&

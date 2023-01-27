@@ -21,10 +21,10 @@ import CategoricalColumn from "./CategoricalColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
 
+import { ColumnCreator } from "./utils"
 import DateColumn from "./DateColumn"
 import TimeColumn from "./TimeColumn"
 import DateTimeColumn from "./DateTimeColumn"
-import { ColumnCreator } from "./utils"
 
 export * from "./utils"
 

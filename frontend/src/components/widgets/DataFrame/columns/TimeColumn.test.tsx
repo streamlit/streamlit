@@ -16,14 +16,8 @@
 
 import { Type as QuiverType } from "src/lib/Quiver"
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import strftime from "strftime"
-import { TimePickerCell } from "src/components/widgets/DataFrame/customCells/TimePickerCell"
-import {
-  addDST,
-  addTimezoneOffset,
-  BaseColumnProps,
-  getTimezoneOffset,
-} from "./utils"
+import { DatetimePicker } from "src/components/widgets/DataFrame/customCells/TimePickerCell"
+import { BaseColumnProps, getTimezoneOffset } from "./utils"
 import TimeColumn, { TimeColumnParams } from "./TimeColumn"
 
 const MOCK_TIME_QUIVER_TYPE: QuiverType = {
@@ -58,17 +52,9 @@ const constantDateWithout0MS = new Date("05 October 2011 14:48:48.001")
 const constantDateAsNumber = Number(constantDate)
 const dateWithout0MSAsNumber = Number(constantDateWithout0MS)
 
-// deal with machines in different timezones
-const constantDisplayDate = strftime(
-  "%H:%M:%S.%L",
-  new Date(Number(constantDate) - getTimezoneOffset())
-).replace(".000", "")
+const constantDisplayDate = ""
 
-// deal with machines in different timezones
-const displayDateWithout0MS = strftime(
-  "%H:%M:%S.%L",
-  new Date(addDST(addTimezoneOffset(constantDateWithout0MS)))
-).replace("T", " ")
+const displayDateWithout0MS = ""
 
 describe("TimeColumn", () => {
   it("creates a valid column instance", () => {
@@ -79,9 +65,7 @@ describe("TimeColumn", () => {
 
     const mockCell = mockColumn.getCell(constantDateAsNumber)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect((mockCell as TimePickerCell).data.time).toEqual(
-      constantDateAsNumber
-    )
+    expect(mockCell.data.time).toEqual(constantDateAsNumber)
   })
 
   it.each([

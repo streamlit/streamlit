@@ -23,11 +23,16 @@ import {
   GridColumn,
 } from "@glideapps/glide-data-grid"
 import { toString, merge, isArray } from "lodash"
+import moment from "moment"
 import numbro from "numbro"
 import { logError } from "src/lib/log"
 
 import { Type as ArrowType } from "src/lib/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
+import {
+  DatetimePickerCell,
+  PythonDateType,
+} from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
 
 /**
  * Interface used for defining the properties (configuration options) of a column.
@@ -85,6 +90,7 @@ export interface BaseColumn extends BaseColumnProps {
 export type ColumnCreator = {
   (props: BaseColumnProps): BaseColumn
   readonly isEditableType: boolean
+  readonly dateType?: PythonDateType
 }
 
 /**
@@ -387,25 +393,6 @@ export function getTimezoneOffset(): number {
   return jan1.getTime() - jan2.getTime()
 }
 
-export function addTimezoneOffset(date: Date): Date {
-  return new Date(date.getTime() - getTimezoneOffset())
-}
-
-export function addDST(date: Date): Date {
-  const rightNow = new Date()
-  // check daylight savings in june because starts in summer
-  const june1 = new Date(rightNow.getFullYear(), 6, 1, 0, 0, 0, 0)
-  const utcDate = rightNow.toUTCString()
-  const june2 = new Date(utcDate.substring(0, utcDate.lastIndexOf(" ") - 1))
-  const daylightTimeOffset = june1.getTime() - june2.getTime()
-
-  if (getTimezoneOffset() !== daylightTimeOffset && rightNow.getMonth() >= 6) {
-    // 60 seconds * 60 minutes * 1000 milliseconds for 1 hour
-    return new Date(date.getTime() + 3600000)
-  }
-  return date
-}
-
 export function removeZeroMillisecondsInISOString(date: string): string {
   return date.replace(".000", "")
 }
@@ -426,4 +413,116 @@ export function appendZeroDateFormatMs(date: string): string {
     return `0${date}`
   }
   return date
+}
+
+export function getDateCell(
+  props: BaseColumnProps,
+  data: any,
+  type: PythonDateType
+): GridCell {
+  const defaultFormat = getDefaultFormat(type)
+
+  const parameters = {
+    ...(props.columnTypeMetadata || {}),
+  }
+
+  const cellTemplate = {
+    kind: GridCellKind.Custom,
+    allowOverlay: true,
+    copyData: "",
+    contentAlign: props.contentAlignment,
+    data: {
+      kind: "DatetimePickerCell",
+      date: undefined,
+      displayDate: "",
+      format: parameters.format ?? defaultFormat,
+      type,
+    },
+  } as DatetimePickerCell
+
+  if (isNullOrUndefined(data)) {
+    return {
+      ...cellTemplate,
+      allowOverlay: true,
+      // missing value
+      copyData: "",
+      isMissingValue: true,
+      data: {
+        kind: "DatetimePickerCell",
+        date: undefined,
+        displayDate: "",
+        format: cellTemplate.data.format,
+        type,
+      },
+    } as DatetimePickerCell
+  }
+
+  try {
+    // Python datetime uses microseconds, but JS & Moment uses milliseconds
+    if (typeof data === "bigint") {
+      data = Number(data) / 1000
+    }
+
+    if (!isValidDate(data)) {
+      return getErrorCell(`Incompatible time value: ${data}`)
+    }
+
+    // safe to do new Date() because checked through isValidDate()
+    const dataDate = new Date(data)
+    const copyData = getCopyDataForDate(dataDate, type)
+    const displayDate = moment.utc(dataDate).format(cellTemplate.data.format)
+    return {
+      ...cellTemplate,
+      allowOverlay: true,
+      copyData,
+      data: {
+        kind: "DatetimePickerCell",
+        date: dataDate,
+        displayDate,
+        format: cellTemplate.data.format,
+        type,
+      },
+    } as DatetimePickerCell
+  } catch (error) {
+    return getErrorCell(`Incompatible time value: ${data}`)
+  }
+}
+
+export function getDefaultFormat(type: PythonDateType): string {
+  switch (type) {
+    case "date":
+      return "YYYY / MM / DD"
+    case "datetime-local":
+      return "YYYY-MM-DDTHH:mm:ss.SSS"
+    case "time":
+      return "HH:mm:ss.SSS"
+    default:
+      return ""
+  }
+}
+
+export function getDateCellContent(cell: DatetimePickerCell): string | null {
+  return !notNullOrUndefined(cell.data.date)
+    ? null
+    : cell.data.date.toISOString()
+}
+
+function getCopyDataForDate(date: Date, type: PythonDateType): string {
+  switch (type) {
+    case "time": {
+      // datetime.time is only hours, minutes, etc
+      const withoutYearAndMonth =
+        (date.getHours() * 60 * 60 +
+          date.getMinutes() * 60 +
+          date.getSeconds()) *
+          1000 +
+        date.getMilliseconds()
+      return toSafeString(withoutYearAndMonth)
+    }
+    case "datetime-local":
+    case "date":
+      return date.toISOString()
+    default:
+      return ""
+  }
 }

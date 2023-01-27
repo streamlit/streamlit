@@ -23,40 +23,70 @@ import {
   ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
 import {
-  addDST,
-  addTimezoneOffset,
   appendZeroDateFormat,
+  appendZeroDateFormatMs,
 } from "src/components/widgets/DataFrame/columns/utils"
 
-interface DatePickerCellProps {
-  readonly kind: "DatePickerCell"
+interface DatetimePickerCellProps {
+  readonly kind: "DatetimePickerCell"
   readonly date: Date | undefined
   readonly displayDate: string
   readonly format: string
+  readonly type: PythonDateType
 }
 
-export type DatePickerCell = CustomCell<DatePickerCellProps>
+export type PythonDateType = "date" | "datetime-local" | "time"
 
-const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
+export type DatetimePickerCell = CustomCell<DatetimePickerCellProps>
+
+const formatValueForHTMLInput = (type: PythonDateType, date: Date): string => {
+  const offsetDate = date
+  if (type === "date") {
+    // add 1 because getMonth is 0 index based
+    const year = offsetDate?.getFullYear().toString()
+    const mm = appendZeroDateFormat((offsetDate?.getMonth() + 1).toString())
+    const dd = appendZeroDateFormat(offsetDate?.getDate().toString())
+    // format example: 2020-03-08
+    return `${year}-${mm}-${dd}`
+  }
+  if (type === "time") {
+    const hours = appendZeroDateFormat(offsetDate.getUTCHours().toString())
+    const minutes = appendZeroDateFormat(offsetDate.getMinutes().toString())
+    const seconds = appendZeroDateFormat(offsetDate.getSeconds().toString())
+    const milliseconds = appendZeroDateFormatMs(
+      offsetDate.getMilliseconds().toString()
+    )
+    // format example: 08:05:01.004
+    return `${hours}:${minutes}:${seconds}.${milliseconds}`
+  }
+  if (type === "datetime-local") {
+    return offsetDate.toISOString().replace("Z", "")
+  }
+  return ""
+}
+
+const Editor: ReturnType<ProvideEditorCallback<DatetimePickerCell>> = cell => {
   const cellData = cell.value.data
-  const { date, displayDate } = cellData
+  const { date, displayDate, type } = cellData
   let newCellData = new Date()
   if (cellData !== undefined) {
     newCellData = cellData.date ?? new Date()
   }
-  const offsetDate = addDST(addTimezoneOffset(new Date(newCellData)))
+  const value = formatValueForHTMLInput(type, newCellData)
 
-  // add 1 because getMonth is 0 index based
-  const year = date?.getFullYear().toString()
-  const mm = appendZeroDateFormat((offsetDate?.getMonth() + 1).toString())
-  const dd = appendZeroDateFormat(offsetDate?.getDate().toString())
   return (
     <input
       required
       style={{ minHeight: 26, border: "none", outline: "none" }}
-      type={"date"}
-      // format example: 2018-07-22
-      value={`${year}-${mm}-${dd}`}
+      type={type}
+      // format example: 2018-07-22 for date
+      // format example: 2017-06-01T08:30 for datetime
+      //   step={
+      //     type === "time" && newCellData.getMilliseconds() !== 0
+      //       ? ".001"
+      //       : undefined
+      //   }
+      value={value}
       autoFocus={true}
       onChange={event => {
         // handle when clear is clicked and value has been wiped
@@ -92,10 +122,10 @@ const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
   )
 }
 
-const renderer: CustomRenderer<DatePickerCell> = {
+const renderer: CustomRenderer<DatetimePickerCell> = {
   kind: GridCellKind.Custom,
-  isMatch: (cell: CustomCell): cell is DatePickerCell =>
-    (cell.data as any).kind === "DatePickerCell",
+  isMatch: (cell: CustomCell): cell is DatetimePickerCell =>
+    (cell.data as any).kind === "DatetimePickerCell",
   draw: (args, cell) => {
     const { displayDate } = cell.data
     drawTextCell(args, displayDate, cell.contentAlign)

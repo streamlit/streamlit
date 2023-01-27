@@ -34,12 +34,7 @@ from typing import (
 
 import pandas as pd
 import pyarrow as pa
-from pandas.api.types import (
-    is_datetime64_any_dtype,
-    is_datetime64tz_dtype,
-    is_float_dtype,
-    is_integer_dtype,
-)
+from pandas.api.types import is_datetime64_any_dtype, is_float_dtype, is_integer_dtype
 from pandas.io.formats.style import Styler
 from typing_extensions import Final, Literal, TypeAlias, TypedDict
 
@@ -56,14 +51,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.type_util import (
-    DataFormat,
-    DataFrameGenericAlias,
-    Key,
-    maybe_convert_datetime_date_edit_df,
-    maybe_convert_datetime_time_edit_df,
-    to_key,
-)
+from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, to_key
 
 if TYPE_CHECKING:
     import numpy as np
@@ -112,6 +100,10 @@ class ColumnConfig(TypedDict, total=False):
             "number",
             "boolean",
             "list",
+            "url",
+            "image",
+            "chart",
+            "range",
             "categorical",
         ]
     ]
@@ -202,7 +194,7 @@ class DataEditorSerde:
         return json.dumps(editing_state, default=str)
 
 
-def _parse_value(value: Union[str, int, float, bool, None], orig_col) -> Any:
+def _parse_value(value: Union[str, int, float, bool, None], dtype) -> Any:
     """Convert a value to the correct type.
 
     Parameters
@@ -219,23 +211,17 @@ def _parse_value(value: Union[str, int, float, bool, None], orig_col) -> Any:
     """
     if value is None:
         return None
-    if pd.api.types.infer_dtype(orig_col) == "time":
-        return maybe_convert_datetime_time_edit_df(value)
-    elif pd.api.types.infer_dtype(orig_col) == "date":
-        return maybe_convert_datetime_date_edit_df(value)
-    elif is_datetime64_any_dtype(orig_col.dtype):
-        if is_datetime64tz_dtype(orig_col.dtype):
-            return pd.to_datetime(value, errors="ignore")
-        else:
-            try:
-                return pd.to_datetime(value, errors="ignore").replace(tzinfo=None)
-            except:
-                # default with timezone
-                return pd.to_datetime(value, errors="ignore")
-    elif is_integer_dtype(orig_col.dtype):
+
+    # TODO(lukasmasuch): how to deal with date & time columns?
+
+    # Datetime values try to parse the value to datetime:
+    # The value is expected to be a ISO 8601 string
+    if is_datetime64_any_dtype(dtype):
+        return pd.to_datetime(value, errors="ignore")
+    elif is_integer_dtype(dtype):
         with contextlib.suppress(ValueError):
             return int(value)
-    elif is_float_dtype(orig_col.dtype):
+    elif is_float_dtype(dtype):
         with contextlib.suppress(ValueError):
             return float(value)
     return value
@@ -265,13 +251,13 @@ def _apply_cell_edits(
             # The edited cell is part of the index
             # To support multi-index in the future: use a tuple of values here
             # instead of a single value
-            df.index.values[row_pos] = _parse_value(value, df.index)
+            df.index.values[row_pos] = _parse_value(value, df.index.dtype)
         else:
             # We need to subtract the number of index levels from col_pos
             # to get the correct column position for Pandas DataFrames
             mapped_column = col_pos - index_count
             df.iat[row_pos, mapped_column] = _parse_value(
-                value, df[df.iloc[mapped_column]]
+                value, df.iloc[:, mapped_column].dtype
             )
 
 
@@ -310,12 +296,14 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
             if col_pos < index_count:
                 # To support multi-index in the future: use a tuple of values here
                 # instead of a single value
-                index_value = _parse_value(value, df.index)
+                index_value = _parse_value(value, df.index.dtype)
             else:
                 # We need to subtract the number of index levels from the col_pos
                 # to get the correct column position for Pandas DataFrames
                 mapped_column = col_pos - index_count
-                new_row[mapped_column] = _parse_value(value, df[df.iloc[mapped_column]])
+                new_row[mapped_column] = _parse_value(
+                    value, df.iloc[:, mapped_column].dtype
+                )
         # Append the new row to the dataframe
         if range_index_stop is not None:
             df.loc[range_index_stop, :] = new_row
@@ -397,8 +385,8 @@ def _apply_data_specific_configs(
             data_df[column_name] = column_data.astype(str)
 
     # Pandas adds a range index as default to all datastructures
-    # but for most of the non-pandas data objects it is unnecessary
-    # to show this index to the user. Therefore, we will hide it as default.
+    # but for most of the non-pandas data objects it
+    # Therefore, we will hide it as default.
     if data_format in [
         DataFormat.SET_OF_VALUES,
         DataFormat.TUPLE_OF_VALUES,
@@ -514,7 +502,6 @@ class DataEditorMixin:
         num_rows : "fixed" or "dynamic"
             If "dynamic", the user can add and delete rows in the data editor.
             If "fixed", the user cannot add or delete rows. Defaults to "fixed".
-            Note: "dynamic" mode does not allow the user to sort columns.
 
         Returns
         -------

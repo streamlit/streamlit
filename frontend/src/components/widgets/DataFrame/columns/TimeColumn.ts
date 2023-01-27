@@ -14,112 +14,31 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-
-import { isNullOrUndefined, notNullOrUndefined } from "src/lib/utils"
-import strftime from "strftime"
-import { TimePickerCell } from "src/components/widgets/DataFrame/customCells/TimePickerCell"
+import { GridCell } from "@glideapps/glide-data-grid"
 
 import {
-  addDST,
-  addTimezoneOffset,
   BaseColumn,
   BaseColumnProps,
-  getErrorCell,
-  isValidDate,
-  removeTInIsoString,
-  removeZeroMillisecondsInISOString,
-  toSafeString,
+  getDateCell,
+  getDateCellContent,
 } from "src/components/widgets/DataFrame/columns/utils"
+import { DatetimePickerCell } from "../customCells/DatetimePickerCell"
 
 export interface TimeColumnParams {
   readonly format?: string
 }
 
 function TimeColumn(props: BaseColumnProps): BaseColumn {
-  const parameters = {
-    ...(props.columnTypeMetadata || {}),
-  } as TimeColumnParams
-
-  const cellTemplate = {
-    kind: GridCellKind.Custom,
-    allowOverlay: true,
-    copyData: "",
-    contentAlign: props.contentAlignment,
-    data: {
-      kind: "TimePickerCell",
-      time: undefined,
-      displayTime: "NA",
-      format: parameters.format ?? "%H:%M:%S.%L",
-    },
-  } as TimePickerCell
-
   return {
     ...props,
     kind: "time",
     sortMode: "smart",
     isEditable: true,
     getCell(data?: any): GridCell {
-      if (isNullOrUndefined(data)) {
-        return {
-          ...cellTemplate,
-          allowOverlay: true,
-          copyData: "",
-          data: {
-            kind: "TimePickerCell",
-            time: undefined,
-            displayTime: "",
-            format: cellTemplate.data.format,
-          },
-          isMissingValue: true,
-        } as TimePickerCell
-      }
-      try {
-        if (typeof data === "bigint") {
-          // Python datetime uses microseconds, but JS & Moment uses milliseconds
-          data = Number(data) / 1000
-        }
-        if (!isValidDate(data)) {
-          return getErrorCell(`Incompatible time value: ${data}`)
-        }
-
-        const dateVersion = new Date(data)
-        // datetime.time is only hours, minutes, etc
-        const withoutYearAndMonth =
-          (dateVersion.getHours() * 60 * 60 +
-            dateVersion.getMinutes() * 60 +
-            dateVersion.getSeconds()) *
-            1000 +
-          dateVersion.getMilliseconds()
-        return {
-          ...cellTemplate,
-          allowOverlay: true,
-          copyData: toSafeString(withoutYearAndMonth),
-          data: {
-            kind: "TimePickerCell",
-            time: data,
-            displayTime: removeTInIsoString(
-              removeZeroMillisecondsInISOString(
-                strftime(
-                  cellTemplate.data.format,
-                  addDST(addTimezoneOffset(dateVersion))
-                )
-              )
-            ),
-            format: cellTemplate.data.format,
-          },
-        } as TimePickerCell
-      } catch (error) {
-        return getErrorCell(
-          `Incompatible time value: ${data}`,
-          `Error: ${error}`
-        )
-      }
+      return getDateCell(props, data, "time")
     },
-    getCellValue(cell: TimePickerCell): string | null {
-      return !notNullOrUndefined(cell.data.time)
-        ? null
-        : new Date(cell.data.time).toISOString()
+    getCellValue(cell: DatetimePickerCell): string | null {
+      return getDateCellContent(cell)
     },
   }
 }
