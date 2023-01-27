@@ -24,6 +24,8 @@ import {
   tableFromIPC,
   Null,
   Field,
+  Dictionary,
+  Struct,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
 import { range, unzip, zip } from "lodash"
@@ -31,6 +33,8 @@ import moment from "moment-timezone"
 import numbro from "numbro"
 
 import { IArrow, Styler as StylerProto } from "src/autogen/proto"
+
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 /** Data types used by ArrowJS. */
 export type DataType =
@@ -41,8 +45,11 @@ export type DataType =
   | Date // datetime
   | Int32Array // int
   | Uint8Array // bytes
+  | Uint32Array // Decimal
   | Vector // arrays
   | StructRow // interval
+  | Dictionary // categorical
+  | Struct // dict
 
 /**
  * A row-major grid of DataFrame index header values.
@@ -301,6 +308,9 @@ export class Quiver {
   /** DataFrame's column labels (matrix of column names). */
   private _columns: Columns
 
+  /** DataFrame's index names. */
+  private _indexNames: string[]
+
   /** DataFrame's data. */
   private _data: Data
 
@@ -321,6 +331,7 @@ export class Quiver {
 
     const index = Quiver.parseIndex(table, schema)
     const columns = Quiver.parseColumns(schema)
+    const indexNames = Quiver.parseIndexNames(schema)
     const data = Quiver.parseData(table, columns, rawColumns)
     const types = Quiver.parseTypes(table, schema)
     const styler = element.styler
@@ -335,6 +346,7 @@ export class Quiver {
     this._types = types
     this._fields = fields
     this._styler = styler
+    this._indexNames = indexNames
   }
 
   /** Parse Arrow table's schema from a JSON string to an object. */
@@ -378,6 +390,22 @@ export class Quiver {
       .filter(
         (column: IndexValue | null): column is IndexValue => column !== null
       )
+  }
+
+  /** Parse DataFrame's index header names. */
+  private static parseIndexNames(schema: Schema): string[] {
+    return schema.index_columns.map(indexName => {
+      // Range indices are treated differently:
+      if (Quiver.isRangeIndex(indexName)) {
+        const { name } = indexName
+        return name || ""
+      }
+      if (indexName.startsWith("__index_level_")) {
+        // Unnamed indices can have a name like "__index_level_0__".
+        return ""
+      }
+      return indexName
+    })
   }
 
   /** Parse DataFrame's column header values. */
@@ -457,22 +485,52 @@ export class Quiver {
     })
   }
 
+  /**
+   * Returns the categorical options defined for a given column.
+   * Returns undefined if the column is not categorical.
+   */
+  public getCategoricalOptions(columnIndex: number): string[] | undefined {
+    // TODO(lukasmasuch): Should we also support headcolumns here?
+    const { columns: numColumns } = this.dimensions
+
+    if (columnIndex < 0 || columnIndex >= numColumns) {
+      throw new Error(`Column index is out of range: ${columnIndex}`)
+    }
+
+    if (!(this._fields[columnIndex].type instanceof Dictionary)) {
+      // This is not a categorical column
+      return undefined
+    }
+
+    const categoricalDict =
+      this._data.getChildAt(columnIndex)?.data[0]?.dictionary
+    if (categoricalDict) {
+      // get all values into a list
+      const values = []
+
+      for (let i = 0; i < categoricalDict.length; i++) {
+        values.push(categoricalDict.get(i))
+      }
+      return values
+    }
+    return undefined
+  }
+
   /** Parse types for each non-index column. */
   private static parseDataType(table: Table, schema: Schema): Type[] {
-    const numDataRows = table.numRows
-    return numDataRows > 0
-      ? schema.columns
-          // Filter out all index columns
-          .filter(
-            columnSchema =>
-              !schema.index_columns.includes(columnSchema.field_name)
-          )
-          .map(columnSchema => ({
-            pandas_type: columnSchema.pandas_type,
-            numpy_type: columnSchema.numpy_type,
-            meta: columnSchema.metadata,
-          }))
-      : []
+    return (
+      schema.columns
+        // Filter out all index columns
+        .filter(
+          columnSchema =>
+            !schema.index_columns.includes(columnSchema.field_name)
+        )
+        .map(columnSchema => ({
+          pandas_type: columnSchema.pandas_type,
+          numpy_type: columnSchema.numpy_type,
+          meta: columnSchema.metadata,
+        }))
+    )
   }
 
   /** Parse styler information from proto. */
@@ -725,7 +783,6 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   /** Takes the data and it's type and nicely formats it. */
   public static format(x: DataType, type?: Type, field?: Field): string {
     const typeName = type && Quiver.getTypeName(type)
-
     if (x == null) {
       return "<NA>"
     }
@@ -776,8 +833,45 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       return String(x)
     }
 
+    if (typeName === "decimal") {
+      // Support decimal type
+      // Unfortunately, this still can fail in certain situations:
+      // https://github.com/apache/arrow/issues/22932
+      // https://github.com/streamlit/streamlit/issues/5864
+      const decimalStr = x.toString()
+      if (
+        isNullOrUndefined(field?.type?.scale) ||
+        Number.isNaN(field?.type?.scale) ||
+        field?.type?.scale > decimalStr.length
+      ) {
+        return decimalStr
+      }
+      const scaleIndex = decimalStr.length - field?.type?.scale
+      return `${decimalStr.slice(0, scaleIndex)}.${decimalStr.slice(
+        scaleIndex
+      )}`
+    }
+
     // Nested arrays and objects.
     if (typeName === "object" || typeName?.startsWith("list")) {
+      if (field?.type instanceof Struct) {
+        // This type is used by python dictionary values
+
+        // Workaround: Arrow JS adds all properties from all cells
+        // as fields. When you convert to string, it will contain lots of fields with
+        // null values. To mitigate this, we filter out null values.
+
+        return JSON.stringify(x, (_key, value) => {
+          if (!notNullOrUndefined(value)) {
+            // Ignore null and undefined values ->
+            return undefined
+          }
+          if (typeof value === "bigint") {
+            return Number(value)
+          }
+          return value
+        })
+      }
       return JSON.stringify(x, (_key, value) =>
         typeof value === "bigint" ? Number(value) : value
       )
@@ -793,6 +887,11 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   /** DataFrame's index (matrix of row names). */
   public get index(): Index {
     return this._index
+  }
+
+  /** DataFrame's index names. */
+  public get indexNames(): string[] {
+    return this._indexNames
   }
 
   /** DataFrame's column labels (matrix of column names). */
@@ -839,6 +938,9 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   /** The DataFrame's dimensions. */
   public get dimensions(): DataFrameDimensions {
+    // TODO(lukasmasuch): this._index[0].length can be 0 if there are rows
+    // but only an empty index. Probably not the best way to cross check the number
+    // of rows.
     const [headerColumns, dataRowsCheck] = this._index.length
       ? [this._index.length, this._index[0].length]
       : [1, 0]

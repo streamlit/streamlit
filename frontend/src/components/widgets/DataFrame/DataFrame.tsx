@@ -14,453 +14,292 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState } from "react"
+import React, { ReactElement } from "react"
 import {
   DataEditor as GlideDataEditor,
-  GridCell,
-  GridColumn,
-  DataEditorProps,
   DataEditorRef,
   GridSelection,
   CompactSelection,
   GridMouseEventArgs,
-  Theme as GlideTheme,
+  drawTextCell,
+  DrawCustomCellCallback,
+  GridCell,
 } from "@glideapps/glide-data-grid"
-import { Resizable, Size as ResizableSize } from "re-resizable"
-import { useColumnSort } from "@glideapps/glide-data-grid-source"
-import { transparentize } from "color2k"
-import { useTheme } from "@emotion/react"
+import { useExtraCells } from "@glideapps/glide-data-grid-cells"
+import { Resizable } from "re-resizable"
 
+import { FormClearHelper } from "src/components/widgets/Form"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
-import { logError } from "src/lib/log"
-import { Theme } from "src/theme"
 import { Arrow as ArrowProto } from "src/autogen/proto"
+import { WidgetInfo, WidgetStateManager } from "src/lib/WidgetStateManager"
+import { debounce } from "src/lib/utils"
 
+import EditingState from "./EditingState"
 import {
-  getCellTemplate,
-  fillCellTemplate,
-  getColumnSortMode,
-  determineColumnType,
-  ColumnType,
-} from "./DataFrameCells"
+  useCustomTheme,
+  useTableSizer,
+  useDataLoader,
+  useDataEditor,
+  useColumnSizer,
+  useColumnSort,
+} from "./hooks"
+import {
+  BaseColumn,
+  toGlideColumn,
+  isMissingValueCell,
+  getTextCell,
+} from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 
-const ROW_HEIGHT = 35
-const MIN_COLUMN_WIDTH = 35
-const MAX_COLUMN_WIDTH = 650
-// Min width for the resizable table container:
-// Based on one column at minimum width + 2 for borders + 1 to prevent overlap problem with selection ring.
-const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 3
-// Min height for the resizable table container:
-// Based on header + one column, and + 2 for borders + 1 to prevent overlap problem with selection ring.
-const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + 3
-const DEFAULT_TABLE_HEIGHT = 400
+// Min column width used for manual and automatic resizing
+const MIN_COLUMN_WIDTH = 50
+// Max column width used for manual resizing
+const MAX_COLUMN_WIDTH = 1000
+// Max column width used for automatic column sizing
+const MAX_COLUMN_AUTO_WIDTH = 500
+// Debounce time for triggering a widget state update
+// This prevents to rapid updates to the widget state.
+const DEBOUNCE_TIME_MS = 100
+// Token used for missing values (null, NaN, etc.)
+const NULL_VALUE_TOKEN = "None"
 
-/**
- * Creates a glide-data-grid compatible theme based on our theme configuration.
- *
- * @param theme: Our theme configuration.
- *
- * @return a glide-data-grid compatible theme.
- */
-export function createDataFrameTheme(theme: Theme): Partial<GlideTheme> {
-  return {
-    // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
-    accentColor: theme.colors.primary,
-    accentFg: theme.colors.white,
-    accentLight: transparentize(theme.colors.primary, 0.9),
-    borderColor: theme.colors.fadedText05,
-    fontFamily: theme.genericFonts.bodyFont,
-    bgSearchResult: transparentize(theme.colors.primary, 0.9),
-    // Header styling:
-    bgIconHeader: theme.colors.fadedText60,
-    fgIconHeader: theme.colors.white,
-    bgHeader: theme.colors.bgMix,
-    bgHeaderHasFocus: theme.colors.secondaryBg,
-    bgHeaderHovered: theme.colors.bgMix, // uses same color as bgHeader to deactivate the hover effect
-    textHeader: theme.colors.fadedText60,
-    textHeaderSelected: theme.colors.white,
-    headerFontStyle: `${theme.fontSizes.sm}`,
-    // Cell styling:
-    baseFontStyle: theme.fontSizes.sm,
-    editorFontSize: theme.fontSizes.sm,
-    textDark: theme.colors.bodyText,
-    textMedium: transparentize(theme.colors.bodyText, 0.2),
-    textLight: theme.colors.fadedText60,
-    textBubble: theme.colors.fadedText60,
-    bgCell: theme.colors.bgColor,
-    bgCellMedium: theme.colors.bgColor, // uses same as bgCell to always have the same background color
-    cellHorizontalPadding: 8,
-    cellVerticalPadding: 3,
-    // Special cells:
-    bgBubble: theme.colors.secondaryBg,
-    bgBubbleSelected: theme.colors.secondaryBg,
-    linkColor: theme.colors.linkText,
-    drilldownBorder: theme.colors.darkenedBgMix25,
-  }
-}
-
-/**
- * The GridColumn type extended with a function to get a template of the given type.
- */
-type GridColumnWithCellTemplate = GridColumn & {
-  getTemplate(): GridCell
-  columnType: ColumnType
-}
-
-/**
- * Returns a list of glide-data-grid compatible columns based on a Quiver instance.
- */
-export function getColumns(
-  element: ArrowProto,
-  data: Quiver
-): GridColumnWithCellTemplate[] {
-  const columns: GridColumnWithCellTemplate[] = []
-  const stretchColumn = element.useContainerWidth || element.width
-
-  if (data.isEmpty()) {
-    // Tables that don't have any columns cause an exception in glide-data-grid.
-    // As a workaround, we are adding an empty index column in this case.
-    columns.push({
-      id: `empty-index`,
-      title: "",
-      hasMenu: false,
-      getTemplate: () => {
-        return getCellTemplate(ColumnType.Text, true, "faded")
-      },
-      columnType: ColumnType.Text,
-      ...(stretchColumn ? { grow: 1 } : {}),
-    } as GridColumnWithCellTemplate)
-    return columns
-  }
-
-  const numIndices = data.types?.index?.length ?? 0
-  const numColumns = data.columns?.[0]?.length ?? 0
-
-  for (let i = 0; i < numIndices; i++) {
-    const quiverType = data.types.index[i]
-    const columnType = determineColumnType(quiverType)
-    columns.push({
-      id: `index-${i}`,
-      // Indices currently have empty titles:
-      title: "",
-      hasMenu: false,
-      getTemplate: () => {
-        return getCellTemplate(columnType, true, "faded")
-      },
-      columnType,
-      ...(stretchColumn ? { grow: 1 } : {}),
-    } as GridColumnWithCellTemplate)
-  }
-
-  for (let i = 0; i < numColumns; i++) {
-    const columnTitle = data.columns[0][i]
-
-    const quiverType = data.types.data[i]
-    const columnType = determineColumnType(quiverType)
-
-    columns.push({
-      id: `column-${columnTitle}-${i}`,
-      title: columnTitle,
-      hasMenu: false,
-      getTemplate: () => {
-        return getCellTemplate(columnType, true)
-      },
-      columnType,
-      ...(stretchColumn ? { grow: 3 } : {}),
-    } as GridColumnWithCellTemplate)
-  }
-  return columns
-}
-
-/**
- * Configuration type for column sorting hook.
- */
-type ColumnSortConfig = {
-  column: GridColumn
-  mode?: "default" | "raw" | "smart"
-  direction?: "asc" | "desc"
-}
-
-/**
- * Updates the column headers based on the sorting configuration.
- */
-function updateSortingHeader(
-  columns: GridColumnWithCellTemplate[],
-  sort: ColumnSortConfig | undefined
-): GridColumnWithCellTemplate[] {
-  if (sort === undefined) {
-    return columns
-  }
-  return columns.map(column => {
-    if (column.id === sort.column.id) {
-      return {
-        ...column,
-        title:
-          sort.direction === "asc" ? `↑ ${column.title}` : `↓ ${column.title}`,
-      }
-    }
-    return column
-  })
-}
-
-/**
- * Create return type for useDataLoader hook based on the DataEditorProps.
- */
-type DataLoaderReturn = { numRows: number; numIndices: number } & Pick<
-  DataEditorProps,
-  "columns" | "getCellContent" | "onColumnResize"
->
-
-/**
- * A custom hook that handles all data loading capabilities for the interactive data table.
- * This also includes the logic to load and configure columns.
- * And features that influence the data representation and column configuration
- * such as column resizing, sorting, etc.
- */
-export function useDataLoader(
-  element: ArrowProto,
-  data: Quiver,
-  sort?: ColumnSortConfig | undefined
-): DataLoaderReturn {
-  // The columns with the corresponding empty template for every type:
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [columnSizes, setColumnSizes] = useState<Map<string, number>>(
-    () => new Map()
-  )
-
-  const columns = getColumns(element, data).map(column => {
-    // Apply column widths from state
-    if (
-      column.id &&
-      columnSizes.has(column.id) &&
-      columnSizes.get(column.id) !== undefined
-    ) {
-      return {
-        ...column,
-        width: columnSizes.get(column.id),
-        grow: 0, // Deactivate grow for this column
-      } as GridColumnWithCellTemplate
-    }
-    return column
-  })
-
-  // Number of rows of the table minus 1 for the header row:
-  const numRows = data.isEmpty() ? 1 : data.dimensions.rows - 1
-  const numIndices = data.types?.index?.length ?? 0
-
-  const onColumnResize = React.useCallback(
-    (
-      column: GridColumn,
-      newSize: number,
-      colIndex: number,
-      newSizeWithGrow: number
-    ) => {
-      if (column.id) {
-        setColumnSizes(new Map(columnSizes).set(column.id, newSizeWithGrow))
-      }
-    },
-    [columns]
-  )
-
-  const getCellContent = React.useCallback(
-    ([col, row]: readonly [number, number]): GridCell => {
-      if (data.isEmpty()) {
-        return {
-          ...getCellTemplate(ColumnType.Text, true, "faded"),
-          displayData: "empty",
-        } as GridCell
-      }
-
-      if (col > columns.length - 1) {
-        // This should never happen
-        return getCellTemplate(ColumnType.Text, true)
-      }
-
-      const cellTemplate = columns[col].getTemplate()
-      if (row > numRows - 1) {
-        // This should never happen
-        return cellTemplate
-      }
-      try {
-        // Quiver has the header in first row
-        const quiverCell = data.getCell(row + 1, col)
-        return fillCellTemplate(cellTemplate, quiverCell, data.cssStyles)
-      } catch (error) {
-        // This should not happen in read-only table.
-        logError(error)
-        return cellTemplate
-      }
-    },
-    [columns, numRows, data]
-  )
-
-  const { getCellContent: getCellContentSorted } = useColumnSort({
-    columns,
-    getCellContent,
-    rows: numRows,
-    sort,
-  })
-
-  const updatedColumns = updateSortingHeader(columns, sort)
-
-  return {
-    numRows,
-    numIndices,
-    columns: updatedColumns,
-    getCellContent: getCellContentSorted,
-    onColumnResize,
-  }
-}
 export interface DataFrameProps {
   element: ArrowProto
   data: Quiver
   width: number
   height?: number
+  disabled: boolean
+  widgetMgr: WidgetStateManager
   isFullScreen?: boolean
 }
 
+/**
+ * If a cell is marked as missing, we draw a placeholder symbol with a faded text color.
+ * This is done by providing a custom cell renderer.
+ */
+const drawMissingCells: DrawCustomCellCallback = args => {
+  const { cell, theme } = args
+  if (isMissingValueCell(cell)) {
+    drawTextCell(
+      {
+        ...args,
+        theme: {
+          ...theme,
+          textDark: theme.textLight,
+          textMedium: theme.textLight,
+        },
+        // The following props are just added for technical reasons:
+        // @ts-ignore
+        spriteManager: {},
+        hyperWrapping: false,
+      },
+      NULL_VALUE_TOKEN,
+      cell.contentAlign
+    )
+    return true
+  }
+
+  return false
+}
+
+/**
+ * The main component used by dataframe & data_editor to render an editable table.
+ *
+ * @param element - The element's proto message
+ * @param data - The Arrow data to render (extracted from the proto message)
+ * @param width - The width of the container
+ * @param height - The height of the container
+ * @param disabled - Whether the widget is disabled
+ * @param widgetMgr - The widget manager
+ * @param isFullScreen - Whether the widget is in full screen mode
+ */
 function DataFrame({
   element,
   data,
   width: containerWidth,
   height: containerHeight,
+  disabled,
+  widgetMgr,
   isFullScreen,
 }: DataFrameProps): ReactElement {
-  const [sort, setSort] = React.useState<ColumnSortConfig>()
+  const resizableRef = React.useRef<Resizable>(null)
   const dataEditorRef = React.useRef<DataEditorRef>(null)
-  const theme: Theme = useTheme()
 
-  const stretchColumn = element.useContainerWidth || element.width
-
-  const { numRows, numIndices, columns, getCellContent, onColumnResize } =
-    useDataLoader(element, data, sort)
+  const extraCellArgs = useExtraCells()
+  const theme = useCustomTheme()
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
 
   const [gridSelection, setGridSelection] = React.useState<GridSelection>({
     columns: CompactSelection.empty(),
     rows: CompactSelection.empty(),
+    current: undefined,
   })
 
-  const resizableRef = React.useRef<Resizable>(null)
+  // This callback is used to clear all selections (row/column/cell)
+  const clearSelection = React.useCallback(() => {
+    setGridSelection({
+      columns: CompactSelection.empty(),
+      rows: CompactSelection.empty(),
+      current: undefined,
+    })
+  }, [])
 
-  const onHeaderClick = React.useCallback(
-    (index: number) => {
-      let sortDirection = "asc"
-      const clickedColumn = columns[index]
-
-      if (sort && sort.column.id === clickedColumn.id) {
-        // The clicked column is already sorted
-        if (sort.direction === "asc") {
-          // Sort column descending
-          sortDirection = "desc"
-        } else {
-          // Remove sorting of column
-          setSort(undefined)
-          return
-        }
-      }
-
-      setSort({
-        column: clickedColumn,
-        direction: sortDirection,
-        mode: getColumnSortMode(
-          (clickedColumn as GridColumnWithCellTemplate).columnType
-        ),
-      } as ColumnSortConfig)
+  // This callback is used to refresh the rendering of selected cells
+  const refreshCells = React.useCallback(
+    (
+      cells: {
+        cell: [number, number]
+      }[]
+    ) => {
+      dataEditorRef.current?.updateCells(cells)
     },
-    [sort, columns]
+    []
+  )
+  // Number of rows of the table minus 1 for the header row:
+  const originalNumRows = Math.max(0, data.dimensions.rows - 1)
+  // For empty tables (editing mode != dynamic), we show an extra row that
+  // contains "empty" as a way to indicate that the table is empty.
+  const showEmptyState =
+    originalNumRows === 0 &&
+    element.editingMode !== ArrowProto.EditingMode.DYNAMIC
+
+  const editingState = React.useRef<EditingState>(
+    new EditingState(originalNumRows)
   )
 
-  // Automatic table height calculation: numRows +1 because of header, and +2 pixels for borders
-  let maxHeight = Math.max(
-    (numRows + 1) * ROW_HEIGHT + 1 + 2,
-    MIN_TABLE_HEIGHT
+  const [numRows, setNumRows] = React.useState(
+    editingState.current.getNumRows()
   )
-  let initialHeight = Math.min(maxHeight, DEFAULT_TABLE_HEIGHT)
 
-  if (element.height) {
-    // User has explicitly configured a height
-    initialHeight = Math.max(element.height, MIN_TABLE_HEIGHT)
-    maxHeight = Math.max(element.height, maxHeight)
-  }
+  React.useEffect(() => {
+    editingState.current = new EditingState(originalNumRows)
+    setNumRows(editingState.current.getNumRows())
+  }, [originalNumRows])
 
-  if (containerHeight) {
-    // If container height is set (e.g. when used in fullscreen)
-    // The maxHeight and height should not be larger than container height
-    initialHeight = Math.min(initialHeight, containerHeight)
-    maxHeight = Math.min(maxHeight, containerHeight)
+  const resetEditingState = React.useCallback(() => {
+    editingState.current = new EditingState(originalNumRows)
+    setNumRows(editingState.current.getNumRows())
+  }, [originalNumRows])
 
-    if (!element.height) {
-      // If no explicit height is set, set height to max height (fullscreen mode)
-      initialHeight = maxHeight
-    }
-  }
+  const { columns: originalColumns, getCellContent: getOriginalCellContent } =
+    useDataLoader(element, data, numRows, disabled, editingState)
 
-  let initialWidth: number | undefined // If container width is undefined, auto set based on column widths
-  let maxWidth = containerWidth
+  const { columns, sortColumn, getOriginalIndex, getCellContent } =
+    useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
-  if (element.useContainerWidth) {
-    // Always use the full container width
-    initialWidth = containerWidth
-  } else if (element.width) {
-    // User has explicitly configured a width
-    initialWidth = Math.min(
-      Math.max(element.width, MIN_TABLE_WIDTH),
-      containerWidth
-    )
-    maxWidth = Math.min(Math.max(element.width, maxWidth), containerWidth)
-  }
-
-  const [resizableSize, setResizableSize] = React.useState<ResizableSize>({
-    width: initialWidth || "100%",
-    height: initialHeight,
-  })
-
-  React.useLayoutEffect(() => {
-    // This prevents weird table resizing behavior if the container width
-    // changes and the table uses the full container width.
-    if (
-      resizableRef.current &&
-      element.useContainerWidth &&
-      resizableSize.width === "100%"
-    ) {
-      setResizableSize({
-        width: containerWidth,
-        height: resizableSize.height,
-      })
-    }
-  }, [containerWidth])
-
-  React.useLayoutEffect(() => {
-    if (resizableRef.current) {
-      // Reset the height if the number of rows changes (e.g. via add_rows)
-      setResizableSize({
-        width: resizableSize.width,
-        height: initialHeight,
-      })
-    }
-  }, [numRows])
-
-  React.useLayoutEffect(() => {
-    if (resizableRef.current) {
-      if (isFullScreen) {
-        setResizableSize({
-          width: stretchColumn ? maxWidth : "100%",
-          height: maxHeight,
-        })
-      } else {
-        setResizableSize({
-          width: initialWidth || "100%",
-          height: initialHeight,
-        })
+  /**
+   * This callback should be called after any edits have been applied to the data.
+   * It will finish up the editing by updating the number of rows, clearing the selection,
+   * and triggering a rerun of the script.
+   *
+   * @param clearSelections - Whether to clear the selection. This is usually done after deleting rows.
+   * @param triggerRerun - Whether to trigger a rerun of the script after applying edits
+   */
+  const applyEdits = React.useCallback(
+    (clearSelections = false, triggerRerun = true) => {
+      if (numRows !== editingState.current.getNumRows()) {
+        // Reset the number of rows if it has been changed in the editing state
+        setNumRows(editingState.current.getNumRows())
       }
+
+      if (clearSelections) {
+        clearSelection()
+      }
+
+      if (triggerRerun) {
+        // Use debounce to prevent rapid updates to the widget state.
+        debounce(DEBOUNCE_TIME_MS, () => {
+          const currentEditingState = editingState.current.toJson(columns)
+          let currentWidgetState = widgetMgr.getStringValue(
+            element as WidgetInfo
+          )
+
+          if (currentWidgetState === undefined) {
+            // Create an empty widget state
+            currentWidgetState = new EditingState(0).toJson([])
+          }
+
+          // Only update if there is actually a difference between editing and widget state
+          if (currentEditingState !== currentWidgetState) {
+            widgetMgr.setStringValue(
+              element as WidgetInfo,
+              currentEditingState,
+              {
+                fromUi: true,
+              }
+            )
+          }
+        })()
+      }
+    },
+    [widgetMgr, element, numRows]
+  )
+
+  const { onCellEdited, onPaste, onRowAppended, onDelete } = useDataEditor(
+    columns,
+    element.editingMode !== ArrowProto.EditingMode.DYNAMIC,
+    editingState,
+    getCellContent,
+    getOriginalIndex,
+    refreshCells,
+    applyEdits
+  )
+
+  const { columns: glideColumns, onColumnResize } = useColumnSizer(
+    columns.map(column => toGlideColumn(column))
+  )
+
+  const {
+    rowHeight,
+    minHeight,
+    maxHeight,
+    minWidth,
+    maxWidth,
+    resizableSize,
+    setResizableSize,
+  } = useTableSizer(
+    element,
+    numRows,
+    containerWidth,
+    containerHeight,
+    isFullScreen
+  )
+
+  // This is used as fallback in case the table is empty to
+  // insert cells indicating this state:
+  const getEmptyStateContent = React.useCallback(
+    ([_col, _row]: readonly [number, number]): GridCell => {
+      return {
+        ...getTextCell(true, false),
+        displayData: "empty",
+        contentAlign: "center",
+        allowOverlay: false,
+        themeOverride: {
+          textDark: theme.textLight,
+        },
+        span: [0, Math.max(columns.length - 1, 0)],
+      } as GridCell
+    },
+    [columns]
+  )
+
+  // This is required for the form clearing functionality:
+  React.useEffect(() => {
+    const formClearHelper = new FormClearHelper()
+    formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      resetEditingState
+    )
+
+    return () => {
+      formClearHelper.disconnect()
     }
-  }, [isFullScreen])
+  }, [])
 
   return (
     <StyledResizableContainer
@@ -468,11 +307,7 @@ function DataFrame({
       onBlur={() => {
         // If the container loses focus, clear the current selection
         if (!isFocused) {
-          setGridSelection({
-            columns: CompactSelection.empty(),
-            rows: CompactSelection.empty(),
-            current: undefined,
-          } as GridSelection)
+          clearSelection()
         }
       }}
     >
@@ -481,12 +316,14 @@ function DataFrame({
         ref={resizableRef}
         defaultSize={resizableSize}
         style={{
-          border: `1px solid ${theme.colors.fadedText05}`,
+          border: `1px solid ${theme.borderColor}`,
+          borderRadius: `${theme.tableBorderRadius}`,
         }}
-        minHeight={MIN_TABLE_HEIGHT}
+        minHeight={minHeight}
         maxHeight={maxHeight}
-        minWidth={MIN_TABLE_WIDTH}
+        minWidth={minWidth}
         maxWidth={maxWidth}
+        size={resizableSize}
         enable={{
           top: false,
           right: false,
@@ -497,9 +334,8 @@ function DataFrame({
           bottomLeft: false,
           topLeft: false,
         }}
-        grid={[1, ROW_HEIGHT]}
-        snapGap={ROW_HEIGHT / 3}
-        size={resizableSize}
+        grid={[1, rowHeight]}
+        snapGap={rowHeight / 3}
         onResizeStop={(_event, _direction, _ref, _delta) => {
           if (resizableRef.current) {
             setResizableSize({
@@ -517,21 +353,34 @@ function DataFrame({
         <GlideDataEditor
           className="glideDataEditor"
           ref={dataEditorRef}
-          columns={columns}
-          rows={numRows}
+          columns={glideColumns}
+          rows={showEmptyState ? 1 : numRows}
           minColumnWidth={MIN_COLUMN_WIDTH}
           maxColumnWidth={MAX_COLUMN_WIDTH}
-          rowHeight={ROW_HEIGHT}
-          headerHeight={ROW_HEIGHT}
-          getCellContent={getCellContent}
+          maxColumnAutoWidth={MAX_COLUMN_AUTO_WIDTH}
+          rowHeight={rowHeight}
+          headerHeight={rowHeight}
+          getCellContent={
+            showEmptyState ? getEmptyStateContent : getCellContent
+          }
           onColumnResize={onColumnResize}
           // Freeze all index columns:
-          freezeColumns={numIndices}
+          freezeColumns={
+            showEmptyState
+              ? 0
+              : columns.filter((col: BaseColumn) => col.isIndex).length
+          }
           smoothScrollX={true}
-          // Only deactivate smooth mode for vertical scrolling for large tables:
-          smoothScrollY={numRows < 100000}
+          smoothScrollY={true}
           // Show borders between cells:
-          verticalBorder={true}
+          verticalBorder={(col: number) =>
+            // Show no border for last column in certain situations
+            // This is required to prevent the cell selection border to not be cut off
+            !(
+              col >= columns.length &&
+              (element.useContainerWidth || resizableSize.width === "100%")
+            )
+          }
           // Activate copy to clipboard functionality:
           getCellsForSelection={true}
           // Deactivate row markers and numbers:
@@ -541,14 +390,14 @@ function DataFrame({
           columnSelect={"none"}
           rowSelect={"none"}
           // Activate search:
-          keybindings={{ search: true }}
+          keybindings={{ search: true, downFill: true }}
           // Header click is used for column sorting:
-          onHeaderClicked={onHeaderClick}
+          onHeaderClicked={showEmptyState ? undefined : sortColumn}
           gridSelection={gridSelection}
-          onGridSelectionChange={(newSelection: GridSelection) => {
-            setGridSelection(newSelection)
-          }}
-          theme={createDataFrameTheme(theme)}
+          onGridSelectionChange={setGridSelection}
+          // Apply different styling to missing cells:
+          drawCell={drawMissingCells}
+          theme={theme}
           onMouseMove={(args: GridMouseEventArgs) => {
             // Determine if the dataframe is focused or not
             if (args.kind === "out-of-bounds" && isFocused) {
@@ -557,10 +406,48 @@ function DataFrame({
               setIsFocused(true)
             }
           }}
+          // Add shadow for index columns and header on scroll:
+          fixedShadowX={true}
+          fixedShadowY={true}
+          // onPaste is deactivated in the read-only mode:
+          onPaste={false}
           experimental={{
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
             scrollbarWidthOverride: 1,
           }}
+          // Add support for additional cells:
+          customRenderers={extraCellArgs.customRenderers}
+          // If element is editable, add additional properties:
+          {...(!showEmptyState &&
+            element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+            !disabled && {
+              // Support fill handle for bulk editing:
+              fillHandle: true,
+              // Support editing:
+              onCellEdited,
+              // Support pasting data for bulk editing:
+              onPaste,
+              // Support deleting cells & rows:
+              onDelete,
+            })}
+          {...(element.editingMode === ArrowProto.EditingMode.DYNAMIC && {
+            // Support adding rows:
+            trailingRowOptions: {
+              sticky: false,
+              tint: true,
+            },
+            rowMarkerTheme: {
+              bgCell: theme.bgHeader,
+              bgCellMedium: theme.bgHeader,
+            },
+            rowMarkers: "checkbox",
+            rowSelectionMode: "auto",
+            rowSelect: disabled ? "none" : "multi",
+            // Support adding rows:
+            onRowAppended: disabled ? undefined : onRowAppended,
+            // Deactivate sorting, since it is not supported with dynamic editing:
+            onHeaderClicked: undefined,
+          })}
         />
       </Resizable>
     </StyledResizableContainer>

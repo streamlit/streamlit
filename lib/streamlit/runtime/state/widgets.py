@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Dict, Mapping, Optional, Union
 from typing_extensions import Final, TypeAlias
 
 from streamlit.errors import DuplicateWidgetID
+from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.Button_pb2 import Button
 from streamlit.proto.CameraInput_pb2 import CameraInput
 from streamlit.proto.Checkbox_pb2 import Checkbox
@@ -55,6 +56,7 @@ if TYPE_CHECKING:
 
 # Protobuf types for all widgets.
 WidgetProto: TypeAlias = Union[
+    Arrow,
     Button,
     CameraInput,
     Checkbox,
@@ -101,6 +103,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
         "text_input": "string_value",
         "time_input": "string_value",
         "component_instance": "json_value",
+        "data_editor": "string_value",
     }
 )
 
