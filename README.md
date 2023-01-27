@@ -43,11 +43,12 @@ Streamlit comes in with [a ton of additional powerful elements](https://docs.str
 <table border="0">
    <tr>
      <td><img src="https://docs.streamlit.io/images/api/date_input.jpg" style="max-height:150; width:auto; display:block;"></td>
-     <td><img src="https://user-images.githubusercontent.com/7164864/215105644-b77445fa-2668-41dc-b560-d4b80e347664.png"  style="max-height:150; width:auto; display:block;"></td>
+     <td><img src="https://user-images.githubusercontent.com/7164864/215110064-5eb4e294-8f30-4933-9563-0275230e52b5.gif"  style="max-height:150; width:auto; display:block;"></td>
      <td><img src="https://docs.streamlit.io/images/api/line_chart.jpg" style="max-height:150; width:auto; display:block;"></td>
      <td><img src="https://docs.streamlit.io/images/api/tabs.jpg" style="max-height:150; width:auto; display:block;"></td>
      <td><img src="https://docs.streamlit.io/images/mpa-add-pages.png" style="max-height:150; width:auto; display:block;"></td>
-     <td><img src="https://docs.streamlit.io/images/api/balloons.jpg" style="max-height:150; width:auto; display:block;"></td>
+     <td><img src="https://user-images.githubusercontent.com/7164864/215109229-6ae9111f-e5c1-4f0b-b3a2-87a79268ccc9.gif" style="max-height:150; width:auto; display:block;"></td>
+
   </tr>
     <tr>
       <td>Input widgets</td>
@@ -66,25 +67,23 @@ Our vibrant creators community also extends Streamlit capabilities using [Stream
 There's so much you can build with Streamlit!
 - 🧬  [Science & technology apps](https://streamlit.io/gallery?category=science-technology)
 - 💬  [NLP & language apps](https://streamlit.io/gallery?category=nlp-language)
-- 👀  [Computer vision & images](https://streamlit.io/gallery?category=computer-vision-images)
-- 🏦  [Finance & business](https://streamlit.io/gallery?category=finance-business)
-- 🗺  [Geography & society](https://streamlit.io/gallery?category=geography-society)
-- ...
+- 👀  [Computer vision apps](https://streamlit.io/gallery?category=computer-vision-images)
+- 🏦  [Finance & business apps](https://streamlit.io/gallery?category=finance-business)
+- 🗺  [Geography & society apps](https://streamlit.io/gallery?category=geography-society)
+- and more!
 
-**Discover more in [our gallery](https://streamlit.io/gallery)** 🎈
+**Check out [our gallery](https://streamlit.io/gallery)** 🎈
 
 ## Community Cloud
   
 Deploy, manage and share your apps for free using our [Community Cloud](https://streamlit.io/cloud)! Sign-up [here](https://share.streamlit.io/signup). <br><br>
 <img src="https://user-images.githubusercontent.com/7164864/214965336-64500db3-0d79-4a20-8052-2dda883902d2.gif" width="400"></img>
 
-## Other
+## Resources
 
-- Learn all about Streamlit in [our docs](https://docs.streamlit.io)
-- Ask/answer questions and showcase your work in [our forum](https://discuss.streamlit.io)
-- Stay up to date on our latest news and releases in [our blog](https://blog.streamlit.io)
-- Extend Streamlit capabilities by installing or creating your own [Streamlit Components](https://streamlit.io/components) 🧩
-- Help others find and play with your app by using the Streamlit GitHub badge in your repository
+- Streamlit [docs](https://docs.streamlit.io), [community forum](https://discuss.streamlit.io) and [blog](https://blog.streamlit.io)
+- Extend Streamlit's capabilities by installing or creating your own [Streamlit Components](https://streamlit.io/components).
+- Help others find and play with your app by using the Streamlit GitHub badge in your repository:
 ```markdown
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](URL_TO_YOUR_APP)
 ```
