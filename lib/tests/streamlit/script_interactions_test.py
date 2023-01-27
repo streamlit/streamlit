@@ -11,14 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from unittest.mock import patch
-
 import pytest
 
 from streamlit.testing.script_interactions import InteractiveScriptTests
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class InteractiveScriptTest(InteractiveScriptTests):
     def test_widgets_script(self):
         script = self.script_from_filename(__file__, "widgets_script.py")
