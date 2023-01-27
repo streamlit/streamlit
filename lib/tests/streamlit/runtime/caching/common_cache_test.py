@@ -921,7 +921,6 @@ class CommonCacheThreadingTest(unittest.TestCase):
         self.assertEqual(1, get_counter())
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class WidgetReplayInteractionTest(InteractiveScriptTests):
     def test_dynamic_widget_replay(self):
         script = self.script_from_filename(__file__, "cached_widget_replay_dynamic.py")
