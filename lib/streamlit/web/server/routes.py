@@ -142,7 +142,7 @@ class HealthHandler(_SpecialRequestHandler):
         self._callback = callback
 
     async def get(self):
-        if self.request.uri and not self.request.uri.startswith("_stcore/"):
+        if self.request.uri and "_stcore/" not in self.request.uri:
             new_path = (
                 "/_stcore/script-health-check"
                 if "script-health-check" in self.request.uri

@@ -40,14 +40,15 @@ from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunction,
+    create_cache_wrapper,
+    ttl_to_seconds,
+)
+from streamlit.runtime.caching.cached_message_replay import (
+    CachedMessageReplayContext,
     CachedResult,
-    CacheMessagesCallStack,
-    CacheWarningCallStack,
     ElementMsgData,
     MsgData,
     MultiCacheResults,
-    create_cache_wrapper,
-    ttl_to_seconds,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
@@ -64,8 +65,7 @@ _CACHE_DIR_NAME = "cache"
 # (`@st.cache_data` was originally called `@st.memo`)
 _CACHED_FILE_EXTENSION = "memo"
 
-CACHE_DATA_CALL_STACK = CacheWarningCallStack(CacheType.DATA)
-CACHE_DATA_MESSAGE_CALL_STACK = CacheMessagesCallStack(CacheType.DATA)
+CACHE_DATA_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.DATA)
 
 # The cache persistence options we support: "disk" or None
 CachePersistType: TypeAlias = Union[Literal["disk"], None]
@@ -97,12 +97,8 @@ class CacheDataFunction(CachedFunction):
         return CacheType.DATA
 
     @property
-    def warning_call_stack(self) -> CacheWarningCallStack:
-        return CACHE_DATA_CALL_STACK
-
-    @property
-    def message_call_stack(self) -> CacheMessagesCallStack:
-        return CACHE_DATA_MESSAGE_CALL_STACK
+    def cached_message_replay_ctx(self) -> CachedMessageReplayContext:
+        return CACHE_DATA_MESSAGE_REPLAY_CTX
 
     @property
     def display_name(self) -> str:
