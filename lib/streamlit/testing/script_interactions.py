@@ -27,11 +27,11 @@ from streamlit.testing.local_script_runner import LocalScriptRunner
 
 
 class InteractiveScriptTests(unittest.TestCase):
-    script_dir: tempfile.TemporaryDirectory
+    tmp_script_dir: tempfile.TemporaryDirectory[str]
 
     def setUp(self) -> None:
         super().setUp()
-        self.script_dir = tempfile.TemporaryDirectory()
+        self.tmp_script_dir = tempfile.TemporaryDirectory()
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
@@ -49,14 +49,14 @@ class InteractiveScriptTests(unittest.TestCase):
         string in the test itself, without having to create a separate file
         for it.
         """
-        path = pathlib.Path(self.script_dir.name, script_name)
+        path = pathlib.Path(self.tmp_script_dir.name, script_name)
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
         return LocalScriptRunner(str(path))
 
-    def script_from_filename(self, script_name: str) -> LocalScriptRunner:
+    def script_from_filename(
+        self, test_dir: str, script_name: str
+    ) -> LocalScriptRunner:
         """Create a runner for the script with the given name, for testing."""
-        script_path = os.path.join(
-            os.path.dirname(__file__), "streamlit", "test_data", script_name
-        )
+        script_path = os.path.join(os.path.dirname(test_dir), "test_data", script_name)
         return LocalScriptRunner(script_path)
