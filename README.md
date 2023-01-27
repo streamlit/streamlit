@@ -60,7 +60,7 @@ Streamlit comes in with [a ton of additional powerful elements](https://docs.str
    </tr>
 <table>
 
-Our vibrant creators community also extends Streamlit capabilities using 🧩 [Streamlit Components](https://streamlit.io/components).
+Our vibrant creators community also extends Streamlit capabilities using  🧩 [Streamlit Components](https://streamlit.io/components).
 
 ## Get inspired 
  
