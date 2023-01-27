@@ -20,11 +20,13 @@ import functools
 import hashlib
 import inspect
 import math
+import threading
 import time
 import types
 from abc import abstractmethod
+from collections import defaultdict
 from datetime import timedelta
-from typing import Any, Callable
+from typing import Any
 
 from streamlit import type_util
 from streamlit.elements.spinner import spinner
@@ -77,6 +79,10 @@ UNEVALUATED_DATAFRAME_TYPES = (
 class Cache:
     """Function cache interface. Caches persist across script runs."""
 
+    def __init__(self):
+        self._value_locks: dict[str, threading.Lock] = defaultdict(threading.Lock)
+        self._value_locks_lock = threading.Lock()
+
     @abstractmethod
     def read_result(self, value_key: str) -> CachedResult:
         """Read a value and associated messages from the cache.
@@ -94,18 +100,36 @@ class Cache:
         """Write a value and associated messages to the cache, overwriting any existing
         result that uses the value_key.
         """
+        # We *could* `del self._value_locks[value_key]` here, since nobody will be taking
+        # a compute_value_lock for this value_key after the result is written.
         raise NotImplementedError
+
+    def compute_value_lock(self, value_key: str) -> threading.Lock:
+        """Return the lock that should be held while computing a new cached value.
+        In a popular app with a cache that hasn't been pre-warmed, many sessions may try
+        to access a not-yet-cached value simultaneously. We use a lock to ensure that
+        only one of those sessions computes the value, and the others block until
+        the value is computed.
+        """
+        with self._value_locks_lock:
+            return self._value_locks[value_key]
+
+    def clear(self):
+        """Clear all values from this cache."""
+        with self._value_locks_lock:
+            self._value_locks.clear()
+        self._clear()
 
     @abstractmethod
-    def clear(self) -> None:
-        """Clear all values from this function cache."""
+    def _clear(self) -> None:
+        """Subclasses must implement this to perform cache-clearing logic."""
         raise NotImplementedError
 
 
-class CachedFunction:
+class CachedFuncInfo:
     """Encapsulates data for a cached function instance.
 
-    CachedFunction instances are scoped to a single script run - they're not
+    CachedFuncInfo instances are scoped to a single script run - they're not
     persistent.
     """
 
@@ -132,96 +156,149 @@ class CachedFunction:
         raise NotImplementedError
 
 
-def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
-    """Create a wrapper for a CachedFunction. This implements the common
-    plumbing for both st.cache_data and st.cache_resource.
+class CachedFunc:
+    """A callable wrapper around a CachedFuncInfo. We create and return a new
+    CachedFunc instance from the `@st.cache_data` and `@st.cache_resource`
+    decorators.
     """
-    func = cached_func.func
-    function_key = _make_function_key(cached_func.cache_type, func)
 
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        """Wrapper function that only calls the underlying function on a cache miss."""
+    def __init__(self, info: CachedFuncInfo):
+        self._info = info
+        self._function_key = _make_function_key(info.cache_type, info.func)
 
-        # Retrieve the function's cache object. We must do this inside the
-        # wrapped function, because caches can be invalidated at any time.
-        cache = cached_func.get_function_cache(function_key)
+        functools.update_wrapper(self, info.func)
 
-        name = func.__qualname__
+    def __call__(self, *args, **kwargs) -> Any:
+        """The wrapper. We'll only call our underlying function on a cache miss."""
 
-        if isinstance(cached_func.show_spinner, bool):
+        name = self._info.func.__qualname__
+
+        if isinstance(self._info.show_spinner, bool):
             if len(args) == 0 and len(kwargs) == 0:
                 message = f"Running `{name}()`."
             else:
                 message = f"Running `{name}(...)`."
         else:
-            message = cached_func.show_spinner
+            message = self._info.show_spinner
 
-        def get_or_create_cached_value():
-            # Generate the key for the cached value. This is based on the
-            # arguments passed to the function.
-            value_key = _make_value_key(cached_func.cache_type, func, *args, **kwargs)
+        if self._info.show_spinner or isinstance(self._info.show_spinner, str):
+            with spinner(message):
+                return self._get_or_create_cached_value(args, kwargs)
+        else:
+            return self._get_or_create_cached_value(args, kwargs)
 
+    def _get_or_create_cached_value(
+        self, func_args: tuple[Any, ...], func_kwargs: dict[str, Any]
+    ) -> Any:
+        # Retrieve the function's cache object. We must do this "just-in-time"
+        # (as opposed to in the constructor), because caches can be invalidated
+        # at any time.
+        cache = self._info.get_function_cache(self._function_key)
+
+        # Generate the key for the cached value. This is based on the
+        # arguments passed to the function.
+        value_key = _make_value_key(
+            cache_type=self._info.cache_type,
+            func=self._info.func,
+            func_args=func_args,
+            func_kwargs=func_kwargs,
+        )
+
+        try:
+            cached_result = cache.read_result(value_key)
+            return self._handle_cache_hit(cached_result)
+        except CacheKeyNotFoundError:
+            return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+
+    def _handle_cache_hit(self, result: CachedResult) -> Any:
+        """Handle a cache hit: replay the result's cached messages, and return its value."""
+        replay_cached_messages(
+            result,
+            self._info.cache_type,
+            self._info.func,
+        )
+        return result.value
+
+    def _handle_cache_miss(
+        self,
+        cache: Cache,
+        value_key: str,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+    ) -> Any:
+        """Handle a cache miss: compute a new cached value, write it back to the cache,
+        and return that newly-computed value.
+        """
+
+        # Implementation notes:
+        # - We take a "compute_value_lock" before computing our value. This ensures that
+        #   multiple sessions don't try to compute the same value simultaneously.
+        #
+        # - We use a different lock for each value_key, as opposed to a single lock for
+        #   the entire cache, so that unrelated value computations don't block on each other.
+        #
+        # - When retrieving a cache entry that may not yet exist, we use a "double-checked locking"
+        #   strategy: first we try to retrieve the cache entry without taking a value lock. (This
+        #   happens in `_get_or_create_cached_value()`.) If that fails because the value hasn't
+        #   been computed yet, we take the value lock and then immediately try to retrieve cache entry
+        #   *again*, while holding the lock. If the cache entry exists at this point, it means that
+        #   another thread computed the value before us.
+        #
+        #   This means that the happy path ("cache entry exists") is a wee bit faster because
+        #   no lock is acquired. But the unhappy path ("cache entry needs to be recomputed") is
+        #   a wee bit slower, because we do two lookups for the entry.
+
+        with cache.compute_value_lock(value_key):
+            # We've acquired the lock - but another thread may have acquired it first
+            # and already computed the value. So we need to test for a cache hit again,
+            # before computing.
             try:
-                result = cache.read_result(value_key)
-                _LOGGER.debug("Cache hit: %s", func)
-
-                replay_cached_messages(result, cached_func.cache_type, func)
-
-                return_value = result.value
+                cached_result = cache.read_result(value_key)
+                # Another thread computed the value before us. Early exit!
+                return self._handle_cache_hit(cached_result)
 
             except CacheKeyNotFoundError:
-                _LOGGER.debug("Cache miss: %s", func)
-
-                with cached_func.cached_message_replay_ctx.calling_cached_function(
-                    func, cached_func.allow_widgets
+                # We acquired the lock before any other thread. Compute the value!
+                with self._info.cached_message_replay_ctx.calling_cached_function(
+                    self._info.func, self._info.allow_widgets
                 ):
-                    return_value = func(*args, **kwargs)
+                    computed_value = self._info.func(*func_args, **func_kwargs)
 
-                messages = cached_func.cached_message_replay_ctx._most_recent_messages
+                # We've computed our value, and now we need to write it back to the cache
+                # along with any "replay messages" that were generated during value computation.
+                messages = self._info.cached_message_replay_ctx._most_recent_messages
                 try:
-                    cache.write_result(value_key, return_value, messages)
-                except (
-                    CacheError,
-                    RuntimeError,
-                ):  # RuntimeError will be raised by Apache Spark, if we do not collect dataframe before using st.experimental_memo
+                    cache.write_result(value_key, computed_value, messages)
+                    return computed_value
+                except (CacheError, RuntimeError):
+                    # An exception was thrown while we tried to write to the cache. Report it to the user.
+                    # (We catch `RuntimeError` here because it will be raised by Apache Spark if we do not
+                    # collect dataframe before using `st.cache_data`.)
                     if True in [
-                        type_util.is_type(return_value, type_name)
+                        type_util.is_type(computed_value, type_name)
                         for type_name in UNEVALUATED_DATAFRAME_TYPES
                     ]:
                         raise UnevaluatedDataFrameError(
                             f"""
-                            The function {get_cached_func_name_md(func)} is decorated with `st.experimental_memo` but it returns an unevaluated dataframe
-                            of type `{type_util.get_fqn_type(return_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
-                            so `st.experimental_memo` can serialize and cache it."""
+                            The function {get_cached_func_name_md(self._info.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
+                            of type `{type_util.get_fqn_type(computed_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
+                            so `st.cache_data` can serialize and cache it."""
                         )
                     raise UnserializableReturnValueError(
-                        return_value=return_value, func=cached_func.func
+                        return_value=computed_value, func=self._info.func
                     )
 
-            return return_value
-
-        if cached_func.show_spinner or isinstance(cached_func.show_spinner, str):
-            with spinner(message):
-                return get_or_create_cached_value()
-        else:
-            return get_or_create_cached_value()
-
-    def clear():
+    def clear(self):
         """Clear the wrapped function's associated cache."""
-        cache = cached_func.get_function_cache(function_key)
+        cache = self._info.get_function_cache(self._function_key)
         cache.clear()
-
-    # Mypy doesn't support declaring attributes of function objects,
-    # so we have to suppress a warning here. We can remove this suppression
-    # when this issue is resolved: https://github.com/python/mypy/issues/2087
-    wrapper.clear = clear  # type: ignore
-
-    return wrapper
 
 
 def _make_value_key(
-    cache_type: CacheType, func: types.FunctionType, *args, **kwargs
+    cache_type: CacheType,
+    func: types.FunctionType,
+    func_args: tuple[Any, ...],
+    func_kwargs: dict[str, Any],
 ) -> str:
     """Create the key for a value within a cache.
 
@@ -238,11 +315,11 @@ def _make_value_key(
     # Create a (name, value) list of all *args and **kwargs passed to the
     # function.
     arg_pairs: list[tuple[str | None, Any]] = []
-    for arg_idx in range(len(args)):
+    for arg_idx in range(len(func_args)):
         arg_name = _get_positional_arg_name(func, arg_idx)
-        arg_pairs.append((arg_name, args[arg_idx]))
+        arg_pairs.append((arg_name, func_args[arg_idx]))
 
-    for kw_name, kw_val in kwargs.items():
+    for kw_name, kw_val in func_kwargs.items():
         # **kwargs ordering is preserved, per PEP 468
         # https://www.python.org/dev/peps/pep-0468/, so this iteration is
         # deterministic.

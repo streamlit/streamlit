@@ -34,8 +34,8 @@ from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
-    CachedFunction,
-    create_cache_wrapper,
+    CachedFunc,
+    CachedFuncInfo,
     ttl_to_seconds,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -142,8 +142,8 @@ def get_resource_cache_stats_provider() -> CacheStatsProvider:
     return _resource_caches
 
 
-class CacheResourceFunction(CachedFunction):
-    """Implements the CachedFunction protocol for @st.cache_resource"""
+class CachedResourceFuncInfo(CachedFuncInfo):
+    """Implements the CachedFuncInfo interface for @st.cache_resource"""
 
     def __init__(
         self,
@@ -371,8 +371,8 @@ class CacheResourceAPI:
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)
         if func is None:
-            return lambda f: create_cache_wrapper(
-                CacheResourceFunction(
+            return lambda f: CachedFunc(
+                CachedResourceFuncInfo(
                     func=f,
                     show_spinner=show_spinner,
                     max_entries=max_entries,
@@ -382,8 +382,8 @@ class CacheResourceAPI:
                 )
             )
 
-        return create_cache_wrapper(
-            CacheResourceFunction(
+        return CachedFunc(
+            CachedResourceFuncInfo(
                 func=cast(types.FunctionType, func),
                 show_spinner=show_spinner,
                 max_entries=max_entries,
@@ -419,6 +419,7 @@ class ResourceCache(Cache):
         display_name: str,
         allow_widgets: bool,
     ):
+        super().__init__()
         self.key = key
         self.display_name = display_name
         self._mem_cache: TTLCache[str, MultiCacheResults] = TTLCache(
@@ -461,7 +462,8 @@ class ResourceCache(Cache):
             result = multi_results.results[widget_key]
 
             if self.validate is not None and not self.validate(result.value):
-                # Result failed validation check.
+                # Validate failed: delete the entry and raise an error.
+                del multi_results.results[widget_key]
                 raise CacheKeyNotFoundError()
 
             return result
@@ -497,7 +499,7 @@ class ResourceCache(Cache):
             multi_results.results[widget_key] = result
             self._mem_cache[key] = multi_results
 
-    def clear(self) -> None:
+    def _clear(self) -> None:
         with self._mem_cache_lock:
             self._mem_cache.clear()
 
