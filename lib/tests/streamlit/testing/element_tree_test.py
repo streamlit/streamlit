@@ -17,7 +17,7 @@ from unittest.mock import patch
 
 import pytest
 
-from tests.script_interactions import InteractiveScriptTests
+from streamlit.testing.script_interactions import InteractiveScriptTests
 
 
 @patch("streamlit.source_util._cached_pages", new=None)
