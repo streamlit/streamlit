@@ -20,6 +20,7 @@ import textwrap
 import unittest
 from unittest.mock import MagicMock
 
+from streamlit import source_util
 from streamlit.runtime import Runtime
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
@@ -32,14 +33,21 @@ class InteractiveScriptTests(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
         self.tmp_script_dir = tempfile.TemporaryDirectory()
+
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
         Runtime._instance = mock_runtime
 
+        with source_util._pages_cache_lock:
+            self.saved_cached_pages = source_util._cached_pages
+            source_util._cached_pages = None
+
     def tearDown(self) -> None:
         super().tearDown()
+        with source_util._pages_cache_lock:
+            source_util._cached_pages = self.saved_cached_pages
         Runtime._instance = None
 
     def script_from_string(self, script_name: str, script: str) -> LocalScriptRunner:

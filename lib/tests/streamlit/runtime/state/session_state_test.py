@@ -286,7 +286,6 @@ class SessionStateTest(DeltaGeneratorTestCase):
         patched_warning.assert_called_once()
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class SessionStateInteractionTest(InteractiveScriptTests):
     def test_updates(self):
         script = self.script_from_filename(__file__, "linked_sliders.py")
