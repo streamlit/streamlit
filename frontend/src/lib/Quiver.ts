@@ -783,6 +783,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   /** Takes the data and it's type and nicely formats it. */
   public static format(x: DataType, type?: Type, field?: Field): string {
     const typeName = type && Quiver.getTypeName(type)
+
     if (x == null) {
       return "<NA>"
     }
