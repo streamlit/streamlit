@@ -60,7 +60,7 @@ Streamlit comes in with [a ton of additional powerful elements](https://docs.str
    </tr>
 <table>
 
-Our vibrant creators community also extends Streamlit capabilities using [Streamlit Components](https://streamlit.io/components) 🧩
+Our vibrant creators community also extends Streamlit capabilities using 🧩 [Streamlit Components](https://streamlit.io/components).
 
 ## Get inspired 
  
@@ -81,7 +81,7 @@ Deploy, manage and share your apps for free using our [Community Cloud](https://
 
 ## Resources
 
-- Streamlit [docs](https://docs.streamlit.io), [community forum](https://discuss.streamlit.io) and [blog](https://blog.streamlit.io)
+- Streamlit [docs](https://docs.streamlit.io), [community forum](https://discuss.streamlit.io) and [blog](https://blog.streamlit.io).
 - Extend Streamlit's capabilities by installing or creating your own [Streamlit Components](https://streamlit.io/components).
 - Help others find and play with your app by using the Streamlit GitHub badge in your repository:
 ```markdown
