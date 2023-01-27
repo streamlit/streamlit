@@ -32,6 +32,7 @@ import {
   RANGE,
   UINT64,
   UNICODE,
+  CATEGORICAL_COLUMN,
   // Special cases
   EMPTY,
   MULTI,
@@ -94,6 +95,21 @@ describe("Quiver", () => {
 
       test("caption", () => {
         expect(q.caption).toEqual("FAKE_CAPTION")
+      })
+
+      describe("getCategoricalOptions", () => {
+        test("gets all categories for a categorical columns", () => {
+          const mockElement = { data: CATEGORICAL_COLUMN }
+          const q = new Quiver(mockElement)
+          // "foo" and "bar" are the two categories available in this column
+          expect(q.getCategoricalOptions(0)).toStrictEqual(["bar", "foo"])
+        })
+
+        test("returns undefined for a non-categorical column", () => {
+          const mockElement = { data: CATEGORICAL_COLUMN }
+          const q = new Quiver(mockElement)
+          expect(q.getCategoricalOptions(1)).toStrictEqual(undefined)
+        })
       })
 
       test("dimensions", () => {

@@ -15,6 +15,7 @@
  */
 
 import { CATEGORICAL } from "./types/categorical"
+import { CATEGORICAL_COLUMN } from "./types/categoricalColumn"
 import { CATEGORICAL_INTERVAL } from "./types/categoricalInterval"
 import { DATETIME } from "./types/datetime"
 import { FLOAT64 } from "./types/float64"
@@ -40,6 +41,7 @@ import { SMALL, WIDE } from "./wide"
 export {
   // Types
   CATEGORICAL,
+  CATEGORICAL_COLUMN,
   CATEGORICAL_INTERVAL,
   DATETIME,
   FLOAT64,
