@@ -16,8 +16,7 @@
 
 import { Type as QuiverType } from "src/lib/Quiver"
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { DatetimePicker } from "src/components/widgets/DataFrame/customCells/TimePickerCell"
-import { BaseColumnProps, getTimezoneOffset } from "./utils"
+import { BaseColumnProps } from "./utils"
 import TimeColumn, { TimeColumnParams } from "./TimeColumn"
 
 const MOCK_TIME_QUIVER_TYPE: QuiverType = {
