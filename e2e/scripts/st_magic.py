@@ -155,7 +155,5 @@ class MyClass:
 MyClass
 
 
-"The line below should look like: `<__main__.MyClass object at 0xSOME_HEX_STRING>`"
-
 my_instance = MyClass()
 my_instance
