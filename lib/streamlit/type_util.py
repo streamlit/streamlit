@@ -447,15 +447,19 @@ def convert_anything_to_df(
     ensure_copy: bool = False,
 ) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
+
     Parameters
     ----------
     df : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
+
     max_unevaluated_rows: int
         If unevaluated data is detected this func will evaluate it,
         taking max_unevaluated_rows, defaults to 10k and 100 for st.table
+
     ensure_copy: bool
         If True, make sure to always return a copy of the data. If False, it depends on the
         type of the data. For example, a Pandas DataFrame will be returned as-is.
+
     Returns
     -------
     pandas.DataFrame
