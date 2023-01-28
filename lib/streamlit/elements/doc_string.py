@@ -246,7 +246,7 @@ def _get_variable_name():
     arg_node = _get_stcall_arg(tree, command_name="help")
 
     if arg_node is None:
-        # If this wasn't an st.help cal, try to get argument from st.write call.
+        # If this wasn't an st.help call, try to get argument from st.write call.
         arg_node = _get_stcall_arg(tree, command_name="write")
 
     if arg_node is None:
@@ -260,7 +260,8 @@ def _get_variable_name():
 
         return code
 
-    # If walrus, get name. E.g. st.help(foo := 123)
+    # If walrus, get name.
+    # E.g. st.help(foo := 123) should give you "foo".
     # (The hasattr is there to support Python 3.7)
     elif hasattr(ast, "NamedExpr") and type(arg_node) is ast.NamedExpr:
         # This next "if" will always be true, but need to add this for the type-checking test to
@@ -268,15 +269,22 @@ def _get_variable_name():
         if type(arg_node.target) is ast.Name:
             return arg_node.target.id
 
-    # If constant, there's no variable name. E.g. st.help("foo") or st.help(123)
-    elif type(arg_node) is ast.Constant:
+    # If constant, there's no variable name.
+    # E.g. st.help("foo") or st.help(123) should give you None.
+    elif type(arg_node) in (
+        ast.Constant,
+        # Python 3.7 support:
+        ast.Num,
+        ast.Str,
+        ast.Bytes,
+        ast.NameConstant,
+        ast.Ellipsis,
+    ):
         return None
 
     # Otherwise, return whatever is inside st.help(<-- here -->)
-    if hasattr(arg_node, "end_col_offset"):
-        end_offset = arg_node.end_col_offset
-    else:
-        end_offset = -1
+    end_offset = getattr(arg_node, "end_col_offset", -1)
+
     return cleaned_code[arg_node.col_offset : end_offset]
 
 
