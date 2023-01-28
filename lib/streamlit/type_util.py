@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import re
 import types
 from typing import (
@@ -26,6 +27,7 @@ from typing import (
     NamedTuple,
     Optional,
     Sequence,
+    Tuple,
     TypeVar,
     Union,
     cast,
@@ -33,8 +35,8 @@ from typing import (
 )
 
 import pyarrow as pa
-from pandas import MultiIndex
-from pandas.api.types import infer_dtype
+from pandas import DataFrame, Index, MultiIndex, Series
+from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
 import streamlit as st
@@ -45,7 +47,6 @@ from streamlit import string_util
 if TYPE_CHECKING:
     import graphviz
     import sympy
-    from pandas import DataFrame, Index, Series
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
     from plotly.graph_objs import Figure
@@ -224,7 +225,7 @@ _DATAFRAME_COMPATIBLE_TYPES: Final[tuple[type, ...]] = (
     type(None),
 )
 
-_DataFrameCompatible: TypeAlias = Union[dict, list, None]
+_DataFrameCompatible: TypeAlias = Union[dict, list, set, Tuple[Any], None]
 DataFrameCompatible: TypeAlias = Union[_DataFrameCompatible, DataFrameLike]
 
 _BYTES_LIKE_TYPES: Final[tuple[type, ...]] = (
@@ -441,18 +442,20 @@ def is_sequence(seq: Any) -> bool:
 
 
 def convert_anything_to_df(
-    df: Any, max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS
+    data: Any,
+    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
+    ensure_copy: bool = False,
 ) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
-
     Parameters
     ----------
     df : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
-
     max_unevaluated_rows: int
         If unevaluated data is detected this func will evaluate it,
         taking max_unevaluated_rows, defaults to 10k and 100 for st.table
-
+    ensure_copy: bool
+        If True, make sure to always return a copy of the data. If False, it depends on the
+        type of the data. For example, a Pandas DataFrame will be returned as-is.
     Returns
     -------
     pandas.DataFrame
@@ -461,55 +464,55 @@ def convert_anything_to_df(
     # This is inefficient as the data will be converted back to Arrow
     # when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
-    if isinstance(df, pa.Table):
-        return df.to_pandas()
+    if isinstance(data, pa.Table):
+        return data.to_pandas()
 
-    if is_type(df, _PANDAS_DF_TYPE_STR):
-        return df
+    if is_type(data, _PANDAS_DF_TYPE_STR):
+        return data.copy() if ensure_copy else data
 
-    if is_pandas_styler(df):
-        return df.data
+    if is_pandas_styler(data):
+        return data.data.copy() if ensure_copy else data.data
 
-    import pandas as pd
-
-    if is_type(df, "numpy.ndarray") and len(df.shape) == 0:
-        return pd.DataFrame([])
+    if is_type(data, "numpy.ndarray"):
+        if len(data.shape) == 0:
+            return DataFrame([])
+        return DataFrame(data)
 
     if (
-        is_type(df, _SNOWPARK_DF_TYPE_STR)
-        or is_type(df, _SNOWPARK_TABLE_TYPE_STR)
-        or is_type(df, _PYSPARK_DF_TYPE_STR)
+        is_type(data, _SNOWPARK_DF_TYPE_STR)
+        or is_type(data, _SNOWPARK_TABLE_TYPE_STR)
+        or is_type(data, _PYSPARK_DF_TYPE_STR)
     ):
-        if is_type(df, _PYSPARK_DF_TYPE_STR):
-            df = df.limit(max_unevaluated_rows).toPandas()
+        if is_type(data, _PYSPARK_DF_TYPE_STR):
+            data = data.limit(max_unevaluated_rows).toPandas()
         else:
-            df = pd.DataFrame(df.take(max_unevaluated_rows))
-        if df.shape[0] == max_unevaluated_rows:
+            data = DataFrame(data.take(max_unevaluated_rows))
+        if data.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
                 "Call `collect()` on the dataframe to show more."
             )
-        return df
+        return data
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
     try:
-        return pd.DataFrame(df)
 
-    except ValueError:
+        return DataFrame(data)
+
+    except ValueError as ex:
+        if isinstance(data, dict):
+            with contextlib.suppress(ValueError):
+                # Try to use index orient as back-up to support key-value dicts
+                return DataFrame.from_dict(data, orient="index")
         raise errors.StreamlitAPIException(
-            """
-Unable to convert object of type `%(type)s` to `pandas.DataFrame`.
-
+            f"""
+Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
 Offending object:
 ```py
-%(object)s
+{data}
 ```"""
-            % {
-                "type": type(df),
-                "object": df,
-            }
-        )
+        ) from ex
 
 
 @overload
@@ -603,16 +606,50 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def _is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
+def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
-    # Check all columns for mixed types and complex128 type
-    # The dtype of mixed type columns is always object, the actual type of the column
-    # values can be determined via the infer_dtype function:
-    # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
+    if column.dtype in [
+        # timedelta64[ns] is supported by pyarrow but not in the Arrow JS:
+        # https://github.com/streamlit/streamlit/issues/4489
+        "timedelta64[ns]",
+        "complex64",
+        "complex128",
+        "complex256",
+    ]:
+        return True
 
-    return (
-        column.dtype == "object" and infer_dtype(column) in ["mixed", "mixed-integer"]
-    ) or column.dtype == "complex128"
+    if column.dtype == "object":
+        # The dtype of mixed type columns is always object, the actual type of the column
+        # values can be determined via the infer_dtype function:
+        # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
+        inferred_type = infer_dtype(column, skipna=True)
+
+        if inferred_type in [
+            "mixed-integer",
+            # Decimal is not correctly supported on Arrow JS:
+            # https://github.com/apache/arrow/issues/22932
+            # https://github.com/apache/arrow/issues/28804
+            "decimal",
+            "complex",
+            "timedelta",
+            "timedelta64",
+        ]:
+            return True
+        elif inferred_type == "mixed":
+            # This includes most of the more complex/custom types (objects, dicts, lists, ...)
+            if (
+                len(column) > 0
+                and hasattr(column, "iloc")
+                and is_list_like(column.iloc[0])
+                # dicts are list-like, but have issues in Arrow JS (see comments in Quiver.ts)
+                and not is_dict_like(column.iloc[0])
+                # Frozensets are list-like, but are not compatible with pyarrow.
+                and not isinstance(column.iloc[0], frozenset)
+            ):
+                # Lists-like structures are supported
+                return False
+            return True
+    return False
 
 
 def fix_arrow_incompatible_column_types(
@@ -638,9 +675,13 @@ def fix_arrow_incompatible_column_types(
     -------
     The fixed dataframe.
     """
+    # Make a copy, but only initialize if necessary to preserve memory.
+    df_copy = None
     for col in selected_columns or df.columns:
-        if _is_colum_type_arrow_incompatible(df[col]):
-            df[col] = df[col].astype(str)
+        if is_colum_type_arrow_incompatible(df[col]):
+            if df_copy is None:
+                df_copy = df.copy()
+            df_copy[col] = df[col].astype(str)
 
     # The index can also contain mixed types
     # causing Arrow issues during conversion.
@@ -651,10 +692,12 @@ def fix_arrow_incompatible_column_types(
             df.index,
             MultiIndex,
         )
-        and _is_colum_type_arrow_incompatible(df.index)
+        and is_colum_type_arrow_incompatible(df.index)
     ):
-        df.index = df.index.astype(str)
-    return df
+        if df_copy is None:
+            df_copy = df.copy()
+        df_copy.index = df.index.astype(str)
+    return df_copy if df_copy is not None else df
 
 
 def data_frame_to_bytes(df: DataFrame) -> bytes:
@@ -668,9 +711,10 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
     """
     try:
         table = pa.Table.from_pandas(df)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError):
+    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
         _LOGGER.info(
-            "Applying automatic fixes for column types to make the dataframe Arrow-compatible."
+            "Applying automatic fixes for column types to make the dataframe Arrow-compatible.",
+            exc_info=ex,
         )
         df = fix_arrow_incompatible_column_types(df)
         table = pa.Table.from_pandas(df)
