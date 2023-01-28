@@ -40,7 +40,6 @@ from typing import (
 import numpy as np
 import pyarrow as pa
 from pandas import DataFrame, Index, MultiIndex, Series
-from pandas import __version__ as pandas_version
 from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
@@ -551,7 +550,6 @@ def convert_anything_to_df(
         raise errors.StreamlitAPIException(
             f"""
 Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
-
 Offending object:
 ```py
 {data}
@@ -628,9 +626,10 @@ def is_pandas_version_less_than(v: str) -> bool:
     bool
 
     """
+    import pandas as pd
     from packaging import version
 
-    return version.parse(pandas_version) < version.parse(v)
+    return version.parse(pd.__version__) < version.parse(v)
 
 
 def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
