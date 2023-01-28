@@ -27,6 +27,7 @@ from parameterized import parameterized
 
 from streamlit import type_util
 from streamlit.type_util import (
+    convert_anything_to_df,
     data_frame_to_bytes,
     fix_arrow_incompatible_column_types,
     is_bytes_like,
@@ -286,6 +287,28 @@ dtype: object""",
                 "No exception should have been thrown here. "
                 f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
             )
+
+    def test_convert_anything_to_df_ensure_copy(self):
+        orginal_df = pd.DataFrame(
+            {
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
+        )
+
+        converted_df = convert_anything_to_df(orginal_df, ensure_copy=True)
+        # Apply a change
+        converted_df["integer"] = [4, 5, 6]
+        # Ensure that the original dataframe is not changed
+        pd.testing.assert_frame_equal(orginal_df["integer"].to_list(), [1, 2, 3])
+
+        converted_df = convert_anything_to_df(orginal_df, ensure_copy=False)
+        # Apply a change
+        converted_df["integer"] = [4, 5, 6]
+        # The original dataframe should be changed here since ensure_copy is False
+        pd.testing.assert_frame_equal(orginal_df["integer"].to_list(), [4, 5, 6])
 
     def test_is_snowpark_dataframe(self):
         df = pd.DataFrame(
