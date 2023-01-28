@@ -94,7 +94,7 @@ def pytest_configure(config: pytest.Config):
         "when --require-snowflake option is passed to pytest",
     )
 
-    is_require_snowflake = config.getoption("--require-snowflake")
+    is_require_snowflake = config.getoption("--require-snowflake", default=False)
     if is_require_snowflake:
         if sys.version_info[0:2] != (3, 8):
             raise pytest.UsageError("Python 3.8 is required to run Snowflake tests")
