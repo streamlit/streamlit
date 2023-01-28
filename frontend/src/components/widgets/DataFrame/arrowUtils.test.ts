@@ -555,6 +555,13 @@ describe("getColumnTypeFromArrow", () => {
     ],
     [
       {
+        pandas_type: "unicode",
+        numpy_type: "string",
+      },
+      TextColumn,
+    ],
+    [
+      {
         pandas_type: "bool",
         numpy_type: "bool",
       },
@@ -562,8 +569,15 @@ describe("getColumnTypeFromArrow", () => {
     ],
     [
       {
+        pandas_type: "bool",
+        numpy_type: "boolean",
+      },
+      BooleanColumn,
+    ],
+    [
+      {
         pandas_type: "categorical",
-        numpy_type: "int8", // TODO: confirm this
+        numpy_type: "int8",
       },
       CategoricalColumn,
     ],
@@ -588,7 +602,62 @@ describe("getColumnTypeFromArrow", () => {
       },
       ObjectColumn,
     ],
-    // TODO: add more types
+    [
+      {
+        pandas_type: "empty",
+        numpy_type: "object",
+      },
+      TextColumn, // TODO: why not ObjectColumn?
+    ],
+    [
+      {
+        pandas_type: "datetime",
+        numpy_type: "datetime64[ns]",
+      },
+      ObjectColumn,
+    ],
+    [
+      {
+        pandas_type: "datetimetz",
+        numpy_type: "datetime64[ns]",
+      },
+      ObjectColumn,
+    ],
+    [
+      {
+        pandas_type: "time",
+        numpy_type: "object",
+      },
+      ObjectColumn,
+    ],
+    [
+      {
+        pandas_type: "date",
+        numpy_type: "object",
+      },
+      ObjectColumn,
+    ],
+    [
+      {
+        pandas_type: "object",
+        numpy_type: "period[H]",
+      },
+      ObjectColumn,
+    ],
+    [
+      {
+        pandas_type: "object",
+        numpy_type: "interval[int64, both]",
+      },
+      ObjectColumn,
+    ],
+    [
+      {
+        pandas_type: "bytes",
+        numpy_type: "object",
+      },
+      ObjectColumn,
+    ],
   ])(
     "interprets %p as column type: %p",
     (arrowType: ArrowType, expectedType: ColumnCreator) => {
