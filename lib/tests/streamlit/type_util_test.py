@@ -14,12 +14,16 @@
 
 import unittest
 from collections import namedtuple
+from datetime import date
+from decimal import Decimal
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
 import pytest
 from pandas.api.types import infer_dtype
+from parameterized import parameterized
 
 from streamlit import type_util
 from streamlit.type_util import (
@@ -29,8 +33,13 @@ from streamlit.type_util import (
     is_snowpark_data_object,
     to_bytes,
 )
-from tests.streamlit.snowpark_mocks import DataFrame, Row
+from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
+from tests.streamlit.snowpark_mocks import Row as SnowparkRow
 from tests.testutil import create_snowpark_session
+
+
+class TestObject(object):
+    pass
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -109,22 +118,116 @@ class TypeUtilTest(unittest.TestCase):
         except Exception as ex:
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
 
-    def test_fix_complex_column_type(self):
-        """Test that `fix_unsupported_column_types` correctly fixes
-        columns containing complex types by converting them to string.
+    @parameterized.expand(
+        [
+            (pd.Series([1, 2, "3"]), True),
+            # Complex numbers:
+            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
+            # Timedelta:
+            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
+            # Decimal:
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), True),
+            # Mixed-integer types:
+            (pd.Series([1, 2, "3"]), True),
+            # Mixed:
+            (pd.Series([1, 2.1, "3", True]), True),
+            # timedelta64
+            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), True),
+            # Frozenset:
+            (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), True),
+            # Dicts:
+            (pd.Series([{"a": 1}, {"b": 2}]), True),
+            # Complex types:
+            (pd.Series([TestObject(), TestObject()]), True),
+            # Supported types:
+            (pd.Series([1, 2, 3]), False),
+            (pd.Series([1, 2, 3.0]), False),
+            (pd.Series(["foo", "bar"]), False),
+            (pd.Series([True, False, None]), False),
+            (pd.Series(["foo", "bar", None]), False),
+            (pd.Series([[1, 2], [3, 4]]), False),
+            (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
+            (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
+        ]
+    )
+    def test_is_colum_type_arrow_incompatible(
+        self, column: pd.Series, incompatible: bool
+    ):
+        self.assertEqual(
+            type_util.is_colum_type_arrow_incompatible(column),
+            incompatible,
+            f"Expected {column} to be {'incompatible' if incompatible else 'compatible'} with Arrow.",
+        )
+
+    @parameterized.expand(
+        [
+            (pd.Series([1, 2, "3"]), True),
+            # Complex numbers:
+            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
+            # Timedelta:
+            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
+            # Decimal:
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), True),
+            # Mixed-integer types:
+            (pd.Series([1, 2, "3"]), True),
+            # Mixed:
+            (pd.Series([1, 2.1, "3", True]), True),
+            # timedelta64
+            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), True),
+            # Frozenset:
+            (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), True),
+            # Dicts:
+            (pd.Series([{"a": 1}, {"b": 2}]), True),
+            # Complex types:
+            (pd.Series([TestObject(), TestObject()]), True),
+            # Supported types:
+            (pd.Series([1, 2, 3]), False),
+            (pd.Series([1, 2, 3.0]), False),
+            (pd.Series(["foo", "bar"]), False),
+            (pd.Series([True, False, None]), False),
+            (pd.Series(["foo", "bar", None]), False),
+            (pd.Series([[1, 2], [3, 4]]), False),
+            (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
+            (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
+        ]
+    )
+    def test_fix_arrow_incompatible_column_types(
+        self, column: pd.Series, incompatible: bool
+    ):
+        """Test that `fix_arrow_incompatible_column_types` correctly fixes
+        columns containing unsupported types by converting them to string and
+        leaves supported columns unchanged.
         """
+        df = pd.DataFrame({"c1": column})
+        fixed_df = fix_arrow_incompatible_column_types(df)
+        col_dtype = fixed_df["c1"].dtype
+        inferred_type = infer_dtype(fixed_df["c1"])
+
+        if incompatible:
+            # Column should have been converted to string.
+            self.assertEqual(col_dtype, "object")
+            self.assertEqual(inferred_type, "string")
+        else:
+            # Column should have the original type.
+            self.assertEqual(col_dtype, df["c1"].dtype)
+            self.assertEqual(inferred_type, infer_dtype(df["c1"]))
+
+    def test_fix_no_columns(self):
+        """Test that `fix_arrow_incompatible_column_types` does not
+        modify a DataFrame if all columns are compatible with Arrow.
+        """
+
         df = pd.DataFrame(
             {
-                "complex": [1 + 2j, 3 + 4j, 5 + 6 * 1j],
                 "integer": [1, 2, 3],
+                "float": [1.1, 2.2, 3.3],
                 "string": ["foo", "bar", None],
+                "boolean": [True, False, None],
             }
         )
 
-        self.assertEqual(infer_dtype(df["complex"]), "complex")
-
         fixed_df = fix_arrow_incompatible_column_types(df)
-        self.assertEqual(infer_dtype(fixed_df["complex"]), "string")
+        pd.testing.assert_frame_equal(df, fixed_df)
 
     def test_fix_mixed_column_types(self):
         """Test that `fix_arrow_incompatible_column_types` correctly fixes
@@ -201,7 +304,7 @@ dtype: object""",
         self.assertFalse(is_snowpark_data_object(df))
 
         # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_data_object should return true
-        self.assertTrue(is_snowpark_data_object(DataFrame()))
+        self.assertTrue(is_snowpark_data_object(SnowparkDataFrame()))
 
         # any object should not be snowpark dataframe
         self.assertFalse(is_snowpark_data_object("any text"))
@@ -249,7 +352,7 @@ dtype: object""",
         self.assertTrue(
             is_snowpark_data_object(
                 [
-                    Row(),
+                    SnowparkRow(),
                 ]
             )
         )
