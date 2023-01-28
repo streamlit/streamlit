@@ -21,7 +21,10 @@ import { IndexTypeName, Quiver } from "src/lib/Quiver"
 import {
   // Types
   CATEGORICAL,
+  CATEGORICAL_COLUMN,
   DATETIME,
+  DECIMAL,
+  DICTIONARY,
   FLOAT64,
   INT64,
   INTERVAL_DATETIME64,
@@ -32,7 +35,6 @@ import {
   RANGE,
   UINT64,
   UNICODE,
-  CATEGORICAL_COLUMN,
   // Special cases
   EMPTY,
   MULTI,
@@ -41,6 +43,7 @@ import {
   FEWER_COLUMNS,
   DIFFERENT_COLUMN_TYPES,
   CATEGORICAL_INTERVAL,
+  NAMED_INDEX,
 } from "src/lib/mocks/arrow"
 
 describe("Quiver", () => {
@@ -70,6 +73,12 @@ describe("Quiver", () => {
           rows: 3,
           columns: 3,
         })
+      })
+
+      test("indexNames", () => {
+        const mockElement = { data: NAMED_INDEX }
+        const q = new Quiver(mockElement)
+        expect(q.indexNames).toStrictEqual(["INDEX"])
       })
     })
 
@@ -197,6 +206,22 @@ describe("Quiver", () => {
           const indexType = q.types.index[0]
 
           expect(Quiver.getTypeName(indexType)).toEqual("period[Q-DEC]")
+        })
+
+        test("decimal", () => {
+          const mockElement = { data: DECIMAL }
+          const q = new Quiver(mockElement)
+          const firstColumnType = q.types.data[0]
+
+          expect(Quiver.getTypeName(firstColumnType)).toEqual("decimal")
+        })
+
+        test("dictionary", () => {
+          const mockElement = { data: DICTIONARY }
+          const q = new Quiver(mockElement)
+          const firstColumnType = q.types.data[0]
+
+          expect(Quiver.getTypeName(firstColumnType)).toEqual("object")
         })
 
         test("interval datetime64[ns]", () => {
@@ -458,6 +483,22 @@ describe("Quiver", () => {
             numpy_type: "interval[uint64, right]",
           })
         ).toEqual("(0, 1]")
+      })
+
+      test("decimal", () => {
+        const mockElement = { data: DECIMAL }
+        const q = new Quiver(mockElement)
+        const { content, contentType, field } = q.getCell(1, 1)
+        expect(Quiver.format(content, contentType, field)).toEqual("1.1")
+      })
+
+      test("dictionary", () => {
+        const mockElement = { data: DICTIONARY }
+        const q = new Quiver(mockElement)
+        const { content, contentType, field } = q.getCell(1, 1)
+        expect(Quiver.format(content, contentType, field)).toEqual(
+          `{"a":1,"b":2}`
+        )
       })
 
       test("categorical interval", () => {
