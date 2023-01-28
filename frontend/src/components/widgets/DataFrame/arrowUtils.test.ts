@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { Quiver, Type as ArrowType } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
@@ -22,12 +21,12 @@ import {
   MULTI,
   CATEGORICAL_COLUMN,
   DECIMAL,
+  STYLER,
+  DISPLAY_VALUES,
 } from "src/lib/mocks/arrow"
 
 import {
   getTextCell,
-  BaseColumn,
-  BaseColumnProps,
   ColumnCreator,
   ObjectColumn,
   BooleanColumn,
@@ -35,7 +34,6 @@ import {
   TextColumn,
   CategoricalColumn,
   ListColumn,
-  isErrorCell,
 } from "./columns"
 import {
   extractCssProperty,
@@ -47,6 +45,34 @@ import {
   getAllColumnsFromArrow,
   getCellFromArrow,
 } from "./arrowUtils"
+
+const MOCK_TEXT_COLUMN = TextColumn({
+  id: "1",
+  title: "Text column",
+  indexNumber: 0,
+  isEditable: false,
+  isHidden: false,
+  isIndex: false,
+  isStretched: false,
+  arrowType: {
+    pandas_type: "unicode",
+    numpy_type: "object",
+  },
+})
+
+const MOCK_NUMBER_COLUMN = NumberColumn({
+  id: "1",
+  title: "Number column",
+  indexNumber: 0,
+  isEditable: false,
+  isHidden: false,
+  isIndex: false,
+  isStretched: false,
+  arrowType: {
+    pandas_type: "int64",
+    numpy_type: "int64",
+  },
+})
 
 describe("extractCssProperty", () => {
   it("should extract the correct property value", () => {
@@ -301,27 +327,11 @@ describe("getColumnFromArrow", () => {
 
 describe("getCellFromArrow", () => {
   it("creates a valid glide-compatible cell", () => {
-    const textColumn = TextColumn({
-      id: "1",
-      title: "Text column",
-      indexNumber: 0,
-      isEditable: false,
-      isHidden: false,
-      isIndex: false,
-      isStretched: false,
-      arrowType: {
-        // The arrow type of the underlying data is
-        // not used for anything inside the column.
-        pandas_type: "unicode",
-        numpy_type: "object",
-      },
-    })
-
     const element = ArrowProto.create({
       data: UNICODE,
     })
     const data = new Quiver(element)
-    const cell = getCellFromArrow(textColumn, data.getCell(1, 1))
+    const cell = getCellFromArrow(MOCK_TEXT_COLUMN, data.getCell(1, 1))
 
     expect(cell).toEqual({
       allowOverlay: true,
@@ -370,11 +380,67 @@ describe("getCellFromArrow", () => {
   })
 
   it("applies display content from arrow cell", () => {
-    // TODO
+    const element = {
+      data: STYLER,
+      styler: {
+        uuid: "FAKE_UUID",
+        styles: "FAKE_CSS",
+        displayValues: DISPLAY_VALUES,
+        caption: "FAKE_CAPTION",
+      },
+    }
+    const data = new Quiver(element)
+    const cell = getCellFromArrow(MOCK_NUMBER_COLUMN, data.getCell(1, 1))
+
+    expect(cell).toEqual({
+      allowOverlay: true,
+      contentAlign: "right",
+      data: 1,
+      displayData: "1",
+      isMissingValue: false,
+      kind: "number",
+      readonly: true,
+      style: "normal",
+      allowNegative: true,
+      fixedDecimals: 0,
+    })
   })
 
   it("applies Pandas styler CSS", () => {
-    // TODO
+    const element = {
+      data: STYLER,
+      styler: {
+        uuid: "FAKE_UUID",
+        styles:
+          "#T_FAKE_UUIDrow1_col1, #T_FAKE_UUIDrow0_col0 { color: white; background-color: pink }",
+        displayValues: DISPLAY_VALUES,
+        caption: "FAKE_CAPTION",
+      },
+    }
+    const data = new Quiver(element)
+
+    const cell = getCellFromArrow(
+      MOCK_NUMBER_COLUMN,
+      data.getCell(1, 1),
+      element.styler.styles
+    )
+
+    expect(cell).toEqual({
+      allowOverlay: true,
+      contentAlign: "right",
+      data: 1,
+      displayData: "1",
+      isMissingValue: false,
+      kind: "number",
+      readonly: true,
+      style: "normal",
+      allowNegative: true,
+      fixedDecimals: 0,
+      themeOverride: {
+        bgCell: "pink",
+        textDark: "white",
+      },
+    })
   })
 })
 
@@ -432,6 +498,13 @@ describe("getColumnTypeFromArrow", () => {
     [
       {
         pandas_type: "object",
+        numpy_type: "object",
+      },
+      ObjectColumn,
+    ],
+    [
+      {
+        pandas_type: "decimal",
         numpy_type: "object",
       },
       ObjectColumn,
