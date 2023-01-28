@@ -23,6 +23,7 @@ import {
   DECIMAL,
   STYLER,
   DISPLAY_VALUES,
+  EMPTY,
 } from "src/lib/mocks/arrow"
 
 import {
@@ -322,6 +323,84 @@ describe("getColumnFromArrow", () => {
         options: ["", "bar", "foo"],
       },
     })
+  })
+})
+describe("getAllColumnsFromArrow", () => {
+  it("extracts all columns", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+    })
+    const data = new Quiver(element)
+    const columns = getAllColumnsFromArrow(data)
+
+    expect(columns).toEqual([
+      {
+        arrowType: {
+          meta: null,
+          numpy_type: "object",
+          pandas_type: "unicode",
+        },
+        id: "index-0",
+        indexNumber: 0,
+        isEditable: true,
+        isHidden: false,
+        isIndex: true,
+        title: "",
+      },
+      {
+        arrowType: {
+          meta: null,
+          numpy_type: "object",
+          pandas_type: "unicode",
+        },
+        columnTypeMetadata: undefined,
+        id: "column-c1-0",
+        indexNumber: 1,
+        isEditable: true,
+        isHidden: false,
+        isIndex: false,
+        title: "c1",
+      },
+      {
+        arrowType: {
+          meta: null,
+          numpy_type: "object",
+          pandas_type: "unicode",
+        },
+        columnTypeMetadata: undefined,
+        id: "column-c2-1",
+        indexNumber: 2,
+        isEditable: true,
+        isHidden: false,
+        isIndex: false,
+        title: "c2",
+      },
+    ])
+  })
+
+  it("handles empty dataframes correctly", () => {
+    // TODO: is this correct
+    const element = ArrowProto.create({
+      data: EMPTY,
+    })
+    const data = new Quiver(element)
+    const columns = getAllColumnsFromArrow(data)
+
+    expect(columns).toEqual([
+      {
+        arrowType: {
+          meta: null,
+          numpy_type: "object",
+          pandas_type: "empty",
+        },
+        id: "index-0",
+        indexNumber: 0,
+        isEditable: true,
+        isHidden: false,
+        isIndex: true,
+        title: "",
+      },
+    ])
   })
 })
 
