@@ -24,14 +24,18 @@ if _get_scriptrunner_frame() is None:
     )
 
 # Testing case where there are no docs.
-st.help(st.net_util)
+class FooWithNoDocs:
+    my_static_var_1 = 123
+
+
+st.help(FooWithNoDocs)
 
 # Testing case where there are no members.
 st.help(globals)
 
 # Test case where there the docs need to scroll,
 # and test case where some members doesn't have docs.
-class Foo:
+class FooWithLongDocs:
     """My docstring.
 
     This is a very long one! You probably need to scroll, scroll, scroll, scroll,
@@ -73,6 +77,6 @@ class Foo:
         pass
 
 
-f = Foo()
+f = FooWithLongDocs()
 
 f
