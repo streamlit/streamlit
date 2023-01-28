@@ -25,7 +25,7 @@ import { logWarning, logError } from "src/lib/log"
 
 import {
   getColumnTypeFromArrow,
-  getColumnsFromArrow,
+  getAllColumnsFromArrow,
   getCellFromArrow,
 } from "src/components/widgets/DataFrame/arrowUtils"
 import EditingState from "src/components/widgets/DataFrame/EditingState"
@@ -223,7 +223,7 @@ function useDataLoader(
     (notNullOrUndefined(element.width) && element.width > 0)
 
   // Converts the columns from Arrow into columns compatible with glide-data-grid
-  const columns: BaseColumn[] = getColumnsFromArrow(data)
+  const columns: BaseColumn[] = getAllColumnsFromArrow(data)
     .map(column => {
       // Apply column configurations
       let updatedColumn = {

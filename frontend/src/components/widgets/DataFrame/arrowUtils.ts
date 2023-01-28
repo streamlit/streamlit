@@ -47,7 +47,7 @@ import {
  *
  * @return the CSS property value or undefined if the property is not found.
  */
-function extractCssProperty(
+export function extractCssProperty(
   htmlElementId: string,
   property: string,
   cssStyle: string
@@ -137,7 +137,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
   ) {
     return ObjectColumn
   }
-  if (["boolean", "bool"].includes(typeName)) {
+  if (["bool"].includes(typeName)) {
     return BooleanColumn
   }
   if (
@@ -256,7 +256,7 @@ export function getColumnFromArrow(
  * @param data - The Arrow data.
  * @return the column props for all columns.
  */
-export function getColumnsFromArrow(data: Quiver): BaseColumnProps[] {
+export function getAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
   const columns: BaseColumnProps[] = []
 
   const numIndices = data.types?.index?.length ?? 0
