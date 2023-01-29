@@ -34,7 +34,7 @@ import numbro from "numbro"
 
 import { IArrow, Styler as StylerProto } from "src/autogen/proto"
 
-import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined } from "src/lib/utils"
 
 /** Data types used by ArrowJS. */
 export type DataType =
@@ -840,13 +840,17 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       // https://github.com/streamlit/streamlit/issues/5864
       const decimalStr = x.toString()
       if (
-        isNullOrUndefined(field?.type?.scale) ||
+        !notNullOrUndefined(field?.type?.scale) ||
         Number.isNaN(field?.type?.scale) ||
         field?.type?.scale > decimalStr.length
       ) {
         return decimalStr
       }
       const scaleIndex = decimalStr.length - field?.type?.scale
+      if (scaleIndex === 0) {
+        return `0.${decimalStr}`
+      }
+
       return `${decimalStr.slice(0, scaleIndex)}.${decimalStr.slice(
         scaleIndex
       )}`

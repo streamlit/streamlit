@@ -13,14 +13,12 @@
 # limitations under the License.
 
 from datetime import datetime, time
-from unittest.mock import patch
 
 import pytest
 
-from tests.script_interactions import InteractiveScriptTests
+from streamlit.testing.script_interactions import InteractiveScriptTests
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class CheckboxTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
@@ -47,7 +45,6 @@ class CheckboxTest(InteractiveScriptTests):
 
 
 @pytest.mark.xfail(reason="button does not work correctly with session state")
-@patch("streamlit.source_util._cached_pages", new=None)
 class ButtonTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
@@ -72,7 +69,6 @@ class ButtonTest(InteractiveScriptTests):
         assert sr3.get("button")[1].value == False
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class MultiselectTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
@@ -101,7 +97,6 @@ class MultiselectTest(InteractiveScriptTests):
         assert set(sr3.get("multiselect")[1].value) == set(["zero", "one", "two"])
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class MarkdownTest(InteractiveScriptTests):
     def test_markdown(self):
         script = self.script_from_string(
@@ -189,7 +184,6 @@ class MarkdownTest(InteractiveScriptTests):
         assert len(sr.get("latex")) == 2
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class HeadingTest(InteractiveScriptTests):
     def test_title(self):
         script = self.script_from_string(
@@ -267,7 +261,6 @@ class HeadingTest(InteractiveScriptTests):
         assert len(sr.get("subheader")) == 2
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class SliderTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
@@ -303,7 +296,6 @@ class SliderTest(InteractiveScriptTests):
         assert s[4].value == 0.1
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class SelectSliderTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
@@ -326,7 +318,6 @@ class SelectSliderTest(InteractiveScriptTests):
         assert sr3.get("select_slider")[1].value == ("orange", "yellow")
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class SelectboxTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(

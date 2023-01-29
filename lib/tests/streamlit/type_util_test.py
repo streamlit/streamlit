@@ -32,6 +32,7 @@ from streamlit import type_util
 from streamlit.type_util import (
     DataFormat,
     can_be_float_or_int,
+    convert_anything_to_df,
     data_frame_to_bytes,
     fix_arrow_incompatible_column_types,
     is_bytes_like,
@@ -404,6 +405,59 @@ class TypeUtilTest(unittest.TestCase):
             f"Expected {column} to be {'incompatible' if incompatible else 'compatible'} with Arrow.",
         )
 
+    @parameterized.expand(
+        [
+            (pd.Series([1, 2, "3"]), True),
+            # Complex numbers:
+            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
+            # Timedelta:
+            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
+            # Decimal:
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), True),
+            # Mixed-integer types:
+            (pd.Series([1, 2, "3"]), True),
+            # Mixed:
+            (pd.Series([1, 2.1, "3", True]), True),
+            # timedelta64
+            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), True),
+            # Frozenset:
+            (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), True),
+            # Dicts:
+            (pd.Series([{"a": 1}, {"b": 2}]), True),
+            # Complex types:
+            (pd.Series([TestObject(), TestObject()]), True),
+            # Supported types:
+            (pd.Series([1, 2, 3]), False),
+            (pd.Series([1, 2, 3.0]), False),
+            (pd.Series(["foo", "bar"]), False),
+            (pd.Series([True, False, None]), False),
+            (pd.Series(["foo", "bar", None]), False),
+            (pd.Series([[1, 2], [3, 4]]), False),
+            (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
+            (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
+        ]
+    )
+    def test_fix_arrow_incompatible_column_types(
+        self, column: pd.Series, incompatible: bool
+    ):
+        """Test that `fix_arrow_incompatible_column_types` correctly fixes
+        columns containing unsupported types by converting them to string and
+        leaves supported columns unchanged.
+        """
+        df = pd.DataFrame({"c1": column})
+        fixed_df = fix_arrow_incompatible_column_types(df)
+        col_dtype = fixed_df["c1"].dtype
+        inferred_type = infer_dtype(fixed_df["c1"])
+
+        if incompatible:
+            # Column should have been converted to string.
+            self.assertEqual(col_dtype, "object")
+            self.assertEqual(inferred_type, "string")
+        else:
+            # Column should have the original type.
+            self.assertEqual(col_dtype, df["c1"].dtype)
+            self.assertEqual(inferred_type, infer_dtype(df["c1"]))
+
     def test_fix_no_columns(self):
         """Test that `fix_arrow_incompatible_column_types` does not
         modify a DataFrame if all columns are compatible with Arrow.
@@ -420,23 +474,6 @@ class TypeUtilTest(unittest.TestCase):
 
         fixed_df = fix_arrow_incompatible_column_types(df)
         pd.testing.assert_frame_equal(df, fixed_df)
-
-    def test_fix_complex_column_type(self):
-        """Test that `fix_arrow_incompatible_column_types` correctly fixes
-        columns containing complex types by converting them to string.
-        """
-        df = pd.DataFrame(
-            {
-                "complex": [1 + 2j, 3 + 4j, 5 + 6 * 1j],
-                "integer": [1, 2, 3],
-                "string": ["foo", "bar", None],
-            }
-        )
-
-        self.assertEqual(infer_dtype(df["complex"]), "complex")
-
-        fixed_df = fix_arrow_incompatible_column_types(df)
-        self.assertEqual(infer_dtype(fixed_df["complex"]), "string")
 
     def test_fix_mixed_column_types(self):
         """Test that `fix_arrow_incompatible_column_types` correctly fixes
@@ -495,6 +532,39 @@ dtype: object""",
                 "No exception should have been thrown here. "
                 f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
             )
+
+    def test_convert_anything_to_df_ensure_copy(self):
+        """Test that `convert_anything_to_df` creates a copy of the original
+        dataframe if `ensure_copy` is True.
+        """
+        orginal_df = pd.DataFrame(
+            {
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
+        )
+
+        converted_df = convert_anything_to_df(orginal_df, ensure_copy=True)
+        # Apply a change
+        converted_df["integer"] = [4, 5, 6]
+        # Ensure that the original dataframe is not changed
+        self.assertEqual(orginal_df["integer"].to_list(), [1, 2, 3])
+
+        converted_df = convert_anything_to_df(orginal_df, ensure_copy=False)
+        # Apply a change
+        converted_df["integer"] = [4, 5, 6]
+        # The original dataframe should be changed here since ensure_copy is False
+        self.assertEqual(orginal_df["integer"].to_list(), [4, 5, 6])
+
+    def test_convert_anything_to_df_supports_key_value_dicts(self):
+        """Test that `convert_anything_to_df` correctly converts
+        key-value dicts to a dataframe.
+        """
+        data = {"a": 1, "b": 2}
+        df = convert_anything_to_df(data)
+        pd.testing.assert_frame_equal(df, pd.DataFrame.from_dict(data, orient="index"))
 
     def test_is_snowpark_dataframe(self):
         df = pd.DataFrame(
