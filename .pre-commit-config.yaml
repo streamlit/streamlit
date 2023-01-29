@@ -27,13 +27,15 @@ repos:
           # Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
           - --target-version=py37
         files: \.py$|\.pyi$
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-        args:
-          - --filter-files
-        exclude: ^lib/streamlit/__init__\.py$
+# Turning off isort temporary due to https://github.com/PyCQA/isort/issues/2077
+# As of 1.28.23, bumping isort to 5.12.0 would resolve the error but requires python3.8+
+  # - repo: https://github.com/PyCQA/isort
+  #   rev: 5.12.0
+  #   hooks:
+  #     - id: isort
+  #       args:
+  #         - --filter-files
+  #       exclude: ^lib/streamlit/__init__\.py$
   - repo: https://github.com/PyCQA/autoflake
     rev: v1.7.7
     hooks:
