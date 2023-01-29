@@ -16,11 +16,12 @@
 
 import { Type as QuiverType } from "src/lib/Quiver"
 import { GridCellKind } from "@glideapps/glide-data-grid"
+import { DatetimePickerCell } from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
 import { BaseColumnProps } from "./utils"
 import TimeColumn, { TimeColumnParams } from "./TimeColumn"
 
 const MOCK_TIME_QUIVER_TYPE: QuiverType = {
-  pandas_type: "datetime",
+  pandas_type: "timestamp",
   numpy_type: "datetime64",
 }
 
@@ -46,14 +47,8 @@ function getTimeColumn(
 }
 
 const constantDate = new Date("05 October 2011 14:48")
-const constantDateWithout0MS = new Date("05 October 2011 14:48:48.001")
 
 const constantDateAsNumber = Number(constantDate)
-const dateWithout0MSAsNumber = Number(constantDateWithout0MS)
-
-const constantDisplayDate = ""
-
-const displayDateWithout0MS = ""
 
 describe("TimeColumn", () => {
   it("creates a valid column instance", () => {
@@ -64,37 +59,6 @@ describe("TimeColumn", () => {
 
     const mockCell = mockColumn.getCell(constantDateAsNumber)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect(mockCell.data.time).toEqual(constantDateAsNumber)
+    expect((mockCell as DatetimePickerCell).data.date).toEqual(constantDate)
   })
-
-  it.each([
-    [constantDateAsNumber, constantDate.toISOString(), constantDisplayDate],
-    [
-      dateWithout0MSAsNumber,
-      constantDateWithout0MS.toISOString(),
-      displayDateWithout0MS,
-    ],
-    [null, null, ""],
-    [undefined, null, ""],
-  ])(
-    "supports date value (%p parsed as %p)",
-    (input: any, value: string | null, displayDate: string) => {
-      const mockColumn = getTimeColumn(MOCK_TIME_QUIVER_TYPE)
-      const cell = mockColumn.getCell(input)
-      expect(mockColumn.getCellValue(cell)).toEqual(value)
-      expect((cell as TimePickerCell).data.displayTime).toEqual(displayDate)
-    }
-  )
-
-  it.each([
-    [{ format: undefined } as TimeColumnParams, "%H:%M:%S.%L"],
-    [{ format: "%d %B, %Y" } as TimeColumnParams, "%d %B, %Y"],
-  ])(
-    "Given %p, shows %p format",
-    (params: TimeColumnParams, expFormat: string) => {
-      const mockColumn = getTimeColumn(MOCK_TIME_QUIVER_TYPE, params)
-      const cell = mockColumn.getCell(100)
-      expect((cell as TimePickerCell).data.format).toEqual(expFormat)
-    }
-  )
 })

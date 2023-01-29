@@ -22,7 +22,7 @@ import {
   getDateCell,
   getDateCellContent,
 } from "src/components/widgets/DataFrame/columns/utils"
-import { DatetimePickerCell } from "../customCells/DatetimePickerCell"
+import { DatetimePickerCell } from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
 
 export interface TimeColumnParams {
   readonly format?: string

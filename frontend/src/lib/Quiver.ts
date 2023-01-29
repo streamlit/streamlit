@@ -657,7 +657,8 @@ but was expecting \`${JSON.stringify(expectedDataTypes)}\`.
     // Thus, as long as the length of `t2` is >= than `t1`, this will work properly.
     // For columns, `pandas_type` will point us to the correct type.
     return t1.every(
-      (type: Type, index: number) => type.pandas_type === t2[index]?.pandas_type
+      (type: Type, index: number) =>
+        type.pandas_type === t2[index]?.pandas_type
     )
   }
 

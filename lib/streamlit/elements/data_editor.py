@@ -100,10 +100,6 @@ class ColumnConfig(TypedDict, total=False):
             "number",
             "boolean",
             "list",
-            "url",
-            "image",
-            "chart",
-            "range",
             "categorical",
         ]
     ]
@@ -385,8 +381,8 @@ def _apply_data_specific_configs(
             data_df[column_name] = column_data.astype(str)
 
     # Pandas adds a range index as default to all datastructures
-    # but for most of the non-pandas data objects it
-    # Therefore, we will hide it as default.
+    # but for most of the non-pandas data objects it is unnecessary
+    # to show this index to the user. Therefore, we will hide it as default.
     if data_format in [
         DataFormat.SET_OF_VALUES,
         DataFormat.TUPLE_OF_VALUES,
@@ -502,6 +498,7 @@ class DataEditorMixin:
         num_rows : "fixed" or "dynamic"
             If "dynamic", the user can add and delete rows in the data editor.
             If "fixed", the user cannot add or delete rows. Defaults to "fixed".
+            Note: "dynamic" mode does not allow the user to sort columns.
 
         Returns
         -------

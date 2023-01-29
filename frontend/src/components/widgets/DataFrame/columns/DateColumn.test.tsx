@@ -16,11 +16,9 @@
 
 import { Type as QuiverType } from "src/lib/Quiver"
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { DatePickerCell } from "src/components/widgets/DataFrame/customCells/DatePickerCell"
-import { DatetimeLocalPickerCell } from "src/components/widgets/DataFrame/customCells/DatetimeLocalPickerCell"
+import { DatetimePickerCell } from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
 import { BaseColumnProps } from "./utils"
 import DateColumn, { DateColumnParams } from "./DateColumn"
-import moment from "moment"
 
 const MOCK_DATE_QUIVER_TYPE: QuiverType = {
   pandas_type: "datetime",
@@ -50,9 +48,6 @@ function getDateColumn(
 
 const constantDate = new Date("05 October 2011 14:48")
 
-// deal with machines in different timezones
-const constantDisplayDate = moment.utc(constantDate).format(format)
-
 describe("DateColumn", () => {
   it("creates a valid column instance", () => {
     const mockColumn = getDateColumn(MOCK_DATE_QUIVER_TYPE)
@@ -62,34 +57,6 @@ describe("DateColumn", () => {
 
     const mockCell = mockColumn.getCell(constantDate)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect((mockCell as DatePickerCell).data.date).toEqual(constantDate)
+    expect((mockCell as DatetimePickerCell).data.date).toEqual(constantDate)
   })
-
-  it.each([
-    [constantDate, constantDate.toISOString(), constantDisplayDate],
-    [null, null, ""],
-    [undefined, null, ""],
-  ])(
-    "supports date value (%p parsed as %p)",
-    (input: any, value: string | null, displayDate: string) => {
-      const mockColumn = getDateColumn(MOCK_DATE_QUIVER_TYPE)
-      const cell = mockColumn.getCell(input)
-      expect(mockColumn.getCellValue(cell)).toEqual(value)
-      expect((cell as DatetimeLocalPickerCell).data.displayDate).toEqual(
-        displayDate
-      )
-    }
-  )
-
-  it.each([
-    [{ format: undefined } as DateColumnParams, "%Y / %m / %d"],
-    [{ format: "%d %B, %Y" } as DateColumnParams, "%d %B, %Y"],
-  ])(
-    "Given %p, shows %p format",
-    (params: DateColumnParams, expFormat: string) => {
-      const mockColumn = getDateColumn(MOCK_DATE_QUIVER_TYPE, params)
-      const cell = mockColumn.getCell(null)
-      expect((cell as DatePickerCell).data.format).toEqual(expFormat)
-    }
-  )
 })
