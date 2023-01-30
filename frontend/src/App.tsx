@@ -1315,6 +1315,7 @@ export class App extends PureComponent<Props, State> {
     } catch (err) {
       windowToPrint = window
     } finally {
+      // wait 1 second before printing, to be 100% sure hamburger close animation ends
       setTimeout(() => {
         if (!windowToPrint) windowToPrint = window
         windowToPrint.print()
