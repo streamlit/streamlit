@@ -668,10 +668,10 @@ dtype: object""",
 
     @parameterized.expand(
         [
-            (1000000, datetime(1969, 12, 31, 16, 16, 40)),
+            (1000000, datetime(1969, 12, 31, 16, 16, 40, tzinfo=tzutc())),
             ("2023-01-07T16:00:00.000Z", datetime(2023, 1, 7, 16, 0, tzinfo=tzutc())),
-            ("1000000", datetime(1969, 12, 31, 16, 16, 40)),
-            (1000000.56, datetime(1969, 12, 31, 16, 16, 40, 560)),
+            ("1000000", datetime(1969, 12, 31, 16, 16, 40, tzinfo=tzutc())),
+            (1000000.56, datetime(1969, 12, 31, 16, 16, 40, 560, tzinfo=tzutc())),
             (None, None),
         ]
     )
@@ -680,10 +680,10 @@ dtype: object""",
 
     @parameterized.expand(
         [
-            (1000000, datetime(1969, 12, 31, 16, 16, 40)),
+            (1000000, datetime(1969, 12, 31, 16, 16, 40, tzinfo=tzutc())),
             ("2023-01-07T16:00:00.000Z", datetime(2023, 1, 7, 16, 0, tzinfo=tzutc())),
-            ("1000000", datetime(1969, 12, 31, 16, 16, 40)),
-            (1000000.56, datetime(1969, 12, 31, 16, 16, 40, 560)),
+            ("1000000", datetime(1969, 12, 31, 16, 16, 40, tzinfo=tzutc())),
+            (1000000.56, datetime(1969, 12, 31, 16, 16, 40, 560, tzinfo=tzutc())),
             (None, None),
         ]
     )
@@ -697,10 +697,10 @@ dtype: object""",
 
     @parameterized.expand(
         [
-            (1000000, datetime(1969, 12, 31, 16, 16, 40)),
+            (1000000, datetime(1969, 12, 31, 16, 16, 40, tzinfo=tzutc())),
             ("2023-01-07T16:00:00.000Z", datetime(2023, 1, 7, 16, 0, tzinfo=tzutc())),
-            ("1000000", datetime(1969, 12, 31, 16, 16, 40)),
-            (1000000.56, datetime(1969, 12, 31, 16, 16, 40, 560)),
+            ("1000000", datetime(1969, 12, 31, 16, 16, 40, tzinfo=tzutc())),
+            (1000000.56, datetime(1969, 12, 31, 16, 16, 40, 560, tzinfo=tzutc())),
             (None, None),
         ]
     )
