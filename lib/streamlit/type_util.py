@@ -450,7 +450,7 @@ def convert_anything_to_df(
 
     Parameters
     ----------
-    df : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
+    data : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
 
     max_unevaluated_rows: int
         If unevaluated data is detected this func will evaluate it,

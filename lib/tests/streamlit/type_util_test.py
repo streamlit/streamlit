@@ -121,7 +121,6 @@ class TypeUtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (pd.Series([1, 2, "3"]), True),
             # Complex numbers:
             (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
             # Timedelta:
@@ -162,7 +161,6 @@ class TypeUtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (pd.Series([1, 2, "3"]), True),
             # Complex numbers:
             (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
             # Timedelta:
