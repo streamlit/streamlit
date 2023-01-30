@@ -18,7 +18,7 @@ describe("st.dataframe and st.data_editor supports various data types", () => {
   before(() => {
     // Increasing timeout since we're waiting for
     // dataframe tables to be rendered.
-    Cypress.config("defaultCommandTimeout", 30000);
+    Cypress.config("defaultCommandTimeout", 15000);
 
     cy.loadApp("http://localhost:3000/");
     cy.prepForElementSnapshots();
