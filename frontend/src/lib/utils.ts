@@ -203,3 +203,104 @@ export function labelVisibilityProtoValueToEnum(
       return LabelVisibilityOptions.Visible
   }
 }
+
+/**
+ * Looks for an IFrame with given className inside given querySet
+ */
+export function findAnIFrameWithClassName(
+  qs: NodeListOf<HTMLIFrameElement> | HTMLCollectionOf<HTMLIFrameElement>,
+  className: string
+): HTMLIFrameElement | null {
+  for (let i = 0; i < qs.length; i++) {
+    const cd = qs[i].contentDocument
+    if (cd && cd.getElementsByClassName(className).length > 0) {
+      return qs[i]
+    }
+  }
+  return null
+}
+
+/**
+ * Returns True if IFrame can be accessed otherwise returns False
+ */
+export function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
+  try {
+    if (iframe.contentWindow === null) return false
+    const doc = iframe.contentDocument || iframe.contentWindow.document
+    const html = doc.body.innerHTML
+    return html !== null && html !== ""
+  } catch (err) {
+    return false
+  }
+}
+
+/**
+ * Tries to get an IFrame in which Streamlit app is embedded on Cloud deployments.
+ * It assumes iframe has title="streamlitApp", iterates over IFrames,
+ * and looks which IFrame contains div with stAppId value, otherwise returns first found iFrame or null.
+ */
+export function getIFrameEnclosingApp(
+  embeddingId: string
+): HTMLIFrameElement | null {
+  if (!isInChildFrame()) {
+    return null
+  }
+  const embeddingIdClassName = getEmbeddingIdClassName(embeddingId)
+  const qsStreamlitAppStr = 'iframe[title="streamlitApp"]'
+  let qs = window.document.querySelectorAll(
+    qsStreamlitAppStr
+  ) as NodeListOf<HTMLIFrameElement>
+  let foundIFrame = findAnIFrameWithClassName(qs, embeddingIdClassName)
+  if (foundIFrame && !canAccessIFrame(foundIFrame)) {
+    return null
+  }
+  if (foundIFrame) {
+    return foundIFrame
+  }
+  if (window.parent) {
+    qs = window.parent.document.querySelectorAll(qsStreamlitAppStr)
+  }
+  foundIFrame = findAnIFrameWithClassName(qs, embeddingIdClassName)
+  if (foundIFrame && !canAccessIFrame(foundIFrame)) {
+    return null
+  }
+  if (foundIFrame) {
+    return foundIFrame
+  }
+  let htmlCollection = window.document.getElementsByTagName(
+    "iframe"
+  ) as HTMLCollectionOf<HTMLIFrameElement>
+  foundIFrame = findAnIFrameWithClassName(htmlCollection, embeddingIdClassName)
+  if (foundIFrame && !canAccessIFrame(foundIFrame)) {
+    return null
+  }
+  if (foundIFrame) {
+    return foundIFrame
+  }
+  if (window.parent) {
+    htmlCollection = window.parent.document.getElementsByTagName("iframe")
+  }
+  foundIFrame = findAnIFrameWithClassName(htmlCollection, embeddingIdClassName)
+  if (foundIFrame && !canAccessIFrame(foundIFrame)) {
+    return null
+  }
+  return foundIFrame
+}
+
+/**
+ * Returns UID generated based on current date and Math.random module
+ */
+export function generateUID(): string {
+  return (
+    Math.floor(Date.now() / 1000).toString(36) +
+    Math.random().toString(36).slice(-6)
+  )
+}
+
+/**
+ * Returns stAppEmbeddingId-${this.embeddingId} string,
+ * which is used as class to detect iFrame when printing
+ */
+export function getEmbeddingIdClassName(embeddingId: string): string {
+  return `stAppEmbeddingId-${embeddingId}`
+}
