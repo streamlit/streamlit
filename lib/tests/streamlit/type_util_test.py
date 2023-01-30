@@ -14,7 +14,7 @@
 
 import unittest
 from collections import namedtuple
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Any, NamedTuple
 from unittest.mock import patch
@@ -668,10 +668,10 @@ dtype: object""",
 
     @parameterized.expand(
         [
-            (1000000, datetime(1969, 12, 31, 16, 16, 40, tzinfo=tzutc())),
+            (1000000, datetime(1970, 1, 1, 0, 16, 40, tzinfo=tzutc())),
             ("2023-01-07T16:00:00.000Z", datetime(2023, 1, 7, 16, 0, tzinfo=tzutc())),
-            ("1000000", datetime(1969, 12, 31, 16, 16, 40, tzinfo=tzutc())),
-            (1000000.56, datetime(1969, 12, 31, 16, 16, 40, 560, tzinfo=tzutc())),
+            ("1000000", datetime(1970, 1, 1, 0, 16, 40, tzinfo=tzutc())),
+            (1000000.56, datetime(1970, 1, 1, 0, 16, 40, 560, tzinfo=tzutc())),
             (None, None),
         ]
     )
@@ -680,34 +680,30 @@ dtype: object""",
 
     @parameterized.expand(
         [
-            (1000000, datetime(1969, 12, 31, 16, 16, 40, tzinfo=tzutc())),
-            ("2023-01-07T16:00:00.000Z", datetime(2023, 1, 7, 16, 0, tzinfo=tzutc())),
-            ("1000000", datetime(1969, 12, 31, 16, 16, 40, tzinfo=tzutc())),
-            (1000000.56, datetime(1969, 12, 31, 16, 16, 40, 560, tzinfo=tzutc())),
+            (1000000, time(0, 16, 40)),
+            ("2023-01-07T16:00:00.000Z", time(7, 16, 0, tzinfo=tzutc())),
+            ("1000000", time(0, 16, 40)),
+            (1000000.56, time(0, 16, 40, 560)),
             (None, None),
         ]
     )
     def test_maybe_convert_datetime_time_edit_df(self, actual, expected):
         if expected != None:
-            self.assertEqual(
-                maybe_convert_datetime_time_edit_df(actual), expected.time()
-            )
+            self.assertEqual(maybe_convert_datetime_time_edit_df(actual), expected)
         else:
             self.assertEqual(maybe_convert_datetime_time_edit_df(actual), expected)
 
     @parameterized.expand(
         [
-            (1000000, datetime(1969, 12, 31, 16, 16, 40, tzinfo=tzutc())),
-            ("2023-01-07T16:00:00.000Z", datetime(2023, 1, 7, 16, 0, tzinfo=tzutc())),
-            ("1000000", datetime(1969, 12, 31, 16, 16, 40, tzinfo=tzutc())),
-            (1000000.56, datetime(1969, 12, 31, 16, 16, 40, 560, tzinfo=tzutc())),
+            (1000000, date(1970, 1, 1)),
+            ("2023-01-07T16:00:00.000Z", date(2023, 1, 7)),
+            ("1000000", date(1970, 1, 1)),
+            (1000000.56, date(1970, 1, 1)),
             (None, None),
         ]
     )
-    def test_maybe_convert_datetime_datetime_edit_df(self, actual, expected):
+    def test_maybe_convert_datetime_date_edit_df(self, actual, expected):
         if expected != None:
-            self.assertEqual(
-                maybe_convert_datetime_date_edit_df(actual), expected.date()
-            )
+            self.assertEqual(maybe_convert_datetime_date_edit_df(actual), expected)
         else:
             self.assertEqual(maybe_convert_datetime_date_edit_df(actual), expected)

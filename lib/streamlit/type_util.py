@@ -1001,13 +1001,16 @@ def maybe_convert_datetime_time_edit_df(value: Union[str, int, float]) -> time |
 def maybe_convert_datetime_datetime_edit_df(value) -> datetime | None:
     try:
         import dateutil.parser
+        from dateutil.tz import tzutc
 
         # handle pasting as the input is a string type but actually a number
         if isinstance(value, str) and not can_be_float_or_int(value):
-            date_converted = dateutil.parser.isoparse(value)
+            date_converted = dateutil.parser.isoparse(value).astimezone(tz=tzutc())
         elif can_be_float_or_int(value) or isinstance(value, (int, float)):
             # Python datetime uses microseconds, but JS & Moment uses milliseconds
-            date_converted = datetime.fromtimestamp(float(value) / 1000)
+            date_converted = datetime.fromtimestamp(float(value) / 1000).astimezone(
+                tz=tzutc()
+            )
         return date_converted
     except Exception as e:
         _LOGGER.info(f"Failed to convert the edited cell to datetime. Exception: {e}")
