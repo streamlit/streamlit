@@ -34,7 +34,12 @@ from typing import (
 
 import pandas as pd
 import pyarrow as pa
-from pandas.api.types import is_datetime64_any_dtype, is_float_dtype, is_integer_dtype
+from pandas.api.types import (
+    is_datetime64_any_dtype,
+    is_datetime64tz_dtype,
+    is_float_dtype,
+    is_integer_dtype,
+)
 from pandas.io.formats.style import Styler
 from typing_extensions import Final, Literal, TypeAlias, TypedDict
 
@@ -51,7 +56,14 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, to_key
+from streamlit.type_util import (
+    DataFormat,
+    DataFrameGenericAlias,
+    Key,
+    maybe_convert_datetime_date_edit_df,
+    maybe_convert_datetime_time_edit_df,
+    to_key,
+)
 
 if TYPE_CHECKING:
     import numpy as np
@@ -190,34 +202,37 @@ class DataEditorSerde:
         return json.dumps(editing_state, default=str)
 
 
-def _parse_value(value: Union[str, int, float, bool, None], dtype) -> Any:
+def _parse_value(value: Union[str, int, float, bool, None], orig_col) -> Any:
     """Convert a value to the correct type.
-
     Parameters
     ----------
     value : str | int | float | bool | None
         The value to convert.
-
-    dtype
-        The type of the value.
-
+    orig_col
+        The original column in order to use infer_dtype or check .dtype
     Returns
     -------
     The converted value.
     """
     if value is None:
         return None
-
-    # TODO(lukasmasuch): how to deal with date & time columns?
-
-    # Datetime values try to parse the value to datetime:
-    # The value is expected to be a ISO 8601 string
-    if is_datetime64_any_dtype(dtype):
-        return pd.to_datetime(value, errors="ignore")
-    elif is_integer_dtype(dtype):
+    if pd.api.types.infer_dtype(orig_col) == "time":
+        return maybe_convert_datetime_time_edit_df(value)
+    elif pd.api.types.infer_dtype(orig_col) == "date":
+        return maybe_convert_datetime_date_edit_df(value)
+    elif is_datetime64_any_dtype(orig_col.dtype):
+        if is_datetime64tz_dtype(orig_col.dtype):
+            return pd.to_datetime(value, errors="ignore")
+        else:
+            try:
+                return pd.to_datetime(value, errors="ignore").replace(tzinfo=None)
+            except:
+                # default with timezone
+                return pd.to_datetime(value, errors="ignore")
+    elif is_integer_dtype(orig_col.dtype):
         with contextlib.suppress(ValueError):
             return int(value)
-    elif is_float_dtype(dtype):
+    elif is_float_dtype(orig_col.dtype):
         with contextlib.suppress(ValueError):
             return float(value)
     return value
