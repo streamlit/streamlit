@@ -273,6 +273,16 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once_with(my_instance)
 
+    # We use "looks like a memory address" as a test inside st.write, so here we're
+    # checking that that logic isn't broken.
+    def test_str_looking_like_mem_address(self):
+        """Test calling st.write on a string that looks like a memory address."""
+
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:
+            st.write("<__main__.MyObj object at 0x13d2d0bb0>")
+
+            p.assert_called_once()
+
     def test_exception(self):
         """Test st.write that raises an exception."""
         # We patch streamlit.exception to observe it, but we also make sure

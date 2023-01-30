@@ -71,6 +71,7 @@ class WriteMixin:
             - write(error)      : Prints an exception specially.
             - write(func)       : Displays information about a function.
             - write(module)     : Displays information about the module.
+            - write(class)      : Displays information about a class.
             - write(dict)       : Displays dict in an interactive widget.
             - write(mpl_fig)    : Displays a Matplotlib figure.
             - write(altair)     : Displays an Altair chart.
