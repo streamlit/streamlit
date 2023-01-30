@@ -205,7 +205,8 @@ st.experimental_data_editor(special_types_df.copy(), use_container_width=True)
 
 
 class TestObject(object):
-    pass
+    def __str__(self):
+        return "TestObject"
 
 
 st.subheader("Unsupported types")
