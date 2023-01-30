@@ -103,8 +103,10 @@ export interface Type {
   /** Type name. */
   // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
   // to define such recursive types in TS, `string` will suffice for now.
+  /** The type label returned by pandas.api.types.infer_dtype */
   pandas_type: IndexTypeName | string
 
+  /** The numpy dtype that corresponds to the types returned in df.dtypes */
   numpy_type: string
 
   /** Type metadata. */
