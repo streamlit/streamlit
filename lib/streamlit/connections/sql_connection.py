@@ -13,7 +13,8 @@
 # limitations under the License.
 
 from contextlib import contextmanager
-from typing import Iterator
+from datetime import timedelta
+from typing import Iterator, Optional, Union
 
 import pandas as pd
 import sqlalchemy
@@ -54,14 +55,18 @@ class SQL(BaseConnection[Engine]):
     def _read_sql(sql: str, _instance, **kwargs) -> pd.DataFrame:
         return pd.read_sql(sql, _instance, **kwargs)
 
-    def read_sql(self, sql: str, ttl_minutes: int = 60, **kwargs) -> pd.DataFrame:
+    def read_sql(
+        self,
+        sql: str,
+        ttl: Optional[Union[float, int, timedelta]] = None,
+        **kwargs,
+    ) -> pd.DataFrame:
         instance = self.instance.connect()
-        if ttl_minutes > 0:
-            # TODO(vdonato): Fix the type error below.
-            return cache_data(self._read_sql, ttl=60 * ttl_minutes)(  # type: ignore
-                sql, instance, **kwargs
-            )
-        return self._read_sql(sql, instance, **kwargs)
+
+        # TODO(vdonato): Fix the type error below.
+        return cache_data(self._read_sql, ttl=ttl)(  # type: ignore
+            sql, instance, **kwargs
+        )
 
     @contextmanager
     def session(self) -> Iterator[Session]:
