@@ -79,13 +79,7 @@ const Editor: ReturnType<ProvideEditorCallback<DatetimePickerCell>> = cell => {
       required
       style={{ minHeight: 26, border: "none", outline: "none" }}
       type={type}
-      // format example: 2018-07-22 for date
-      // format example: 2017-06-01T08:30 for datetime
-      //   step={
-      //     type === "time" && newCellData.getMilliseconds() !== 0
-      //       ? ".001"
-      //       : undefined
-      //   }
+      step={newCellData.getMilliseconds() !== 0 ? ".001" : undefined}
       value={value}
       autoFocus={true}
       onChange={event => {
