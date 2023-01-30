@@ -630,10 +630,6 @@ def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
 
         if inferred_type in [
             "mixed-integer",
-            # Decimal is not correctly supported on Arrow JS:
-            # https://github.com/apache/arrow/issues/22932
-            # https://github.com/apache/arrow/issues/28804
-            "decimal",
             "complex",
             "timedelta",
             "timedelta64",
