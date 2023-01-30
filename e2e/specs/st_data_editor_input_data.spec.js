@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-describe("st.dataframe support various input data types and formats", () => {
+describe("st.data_editor support various input data types and formats", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
     cy.prepForElementSnapshots();
@@ -29,7 +29,7 @@ describe("st.dataframe support various input data types and formats", () => {
     itself also has more advanced canvas based tests for some of the interactive features. */
 
     cy.get(".stDataFrame").each((el, idx) => {
-      return cy.wrap(el).matchThemedSnapshots("dataframe-input-data-" + idx);
+      return cy.wrap(el).matchThemedSnapshots("data_editor-input-data-" + idx);
     });
   });
 });
