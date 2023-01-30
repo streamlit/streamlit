@@ -44,27 +44,26 @@ export enum PythonDateType {
 export type DatetimePickerCell = CustomCell<DatetimePickerCellProps>
 
 const formatValueForHTMLInput = (type: PythonDateType, date: Date): string => {
-  const offsetDate = date
   if (type === "date") {
     // add 1 because getMonth is 0 index based
-    const year = offsetDate?.getFullYear().toString()
-    const mm = appendZeroDateFormatSec((offsetDate?.getMonth() + 1).toString())
-    const dd = appendZeroDateFormatSec(offsetDate?.getDate().toString())
+    const year = date?.getFullYear().toString()
+    const mm = appendZeroDateFormatSec((date?.getUTCMonth() + 1).toString())
+    const dd = appendZeroDateFormatSec(date?.getUTCDate().toString())
     // format example: 2020-03-08
     return `${year}-${mm}-${dd}`
   }
   if (type === "time") {
-    const hours = appendZeroDateFormatSec(offsetDate.getUTCHours().toString())
-    const minutes = appendZeroDateFormatSec(offsetDate.getMinutes().toString())
-    const seconds = appendZeroDateFormatSec(offsetDate.getSeconds().toString())
+    const hours = appendZeroDateFormatSec(date.getUTCHours().toString())
+    const minutes = appendZeroDateFormatSec(date.getMinutes().toString())
+    const seconds = appendZeroDateFormatSec(date.getSeconds().toString())
     const milliseconds = appendZeroDateFormatMs(
-      offsetDate.getMilliseconds().toString()
+      date.getMilliseconds().toString()
     )
     // format example: 08:05:01.004
     return `${hours}:${minutes}:${seconds}.${milliseconds}`
   }
   if (type === "datetime-local") {
-    return offsetDate.toISOString().replace("Z", "")
+    return date.toISOString().replace("Z", "")
   }
   return ""
 }
