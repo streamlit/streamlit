@@ -982,17 +982,17 @@ def can_be_float_or_int(value: str | int | float) -> bool:
         return False
 
 
-def maybe_convert_datetime_date_edit_df(value) -> date | None:
+def maybe_convert_datetime_date_edit_df(value: Union[str, int, float]) -> date | None:
     converted_datetime = maybe_convert_datetime_datetime_edit_df(value)
-    if converted_datetime == None:
+    if converted_datetime is None:
         return None
     else:
         return converted_datetime.date()
 
 
-def maybe_convert_datetime_time_edit_df(value) -> time | None:
+def maybe_convert_datetime_time_edit_df(value: Union[str, int, float]) -> time | None:
     converted_datetime = maybe_convert_datetime_datetime_edit_df(value)
-    if converted_datetime == None:
+    if converted_datetime is None:
         return None
     else:
         return converted_datetime.time()
