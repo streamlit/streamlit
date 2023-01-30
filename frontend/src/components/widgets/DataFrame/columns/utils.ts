@@ -385,14 +385,6 @@ export function isDateNotNaN(date: Date): boolean {
   return !Number.isNaN(date.getTime())
 }
 
-export function getTimezoneOffset(): number {
-  const rightNow = new Date()
-  const jan1 = new Date(rightNow.getFullYear(), 0, 1, 0, 0, 0, 0)
-  const temp = jan1.toUTCString()
-  const jan2 = new Date(temp.substring(0, temp.lastIndexOf(" ") - 1))
-  return jan1.getTime() - jan2.getTime()
-}
-
 export function removeZeroMillisecondsInISOString(date: string): string {
   return date.replace(".000", "")
 }

@@ -35,6 +35,9 @@ import {
   TextColumn,
   CategoricalColumn,
   ListColumn,
+  TimeColumn,
+  DateTimeColumn,
+  DateColumn,
 } from "./columns"
 import {
   extractCssProperty,
@@ -614,28 +617,28 @@ describe("getColumnTypeFromArrow", () => {
         pandas_type: "datetime",
         numpy_type: "datetime64[ns]",
       },
-      ObjectColumn,
+      DateTimeColumn,
     ],
     [
       {
         pandas_type: "datetimetz",
         numpy_type: "datetime64[ns]",
       },
-      ObjectColumn,
+      DateTimeColumn,
     ],
     [
       {
         pandas_type: "time",
-        numpy_type: "object",
+        numpy_type: "date",
       },
-      ObjectColumn,
+      TimeColumn,
     ],
     [
       {
         pandas_type: "date",
         numpy_type: "object",
       },
-      ObjectColumn,
+      DateColumn,
     ],
     [
       {
