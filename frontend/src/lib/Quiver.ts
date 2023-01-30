@@ -395,7 +395,9 @@ export class Quiver {
   /** Parse DataFrame's index header names. */
   private static parseIndexNames(schema: Schema): string[] {
     return schema.index_columns.map(indexName => {
-      // Range indices are treated differently:
+      // Range indices are treated differently since they
+      // contain additional metadata (e.g. start, stop, step).
+      // and not just the name.
       if (Quiver.isRangeIndex(indexName)) {
         const { name } = indexName
         return name || ""
