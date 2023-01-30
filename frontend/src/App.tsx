@@ -1304,7 +1304,7 @@ export class App extends PureComponent<Props, State> {
       setTimeout(this.printCallback, 500)
       return
     }
-    let windowToPrint
+    let windowToPrint: Window
     try {
       const htmlIFrameElement = getIFrameEnclosingApp(this.embeddingId)
       if (htmlIFrameElement && htmlIFrameElement.contentWindow) {
@@ -1315,8 +1315,10 @@ export class App extends PureComponent<Props, State> {
     } catch (err) {
       windowToPrint = window
     } finally {
-      if (!windowToPrint) windowToPrint = window
-      windowToPrint.print()
+      setTimeout(() => {
+        if (!windowToPrint) windowToPrint = window
+        windowToPrint.print()
+      }, 1000)
     }
   }
 
