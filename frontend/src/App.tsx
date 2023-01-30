@@ -44,11 +44,14 @@ import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import {
   setCookie,
+  getIFrameEnclosingApp,
   hashString,
   isEmbeddedInIFrame,
   isInChildFrame,
   notUndefined,
   getElementWidgetID,
+  generateUID,
+  getEmbeddingIdClassName,
 } from "src/lib/utils"
 import { BaseUriParts } from "src/lib/UriUtil"
 import {
@@ -181,6 +184,8 @@ export class App extends PureComponent<Props, State> {
   private pendingElementsTimerRunning: boolean
 
   private readonly componentRegistry: ComponentRegistry
+
+  private readonly embeddingId: string = generateUID()
 
   constructor(props: Props) {
     super(props)
@@ -1287,6 +1292,34 @@ export class App extends PureComponent<Props, State> {
     this.openDialog(newDialog)
   }
 
+  /**
+   * Prints the app, if the app is in IFrame
+   * it prints the content of the IFrame.
+   * Before printing this function ensures the app has fully loaded,
+   * by checking if we're in ScriptRunState.NOT_RUNNING state.
+   */
+  printCallback = (): void => {
+    const { scriptRunState } = this.state
+    if (scriptRunState !== ScriptRunState.NOT_RUNNING) {
+      setTimeout(this.printCallback, 500)
+      return
+    }
+    let windowToPrint
+    try {
+      const htmlIFrameElement = getIFrameEnclosingApp(this.embeddingId)
+      if (htmlIFrameElement && htmlIFrameElement.contentWindow) {
+        windowToPrint = htmlIFrameElement.contentWindow.window
+      } else {
+        windowToPrint = window
+      }
+    } catch (err) {
+      windowToPrint = window
+    } finally {
+      if (!windowToPrint) windowToPrint = window
+      windowToPrint.print()
+    }
+  }
+
   screencastCallback = (): void => {
     const { scriptName } = this.state
     const { startRecording } = this.props.screenCast
@@ -1356,10 +1389,14 @@ export class App extends PureComponent<Props, State> {
     const { hideSidebarNav: hostHideSidebarNav } =
       this.props.hostCommunication.currentState
 
-    const outerDivClass = classNames("stApp", {
-      "streamlit-embedded": isEmbeddedInIFrame(),
-      "streamlit-wide": userSettings.wideMode,
-    })
+    const outerDivClass = classNames(
+      "stApp",
+      getEmbeddingIdClassName(this.embeddingId),
+      {
+        "streamlit-embedded": isEmbeddedInIFrame(),
+        "streamlit-wide": userSettings.wideMode,
+      }
+    )
 
     const renderedDialog: React.ReactNode = dialog
       ? StreamlitDialog({
@@ -1427,6 +1464,7 @@ export class App extends PureComponent<Props, State> {
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}
                 aboutCallback={this.aboutCallback}
+                printCallback={this.printCallback}
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}
                 hostMenuItems={

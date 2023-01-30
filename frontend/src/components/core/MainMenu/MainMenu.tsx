@@ -93,6 +93,9 @@ export interface Props {
   /** Show the About dialog. */
   aboutCallback: () => void
 
+  /** Open the Print Dialog, if the app is in iFrame first open a new tab with app URL */
+  printCallback: () => void
+
   screenCastState: string
 
   hostMenuItems: IMenuItem[]
@@ -373,6 +376,7 @@ function MainMenu(props: Props): ReactElement {
       label: "Rerun",
       shortcut: "r",
     },
+    print: { onClick: props.printCallback, label: "Print" },
     recordScreencast: {
       onClick: props.screencastCallback,
       label: SCREENCAST_LABEL[props.screenCastState] || "Record a screencast",
@@ -481,6 +485,7 @@ function MainMenu(props: Props): ReactElement {
     coreMenuItems.rerun,
     coreMenuItems.settings,
     coreMenuItems.DIVIDER,
+    coreMenuItems.print,
     coreMenuItems.recordScreencast,
     coreMenuItems.DIVIDER,
     coreMenuItems.report,
