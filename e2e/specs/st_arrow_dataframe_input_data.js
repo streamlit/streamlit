@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-describe("st.dataframe and st.data_editor support a variety of column types", () => {
+describe("st.dataframe support various input data types and formats", () => {
   before(() => {
     // Increasing timeout since we're waiting for
     // dataframe tables to be rendered.
@@ -24,8 +24,8 @@ describe("st.dataframe and st.data_editor support a variety of column types", ()
     cy.prepForElementSnapshots();
   });
 
-  it("shows widget correctly", () => {
-    cy.get(".stDataFrame").should("have.length", 18);
+  it("shows tables correctly", () => {
+    cy.get(".stDataFrame").should("have.length", 30);
 
     /** Since glide-data-grid uses HTML canvas for rendering the table we
     cannot run any tests based on the HTML DOM. Therefore, we only use snapshot
@@ -33,7 +33,7 @@ describe("st.dataframe and st.data_editor support a variety of column types", ()
     itself also has more advanced canvas based tests for some of the interactive features. */
 
     cy.get(".stDataFrame").each((el, idx) => {
-      return cy.wrap(el).matchThemedSnapshots("dataframe-types-" + idx);
+      return cy.wrap(el).matchThemedSnapshots("dataframe-input-data-" + idx);
     });
   });
 });
