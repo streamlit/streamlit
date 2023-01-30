@@ -100,10 +100,9 @@ interface Types {
 
 /** Type information for single-index columns, and data columns. */
 export interface Type {
-  /** Type name. */
+  /** The type label returned by pandas.api.types.infer_dtype */
   // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
   // to define such recursive types in TS, `string` will suffice for now.
-  /** The type label returned by pandas.api.types.infer_dtype */
   pandas_type: IndexTypeName | string
 
   /** The numpy dtype that corresponds to the types returned in df.dtypes */
@@ -493,7 +492,8 @@ export class Quiver {
    * Returns undefined if the column is not categorical.
    */
   public getCategoricalOptions(columnIndex: number): string[] | undefined {
-    // TODO(lukasmasuch): Should we also support headcolumns here?
+    // TODO(lukasmasuch): Also support headcolumns here to support
+    // categorical index columns in the future.
     const { columns: numColumns } = this.dimensions
 
     if (columnIndex < 0 || columnIndex >= numColumns) {
