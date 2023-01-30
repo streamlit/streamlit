@@ -35,6 +35,18 @@ def patch_varname_getter():
 class StHelpTest(DeltaGeneratorTestCase):
     """Test st.help."""
 
+    def test_no_arg(self):
+        """When st.help is called with no arguments, show Streamlit docs."""
+
+        with patch_varname_getter():
+            st.help()
+
+        ds = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual("", ds.name)
+        self.assertEqual("streamlit", ds.value)
+        self.assertEqual("module", ds.type)
+        self.assertTrue(ds.doc_string.startswith("Streamlit."))
+
     def test_basic_func_with_doc(self):
         """Test basic function with docstring."""
 

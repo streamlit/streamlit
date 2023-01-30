@@ -45,15 +45,18 @@ CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
 
 class HelpMixin:
     @gather_metrics("help")
-    def help(self, obj: Any) -> "DeltaGenerator":
-        """Display object's doc string, nicely formatted.
+    def help(self, obj: Any = None) -> "DeltaGenerator":
+        """Display help and other information for a given object.
 
-        Displays the doc string for this object.
+        Depending on the type of object that is passed in, this displays the
+        object's name, type, value, signature, docstring, and member variables,
+        methods -- as well as the values/docstring of members and methods.
 
         Parameters
         ----------
-        obj : Object
-            The object whose docstring should be displayed.
+        obj : any
+            The object whose information should be displayed. If `None`, this
+            call will display help for Streamlit itself.
 
         Example
         -------
@@ -65,7 +68,7 @@ class HelpMixin:
         >>>
         >>> st.help(pandas.DataFrame)
 
-        Want to quickly check what datatype is output by a certain function?
+        Want to quickly check what data type is output by a certain function?
         Try:
 
         >>> import streamlit as st
@@ -73,7 +76,40 @@ class HelpMixin:
         >>> x = my_poorly_documented_function()
         >>> st.help(x)
 
+        Want to quickly inspect an object? No sweat:
+
+        >>> class Dog:
+        >>>   '''A typical dog.'''
+        >>>
+        >>>   def __init__(self, breed, color):
+        >>>     self.breed = breed
+        >>>     self.color = colod
+        >>>
+        >>>   def bark(self):
+        >>>     return 'Woof!'
+        >>>
+        >>>
+        >>> fido = Dog('poodle', 'white')
+        >>>
+        >>> st.help(fido)
+
+        And if you're using Magic, you can get help for functions, classes,
+        and modules without even typing `st.help`:
+
+        >>> import streamlit as st
+        >>> import pandas
+        >>>
+        >>> # Get help for Pandas DataFrame:
+        >>> pandas.DataFrame
+        >>>
+        >>> # Get help for Streamlit itself:
+        >>> st
         """
+        if obj is None:
+            import streamlit
+
+            obj = streamlit
+
         doc_string_proto = DocStringProto()
         _marshall(doc_string_proto, obj)
         return self.dg._enqueue("doc_string", doc_string_proto)
@@ -242,15 +278,11 @@ def _get_variable_name():
     #   ]
     # )
 
-    # Try to get argument from st.help call.
-    arg_node = _get_stcall_arg(tree, command_name="help")
-
-    if arg_node is None:
-        # If this wasn't an st.help call, try to get argument from st.write call.
-        arg_node = _get_stcall_arg(tree, command_name="write")
-
-    if arg_node is None:
-        # If this wasn't an st.write, it's probably a magic call. Just clean it up and return it.
+    # Check if this is an magic call (i.e. it's not st.help or st.write).
+    # If that's the case, just clean it up and return it.
+    if not _is_stcommand(tree, command_name="help") and not _is_stcommand(
+        tree, command_name="write"
+    ):
         code = cleaned_code
 
         # A common pattern is to add "," at the end of a magic command to make it print.
@@ -259,6 +291,12 @@ def _get_variable_name():
             code = code[:-1]
 
         return code
+
+    arg_node = _get_stcommand_arg(tree)
+
+    # If st.help() is called without an argument, return no variable name.
+    if not arg_node:
+        return None
 
     # If walrus, get name.
     # E.g. st.help(foo := 123) should give you "foo".
@@ -311,22 +349,30 @@ def _get_scriptrunner_frame():
     return scriptrunner_frame
 
 
-def _get_stcall_arg(tree, command_name):
-    """Gets the argument node for st.help() given the AST for that line of code."""
+def _is_stcommand(tree, command_name):
+    """Checks whether the AST in tree is a call for command_name."""
+    root_node = tree.body[0].value
+
+    if not type(root_node) is ast.Call:
+        return False
+
+    return (
+        # st call called without module. E.g. "help()"
+        getattr(root_node.func, "id", None) == command_name
+        or
+        # st call called with module. E.g. "foo.help()" (where usually "foo" is "st")
+        getattr(root_node.func, "attr", None) == command_name
+    )
+
+
+def _get_stcommand_arg(tree):
+    """Gets the argument node for the st command in tree (AST)."""
 
     root_node = tree.body[0].value
 
-    if type(root_node) is ast.Call:
+    if root_node.args:
+        return root_node.args[0]
 
-        # st.help should work when called as "help()":
-        if getattr(root_node.func, "id", None) == command_name:
-            return root_node.args[0]
-
-        # st.help should work when called as "foo.help()" (where usually "foo" is "st"):
-        if getattr(root_node.func, "attr", None) == command_name:
-            return root_node.args[0]
-
-    # This doesn't look like an st.help AST. Return None.
     return None
 
 
