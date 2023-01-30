@@ -38,6 +38,7 @@ import {
   getDefaultFormatDateCell,
   getDateCell,
   getCopyDataForDate,
+  formatValueForHTMLInput,
 } from "./utils"
 import { TextColumn } from "."
 
@@ -351,6 +352,7 @@ describe("getDateCell", () => {
     arrowType: MOCK_DATETIME_QUIVER_TYPE,
     contentAlignment: "left",
   } as BaseColumnProps
+
   describe("data is null or undefined", () => {
     it.each([[null], [undefined]])(
       "returns the correct cell with null or undefined",
@@ -369,6 +371,7 @@ describe("getDateCell", () => {
         expect(dateCell.data.kind).toBe("DatetimePickerCell")
       }
     )
+
     it.each([
       [BigInt(1000), new Date(1)],
       ["100", new Date(100 + new Date().getTimezoneOffset() * 60000)],
@@ -388,6 +391,7 @@ describe("getDateCell", () => {
       }
     )
   })
+
   describe("getCopyDataForDate", () => {
     it.each([
       [PythonDateType.Date, new Date(100), "1970-01-01T00:00:00.100Z"],
@@ -405,6 +409,19 @@ describe("getDateCell", () => {
       "check (%p, %p) gives the correct copyData: %p",
       (type: PythonDateType, date: Date, copyData: string) => {
         expect(getCopyDataForDate(date, type)).toContain(copyData)
+      }
+    )
+  })
+
+  describe("formatValueForHTMLInput", () => {
+    it.each([
+      [PythonDateType.Date, new Date(100), "1970-01-01"],
+      [PythonDateType.DatetimeLocal, new Date(100), "1970-01-01T00:00:00.100"],
+      [PythonDateType.Time, new Date(100), "00:00:00.100"],
+    ])(
+      "with type %p and date %p, check that the formatting is correct: %p",
+      (type: PythonDateType, date: Date, formattedDate: string) => {
+        expect(formatValueForHTMLInput(type, date)).toEqual(formattedDate)
       }
     )
   })

@@ -22,12 +22,9 @@ import {
   GridCellKind,
   ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
-import {
-  appendZeroDateFormatSec,
-  appendZeroDateFormatMs,
-} from "src/components/widgets/DataFrame/columns/utils"
+import { formatValueForHTMLInput } from "src/components/widgets/DataFrame/columns/utils"
 
-interface DatetimePickerCellProps {
+export interface DatetimePickerCellProps {
   readonly kind: "DatetimePickerCell"
   readonly date: Date | undefined
   readonly displayDate: string
@@ -42,31 +39,6 @@ export enum PythonDateType {
 }
 
 export type DatetimePickerCell = CustomCell<DatetimePickerCellProps>
-
-const formatValueForHTMLInput = (type: PythonDateType, date: Date): string => {
-  if (type === "date") {
-    // add 1 because getMonth is 0 index based
-    const year = date?.getFullYear().toString()
-    const mm = appendZeroDateFormatSec((date?.getUTCMonth() + 1).toString())
-    const dd = appendZeroDateFormatSec(date?.getUTCDate().toString())
-    // format example: 2020-03-08
-    return `${year}-${mm}-${dd}`
-  }
-  if (type === "time") {
-    const hours = appendZeroDateFormatSec(date.getUTCHours().toString())
-    const minutes = appendZeroDateFormatSec(date.getMinutes().toString())
-    const seconds = appendZeroDateFormatSec(date.getSeconds().toString())
-    const milliseconds = appendZeroDateFormatMs(
-      date.getMilliseconds().toString()
-    )
-    // format example: 08:05:01.004
-    return `${hours}:${minutes}:${seconds}.${milliseconds}`
-  }
-  if (type === "datetime-local") {
-    return date.toISOString().replace("Z", "")
-  }
-  return ""
-}
 
 const Editor: ReturnType<ProvideEditorCallback<DatetimePickerCell>> = cell => {
   const cellData = cell.value.data
