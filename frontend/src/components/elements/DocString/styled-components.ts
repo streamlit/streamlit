@@ -61,7 +61,7 @@ export const StyledDocString = styled.div(({ theme }) => ({
   whiteSpace: "pre",
   overflowX: "auto",
   overflowY: "auto",
-  maxHeight: "30rem",
+  maxHeight: "30.5rem", // The extra 0.5rem is to show a little of the overflowing line.
   padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
   fontSize: theme.fontSizes.sm,
 
