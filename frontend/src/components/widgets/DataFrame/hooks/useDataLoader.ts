@@ -27,12 +27,14 @@ import {
   getColumnTypeFromArrow,
   getAllColumnsFromArrow,
   getCellFromArrow,
+  getEmptyIndexColumn,
 } from "src/components/widgets/DataFrame/arrowUtils"
 import EditingState from "src/components/widgets/DataFrame/EditingState"
 import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
+  ObjectColumn,
   ColumnTypes,
   ColumnCreator,
 } from "src/components/widgets/DataFrame/columns"
@@ -223,7 +225,7 @@ function useDataLoader(
     (notNullOrUndefined(element.width) && element.width > 0)
 
   // Converts the columns from Arrow into columns compatible with glide-data-grid
-  const columns: BaseColumn[] = getAllColumnsFromArrow(data)
+  const configuredColumns: BaseColumn[] = getAllColumnsFromArrow(data)
     .map(column => {
       // Apply column configurations
       let updatedColumn = {
@@ -253,6 +255,13 @@ function useDataLoader(
       // Filter out all columns that are hidden
       return !column.isHidden
     })
+
+  // If all columns got filtered out, we add a an empty index column
+  // to prevent errors from glide-data-grid.
+  const columns =
+    configuredColumns.length > 0
+      ? configuredColumns
+      : [ObjectColumn(getEmptyIndexColumn())]
 
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
