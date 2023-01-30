@@ -22,7 +22,10 @@ import {
   getDateCell,
   getDateCellContent,
 } from "src/components/widgets/DataFrame/columns/utils"
-import { DatetimePickerCell } from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
+import {
+  DatetimePickerCell,
+  PythonDateType,
+} from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
 
 export interface DateTimeColumnParams {
   readonly format?: string
@@ -35,7 +38,7 @@ function DateTimeColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "smart",
     isEditable: true,
     getCell(data?: any): GridCell {
-      return getDateCell(props, data, "datetime-local")
+      return getDateCell(props, data, PythonDateType.DatetimeLocal)
     },
     getCellValue(cell: DatetimePickerCell): string | null {
       return getDateCellContent(cell)

@@ -369,6 +369,9 @@ export function formatNumber(value: number, maxPrecision = 4): string {
 export function isValidDate(date: any): boolean {
   try {
     if (typeof date === "string") {
+      if (isStringButNumber(date)) {
+        return isDateNotNaN(new Date(Number(date)))
+      }
       // attempt replacing spaces with a T because
       // python datetime removes T
       const modifiedDate = new Date(date.replace(" ", "T"))
@@ -381,6 +384,13 @@ export function isValidDate(date: any): boolean {
   }
 }
 
+export function isStringButNumber(val: any): boolean {
+  if (typeof val === "string" && !Number.isNaN(Number(val))) {
+    return true
+  }
+  return false
+}
+
 export function isDateNotNaN(date: Date): boolean {
   return !Number.isNaN(date.getTime())
 }
@@ -389,11 +399,11 @@ export function removeZeroMillisecondsInISOString(date: string): string {
   return date.replace(".000", "")
 }
 
-export function removeTInIsoString(date: string): string {
+export function removeTInString(date: string): string {
   return date.replace("T", " ")
 }
 
-export function appendZeroDateFormat(date: string): string {
+export function appendZeroDateFormatSec(date: string): string {
   return date.length === 1 ? `0${date}` : date
 }
 
@@ -412,7 +422,7 @@ export function getDateCell(
   data: any,
   type: PythonDateType
 ): GridCell {
-  const defaultFormat = getDefaultFormat(type)
+  const defaultFormat = getDefaultFormatDateCell(type)
 
   const parameters = {
     ...(props.columnTypeMetadata || {}),
@@ -456,11 +466,20 @@ export function getDateCell(
     }
 
     if (!isValidDate(data)) {
-      return getErrorCell(`Incompatible time value: ${data}`)
+      return getErrorCell(`Incompatible Date value: ${data}`)
     }
 
-    // safe to do new Date() because checked through isValidDate()
-    const dataDate = new Date(data)
+    let dataDate: Date
+    if (isStringButNumber(data)) {
+      // 60000 => 60 minute / 1 second * 100 millisecond / 1 sec
+      dataDate = new Date(
+        Number(data) + new Date().getTimezoneOffset() * 60000
+      )
+    } else {
+      // safe to do new Date() because checked through isValidDate()
+      dataDate = new Date(data)
+    }
+
     const copyData = getCopyDataForDate(dataDate, type)
     const displayDate = moment.utc(dataDate).format(cellTemplate.data.format)
     return {
@@ -476,11 +495,11 @@ export function getDateCell(
       },
     } as DatetimePickerCell
   } catch (error) {
-    return getErrorCell(`Incompatible time value: ${data}`)
+    return getErrorCell(`Incompatible date value: ${data}`)
   }
 }
 
-export function getDefaultFormat(type: PythonDateType): string {
+export function getDefaultFormatDateCell(type: PythonDateType): string {
   switch (type) {
     case "date":
       return "YYYY / MM / DD"
@@ -499,7 +518,7 @@ export function getDateCellContent(cell: DatetimePickerCell): string | null {
     : cell.data.date.toISOString()
 }
 
-function getCopyDataForDate(date: Date, type: PythonDateType): string {
+export function getCopyDataForDate(date: Date, type: PythonDateType): string {
   switch (type) {
     case "time": {
       // datetime.time is only hours, minutes, etc

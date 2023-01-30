@@ -15,6 +15,11 @@
  */
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
+import { Type } from "src/lib/Quiver"
+import {
+  DatetimePickerCell,
+  PythonDateType,
+} from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
 import {
   getErrorCell,
   isErrorCell,
@@ -30,6 +35,9 @@ import {
   toGlideColumn,
   isValidDate,
   isDateNotNaN,
+  getDefaultFormatDateCell,
+  getDateCell,
+  getCopyDataForDate,
 } from "./utils"
 import { TextColumn } from "."
 
@@ -270,6 +278,7 @@ describe("isValidDate", () => {
     [1.0, true],
     [-1.0, true],
     [new Date(), true],
+    ["7000", true],
 
     // iso date string examples
     // YYYY-MM-DD
@@ -307,5 +316,92 @@ describe("isDateNotNaN", () => {
     [new Date(), true],
   ])("check %p is not NaN: %p", (input: Date, expected: boolean) => {
     expect(isDateNotNaN(input)).toBe(expected)
+  })
+})
+
+describe("getDefaultFormatDateCell", () => {
+  it.each([
+    [PythonDateType.Date, "YYYY / MM / DD"],
+    [PythonDateType.DatetimeLocal, "YYYY-MM-DDTHH:mm:ss.SSS"],
+    [PythonDateType.Time, "HH:mm:ss.SSS"],
+  ])(
+    "check %p gives the correct moment format date: %p",
+    (type: PythonDateType, expectedFormat: string) => {
+      expect(getDefaultFormatDateCell(type)).toBe(expectedFormat)
+    }
+  )
+})
+
+describe("getDateCell", () => {
+  const DATETIME_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
+    id: "1",
+    title: "datetime",
+    indexNumber: 0,
+    isEditable: true,
+    isHidden: false,
+    isIndex: false,
+    isStretched: false,
+  }
+  const MOCK_DATETIME_QUIVER_TYPE: Type = {
+    pandas_type: "datetime",
+    numpy_type: "datetime64",
+  }
+  const DATETIME_COLUMN_PROPS: BaseColumnProps = {
+    ...DATETIME_COLUMN_TEMPLATE,
+    arrowType: MOCK_DATETIME_QUIVER_TYPE,
+    contentAlignment: "left",
+  } as BaseColumnProps
+  describe("data is null or undefined", () => {
+    it.each([[null], [undefined]])(
+      "returns the correct cell with null or undefined",
+      (input: any) => {
+        const dateCell = getDateCell(
+          DATETIME_COLUMN_PROPS,
+          input,
+          PythonDateType.Time
+        ) as DatetimePickerCell
+        expect(dateCell.contentAlign).toBe("left")
+        // @ts-ignore
+        expect(dateCell.isMissingValue).toBe(true)
+        expect(dateCell.copyData).toBe("")
+        expect(dateCell.data.type).toBe("time")
+        expect(dateCell.data.date).toBe(undefined)
+        expect(dateCell.data.kind).toBe("DatetimePickerCell")
+      }
+    )
+    it.each([
+      [BigInt(1000), new Date(1)],
+      ["100", new Date(100 + new Date().getTimezoneOffset() * 60000)],
+      [100, new Date(100)],
+      ["2022-03-03T13:11:09.000Z", new Date("2022-03-03T13:11:09.000Z")],
+      [100.1, new Date(100.1)],
+      ["invalid date", undefined],
+    ])(
+      "when data = %p, returns the correct date(%p)",
+      (data: any, expectedData: Date | undefined) => {
+        const dateCell = getDateCell(
+          DATETIME_COLUMN_PROPS,
+          data,
+          PythonDateType.Time
+        ) as DatetimePickerCell
+        expect(dateCell.data.date).toStrictEqual(expectedData)
+      }
+    )
+  })
+  describe("getCopyDataForDate", () => {
+    it.each([
+      [PythonDateType.Date, new Date(100), "1970-01-01T00:00:00.100Z"],
+      [
+        PythonDateType.DatetimeLocal,
+        new Date(100),
+        "1970-01-01T00:00:00.100Z",
+      ],
+      [PythonDateType.Time, new Date(100), "57600100"],
+    ])(
+      "check (%p, %p) gives the correct copyData: %p",
+      (type: PythonDateType, date: Date, copyData: string) => {
+        expect(getCopyDataForDate(date, type)).toBe(copyData)
+      }
+    )
   })
 })

@@ -23,7 +23,7 @@ import {
   ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
 import {
-  appendZeroDateFormat,
+  appendZeroDateFormatSec,
   appendZeroDateFormatMs,
 } from "src/components/widgets/DataFrame/columns/utils"
 
@@ -35,7 +35,11 @@ interface DatetimePickerCellProps {
   readonly type: PythonDateType
 }
 
-export type PythonDateType = "date" | "datetime-local" | "time"
+export enum PythonDateType {
+  Date = "date",
+  DatetimeLocal = "datetime-local",
+  Time = "time",
+}
 
 export type DatetimePickerCell = CustomCell<DatetimePickerCellProps>
 
@@ -44,15 +48,15 @@ const formatValueForHTMLInput = (type: PythonDateType, date: Date): string => {
   if (type === "date") {
     // add 1 because getMonth is 0 index based
     const year = offsetDate?.getFullYear().toString()
-    const mm = appendZeroDateFormat((offsetDate?.getMonth() + 1).toString())
-    const dd = appendZeroDateFormat(offsetDate?.getDate().toString())
+    const mm = appendZeroDateFormatSec((offsetDate?.getMonth() + 1).toString())
+    const dd = appendZeroDateFormatSec(offsetDate?.getDate().toString())
     // format example: 2020-03-08
     return `${year}-${mm}-${dd}`
   }
   if (type === "time") {
-    const hours = appendZeroDateFormat(offsetDate.getUTCHours().toString())
-    const minutes = appendZeroDateFormat(offsetDate.getMinutes().toString())
-    const seconds = appendZeroDateFormat(offsetDate.getSeconds().toString())
+    const hours = appendZeroDateFormatSec(offsetDate.getUTCHours().toString())
+    const minutes = appendZeroDateFormatSec(offsetDate.getMinutes().toString())
+    const seconds = appendZeroDateFormatSec(offsetDate.getSeconds().toString())
     const milliseconds = appendZeroDateFormatMs(
       offsetDate.getMilliseconds().toString()
     )
@@ -68,9 +72,13 @@ const formatValueForHTMLInput = (type: PythonDateType, date: Date): string => {
 const Editor: ReturnType<ProvideEditorCallback<DatetimePickerCell>> = cell => {
   const cellData = cell.value.data
   const { date, displayDate, type } = cellData
-  let newCellData = new Date()
+  let newCellData = new Date(
+    new Date().getTime() - new Date().getTimezoneOffset() * 60000
+  )
   if (cellData !== undefined) {
-    newCellData = cellData.date ?? new Date()
+    newCellData =
+      cellData.date ??
+      new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
   }
   const value = formatValueForHTMLInput(type, newCellData)
 
