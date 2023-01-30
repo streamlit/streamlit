@@ -38,8 +38,8 @@ from streamlit.runtime.state.session_state import (
     WStates,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.testing.script_interactions import InteractiveScriptTests
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.script_interactions import InteractiveScriptTests
 
 identity = lambda x: x
 
@@ -286,10 +286,9 @@ class SessionStateTest(DeltaGeneratorTestCase):
         patched_warning.assert_called_once()
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class SessionStateInteractionTest(InteractiveScriptTests):
     def test_updates(self):
-        script = self.script_from_filename("linked_sliders.py")
+        script = self.script_from_filename(__file__, "linked_sliders.py")
         sr = script.run()
         assert sr.get("slider")[0].value == -100.0
         assert sr.get("markdown")[0].value == "Celsius `-100.0`"
