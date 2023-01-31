@@ -131,9 +131,6 @@ DATETIME_TYPES_DF = pd.DataFrame(
                 [
                     random_date().replace(tzinfo=timezone.utc),
                     pd.to_datetime("2022-03-11 17:41:00-05:00"),
-                    pd.to_datetime("2022-03-12 18:42:00").dt.tz_localize(
-                        "Europe/Moscow"
-                    ),
                     random_date(),
                 ]
             )
