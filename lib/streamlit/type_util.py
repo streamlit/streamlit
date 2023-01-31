@@ -655,6 +655,7 @@ def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
                 # This seems to be an incompatible list-like type
                 return True
             return False
+    # We did not detect an incompatible type, so we assume it is compatible:
     return False
 
 
