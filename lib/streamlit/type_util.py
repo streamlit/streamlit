@@ -893,9 +893,9 @@ def convert_df_to_data_format(
         # the first column as numpy array
         # Calling to_numpy() on the full DataFrame would result in:
         # [[1], [2]] instead of [1, 2]
-        return np.ndarray([]) if df.empty else df.iloc[:, 0].to_numpy()
+        return np.ndarray(0) if df.empty else df.iloc[:, 0].to_numpy()
     elif data_format == DataFormat.NUMPY_MATRIX:
-        return df.to_numpy()
+        return np.ndarray(0) if df.empty else df.to_numpy()
     elif data_format == DataFormat.PYARROW_TABLE:
         return pa.Table.from_pandas(df)
     elif data_format == DataFormat.PANDAS_SERIES:
