@@ -41,7 +41,7 @@ class SQL(BaseConnection["Engine"]):
         secrets = self.get_secrets()
 
         if "url" in secrets:
-            url = secrets["url"]
+            url = sqlalchemy.engine.make_url(secrets["url"])
         else:
             for p in REQUIRED_CONNECTION_PARAMS:
                 if p not in secrets:
@@ -56,11 +56,11 @@ class SQL(BaseConnection["Engine"]):
                 username=secrets["username"],
                 password=secrets.get("password"),
                 host=secrets["host"],
-                port=secrets["port"],
+                port=int(secrets["port"]),
                 database=secrets.get("database"),
             )
 
-        eng = sqlalchemy.create_engine(sqlalchemy.engine.make_url(url), **kwargs)
+        eng = sqlalchemy.create_engine(url, **kwargs)
 
         if autocommit:
             return cast("Engine", eng.execution_options(isolation_level="AUTOCOMMIT"))
