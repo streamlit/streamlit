@@ -38,7 +38,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.type_util import DataFormat, bytes_to_data_frame
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.type_util_test import SHARED_TEST_CASES, TestCaseMetadata
+from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
 
 
 class DataEditorUtilTest(unittest.TestCase):

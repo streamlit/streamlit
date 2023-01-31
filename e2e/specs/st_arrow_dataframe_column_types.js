@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-describe("st.dataframe and st.data_editor support a variety of column types", () => {
+describe("st.dataframe supports a variety of column types", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
     cy.prepForElementSnapshots();
   });
 
-  it("shows widget correctly", () => {
-    cy.get(".stDataFrame").should("have.length", 21);
+  it("renders element correctly", () => {
+    cy.get(".stDataFrame").should("have.length", 8);
 
     /** Since glide-data-grid uses HTML canvas for rendering the table we
     cannot run any tests based on the HTML DOM. Therefore, we only use snapshot

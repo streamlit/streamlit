@@ -16,13 +16,12 @@ import unittest
 from collections import namedtuple
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Any, NamedTuple
+from typing import Any
 from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
-import pyarrow as pa
 import pytest
 from dateutil.tz import tzutc
 from pandas.api.types import infer_dtype
@@ -42,175 +41,21 @@ from streamlit.type_util import (
     maybe_convert_datetime_time_edit_df,
     to_bytes,
 )
+from tests.streamlit.data_mocks import (
+    BASE_TYPES_DF,
+    DATETIME_TYPES_DF,
+    INTERVAL_TYPES_DF,
+    LIST_TYPES_DF,
+    NUMBER_TYPES_DF,
+    SHARED_TEST_CASES,
+    SPECIAL_TYPES_DF,
+    UNSUPPORTED_TYPES_DF,
+    TestCaseMetadata,
+    TestObject,
+)
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
-from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 from tests.testutil import create_snowpark_session
-
-
-class TestCaseMetadata(NamedTuple):
-    expected_rows: int
-    expected_cols: int
-    expected_data_format: DataFormat
-
-
-SHARED_TEST_CASES = [
-    # None:
-    (None, TestCaseMetadata(0, 0, DataFormat.EMPTY)),
-    # Empty list:
-    ([], TestCaseMetadata(0, 0, DataFormat.LIST_OF_VALUES)),
-    # Empty tuple:
-    ((), TestCaseMetadata(0, 0, DataFormat.TUPLE_OF_VALUES)),
-    # Empty dict (not a an empty set!)
-    ({}, TestCaseMetadata(0, 0, DataFormat.KEY_VALUE_DICT)),
-    # Empty set:
-    (set(), TestCaseMetadata(0, 0, DataFormat.SET_OF_VALUES)),
-    # Empty numpy array:
-    # for unknown reasons, pd.DataFrame initializes empty numpy arrays with a single column
-    (np.ndarray(0), TestCaseMetadata(0, 1, DataFormat.NUMPY_LIST)),
-    # Empty column value mapping with columns:
-    ({"name": [], "type": []}, TestCaseMetadata(0, 2, DataFormat.COLUMN_VALUE_MAPPING)),
-    # Empty dataframe:
-    (pd.DataFrame(), TestCaseMetadata(0, 0, DataFormat.PANDAS_DATAFRAME)),
-    # Empty dataframe with columns:
-    (
-        pd.DataFrame(columns=["name", "type"]),
-        TestCaseMetadata(0, 2, DataFormat.PANDAS_DATAFRAME),
-    ),
-    # Pandas DataFrame:
-    (
-        pd.DataFrame(["st.text_area", "st.markdown"]),
-        TestCaseMetadata(2, 1, DataFormat.PANDAS_DATAFRAME),
-    ),
-    # List of strings (List[str]):
-    (
-        ["st.text_area", "st.number_input", "st.text_input"],
-        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES),
-    ),
-    # List of integers (List[int]):
-    ([1, 2, 3], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
-    # List of floats (List[float]):
-    ([1.0, 2.0, 3.0], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
-    # List of booleans (List[bool]):
-    ([True, False, True], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
-    # List of Nones (List[None]):
-    ([None, None, None], TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES)),
-    # List of dates (List[date]):
-    (
-        [date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)],
-        TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES),
-    ),
-    # Set of strings (Set[str]):
-    # Set does not have a stable order across different Python version.
-    # Therefore, we are only testing this with one item.
-    (
-        {"st.number_input", "st.number_input"},
-        TestCaseMetadata(1, 1, DataFormat.SET_OF_VALUES),
-    ),
-    # Tuple of strings (Tuple[str]):
-    (
-        ("st.text_area", "st.number_input", "st.text_input"),
-        TestCaseMetadata(3, 1, DataFormat.TUPLE_OF_VALUES),
-    ),
-    # Numpy list / 1D numpy array (np.array[str]):
-    (
-        np.array(["st.text_area", "st.number_input", "st.text_input"]),
-        TestCaseMetadata(3, 1, DataFormat.NUMPY_LIST),
-    ),
-    # np.array[int]:
-    (np.array([1, 2, 3]), TestCaseMetadata(3, 1, DataFormat.NUMPY_LIST)),
-    # Multi-dimensional numpy array (np.array[List[Scalar]])
-    (
-        np.array(
-            [
-                ["st.text_area", "widget"],
-                ["st.markdown", "element"],
-            ]
-        ),
-        TestCaseMetadata(2, 2, DataFormat.NUMPY_MATRIX),
-    ),
-    # np.array[List[str]]:
-    (
-        np.array([["st.text_area"], ["st.number_input"], ["st.text_input"]]),
-        TestCaseMetadata(3, 1, DataFormat.NUMPY_MATRIX),
-    ),
-    # Pandas Series (pd.Series):
-    (
-        pd.Series(["st.text_area", "st.number_input", "st.text_input"], name="widgets"),
-        TestCaseMetadata(3, 1, DataFormat.PANDAS_SERIES),
-    ),
-    # Pandas Styler (pd.Styler):
-    (
-        pd.DataFrame(["st.text_area", "st.markdown"]).style,
-        TestCaseMetadata(2, 1, DataFormat.PANDAS_STYLER),
-    ),
-    # Pandas Index (pd.Index):
-    (
-        pd.Index(["st.text_area", "st.markdown"]),
-        TestCaseMetadata(2, 1, DataFormat.PANDAS_INDEX),
-    ),
-    # Pyarrow Table (pyarrow.Table):
-    (
-        pa.Table.from_pandas(pd.DataFrame(["st.text_area", "st.markdown"])),
-        TestCaseMetadata(2, 1, DataFormat.PYARROW_TABLE),
-    ),
-    # List of rows (List[List[Scalar]]):
-    (
-        [["st.text_area", "widget"], ["st.markdown", "element"]],
-        TestCaseMetadata(2, 2, DataFormat.LIST_OF_ROWS),
-    ),
-    # List of records (List[Dict[str, Scalar]]):
-    (
-        [
-            {"name": "st.text_area", "type": "widget"},
-            {"name": "st.markdown", "type": "element"},
-        ],
-        TestCaseMetadata(2, 2, DataFormat.LIST_OF_RECORDS),
-    ),
-    # Column-index mapping ({column: {index: value}}):
-    (
-        {
-            "type": {"st.text_area": "widget", "st.markdown": "element"},
-            "usage": {"st.text_area": 4.92, "st.markdown": 47.22},
-        },
-        TestCaseMetadata(2, 2, DataFormat.COLUMN_INDEX_MAPPING),
-    ),
-    # Column-value mapping ({column: List[values]}}):
-    (
-        {
-            "name": ["st.text_area", "st.markdown"],
-            "type": ["widget", "element"],
-        },
-        TestCaseMetadata(2, 2, DataFormat.COLUMN_VALUE_MAPPING),
-    ),
-    # Column-series mapping ({column: Series(values)}):
-    (
-        {
-            "name": pd.Series(["st.text_area", "st.markdown"], name="name"),
-            "type": pd.Series(["widget", "element"], name="type"),
-        },
-        TestCaseMetadata(2, 2, DataFormat.COLUMN_SERIES_MAPPING),
-    ),
-    # Key-value dict ({index: value}):
-    (
-        {"st.text_area": "widget", "st.markdown": "element"},
-        TestCaseMetadata(2, 1, DataFormat.KEY_VALUE_DICT),
-    ),
-    # Snowpark DataFrame:
-    (
-        SnowparkDataFrame(num_of_rows=2, num_of_cols=2),
-        TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT),
-    ),
-    # Snowpark Table:
-    (
-        SnowparkTable(num_of_rows=2, num_of_cols=2),
-        TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT),
-    ),
-]
-
-
-class TestObject(object):
-    pass
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -304,79 +149,38 @@ class TypeUtilTest(unittest.TestCase):
         self.assertEqual(converted_df.shape[0], metadata.expected_rows)
         self.assertEqual(converted_df.shape[1], metadata.expected_cols)
 
-    @parameterized.expand(
-        SHARED_TEST_CASES,
-    )
-    def test_determine_data_format(
-        self,
-        input_data: Any,
-        metadata: TestCaseMetadata,
-    ):
-        """Test that `determine_data_format` correctly determines the
-        data format of a variety of data structures/types.
+    def test_convert_anything_to_df_ensure_copy(self):
+        """Test that `convert_anything_to_df` creates a copy of the original
+        dataframe if `ensure_copy` is True.
         """
-        data_format = type_util.determine_data_format(input_data)
-        self.assertEqual(
-            data_format,
-            metadata.expected_data_format,
-            f"{str(input_data)} is expected to be {metadata.expected_data_format} but was {data_format}.",
+        orginal_df = pd.DataFrame(
+            {
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
         )
 
-    @parameterized.expand(
-        SHARED_TEST_CASES,
-    )
-    def test_convert_df_to_data_format(
-        self,
-        input_data: Any,
-        metadata: TestCaseMetadata,
-    ):
-        """Test that `convert_df_to_data_format` correctly converts a
-        DataFrame to the specified data format.
+        converted_df = convert_anything_to_df(orginal_df, ensure_copy=True)
+        # Apply a change
+        converted_df["integer"] = [4, 5, 6]
+        # Ensure that the original dataframe is not changed
+        self.assertEqual(orginal_df["integer"].to_list(), [1, 2, 3])
+
+        converted_df = convert_anything_to_df(orginal_df, ensure_copy=False)
+        # Apply a change
+        converted_df["integer"] = [4, 5, 6]
+        # The original dataframe should be changed here since ensure_copy is False
+        self.assertEqual(orginal_df["integer"].to_list(), [4, 5, 6])
+
+    def test_convert_anything_to_df_supports_key_value_dicts(self):
+        """Test that `convert_anything_to_df` correctly converts
+        key-value dicts to a dataframe.
         """
-        converted_df = type_util.convert_anything_to_df(input_data)
-        self.assertEqual(converted_df.shape[0], metadata.expected_rows)
-        self.assertEqual(converted_df.shape[1], metadata.expected_cols)
-
-        if metadata.expected_data_format == DataFormat.UNKNOWN:
-            with self.assertRaises(ValueError):
-                type_util.convert_df_to_data_format(
-                    converted_df, metadata.expected_data_format
-                )
-            # We don't have to do any other tests for unknown data formats.
-        else:
-            converted_data = type_util.convert_df_to_data_format(
-                converted_df, metadata.expected_data_format
-            )
-
-            # Some data formats are converted to DataFrames instead of
-            # the original data type/structure.
-            if metadata.expected_data_format in [
-                DataFormat.SNOWPARK_OBJECT,
-                DataFormat.PYSPARK_OBJECT,
-                DataFormat.PANDAS_INDEX,
-                DataFormat.PANDAS_STYLER,
-                DataFormat.EMPTY,
-            ]:
-                assert isinstance(converted_data, pd.DataFrame)
-                self.assertEqual(converted_data.shape[0], metadata.expected_rows)
-                self.assertEqual(converted_data.shape[1], metadata.expected_cols)
-            else:
-                self.assertEqual(type(converted_data), type(input_data))
-                # Sets in python are unordered, so we can't compare them this way.
-                if metadata.expected_data_format != DataFormat.SET_OF_VALUES:
-                    self.assertEqual(str(converted_data), str(input_data))
-                    pd.testing.assert_frame_equal(
-                        converted_df, type_util.convert_anything_to_df(converted_data)
-                    )
-
-    def test_convert_df_to_data_format_with_unknown_data_format(self):
-        """Test that `convert_df_to_data_format` raises a ValueError when
-        passed an unknown data format.
-        """
-        with self.assertRaises(ValueError):
-            type_util.convert_df_to_data_format(
-                pd.DataFrame({"a": [1, 2, 3]}), DataFormat.UNKNOWN
-            )
+        data = {"a": 1, "b": 2}
+        df = convert_anything_to_df(data)
+        pd.testing.assert_frame_equal(df, pd.DataFrame.from_dict(data, orient="index"))
 
     @parameterized.expand(
         [
@@ -543,38 +347,31 @@ dtype: object""",
                 f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
             )
 
-    def test_convert_anything_to_df_ensure_copy(self):
-        """Test that `convert_anything_to_df` creates a copy of the original
-        dataframe if `ensure_copy` is True.
+    @parameterized.expand(
+        [
+            (BASE_TYPES_DF,),
+            (DATETIME_TYPES_DF,),
+            (INTERVAL_TYPES_DF,),
+            (LIST_TYPES_DF,),
+            (NUMBER_TYPES_DF,),
+            (SPECIAL_TYPES_DF,),
+            (UNSUPPORTED_TYPES_DF,),
+        ]
+    )
+    def test_data_frame_to_bytes(
+        self,
+        input_df: pd.DataFrame,
+    ):
+        """Test that `data_frame_to_bytes` correctly converts
+        DataFrames with a variety of types to Arrow.
         """
-        orginal_df = pd.DataFrame(
-            {
-                "integer": [1, 2, 3],
-                "float": [1.0, 2.1, 3.2],
-                "string": ["foo", "bar", None],
-            },
-            index=[1.0, "foo", 3],
-        )
-
-        converted_df = convert_anything_to_df(orginal_df, ensure_copy=True)
-        # Apply a change
-        converted_df["integer"] = [4, 5, 6]
-        # Ensure that the original dataframe is not changed
-        self.assertEqual(orginal_df["integer"].to_list(), [1, 2, 3])
-
-        converted_df = convert_anything_to_df(orginal_df, ensure_copy=False)
-        # Apply a change
-        converted_df["integer"] = [4, 5, 6]
-        # The original dataframe should be changed here since ensure_copy is False
-        self.assertEqual(orginal_df["integer"].to_list(), [4, 5, 6])
-
-    def test_convert_anything_to_df_supports_key_value_dicts(self):
-        """Test that `convert_anything_to_df` correctly converts
-        key-value dicts to a dataframe.
-        """
-        data = {"a": 1, "b": 2}
-        df = convert_anything_to_df(data)
-        pd.testing.assert_frame_equal(df, pd.DataFrame.from_dict(data, orient="index"))
+        try:
+            data_frame_to_bytes(input_df)
+        except Exception as ex:
+            self.fail(
+                "No exception should have been thrown here. "
+                f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
+            )
 
     def test_is_snowpark_dataframe(self):
         df = pd.DataFrame(
@@ -717,3 +514,77 @@ dtype: object""",
             self.assertEqual(maybe_convert_datetime_date_edit_df(actual), expected)
         else:
             self.assertEqual(maybe_convert_datetime_date_edit_df(actual), expected)
+
+    @parameterized.expand(
+        SHARED_TEST_CASES,
+    )
+    def test_determine_data_format(
+        self,
+        input_data: Any,
+        metadata: TestCaseMetadata,
+    ):
+        """Test that `determine_data_format` correctly determines the
+        data format of a variety of data structures/types.
+        """
+        data_format = type_util.determine_data_format(input_data)
+        self.assertEqual(
+            data_format,
+            metadata.expected_data_format,
+            f"{str(input_data)} is expected to be {metadata.expected_data_format} but was {data_format}.",
+        )
+
+    @parameterized.expand(
+        SHARED_TEST_CASES,
+    )
+    def test_convert_df_to_data_format(
+        self,
+        input_data: Any,
+        metadata: TestCaseMetadata,
+    ):
+        """Test that `convert_df_to_data_format` correctly converts a
+        DataFrame to the specified data format.
+        """
+        converted_df = type_util.convert_anything_to_df(input_data)
+        self.assertEqual(converted_df.shape[0], metadata.expected_rows)
+        self.assertEqual(converted_df.shape[1], metadata.expected_cols)
+
+        if metadata.expected_data_format == DataFormat.UNKNOWN:
+            with self.assertRaises(ValueError):
+                type_util.convert_df_to_data_format(
+                    converted_df, metadata.expected_data_format
+                )
+            # We don't have to do any other tests for unknown data formats.
+        else:
+            converted_data = type_util.convert_df_to_data_format(
+                converted_df, metadata.expected_data_format
+            )
+
+            # Some data formats are converted to DataFrames instead of
+            # the original data type/structure.
+            if metadata.expected_data_format in [
+                DataFormat.SNOWPARK_OBJECT,
+                DataFormat.PYSPARK_OBJECT,
+                DataFormat.PANDAS_INDEX,
+                DataFormat.PANDAS_STYLER,
+                DataFormat.EMPTY,
+            ]:
+                assert isinstance(converted_data, pd.DataFrame)
+                self.assertEqual(converted_data.shape[0], metadata.expected_rows)
+                self.assertEqual(converted_data.shape[1], metadata.expected_cols)
+            else:
+                self.assertEqual(type(converted_data), type(input_data))
+                # Sets in python are unordered, so we can't compare them this way.
+                if metadata.expected_data_format != DataFormat.SET_OF_VALUES:
+                    self.assertEqual(str(converted_data), str(input_data))
+                    pd.testing.assert_frame_equal(
+                        converted_df, type_util.convert_anything_to_df(converted_data)
+                    )
+
+    def test_convert_df_to_data_format_with_unknown_data_format(self):
+        """Test that `convert_df_to_data_format` raises a ValueError when
+        passed an unknown data format.
+        """
+        with self.assertRaises(ValueError):
+            type_util.convert_df_to_data_format(
+                pd.DataFrame({"a": [1, 2, 3]}), DataFormat.UNKNOWN
+            )
