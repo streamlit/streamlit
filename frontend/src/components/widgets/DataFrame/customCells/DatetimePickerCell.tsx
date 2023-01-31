@@ -22,7 +22,7 @@ import {
   GridCellKind,
   ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
-import { formatValueForHTMLInput } from "src/components/widgets/DataFrame/columns/utils"
+import moment from "moment"
 
 export interface DatetimePickerCellProps {
   readonly kind: "DatetimePickerCell"
@@ -36,6 +36,22 @@ export enum PythonDateType {
   Date = "date",
   DatetimeLocal = "datetime-local",
   Time = "time",
+}
+
+export const formatValueForHTMLInput = (
+  type: PythonDateType,
+  date: Date
+): string => {
+  if (type === "date") {
+    return moment.utc(date).format("YYYY-MM-DD")
+  }
+  if (type === "time") {
+    return moment.utc(date).format("HH:mm:ss.SSS")
+  }
+  if (type === "datetime-local") {
+    return date.toISOString().replace("Z", "")
+  }
+  return ""
 }
 
 export type DatetimePickerCell = CustomCell<DatetimePickerCellProps>

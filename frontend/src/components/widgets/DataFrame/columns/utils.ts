@@ -403,20 +403,6 @@ export function removeTInString(date: string): string {
   return date.replace("T", " ")
 }
 
-export function appendZeroDateFormatSec(date: string): string {
-  return date.length === 1 ? `0${date}` : date
-}
-
-export function appendZeroDateFormatMs(date: string): string {
-  if (date.length === 1) {
-    return `00${date}`
-  }
-  if (date.length === 2) {
-    return `0${date}`
-  }
-  return date
-}
-
 export function getDateCell(
   props: BaseColumnProps,
   data: any,
@@ -481,7 +467,11 @@ export function getDateCell(
     }
 
     const copyData = getCopyDataForDate(dataDate, type)
-    const displayDate = moment.utc(dataDate).format(cellTemplate.data.format)
+    const displayDate = removeTInString(
+      removeZeroMillisecondsInISOString(
+        moment.utc(dataDate).format(cellTemplate.data.format)
+      )
+    )
     return {
       ...cellTemplate,
       allowOverlay: true,
