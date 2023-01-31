@@ -266,7 +266,6 @@ NUMBER_TYPES_DF = pd.DataFrame(
     }
 )
 
-# TODO: pd.to_datetime(df["str"]).dt.tz_localize("Europe/Moscow")
 DATETIME_TYPES_DF = pd.DataFrame(
     {
         "datetime": [random_date() for _ in range(8)] + [None],
@@ -393,7 +392,6 @@ UNSUPPORTED_TYPES_DF = pd.DataFrame(
         "timedelta": pd.Series(
             [pd.Timedelta("1 days"), np.timedelta64(366, "D"), pd.Timedelta("2 hours")]
         ),
-        "decimal": pd.Series([Decimal("1.1"), Decimal("2.2"), Decimal("10000")]),
         "mixed-integer": pd.Series([1, 2, "3"]),
         "mixed-types": pd.Series([2.1, "3", True]),
         "frozenset": pd.Series(
