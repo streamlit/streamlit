@@ -109,7 +109,7 @@ class WriteMixin:
             https://doc-write1.streamlitapp.com/
             height: 150px
 
-        As mentioned earlier, `st.write()` also accepts other data formats, such as
+        As mentioned earlier, ``st.write()`` also accepts other data formats, such as
         numbers, data frames, styled data frames, and assorted objects:
 
         >>> import streamlit as st
@@ -136,7 +136,7 @@ class WriteMixin:
             https://doc-write3.streamlitapp.com/
             height: 410px
 
-        Oh, one more thing: `st.write` accepts chart objects too! For example:
+        Oh, one more thing: ``st.write`` accepts chart objects too! For example:
 
         >>> import streamlit as st
         >>> import pandas as pd
