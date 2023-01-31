@@ -76,6 +76,17 @@ class SQL(BaseConnection[Engine]):
             `with conn.session() as session:`
         instead of importing the Session object and writing
             `with Session(conn.instance) as session:`
+
+        See the usage example below, which assumes we have a table `numbers` with a
+        single integer column `val`.
+
+        Example
+        -------
+        >>> n = st.slider("Pick a number")
+        >>> if st.button("Add the number!"):
+        ...     with conn.session() as session:
+        ...         session.execute("INSERT INTO numbers (val) VALUES (:n);", {"n": n})
+        ...         session.commit()
         """
         with Session(self.instance) as s:
             yield s
