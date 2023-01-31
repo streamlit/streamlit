@@ -21,7 +21,7 @@ describe("st.dataframe and st.data_editor support a variety of column types", ()
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stDataFrame").should("have.length", 18);
+    cy.get(".stDataFrame").should("have.length", 21);
 
     /** Since glide-data-grid uses HTML canvas for rendering the table we
     cannot run any tests based on the HTML DOM. Therefore, we only use snapshot
