@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Any, Literal, Type, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Type, TypeVar, overload
+
+from typing_extensions import Literal
 
 from streamlit.connections.base_connection import BaseConnection
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.connections.sql_connection import SQL
@@ -71,6 +74,7 @@ def connection(
 # TODO(vdonato): Write a docstring for this function.
 # TODO(vdonato): Maybe support st.connection.sql() syntax as an alias for
 #                st.connection("sql") if we decide we want to do that.
+@gather_metrics("connection")
 @cache_resource(validate=_validate)
 def connection(connection_class, name="default", **kwargs):
     if type(connection_class) == str:
