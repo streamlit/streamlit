@@ -160,12 +160,19 @@ function DataFrame({
     []
   )
   // Number of rows of the table minus 1 for the header row:
-  const originalNumRows = Math.max(0, data.dimensions.rows - 1)
-  // For empty tables (editing mode != dynamic), we show an extra row that
+  const dataDimensions = data.dimensions
+  const originalNumRows = Math.max(0, dataDimensions.rows - 1)
+
+  // For empty tables, we show an extra row that
   // contains "empty" as a way to indicate that the table is empty.
   const showEmptyState =
     originalNumRows === 0 &&
-    element.editingMode !== ArrowProto.EditingMode.DYNAMIC
+    // We don't show empty state for dynamic mode with a table that has
+    // data columns defined.
+    !(
+      element.editingMode === ArrowProto.EditingMode.DYNAMIC &&
+      dataDimensions.dataColumns > 0
+    )
 
   const editingState = React.useRef<EditingState>(
     new EditingState(originalNumRows)
@@ -430,24 +437,25 @@ function DataFrame({
               // Support deleting cells & rows:
               onDelete,
             })}
-          {...(element.editingMode === ArrowProto.EditingMode.DYNAMIC && {
-            // Support adding rows:
-            trailingRowOptions: {
-              sticky: false,
-              tint: true,
-            },
-            rowMarkerTheme: {
-              bgCell: theme.bgHeader,
-              bgCellMedium: theme.bgHeader,
-            },
-            rowMarkers: "checkbox",
-            rowSelectionMode: "auto",
-            rowSelect: disabled ? "none" : "multi",
-            // Support adding rows:
-            onRowAppended: disabled ? undefined : onRowAppended,
-            // Deactivate sorting, since it is not supported with dynamic editing:
-            onHeaderClicked: undefined,
-          })}
+          {...(!showEmptyState &&
+            element.editingMode === ArrowProto.EditingMode.DYNAMIC && {
+              // Support adding rows:
+              trailingRowOptions: {
+                sticky: false,
+                tint: true,
+              },
+              rowMarkerTheme: {
+                bgCell: theme.bgHeader,
+                bgCellMedium: theme.bgHeader,
+              },
+              rowMarkers: "checkbox",
+              rowSelectionMode: "auto",
+              rowSelect: disabled ? "none" : "multi",
+              // Support adding rows:
+              onRowAppended: disabled ? undefined : onRowAppended,
+              // Deactivate sorting, since it is not supported with dynamic editing:
+              onHeaderClicked: undefined,
+            })}
         />
       </Resizable>
     </StyledResizableContainer>

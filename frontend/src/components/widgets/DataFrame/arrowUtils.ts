@@ -279,6 +279,7 @@ export function getEmptyIndexColumn(): BaseColumnProps {
 export function getAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
   const columns: BaseColumnProps[] = []
 
+  // TODO(lukasmasuch): use data.dimensions instead here?
   const numIndices = data.types?.index?.length ?? 0
   const numColumns = data.columns?.[0]?.length ?? 0
 
