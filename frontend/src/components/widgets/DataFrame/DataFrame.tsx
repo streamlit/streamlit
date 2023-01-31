@@ -165,7 +165,7 @@ function DataFrame({
 
   // For empty tables, we show an extra row that
   // contains "empty" as a way to indicate that the table is empty.
-  const showEmptyState =
+  const isEmptyTable =
     originalNumRows === 0 &&
     // We don't show empty state for dynamic mode with a table that has
     // data columns defined.
@@ -173,6 +173,9 @@ function DataFrame({
       element.editingMode === ArrowProto.EditingMode.DYNAMIC &&
       dataDimensions.dataColumns > 0
     )
+
+  // For large tables, we apply some optimizations to handle large data
+  const isLargeTable = originalNumRows > 150000
 
   const editingState = React.useRef<EditingState>(
     new EditingState(originalNumRows)
@@ -361,19 +364,17 @@ function DataFrame({
           className="glideDataEditor"
           ref={dataEditorRef}
           columns={glideColumns}
-          rows={showEmptyState ? 1 : numRows}
+          rows={isEmptyTable ? 1 : numRows}
           minColumnWidth={MIN_COLUMN_WIDTH}
           maxColumnWidth={MAX_COLUMN_WIDTH}
           maxColumnAutoWidth={MAX_COLUMN_AUTO_WIDTH}
           rowHeight={rowHeight}
           headerHeight={rowHeight}
-          getCellContent={
-            showEmptyState ? getEmptyStateContent : getCellContent
-          }
+          getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
           onColumnResize={onColumnResize}
           // Freeze all index columns:
           freezeColumns={
-            showEmptyState
+            isEmptyTable
               ? 0
               : columns.filter((col: BaseColumn) => col.isIndex).length
           }
@@ -399,7 +400,10 @@ function DataFrame({
           // Activate search:
           keybindings={{ search: true, downFill: true }}
           // Header click is used for column sorting:
-          onHeaderClicked={showEmptyState ? undefined : sortColumn}
+          onHeaderClicked={
+            // Deactivate sorting for empty state and for large dataframes:
+            isEmptyTable || isLargeTable ? undefined : sortColumn
+          }
           gridSelection={gridSelection}
           onGridSelectionChange={setGridSelection}
           // Apply different styling to missing cells:
@@ -425,7 +429,7 @@ function DataFrame({
           // Add support for additional cells:
           customRenderers={extraCellArgs.customRenderers}
           // If element is editable, add additional properties:
-          {...(!showEmptyState &&
+          {...(!isEmptyTable &&
             element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
             !disabled && {
               // Support fill handle for bulk editing:
@@ -437,7 +441,7 @@ function DataFrame({
               // Support deleting cells & rows:
               onDelete,
             })}
-          {...(!showEmptyState &&
+          {...(!isEmptyTable &&
             element.editingMode === ArrowProto.EditingMode.DYNAMIC && {
               // Support adding rows:
               trailingRowOptions: {
