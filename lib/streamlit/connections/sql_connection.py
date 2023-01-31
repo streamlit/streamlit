@@ -47,23 +47,17 @@ class SQL(BaseConnection["Engine"]):
                 if p not in secrets:
                     raise StreamlitAPIException(f"Missing SQL DB connection param: {p}")
 
-            driver = f"+{secrets['driver']}" if "driver" in secrets else ""
-            password = f":{secrets['password']}" if "password" in secrets else ""
-            database = f"/{secrets['database']}" if "database" in secrets else ""
+            drivername = secrets["dialect"] + (
+                f"+{secrets['driver']}" if "driver" in secrets else ""
+            )
 
-            url = "".join(
-                [
-                    secrets["dialect"],
-                    driver,
-                    "://",
-                    secrets["username"],
-                    password,
-                    "@",
-                    secrets["host"],
-                    ":",
-                    secrets["port"],
-                    database,
-                ]
+            url = sqlalchemy.engine.URL.create(
+                drivername=drivername,
+                username=secrets["username"],
+                password=secrets.get("password"),
+                host=secrets["host"],
+                port=secrets["port"],
+                database=secrets.get("database"),
             )
 
         eng = sqlalchemy.create_engine(sqlalchemy.engine.make_url(url), **kwargs)
