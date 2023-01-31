@@ -104,6 +104,9 @@ export const StyledMenuItem = styled.ul<ItemProps>(
       cursor: "pointer",
       ...(recordingStyles || {}),
       ...disabledStyles,
+      "@media print": {
+        display: "none !important",
+      },
     }
   }
 )
