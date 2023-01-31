@@ -33,7 +33,6 @@ import moment from "moment-timezone"
 import numbro from "numbro"
 
 import { IArrow, Styler as StylerProto } from "src/autogen/proto"
-
 import { notNullOrUndefined } from "src/lib/utils"
 
 /** Data types used by ArrowJS. */
@@ -101,11 +100,12 @@ interface Types {
 
 /** Type information for single-index columns, and data columns. */
 export interface Type {
-  /** Type name. */
+  /** The type label returned by pandas.api.types.infer_dtype */
   // NOTE: `DataTypeName` should be used here, but as it's hard (maybe impossible)
   // to define such recursive types in TS, `string` will suffice for now.
   pandas_type: IndexTypeName | string
 
+  /** The numpy dtype that corresponds to the types returned in df.dtypes */
   numpy_type: string
 
   /** Type metadata. */
@@ -395,7 +395,9 @@ export class Quiver {
   /** Parse DataFrame's index header names. */
   private static parseIndexNames(schema: Schema): string[] {
     return schema.index_columns.map(indexName => {
-      // Range indices are treated differently:
+      // Range indices are treated differently since they
+      // contain additional metadata (e.g. start, stop, step).
+      // and not just the name.
       if (Quiver.isRangeIndex(indexName)) {
         const { name } = indexName
         return name || ""
@@ -490,7 +492,8 @@ export class Quiver {
    * Returns undefined if the column is not categorical.
    */
   public getCategoricalOptions(columnIndex: number): string[] | undefined {
-    // TODO(lukasmasuch): Should we also support headcolumns here?
+    // TODO(lukasmasuch): Also support headcolumns here to support
+    // categorical index columns in the future.
     const { columns: numColumns } = this.dimensions
 
     if (columnIndex < 0 || columnIndex >= numColumns) {

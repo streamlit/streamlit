@@ -36,6 +36,7 @@ const { GitStates } = GitInfo
 
 const getProps = (extend?: Partial<Props>): Props => ({
   aboutCallback: jest.fn(),
+  printCallback: jest.fn(),
   clearCacheCallback: jest.fn(),
   isServerConnected: true,
   quickRerunCallback: jest.fn(),
@@ -101,6 +102,7 @@ describe("App", () => {
     expect(menuLabels).toEqual([
       "Rerun",
       "Settings",
+      "Print",
       "Record a screencast",
       "Report a bug",
       "Get help",
@@ -143,6 +145,7 @@ describe("App", () => {
     expect(menuLabels).toEqual([
       "Rerun",
       "Settings",
+      "Print",
       "Record a screencast",
       "Report a bug",
       "Get help",
@@ -184,6 +187,7 @@ describe("App", () => {
     expect(menuLabels).toEqual([
       "Rerun",
       "Settings",
+      "Print",
       "Record a screencast",
       "Report a bug",
       "Get help",
@@ -348,6 +352,7 @@ describe("App", () => {
     expect(menuLabels).toEqual([
       "Rerun",
       "Settings",
+      "Print",
       "Record a screencast",
       "About",
     ])
@@ -376,6 +381,7 @@ describe("App", () => {
     expect(menuLabels).toEqual([
       "Rerun",
       "Settings",
+      "Print",
       "Record a screencast",
       "Get help",
       "About",
@@ -408,6 +414,7 @@ describe("App", () => {
     expect(menuLabels).toEqual([
       "Rerun",
       "Settings",
+      "Print",
       "Record a screencast",
       "Report a bug",
       "Get help",
