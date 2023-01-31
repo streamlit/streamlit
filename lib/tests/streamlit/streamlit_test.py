@@ -135,6 +135,7 @@ class StreamlitTest(unittest.TestCase):
                 "color_picker",
                 "sidebar",
                 # Other modules the user should have access to:
+                "connection",
                 "echo",
                 "spinner",
                 "set_page_config",
