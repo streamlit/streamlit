@@ -144,6 +144,9 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
   if (typeName === "date") {
     return DateColumn
   }
+  if (["object", "decimal", "bytes"].includes(typeName)) {
+    return ObjectColumn
+  }
   if (["bool"].includes(typeName)) {
     return BooleanColumn
   }
@@ -172,9 +175,6 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
   }
   if (typeName.startsWith("list")) {
     return ListColumn
-  }
-  if (["decimal", "bytes"].includes(typeName)) {
-    return ObjectColumn
   }
 
   return ObjectColumn
@@ -258,6 +258,21 @@ export function getColumnFromArrow(
 }
 
 /**
+ * Creates the column props for an empty index column.
+ * This is used for DataFrames that don't have any index.
+ * At least one column is required for glide.
+ */
+export function getEmptyIndexColumn(): BaseColumnProps {
+  return {
+    id: `empty-index`,
+    title: "",
+    indexNumber: 0,
+    isEditable: false,
+    isIndex: true,
+  } as BaseColumnProps
+}
+
+/**
  * Creates the column props for all columns from the Arrow metadata.
  *
  * @param data - The Arrow data.
@@ -272,13 +287,7 @@ export function getAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
   if (numIndices === 0 && numColumns === 0) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
     // As a workaround, we are adding an empty index column in this case.
-    columns.push({
-      id: `empty-index`,
-      title: "",
-      indexNumber: 0,
-      isEditable: false,
-      isIndex: true,
-    } as BaseColumnProps)
+    columns.push(getEmptyIndexColumn())
     return columns
   }
 

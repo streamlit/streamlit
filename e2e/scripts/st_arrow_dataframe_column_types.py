@@ -112,6 +112,7 @@ def random_date(start: datetime.datetime, end: datetime.datetime) -> datetime.da
     ).replace(tzinfo=None)
 
 
+# pd.to_datetime(df["str"]).dt.tz_localize("Europe/Moscow")
 st.subheader("Date, time and datetime types")
 datetime_df = pd.DataFrame(
     {
@@ -193,6 +194,45 @@ st.dataframe(list_types_df.dtypes)
 st.dataframe(list_types_df.copy(), use_container_width=True)
 st.experimental_data_editor(list_types_df.copy(), use_container_width=True)
 
+st.header("Interval dtypes in pd.DataFrame")
+n_rows = 5
+interval_df = pd.DataFrame(
+    {
+        "int64_both": [
+            pd.Interval(left=i, right=i + 1, closed="both") for i in range(n_rows)
+        ]
+        + [None],
+        "int64_right": [
+            pd.Interval(left=i, right=i + 1, closed="right") for i in range(n_rows)
+        ]
+        + [None],
+        "int64_left": [
+            pd.Interval(left=i, right=i + 1, closed="left") for i in range(n_rows)
+        ]
+        + [None],
+        "int64_neither": [
+            pd.Interval(left=i, right=i + 1, closed="neither") for i in range(n_rows)
+        ]
+        + [None],
+        "timestamp_right_default": [
+            pd.Interval(
+                left=pd.Timestamp(2022, 3, 14, i),
+                right=pd.Timestamp(2022, 3, 14, i + 1),
+            )
+            for i in range(n_rows)
+        ]
+        + [None],
+        "float64": [
+            pd.Interval(np.random.random(), np.random.random() + 1)
+            for _ in range(n_rows)
+        ]
+        + [None],
+    }
+)
+st.dataframe(interval_df.dtypes)
+st.dataframe(interval_df.copy(), use_container_width=True)
+st.experimental_data_editor(interval_df.copy(), use_container_width=True)
+
 st.subheader("Special types")
 special_types_df = pd.DataFrame(
     {
@@ -202,14 +242,14 @@ special_types_df = pd.DataFrame(
         ),
         "bytes": pd.Series(
             [
+                b"a",
+                b"b",
                 b"foo",
                 b"bar",
-                b"lorem",
-                b"ipsum",
                 None,
             ]
         ),
-        "interval": [pd.Interval(left=i, right=i + 1, closed="both") for i in range(5)],
+        "emojis 🌈": pd.Series(["Black ⚫", "Red 🔴", "White ⚪", "Red 🔴", None]),
     }
 )
 

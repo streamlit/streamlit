@@ -65,6 +65,23 @@ SHARED_TEST_CASES = [
     ({}, TestCaseMetadata(0, 0, DataFormat.KEY_VALUE_DICT)),
     # Empty set:
     (set(), TestCaseMetadata(0, 0, DataFormat.SET_OF_VALUES)),
+    # Empty numpy array:
+    # for unknown reasons, pd.DataFrame initializes empty numpy arrays with a single column
+    (np.ndarray(0), TestCaseMetadata(0, 1, DataFormat.NUMPY_LIST)),
+    # Empty column value mapping with columns:
+    ({"name": [], "type": []}, TestCaseMetadata(0, 2, DataFormat.COLUMN_VALUE_MAPPING)),
+    # Empty dataframe:
+    (pd.DataFrame(), TestCaseMetadata(0, 0, DataFormat.PANDAS_DATAFRAME)),
+    # Empty dataframe with columns:
+    (
+        pd.DataFrame(columns=["name", "type"]),
+        TestCaseMetadata(0, 2, DataFormat.PANDAS_DATAFRAME),
+    ),
+    # Pandas DataFrame:
+    (
+        pd.DataFrame(["st.text_area", "st.markdown"]),
+        TestCaseMetadata(2, 1, DataFormat.PANDAS_DATAFRAME),
+    ),
     # List of strings (List[str]):
     (
         ["st.text_area", "st.number_input", "st.text_input"],
@@ -84,9 +101,11 @@ SHARED_TEST_CASES = [
         TestCaseMetadata(3, 1, DataFormat.LIST_OF_VALUES),
     ),
     # Set of strings (Set[str]):
+    # Set does not have a stable order across different Python version.
+    # Therefore, we are only testing this with one item.
     (
-        {"st.number_input", "st.text_area", "st.text_input"},
-        TestCaseMetadata(3, 1, DataFormat.SET_OF_VALUES),
+        {"st.number_input", "st.number_input"},
+        TestCaseMetadata(1, 1, DataFormat.SET_OF_VALUES),
     ),
     # Tuple of strings (Tuple[str]):
     (
@@ -114,11 +133,6 @@ SHARED_TEST_CASES = [
     (
         np.array([["st.text_area"], ["st.number_input"], ["st.text_input"]]),
         TestCaseMetadata(3, 1, DataFormat.NUMPY_MATRIX),
-    ),
-    # Pandas DataFrame:
-    (
-        pd.DataFrame(["st.text_area", "st.markdown"]),
-        TestCaseMetadata(2, 1, DataFormat.PANDAS_DATAFRAME),
     ),
     # Pandas Series (pd.Series):
     (
@@ -264,7 +278,7 @@ class TypeUtilTest(unittest.TestCase):
         string_obj = "a normal string"
         self.assertFalse(is_bytes_like(string_obj))
         with self.assertRaises(RuntimeError):
-            to_bytes(string_obj)
+            to_bytes(string_obj)  # type: ignore
 
     def test_data_frame_with_dtype_values_to_bytes(self):
         df1 = pd.DataFrame(["foo", "bar"])
@@ -366,13 +380,10 @@ class TypeUtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (pd.Series([1, 2, "3"]), True),
             # Complex numbers:
             (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
             # Timedelta:
             (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
-            # Decimal:
-            (pd.Series([Decimal("1.1"), Decimal("2.2")]), True),
             # Mixed-integer types:
             (pd.Series([1, 2, "3"]), True),
             # Mixed:
@@ -394,6 +405,7 @@ class TypeUtilTest(unittest.TestCase):
             (pd.Series([[1, 2], [3, 4]]), False),
             (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
             (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), False),
         ]
     )
     def test_is_colum_type_arrow_incompatible(
@@ -407,13 +419,10 @@ class TypeUtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (pd.Series([1, 2, "3"]), True),
             # Complex numbers:
             (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
             # Timedelta:
             (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
-            # Decimal:
-            (pd.Series([Decimal("1.1"), Decimal("2.2")]), True),
             # Mixed-integer types:
             (pd.Series([1, 2, "3"]), True),
             # Mixed:
@@ -435,6 +444,7 @@ class TypeUtilTest(unittest.TestCase):
             (pd.Series([[1, 2], [3, 4]]), False),
             (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
             (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), False),
         ]
     )
     def test_fix_arrow_incompatible_column_types(
