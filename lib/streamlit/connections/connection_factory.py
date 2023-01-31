@@ -12,17 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Any, Type, TypeVar, overload
+from typing import Any, Type, TypeVar, overload
 
 from typing_extensions import Literal
 
 from streamlit.connections.base_connection import BaseConnection
+from streamlit.connections.sql_connection import SQL
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
-
-if TYPE_CHECKING:
-    from streamlit.connections.sql_connection import SQL
 
 # The BaseConnection bound should be parameterized to `Any` below as subclasses of
 # BaseConnection are responsible for binding the type parameter of BaseConnection to a
@@ -33,19 +31,12 @@ ConnectionClass = TypeVar("ConnectionClass", bound=BaseConnection[Any])
 # NOTE: Adding support for a new first party connection requires:
 #   1. Adding the new connection name and class to this function.
 #   2. Writing a new @overload signature mapping the connection's name to its class.
-#
-# Additionally, contributors should take care to avoid importing the new connection
-# outside of `if TYPE_CHECKING` and `if connection_name == <new_connection>` blocks.
-# This is because connection class implementations will frequently import packages that
-# are not hard dependencies of Streamlit, so we want to avoid throwing ImportErrors
-# when the user doesn't have these packages installed unless they're actually trying to
-# use the associated connection.
+# TODO(vdonato): Some way to test that optional dependencies required by a connection
+# don't cause `ModuleNotFoundError`s until the connection is actually instantiated.
 def _get_first_party_connection(connection_name: str):
     FIRST_PARTY_CONNECTIONS = {"sql"}
 
     if connection_name == "sql":
-        from streamlit.connections.sql_connection import SQL
-
         return SQL
 
     raise StreamlitAPIException(
@@ -80,7 +71,15 @@ def connection(connection_class, name="default", **kwargs):
     if type(connection_class) == str:
         connection_class = _get_first_party_connection(connection_class)
 
-    return connection_class(
-        connection_name=name,
-        **kwargs,
-    )
+    try:
+        return connection_class(
+            connection_name=name,
+            **kwargs,
+        )
+    except ModuleNotFoundError as e:
+        # TODO(vdonato): Finalize what we want this error message to be. We just add
+        # some generic text for now to demonstrate that we can add to the default
+        # error message.
+        raise ModuleNotFoundError(
+            f"{str(e)}. You may need to install this package to use this connection."
+        )
