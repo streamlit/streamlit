@@ -639,7 +639,8 @@ def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
             # This includes most of the more complex/custom types (objects, dicts, lists, ...)
             if len(column) == 0 or not hasattr(column, "iloc"):
                 # The column seems to be invalid, so we assume it is incompatible.
-                # But this most likely would never happen.
+                # But this would most likely never happen since empty columns
+                # cannot be mixed.
                 return True
 
             # Get the first value to check if it is a supported list-like type.
