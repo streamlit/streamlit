@@ -361,13 +361,10 @@ class TypeUtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (pd.Series([1, 2, "3"]), True),
             # Complex numbers:
             (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
             # Timedelta:
             (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
-            # Decimal:
-            (pd.Series([Decimal("1.1"), Decimal("2.2")]), True),
             # Mixed-integer types:
             (pd.Series([1, 2, "3"]), True),
             # Mixed:
@@ -389,6 +386,7 @@ class TypeUtilTest(unittest.TestCase):
             (pd.Series([[1, 2], [3, 4]]), False),
             (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
             (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), False),
         ]
     )
     def test_is_colum_type_arrow_incompatible(
@@ -402,13 +400,10 @@ class TypeUtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (pd.Series([1, 2, "3"]), True),
             # Complex numbers:
             (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
             # Timedelta:
             (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
-            # Decimal:
-            (pd.Series([Decimal("1.1"), Decimal("2.2")]), True),
             # Mixed-integer types:
             (pd.Series([1, 2, "3"]), True),
             # Mixed:
@@ -430,6 +425,7 @@ class TypeUtilTest(unittest.TestCase):
             (pd.Series([[1, 2], [3, 4]]), False),
             (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
             (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), False),
         ]
     )
     def test_fix_arrow_incompatible_column_types(

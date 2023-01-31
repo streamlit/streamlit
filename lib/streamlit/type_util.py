@@ -488,7 +488,7 @@ def convert_anything_to_df(
 
     Parameters
     ----------
-    df : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
+    data : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
 
     max_unevaluated_rows: int
         If unevaluated data is detected this func will evaluate it,
@@ -668,10 +668,6 @@ def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
 
         if inferred_type in [
             "mixed-integer",
-            # Decimal is not correctly supported on Arrow JS:
-            # https://github.com/apache/arrow/issues/22932
-            # https://github.com/apache/arrow/issues/28804
-            "decimal",
             "complex",
             "timedelta",
             "timedelta64",
@@ -679,18 +675,26 @@ def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
             return True
         elif inferred_type == "mixed":
             # This includes most of the more complex/custom types (objects, dicts, lists, ...)
+            if len(column) == 0 or not hasattr(column, "iloc"):
+                # The column seems to be invalid, so we assume it is incompatible.
+                # But this would most likely never happen since empty columns
+                # cannot be mixed.
+                return True
+
+            # Get the first value to check if it is a supported list-like type.
+            first_value = column.iloc[0]
+
             if (
-                len(column) > 0
-                and hasattr(column, "iloc")
-                and is_list_like(column.iloc[0])
+                not is_list_like(first_value)
                 # dicts are list-like, but have issues in Arrow JS (see comments in Quiver.ts)
-                and not is_dict_like(column.iloc[0])
+                or is_dict_like(first_value)
                 # Frozensets are list-like, but are not compatible with pyarrow.
-                and not isinstance(column.iloc[0], frozenset)
+                or isinstance(first_value, frozenset)
             ):
-                # Lists-like structures are supported
-                return False
-            return True
+                # This seems to be an incompatible list-like type
+                return True
+            return False
+    # We did not detect an incompatible type, so we assume it is compatible:
     return False
 
 
