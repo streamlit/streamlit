@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-describe("st.data_editor supports various input data types and formats", () => {
+describe("st.data_editor supports a variety of column types", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
     cy.prepForElementSnapshots();
   });
 
-  it("shows tables correctly", () => {
-    cy.get(".stDataFrame").should("have.length", 30);
+  it("renders element correctly", () => {
+    cy.get(".stDataFrame").should("have.length", 7);
 
     /** Since glide-data-grid uses HTML canvas for rendering the table we
     cannot run any tests based on the HTML DOM. Therefore, we only use snapshot
@@ -29,7 +29,7 @@ describe("st.data_editor supports various input data types and formats", () => {
     itself also has more advanced canvas based tests for some of the interactive features. */
 
     cy.get(".stDataFrame").each((el, idx) => {
-      return cy.wrap(el).matchThemedSnapshots("data_editor-input-data-" + idx);
+      return cy.wrap(el).matchThemedSnapshots("data_editor-types-" + idx);
     });
   });
 });
