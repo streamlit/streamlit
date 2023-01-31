@@ -133,7 +133,15 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
     return TextColumn
   }
   if (
-    ["object", "date", "time", "datetime", "datetimetz"].includes(typeName)
+    [
+      "object",
+      "date",
+      "time",
+      "datetime",
+      "datetimetz",
+      "decimal",
+      "bytes",
+    ].includes(typeName)
   ) {
     return ObjectColumn
   }
@@ -165,9 +173,6 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
   }
   if (typeName.startsWith("list")) {
     return ListColumn
-  }
-  if (["decimal", "bytes"].includes(typeName)) {
-    return ObjectColumn
   }
 
   return ObjectColumn
