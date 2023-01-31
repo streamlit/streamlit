@@ -34,13 +34,19 @@ from streamlit.type_util import (
     is_snowpark_data_object,
     to_bytes,
 )
+from tests.streamlit.data_mocks import (
+    BASE_TYPES_DF,
+    DATETIME_TYPES_DF,
+    INTERVAL_TYPES_DF,
+    LIST_TYPES_DF,
+    NUMBER_TYPES_DF,
+    SPECIAL_TYPES_DF,
+    UNSUPPORTED_TYPES_DF,
+    TestObject,
+)
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
 from tests.testutil import create_snowpark_session
-
-
-class TestObject(object):
-    pass
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -108,7 +114,7 @@ class TypeUtilTest(unittest.TestCase):
         string_obj = "a normal string"
         self.assertFalse(is_bytes_like(string_obj))
         with self.assertRaises(RuntimeError):
-            to_bytes(string_obj)
+            to_bytes(string_obj)  # type: ignore
 
     def test_data_frame_with_dtype_values_to_bytes(self):
         df1 = pd.DataFrame(["foo", "bar"])
@@ -118,6 +124,39 @@ class TypeUtilTest(unittest.TestCase):
             data_frame_to_bytes(df2)
         except Exception as ex:
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
+
+    def test_convert_anything_to_df_ensure_copy(self):
+        """Test that `convert_anything_to_df` creates a copy of the original
+        dataframe if `ensure_copy` is True.
+        """
+        orginal_df = pd.DataFrame(
+            {
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
+        )
+
+        converted_df = convert_anything_to_df(orginal_df, ensure_copy=True)
+        # Apply a change
+        converted_df["integer"] = [4, 5, 6]
+        # Ensure that the original dataframe is not changed
+        self.assertEqual(orginal_df["integer"].to_list(), [1, 2, 3])
+
+        converted_df = convert_anything_to_df(orginal_df, ensure_copy=False)
+        # Apply a change
+        converted_df["integer"] = [4, 5, 6]
+        # The original dataframe should be changed here since ensure_copy is False
+        self.assertEqual(orginal_df["integer"].to_list(), [4, 5, 6])
+
+    def test_convert_anything_to_df_supports_key_value_dicts(self):
+        """Test that `convert_anything_to_df` correctly converts
+        key-value dicts to a dataframe.
+        """
+        data = {"a": 1, "b": 2}
+        df = convert_anything_to_df(data)
+        pd.testing.assert_frame_equal(df, pd.DataFrame.from_dict(data, orient="index"))
 
     @parameterized.expand(
         [
@@ -284,38 +323,31 @@ dtype: object""",
                 f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
             )
 
-    def test_convert_anything_to_df_ensure_copy(self):
-        """Test that `convert_anything_to_df` creates a copy of the original
-        dataframe if `ensure_copy` is True.
+    @parameterized.expand(
+        [
+            (BASE_TYPES_DF,),
+            (DATETIME_TYPES_DF,),
+            (INTERVAL_TYPES_DF,),
+            (LIST_TYPES_DF,),
+            (NUMBER_TYPES_DF,),
+            (SPECIAL_TYPES_DF,),
+            (UNSUPPORTED_TYPES_DF,),
+        ]
+    )
+    def test_data_frame_to_bytes(
+        self,
+        input_df: pd.DataFrame,
+    ):
+        """Test that `data_frame_to_bytes` correctly converts
+        DataFrames with a variety of types to Arrow.
         """
-        orginal_df = pd.DataFrame(
-            {
-                "integer": [1, 2, 3],
-                "float": [1.0, 2.1, 3.2],
-                "string": ["foo", "bar", None],
-            },
-            index=[1.0, "foo", 3],
-        )
-
-        converted_df = convert_anything_to_df(orginal_df, ensure_copy=True)
-        # Apply a change
-        converted_df["integer"] = [4, 5, 6]
-        # Ensure that the original dataframe is not changed
-        self.assertEqual(orginal_df["integer"].to_list(), [1, 2, 3])
-
-        converted_df = convert_anything_to_df(orginal_df, ensure_copy=False)
-        # Apply a change
-        converted_df["integer"] = [4, 5, 6]
-        # The original dataframe should be changed here since ensure_copy is False
-        self.assertEqual(orginal_df["integer"].to_list(), [4, 5, 6])
-
-    def test_convert_anything_to_df_supports_key_value_dicts(self):
-        """Test that `convert_anything_to_df` correctly converts
-        key-value dicts to a dataframe.
-        """
-        data = {"a": 1, "b": 2}
-        df = convert_anything_to_df(data)
-        pd.testing.assert_frame_equal(df, pd.DataFrame.from_dict(data, orient="index"))
+        try:
+            data_frame_to_bytes(input_df)
+        except Exception as ex:
+            self.fail(
+                "No exception should have been thrown here. "
+                f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
+            )
 
     def test_is_snowpark_dataframe(self):
         df = pd.DataFrame(
