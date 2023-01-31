@@ -169,6 +169,9 @@ Cypress.Commands.add("prepForElementSnapshots", () => {
   // Make the ribbon decoration line disappear as it can occasionally get
   // caught when a snapshot is taken.
   cy.get("[data-testid='stDecoration']").invoke("css", "display", "none")
+  // Make the toolbar disappear as it can occasionally get caught when a
+  // snapshot is taken in wide mode.
+  cy.get("[data-testid='stToolbar']").invoke("css", "display", "none")
 
   // Similarly, the header styling can sometimes interfere with the snapshot
   // for elements near the top of the page.
