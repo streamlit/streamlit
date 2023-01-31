@@ -14,24 +14,28 @@
 
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import Iterator, Optional, Union, cast
+from typing import TYPE_CHECKING, Iterator, Optional, Union, cast
 
 import pandas as pd
-import sqlalchemy
-from sqlalchemy.engine.base import Engine
-from sqlalchemy.orm import Session
 
 from streamlit.connections import BaseConnection
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
+if TYPE_CHECKING:
+    from sqlalchemy.engine.base import Engine
+    from sqlalchemy.orm import Session
+
+
 REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host", "port"}
 
 
-class SQL(BaseConnection[Engine]):
+class SQL(BaseConnection["Engine"]):
     _default_connection_name = "sql"
 
-    def connect(self, autocommit: bool = False, **kwargs) -> Engine:
+    def connect(self, autocommit: bool = False, **kwargs) -> "Engine":
+        import sqlalchemy
+
         self._closed = False
 
         secrets = self.get_secrets()
@@ -65,9 +69,9 @@ class SQL(BaseConnection[Engine]):
         eng = sqlalchemy.create_engine(sqlalchemy.engine.make_url(url), **kwargs)
 
         if autocommit:
-            return cast(Engine, eng.execution_options(isolation_level="AUTOCOMMIT"))
+            return cast("Engine", eng.execution_options(isolation_level="AUTOCOMMIT"))
         else:
-            return cast(Engine, eng)
+            return cast("Engine", eng)
 
     def disconnect(self) -> None:
         self.instance.dispose()
@@ -100,7 +104,7 @@ class SQL(BaseConnection[Engine]):
         )
 
     @contextmanager
-    def session(self) -> Iterator[Session]:
+    def session(self) -> Iterator["Session"]:
         """A simple wrapper around SQLAlchemy Session context management.
 
         This allows us to write
@@ -119,5 +123,7 @@ class SQL(BaseConnection[Engine]):
         ...         session.execute("INSERT INTO numbers (val) VALUES (:n);", {"n": n})
         ...         session.commit()
         """
+        from sqlalchemy.orm import Session
+
         with Session(self.instance) as s:
             yield s
