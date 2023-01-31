@@ -21,7 +21,7 @@ describe("st.data_editor supports various input data types and formats", () => {
   });
 
   it("shows tables correctly", () => {
-    cy.get(".stDataFrame").should("have.length", 60);
+    cy.get(".stDataFrame").should("have.length", 68);
 
     /** Since glide-data-grid uses HTML canvas for rendering the table we
     cannot run any tests based on the HTML DOM. Therefore, we only use snapshot
