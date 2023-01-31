@@ -22,7 +22,10 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import Session
 
 from streamlit.connections import BaseConnection
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
+
+REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host", "port"}
 
 
 class SQL(BaseConnection[Engine]):
@@ -33,11 +36,33 @@ class SQL(BaseConnection[Engine]):
 
         secrets = self.get_secrets()
 
-        # TODO(vdonato): Allow developers to alternatively specify connection parameters
-        #                individually rather than via a single connection string.
-        eng = sqlalchemy.create_engine(
-            sqlalchemy.engine.make_url(secrets["url"]), **kwargs
-        )
+        if "url" in secrets:
+            url = secrets["url"]
+        else:
+            for p in REQUIRED_CONNECTION_PARAMS:
+                if p not in secrets:
+                    raise StreamlitAPIException(f"Missing SQL DB connection param: {p}")
+
+            driver = f"+{secrets['driver']}" if "driver" in secrets else ""
+            password = f":{secrets['password']}" if "password" in secrets else ""
+            database = f"/{secrets['database']}" if "database" in secrets else ""
+
+            url = "".join(
+                [
+                    secrets["dialect"],
+                    driver,
+                    "://",
+                    secrets["username"],
+                    password,
+                    "@",
+                    secrets["host"],
+                    ":",
+                    secrets["port"],
+                    database,
+                ]
+            )
+
+        eng = sqlalchemy.create_engine(sqlalchemy.engine.make_url(url), **kwargs)
 
         if autocommit:
             return cast(Engine, eng.execution_options(isolation_level="AUTOCOMMIT"))
