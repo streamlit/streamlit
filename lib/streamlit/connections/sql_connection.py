@@ -14,7 +14,7 @@
 
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import Iterator, Optional, Union
+from typing import Iterator, Optional, Union, cast
 
 import pandas as pd
 import sqlalchemy
@@ -28,15 +28,21 @@ from streamlit.runtime.caching import cache_data
 class SQL(BaseConnection[Engine]):
     _default_connection_name = "sql"
 
-    def connect(self, **kwargs) -> Engine:
+    def connect(self, autocommit: bool = False, **kwargs) -> Engine:
         self._closed = False
 
         secrets = self.get_secrets()
+
         # TODO(vdonato): Allow developers to alternatively specify connection parameters
         #                individually rather than via a single connection string.
-        return sqlalchemy.create_engine(
+        eng = sqlalchemy.create_engine(
             sqlalchemy.engine.make_url(secrets["url"]), **kwargs
         )
+
+        if autocommit:
+            return cast(Engine, eng.execution_options(isolation_level="AUTOCOMMIT"))
+        else:
+            return cast(Engine, eng)
 
     def disconnect(self) -> None:
         self.instance.dispose()
