@@ -23,3 +23,7 @@ def hello():
     print("Hello, Streamlit!")
 """
 st.code(code, language="python")
+
+st.code(code, language="python", line_numbers=True)
+
+st.code("PLAIN TEXT", language=None, line_numbers=True)

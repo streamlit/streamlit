@@ -20,7 +20,6 @@ import re
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
 from unittest.mock import patch
 
@@ -316,20 +315,6 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
             bytes_to_data_frame(proto.datasets[0].data.data),
             EXPECTED_DATAFRAME,
         )
-
-    def test_st_code(self):
-        """Test st.code."""
-        st.code("print('My string = %d' % my_value)", language="python")
-        expected = textwrap.dedent(
-            """
-            ```python
-            print('My string = %d' % my_value)
-            ```
-        """
-        )
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, expected.strip())
 
     def test_st_legacy_dataframe(self):
         """Test st._legacy_dataframe."""
