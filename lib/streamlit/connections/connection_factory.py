@@ -17,6 +17,7 @@ from typing import Any, Type, TypeVar, overload
 from typing_extensions import Literal
 
 from streamlit.connections.base_connection import BaseConnection
+from streamlit.connections.snowpark_connection import Snowpark
 from streamlit.connections.sql_connection import SQL
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
@@ -34,10 +35,12 @@ ConnectionClass = TypeVar("ConnectionClass", bound=BaseConnection[Any])
 # TODO(vdonato): Some way to test that optional dependencies required by a connection
 # don't cause `ModuleNotFoundError`s until the connection is actually instantiated.
 def _get_first_party_connection(connection_name: str):
-    FIRST_PARTY_CONNECTIONS = {"sql"}
+    FIRST_PARTY_CONNECTIONS = {"snowpark", "sql"}
 
     if connection_name == "sql":
         return SQL
+    elif connection_name == "snowpark":
+        return Snowpark
 
     raise StreamlitAPIException(
         f"Invalid connection {connection_name}. Supported connection classes: {FIRST_PARTY_CONNECTIONS}"
@@ -52,6 +55,13 @@ def _validate(conn: ConnectionClass) -> bool:
 def connection(
     connection_class: Literal["sql"], name: str = "default", **kwargs
 ) -> "SQL":
+    ...
+
+
+@overload
+def connection(
+    connection_class: Literal["snowpark"], name: str = "default", **kwargs
+) -> "Snowpark":
     ...
 
 
