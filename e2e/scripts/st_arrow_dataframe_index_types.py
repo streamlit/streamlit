@@ -53,7 +53,6 @@ st._arrow_dataframe(DATETIME_TYPES_DF.set_index("date"), use_container_width=Tru
 st.subheader("Time Index (pd.Index)")
 st._arrow_dataframe(DATETIME_TYPES_DF.set_index("time"), use_container_width=True)
 
-
 st.subheader("Interval Index (pd.IntervalIndex)")
 st._arrow_dataframe(INTERVAL_TYPES_DF.set_index("int64_both"), use_container_width=True)
 
