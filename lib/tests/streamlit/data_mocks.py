@@ -366,7 +366,7 @@ SPECIAL_TYPES_DF = pd.DataFrame(
     {
         "categorical": pd.Series(["a", "b", "c", "a", None]).astype("category"),
         "decimal": pd.Series(
-            [Decimal("1.1"), Decimal("2.2"), Decimal("10000"), Decimal("-2.2123"), None]
+            [Decimal("1.1"), Decimal("2.2"), Decimal("1000"), Decimal("2.212"), None]
         ),
         "bytes": pd.Series(
             [
