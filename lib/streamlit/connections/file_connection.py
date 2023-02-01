@@ -18,22 +18,19 @@ from contextlib import contextmanager
 from datetime import timedelta
 from io import TextIOWrapper
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Iterator, Optional, Union
 
 import pandas as pd
 
-from streamlit import cache_data
 from streamlit.connections import BaseConnection
+from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
     from fsspec import AbstractFileSystem, filesystem
     from fsspec.spec import AbstractBufferedFile
 
 
-TTLType = int | float | timedelta
-
-
-class File(BaseConnection[AbstractFileSystem]):
+class File(BaseConnection["AbstractFileSystem"]):
     _default_connection_name = "file"
 
     def __init__(
@@ -42,7 +39,7 @@ class File(BaseConnection[AbstractFileSystem]):
         self.protocol = protocol
         super().__init__(connection_name, **kwargs)
 
-    def connect(self, **kwargs) -> AbstractFileSystem:
+    def connect(self, **kwargs) -> "AbstractFileSystem":
         """
         Pass a protocol such as "s3", "gcs", or "file"
         """
@@ -93,12 +90,22 @@ class File(BaseConnection[AbstractFileSystem]):
         with self.instance.open(path, mode, *args, **kwargs) as f:
             return f.read()
 
-    def read_text(self, path: str | Path, ttl: TTLType = 3600, **kwargs) -> str:
+    def read_text(
+        self,
+        path: str | Path,
+        ttl: Optional[Union[float, int, timedelta]] = None,
+        **kwargs,
+    ) -> str:
         return cache_data(self._read_data, ttl=ttl)(  # type: ignore
             path, binary=False, connection_name=self._connection_name, **kwargs
         )
 
-    def read_bytes(self, path: str | Path, ttl: TTLType = 3600, **kwargs) -> bytes:
+    def read_bytes(
+        self,
+        path: str | Path,
+        ttl: Optional[Union[float, int, timedelta]] = None,
+        **kwargs,
+    ) -> bytes:
         return cache_data(self._read_data, ttl=ttl)(  # type: ignore
             path, binary=True, connection_name=self._connection_name, **kwargs
         )
@@ -112,7 +119,12 @@ class File(BaseConnection[AbstractFileSystem]):
         with self.open(path, "rt") as f:
             return pd.read_csv(f, **kwargs)
 
-    def read_csv(self, path: str | Path, ttl: TTLType = 3600, **kwargs) -> pd.DataFrame:
+    def read_csv(
+        self,
+        path: str | Path,
+        ttl: Optional[Union[float, int, timedelta]] = None,
+        **kwargs,
+    ) -> pd.DataFrame:
         return cache_data(self._read_csv, ttl=ttl)(  # type: ignore
             path, connection_name=self._connection_name, **kwargs
         )
@@ -127,7 +139,10 @@ class File(BaseConnection[AbstractFileSystem]):
             return pd.read_parquet(f, **kwargs)  # type: ignore
 
     def read_parquet(
-        self, path: str | Path, ttl: TTLType = 3600, **kwargs
+        self,
+        path: str | Path,
+        ttl: Optional[Union[float, int, timedelta]] = None,
+        **kwargs,
     ) -> pd.DataFrame:
         return cache_data(self._read_parquet, ttl=ttl)(  # type: ignore
             path, connection_name=self._connection_name, **kwargs
