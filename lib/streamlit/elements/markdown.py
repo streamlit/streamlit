@@ -82,7 +82,10 @@ class MarkdownMixin:
 
     @gather_metrics("code")
     def code(
-        self, body: SupportsStr, language: Optional[str] = "python"
+        self,
+        body: SupportsStr,
+        language: Optional[str] = "python",
+        line_numbers: bool = False,
     ) -> "DeltaGenerator":
         """Display a code block with optional syntax highlighting.
 
@@ -101,6 +104,10 @@ class MarkdownMixin:
 
             https://github.com/react-syntax-highlighter/react-syntax-highlighter/blob/master/AVAILABLE_LANGUAGES_PRISM.MD
 
+        line_numbers : bool
+            Whether line numbers should be shown to the left of the code.
+            Defaults to False.
+
         Example
         -------
         >>> import streamlit as st
@@ -111,7 +118,8 @@ class MarkdownMixin:
 
         """
         code_proto = MarkdownProto()
-        markdown = f'```{language or ""}\n{body}\n```'
+        metadata = " showLineNumbers" if line_numbers else ""
+        markdown = f'```{language or "plaintext"}{metadata}\n{body}\n```'
         code_proto.body = clean_text(markdown)
         code_proto.element_type = MarkdownProto.Type.CODE
         return self.dg._enqueue("markdown", code_proto)

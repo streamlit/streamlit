@@ -17,6 +17,7 @@
 import React, { ReactElement, ReactNode, FunctionComponent } from "react"
 import { ReactMarkdownProps } from "react-markdown/lib/ast-to-react"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { Data } from "unist"
 
 import CopyButton from "./CopyButton"
 import {
@@ -33,6 +34,14 @@ export interface CodeBlockProps {
   children: ReactNode
 }
 
+function shouldShowLineNumbers(data: Data | undefined): boolean {
+  if (!data?.meta) {
+    return false
+  }
+  const meta = data.meta as string
+  return meta.includes("showLineNumbers")
+}
+
 /**
  * Renders code tag with highlighting based on requested language.
  */
@@ -45,6 +54,7 @@ export const CodeTag: FunctionComponent<CodeTagProps> = ({
 }) => {
   const match = /language-(\w+)/.exec(className || "")
   const codeText = String(children).trim().replace(/\n$/, "")
+  const showLineNumbers = shouldShowLineNumbers(node.data)
 
   return !inline ? (
     <>
@@ -58,7 +68,9 @@ export const CodeTag: FunctionComponent<CodeTagProps> = ({
           language={(match && match[1]) || ""}
           PreTag="div"
           customStyle={{ backgroundColor: "transparent" }}
+          showLineNumbers={showLineNumbers}
           style={{}}
+          lineNumberStyle={{}}
         >
           {codeText}
         </SyntaxHighlighter>

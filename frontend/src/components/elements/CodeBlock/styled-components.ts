@@ -27,6 +27,12 @@ export const StyledPre = styled.pre(({ theme }) => ({
   paddingRight: "2.75rem",
   color: theme.colors.bodyText,
 
+  // The token can consist of many lines, e.g. a triple-quote string, so
+  // we need to make sure that the color is not overwritten.
+  ".comment.linenumber": {
+    color: theme.colors.bodyText,
+  },
+
   ".token.comment, .token.prolog, .token.doctype, .token.cdata": {
     color: "slategray",
   },
