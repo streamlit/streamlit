@@ -15,7 +15,6 @@
 import random
 
 import numpy as np
-import pandas as pd
 
 import streamlit as st
 from tests.streamlit.data_mocks import (
@@ -53,3 +52,6 @@ st.experimental_data_editor(SPECIAL_TYPES_DF.copy(), use_container_width=True)
 
 st.subheader("Unsupported types")
 st.experimental_data_editor(UNSUPPORTED_TYPES_DF.copy(), use_container_width=True)
+
+st.subheader("String Index (pd.Index)")
+st.experimental_data_editor(BASE_TYPES_DF.set_index("string"), use_container_width=True)

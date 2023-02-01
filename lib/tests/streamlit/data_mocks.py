@@ -271,7 +271,7 @@ DATETIME_TYPES_DF = pd.DataFrame(
         "datetime": [random_date() for _ in range(8)] + [None],
         "time": [random_date().time() for _ in range(8)] + [None],
         "date": [random_date().date() for _ in range(8)] + [None],
-        "mixed datetime": [
+        "mixed_datetime": [
             random.choice(
                 [
                     pd.Timestamp(random_date()),
@@ -283,17 +283,17 @@ DATETIME_TYPES_DF = pd.DataFrame(
             for _ in range(8)
         ]
         + [None],
-        "pd_datetime + TZ": [
+        "pd_datetime_TZ": [
             (pd.to_datetime("2022-03-11 17:41:00-05:00")) for _ in range(8)
         ]
         + [None],
-        "datetime + UTC TZ": [
+        "datetime_UTC_TZ": [
             random_date().replace(tzinfo=timezone.utc) for _ in range(8)
         ]
         + [None],
         # TODO: Mixed timezones within a column will force the column to be of type object
         # It also seems to not work correctly.
-        "mixed timezones": [
+        "mixed_timezones": [
             random.choice(
                 [
                     random_date().replace(tzinfo=timezone.utc),
@@ -309,10 +309,10 @@ DATETIME_TYPES_DF = pd.DataFrame(
 
 LIST_TYPES_DF = pd.DataFrame(
     {
-        "string-list": pd.Series(
+        "string_list": pd.Series(
             [["a", "b", "c"], ["foo", "bar"], list(["lorem"]), [], None]
         ),
-        "number-set": pd.Series([{1, 2, 3}, {2, 3}, {4, 4}, set(), None]),
+        "number_set": pd.Series([{1, 2, 3}, {2, 3}, {4, 4}, set(), None]),
         "boolean_tuple": [
             (True, False),
             (False, True, True),
@@ -320,7 +320,7 @@ LIST_TYPES_DF = pd.DataFrame(
             tuple(),
             None,
         ],
-        "dict-list": [
+        "dict_list": [
             [{"foo": random.randint(0, 1000), "bar": "blub"} for _ in range(2)]
             for _ in range(4)
         ]
@@ -392,8 +392,8 @@ UNSUPPORTED_TYPES_DF = pd.DataFrame(
         "timedelta": pd.Series(
             [pd.Timedelta("1 days"), np.timedelta64(366, "D"), pd.Timedelta("2 hours")]
         ),
-        "mixed-integer": pd.Series([1, 2, "3"]),
-        "mixed-types": pd.Series([2.1, "3", True]),
+        "mixed_integer": pd.Series([1, 2, "3"]),
+        "mixed_types": pd.Series([2.1, "3", True]),
         "frozenset": pd.Series(
             [frozenset([1, 2]), frozenset([3, 4]), frozenset([5, 6])]
         ),
