@@ -219,7 +219,7 @@ BASE_TYPES_DF = pd.DataFrame(
             None,
         ],
         "bool": [True, False, True, False, True, None],
-        "int64": [-5, 1, 2, 3, 4, 5],
+        "int64": [-5, 0, 1, 2, 3, None],
         "float64": [-0.1, 0, 0.1, 0.001, 1.1, None],
         "datetime": [
             datetime(2020, 1, 1, 0, 0, 0),
@@ -386,19 +386,26 @@ UNSUPPORTED_TYPES_DF = pd.DataFrame(
         "period[H]": [
             (pd.Period("2022-03-14 11:52:00", freq="H") + pd.offsets.Hour(i))
             for i in range(3)
-        ],
-        "period[D]": [(pd.Period(random_date().date(), freq="D")) for _ in range(3)],
-        "complex": pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]),
+        ]
+        + [None],
+        "period[D]": [(pd.Period(random_date().date(), freq="D")) for _ in range(3)]
+        + [None],
+        "complex": pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j, None]),
         "timedelta": pd.Series(
-            [pd.Timedelta("1 days"), np.timedelta64(366, "D"), pd.Timedelta("2 hours")]
+            [
+                pd.Timedelta("1 days"),
+                np.timedelta64(366, "D"),
+                pd.Timedelta("2 hours"),
+                None,
+            ]
         ),
-        "mixed_integer": pd.Series([1, 2, "3"]),
-        "mixed_types": pd.Series([2.1, "3", True]),
+        "mixed_integer": pd.Series([1, 2, "3", None]),
+        "mixed_types": pd.Series([2.1, "3", True, None]),
         "frozenset": pd.Series(
-            [frozenset([1, 2]), frozenset([3, 4]), frozenset([5, 6])]
+            [frozenset([1, 2]), frozenset([3, 4]), frozenset([5, 6]), None]
         ),
-        "dicts": pd.Series([{"a": 1}, {"b": 2}, {"c": 2}]),
-        "objects": pd.Series([TestObject(), TestObject(), TestObject()]),
+        "dicts": pd.Series([{"a": 1}, {"b": 2}, {"c": 2}, None]),
+        "objects": pd.Series([TestObject(), TestObject(), TestObject(), None]),
         # TODO(lukasmasuch): Not supported, but currently leads to error
         # "mixed_types_list": pd.Series(
         #     [random.choice([1, 1.0, None, "foo"]) for _ in range(10)]
