@@ -26,7 +26,7 @@ import React, {
 import { visit } from "unist-util-visit"
 import { useTheme } from "@emotion/react"
 import ReactMarkdown from "react-markdown"
-import PluginOptions from "react-markdown/lib/react-markdown"
+import { PluggableList } from "react-markdown/lib/react-markdown"
 import {
   Components,
   ReactMarkdownProps,
@@ -311,7 +311,7 @@ export function RenderedMarkdown({
     remarkDirective,
     remarkColoring,
   ]
-  const rehypePlugins: PluginOptions.PluggableList = [rehypeKatex]
+  const rehypePlugins: PluggableList = [rehypeKatex]
 
   if (allowHTML) {
     rehypePlugins.push(rehypeRaw)

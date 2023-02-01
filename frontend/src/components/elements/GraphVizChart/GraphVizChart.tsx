@@ -69,8 +69,7 @@ export function GraphVizChart({
   const updateChart = (): void => {
     try {
       // Layout and render the graph
-      const graph = select(`#${chartId}`)
-        .graphviz()
+      const graph = graphviz(`#${chartId}`)
         .zoom(false)
         .fit(true)
         .scale(1)

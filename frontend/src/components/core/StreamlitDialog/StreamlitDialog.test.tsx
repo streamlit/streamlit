@@ -21,7 +21,7 @@ import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
 import { StreamlitDialog, DialogType } from "./StreamlitDialog"
 
 function flushPromises(): Promise<void> {
-  return new Promise(resolve => setImmediate(resolve))
+  return new Promise(process.nextTick)
 }
 
 describe("StreamlitDialog", () => {

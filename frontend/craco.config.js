@@ -13,17 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-const HardSourceWebpackPlugin = require("hard-source-webpack-plugin")
-
 module.exports = {
   devServer: {
-    headers: {
-      // This allows static files request other static files in development mode.
-      "Access-Control-Allow-Origin": "*",
-    },
-    watchOptions: {
-      ignored: [/node_modules/, "*.test.{ts,tsx}", /cypress/],
+    static: {
+      watch: {
+        ignored: [/node_modules/, "*.test.{ts,tsx}", /cypress/],
+      },
     },
   },
   jest: {
@@ -51,6 +46,10 @@ module.exports = {
   webpack: {
     configure: webpackConfig => {
       webpackConfig.resolve.mainFields = ["module", "main"]
+      // Webpack 5 requires polyfills. We don't need them, so resolve to an empty module
+      webpackConfig.resolve.fallback ||= {}
+      webpackConfig.resolve.fallback.tty = false
+      webpackConfig.resolve.fallback.os = false
 
       // Apache Arrow uses .mjs
       webpackConfig.module.rules.push({
@@ -62,7 +61,7 @@ module.exports = {
       // find terser plugin
       const minimizerPlugins = webpackConfig.optimization.minimizer
       const terserPluginIndex = minimizerPlugins.findIndex(
-        item => item.options.terserOptions
+        item => item.constructor.name === "TerserPlugin"
       )
 
       if (process.env.BUILD_AS_FAST_AS_POSSIBLE) {
@@ -81,17 +80,9 @@ module.exports = {
         // turn off sourcemaps
         webpackConfig.devtool = "eval"
       } else {
+        // TODO: Trace/Test this for update to GITHUB_ACTION instead
         const parallel = process.env.CIRCLECI ? false : true
         minimizerPlugins[terserPluginIndex].options.parallel = parallel
-
-        // HardSourceWebpackPlugin adds aggressive build caching.
-        // More info: https://github.com/mzgoddard/hard-source-webpack-plugin
-        //
-        // This speeds up builds for local development.  Empirically, however, it
-        // seems to slow down one-time production builds, so we are making it
-        // possible to turn it off via setting BUILD_AS_FAST_AS_POSSIBLE=1.  This
-        // is useful in CircleCI, when doing releases, etc.
-        webpackConfig.plugins.unshift(new HardSourceWebpackPlugin())
       }
 
       return webpackConfig
