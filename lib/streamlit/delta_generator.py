@@ -407,7 +407,7 @@ class DeltaGenerator(
     def _enqueue(  # type: ignore[misc]
         self,
         delta_type: str,
-        element_proto: "Message",
+        element_proto: Message,
         return_value: None,
         last_index: Hashable | None = None,
         element_width: int | None = None,
@@ -419,7 +419,7 @@ class DeltaGenerator(
     def _enqueue(  # type: ignore[misc]
         self,
         delta_type: str,
-        element_proto: "Message",
+        element_proto: Message,
         return_value: Type[NoValue],
         last_index: Hashable | None = None,
         element_width: int | None = None,
@@ -431,7 +431,7 @@ class DeltaGenerator(
     def _enqueue(  # type: ignore[misc]
         self,
         delta_type: str,
-        element_proto: "Message",
+        element_proto: Message,
         return_value: Value,
         last_index: Hashable | None = None,
         element_width: int | None = None,
@@ -443,7 +443,7 @@ class DeltaGenerator(
     def _enqueue(
         self,
         delta_type: str,
-        element_proto: "Message",
+        element_proto: Message,
         return_value: None = None,
         last_index: Hashable | None = None,
         element_width: int | None = None,
@@ -455,7 +455,7 @@ class DeltaGenerator(
     def _enqueue(
         self,
         delta_type: str,
-        element_proto: "Message",
+        element_proto: Message,
         return_value: Type[NoValue] | Value | None = None,
         last_index: Hashable | None = None,
         element_width: int | None = None,
@@ -466,7 +466,7 @@ class DeltaGenerator(
     def _enqueue(
         self,
         delta_type: str,
-        element_proto: "Message",
+        element_proto: Message,
         return_value: Type[NoValue] | Value | None = None,
         last_index: Hashable | None = None,
         element_width: int | None = None,
@@ -639,9 +639,9 @@ class DeltaGenerator(
 
     def _legacy_add_rows(
         self: DG,
-        data: "Data" = None,
-        **kwargs: "DataFrame"
-        | "npt.NDArray[Any]"
+        data: Data = None,
+        **kwargs: DataFrame
+        | npt.NDArray[Any]
         | Iterable[Any]
         | dict[Hashable, Any]
         | None,
@@ -756,9 +756,9 @@ class DeltaGenerator(
 
     def _arrow_add_rows(
         self: DG,
-        data: "Data" = None,
-        **kwargs: "DataFrame"
-        | "npt.NDArray[Any]"
+        data: Data = None,
+        **kwargs: DataFrame
+        | npt.NDArray[Any]
         | Iterable[Any]
         | dict[Hashable, Any]
         | None,
@@ -882,7 +882,7 @@ def _maybe_melt_data_for_add_rows(
 ) -> tuple[DFT | DataFrame, int | Any]:
     import pandas as pd
 
-    def _melt_data(df: "DataFrame", last_index: Any) -> tuple["DataFrame", int | Any]:
+    def _melt_data(df: DataFrame, last_index: Any) -> tuple[DataFrame, int | Any]:
         if isinstance(df.index, pd.RangeIndex):
             old_step = _get_pandas_index_attr(df, "step")
 
