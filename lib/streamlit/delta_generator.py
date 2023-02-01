@@ -21,7 +21,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Hashable,
     Iterable,
     NoReturn,
@@ -645,7 +644,7 @@ class DeltaGenerator(
         **kwargs: "DataFrame"
         | "npt.NDArray[Any]"
         | Iterable[Any]
-        | Dict[Hashable, Any]
+        | dict[Hashable, Any]
         | None,
     ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
@@ -762,7 +761,7 @@ class DeltaGenerator(
         **kwargs: "DataFrame"
         | "npt.NDArray[Any]"
         | Iterable[Any]
-        | Dict[Hashable, Any]
+        | dict[Hashable, Any]
         | None,
     ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
