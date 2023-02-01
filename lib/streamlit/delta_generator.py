@@ -14,6 +14,8 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
+from __future__ import annotations
+
 import sys
 from typing import (
     TYPE_CHECKING,
@@ -231,7 +233,7 @@ class DeltaGenerator(
         self,
         root_container: Optional[int] = RootContainer.MAIN,
         cursor: Optional[Cursor] = None,
-        parent: Optional["DeltaGenerator"] = None,
+        parent: Optional[DeltaGenerator] = None,
         block_type: Optional[str] = None,
     ) -> None:
         """Inserts or updates elements in Streamlit apps.
@@ -304,7 +306,7 @@ class DeltaGenerator(
         return False
 
     @property
-    def _active_dg(self) -> "DeltaGenerator":
+    def _active_dg(self) -> DeltaGenerator:
         """Return the DeltaGenerator that's currently 'active'.
         If we are the main DeltaGenerator, and are inside a `with` block that
         creates a container, our active_dg is that container. Otherwise,
@@ -322,7 +324,7 @@ class DeltaGenerator(
         return self
 
     @property
-    def _main_dg(self) -> "DeltaGenerator":
+    def _main_dg(self) -> DeltaGenerator:
         """Return this DeltaGenerator's root - that is, the top-level ancestor
         DeltaGenerator that we belong to (this generally means the st._main
         DeltaGenerator).
@@ -414,7 +416,7 @@ class DeltaGenerator(
         last_index: Optional[Hashable] = None,
         element_width: Optional[int] = None,
         element_height: Optional[int] = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         ...
 
     @overload
@@ -450,7 +452,7 @@ class DeltaGenerator(
         last_index: Optional[Hashable] = None,
         element_width: Optional[int] = None,
         element_height: Optional[int] = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         ...
 
     @overload
@@ -462,7 +464,7 @@ class DeltaGenerator(
         last_index: Optional[Hashable] = None,
         element_width: Optional[int] = None,
         element_height: Optional[int] = None,
-    ) -> Union["DeltaGenerator", None, Value]:
+    ) -> Union[DeltaGenerator, None, Value]:
         ...
 
     def _enqueue(
@@ -473,7 +475,7 @@ class DeltaGenerator(
         last_index: Optional[Hashable] = None,
         element_width: Optional[int] = None,
         element_height: Optional[int] = None,
-    ) -> Union["DeltaGenerator", None, Value]:
+    ) -> Union[DeltaGenerator, None, Value]:
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
@@ -573,7 +575,7 @@ class DeltaGenerator(
     def _block(
         self,
         block_proto: Block_pb2.Block = Block_pb2.Block(),
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
 
