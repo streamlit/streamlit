@@ -19,7 +19,7 @@ describe("st.data_editor supports a variety of column types", () => {
     cy.loadApp("http://localhost:3000/");
     cy.prepForElementSnapshots();
     // Make the toolbar disappear to not interfere with snapshots (in wide mode)
-    cy.get("[data-testid='stToolbar']").invoke("css", "display", "none");
+    cy.get("[data-testid='stToolbar']").invoke("css", "opacity", 0);
   });
 
   it("renders element correctly", () => {
@@ -31,7 +31,7 @@ describe("st.data_editor supports a variety of column types", () => {
     itself also has more advanced canvas based tests for some of the interactive features. */
 
     cy.get(".stDataFrame").each((el, idx) => {
-      return cy.wrap(el).matchThemedSnapshots("data_editor-types-" + idx);
+      return cy.wrap(el).matchImageSnapshot("data_editor-types-" + idx);
     });
   });
 });

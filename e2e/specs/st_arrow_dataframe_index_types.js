@@ -29,7 +29,7 @@ describe("st.dataframe supports a variety of index types", () => {
     itself also has more advanced canvas based tests for some of the interactive features. */
 
     cy.get(".stDataFrame").each((el, idx) => {
-      return cy.wrap(el).matchThemedSnapshots("dataframe-index-types-" + idx);
+      return cy.wrap(el).matchImageSnapshot("dataframe-index-types-" + idx);
     });
   });
 });
