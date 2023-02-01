@@ -303,6 +303,7 @@ class NumberInput extends React.PureComponent<Props, State> {
         formattedValue: targetValue,
       })
     } else {
+      // need to save the in-flight formatted value
       const { value } = this.state
       this.setState({
         dirty: false,

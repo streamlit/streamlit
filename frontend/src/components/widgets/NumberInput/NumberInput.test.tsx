@@ -274,6 +274,57 @@ describe("NumberInput widget", () => {
     })
   })
 
+  describe("format", () => {
+    it("honors format specification for integers (%d)", () => {
+      const props = getIntProps({ format: "$%dk" })
+      const wrapper = shallow(<NumberInput {...props} />)
+      expect(wrapper.state("formattedValue")).toBe("$10k")
+    })
+
+    it("of %f%% and a value of 5.3 results in 5.3%", () => {
+      const props = getFloatProps({ format: "%f%%", default: 5.3 })
+      const wrapper = shallow(<NumberInput {...props} />)
+      expect(wrapper.state("formattedValue")).toBe("5.3%")
+    })
+
+    it("input data only update if valid", () => {
+      const props = getIntProps({ default: 10, format: "$%dk" })
+      const wrapper = shallow(<NumberInput {...props} />)
+
+      const InputWrapper = wrapper.find(UIInput)
+      // @ts-ignore
+      InputWrapper.props().onChange({
+        // @ts-ignore
+        target: {
+          value: "$100",
+        },
+      })
+      expect(wrapper.state("value")).toBe(10)
+      expect(wrapper.state("dirty")).toBe(false)
+      expect(wrapper.state("formattedValue")).toBe("$100")
+    })
+
+    it("ignore enter keypress if invalid", () => {
+      const props = getIntProps({
+        default: 10,
+        value: 10,
+        format: "$%dk",
+      })
+      jest.spyOn(props.widgetMgr, "setIntValue")
+
+      const wrapper = shallow(<NumberInput {...props} />)
+
+      const InputWrapper = wrapper.find(UIInput)
+      // @ts-ignore
+      InputWrapper.props().onKeyPress({
+        key: "Enter",
+      })
+
+      expect(wrapper.state("dirty")).toBe(false)
+      expect(props.widgetMgr.setIntValue).toHaveBeenCalled()
+    })
+  })
+
   describe("IntData", () => {
     it("passes a default value", () => {
       const props = getIntProps({ default: 10 })
