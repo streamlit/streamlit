@@ -234,14 +234,18 @@ class NumberInputMixin:
                 format = "%d" if int_value else "%0.2f"
 
             # Warn user if they format an int type as a float or vice versa.
-            if format in ["%d", "%u", "%i"] and float_value:
+            # todo: Doesn't happen because back message when formatted as an int
+            #       restricts the data sent to be an int.
+            if (
+                ("%d" in format) or ("%u" in format) or ("%i" in format)
+            ) and float_value:
                 import streamlit as st
 
                 st.warning(
                     "Warning: NumberInput value below has type float,"
                     f" but format {format} displays as integer."
                 )
-            elif format[-1] == "f" and int_value:
+            elif "%f" in format and int_value:
                 import streamlit as st
 
                 st.warning(
@@ -251,14 +255,6 @@ class NumberInputMixin:
 
         if step is None:
             step = 1 if int_value else 0.01
-
-        try:
-            float(format % 2)
-        except (TypeError, ValueError):
-            raise StreamlitAPIException(
-                "Format string for st.number_input contains invalid characters: %s"
-                % format
-            )
 
         # Ensure that the value matches arguments' types.
         all_ints = int_value and int_args
