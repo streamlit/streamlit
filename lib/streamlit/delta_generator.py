@@ -24,7 +24,6 @@ from typing import (
     Hashable,
     Iterable,
     NoReturn,
-    Tuple,
     Type,
     TypeVar,
     cast,
@@ -880,10 +879,10 @@ def _maybe_melt_data_for_add_rows(
     data: DFT,
     delta_type: str,
     last_index: Any,
-) -> Tuple[DFT | DataFrame, int | Any]:
+) -> tuple[DFT | DataFrame, int | Any]:
     import pandas as pd
 
-    def _melt_data(df: "DataFrame", last_index: Any) -> Tuple["DataFrame", int | Any]:
+    def _melt_data(df: "DataFrame", last_index: Any) -> tuple["DataFrame", int | Any]:
         if isinstance(df.index, pd.RangeIndex):
             old_step = _get_pandas_index_attr(df, "step")
 
