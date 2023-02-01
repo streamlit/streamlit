@@ -343,18 +343,25 @@ export function toSafeNumber(value: any): number | null {
  *
  * @param value - The number to format.
  * @param maxPrecision - The maximum number of decimals to show.
+ * @param keepTrailingZeros - Whether to keep trailing zeros.
  *
  * @returns The formatted number as a string.
  */
-export function formatNumber(value: number, maxPrecision = 4): string {
-  // TODO(lukasmasuch): Should we provide an option to keep the 0 suffixes?
-
+export function formatNumber(
+  value: number,
+  maxPrecision = 4,
+  keepTrailingZeros = false
+): string {
   if (!Number.isNaN(value) && Number.isFinite(value)) {
     if (maxPrecision === 0) {
       // Numbro is unable to format the numb with 0 decimals.
       value = Math.round(value)
     }
-    return numbro(value).format(`0,0.[${"0".repeat(maxPrecision)}]`)
+    return numbro(value).format(
+      keepTrailingZeros
+        ? `0,0.${"0".repeat(maxPrecision)}`
+        : `0,0.[${"0".repeat(maxPrecision)}]`
+    )
   }
   return ""
 }
