@@ -25,7 +25,6 @@ from typing import (
     Hashable,
     Iterable,
     NoReturn,
-    Optional,
     Tuple,
     Type,
     TypeVar,
@@ -230,10 +229,10 @@ class DeltaGenerator(
     # those, see above.
     def __init__(
         self,
-        root_container: Optional[int] = RootContainer.MAIN,
-        cursor: Optional[Cursor] = None,
-        parent: Optional[DeltaGenerator] = None,
-        block_type: Optional[str] = None,
+        root_container: int | None = RootContainer.MAIN,
+        cursor: Cursor | None = None,
+        parent: DeltaGenerator | None = None,
+        block_type: str | None = None,
     ) -> None:
         """Inserts or updates elements in Streamlit apps.
 
@@ -272,7 +271,7 @@ class DeltaGenerator(
         self._block_type = block_type
 
         # If this an `st.form` block, this will get filled in.
-        self._form_data: Optional[FormData] = None
+        self._form_data: FormData | None = None
 
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
@@ -364,7 +363,7 @@ class DeltaGenerator(
         """Iterate all the block types used by this DeltaGenerator and all
         its ancestor DeltaGenerators.
         """
-        current_dg: Optional[DeltaGenerator] = self
+        current_dg: DeltaGenerator | None = self
         while current_dg is not None:
             if current_dg._block_type is not None:
                 yield current_dg._block_type
@@ -374,7 +373,7 @@ class DeltaGenerator(
         return sum(1 for parent_block in parent_block_types if parent_block == "column")
 
     @property
-    def _cursor(self) -> Optional[Cursor]:
+    def _cursor(self) -> Cursor | None:
         """Return our Cursor. This will be None if we're not running in a
         ScriptThread - e.g., if we're running a "bare" script outside of
         Streamlit.
@@ -412,9 +411,9 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: "Message",
         return_value: None,
-        last_index: Optional[Hashable] = None,
-        element_width: Optional[int] = None,
-        element_height: Optional[int] = None,
+        last_index: Hashable | None = None,
+        element_width: int | None = None,
+        element_height: int | None = None,
     ) -> DeltaGenerator:
         ...
 
@@ -424,9 +423,9 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: "Message",
         return_value: Type[NoValue],
-        last_index: Optional[Hashable] = None,
-        element_width: Optional[int] = None,
-        element_height: Optional[int] = None,
+        last_index: Hashable | None = None,
+        element_width: int | None = None,
+        element_height: int | None = None,
     ) -> None:
         ...
 
@@ -436,9 +435,9 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: "Message",
         return_value: Value,
-        last_index: Optional[Hashable] = None,
-        element_width: Optional[int] = None,
-        element_height: Optional[int] = None,
+        last_index: Hashable | None = None,
+        element_width: int | None = None,
+        element_height: int | None = None,
     ) -> Value:
         ...
 
@@ -448,9 +447,9 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: "Message",
         return_value: None = None,
-        last_index: Optional[Hashable] = None,
-        element_width: Optional[int] = None,
-        element_height: Optional[int] = None,
+        last_index: Hashable | None = None,
+        element_width: int | None = None,
+        element_height: int | None = None,
     ) -> DeltaGenerator:
         ...
 
@@ -460,9 +459,9 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: "Message",
         return_value: Type[NoValue] | Value | None = None,
-        last_index: Optional[Hashable] = None,
-        element_width: Optional[int] = None,
-        element_height: Optional[int] = None,
+        last_index: Hashable | None = None,
+        element_width: int | None = None,
+        element_height: int | None = None,
     ) -> DeltaGenerator | Value | None:
         ...
 
@@ -471,9 +470,9 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: "Message",
         return_value: Type[NoValue] | Value | None = None,
-        last_index: Optional[Hashable] = None,
-        element_width: Optional[int] = None,
-        element_height: Optional[int] = None,
+        last_index: Hashable | None = None,
+        element_width: int | None = None,
+        element_height: int | None = None,
     ) -> DeltaGenerator | Value | None:
         """Create NewElement delta, fill it, and enqueue it.
 
