@@ -23,9 +23,3 @@ Is your feature request related to a problem? Please describe the problem here. 
 ### Additional context
 
 Add any other context or screenshots about the feature request here. For example, did this FR come from https://discuss.streamlit.io or another site? Link the original source here!
-
----
-
-Community voting on feature requests enables the Streamlit team to understand which features are most important to our users.
-
-**If you'd like the Streamlit team to prioritize this feature request, please use the 👍 (thumbs up emoji) reaction in response to the initial post.**
