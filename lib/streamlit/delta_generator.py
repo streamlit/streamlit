@@ -29,7 +29,6 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -460,22 +459,22 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: "Message",
-        return_value: Union[None, Type[NoValue], Value] = None,
+        return_value: Type[NoValue] | Value | None = None,
         last_index: Optional[Hashable] = None,
         element_width: Optional[int] = None,
         element_height: Optional[int] = None,
-    ) -> Union[DeltaGenerator, None, Value]:
+    ) -> DeltaGenerator | Value | None:
         ...
 
     def _enqueue(
         self,
         delta_type: str,
         element_proto: "Message",
-        return_value: Union[None, Type[NoValue], Value] = None,
+        return_value: Type[NoValue] | Value | None = None,
         last_index: Optional[Hashable] = None,
         element_width: Optional[int] = None,
         element_height: Optional[int] = None,
-    ) -> Union[DeltaGenerator, None, Value]:
+    ) -> DeltaGenerator | Value | None:
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
@@ -644,10 +643,12 @@ class DeltaGenerator(
     def _legacy_add_rows(
         self: DG,
         data: "Data" = None,
-        **kwargs: Union[
-            "DataFrame", "npt.NDArray[Any]", Iterable[Any], Dict[Hashable, Any], None
-        ],
-    ) -> Optional[DG]:
+        **kwargs: "DataFrame"
+        | "npt.NDArray[Any]"
+        | Iterable[Any]
+        | Dict[Hashable, Any]
+        | None,
+    ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
@@ -759,10 +760,12 @@ class DeltaGenerator(
     def _arrow_add_rows(
         self: DG,
         data: "Data" = None,
-        **kwargs: Union[
-            "DataFrame", "npt.NDArray[Any]", Iterable[Any], Dict[Hashable, Any], None
-        ],
-    ) -> Optional[DG]:
+        **kwargs: "DataFrame"
+        | "npt.NDArray[Any]"
+        | Iterable[Any]
+        | Dict[Hashable, Any]
+        | None,
+    ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
@@ -879,12 +882,10 @@ def _maybe_melt_data_for_add_rows(
     data: DFT,
     delta_type: str,
     last_index: Any,
-) -> Tuple[Union[DFT, "DataFrame"], Union[int, Any]]:
+) -> Tuple[DFT | DataFrame, int | Any]:
     import pandas as pd
 
-    def _melt_data(
-        df: "DataFrame", last_index: Any
-    ) -> Tuple["DataFrame", Union[int, Any]]:
+    def _melt_data(df: "DataFrame", last_index: Any) -> Tuple["DataFrame", int | Any]:
         if isinstance(df.index, pd.RangeIndex):
             old_step = _get_pandas_index_attr(df, "step")
 
@@ -930,9 +931,9 @@ def _maybe_melt_data_for_add_rows(
 
 
 def _get_pandas_index_attr(
-    data: "Union[DataFrame, Series]",
+    data: DataFrame | Series,
     attr: str,
-) -> Optional[Any]:
+) -> Any | None:
     return getattr(data.index, attr, None)
 
 
@@ -960,9 +961,9 @@ def _value_or_dg(value: Value, dg: DG) -> Value:
 
 
 def _value_or_dg(
-    value: Union[None, Type[NoValue], Value],
+    value: Type[NoValue] | Value | None,
     dg: DG,
-) -> Union[DG, None, Value]:
+) -> DG | Value | None:
     """Return either value, or None, or dg.
 
     This is needed because Widgets have meaningful return values. This is
