@@ -15,7 +15,7 @@
  */
 
 import axios from "axios"
-import WS from "jest-websocket-mock"
+import { WS } from "jest-websocket-mock"
 import { zip } from "lodash"
 import React, { Fragment } from "react"
 
