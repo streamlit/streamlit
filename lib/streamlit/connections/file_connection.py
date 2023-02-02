@@ -30,8 +30,8 @@ if TYPE_CHECKING:
     from fsspec.spec import AbstractBufferedFile
 
 
-class File(BaseConnection["AbstractFileSystem"]):
-    _default_connection_name = "file"
+class FileSystem(BaseConnection["AbstractFileSystem"]):
+    _default_connection_name = "files"
 
     def __init__(
         self, connection_name: str = "default", protocol: str | None = None, **kwargs
