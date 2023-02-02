@@ -33,7 +33,7 @@ import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import { WidgetInfo, WidgetStateManager } from "src/lib/WidgetStateManager"
-import { debounce } from "src/lib/utils"
+import { debounce, isNullOrUndefined } from "src/lib/utils"
 
 import EditingState from "./EditingState"
 import {
@@ -162,6 +162,14 @@ function DataFrame({
     },
     []
   )
+
+  // This is done to keep some backwards compatibility
+  // so that old arrow proto messages from the st.dataframe
+  // would still work. Those messages don't have the
+  // editingMode field defined.
+  if (isNullOrUndefined(element.editingMode)) {
+    element.editingMode = ArrowProto.EditingMode.READ_ONLY
+  }
 
   const { READ_ONLY, DYNAMIC } = ArrowProto.EditingMode
 
