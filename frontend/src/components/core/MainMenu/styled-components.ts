@@ -18,6 +18,7 @@ import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
 import { Keyframes } from "@emotion/serialize"
 import { Theme } from "src/theme"
+import { transparentize } from "color2k"
 
 const recordingIndicatorPulse = (theme: Theme): Keyframes => keyframes`
 0% {
@@ -114,7 +115,9 @@ export const StyledMenuItem = styled.ul<ItemProps>(
 export const StyledCoreItem = styled.li<ItemStyleProps>(
   ({ isHighlighted, styleProps, theme }) => {
     const highlightedStyles = isHighlighted && {
-      backgroundColor: theme.colors.secondaryBg,
+      "&:hover": {
+        backgroundColor: theme.colors.secondaryBg,
+      },
     }
 
     const margin = styleProps?.margin || 0
@@ -138,7 +141,11 @@ export const StyledCoreItem = styled.li<ItemStyleProps>(
 export const StyledDevItem = styled.li<ItemStyleProps>(
   ({ isHighlighted, styleProps, theme }) => {
     const highlightedStyles = isHighlighted && {
-      backgroundColor: theme.colors.primaryBg,
+      "&:hover": {
+        // Whatever color we use here as the hover state, we want to transparentize it
+        // to its full extend, so you can see the underlying color of the menu.
+        backgroundColor: transparentize(theme.colors.secondaryBg, 1),
+      },
     }
     const margin = styleProps?.margin || 0
     const padding =
