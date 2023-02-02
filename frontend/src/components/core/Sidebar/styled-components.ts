@@ -15,7 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-import { keyframes } from "@emotion/react"
 import { transparentize } from "color2k"
 
 export interface StyledSidebarProps {
@@ -65,43 +64,14 @@ export interface StyledSidebarNavItemsProps {
 
 export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
   ({ isExpanded, isOverflowing, hasSidebarElements, theme }) => {
-    const isExpandedMaxHeight = isExpanded ? "75vh" : "33vh"
-    const maxHeight = hasSidebarElements ? isExpandedMaxHeight : "100vh"
+    const isExpandedPaddingBottom = isExpanded ? theme.spacing.threeXS : 0
+    const paddingBottom = hasSidebarElements ? isExpandedPaddingBottom : 0
 
     return {
-      maxHeight,
       listStyle: "none",
-      overflow: ["auto", "overlay"],
       margin: 0,
       paddingTop: theme.sizes.sidebarTopSpace,
-      paddingBottom: theme.spacing.lg,
-
-      "&::before": isOverflowing
-        ? {
-            content: '" "',
-            backgroundImage: `linear-gradient(0deg, transparent, ${theme.colors.bgColor})`,
-            width: "100%",
-            height: "2rem",
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            pointerEvents: "none",
-          }
-        : null,
-
-      "&::after": isOverflowing
-        ? {
-            content: '" "',
-            backgroundImage: `linear-gradient(0deg, ${theme.colors.bgColor}, transparent)`,
-            height: "2rem",
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            pointerEvents: "none",
-          }
-        : null,
+      paddingBottom,
     }
   }
 )
@@ -111,44 +81,10 @@ export interface StyledSidebarNavSeparatorContainerProps {
   isOverflowing: boolean
 }
 
-const bounceAnimation = keyframes`
-  from, to {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-0.25rem);
-  }
-`
-
 export const StyledSidebarNavSeparatorContainer =
-  styled.div<StyledSidebarNavSeparatorContainerProps>(
-    ({ isExpanded, isOverflowing, theme }) => ({
-      cursor: isExpanded || isOverflowing ? "pointer" : "default",
-      position: "absolute",
-      height: theme.spacing.lg,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: theme.colors.fadedText60,
-      borderBottom: `1px solid ${theme.colors.fadedText10}`,
-      transition: "color 500ms",
-
-      ...((isExpanded || isOverflowing) && {
-        "&:hover": {
-          color: theme.colors.bodyText,
-          background: `linear-gradient(0deg, ${theme.colors.darkenedBgMix15}, transparent)`,
-
-          "& > *": {
-            animation: `${bounceAnimation} 0.5s ease infinite`,
-          },
-        },
-      }),
-    })
-  )
+  styled.div<StyledSidebarNavSeparatorContainerProps>(({ theme }) => ({
+    borderBottom: `1px solid ${theme.colors.fadedText10}`,
+  }))
 
 export const StyledSidebarNavLinkContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -316,5 +252,24 @@ export const StyledResizeHandle = styled.div(({ theme }) => ({
 
   "&:hover": {
     backgroundImage: `linear-gradient(to right, transparent 20%, ${theme.colors.fadedText20} 28%, transparent 36%)`,
+  },
+}))
+
+export const StyledSidebarNavButton = styled.button(({ theme }) => ({
+  color: theme.colors.fadedText60,
+  fontSize: theme.fontSizes.twoSm,
+  padding: 0,
+  border: "none",
+  paddingLeft: theme.spacing.twoXL,
+  marginTop: theme.spacing.threeXS,
+  marginBottom: theme.spacing.twoXL,
+  background: "transparent",
+
+  "&:focus": {
+    outline: "none",
+  },
+
+  "&:hover": {
+    color: theme.colors.bodyText,
   },
 }))

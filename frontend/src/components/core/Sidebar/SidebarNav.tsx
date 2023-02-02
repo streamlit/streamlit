@@ -18,11 +18,10 @@ import React, { ReactElement, useCallback, useRef, useState } from "react"
 // We import react-device-detect in this way so that tests can mock its
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { IAppPage } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
-import Icon, { EmojiIcon } from "src/components/shared/Icon"
+import { EmojiIcon } from "src/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/Hooks"
 
 import {
@@ -32,6 +31,7 @@ import {
   StyledSidebarLinkText,
   StyledSidebarNavLinkContainer,
   StyledSidebarNavSeparatorContainer,
+  StyledSidebarNavButton,
 } from "./styled-components"
 
 export interface Props {
@@ -57,7 +57,13 @@ const SidebarNav = ({
     return null
   }
 
-  const [expanded, setExpanded] = useState(false)
+  // Check localStorage to see if the user has a preference set
+  const isNavExpanded =
+    localStorage.getItem("navExpanded") &&
+    localStorage.getItem("navExpanded") === "true"
+
+  const [expanded, setExpanded] = useState(!!isNavExpanded)
+  const [pagesToShow, setPagesToShow] = useState(isNavExpanded ? -1 : 6)
   const navItemsRef = useRef<HTMLUListElement>(null)
   const isOverflowing = useIsOverflowing(navItemsRef)
   // We use React.useContext here instead of destructuring it in the imports
@@ -76,12 +82,16 @@ const SidebarNav = ({
   )
 
   const toggleExpanded = useCallback(() => {
-    if (!expanded && isOverflowing) {
+    if (!expanded) {
       setExpanded(true)
+      setPagesToShow(-1)
+      localStorage.setItem("navExpanded", "true")
     } else if (expanded) {
       setExpanded(false)
+      setPagesToShow(6)
+      localStorage.setItem("navExpanded", "false")
     }
-  }, [expanded, isOverflowing])
+  }, [expanded])
 
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
@@ -93,73 +103,87 @@ const SidebarNav = ({
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
       >
-        {appPages.map(
-          (
-            { icon: pageIcon, pageName, pageScriptHash }: IAppPage,
-            pageIndex: number
-          ) => {
-            pageName = pageName as string
-            // NOTE: We use window.location to get the port instead of
-            // getBaseUriParts() because the port may differ in dev mode (since
-            // the frontend is served by the react dev server and not the
-            // streamlit server).
-            const { port, protocol } = window.location
-            const baseUriParts = getBaseUriParts()
+        {appPages
+          .slice(0, pagesToShow)
+          .map(
+            (
+              { icon: pageIcon, pageName, pageScriptHash }: IAppPage,
+              pageIndex: number
+            ) => {
+              pageName = pageName as string
+              // NOTE: We use window.location to get the port instead of
+              // getBaseUriParts() because the port may differ in dev mode (since
+              // the frontend is served by the react dev server and not the
+              // streamlit server).
+              const { port, protocol } = window.location
+              const baseUriParts = getBaseUriParts()
 
-            const navigateTo = pageIndex === 0 ? "" : pageName
-            let pageUrl = ""
+              const navigateTo = pageIndex === 0 ? "" : pageName
+              let pageUrl = ""
 
-            if (pageLinkBaseUrl) {
-              pageUrl = `${pageLinkBaseUrl}/${navigateTo}`
-            } else if (baseUriParts) {
-              const { basePath, host } = baseUriParts
-              const portSection = port ? `:${port}` : ""
-              const basePathSection = basePath ? `${basePath}/` : ""
+              if (pageLinkBaseUrl) {
+                pageUrl = `${pageLinkBaseUrl}/${navigateTo}`
+              } else if (baseUriParts) {
+                const { basePath, host } = baseUriParts
+                const portSection = port ? `:${port}` : ""
+                const basePathSection = basePath ? `${basePath}/` : ""
 
-              pageUrl = `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
+                pageUrl = `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
+              }
+
+              const tooltipContent = pageName.replace(/_/g, " ")
+              const isActive = pageScriptHash === currentPageScriptHash
+
+              return (
+                <li key={pageName}>
+                  <StyledSidebarNavLinkContainer>
+                    <StyledSidebarNavLink
+                      isActive={isActive}
+                      href={pageUrl}
+                      onClick={e => {
+                        e.preventDefault()
+                        onPageChange(pageScriptHash as string)
+                        // If there are widgets on the sidebar after page change,
+                        // we want to expand the nav items by default, to prevent layout shift.
+                        // We're also checking if the user isn't clicking on the active page,
+                        // to avoid expanding/collapsing the menu in that scenario.
+                        if (!isActive && hasSidebarElements && !expanded) {
+                          toggleExpanded()
+                        }
+                        if (reactDeviceDetect.isMobile) {
+                          collapseSidebar()
+                        }
+                      }}
+                    >
+                      {pageIcon && pageIcon.length && (
+                        <EmojiIcon size="lg">{pageIcon}</EmojiIcon>
+                      )}
+                      <StyledSidebarLinkText isActive={isActive}>
+                        {tooltipContent}
+                      </StyledSidebarLinkText>
+                    </StyledSidebarNavLink>
+                  </StyledSidebarNavLinkContainer>
+                </li>
+              )
             }
-
-            const tooltipContent = pageName.replace(/_/g, " ")
-            const isActive = pageScriptHash === currentPageScriptHash
-
-            return (
-              <li key={pageName}>
-                <StyledSidebarNavLinkContainer>
-                  <StyledSidebarNavLink
-                    isActive={isActive}
-                    href={pageUrl}
-                    onClick={e => {
-                      e.preventDefault()
-                      onPageChange(pageScriptHash as string)
-                      if (reactDeviceDetect.isMobile) {
-                        collapseSidebar()
-                      }
-                    }}
-                  >
-                    {pageIcon && pageIcon.length && (
-                      <EmojiIcon size="lg">{pageIcon}</EmojiIcon>
-                    )}
-                    <StyledSidebarLinkText isActive={isActive}>
-                      {tooltipContent}
-                    </StyledSidebarLinkText>
-                  </StyledSidebarNavLink>
-                </StyledSidebarNavLinkContainer>
-              </li>
-            )
-          }
-        )}
+          )}
       </StyledSidebarNavItems>
 
       {hasSidebarElements && (
         <StyledSidebarNavSeparatorContainer
           isExpanded={expanded}
           isOverflowing={isOverflowing}
-          onClick={toggleExpanded}
         >
-          {isOverflowing && !expanded && (
-            <Icon content={ExpandMore} size="md" />
+          {!expanded && (
+            <StyledSidebarNavButton onClick={toggleExpanded}>
+              {appPages.length - pagesToShow} More
+            </StyledSidebarNavButton>
           )}
-          {expanded && <Icon content={ExpandLess} size="md" />}
+          {expanded && (
+            <StyledSidebarNavButton onClick={toggleExpanded}>
+              View less
+            </StyledSidebarNavButton>
+          )}
         </StyledSidebarNavSeparatorContainer>
       )}
     </StyledSidebarNavContainer>
