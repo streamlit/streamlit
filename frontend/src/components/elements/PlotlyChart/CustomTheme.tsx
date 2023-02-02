@@ -116,6 +116,7 @@ export function applyStreamlitThemeTemplateLayout(
           color: getGray70(theme),
           size: fontSizes.smPx,
         },
+        standoff: theme.spacing.xlPx,
       },
       minor: {
         gridcolor: getGray30(theme),
@@ -130,7 +131,7 @@ export function applyStreamlitThemeTemplateLayout(
       },
     },
     margin: {
-      pad: theme.spacing.lgPx,
+      pad: theme.spacing.smPx,
       r: theme.spacing.nonePx,
       l: theme.spacing.nonePx,
     },
