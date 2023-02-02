@@ -239,7 +239,7 @@
     "query-string": "^8.1.0",
     "serialize-javascript": "^6.0.1",
     "set-value": "^4.0.1",
-    "shell-quote": "^1.7.3",
+    "shell-quote": "^1.8.0",
     "ssri": "^10.0.1",
     "static-eval": "^2.0.5",
     "terser": "^5.16.2",
