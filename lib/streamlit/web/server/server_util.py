@@ -121,16 +121,8 @@ def emit_endpoint_deprecation_notice(
     handler: tornado.web.RequestHandler, new_path: str
 ) -> None:
     """
-    Emits the warning about deprecation of HTTP endpoint both in the HTTP header
-    and in the application logs.
+    Emits the warning about deprecation of HTTP endpoint in the HTTP header.
     """
-    # Use repr function to avoid log injection attack.
-    # See: https://codeql.github.com/codeql-query-help/python/py-log-injection/
-    _LOGGER.warning(
-        f"Endpoint %s is deprecated. Please use %s instead.",
-        repr(str(handler.request.uri)),
-        repr(str(new_path)),
-    )
     handler.set_header("Deprecation", True)
     new_url = urljoin(f"{handler.request.protocol}://{handler.request.host}", new_path)
     handler.set_header("Link", f'<{new_url}>; rel="alternate"')
