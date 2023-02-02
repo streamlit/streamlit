@@ -22,8 +22,6 @@ import tornado.testing
 import tornado.web
 import tornado.websocket
 
-from streamlit import config
-from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.routes import ALLOWED_MESSAGE_ORIGINS
