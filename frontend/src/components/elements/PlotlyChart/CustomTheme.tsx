@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { assign, merge } from "lodash"
+import { merge } from "lodash"
 
 import {
   getDecreasingRed,
@@ -411,7 +411,7 @@ export function applyStreamlitTheme(spec: any, theme: Theme): void {
     logError(err)
   }
   if ("title" in spec.layout) {
-    spec.layout.title = assign(spec.layout.title, {
+    spec.layout.title = merge(spec.layout.title, {
       text: `<b>${spec.layout.title.text}</b>`,
     })
   }
