@@ -191,8 +191,8 @@ SHARED_TEST_CASES = [
 
 
 def random_date() -> datetime:
-    start_date = datetime.fromisoformat("2018-01-31T09:24:31.488670+00:00")
-    end_date = datetime.fromisoformat("2022-01-31T09:24:31.488670+00:00")
+    start_date = datetime.fromisoformat("2018-01-31T09:24:31.123+00:00")
+    end_date = datetime.fromisoformat("2022-01-31T09:24:31.345+00:00")
 
     return (
         start_date
