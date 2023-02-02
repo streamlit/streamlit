@@ -65,6 +65,9 @@ const MAX_COLUMN_AUTO_WIDTH = 500
 const DEBOUNCE_TIME_MS = 100
 // Token used for missing values (null, NaN, etc.)
 const NULL_VALUE_TOKEN = "None"
+// Number of rows that triggers some optimization features
+// for large tables.
+const LARGE_TABLE_ROWS_THRESHOLD = 150000
 
 export interface DataFrameProps {
   element: ArrowProto
@@ -159,6 +162,9 @@ function DataFrame({
     },
     []
   )
+
+  const { READ_ONLY, DYNAMIC } = ArrowProto.EditingMode
+
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
   const originalNumRows = Math.max(0, dataDimensions.rows - 1)
@@ -169,13 +175,10 @@ function DataFrame({
     originalNumRows === 0 &&
     // We don't show empty state for dynamic mode with a table that has
     // data columns defined.
-    !(
-      element.editingMode === ArrowProto.EditingMode.DYNAMIC &&
-      dataDimensions.dataColumns > 0
-    )
+    !(element.editingMode === DYNAMIC && dataDimensions.dataColumns > 0)
 
   // For large tables, we apply some optimizations to handle large data
-  const isLargeTable = originalNumRows > 150000
+  const isLargeTable = originalNumRows > LARGE_TABLE_ROWS_THRESHOLD
 
   const editingState = React.useRef<EditingState>(
     new EditingState(originalNumRows)
@@ -251,7 +254,7 @@ function DataFrame({
 
   const { onCellEdited, onPaste, onRowAppended, onDelete } = useDataEditor(
     columns,
-    element.editingMode !== ArrowProto.EditingMode.DYNAMIC,
+    element.editingMode !== DYNAMIC,
     editingState,
     getCellContent,
     getOriginalIndex,
@@ -420,7 +423,7 @@ function DataFrame({
           // Add shadow for index columns and header on scroll:
           fixedShadowX={true}
           fixedShadowY={true}
-          // onPaste is deactivated in the read-only mode:
+          // The default setup is READ_ONLY and therefore we deactivate paste here:
           onPaste={false}
           experimental={{
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
@@ -430,7 +433,7 @@ function DataFrame({
           customRenderers={extraCellArgs.customRenderers}
           // If element is editable, add additional properties:
           {...(!isEmptyTable &&
-            element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+            element.editingMode !== READ_ONLY &&
             !disabled && {
               // Support fill handle for bulk editing:
               fillHandle: true,
@@ -442,7 +445,7 @@ function DataFrame({
               onDelete,
             })}
           {...(!isEmptyTable &&
-            element.editingMode === ArrowProto.EditingMode.DYNAMIC && {
+            element.editingMode === DYNAMIC && {
               // Support adding rows:
               trailingRowOptions: {
                 sticky: false,
