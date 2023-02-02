@@ -2,7 +2,6 @@
 
 <img src="https://i.ibb.co/5FdSr1V/streamlit.png" alt="Streamlit logo" style="margin-top:50px"></img>
 
-
 # Welcome to Streamlit 👋
 
 **A faster way to build and share data apps.**
@@ -13,12 +12,13 @@ Streamlit lets you turn data scripts into shareable web apps in minutes, not wee
 ## Installation
 
 Open a terminal and run:
+
 ```bash
-$ pip install streamlit 
+$ pip install streamlit
 $ streamlit hello
 ```
 
-If this opens our sweet _Streamlit Hello_ app in your browser, you're all set! If not, head over to [our docs](https://docs.streamlit.io/library/get-started) for specific installs. 
+If this opens our sweet _Streamlit Hello_ app in your browser, you're all set! If not, head over to [our docs](https://docs.streamlit.io/library/get-started) for specific installs.
 
 The app features a bunch of examples of what you can do with Streamlit! Jump to the [quickstart](#quickstart) section to understand how that all works.
 
@@ -64,8 +64,8 @@ Streamlit comes in with [a ton of additional powerful elements](https://docs.str
 
 Our vibrant creators community also extends Streamlit capabilities using  🧩 [Streamlit Components](https://streamlit.io/components).
 
-## Get inspired 
- 
+## Get inspired
+
 There's so much you can build with Streamlit!
 - 🧬  [Science & technology apps](https://streamlit.io/gallery?category=science-technology)
 - 💬  [NLP & language apps](https://streamlit.io/gallery?category=nlp-language)
@@ -77,7 +77,7 @@ There's so much you can build with Streamlit!
 **Check out [our gallery](https://streamlit.io/gallery)** 🎈
 
 ## Community Cloud
-  
+
 Deploy, manage and share your apps for free using our [Community Cloud](https://streamlit.io/cloud)! Sign-up [here](https://share.streamlit.io/signup). <br><br>
 <img src="https://user-images.githubusercontent.com/7164864/214965336-64500db3-0d79-4a20-8052-2dda883902d2.gif" width="400"></img>
 
