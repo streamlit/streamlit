@@ -17,12 +17,10 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { matchers } from "@emotion/jest"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 import React from "react"
 import * as reactDeviceDetect from "react-device-detect"
 import { act } from "react-dom/test-utils"
 
-import Icon from "src/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/Hooks"
 import { mount, shallow } from "src/lib/test_util"
 import { BaseUriParts } from "src/lib/UriUtil"
@@ -33,6 +31,7 @@ import {
   StyledSidebarNavSeparatorContainer,
   StyledSidebarNavLink,
   StyledSidebarLinkText,
+  StyledSidebarNavButton,
 } from "./styled-components"
 
 expect.extend(matchers)
@@ -215,27 +214,20 @@ describe("SidebarNav", () => {
     )
   })
 
-  it("does not render an icon when not expanded and not overflowing", () => {
-    const wrapper = shallow(
-      <SidebarNav {...getProps({ hasSidebarElements: true })} />
-    )
-    expect(
-      wrapper.find(StyledSidebarNavSeparatorContainer).find(Icon).exists()
-    ).toBe(false)
-  })
-
-  it("renders ExpandMore icon when not expanded and overflowing", () => {
-    mockUseIsOverflowing.mockReturnValueOnce(true)
+  it("renders the correct StyledSidebarNavButton when collapsed", () => {
     const wrapper = shallow(
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
 
     expect(
-      wrapper.find(StyledSidebarNavSeparatorContainer).find(Icon).props()
-    ).toHaveProperty("content", ExpandMore)
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(StyledSidebarNavButton)
+        .props()
+    ).toHaveProperty("isExpanded", false)
   })
 
-  it("renders ExpandLess icon when expanded and not overflowing", () => {
+  it("renders the correct StyledSidebarNavButton when expanded", () => {
     // We need to have useIsOverflowing return true once so that we can click
     // on the separator to expand the nav component. After this click, it
     // returns false.
@@ -244,68 +236,38 @@ describe("SidebarNav", () => {
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
 
-    wrapper.find(StyledSidebarNavSeparatorContainer).prop("onClick")!(
-      mockClickEvent
-    )
+    wrapper.find(StyledSidebarNavButton).prop("onClick")!(mockClickEvent)
     expect(
-      wrapper.find(StyledSidebarNavSeparatorContainer).find(Icon).props()
-    ).toHaveProperty("content", ExpandLess)
-  })
-
-  it("renders ExpandLess icon when expanded and overflowing", () => {
-    // Have useIsOverflowing return true both before and after the nav is
-    // expanded.
-    mockUseIsOverflowing.mockReturnValueOnce(true).mockReturnValueOnce(true)
-    const wrapper = shallow(
-      <SidebarNav {...getProps({ hasSidebarElements: true })} />
-    )
-
-    wrapper.find(StyledSidebarNavSeparatorContainer).prop("onClick")!(
-      mockClickEvent
-    )
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(StyledSidebarNavButton)
+        .props()
+    ).toHaveProperty("isExpanded", true)
     expect(
-      wrapper.find(StyledSidebarNavSeparatorContainer).find(Icon).props()
-    ).toHaveProperty("content", ExpandLess)
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(StyledSidebarNavButton)
+        .text()
+    ).toBe("View less")
   })
 
-  it("changes cursor to pointer above separator when overflowing", () => {
-    mockUseIsOverflowing.mockReturnValueOnce(true)
-    // Need mount > shallow here so that toHaveStyleRule can be used.
-    const wrapper = mount(
-      <SidebarNav {...getProps({ hasSidebarElements: true })} />
-    )
-
-    expect(wrapper.find(StyledSidebarNavSeparatorContainer)).toHaveStyleRule(
-      "cursor",
-      "pointer"
-    )
-  })
-
-  it("is unexpanded by default", () => {
-    // Need mount > shallow here so that toHaveStyleRule can be used.
+  it("is collapsed by default if there are widgets on the sidebar", () => {
     const wrapper = mount(
       <SidebarNav {...getProps({ hasSidebarElements: true })} />
     )
 
     expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
-    expect(wrapper.find("StyledSidebarNavItems")).toHaveStyleRule(
-      "max-height",
-      "33vh"
-    )
   })
 
-  it("does not expand when you click on the separator if there is no overflow", () => {
-    const wrapper = shallow(
-      <SidebarNav {...getProps({ hasSidebarElements: true })} />
+  it("is expanded by default if no widgets are present on the sidebar", () => {
+    const wrapper = mount(
+      <SidebarNav {...getProps({ hasSidebarElements: false })} />
     )
 
-    wrapper.find(StyledSidebarNavSeparatorContainer).prop("onClick")!(
-      mockClickEvent
-    )
-    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
+    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(true)
   })
 
-  it("toggles to expanded and back when the separator is clicked", () => {
+  it("toggles to expanded and back when the StyledSidebarNavButton is clicked", () => {
     mockUseIsOverflowing.mockReturnValueOnce(true)
 
     // Need mount > shallow here so that toHaveStyleRule can be used.
@@ -314,30 +276,18 @@ describe("SidebarNav", () => {
     )
 
     act(() => {
-      wrapper.find(StyledSidebarNavSeparatorContainer).prop("onClick")!(
-        mockClickEvent
-      )
+      wrapper.find(StyledSidebarNavButton).prop("onClick")!(mockClickEvent)
     })
     wrapper.update()
 
     expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(true)
-    expect(wrapper.find(StyledSidebarNavItems)).toHaveStyleRule(
-      "max-height",
-      "75vh"
-    )
 
     act(() => {
-      wrapper.find(StyledSidebarNavSeparatorContainer).prop("onClick")!(
-        mockClickEvent
-      )
+      wrapper.find(StyledSidebarNavButton).prop("onClick")!(mockClickEvent)
     })
     wrapper.update()
 
     expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
-    expect(wrapper.find(StyledSidebarNavItems)).toHaveStyleRule(
-      "max-height",
-      "33vh"
-    )
   })
 
   it("passes the pageScriptHash to onPageChange if a link is clicked", () => {
