@@ -22,6 +22,10 @@ export interface StyledSidebarProps {
   sidebarWidth: string
 }
 
+export interface StyledSidebarNavButtonProps {
+  isExpanded: boolean
+}
+
 export const StyledSidebar = styled.section<StyledSidebarProps>(
   ({ theme, isCollapsed, sidebarWidth }) => {
     const minWidth = isCollapsed ? 0 : Math.min(244, window.innerWidth)
@@ -255,21 +259,22 @@ export const StyledResizeHandle = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledSidebarNavButton = styled.button(({ theme }) => ({
-  color: theme.colors.fadedText60,
-  fontSize: theme.fontSizes.twoSm,
-  padding: 0,
-  border: "none",
-  paddingLeft: theme.spacing.twoXL,
-  marginTop: theme.spacing.threeXS,
-  marginBottom: theme.spacing.twoXL,
-  background: "transparent",
+export const StyledSidebarNavButton =
+  styled.button<StyledSidebarNavButtonProps>(({ theme }) => ({
+    color: theme.colors.fadedText60,
+    fontSize: theme.fontSizes.twoSm,
+    padding: 0,
+    border: "none",
+    paddingLeft: theme.spacing.twoXL,
+    marginTop: theme.spacing.threeXS,
+    marginBottom: theme.spacing.twoXL,
+    background: "transparent",
 
-  "&:focus": {
-    outline: "none",
-  },
+    "&:focus": {
+      outline: "none",
+    },
 
-  "&:hover": {
-    color: theme.colors.bodyText,
-  },
-}))
+    "&:hover": {
+      color: theme.colors.bodyText,
+    },
+  }))

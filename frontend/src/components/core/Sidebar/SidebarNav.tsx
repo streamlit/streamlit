@@ -58,12 +58,17 @@ const SidebarNav = ({
   }
 
   // Check localStorage to see if the user has a preference set
-  const isNavExpanded =
-    localStorage.getItem("navExpanded") &&
-    localStorage.getItem("navExpanded") === "true"
+  const isLocalStorageSet = localStorage.getItem("navExpanded") !== null
+  const shouldNavExpand =
+    isLocalStorageSet && localStorage.getItem("navExpanded") === "true"
+  const pageLimit = shouldNavExpand === true ? -1 : 6
 
-  const [expanded, setExpanded] = useState(!!isNavExpanded)
-  const [pagesToShow, setPagesToShow] = useState(isNavExpanded ? -1 : 6)
+  const [expanded, setExpanded] = useState(
+    hasSidebarElements === true ? false : shouldNavExpand
+  )
+  const [pagesToShow, setPagesToShow] = useState(
+    hasSidebarElements === true ? 6 : pageLimit
+  )
   const navItemsRef = useRef<HTMLUListElement>(null)
   const isOverflowing = useIsOverflowing(navItemsRef)
   // We use React.useContext here instead of destructuring it in the imports
@@ -175,12 +180,18 @@ const SidebarNav = ({
           isOverflowing={isOverflowing}
         >
           {!expanded && (
-            <StyledSidebarNavButton onClick={toggleExpanded}>
+            <StyledSidebarNavButton
+              isExpanded={expanded}
+              onClick={toggleExpanded}
+            >
               {appPages.length - pagesToShow} More
             </StyledSidebarNavButton>
           )}
           {expanded && (
-            <StyledSidebarNavButton onClick={toggleExpanded}>
+            <StyledSidebarNavButton
+              isExpanded={expanded}
+              onClick={toggleExpanded}
+            >
               View less
             </StyledSidebarNavButton>
           )}
