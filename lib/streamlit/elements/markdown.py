@@ -30,7 +30,7 @@ class MarkdownMixin:
     def markdown(
         self, body: SupportsStr, unsafe_allow_html: bool = False
     ) -> "DeltaGenerator":
-        """Display string formatted as Markdown.
+        r"""Display string formatted as Markdown.
 
         Parameters
         ----------
@@ -89,7 +89,7 @@ class MarkdownMixin:
     ) -> "DeltaGenerator":
         """Display a code block with optional syntax highlighting.
 
-        (This is a convenience wrapper around `st.markdown()`)
+        (This is a convenience wrapper around ``st.markdown()``)
 
         Parameters
         ----------
@@ -105,8 +105,8 @@ class MarkdownMixin:
             https://github.com/react-syntax-highlighter/react-syntax-highlighter/blob/master/AVAILABLE_LANGUAGES_PRISM.MD
 
         line_numbers : bool
-            Whether line numbers should be shown to the left of the code.
-            Defaults to False.
+            An optional boolean indicating whether to show line numbers to the
+            left of the code block. Defaults to ``False``.
 
         Example
         -------
