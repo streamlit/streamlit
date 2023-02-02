@@ -423,15 +423,15 @@ function DataFrame({
           // Add shadow for index columns and header on scroll:
           fixedShadowX={true}
           fixedShadowY={true}
-          // The default setup is READ_ONLY and therefore we deactivate paste here:
-          onPaste={false}
           experimental={{
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
             scrollbarWidthOverride: 1,
           }}
           // Add support for additional cells:
           customRenderers={extraCellArgs.customRenderers}
-          // If element is editable, add additional properties:
+          // The default setup is read only, and therefore we deactivate paste here:
+          onPaste={false}
+          // If element is editable, enable editing features:
           {...(!isEmptyTable &&
             element.editingMode !== READ_ONLY &&
             !disabled && {
@@ -444,6 +444,7 @@ function DataFrame({
               // Support deleting cells & rows:
               onDelete,
             })}
+          // If element is dynamic, enable adding & deleting rows:
           {...(!isEmptyTable &&
             element.editingMode === DYNAMIC && {
               // Support adding rows:
