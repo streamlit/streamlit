@@ -240,6 +240,7 @@ fig.update_xaxes(
     ),
 )
 fig.update_layout(height=300, width=600)
+fig.update_layout(title_font_size=30)
 st.plotly_chart(fig, theme="streamlit")
 
 data = pd.DataFrame((100, 120, 104, 102, 203, 102), columns=["some_col"])

@@ -412,7 +412,9 @@ export function applyStreamlitTheme(spec: any, theme: Theme): void {
     logError(err)
   }
   if ("title" in spec.layout) {
-    spec.layout.title = { text: `<b>${spec.layout.title.text}</b>` }
+    spec.layout.title = merge(spec.layout.title, {
+      text: `<b>${spec.layout.title.text}</b>`,
+    })
   }
 }
 
