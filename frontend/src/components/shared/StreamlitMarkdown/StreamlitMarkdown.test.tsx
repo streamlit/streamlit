@@ -18,17 +18,12 @@ import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
 import { mount } from "src/lib/test_util"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
-import { Heading as HeadingProto } from "src/autogen/proto"
-import { colors } from "src/theme/primitives/colors"
-import StreamlitMarkdown, {
-  LinkWithTargetBlank,
-  createAnchorFromText,
+import {
   HeadingWithAnchor,
-  Heading,
-  HeadingProtoProps,
-} from "./StreamlitMarkdown"
-
-import { StyledLinkIconContainer } from "./styled-components"
+  StyledLinkIconContainer,
+} from "src/components/shared/Heading"
+import { colors } from "src/theme/primitives/colors"
+import StreamlitMarkdown, { LinkWithTargetBlank } from "./StreamlitMarkdown"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -37,20 +32,6 @@ const getMarkdownElement = (body: string): ReactElement => {
   }
   return <ReactMarkdown components={components}>{body}</ReactMarkdown>
 }
-
-describe("createAnchorFromText", () => {
-  it("generates slugs correctly", () => {
-    const cases = [
-      ["some header", "some-header"],
-      ["some -24$35-9824  header", "some-24-35-9824-header"],
-      ["blah___blah___blah", "blah-blah-blah"],
-    ]
-
-    cases.forEach(([s, want]) => {
-      expect(createAnchorFromText(s)).toEqual(want)
-    })
-  })
-})
 
 describe("linkReference", () => {
   it("renders a link with _blank target", () => {
@@ -103,16 +84,6 @@ describe("linkReference", () => {
 })
 
 describe("StreamlitMarkdown", () => {
-  it("renders header anchors when isSidebar is false", () => {
-    const source = "# header"
-    const wrapper = mount(
-      <IsSidebarContext.Provider value={false}>
-        <StreamlitMarkdown source={source} allowHTML={false} />
-      </IsSidebarContext.Provider>
-    )
-    expect(wrapper.find(StyledLinkIconContainer).exists()).toBeTruthy()
-  })
-
   it("passes props properly", () => {
     const source =
       "<a class='nav_item' href='//0.0.0.0:8501/?p=some_page' target='_self'>Some Page</a>"
@@ -124,6 +95,16 @@ describe("StreamlitMarkdown", () => {
       "//0.0.0.0:8501/?p=some_page"
     )
     expect(wrapper.find("a").prop("target")).toEqual("_self")
+  })
+
+  it("renders header anchors when isSidebar is false", () => {
+    const source = "# header"
+    const wrapper = mount(
+      <IsSidebarContext.Provider value={false}>
+        <StreamlitMarkdown source={source} allowHTML={false} />
+      </IsSidebarContext.Provider>
+    )
+    expect(wrapper.find(StyledLinkIconContainer).exists()).toBeTruthy()
   })
 
   it("doesn't render header anchors when isSidebar is true", () => {
@@ -233,74 +214,5 @@ describe("StreamlitMarkdown", () => {
         colorMapping.get(color)
       )
     }
-  })
-})
-
-const getHeadingProps = (
-  elementProps: Partial<HeadingProto> = {}
-): HeadingProtoProps => ({
-  width: 5,
-  element: HeadingProto.create({
-    anchor: "some-anchor",
-    tag: "h1",
-    body: `hello world
-          this is a new line`,
-    ...elementProps,
-  }),
-})
-
-describe("Heading", () => {
-  it("renders properly after a new line", () => {
-    const props = getHeadingProps()
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("hello world")
-    expect(wrapper.find("RenderedMarkdown").at(1).text()).toEqual(
-      "this is a new line"
-    )
-  })
-
-  it("renders properly without a new line", () => {
-    const props = getHeadingProps({ body: "hello" })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("hello")
-    expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(1)
-  })
-
-  it("does not render ol block", () => {
-    const props = getHeadingProps({ body: "1) hello" })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("1) hello")
-    expect(wrapper.find("ol")).toHaveLength(0)
-  })
-
-  it("does not render ul block", () => {
-    const props = getHeadingProps({ body: "* hello" })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("* hello")
-    expect(wrapper.find("ul")).toHaveLength(0)
-  })
-
-  it("does not render blockquote with >", () => {
-    const props = getHeadingProps({ body: ">hello" })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual(">hello")
-    expect(wrapper.find("blockquote")).toHaveLength(0)
-  })
-
-  it("does not render tables", () => {
-    const props = getHeadingProps({
-      body: `| Syntax | Description |
-        | ----------- | ----------- |
-        | Header      | Title       |
-        | Paragraph   | Text        |`,
-    })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual(`| Syntax | Description |`)
-    expect(wrapper.find("RenderedMarkdown").at(1).text()).toEqual(
-      `| ----------- | ----------- |
-    | Header      | Title       |
-    | Paragraph   | Text        |`
-    )
-    expect(wrapper.find("table")).toHaveLength(0)
   })
 })

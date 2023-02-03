@@ -76,7 +76,7 @@ import { getAlertKind } from "src/components/elements/Alert/Alert"
 
 import Maybe from "src/components/core/Maybe/"
 import { FormSubmitContent } from "src/components/widgets/Form"
-import { Heading } from "src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Heading from "src/components/shared/Heading"
 
 import {
   BaseBlockProps,

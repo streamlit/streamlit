@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
 export interface StyledStreamlitMarkdownProps {
@@ -28,14 +27,6 @@ function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
-function sharedMarkdownStyle(theme: Theme): any {
-  return {
-    a: {
-      color: theme.colors.linkText,
-    },
-  }
-}
-
 export const StyledStreamlitMarkdown =
   styled.div<StyledStreamlitMarkdownProps>(
     ({ theme, isCaption, isInSidebar, isLabel, isCheckbox }) => {
@@ -44,7 +35,11 @@ export const StyledStreamlitMarkdown =
       return {
         fontFamily: theme.genericFonts.bodyFont,
         marginBottom: `-${theme.spacing.lg}`,
-        ...sharedMarkdownStyle(theme),
+
+        a: {
+          color: theme.colors.linkText,
+        },
+
         p: {
           wordBreak: "break-word",
           ...(labelFontSize ? { fontSize: theme.fontSizes.sm } : {}),
@@ -105,62 +100,3 @@ export const StyledStreamlitMarkdown =
       }
     }
   )
-
-export const StyledLinkIconContainer = styled.div(() => ({
-  position: "relative",
-  left: "calc(-2.5rem - 0.5rem)",
-  width: "calc(100% + 2.5rem + 0.5rem)",
-  display: "flex",
-  alignItems: "center",
-  overflow: "visible",
-  ":hover": {
-    a: {
-      opacity: 1,
-      transform: "scale(1)",
-      transition: "none",
-    },
-  },
-}))
-
-export const StyledLinkIcon = styled.a(({ theme }) => ({
-  position: "absolute",
-  marginRight: "0.5rem",
-
-  // center icon
-  lineHeight: 0,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-
-  // copied from full screen button
-  transform: "scale(0)",
-  transition: "opacity 300ms 150ms, transform 300ms 150ms",
-  opacity: 0,
-  height: "2.5rem",
-  width: "2.5rem",
-  zIndex: theme.zIndices.sidebar + 1,
-  border: "none",
-  backgroundColor: theme.colors.lightenedBg05,
-  borderRadius: "50%",
-
-  svg: {
-    stroke: theme.colors.fadedText60,
-  },
-
-  "&:hover svg": {
-    stroke: theme.colors.bodyText,
-  },
-}))
-
-export const StyledHeaderContainer = styled.div(({ theme }) => ({
-  "h1, h2, h3, h4, h5, h6, span": {
-    scrollMarginTop: theme.spacing.threeXL,
-  },
-  ...sharedMarkdownStyle(theme),
-}))
-
-export const StyledHeaderContent = styled.span(() => ({
-  position: "relative",
-  flex: "1",
-  marginLeft: "calc(2.5rem + 0.5rem)",
-}))
