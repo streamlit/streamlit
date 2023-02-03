@@ -17,6 +17,7 @@ from typing import Any, Type, TypeVar, overload
 from typing_extensions import Literal
 
 from streamlit.connections.base_connection import BaseConnection
+from streamlit.connections.file_connection import FileSystem
 from streamlit.connections.snowpark_connection import Snowpark
 from streamlit.connections.sql_connection import SQL
 from streamlit.errors import StreamlitAPIException
@@ -35,12 +36,18 @@ ConnectionClass = TypeVar("ConnectionClass", bound=BaseConnection[Any])
 # TODO(vdonato): Some way to test that optional dependencies required by a connection
 # don't cause `ModuleNotFoundError`s until the connection is actually instantiated.
 def _get_first_party_connection(connection_name: str):
-    FIRST_PARTY_CONNECTIONS = {"snowpark", "sql"}
+    FIRST_PARTY_CONNECTIONS = {"snowpark", "sql", "files", "s3", "gcs"}
 
     if connection_name == "sql":
         return SQL
     elif connection_name == "snowpark":
         return Snowpark
+    elif connection_name == "files":
+        return FileSystem
+    elif connection_name == "s3":
+        return FileSystem
+    elif connection_name == "gcs":
+        return FileSystem
 
     raise StreamlitAPIException(
         f"Invalid connection {connection_name}. Supported connection classes: {FIRST_PARTY_CONNECTIONS}"
@@ -67,6 +74,27 @@ def connection(
 
 @overload
 def connection(
+    connection_class: Literal["files"], name: str = "default", **kwargs
+) -> "FileSystem":
+    ...
+
+
+@overload
+def connection(
+    connection_class: Literal["s3"], name: str = "default", **kwargs
+) -> "FileSystem":
+    ...
+
+
+@overload
+def connection(
+    connection_class: Literal["gcs"], name: str = "default", **kwargs
+) -> "FileSystem":
+    ...
+
+
+@overload
+def connection(
     connection_class: Type[ConnectionClass], name: str = "default", **kwargs
 ) -> ConnectionClass:
     ...
@@ -79,6 +107,14 @@ def connection(
 @cache_resource(validate=_validate)
 def connection(connection_class, name="default", **kwargs):
     if type(connection_class) == str:
+        if connection_class == "s3":
+            kwargs["protocol"] = kwargs.get("protocol", "s3")
+            if name == "default":
+                name = "s3"
+        if connection_class == "gcs":
+            kwargs["protocol"] = kwargs.get("protocol", "gcs")
+            if name == "default":
+                name = "gcs"
         connection_class = _get_first_party_connection(connection_class)
 
     try:
