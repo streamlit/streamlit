@@ -16,10 +16,7 @@
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { Type } from "src/lib/Quiver"
-import {
-  DatetimePickerCell,
-  PythonDateType,
-} from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
+import { DatetimePickerCell } from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
 import {
   getErrorCell,
   isErrorCell,
@@ -322,12 +319,12 @@ describe("isDateNotNaN", () => {
 
 describe("getDefaultFormatDateCell", () => {
   it.each([
-    [PythonDateType.Date, "YYYY / MM / DD"],
-    [PythonDateType.DatetimeLocal, "YYYY-MM-DDTHH:mm:ss.SSS"],
-    [PythonDateType.Time, "HH:mm:ss.SSS"],
+    ["date", "YYYY / MM / DD"],
+    ["datetime-local", "YYYY-MM-DDTHH:mm:ss.SSS"],
+    ["time", "HH:mm:ss.SSS"],
   ])(
     "check %p gives the correct moment format date: %p",
-    (type: PythonDateType, expectedFormat: string) => {
+    (type: string, expectedFormat: string) => {
       expect(getDefaultFormatDateCell(type)).toBe(expectedFormat)
     }
   )
@@ -360,7 +357,7 @@ describe("getDateCell", () => {
         const dateCell = getDateCell(
           DATETIME_COLUMN_PROPS,
           input,
-          PythonDateType.Time
+          "time"
         ) as DatetimePickerCell
         expect(dateCell.contentAlign).toBe("left")
         // @ts-ignore
@@ -385,7 +382,7 @@ describe("getDateCell", () => {
         const dateCell = getDateCell(
           DATETIME_COLUMN_PROPS,
           data,
-          PythonDateType.Time
+          "time"
         ) as DatetimePickerCell
         expect(dateCell.data.date).toStrictEqual(expectedData)
       }
@@ -394,20 +391,16 @@ describe("getDateCell", () => {
 
   describe("getCopyDataForDate", () => {
     it.each([
-      [PythonDateType.Date, new Date(100), "1970-01-01T00:00:00.100Z"],
+      ["date", new Date(100), "1970-01-01T00:00:00.100Z"],
+      ["datetime-local", new Date(100), "1970-01-01T00:00:00.100Z"],
       [
-        PythonDateType.DatetimeLocal,
-        new Date(100),
-        "1970-01-01T00:00:00.100Z",
-      ],
-      [
-        PythonDateType.Time,
+        "time",
         new Date(100),
         new Date(Number(100)).getMilliseconds().toString(),
       ],
     ])(
       "check (%p, %p) gives the correct copyData: %p",
-      (type: PythonDateType, date: Date, copyData: string) => {
+      (type: string, date: Date, copyData: string) => {
         expect(getCopyDataForDate(date, type)).toContain(copyData)
       }
     )
@@ -415,12 +408,12 @@ describe("getDateCell", () => {
 
   describe("formatValueForHTMLInput", () => {
     it.each([
-      [PythonDateType.Date, new Date(100), "1970-01-01"],
-      [PythonDateType.DatetimeLocal, new Date(100), "1970-01-01T00:00:00.100"],
-      [PythonDateType.Time, new Date(100), "00:00:00.100"],
+      ["date", new Date(100), "1970-01-01"],
+      ["datetime-local", new Date(100), "1970-01-01T00:00:00.100"],
+      ["time", new Date(100), "00:00:00.100"],
     ])(
       "with type %p and date %p, check that the formatting is correct: %p",
-      (type: PythonDateType, date: Date, formattedDate: string) => {
+      (type: string, date: Date, formattedDate: string) => {
         expect(formatValueForHTMLInput(type, date)).toEqual(formattedDate)
       }
     )

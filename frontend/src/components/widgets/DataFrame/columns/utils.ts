@@ -29,10 +29,7 @@ import { logError } from "src/lib/log"
 
 import { Type as ArrowType } from "src/lib/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
-import {
-  DatetimePickerCell,
-  PythonDateType,
-} from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
+import { DatetimePickerCell } from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
 
 /**
  * Interface used for defining the properties (configuration options) of a column.
@@ -90,7 +87,7 @@ export interface BaseColumn extends BaseColumnProps {
 export type ColumnCreator = {
   (props: BaseColumnProps): BaseColumn
   readonly isEditableType: boolean
-  readonly dateType?: PythonDateType
+  readonly dateType?: string
 }
 
 /**
@@ -406,7 +403,7 @@ export function removeTInString(date: string): string {
 export function getDateCell(
   props: BaseColumnProps,
   data: any,
-  type: PythonDateType
+  type: string
 ): GridCell {
   const defaultFormat = getDefaultFormatDateCell(type)
 
@@ -489,7 +486,7 @@ export function getDateCell(
   }
 }
 
-export function getDefaultFormatDateCell(type: PythonDateType): string {
+export function getDefaultFormatDateCell(type: string): string {
   switch (type) {
     case "date":
       return "YYYY / MM / DD"
@@ -508,7 +505,7 @@ export function getDateCellContent(cell: DatetimePickerCell): string | null {
     : cell.data.date.toISOString()
 }
 
-export function getCopyDataForDate(date: Date, type: PythonDateType): string {
+export function getCopyDataForDate(date: Date, type: string): string {
   switch (type) {
     case "time": {
       // datetime.time is only hours, minutes, etc
@@ -528,10 +525,7 @@ export function getCopyDataForDate(date: Date, type: PythonDateType): string {
   }
 }
 
-export const formatValueForHTMLInput = (
-  type: PythonDateType,
-  date: Date
-): string => {
+export const formatValueForHTMLInput = (type: string, date: Date): string => {
   if (type === "date") {
     return moment.utc(date).format("YYYY-MM-DD")
   }

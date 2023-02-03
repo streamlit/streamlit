@@ -22,10 +22,7 @@ import {
   getDateCell,
   getDateCellContent,
 } from "src/components/widgets/DataFrame/columns/utils"
-import {
-  DatetimePickerCell,
-  PythonDateType,
-} from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
+import { DatetimePickerCell } from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
 
 export interface TimeColumnParams {
   readonly format?: string
@@ -38,7 +35,7 @@ function TimeColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "smart",
     isEditable: true,
     getCell(data?: any): GridCell {
-      return getDateCell(props, data, PythonDateType.Time)
+      return getDateCell(props, data, "time")
     },
     getCellValue(cell: DatetimePickerCell): string | null {
       return getDateCellContent(cell)

@@ -21,91 +21,91 @@ import {
   drawTextCell,
   GridCellKind,
   ProvideEditorCallback,
+  TextCellEntry,
 } from "@glideapps/glide-data-grid"
-import moment from "moment"
 
-export interface DatetimePickerCellProps {
+interface DatetimePickerCellProps {
   readonly kind: "DatetimePickerCell"
   readonly date: Date | undefined
   readonly displayDate: string
-  readonly format: string
-  readonly type: PythonDateType
+  readonly format: any
+  readonly type: DateKind
+  readonly readonly?: boolean
+  readonly min?: string
+  readonly max?: string
+  readonly step?: string
 }
 
-export enum PythonDateType {
-  Date = "date",
-  DatetimeLocal = "datetime-local",
-  Time = "time",
-}
+export type DateKind = "date" | "time" | "datetime-local"
 
 export const formatValueForHTMLInput = (
-  type: PythonDateType,
-  date: Date
+  dateKind: DateKind,
+  date: Date | undefined
 ): string => {
-  if (type === "date") {
-    return moment.utc(date).format("YYYY-MM-DD")
+  if (date === undefined) {
+    return ""
   }
-  if (type === "time") {
-    return moment.utc(date).format("HH:mm:ss.SSS")
+  switch (dateKind) {
+    case "date":
+      return date.toISOString().split("T")[0]
+    case "datetime-local":
+      return date.toISOString().replace("Z", "")
+    case "time":
+      return date.toISOString().split("T")[1].replace("Z", "")
+    default:
+      return ""
   }
-  if (type === "datetime-local") {
-    return date.toISOString().replace("Z", "")
-  }
-  return ""
 }
 
 export type DatetimePickerCell = CustomCell<DatetimePickerCellProps>
 
 const Editor: ReturnType<ProvideEditorCallback<DatetimePickerCell>> = cell => {
   const cellData = cell.value.data
-  const { date, displayDate, type } = cellData
-  let newCellData = new Date(
-    new Date().getTime() - new Date().getTimezoneOffset() * 60000
-  )
-  if (cellData !== undefined) {
-    newCellData =
-      cellData.date ??
-      new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
+  const { min, max, step, readonly, type, displayDate } = cellData
+  const value = formatValueForHTMLInput(type, cellData.date)
+  if (readonly) {
+    return (
+      <TextCellEntry
+        highlight={true}
+        autoFocus={false}
+        disabled={true}
+        value={displayDate ?? ""}
+        onChange={() => undefined}
+      />
+    )
   }
-  const value = formatValueForHTMLInput(type, newCellData)
-
   return (
     <input
       required
       style={{ minHeight: 26, border: "none", outline: "none" }}
       type={type}
-      step={newCellData.getMilliseconds() !== 0 ? ".001" : undefined}
       value={value}
+      min={min}
+      max={max}
+      step={step}
       autoFocus={true}
       onChange={event => {
-        // handle when clear is clicked and value has been wiped
         if (event.target.value === "") {
-          try {
-            cell.onChange({
-              ...cell.value,
-              data: {
-                ...cell.value.data,
-                date: date !== undefined ? date : new Date(displayDate),
-              },
-            })
-          } catch (error) {
-            cell.onChange({
-              ...cell.value,
-              data: {
-                ...cell.value.data,
-                displayDate: String(error),
-              },
-            })
-          }
-          return
+          cell.onChange({
+            ...cell.value,
+            data: {
+              ...cell.value.data,
+              // just set the value to undefined if submitted (enter or clicking out)
+              // escape still works
+              date: undefined,
+            },
+          })
+        } else {
+          cell.onChange({
+            ...cell.value,
+            data: {
+              ...cell.value.data,
+              // use valueAsNumber because valueAsDate is null for "datetime-local"
+              // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/datetime-local#technical_summary
+              date: new Date(event.target.valueAsNumber) ?? cellData.date,
+            },
+          })
         }
-        cell.onChange({
-          ...cell.value,
-          data: {
-            ...cell.value.data,
-            date: new Date(event.target.valueAsNumber) ?? newCellData,
-          },
-        })
       }}
     />
   )
