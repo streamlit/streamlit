@@ -240,6 +240,14 @@ fig.update_xaxes(
     ),
 )
 fig.update_layout(height=300, width=600)
+fig.update_layout(
+    font_family="Courier New",
+    font_color="blue",
+    title_font_family="Times New Roman",
+    title_font_color="red",
+    legend_title_font_color="green",
+    title_font_size=30,
+)
 st.plotly_chart(fig, theme="streamlit")
 
 data = pd.DataFrame((100, 120, 104, 102, 203, 102), columns=["some_col"])
