@@ -419,12 +419,12 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool = False,
         key: Optional[Key] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        num_rows: Literal["fixed", "dynamic"] = "fixed",
     ) -> EditableData:
         pass
 
@@ -436,12 +436,12 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool = False,
         key: Optional[Key] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        num_rows: Literal["fixed", "dynamic"] = "fixed",
     ) -> pd.DataFrame:
         pass
 
@@ -453,12 +453,12 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool = False,
         key: Optional[Key] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        num_rows: Literal["fixed", "dynamic"] = "fixed",
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -479,6 +479,10 @@ class DataEditorMixin:
         use_container_width : bool
             If True, set the data editor width to the width of the parent container.
             This takes precedence over the width argument. Defaults to False.
+        num_rows : "fixed" or "dynamic"
+            If "dynamic", the user can add and delete rows in the data editor.
+            If "fixed", the user cannot add or delete rows. Defaults to "fixed".
+            Note: "dynamic" mode does not allow the user to sort columns.
         disabled : bool
             If True, the data editor will be disabled and not allow any edits.
         key : str
@@ -492,10 +496,6 @@ class DataEditorMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
-        num_rows : "fixed" or "dynamic"
-            If "dynamic", the user can add and delete rows in the data editor.
-            If "fixed", the user cannot add or delete rows. Defaults to "fixed".
-            Note: "dynamic" mode does not allow the user to sort columns.
 
         Returns
         -------
