@@ -469,7 +469,6 @@ class DataEditorMixin:
         ----------
         data : pandas.DataFrame, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
             The data to edit in the data editor.
-
         width : int or None
             Desired width of the data editor expressed in pixels. If None, the width
             will be automatically calculated based on the container width.
@@ -565,6 +564,13 @@ class DataEditorMixin:
             )
 
         _apply_data_specific_configs(columns_config, data_df, data_format)
+
+        # Temporary workaround: We hide range indices if num_rows is dynamic.
+        # since the current way of handling this index during editing is a bit confusing.
+        if type(data_df.index) is pd.RangeIndex and num_rows == "dynamic":
+            if _INDEX_IDENTIFIER not in columns_config:
+                columns_config[_INDEX_IDENTIFIER] = {}
+            columns_config[_INDEX_IDENTIFIER]["hidden"] = True
 
         delta_path = self.dg._get_delta_path_str()
         default_uuid = str(hash(delta_path))
