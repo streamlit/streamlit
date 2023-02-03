@@ -20,9 +20,6 @@ from urllib.parse import urljoin
 import tornado.web
 
 from streamlit import config, net_util, url_util
-from streamlit.logger import get_logger
-
-_LOGGER = get_logger(__name__)
 
 
 def is_url_from_allowed_origins(url: str) -> bool:
