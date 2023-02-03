@@ -35,7 +35,6 @@ import {
   getDefaultFormatDateCell,
   getDateCell,
   getCopyDataForDate,
-  formatValueForHTMLInput,
 } from "./utils"
 import { TextColumn } from "."
 
@@ -402,19 +401,6 @@ describe("getDateCell", () => {
       "check (%p, %p) gives the correct copyData: %p",
       (type: string, date: Date, copyData: string) => {
         expect(getCopyDataForDate(date, type)).toContain(copyData)
-      }
-    )
-  })
-
-  describe("formatValueForHTMLInput", () => {
-    it.each([
-      ["date", new Date(100), "1970-01-01"],
-      ["datetime-local", new Date(100), "1970-01-01T00:00:00.100"],
-      ["time", new Date(100), "00:00:00.100"],
-    ])(
-      "with type %p and date %p, check that the formatting is correct: %p",
-      (type: string, date: Date, formattedDate: string) => {
-        expect(formatValueForHTMLInput(type, date)).toEqual(formattedDate)
       }
     )
   })

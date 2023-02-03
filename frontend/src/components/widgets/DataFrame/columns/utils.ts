@@ -524,16 +524,3 @@ export function getCopyDataForDate(date: Date, type: string): string {
       return ""
   }
 }
-
-export const formatValueForHTMLInput = (type: string, date: Date): string => {
-  if (type === "date") {
-    return moment.utc(date).format("YYYY-MM-DD")
-  }
-  if (type === "time") {
-    return moment.utc(date).format("HH:mm:ss.SSS")
-  }
-  if (type === "datetime-local") {
-    return date.toISOString().replace("Z", "")
-  }
-  return ""
-}
