@@ -12,18 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import configparser
+import os
 import threading
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Iterator, cast
+from datetime import timedelta
+from typing import TYPE_CHECKING, Dict, Iterator, Optional, Union, cast
+
+import pandas as pd
 
 from streamlit.connections import BaseConnection
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
     from snowflake.snowpark.session import Session
 
 
-REQUIRED_CONNECTION_PARAMS = {"account", "user", "password"}
+REQUIRED_CONNECTION_PARAMS = {"account", "user"}
+_DEFAULT_CONNECTION_FILE = "~/.snowsql/config"
+
+
+def _load_from_snowsql_config_file() -> Dict:
+    """Loads the dictionary from snowsql config file."""
+    snowsql_config_file = os.path.expanduser(_DEFAULT_CONNECTION_FILE)
+    if not os.path.exists(snowsql_config_file):
+        return {}
+
+    config = configparser.ConfigParser(inline_comment_prefixes="#")
+    config.read(snowsql_config_file)
+
+    conn_params = config["connections"]
+    conn_params = {k.replace("name", ""): v.strip('"') for k, v in conn_params.items()}
+    if "db" in conn_params:
+        conn_params["database"] = conn_params["db"]
+        del conn_params["db"]
+    return conn_params
 
 
 class Snowpark(BaseConnection["Session"]):
@@ -45,6 +69,9 @@ class Snowpark(BaseConnection["Session"]):
 
         self._closed = False
         conn_params = self.get_secrets()
+
+        if not conn_params:
+            conn_params = _load_from_snowsql_config_file()
 
         for p in REQUIRED_CONNECTION_PARAMS:
             if p not in conn_params:
@@ -68,6 +95,18 @@ class Snowpark(BaseConnection["Session"]):
         # of additional load to each script run.
         with self._lock:
             return not self._closed
+
+    @staticmethod
+    def _read_sql(sql: str, _instance: "Session") -> pd.DataFrame:
+        return _instance.sql(sql).to_pandas()
+
+    def read_sql(
+        self,
+        sql: str,
+        ttl: Optional[Union[float, int, timedelta]] = None,
+    ) -> pd.DataFrame:
+        # TODO(vdonato): Fix the type error below.
+        return cache_data(self._read_sql, ttl=ttl)(sql, self.instance)  # type: ignore
 
     @contextmanager
     def session(self) -> Iterator["Session"]:
