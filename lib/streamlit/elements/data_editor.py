@@ -469,30 +469,39 @@ class DataEditorMixin:
         ----------
         data : pandas.DataFrame, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
             The data to edit in the data editor.
+
         width : int or None
             Desired width of the data editor expressed in pixels. If None, the width
             will be automatically calculated based on the container width.
+
         height : int or None
             Desired height of the data editor expressed in pixels. If None, a
             default height is used.
+
         use_container_width : bool
             If True, set the data editor width to the width of the parent container.
             This takes precedence over the width argument. Defaults to False.
+
         num_rows : "fixed" or "dynamic"
             If "dynamic", the user can add and delete rows in the data editor.
             If "fixed", the user cannot add or delete rows. Defaults to "fixed".
             Note: "dynamic" mode does not allow the user to sort columns.
+
         disabled : bool
             If True, the data editor will be disabled and not allow any edits.
+
         key : str
             An optional string to use as the unique key for this widget. If this
             is omitted, a key will be generated for the widget based on its
             content. Multiple widgets of the same type may not share the same
             key.
+
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
