@@ -110,12 +110,23 @@ describe("applyColumnConfig", () => {
     expect(column1.isEditable).toBe(true)
     expect(column1.width).toBe(100)
     expect(column1.customType).toBe("text")
+    expect(column1).toEqual({
+      ...MOCK_COLUMNS[1],
+      width: 100,
+      isEditable: true,
+      customType: "text",
+    })
 
     const column2 = applyColumnConfig(MOCK_COLUMNS[2], columnConfig)
     expect(column2.isEditable).toBe(false)
     expect(column2.width).toBe(undefined)
     expect(column2.contentAlignment).toBe("center")
     expect(column2.isHidden).toBe(true)
+    expect(column2).toEqual({
+      ...MOCK_COLUMNS[2],
+      isHidden: true,
+      contentAlignment: "center",
+    })
   })
 
   it("allows configuring the index via `index` as ID", () => {
