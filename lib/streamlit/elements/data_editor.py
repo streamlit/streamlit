@@ -502,6 +502,41 @@ class DataEditorMixin:
         The edited data. The data is returned in its original data type for pd.DataFrame,
         pd.Styler, pyarrow.Table, np.ndarray, list, set, tuple, and dict.
         Other data types are returned as a pd.DataFrame.
+
+        Examples
+        --------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>>
+        >>> df = pd.DataFrame(
+        >>>     [
+        >>>        {"command": "st.selectbox", "rating": 4, "is_widget": True},
+        >>>        {"command": "st.balloons", "rating": 5, "is_widget": False},
+        >>>        {"command": "st.time_input", "rating": 3, "is_widget": True},
+        >>>    ]
+        >>> )
+        >>> edited_df = st.experimental_data_editor(df)
+        >>>
+        >>> favorite_command = edited_df.loc[edited_df["rating"].idxmax()]["command"]
+        >>> st.markdown(f"Your favorite command is **{favorite_command}** 🎈")
+
+        You can also allow the user to add and delete rows by setting `num_rows` to "dynamic":
+
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>>
+        >>> df = pd.DataFrame(
+        >>>     [
+        >>>        {"command": "st.selectbox", "rating": 4, "is_widget": True},
+        >>>        {"command": "st.balloons", "rating": 5, "is_widget": False},
+        >>>        {"command": "st.time_input", "rating": 3, "is_widget": True},
+        >>>    ]
+        >>> )
+        >>> edited_df = st.experimental_data_editor(df, num_rows="dynamic")
+        >>>
+        >>> favorite_command = edited_df.loc[edited_df["rating"].idxmax()]["command"]
+        >>> st.markdown(f"Your favorite command is **{favorite_command}** 🎈")
+
         """
 
         columns_config: ColumnConfigMapping = {}
