@@ -4261,10 +4261,10 @@ anymatch@^3.0.3, anymatch@~3.1.2:
     normalize-path "^3.0.0"
     picomatch "^2.0.4"
 
-apache-arrow@^10.0.1, apache-arrow@^4.0.0:
-  version "10.0.1"
-  resolved "https://registry.yarnpkg.com/apache-arrow/-/apache-arrow-10.0.1.tgz#577bc72b8192b09292628b7282fd1c31ed134a75"
-  integrity sha512-6QrfmyNsmNjZQszYzVLHSXIejZiRa3jFqeD3nTCjU3WqvoUxaC/0etjcErwnlLR3++3uc+faWw0OlM6IgY6xIQ==
+apache-arrow@^11.0.0, apache-arrow@^4.0.0:
+  version "11.0.0"
+  resolved "https://registry.yarnpkg.com/apache-arrow/-/apache-arrow-11.0.0.tgz#b48cdb81afb502bcafdc2912b50d0f2c58ebc783"
+  integrity sha512-M8J4y+DimIyS44w2KOmVfzNHbTroR1oDpBKK6BYnlu8xVB41lxTz0yLmapo8/WJVAt5XcinAxMm14M771dm/rA==
   dependencies:
     "@types/command-line-args" "5.2.0"
     "@types/command-line-usage" "5.0.2"
