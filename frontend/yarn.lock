@@ -6251,7 +6251,7 @@ d3-hierarchy@^1.1.9:
   resolved "https://registry.yarnpkg.com/d3-hierarchy/-/d3-hierarchy-1.1.9.tgz#2f6bee24caaea43f8dc37545fa01628559647a83"
   integrity sha512-j8tPxlqh1srJHAtxfvOUwKNYJkQuBFdM1+JAUfq6xqH5eAqf93L7oG1NVqDa4CpFZNvnNKtCYEUC8KY9yEn9lQ==
 
-d3-interpolate@1, d3-interpolate@^1.1.5, d3-interpolate@^1.4.0:
+d3-interpolate@1, d3-interpolate@^1.1.5:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/d3-interpolate/-/d3-interpolate-1.4.0.tgz#526e79e2d80daa383f9e0c1c1c7dcc0f0583e987"
   integrity sha512-V9znK0zc3jOPV4VD2zZn0sDhZU3WAE2bmlxdIwwQPPzPjvyLkd8B3JUVdS1IDUFDkWZ72c9qnv1GK2ZagTZ8EA==
@@ -9235,10 +9235,15 @@ immer@^9.0.19, immer@^9.0.7:
   resolved "https://registry.yarnpkg.com/immer/-/immer-9.0.19.tgz#67fb97310555690b5f9cd8380d38fc0aabb6b38b"
   integrity sha512-eY+Y0qcsB4TZKwgQzLaE/lqYMlKhv5J9dyd2RhhtGhNo2njPXDqU9XPfcNfa3MIDsdtZt5KlkIsirlo4dHsWdQ==
 
-immutable@^4.0.0, immutable@^4.2.2:
+immutable@^4.0.0:
   version "4.2.2"
   resolved "https://registry.yarnpkg.com/immutable/-/immutable-4.2.2.tgz#2da9ff4384a4330c36d4d1bc88e90f9e0b0ccd16"
   integrity sha512-fTMKDwtbvO5tldky9QZ2fMX7slR0mYpY5nbnFWYp0fOzDhHqhgIw9KoYgxLWsoNTS9ZHGauHj18DTyEw6BK3Og==
+
+immutable@^4.2.3:
+  version "4.2.3"
+  resolved "https://registry.yarnpkg.com/immutable/-/immutable-4.2.3.tgz#a203cdda37a5a30bc351b982a1794c1930198815"
+  integrity sha512-IHpmvaOIX4VLJwPOuQr1NpeBr2ZG6vpIj3blsLVxXRWJscLioaJRStqC+NcBsLeCDsnGlPpXd5/WZmnE7MbsKA==
 
 import-fresh@^3.0.0, import-fresh@^3.1.0, import-fresh@^3.2.1:
   version "3.3.0"
@@ -12505,10 +12510,10 @@ plist@^3.0.1:
     base64-js "^1.5.1"
     xmlbuilder "^9.0.7"
 
-plotly.js@^2.18.0:
-  version "2.18.0"
-  resolved "https://registry.yarnpkg.com/plotly.js/-/plotly.js-2.18.0.tgz#b935aa5d87a08a579a5e713babac1d94a97a9152"
-  integrity sha512-EauUKlr03yI7v2K2BA0NobvJb1Na+uid0ZFKbLehpiR/WSnGO7tf5/cKnXl4TEqGYKnytj07Poek6JlXZC3jbg==
+plotly.js@^2.18.1:
+  version "2.18.1"
+  resolved "https://registry.yarnpkg.com/plotly.js/-/plotly.js-2.18.1.tgz#f85919699bc6f1908107e34fd63486356be6cac0"
+  integrity sha512-ZOOWAI4X8vYPrlhKnO27+NdA99GIYvj0+DHFmPXMZCkfxMT8YWUb6th0og6HKCve727tH+7vWAkb+Hg+2KgtUA==
   dependencies:
     "@plotly/d3" "3.8.0"
     "@plotly/d3-sankey" "0.7.2"
@@ -12527,7 +12532,7 @@ plotly.js@^2.18.0:
     d3-geo "^1.12.1"
     d3-geo-projection "^2.9.0"
     d3-hierarchy "^1.1.9"
-    d3-interpolate "^1.4.0"
+    d3-interpolate "^3.0.1"
     d3-time "^1.1.0"
     d3-time-format "^2.2.3"
     fast-isnumeric "^1.1.4"
