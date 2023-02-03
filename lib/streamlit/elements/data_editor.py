@@ -462,8 +462,8 @@ class DataEditorMixin:
     ) -> DataTypes:
         """Display a data editor widget.
 
-        This widget allows you to edit DataFrames and many other data structures
-        in a table-like UI.
+        Display a data editor widget that allows you to edit DataFrames and
+        many other data structures in a table-like UI.
 
         Parameters
         ----------
@@ -483,12 +483,14 @@ class DataEditorMixin:
             This takes precedence over the width argument. Defaults to False.
 
         num_rows : "fixed" or "dynamic"
-            If "dynamic", the user can add and delete rows in the data editor.
-            If "fixed", the user cannot add or delete rows. Defaults to "fixed".
-            Note: "dynamic" mode does not allow the user to sort columns.
+            Specifies if the user can add and delete rows in the data editor.
+            If "fixed", the user cannot add or delete rows. If "dynamic", the user can
+            add and delete rows in the data editor, but column sorting is disabled.
+            Defaults to "fixed".
 
         disabled : bool
-            If True, the data editor will be disabled and not allow any edits.
+            An optional boolean which, if True, disables the data editor and prevents
+            any edits. Defaults to False. This argument can only be supplied by keyword.
 
         key : str
             An optional string to use as the unique key for this widget. If this
@@ -507,9 +509,10 @@ class DataEditorMixin:
 
         Returns
         -------
-        The edited data. The data is returned in its original data type for pd.DataFrame,
-        pd.Styler, pyarrow.Table, np.ndarray, list, set, tuple, and dict.
-        Other data types are returned as a pd.DataFrame.
+        pd.DataFrame, pd.Styler, pyarrow.Table, np.ndarray, list, set, tuple, or dict.
+            The edited data. The edited data is returned in its original data type if
+            it corresponds to any of the supported return types. All other data types
+            are returned as a ``pd.DataFrame``.
 
         Examples
         --------
