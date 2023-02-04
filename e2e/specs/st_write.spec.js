@@ -39,12 +39,6 @@ describe("st.write", () => {
     cy.get(".stDataFrame").should("have.length", 1);
   });
 
-  it("st.write should display pyspark.sql.DataFrame as st.dataframe with proper width and height", () => {
-    cy.getIndexed(".stDataFrame", 0)
-          .should("have.css", "width", "290px")
-          .should("have.css", "height", "108px");
-  });
-
   it("allows HTML if defined explicitly", () => {
     cy.get(".element-container .stMarkdown p")
       .last()

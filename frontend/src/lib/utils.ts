@@ -120,7 +120,17 @@ export function notNull<T>(value: T | null): value is T {
 export function notNullOrUndefined<T>(
   value: T | null | undefined
 ): value is T {
-  return value !== null && value !== undefined
+  return <T>value !== null && <T>value !== undefined
+}
+
+/**
+ * A type predicate that is true if the given value is either undefined
+ * or null.
+ */
+export function isNullOrUndefined<T>(
+  value: T | null | undefined
+): value is null | undefined {
+  return <T>value === null || <T>value === undefined
 }
 
 /**
