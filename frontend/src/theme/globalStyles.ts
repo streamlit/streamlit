@@ -70,7 +70,13 @@ export const globalStyles = (theme: Theme): any => css`
     color: ${theme.colors.disabled};
   }
 
-  // VegaLite-specific CSS to style tootips
+  // glide-data-grid
+  // Fix issue with empty option in dropdown cell
+  div#portal div.click-outside-ignore > div > div {
+    min-height: ${theme.spacing.threeXLPx}px;
+  }
+
+  // VegaLite-specific CSS to style tooltips
   #vg-tooltip-element {
     font-family: ${theme.genericFonts.bodyFont};
     color: ${theme.colors.bodyText};

@@ -15,12 +15,8 @@
  */
 
 import React from "react"
-import {
-  DataEditor as GlideDataEditor,
-  SizedGridColumn,
-  NumberCell,
-} from "@glideapps/glide-data-grid"
-import { renderHook, act } from "@testing-library/react-hooks"
+
+import { DataEditor as GlideDataEditor } from "@glideapps/glide-data-grid"
 
 import { TEN_BY_TEN } from "src/lib/mocks/arrow"
 import { mount } from "src/lib/test_util"
@@ -28,11 +24,7 @@ import { Quiver } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 
 import { Resizable } from "re-resizable"
-import DataFrame, {
-  DataFrameProps,
-  useDataLoader,
-  getColumns,
-} from "./DataFrame"
+import DataFrame, { DataFrameProps } from "./DataFrame"
 import { StyledResizableContainer } from "./styled-components"
 
 const getProps = (
@@ -47,6 +39,8 @@ const getProps = (
   }),
   data,
   width: 700,
+  disabled: false,
+  widgetMgr: {} as any,
 })
 
 const { ResizeObserver } = window
@@ -97,80 +91,5 @@ describe("DataFrame widget", () => {
     const dataFrameContainer = wrapper.find(Resizable).props() as any
     expect(dataFrameContainer.size.width).toBe(400)
     expect(dataFrameContainer.size.height).toBe(400)
-  })
-
-  it("Test column resizing function.", () => {
-    const { result } = renderHook(() =>
-      useDataLoader(props.element, props.data)
-    )
-
-    // Resize first column to size of 123:
-    act(() => {
-      const { columns, onColumnResize } = result.current
-      onColumnResize?.(columns[0], 123, 0, 123)
-    })
-    expect((result.current.columns[0] as SizedGridColumn).width).toBe(123)
-
-    // Resize first column to size of 321:
-    act(() => {
-      const { columns, onColumnResize } = result.current
-      onColumnResize?.(columns[0], 321, 0, 321)
-    })
-    expect((result.current.columns[0] as SizedGridColumn).width).toBe(321)
-
-    // First column should stay at previous value if other column is resized
-    act(() => {
-      const { columns, onColumnResize } = result.current
-      onColumnResize?.(columns[1], 88, 1, 88)
-    })
-    expect((result.current.columns[0] as SizedGridColumn).width).toBe(321)
-  })
-
-  it("should correctly sort the table descending order", () => {
-    const tableColumns = getColumns(props.element, props.data)
-
-    // Add descending sort for first column
-    const { result } = renderHook(() =>
-      useDataLoader(props.element, props.data, {
-        column: tableColumns[0],
-        mode: "smart",
-        direction: "desc",
-      })
-    )
-
-    const sortedData = []
-
-    for (let i = 0; i < result.current.numRows; i++) {
-      sortedData.push(
-        (result.current.getCellContent([0, i]) as NumberCell).data
-      )
-    }
-
-    expect(Array.from(sortedData)).toEqual(
-      Array.from(sortedData).sort().reverse()
-    )
-  })
-
-  it("should correctly sort the table ascending order", () => {
-    const tableColumns = getColumns(props.element, props.data)
-
-    // Add ascending sort for first column
-    const { result } = renderHook(() =>
-      useDataLoader(props.element, props.data, {
-        column: tableColumns[0],
-        mode: "smart",
-        direction: "asc",
-      })
-    )
-
-    const sortedData = []
-
-    for (let i = 0; i < result.current.numRows; i++) {
-      sortedData.push(
-        (result.current.getCellContent([0, i]) as NumberCell).data
-      )
-    }
-
-    expect(Array.from(sortedData)).toEqual(Array.from(sortedData).sort())
   })
 })

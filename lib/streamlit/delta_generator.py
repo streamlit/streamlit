@@ -48,6 +48,7 @@ from streamlit.elements.button import ButtonMixin
 from streamlit.elements.camera_input import CameraInputMixin
 from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.color_picker import ColorPickerMixin
+from streamlit.elements.data_editor import DataEditorMixin
 from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.doc_string import HelpMixin
@@ -189,6 +190,7 @@ class DeltaGenerator(
     ArrowMixin,
     ArrowAltairMixin,
     ArrowVegaLiteMixin,
+    DataEditorMixin,
     LegacyDataFrameMixin,
     LegacyAltairMixin,
     LegacyVegaLiteMixin,

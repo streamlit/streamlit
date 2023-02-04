@@ -110,7 +110,10 @@ class ArrowMixin:
             proto.width = width
         if height:
             proto.height = height
+        proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
+
         marshall(proto, data, default_uuid)
+
         return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("_arrow_table")

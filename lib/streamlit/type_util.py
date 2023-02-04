@@ -19,14 +19,17 @@ from __future__ import annotations
 import contextlib
 import re
 import types
+from enum import Enum, auto
 from typing import (
     TYPE_CHECKING,
     Any,
+    Dict,
     Iterable,
     List,
     NamedTuple,
     Optional,
     Sequence,
+    Set,
     Tuple,
     TypeVar,
     Union,
@@ -34,6 +37,7 @@ from typing import (
     overload,
 )
 
+import numpy as np
 import pyarrow as pa
 from pandas import DataFrame, Index, MultiIndex, Series
 from pandas.api.types import infer_dtype, is_dict_like, is_list_like
@@ -222,6 +226,8 @@ DataFrameLike: TypeAlias = "Union[DataFrame, Index, Series, Styler]"
 _DATAFRAME_COMPATIBLE_TYPES: Final[tuple[type, ...]] = (
     dict,
     list,
+    set,
+    tuple,
     type(None),
 )
 
@@ -234,6 +240,31 @@ _BYTES_LIKE_TYPES: Final[tuple[type, ...]] = (
 )
 
 BytesLike: TypeAlias = Union[bytes, bytearray]
+
+
+class DataFormat(Enum):
+    """DataFormat is used to determine the format of the data."""
+
+    UNKNOWN = auto()
+    EMPTY = auto()  # None
+    PANDAS_DATAFRAME = auto()  # pd.DataFrame
+    PANDAS_SERIES = auto()  # pd.Series
+    PANDAS_INDEX = auto()  # pd.Index
+    NUMPY_LIST = auto()  # np.array[Scalar]
+    NUMPY_MATRIX = auto()  # np.array[List[Scalar]]
+    PYARROW_TABLE = auto()  # pyarrow.Table
+    SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
+    PYSPARK_OBJECT = auto()  # pyspark.DataFrame
+    PANDAS_STYLER = auto()  # pandas Styler
+    LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
+    LIST_OF_ROWS = auto()  # List[List[Scalar]]
+    LIST_OF_VALUES = auto()  # List[Scalar]
+    TUPLE_OF_VALUES = auto()  # Tuple[Scalar]
+    SET_OF_VALUES = auto()  # Set[Scalar]
+    COLUMN_INDEX_MAPPING = auto()  # {column: {index: value}}
+    COLUMN_VALUE_MAPPING = auto()  # {column: List[values]}
+    COLUMN_SERIES_MAPPING = auto()  # {column: Series(values)}
+    KEY_VALUE_DICT = auto()  # {index: value}
 
 
 def is_dataframe(obj: object) -> TypeGuard[DataFrame]:
@@ -337,6 +368,13 @@ def is_keras_model(obj: object) -> bool:
         or is_type(obj, "tensorflow.python.keras.engine.sequential.Sequential")
         or is_type(obj, "tensorflow.python.keras.engine.training.Model")
     )
+
+
+def is_list_of_scalars(data: Iterable[Any]) -> bool:
+    """Check if the list only contains scalar values."""
+    # Overview on all value that are interpreted as scalar:
+    # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
+    return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
 
 
 def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str, Any]]]:
@@ -740,6 +778,168 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
     """
     reader = pa.RecordBatchStreamReader(source)
     return reader.read_pandas()
+
+
+def determine_data_format(input_data: Any) -> DataFormat:
+    """Determine the data format of the input data.
+
+    Parameters
+    ----------
+    input_data : Any
+        The input data to determine the data format of.
+
+    Returns
+    -------
+    DataFormat
+        The data format of the input data.
+    """
+    if input_data is None:
+        return DataFormat.EMPTY
+    elif isinstance(input_data, DataFrame):
+        return DataFormat.PANDAS_DATAFRAME
+    elif isinstance(input_data, np.ndarray):
+        if len(input_data.shape) == 1:
+            # For technical reasons, we need to distinguish one
+            # one-dimensional numpy array from multidimensional ones.
+            return DataFormat.NUMPY_LIST
+        return DataFormat.NUMPY_MATRIX
+    elif isinstance(input_data, pa.Table):
+        return DataFormat.PYARROW_TABLE
+    elif isinstance(input_data, Series):
+        return DataFormat.PANDAS_SERIES
+    elif isinstance(input_data, Index):
+        return DataFormat.PANDAS_INDEX
+    elif is_pandas_styler(input_data):
+        return DataFormat.PANDAS_STYLER
+    elif is_snowpark_data_object(input_data):
+        return DataFormat.SNOWPARK_OBJECT
+    elif is_pyspark_data_object(input_data):
+        return DataFormat.PYSPARK_OBJECT
+    elif isinstance(input_data, (list, tuple, set)):
+        if is_list_of_scalars(input_data):
+            # -> one-dimensional data structure
+            if isinstance(input_data, tuple):
+                return DataFormat.TUPLE_OF_VALUES
+            if isinstance(input_data, set):
+                return DataFormat.SET_OF_VALUES
+            return DataFormat.LIST_OF_VALUES
+        else:
+            # -> Multi-dimensional data structure
+            # This should always contain at least one element,
+            # otherwise the values type from infer_dtype would have been empty
+            first_element = next(iter(input_data))
+            if isinstance(first_element, dict):
+                return DataFormat.LIST_OF_RECORDS
+            if isinstance(first_element, (list, tuple, set)):
+                return DataFormat.LIST_OF_ROWS
+    elif isinstance(input_data, dict):
+        if not input_data:
+            return DataFormat.KEY_VALUE_DICT
+        if len(input_data) > 0:
+            first_value = next(iter(input_data.values()))
+            if isinstance(first_value, dict):
+                return DataFormat.COLUMN_INDEX_MAPPING
+            if isinstance(first_value, (list, tuple)):
+                return DataFormat.COLUMN_VALUE_MAPPING
+            if isinstance(first_value, Series):
+                return DataFormat.COLUMN_SERIES_MAPPING
+            # In the future, we could potentially also support the tight & split formats here
+            if is_list_of_scalars(input_data.values()):
+                # Only use the key-value dict format if the values are only scalar values
+                return DataFormat.KEY_VALUE_DICT
+    return DataFormat.UNKNOWN
+
+
+def convert_df_to_data_format(
+    df: DataFrame, data_format: DataFormat
+) -> Union[
+    DataFrame,
+    Series,
+    Index,
+    Styler,
+    pa.Table,
+    np.ndarray[Any, np.dtype[Any]],
+    Tuple[Any],
+    List[Any],
+    Set[Any],
+    Dict[str, Any],
+]:
+    """Convert a dataframe to the specified data format.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to convert.
+
+    data_format : DataFormat
+        The data format to convert to.
+
+    Returns
+    -------
+    pd.DataFrame, pd.Index, Styler, pa.Table, np.ndarray, tuple, list, set, dict
+        The converted dataframe.
+    """
+    if data_format in [
+        DataFormat.EMPTY,
+        DataFormat.PANDAS_DATAFRAME,
+        DataFormat.SNOWPARK_OBJECT,
+        DataFormat.PYSPARK_OBJECT,
+        DataFormat.PANDAS_INDEX,
+        DataFormat.PANDAS_STYLER,
+    ]:
+        return df
+    elif data_format == DataFormat.NUMPY_LIST:
+        # It's a 1-dimensional array, so we only return
+        # the first column as numpy array
+        # Calling to_numpy() on the full DataFrame would result in:
+        # [[1], [2]] instead of [1, 2]
+        return np.ndarray(0) if df.empty else df.iloc[:, 0].to_numpy()
+    elif data_format == DataFormat.NUMPY_MATRIX:
+        return np.ndarray(0) if df.empty else df.to_numpy()
+    elif data_format == DataFormat.PYARROW_TABLE:
+        return pa.Table.from_pandas(df)
+    elif data_format == DataFormat.PANDAS_SERIES:
+        # Select first column in dataframe and create a new series based on the values
+        if len(df.columns) != 1:
+            raise ValueError(
+                f"DataFrame is expected to have a single column but has {len(df.columns)}."
+            )
+        return df[df.columns[0]]
+    elif data_format == DataFormat.LIST_OF_RECORDS:
+        return df.to_dict(orient="records")
+    elif data_format == DataFormat.LIST_OF_ROWS:
+        # to_numpy converts the dataframe to a list of rows
+        return df.to_numpy().tolist()
+    elif data_format == DataFormat.COLUMN_INDEX_MAPPING:
+        return df.to_dict(orient="dict")
+    elif data_format == DataFormat.COLUMN_VALUE_MAPPING:
+        return df.to_dict(orient="list")
+    elif data_format == DataFormat.COLUMN_SERIES_MAPPING:
+        return df.to_dict(orient="series")
+    elif data_format in [
+        DataFormat.LIST_OF_VALUES,
+        DataFormat.TUPLE_OF_VALUES,
+        DataFormat.SET_OF_VALUES,
+    ]:
+        return_list = []
+        if len(df.columns) == 1:
+            #  Get the first column and convert to list
+            return_list = df[df.columns[0]].tolist()
+        elif len(df.columns) >= 1:
+            raise ValueError(
+                f"DataFrame is expected to have a single column but has {len(df.columns)}."
+            )
+        if data_format == DataFormat.TUPLE_OF_VALUES:
+            return tuple(return_list)
+        if data_format == DataFormat.SET_OF_VALUES:
+            return set(return_list)
+        return return_list
+    elif data_format == DataFormat.KEY_VALUE_DICT:
+        # The key is expected to be the index -> this will return the first column
+        # as a dict with index as key.
+        return dict() if df.empty else df.iloc[:, 0].to_dict()
+
+    raise ValueError(f"Unsupported input data format: {data_format}")
 
 
 @overload

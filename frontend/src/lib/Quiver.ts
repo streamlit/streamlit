@@ -776,6 +776,31 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     return `${leftBracket + leftInterval}, ${rightInterval + rightBracket}`
   }
 
+  private static formatTime(data: number, field?: Field): string {
+    let timeInSeconds
+
+    // Unit information:
+    // https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
+    if (field?.type?.unit === 1) {
+      // Milliseconds
+      timeInSeconds = data / 1000
+    } else if (field?.type?.unit === 2) {
+      // Microseconds
+      timeInSeconds = data / (1000 * 1000)
+    } else if (field?.type?.unit === 3) {
+      // Nanoseconds
+      timeInSeconds = data / (1000 * 1000 * 1000)
+    } else {
+      // Interpret this as seconds as a fallback
+      timeInSeconds = data
+    }
+
+    return moment
+      .unix(timeInSeconds)
+      .utc()
+      .format(timeInSeconds % 1 === 0 ? "HH:mm:ss" : "HH:mm:ss.SSS")
+  }
+
   /** Returns type for a single-index column or data column. */
   public static getTypeName(type: Type): IndexTypeName | string {
     // For `PeriodIndex` and `IntervalIndex` types are kept in `numpy_type`,
@@ -796,6 +821,11 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     if (isDate && typeName === "date") {
       return moment.utc(x as Date | number).format("YYYY-MM-DD")
     }
+    // time
+    if (typeof x === "bigint" && typeName === "time") {
+      return Quiver.formatTime(Number(x), field)
+    }
+
     // datetimetz
     if (isDate && typeName === "datetimetz") {
       const meta = type?.meta
@@ -811,11 +841,11 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
         }
       }
 
-      return datetime.format("YYYY-MM-DDTHH:mm:ssZ")
+      return datetime.format("YYYY-MM-DD HH:mm:ssZ")
     }
     // datetime, datetime64, datetime64[ns], etc.
     if (isDate && typeName?.startsWith("datetime")) {
-      return moment.utc(x as Date | number).format("YYYY-MM-DDTHH:mm:ss")
+      return moment.utc(x as Date | number).format("YYYY-MM-DD HH:mm:ss")
     }
 
     if (typeName?.startsWith("interval")) {
