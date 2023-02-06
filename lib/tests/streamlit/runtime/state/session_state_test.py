@@ -132,7 +132,7 @@ class WStateTests(unittest.TestCase):
     def test_values(self):
         assert self.wstates.values() == {"5", 5}
 
-    def test_cull_nonexistent(self):
+    def test_remove_stale_widgets(self):
         self.wstates.remove_stale_widgets({"widget_id_1"})
         assert "widget_id_1" in self.wstates
         assert "widget_id_2" not in self.wstates
@@ -608,7 +608,7 @@ class SessionStateMethodTests(unittest.TestCase):
         self.session_state._new_widget_state.set_from_value("foo", "bar")
         assert not self.session_state._widget_changed("foo")
 
-    def test_cull_nonexistent(self):
+    def test_remove_stale_widgets(self):
         generated_widget_key = f"{GENERATED_WIDGET_KEY_PREFIX}-removed_widget"
 
         self.session_state._old_state = {
