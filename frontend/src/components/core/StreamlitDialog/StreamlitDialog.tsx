@@ -50,6 +50,8 @@ import {
   StyledAnchorsContent,
 } from "./styled-components"
 
+const ANCHOR_SEPARATOR = " - "
+
 type PlainEventHandler = () => void
 
 interface SettingsProps extends SettingsDialogProps {
@@ -123,6 +125,34 @@ interface AboutProps {
   aboutSectionMd?: string | null
 }
 
+function StreamlitInfoBox(): ReactElement {
+  return (
+    <StyledAnchorsContent>
+      <p>
+        {/* Show our version string only if SessionInfo has been created. If Streamlit
+            hasn't yet connected to the server, the SessionInfo singleton will be null. */}
+        {SessionInfo.isSet() && (
+          <>
+            Streamlit v{SessionInfo.current.streamlitVersion}
+            <br />
+          </>
+        )}
+        <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
+        <br />
+        Copyright {new Date().getFullYear()} Snowflake Inc. All rights
+        reserved.
+      </p>
+      <p>
+        <a href={ONLINE_DOCS_URL}>Documentation</a>
+        {ANCHOR_SEPARATOR}
+        <a href={COMMUNITY_URL}>Forum</a>
+        {ANCHOR_SEPARATOR}
+        <a href={BUG_URL}>Report a bug</a>
+      </p>
+    </StyledAnchorsContent>
+  )
+}
+
 /** About Dialog */
 function aboutDialog(props: AboutProps): ReactElement {
   if (props.aboutSectionMd) {
@@ -132,27 +162,24 @@ function aboutDialog(props: AboutProps): ReactElement {
       maxHeight: "35vh",
     }
 
-    // Markdown New line is 2 spaces + \n
-    const newLineMarkdown = "  \n"
-    const StreamlitInfo = [
-      `Made with Streamlit v${SessionInfo.current.streamlitVersion}`,
-      STREAMLIT_HOME_URL,
-      `Copyright ${new Date().getFullYear()} Snowflake Inc. All rights reserved.`,
-    ].join(newLineMarkdown)
-
-    const source = `${props.aboutSectionMd} ${newLineMarkdown} ${newLineMarkdown} ${StreamlitInfo}`
-
     return (
       <Modal isOpen onClose={props.onClose}>
         <ModalHeader>About</ModalHeader>
         <ModalBody>
           <StyledAboutInfo>
             <StreamlitMarkdown
-              source={source}
+              source={props.aboutSectionMd}
               allowHTML={false}
               style={markdownStyle}
             />
+            <StyledAnchorsContent>
+              <a href={ONLINE_DOCS_URL}>Get help</a>
+              {ANCHOR_SEPARATOR}
+              <a href={COMMUNITY_URL}>Report a bug with this app</a>
+            </StyledAnchorsContent>
           </StyledAboutInfo>
+          <hr />
+          <StreamlitInfoBox />
         </ModalBody>
         <ModalFooter>
           <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
@@ -162,34 +189,11 @@ function aboutDialog(props: AboutProps): ReactElement {
       </Modal>
     )
   }
-  const anchorSeparator = " - "
   return (
     <Modal isOpen onClose={props.onClose}>
       <ModalHeader>About</ModalHeader>
       <ModalBody>
-        <StyledAnchorsContent>
-          <p>
-            {/* Show our version string only if SessionInfo has been created. If Streamlit
-            hasn't yet connected to the server, the SessionInfo singleton will be null. */}
-            {SessionInfo.isSet() && (
-              <>
-                Streamlit v{SessionInfo.current.streamlitVersion}
-                <br />
-              </>
-            )}
-            <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
-            <br />
-            Copyright {new Date().getFullYear()} Snowflake Inc. All rights
-            reserved.
-          </p>
-          <p>
-            <a href={ONLINE_DOCS_URL}>Documentation</a>
-            {anchorSeparator}
-            <a href={COMMUNITY_URL}>Forum</a>
-            {anchorSeparator}
-            <a href={BUG_URL}>Report a bug</a>
-          </p>
-        </StyledAnchorsContent>
+        <StreamlitInfoBox />
       </ModalBody>
       <ModalFooter>
         <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>

@@ -142,7 +142,7 @@ export const StyledDeployErrorContent = styled.div(({ theme }) => ({
 }))
 
 export const StyledAboutInfo = styled.div(() => ({
-  padding: "0 0 1rem 0",
+  padding: "0",
   overflowY: "scroll",
 }))
 
