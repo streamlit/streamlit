@@ -160,7 +160,9 @@ def marshall(
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
     image_width = (
-        image_utils.COLUMN_WIDTH if use_container_width else image_utils.ORIGINAL_WIDTH
+        image_utils.WidthBehaviour.COLUMN
+        if use_container_width
+        else image_utils.WidthBehaviour.ORIGINAL
     )
     image_utils.marshall_images(
         coordinates=coordinates,
