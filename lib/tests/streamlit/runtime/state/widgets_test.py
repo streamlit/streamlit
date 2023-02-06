@@ -31,7 +31,7 @@ from streamlit.runtime.state.session_state import (
     SessionState,
     WidgetMetadata,
 )
-from streamlit.runtime.state.widgets import _get_widget_id, user_key_from_widget_id
+from streamlit.runtime.state.widgets import _compute_widget_id, user_key_from_widget_id
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -243,7 +243,7 @@ class WidgetHelperTests(unittest.TestCase):
         button_proto = ButtonProto()
         button_proto.label = "the label"
         self.assertTrue(
-            _get_widget_id("button", button_proto).startswith(
+            _compute_widget_id("button", button_proto).startswith(
                 GENERATED_WIDGET_KEY_PREFIX
             )
         )

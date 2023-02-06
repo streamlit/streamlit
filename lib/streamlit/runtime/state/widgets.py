@@ -184,7 +184,7 @@ def register_widget(
         For both paths a widget return value is provided, allowing the widgets
         to be used in a non-streamlit setting.
     """
-    widget_id = _get_widget_id(element_type, element_proto, user_key)
+    widget_id = _compute_widget_id(element_type, element_proto, user_key)
     element_proto.id = widget_id
 
     # Create the widget's updated metadata, and register it with session_state.
@@ -333,10 +333,11 @@ def _build_duplicate_widget_message(
     return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
 
 
-def _get_widget_id(
+def _compute_widget_id(
     element_type: str, element_proto: WidgetProto, user_key: Optional[str] = None
 ) -> str:
-    """Generate a widget id for the given widget.
+    """Compute the widget id for the given widget. This id is stable: a given
+    set of inputs to this function will always produce the same widget id output.
 
     The widget id includes the user_key so widgets with identical arguments can
     use it to be distinct.
