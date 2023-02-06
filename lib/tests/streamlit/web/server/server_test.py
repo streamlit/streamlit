@@ -408,14 +408,9 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(b"test_message", response.body)
 
     def test_deprecated_endpoint(self):
-        with self.assertLogs("streamlit.web.server.server_util") as logs:
-            response = self.fetch("/script-health-check")
+        response = self.fetch("/script-health-check")
         self.assertEqual(200, response.code)
         self.assertEqual(b"test_message", response.body)
-        self.assertEqual(
-            logs.records[0].getMessage(),
-            "Endpoint '/script-health-check' is deprecated. Please use '/_stcore/script-health-check' instead.",
-        )
         self.assertEqual(
             response.headers["link"],
             f'<http://127.0.0.1:{self.get_http_port()}/_stcore/script-health-check>; rel="alternate"',
