@@ -387,24 +387,8 @@ function MainMenu(props: Props): ReactElement {
       disabled: isServerDisconnected,
       label: "Save a snapshot",
     },
-    ...(!props.menuItems?.hideGetHelp && {
-      community: {
-        onClick: getOpenInWindowCallback(
-          props.menuItems?.getHelpUrl || COMMUNITY_URL
-        ),
-        label: "Get help",
-      },
-    }),
-    ...(!props.menuItems?.hideReportABug && {
-      report: {
-        onClick: getOpenInWindowCallback(
-          props.menuItems?.reportABugUrl || BUG_URL
-        ),
-        label: "Report a bug",
-      },
-    }),
     settings: { onClick: props.settingsCallback, label: "Settings" },
-    about: { onClick: props.aboutCallback, label: "About" },
+    about: { onClick: props.aboutCallback, label: "About & help" },
   }
 
   const coreDevMenuItems = {
@@ -468,8 +452,6 @@ function MainMenu(props: Props): ReactElement {
     coreMenuItems.print,
     coreMenuItems.recordScreencast,
     coreMenuItems.DIVIDER,
-    coreMenuItems.report,
-    coreMenuItems.community,
     ...(shouldShowHostMenu ? hostMenuItems : [coreMenuItems.DIVIDER]),
     coreMenuItems.about,
   ]

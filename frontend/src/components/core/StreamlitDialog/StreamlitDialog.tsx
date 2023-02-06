@@ -30,7 +30,12 @@ import {
 } from "src/components/core/StreamlitDialog/ScriptChangedDialog"
 import { IException } from "src/autogen/proto"
 import { SessionInfo } from "src/lib/SessionInfo"
-import { STREAMLIT_HOME_URL } from "src/urls"
+import {
+  BUG_URL,
+  COMMUNITY_URL,
+  ONLINE_DOCS_URL,
+  STREAMLIT_HOME_URL,
+} from "src/urls"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
@@ -158,21 +163,30 @@ function aboutDialog(props: AboutProps): ReactElement {
   }
   return (
     <Modal isOpen onClose={props.onClose}>
-      <ModalHeader>Powered by</ModalHeader>
+      <ModalHeader>About</ModalHeader>
       <ModalBody>
         <div>
-          {/* Show our version string only if SessionInfo has been created. If Streamlit
-          hasn't yet connected to the server, the SessionInfo singleton will be null. */}
-          {SessionInfo.isSet() && (
-            <>
-              Streamlit v{SessionInfo.current.streamlitVersion}
-              <br />
-            </>
-          )}
-          <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
-          <br />
-          Copyright {new Date().getFullYear()} Snowflake Inc. All rights
-          reserved.
+          <p>
+            {/* Show our version string only if SessionInfo has been created. If Streamlit
+            hasn't yet connected to the server, the SessionInfo singleton will be null. */}
+            {SessionInfo.isSet() && (
+              <>
+                Streamlit v{SessionInfo.current.streamlitVersion}
+                <br />
+              </>
+            )}
+            <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
+            <br />
+            Copyright {new Date().getFullYear()} Snowflake Inc. All rights
+            reserved.
+          </p>
+          <p>
+            <a href={ONLINE_DOCS_URL}>Documentation</a>
+            {" - "}
+            <a href={COMMUNITY_URL}>Forum</a>
+            {" - "}
+            <a href={BUG_URL}>Report a bug</a>
+          </p>
         </div>
       </ModalBody>
       <ModalFooter>
