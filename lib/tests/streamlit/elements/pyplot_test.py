@@ -23,6 +23,7 @@ import numpy as np
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements import image
 from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -89,3 +90,17 @@ class PyplotTest(DeltaGeneratorTestCase):
                 fig_clf.assert_called_once()
             else:
                 fig_clf.assert_not_called()
+
+    @parameterized.expand([(True, image.ORIGINAL_WIDTH), (False, image.COLUMN_WIDTH)])
+    def test_st_pyplot_use_container_width(
+        self, use_container_width: bool, image_width: int
+    ):
+        """st.pyplot should set image width."""
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+        ax1.hist(np.random.normal(1, 1, size=100), bins=20)
+
+        st.pyplot(fig, use_container_width=use_container_width)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.imgs.width, image_width)

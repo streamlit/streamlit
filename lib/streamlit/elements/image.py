@@ -62,6 +62,15 @@ Channels: TypeAlias = Literal["RGB", "BGR"]
 ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
+"""
+Special values that are recognized by the frontend and allow us to change the
+behavior of the displayed image.
+For details, see: `width` parameter in `marshall_images` method
+"""
+ORIGINAL_WIDTH = -1
+COLUMN_WIDTH = -2
+AUTO_WIDTH = -3
+
 
 class ImageMixin:
     @gather_metrics("image")
@@ -431,9 +440,9 @@ def marshall_images(
     width
         The desired width of the image or images. This parameter will be
         passed to the frontend, where it has some special meanings:
-        -1: "OriginalWidth" (display the image at its original width)
-        -2: "ColumnWidth" (display the image at the width of the column it's in)
-        -3: "AutoWidth" (display the image at its original width, unless it
+        -1: "ORIGINAL_WIDTH" (display the image at its original width)
+        -2: "COLUMN_WIDTH" (display the image at the width of the column it's in)
+        -3: "AUTO_WIDTH" (display the image at its original width, unless it
             would exceed the width of its column in which case clamp it to
             its column width).
     proto_imgs
