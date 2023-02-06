@@ -162,6 +162,7 @@ function aboutDialog(props: AboutProps): ReactElement {
       </Modal>
     )
   }
+  const anchorSeparator = " - "
   return (
     <Modal isOpen onClose={props.onClose}>
       <ModalHeader>About</ModalHeader>
@@ -183,9 +184,9 @@ function aboutDialog(props: AboutProps): ReactElement {
           </p>
           <p>
             <a href={ONLINE_DOCS_URL}>Documentation</a>
-            {" - "}
+            {anchorSeparator}
             <a href={COMMUNITY_URL}>Forum</a>
-            {" - "}
+            {anchorSeparator}
             <a href={BUG_URL}>Report a bug</a>
           </p>
         </StyledAnchorsContent>
