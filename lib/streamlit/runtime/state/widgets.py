@@ -200,7 +200,7 @@ def register_widget(
     return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
 
 
-def user_key_from_widget_id(wid: str) -> Optional[str]:
+def user_key_from_widget_id(widget_id: str) -> Optional[str]:
     """Return the user key portion of a widget id, or None if the id does not
     have a user key.
 
@@ -208,7 +208,7 @@ def user_key_from_widget_id(wid: str) -> Optional[str]:
     "None" as a key, but we can't avoid this kind of problem while storing the
     string representation of the no-user-key sentinel as part of the widget id.
     """
-    user_key = wid.split("-", maxsplit=2)[-1]
+    user_key = widget_id.split("-", maxsplit=2)[-1]
     user_key = None if user_key == "None" else user_key
     return user_key
 

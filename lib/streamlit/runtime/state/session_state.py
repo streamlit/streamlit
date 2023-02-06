@@ -674,11 +674,12 @@ class SessionState:
 
 
 def _is_widget_id(key: str) -> bool:
+    """True if the given session_state key has the structure of a widget ID."""
     return key.startswith(GENERATED_WIDGET_KEY_PREFIX)
 
 
-# TODO: It would be better to make key vs not visible through more principled means
 def _is_keyed_widget_id(key: str) -> bool:
+    """True if the given session_state key has the structure of a widget ID with a user_key."""
     return _is_widget_id(key) and not key.endswith("-None")
 
 
