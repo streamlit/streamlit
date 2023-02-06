@@ -204,11 +204,9 @@ class WStates(MutableMapping[str, Any]):
         """Set a widget's metadata, overwriting any existing metadata it has."""
         self.widget_metadata[widget_meta.id] = widget_meta
 
-    def cull_nonexistent(self, widget_ids: set[str]) -> None:
-        """Remove any widgets whose ids aren't present in a set of provided
-        widget_ids.
-        """
-        self.states = {k: v for k, v in self.states.items() if k in widget_ids}
+    def remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
+        """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
+        self.states = {k: v for k, v in self.states.items() if k in active_widget_ids}
 
     def get_serialized(self, k: str) -> WidgetStateProto | None:
         """Get the serialized value of the widget with the given id.
@@ -575,11 +573,11 @@ class SessionState:
         ----------
         widget_ids_this_run: set[str]
             The IDs of the widgets that were accessed during the script
-            run. Any widget whose ID does *not* appear in this set will
-            be culled.
+            run. Any widget state whose ID does *not* appear in this set
+            is considered "stale" and will be removed.
         """
         self._reset_triggers()
-        self._cull_nonexistent(widget_ids_this_run)
+        self._remove_stale_widgets(widget_ids_this_run)
 
     def _reset_triggers(self) -> None:
         """Set all trigger values in our state dictionary to False."""
@@ -595,15 +593,16 @@ class SessionState:
                 if metadata.value_type == "trigger_value":
                     self._old_state[state_id] = False
 
-    def _cull_nonexistent(self, widget_ids: set[str]) -> None:
-        self._new_widget_state.cull_nonexistent(widget_ids)
+    def _remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
+        """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
+        self._new_widget_state.remove_stale_widgets(active_widget_ids)
 
         # Remove entries from _old_state corresponding to
         # widgets not in widget_ids.
         self._old_state = {
             k: v
             for k, v in self._old_state.items()
-            if (k in widget_ids or not _is_widget_id(k))
+            if (k in active_widget_ids or not _is_widget_id(k))
         }
 
     def _set_widget_metadata(self, widget_metadata: WidgetMetadata[Any]) -> None:
