@@ -123,9 +123,14 @@ interface AboutProps {
   onClose: PlainEventHandler
 
   aboutSectionMd?: string | null
+  getHelpUrl?: string | null
+  reportABugUrl?: string | null
 }
 
-function StreamlitInfoBox(): ReactElement {
+interface StreamlitInfo {
+  reportABugUrl?: string | null
+}
+function StreamlitInfoBox(props: StreamlitInfo): ReactElement {
   return (
     <StyledAnchorsContent>
       <p>
@@ -147,7 +152,7 @@ function StreamlitInfoBox(): ReactElement {
         {ANCHOR_SEPARATOR}
         <a href={COMMUNITY_URL}>Forum</a>
         {ANCHOR_SEPARATOR}
-        <a href={BUG_URL}>Report a bug</a>
+        <a href={props?.reportABugUrl || BUG_URL}>Report a bug</a>
       </p>
     </StyledAnchorsContent>
   )
@@ -173,13 +178,13 @@ function aboutDialog(props: AboutProps): ReactElement {
               style={markdownStyle}
             />
             <StyledAnchorsContent>
-              <a href={ONLINE_DOCS_URL}>Get help</a>
+              <a href={props?.getHelpUrl || COMMUNITY_URL}>Get help</a>
               {ANCHOR_SEPARATOR}
               <a href={COMMUNITY_URL}>Report a bug with this app</a>
             </StyledAnchorsContent>
           </StyledAboutInfo>
           <hr />
-          <StreamlitInfoBox />
+          <StreamlitInfoBox reportABugUrl={props.reportABugUrl} />
         </ModalBody>
         <ModalFooter>
           <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
@@ -193,7 +198,7 @@ function aboutDialog(props: AboutProps): ReactElement {
     <Modal isOpen onClose={props.onClose}>
       <ModalHeader>About</ModalHeader>
       <ModalBody>
-        <StreamlitInfoBox />
+        <StreamlitInfoBox reportABugUrl={props.reportABugUrl} />
       </ModalBody>
       <ModalFooter>
         <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>

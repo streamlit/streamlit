@@ -1288,6 +1288,8 @@ export class App extends PureComponent<Props, State> {
       type: DialogType.ABOUT,
       onClose: this.closeDialog,
       aboutSectionMd: menuItems?.aboutSectionMd,
+      getHelpUrl: menuItems?.getHelpUrl,
+      reportABugUrl: menuItems?.reportABugUrl,
     }
     this.openDialog(newDialog)
   }
