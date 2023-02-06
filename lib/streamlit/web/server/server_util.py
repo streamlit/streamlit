@@ -20,9 +20,6 @@ from urllib.parse import urljoin
 import tornado.web
 
 from streamlit import config, net_util, url_util
-from streamlit.logger import get_logger
-
-_LOGGER = get_logger(__name__)
 
 
 def is_url_from_allowed_origins(url: str) -> bool:
@@ -121,16 +118,8 @@ def emit_endpoint_deprecation_notice(
     handler: tornado.web.RequestHandler, new_path: str
 ) -> None:
     """
-    Emits the warning about deprecation of HTTP endpoint both in the HTTP header
-    and in the application logs.
+    Emits the warning about deprecation of HTTP endpoint in the HTTP header.
     """
-    # Use repr function to avoid log injection attack.
-    # See: https://codeql.github.com/codeql-query-help/python/py-log-injection/
-    _LOGGER.warning(
-        f"Endpoint %s is deprecated. Please use %s instead.",
-        repr(str(handler.request.uri)),
-        repr(str(new_path)),
-    )
     handler.set_header("Deprecation", True)
     new_url = urljoin(f"{handler.request.protocol}://{handler.request.host}", new_path)
     handler.set_header("Link", f'<{new_url}>; rel="alternate"')
