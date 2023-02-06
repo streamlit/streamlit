@@ -91,7 +91,7 @@ class PyplotTest(DeltaGeneratorTestCase):
             else:
                 fig_clf.assert_not_called()
 
-    @parameterized.expand([(True, image.ORIGINAL_WIDTH), (False, image.COLUMN_WIDTH)])
+    @parameterized.expand([(True, image.COLUMN_WIDTH), (False, image.ORIGINAL_WIDTH)])
     def test_st_pyplot_use_container_width(
         self, use_container_width: bool, image_width: int
     ):
