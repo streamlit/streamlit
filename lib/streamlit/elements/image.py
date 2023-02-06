@@ -157,11 +157,11 @@ class ImageMixin:
         """
 
         if use_column_width == "auto" or (use_column_width is None and width is None):
-            width = -3
+            width = WidthBehaviour.AUTO
         elif use_column_width == "always" or use_column_width == True:
-            width = -2
+            width = WidthBehaviour.COLUMN
         elif width is None:
-            width = -1
+            width = WidthBehaviour.ORIGINAL
         elif width <= 0:
             raise StreamlitAPIException("Image width must be positive.")
 
