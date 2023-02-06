@@ -47,6 +47,7 @@ import {
   StyledCommandLine,
   StyledDeployErrorContent,
   StyledAboutInfo,
+  StyledAnchorsContent,
 } from "./styled-components"
 
 type PlainEventHandler = () => void
@@ -165,7 +166,7 @@ function aboutDialog(props: AboutProps): ReactElement {
     <Modal isOpen onClose={props.onClose}>
       <ModalHeader>About</ModalHeader>
       <ModalBody>
-        <div>
+        <StyledAnchorsContent>
           <p>
             {/* Show our version string only if SessionInfo has been created. If Streamlit
             hasn't yet connected to the server, the SessionInfo singleton will be null. */}
@@ -187,7 +188,7 @@ function aboutDialog(props: AboutProps): ReactElement {
             {" - "}
             <a href={BUG_URL}>Report a bug</a>
           </p>
-        </div>
+        </StyledAnchorsContent>
       </ModalBody>
       <ModalFooter>
         <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
