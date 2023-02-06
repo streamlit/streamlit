@@ -25,6 +25,8 @@ from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorage,
     CacheStorageContext,
+    CacheStorageError,
+    CacheStorageKeyNotFoundError,
 )
 
 _LOGGER = get_logger(__name__)
@@ -64,7 +66,7 @@ class OpenSourceCacheStorage(CacheStorage):
         try:
             entry_bytes = self._read_from_mem_cache(key)
 
-        except CacheKeyNotFoundError as e:
+        except CacheStorageKeyNotFoundError as e:
             if self.persist == "disk":
                 entry_bytes = self._read_from_disk_cache(key)
                 self._write_to_mem_cache(key, entry_bytes)
@@ -101,7 +103,10 @@ class OpenSourceCacheStorage(CacheStorage):
 
     def get_stats(self) -> list[int]:
         """Returns a list of stats in bytes for the cache storage per item"""
-        pass
+        return [1, 2, 3]
+
+    def close(self) -> None:
+        """Closes the cache storage"""
 
     def _read_from_disk_cache(self, key: str) -> bytes:
         path = self._get_file_path(key)
@@ -113,10 +118,10 @@ class OpenSourceCacheStorage(CacheStorage):
                 # so we can avoid having to repickle it when writing to the mem_cache
                 return bytes(value)
         except FileNotFoundError:
-            raise CacheKeyNotFoundError("Key not found in disk cache")
+            raise CacheStorageKeyNotFoundError("Key not found in disk cache")
         except Exception as ex:
             _LOGGER.error(ex)
-            raise CacheError("Unable to read from cache") from ex
+            raise CacheStorageError("Unable to read from cache") from ex
 
     def _read_from_mem_cache(self, key: str) -> bytes:
         with self._mem_cache_lock:
@@ -127,9 +132,7 @@ class OpenSourceCacheStorage(CacheStorage):
 
             else:
                 _LOGGER.debug("Memory cache MISS: %s", key)
-                # TODO: [Karen] raise a custom exception related to this
-                #  specific storage
-                raise Exception("Key not found in mem cache")
+                raise CacheStorageKeyNotFoundError("Key not found in mem cache")
 
     def _write_to_disk_cache(self, key: str, pickled_value: bytes) -> None:
         path = self._get_file_path(key)
@@ -144,7 +147,7 @@ class OpenSourceCacheStorage(CacheStorage):
             except (FileNotFoundError, IOError, OSError):
                 # If we can't remove the file, it's not a big deal.
                 pass
-            raise CacheError("Unable to write to cache") from e
+            raise CacheStorageError("Unable to write to cache") from e
 
     def _write_to_mem_cache(self, key: str, entry_bytes: bytes) -> None:
         with self._mem_cache_lock:
@@ -175,5 +178,6 @@ class OpenSourceCacheStorage(CacheStorage):
     def _get_file_path(self, value_key: str) -> str:
         """Return the path of the disk cache file for the given value."""
         return get_streamlit_file_path(
-            _CACHE_DIR_NAME, f"{self.key}-{value_key}.{_CACHED_FILE_EXTENSION}"
+            _CACHE_DIR_NAME,
+            f"{self.function_key}-{value_key}.{_CACHED_FILE_EXTENSION}",
         )

@@ -20,6 +20,14 @@ from dataclasses import dataclass
 from typing_extensions import ClassVar, Literal, Protocol
 
 
+class CacheStorageError(Exception):
+    """Base exception raised by the cache storage"""
+
+
+class CacheStorageKeyNotFoundError(CacheStorageError):
+    """Raised when the key is not found in the cache storage"""
+
+
 @dataclass(frozen=True)
 class CacheStorageContext:
     """Context passed to the cache storage"""
