@@ -36,6 +36,7 @@ const { GitStates } = GitInfo
 
 const getProps = (extend?: Partial<Props>): Props => ({
   aboutCallback: jest.fn(),
+  embedCallback: jest.fn(),
   printCallback: jest.fn(),
   clearCacheCallback: jest.fn(),
   isServerConnected: true,
@@ -104,6 +105,7 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
+      "How to embed this app?",
       "Report a bug",
       "Get help",
       "View app source",
@@ -147,6 +149,7 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
+      "How to embed this app?",
       "Report a bug",
       "Get help",
       "About",
@@ -189,6 +192,7 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
+      "How to embed this app?",
       "Report a bug",
       "Get help",
       "About",
@@ -354,6 +358,7 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
+      "How to embed this app?",
       "About",
     ])
   })
@@ -383,6 +388,7 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
+      "How to embed this app?",
       "Get help",
       "About",
     ])
@@ -416,6 +422,7 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
+      "How to embed this app?",
       "Report a bug",
       "Get help",
       "About",

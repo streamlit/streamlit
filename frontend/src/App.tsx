@@ -52,6 +52,7 @@ import {
   getElementWidgetID,
   generateUID,
   getEmbeddingIdClassName,
+  getEmbedURL,
 } from "src/lib/utils"
 import { BaseUriParts } from "src/lib/UriUtil"
 import {
@@ -1293,6 +1294,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Displays the correct code to embed the app somewhere else
+   */
+  embedCallback = (): void => {
+    const newDialog: DialogProps = {
+      type: DialogType.EMBED,
+      onClose: this.closeDialog,
+      embedURL: getEmbedURL(),
+    }
+    this.openDialog(newDialog)
+  }
+
+  /**
    * Prints the app, if the app is in IFrame
    * it prints the content of the IFrame.
    * Before printing this function ensures the app has fully loaded,
@@ -1464,6 +1477,7 @@ export class App extends PureComponent<Props, State> {
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}
                 aboutCallback={this.aboutCallback}
+                embedCallback={this.embedCallback}
                 printCallback={this.printCallback}
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}

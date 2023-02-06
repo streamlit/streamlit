@@ -32,6 +32,8 @@ import { IException } from "src/autogen/proto"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { STREAMLIT_HOME_URL } from "src/urls"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+import { StyledPre } from "src/components/elements/CodeBlock/styled-components"
+import CopyButton from "src/components/elements/CodeBlock/CopyButton"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
@@ -42,6 +44,7 @@ import {
   StyledCommandLine,
   StyledDeployErrorContent,
   StyledAboutInfo,
+  StyledCopyButtonInEmbedModalContainer,
 } from "./styled-components"
 
 type PlainEventHandler = () => void
@@ -60,6 +63,7 @@ interface ThemeCreatorProps extends ThemeCreatorDialogProps {
 
 export type DialogProps =
   | AboutProps
+  | EmbedProps
   | ClearCacheProps
   | RerunScriptProps
   | SettingsProps
@@ -70,6 +74,7 @@ export type DialogProps =
   | DeployErrorProps
 
 export enum DialogType {
+  EMBED = "embed",
   ABOUT = "about",
   CLEAR_CACHE = "clearCache",
   RERUN_SCRIPT = "rerunScript",
@@ -83,6 +88,8 @@ export enum DialogType {
 
 export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
   switch (dialogProps.type) {
+    case DialogType.EMBED:
+      return embedDialog(dialogProps)
     case DialogType.ABOUT:
       return aboutDialog(dialogProps)
     case DialogType.CLEAR_CACHE:
@@ -106,6 +113,69 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
     default:
       return typeNotRecognizedDialog(dialogProps)
   }
+}
+
+interface EmbedProps {
+  type: DialogType.EMBED
+
+  /** Callback to close the dialog */
+  onClose: PlainEventHandler
+
+  embedURL: string
+}
+
+/**  */
+function embedDialog(props: EmbedProps): ReactElement {
+  const markdownStyle: CSSProperties = {
+    overflowY: "auto",
+    overflowX: "hidden",
+    maxHeight: "35vh",
+  }
+
+  const initialMessage =
+    "To embed this app, please place the following HTML snippet somewhere on your website:"
+
+  const codeText = `<iframe  \n \t width="100%" \n \t height="500px" \n \t frameBorder="0" \n \t src="${props.embedURL}" \n ></iframe>`
+
+  // Markdown New line is 2 spaces + \n
+  const newLineMarkdown = "  \n"
+  const customizationOptionsMd = `${
+    "" +
+    "There are multiple options to customize embed (they should be placed as embed query params):"
+  }${newLineMarkdown}* \`?embed=true&embed_options=show_colored_line\` makes the colored bar at the top disappear.${newLineMarkdown}* \`?embed=true&embed_options=show_toolbar\` makes the toolbar disappear.${newLineMarkdown}* \`?embed=true&embed_options=show_padding\` removes the extra padding at the top and bottom of the app.${newLineMarkdown}* \`?embed=true&embed_options=disable_scrolling\` disables scrolling.${newLineMarkdown}* \`?embed=true&embed_options=show_footer\` removes "Made with Streamlit" footer.${newLineMarkdown}${newLineMarkdown}Embed params can be merged in the following way:${newLineMarkdown}\`?embed=true&embed_options=show_colored_bar&embed_options=show_toolbar\`.${newLineMarkdown}Param \`?embed=true\` will always override other options, so do not use it when trying to customize embed params.${newLineMarkdown}`
+
+  return (
+    <Modal isOpen onClose={props.onClose}>
+      <ModalHeader>How to embed this app?</ModalHeader>
+      <ModalBody>
+        {initialMessage}
+        <StyledCopyButtonInEmbedModalContainer>
+          <CopyButton
+            alwaysVisible={true}
+            text={codeText}
+            onClick={() => {
+              navigator.clipboard.writeText(codeText).then(r => {
+                return r
+              })
+            }}
+          />
+        </StyledCopyButtonInEmbedModalContainer>
+
+        <StyledPre>{codeText}</StyledPre>
+
+        <StreamlitMarkdown
+          source={customizationOptionsMd}
+          allowHTML={false}
+          style={markdownStyle}
+        />
+      </ModalBody>
+      <ModalFooter>
+        <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
+          Close
+        </ModalButton>
+      </ModalFooter>
+    </Modal>
+  )
 }
 
 interface AboutProps {

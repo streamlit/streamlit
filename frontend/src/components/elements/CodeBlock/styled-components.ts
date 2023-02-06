@@ -95,6 +95,20 @@ export const StyledPre = styled.pre(({ theme }) => ({
   },
 }))
 
+export const StyledCopyButtonAlwaysVisible = styled.button(({ theme }) => ({
+  opacity: 1,
+  height: "2.5rem",
+  padding: 0,
+  width: "2.5rem",
+  transition: "opacity 300ms 150ms, transform 300ms 150ms",
+  border: "none",
+  backgroundColor: theme.colors.transparent,
+  color: theme.colors.fadedText60,
+  borderRadius: theme.radii.xl,
+  transform: "scale(1)",
+  outline: "none !important",
+}))
+
 export const StyledCopyButton = styled.button(({ theme }) => ({
   opacity: 0,
   height: "2.5rem",

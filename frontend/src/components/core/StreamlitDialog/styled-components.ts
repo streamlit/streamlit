@@ -145,3 +145,20 @@ export const StyledAboutInfo = styled.div(() => ({
   padding: "0 0 1rem 0",
   overflowY: "scroll",
 }))
+
+export const StyledCopyButtonInEmbedModalContainer = styled.div(
+  ({ theme }) => ({
+    padding: `${theme.spacing.sm} ${theme.spacing.sm} 0 0`,
+    top: 125,
+    right: 15,
+    position: "absolute",
+    width: "2.75rem",
+    height: "100px",
+    opacity: 1,
+    transform: "scale(1) !important",
+    outline: "none !important",
+    color: theme.colors.bodyText,
+    transition: "none !important",
+    zIndex: theme.zIndices.balloons * 1000,
+  })
+)

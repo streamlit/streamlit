@@ -314,3 +314,14 @@ export function generateUID(): string {
 export function getEmbeddingIdClassName(embeddingId: string): string {
   return `stAppEmbeddingId-${embeddingId}`
 }
+
+/**
+ * Returns embed URL of this Streamlit app
+ */
+export function getEmbedURL(): string {
+  let windowToGetURLFrom: Window = window
+  if (isInChildFrame()) {
+    windowToGetURLFrom = window.parent
+  }
+  return `${windowToGetURLFrom.location.href.split("?")[0]}?embed=true`
+}

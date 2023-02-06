@@ -93,6 +93,9 @@ export interface Props {
   /** Show the About dialog. */
   aboutCallback: () => void
 
+  /** Display the correct code to embed the app somewhere else */
+  embedCallback: () => void
+
   /** Open the Print Dialog, if the app is in iFrame first open a new tab with app URL */
   printCallback: () => void
 
@@ -379,6 +382,7 @@ function MainMenu(props: Props): ReactElement {
       shortcut: "r",
     },
     print: { onClick: props.printCallback, label: "Print" },
+    embed: { onClick: props.embedCallback, label: "How to embed this app?" },
     recordScreencast: {
       onClick: props.screencastCallback,
       label: SCREENCAST_LABEL[props.screenCastState] || "Record a screencast",
@@ -489,6 +493,7 @@ function MainMenu(props: Props): ReactElement {
     coreMenuItems.DIVIDER,
     coreMenuItems.print,
     coreMenuItems.recordScreencast,
+    coreMenuItems.embed,
     coreMenuItems.DIVIDER,
     coreMenuItems.report,
     coreMenuItems.community,

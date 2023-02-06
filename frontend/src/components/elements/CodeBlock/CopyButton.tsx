@@ -17,10 +17,15 @@
 import Clipboard from "clipboard"
 import React, { PureComponent, ReactNode, createRef } from "react"
 import { Copy as CopyIcon } from "react-feather"
-import { StyledCopyButton } from "./styled-components"
+import {
+  StyledCopyButton,
+  StyledCopyButtonAlwaysVisible,
+} from "./styled-components"
 
 interface Props {
   text: string
+  alwaysVisible?: boolean
+  onClick?: () => void
 }
 
 class CopyButton extends PureComponent<Props> {
@@ -43,10 +48,15 @@ class CopyButton extends PureComponent<Props> {
   }
 
   public render(): ReactNode {
+    const { alwaysVisible } = this.props
+    const SelectedStyledCopyButton = alwaysVisible
+      ? StyledCopyButtonAlwaysVisible
+      : StyledCopyButton
     return (
-      <StyledCopyButton
+      <SelectedStyledCopyButton
         title="Copy to clipboard"
         ref={this.button}
+        onClick={this.props.onClick}
         data-clipboard-text={this.props.text}
         style={{
           top: 0,
@@ -54,7 +64,7 @@ class CopyButton extends PureComponent<Props> {
         }}
       >
         <CopyIcon size="16" />
-      </StyledCopyButton>
+      </SelectedStyledCopyButton>
     )
   }
 }
