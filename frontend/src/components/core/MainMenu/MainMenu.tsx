@@ -46,8 +46,6 @@ import {
 import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
 import { MetricsManager } from "src/lib/MetricsManager"
 import {
-  BUG_URL,
-  COMMUNITY_URL,
   DEPLOY_URL,
   STREAMLIT_CLOUD_URL,
 } from "src/urls"
