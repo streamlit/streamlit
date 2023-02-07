@@ -22,7 +22,7 @@ import pytest
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import SafeSessionState, SessionState, SessionStateProxy
-from streamlit.runtime.state.util import (
+from streamlit.runtime.state.common import (
     GENERATED_WIDGET_ID_PREFIX,
     require_valid_user_key,
 )

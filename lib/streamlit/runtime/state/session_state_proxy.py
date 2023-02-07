@@ -19,9 +19,9 @@ from typing_extensions import Final
 from streamlit import logger as _logger
 from streamlit import runtime
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.state.common import require_valid_user_key
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
-from streamlit.runtime.state.util import require_valid_user_key
 from streamlit.type_util import Key
 
 LOGGER: Final = _logger.get_logger(__name__)

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Functions and data structures shared by session_state.py and widgets.py"""
+
 import hashlib
 from typing import Optional, Union
 

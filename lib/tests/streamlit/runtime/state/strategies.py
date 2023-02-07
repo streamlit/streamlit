@@ -14,8 +14,8 @@
 
 from hypothesis import strategies as hst
 
+from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
-from streamlit.runtime.state.util import GENERATED_WIDGET_ID_PREFIX
 
 ASCII = list("abcdefghijklmnopqrstuvwxyz0123456789_-")
 

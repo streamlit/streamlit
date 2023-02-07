@@ -30,13 +30,13 @@ from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
+from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX
 from streamlit.runtime.state.session_state import (
     Serialized,
     Value,
     WidgetMetadata,
     WStates,
 )
-from streamlit.runtime.state.util import GENERATED_WIDGET_ID_PREFIX
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.testing.script_interactions import InteractiveScriptTests
 from tests.delta_generator_test_case import DeltaGeneratorTestCase

@@ -20,6 +20,11 @@ from typing_extensions import Final, TypeAlias
 
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime.state.common import (
+    WidgetProto,
+    compute_widget_id,
+    user_key_from_widget_id,
+)
 from streamlit.runtime.state.session_state import (
     RegisterWidgetResult,
     T,
@@ -29,11 +34,6 @@ from streamlit.runtime.state.session_state import (
     WidgetKwargs,
     WidgetMetadata,
     WidgetSerializer,
-)
-from streamlit.runtime.state.util import (
-    WidgetProto,
-    compute_widget_id,
-    user_key_from_widget_id,
 )
 from streamlit.type_util import ValueFieldName
 
