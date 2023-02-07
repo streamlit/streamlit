@@ -30,7 +30,11 @@ export const StyledPre = styled.pre(({ theme }) => ({
   // The token can consist of many lines, e.g. a triple-quote string, so
   // we need to make sure that the color is not overwritten.
   ".comment.linenumber": {
-    color: theme.colors.bodyText,
+    color: theme.colors.fadedText40,
+    fontSize: theme.fontSizes.twoSm,
+
+    // Override the default token's min-width, to ensure it fits 3-digit lines
+    minWidth: `${theme.spacing.threeXL} !important`,
   },
 
   ".token.comment, .token.prolog, .token.doctype, .token.cdata": {
