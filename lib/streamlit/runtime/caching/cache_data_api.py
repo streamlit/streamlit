@@ -17,9 +17,7 @@
 from __future__ import annotations
 
 import math
-import os
 import pickle
-import shutil
 import threading
 import types
 from datetime import timedelta
@@ -49,6 +47,13 @@ from streamlit.runtime.caching.cached_message_replay import (
     ElementMsgData,
     MsgData,
     MultiCacheResults,
+)
+from streamlit.runtime.caching.storage import CacheStorage, CacheStorageContext
+from streamlit.runtime.caching.storage.cache_storage import (
+    OpenSourceCacheStorageFactory,
+)
+from streamlit.runtime.caching.storage.cache_storage_protocol import (
+    CacheStorageKeyNotFoundError,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
@@ -161,6 +166,13 @@ class DataCaches(CacheStatsProvider):
                 max_entries,
                 ttl,
             )
+            cache_context = CacheStorageContext(
+                function_key=key,
+                ttl_seconds=ttl_seconds,
+                max_entries=max_entries,
+                persist=persist,
+            )
+            storage = OpenSourceCacheStorageFactory().create(cache_context)
             cache = DataCache(
                 key=key,
                 persist=persist,
@@ -168,20 +180,38 @@ class DataCaches(CacheStatsProvider):
                 ttl_seconds=ttl_seconds,
                 display_name=display_name,
                 allow_widgets=allow_widgets,
+                storage=storage,
             )
+            # TODO [Karen]: Since we override old function cache with new one, we should
+            # also think about connected storage resource deallocation.
             self._function_caches[key] = cache
             return cache
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
         with self._caches_lock:
-            self._function_caches = {}
-
+            # TODO: [Karen] We should call storage.clear_all() for each storage
             # TODO: Only delete disk cache for functions related to the user's
             #  current script.
-            cache_path = get_cache_path()
-            if os.path.isdir(cache_path):
-                shutil.rmtree(cache_path)
+
+            # TODO: [Karen] current implementation (without abstraction) just remove
+            #  cache folder from disk. IT is faster than removing key by key, but after
+            #  abstraction of storage it is impossible to remove cache folder from disk
+            #  directly from DataCaches.
+            #  One possible solution is to delegate that responsibility to
+            #  StorageFactory (so it will became Manager instead of just Factory)
+
+            # TODO: [Karen] We should also think about call storage.close() to
+            #  release resources
+
+            for data_cache in self._function_caches.values():
+                data_cache.clear()
+            self._function_caches = {}
+
+            # self._function_caches = {}
+            # cache_path = get_cache_path()
+            # if os.path.isdir(cache_path):
+            #     shutil.rmtree(cache_path)
 
     def get_stats(self) -> list[CacheStat]:
         with self._caches_lock:
@@ -467,36 +497,34 @@ class DataCache(Cache):
         ttl_seconds: float,
         display_name: str,
         allow_widgets: bool = False,
+        storage: CacheStorage = None,
     ):
         super().__init__()
         self.key = key
         self.display_name = display_name
+        self.storage = storage
+        self.ttl_seconds = ttl_seconds
+        self.max_entries = max_entries
         self.persist = persist
-        self._mem_cache: TTLCache[str, bytes] = TTLCache(
-            maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
-        )
-        self._mem_cache_lock = threading.Lock()
+        # self._mem_cache: TTLCache[str, bytes] = TTLCache(
+        #     maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
+        # )
+        # self._mem_cache_lock = threading.Lock()
         self.allow_widgets = allow_widgets
 
-    @property
-    def max_entries(self) -> float:
-        return cast(float, self._mem_cache.maxsize)
-
-    @property
-    def ttl_seconds(self) -> float:
-        return cast(float, self._mem_cache.ttl)
+    # TODO [Karen] think about this max_entries live here or in the storage
 
     def get_stats(self) -> list[CacheStat]:
         stats: list[CacheStat] = []
-        with self._mem_cache_lock:
-            for item_key, item_value in self._mem_cache.items():
-                stats.append(
-                    CacheStat(
-                        category_name="st_cache_data",
-                        cache_name=self.display_name,
-                        byte_length=len(item_value),
-                    )
+
+        for item_byte_length in self.storage.get_stats():
+            stats.append(
+                CacheStat(
+                    category_name="st_cache_data",
+                    cache_name=self.display_name,
+                    byte_length=item_byte_length,
                 )
+            )
         return stats
 
     def read_result(self, key: str) -> CachedResult:
@@ -505,21 +533,16 @@ class DataCache(Cache):
         be unpickled.
         """
         try:
-            pickled_entry = self._read_from_mem_cache(key)
-
-        except CacheKeyNotFoundError as e:
-            if self.persist == "disk":
-                pickled_entry = self._read_from_disk_cache(key)
-                self._write_to_mem_cache(key, pickled_entry)
-            else:
-                raise e
+            pickled_entry = self.storage.get(key)
+        except CacheStorageKeyNotFoundError as e:
+            raise CacheKeyNotFoundError(str(e)) from e
 
         try:
             entry = pickle.loads(pickled_entry)
             if not isinstance(entry, MultiCacheResults):
                 # Loaded an old cache file format, remove it and let the caller
                 # rerun the function.
-                self._remove_from_disk_cache(key)
+                self.storage.delete(key)
                 raise CacheKeyNotFoundError()
 
             ctx = get_script_run_ctx()
@@ -560,13 +583,11 @@ class DataCache(Cache):
         # Try to find in mem cache, falling back to disk, then falling back
         # to a new result instance
         try:
-            multi_cache_results = self._read_multi_results_from_mem_cache(key)
+            multi_cache_results = self._read_multi_results_from_storage(key)
         except (CacheKeyNotFoundError, pickle.UnpicklingError):
-            if self.persist == "disk":
-                try:
-                    multi_cache_results = self._read_multi_results_from_disk_cache(key)
-                except CacheKeyNotFoundError:
-                    pass
+            # TODO: [Karen] move pickle.UnpicklingError to
+            #  _read_multi_results_from_storage
+            pass
 
         if multi_cache_results is None:
             multi_cache_results = MultiCacheResults(widget_ids=widgets, results={})
@@ -581,114 +602,56 @@ class DataCache(Cache):
         except (pickle.PicklingError, TypeError) as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
-        self._write_to_mem_cache(key, pickled_entry)
-        if self.persist == "disk":
-            self._write_to_disk_cache(key, pickled_entry)
+        self.storage.set(key, pickled_entry)
 
     def _clear(self) -> None:
-        with self._mem_cache_lock:
-            # We keep a lock for the entirety of the clear operation to avoid
-            # disk cache race conditions.
-            for key in self._mem_cache.keys():
-                self._remove_from_disk_cache(key)
+        self.storage.clear_all()
 
-            self._mem_cache.clear()
+    # def _read_from_mem_cache(self, key: str) -> bytes:
+    #     with self._mem_cache_lock:
+    #         if key in self._mem_cache:
+    #             entry = bytes(self._mem_cache[key])
+    #             _LOGGER.debug("Memory cache first stage HIT: %s", key)
+    #             return entry
+    #
+    #         else:
+    #             _LOGGER.debug("Memory cache MISS: %s", key)
+    #             raise CacheKeyNotFoundError("Key not found in mem cache")
 
-    def _read_from_mem_cache(self, key: str) -> bytes:
-        with self._mem_cache_lock:
-            if key in self._mem_cache:
-                entry = bytes(self._mem_cache[key])
-                _LOGGER.debug("Memory cache first stage HIT: %s", key)
-                return entry
+    # TOREMOVE!!!!
+    # def _read_multi_results_from_mem_cache(self, key: str) -> MultiCacheResults:
+    #     """Look up the results and ensure it has the right type.
+    #
+    #     Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
+    #     entry is malformed.
+    #     """
+    #     pickled = self._read_from_mem_cache(key)
+    #     maybe_results = pickle.loads(pickled)
+    #     if isinstance(maybe_results, MultiCacheResults):
+    #         return maybe_results
+    #     else:
+    #         with self._mem_cache_lock:
+    #             del self._mem_cache[key]
+    #         raise CacheKeyNotFoundError()
 
-            else:
-                _LOGGER.debug("Memory cache MISS: %s", key)
-                raise CacheKeyNotFoundError("Key not found in mem cache")
-
-    def _read_multi_results_from_mem_cache(self, key: str) -> MultiCacheResults:
-        """Look up the results and ensure it has the right type.
+    def _read_multi_results_from_storage(self, key: str) -> MultiCacheResults:
+        """Look up the results from storage and ensure it has the right type.
 
         Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
         entry is malformed.
         """
-        pickled = self._read_from_mem_cache(key)
+        try:
+            pickled = self.storage.get(key)
+        except CacheStorageKeyNotFoundError as e:
+            raise CacheKeyNotFoundError(str(e)) from e
+
         maybe_results = pickle.loads(pickled)
+
         if isinstance(maybe_results, MultiCacheResults):
             return maybe_results
         else:
-            with self._mem_cache_lock:
-                del self._mem_cache[key]
+            self.storage.delete(key)
             raise CacheKeyNotFoundError()
-
-    def _read_from_disk_cache(self, key: str) -> bytes:
-        path = self._get_file_path(key)
-        try:
-            with streamlit_read(path, binary=True) as input:
-                value = input.read()
-                _LOGGER.debug("Disk cache first stage HIT: %s", key)
-                # The value is a pickled CachedResult, but we don't unpickle it yet
-                # so we can avoid having to repickle it when writing to the mem_cache
-                return bytes(value)
-        except FileNotFoundError:
-            raise CacheKeyNotFoundError("Key not found in disk cache")
-        except Exception as ex:
-            _LOGGER.error(ex)
-            raise CacheError("Unable to read from cache") from ex
-
-    def _read_multi_results_from_disk_cache(self, key: str) -> MultiCacheResults:
-        """Look up the results from disk and ensure it has the right type.
-
-        Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
-        entry is the wrong type, which usually means it was written by another
-        version of streamlit.
-        """
-        pickled = self._read_from_disk_cache(key)
-        maybe_results = pickle.loads(pickled)
-        if isinstance(maybe_results, MultiCacheResults):
-            return maybe_results
-        else:
-            self._remove_from_disk_cache(key)
-            raise CacheKeyNotFoundError("Key not found in disk cache")
-
-    def _write_to_mem_cache(self, key: str, pickled_value: bytes) -> None:
-        with self._mem_cache_lock:
-            self._mem_cache[key] = pickled_value
-
-    def _write_to_disk_cache(self, key: str, pickled_value: bytes) -> None:
-        path = self._get_file_path(key)
-        try:
-            with streamlit_write(path, binary=True) as output:
-                output.write(pickled_value)
-        except util.Error as e:
-            _LOGGER.debug(e)
-            # Clean up file so we don't leave zero byte files.
-            try:
-                os.remove(path)
-            except (FileNotFoundError, IOError, OSError):
-                # If we can't remove the file, it's not a big deal.
-                pass
-            raise CacheError("Unable to write to cache") from e
-
-    def _remove_from_disk_cache(self, key: str) -> None:
-        """Delete a cache file from disk. If the file does not exist on disk,
-        return silently. If another exception occurs, log it. Does not throw.
-        """
-        path = self._get_file_path(key)
-        try:
-            os.remove(path)
-        except FileNotFoundError:
-            # The file is already removed.
-            pass
-        except Exception as ex:
-            _LOGGER.exception(
-                "Unable to remove a file from the disk cache", exc_info=ex
-            )
-
-    def _get_file_path(self, value_key: str) -> str:
-        """Return the path of the disk cache file for the given value."""
-        return get_streamlit_file_path(
-            _CACHE_DIR_NAME, f"{self.key}-{value_key}.{_CACHED_FILE_EXTENSION}"
-        )
 
 
 def get_cache_path() -> str:
