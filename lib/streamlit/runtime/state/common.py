@@ -15,7 +15,8 @@
 """Functions and data structures shared by session_state.py and widgets.py"""
 
 import hashlib
-from typing import Optional, Union
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, Generic, Optional, Tuple, TypeVar, Union
 
 from typing_extensions import Final, TypeAlias
 
@@ -37,6 +38,7 @@ from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
+from streamlit.type_util import ValueFieldName
 
 # Protobuf types for all widgets.
 WidgetProto: TypeAlias = Union[
@@ -60,6 +62,73 @@ WidgetProto: TypeAlias = Union[
 ]
 
 GENERATED_WIDGET_ID_PREFIX: Final = "$$GENERATED_WIDGET_ID"
+
+
+T = TypeVar("T")
+T_co = TypeVar("T_co", covariant=True)
+
+
+WidgetArgs: TypeAlias = Tuple[Any, ...]
+WidgetKwargs: TypeAlias = Dict[str, Any]
+WidgetCallback: TypeAlias = Callable[..., None]
+
+# A deserializer receives the value from whatever field is set on the
+# WidgetState proto, and returns a regular python value. A serializer
+# receives a regular python value, and returns something suitable for
+# a value field on WidgetState proto. They should be inverses.
+WidgetDeserializer: TypeAlias = Callable[[Any, str], T]
+WidgetSerializer: TypeAlias = Callable[[T], Any]
+
+
+@dataclass(frozen=True)
+class WidgetMetadata(Generic[T]):
+    """Metadata associated with a single widget. Immutable."""
+
+    id: str
+    deserializer: WidgetDeserializer[T] = field(repr=False)
+    serializer: WidgetSerializer[T] = field(repr=False)
+    value_type: ValueFieldName
+
+    # An optional user-code callback invoked when the widget's value changes.
+    # Widget callbacks are called at the start of a script run, before the
+    # body of the script is executed.
+    callback: WidgetCallback | None = None
+    callback_args: WidgetArgs | None = None
+    callback_kwargs: WidgetKwargs | None = None
+
+
+@dataclass(frozen=True)
+class RegisterWidgetResult(Generic[T_co]):
+    """Result returned by the `register_widget` family of functions/methods.
+
+    Should be usable by widget code to determine what value to return, and
+    whether to update the UI.
+
+    Parameters
+    ----------
+    value : T_co
+        The widget's current value, or, in cases where the true widget value
+        could not be determined, an appropriate fallback value.
+
+        This value should be returned by the widget call.
+    value_changed : bool
+        True if the widget's value is different from the value most recently
+        returned from the frontend.
+
+        Implies an update to the frontend is needed.
+    """
+
+    value: T_co
+    value_changed: bool
+
+    @classmethod
+    def failure(
+        cls, deserializer: WidgetDeserializer[T_co]
+    ) -> "RegisterWidgetResult[T_co]":
+        """The canonical way to construct a RegisterWidgetResult in cases
+        where the true widget value could not be determined.
+        """
+        return cls(value=deserializer(None, ""), value_changed=False)
 
 
 def compute_widget_id(

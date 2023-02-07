@@ -19,15 +19,10 @@ from dataclasses import dataclass, field, replace
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
-    Dict,
-    Generic,
     Iterator,
     KeysView,
     List,
     MutableMapping,
-    Tuple,
-    TypeVar,
     Union,
     cast,
 )
@@ -39,28 +34,16 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-from streamlit.runtime.state.common import is_keyed_widget_id, is_widget_id
+from streamlit.runtime.state.common import (
+    WidgetMetadata,
+    is_keyed_widget_id,
+    is_widget_id,
+)
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 from streamlit.type_util import ValueFieldName, is_array_value_field_name
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import SessionManager
-
-
-T = TypeVar("T")
-T_co = TypeVar("T_co", covariant=True)
-
-
-WidgetArgs: TypeAlias = Tuple[Any, ...]
-WidgetKwargs: TypeAlias = Dict[str, Any]
-WidgetCallback: TypeAlias = Callable[..., None]
-
-# A deserializer receives the value from whatever field is set on the
-# WidgetState proto, and returns a regular python value. A serializer
-# receives a regular python value, and returns something suitable for
-# a value field on WidgetState proto. They should be inverses.
-WidgetDeserializer: TypeAlias = Callable[[Any, str], T]
-WidgetSerializer: TypeAlias = Callable[[T], Any]
 
 
 STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
@@ -84,23 +67,6 @@ class Value:
 
 
 WState: TypeAlias = Union[Value, Serialized]
-
-
-@dataclass(frozen=True)
-class WidgetMetadata(Generic[T]):
-    """Metadata associated with a single widget. Immutable."""
-
-    id: str
-    deserializer: WidgetDeserializer[T] = field(repr=False)
-    serializer: WidgetSerializer[T] = field(repr=False)
-    value_type: ValueFieldName
-
-    # An optional user-code callback invoked when the widget's value changes.
-    # Widget callbacks are called at the start of a script run, before the
-    # body of the script is executed.
-    callback: WidgetCallback | None = None
-    callback_args: WidgetArgs | None = None
-    callback_kwargs: WidgetKwargs | None = None
 
 
 @dataclass
@@ -279,40 +245,6 @@ def _missing_key_error_message(key: str) -> str:
         f'st.session_state has no key "{key}". Did you forget to initialize it? '
         f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
     )
-
-
-@dataclass(frozen=True)
-class RegisterWidgetResult(Generic[T_co]):
-    """Result returned by the `register_widget` family of functions/methods.
-
-    Should be usable by widget code to determine what value to return, and
-    whether to update the UI.
-
-    Parameters
-    ----------
-    value : T_co
-        The widget's current value, or, in cases where the true widget value
-        could not be determined, an appropriate fallback value.
-
-        This value should be returned by the widget call.
-    value_changed : bool
-        True if the widget's value is different from the value most recently
-        returned from the frontend.
-
-        Implies an update to the frontend is needed.
-    """
-
-    value: T_co
-    value_changed: bool
-
-    @classmethod
-    def failure(
-        cls, deserializer: WidgetDeserializer[T_co]
-    ) -> "RegisterWidgetResult[T_co]":
-        """The canonical way to construct a RegisterWidgetResult in cases
-        where the true widget value could not be determined.
-        """
-        return cls(value=deserializer(None, ""), value_changed=False)
 
 
 @dataclass
