@@ -17,12 +17,8 @@ from typing import Any, Dict, List, Optional, Set
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-from streamlit.runtime.state.session_state import (
-    RegisterWidgetResult,
-    SessionState,
-    T,
-    WidgetMetadata,
-)
+from streamlit.runtime.state import SessionState
+from streamlit.runtime.state.common import RegisterWidgetResult, T, WidgetMetadata
 
 
 class SafeSessionState:

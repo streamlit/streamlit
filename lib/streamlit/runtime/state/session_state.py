@@ -35,6 +35,8 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.state.common import (
+    RegisterWidgetResult,
+    T,
     WidgetMetadata,
     is_keyed_widget_id,
     is_widget_id,

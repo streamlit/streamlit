@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Functions and data structures shared by session_state.py and widgets.py"""
+from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
