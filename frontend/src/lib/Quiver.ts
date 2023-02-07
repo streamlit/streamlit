@@ -50,6 +50,7 @@ export type DataType =
   | StructRow // interval
   | Dictionary // categorical
   | Struct // dict
+  | BigInt // period
 
 /**
  * A row-major grid of DataFrame index header values.
@@ -119,49 +120,19 @@ type IntervalType = `interval[${IntervalData}, ${IntervalClosed}]`
 
 // The frequency strings defined in pandas.
 // See: https://pandas.pydata.org/docs/user_guide/timeseries.html#dateoffset-objects
-type PandasOffsetType =
-  | "B"
-  | "C"
-  | "W"
-  | "WOM"
-  | "LWOM"
-  | "M"
-  | "MS"
-  | "BM"
-  | "BMS"
-  | "CBM"
-  | "CBMS"
-  | "SM"
-  | "SMS"
-  | "Q"
-  | "QS"
-  | "BQ"
-  | "BQS"
-  | "REQ"
-  | "A"
-  | "AS"
-  | "BYS"
-  | "BA"
-  | "BAS"
-  | "RE"
-  | "BH"
-  | "CBH"
-  | "D"
-  | "H"
-  | "T"
-  | "S"
-  | "L"
-  | "U"
-  | "N"
-type PeriodFrequency = PandasOffsetType | `${PandasOffsetType}-${string}`
+type SupportedPandasOffsetType = "W" | "Q" | "D" | "H" | "T" | "S" | "L"
+type PeriodFrequency =
+  | SupportedPandasOffsetType
+  | `${SupportedPandasOffsetType}-${string}`
 type PeriodType = `period[${PeriodFrequency}]`
 
 const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
 // TODO: For now, we only support the most commonly used offset types.
 //  In the future, it is worth adding support for other types as needed.
-const PERIOD_TYPE_FORMATTERS: Partial<
-  Record<PandasOffsetType, (duration: number, freqParam?: string) => string>
+const PERIOD_TYPE_FORMATTERS: Record<
+  SupportedPandasOffsetType,
+  (duration: number, freqParam?: string) => string
 > = {
   L: duration =>
     moment("19700101", "YYYYMMDD")
@@ -890,8 +861,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       .format(timeInSeconds % 1 === 0 ? "HH:mm:ss" : "HH:mm:ss.SSS")
   }
 
-  private static formatPeriodType(data: number, typeName: PeriodType): string {
-    const duration = Number(data)
+  private static formatPeriodType(
+    duration: BigInt,
+    typeName: PeriodType
+  ): string {
     const match = typeName.match(/period\[(.*)]/)
     if (match === null) {
       throw new Error(`Invalid period type: ${typeName}`)
@@ -901,20 +874,26 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   private static formatPeriod(
-    duration: number,
+    duration: BigInt,
     freq: PeriodFrequency
   ): string {
     const [freqName, freqParam] = freq.split("-", 2)
     const momentConverter =
-      PERIOD_TYPE_FORMATTERS[freqName as PandasOffsetType]
+      PERIOD_TYPE_FORMATTERS[freqName as SupportedPandasOffsetType]
     if (!momentConverter) {
       throw new Error(`Unsupported period frequency: ${freq}`)
     }
-    return momentConverter(duration, freqParam)
+    const duration_number = Number(duration)
+    if (!Number.isSafeInteger(duration_number)) {
+      throw new Error(
+        `Unsupported value: ${duration}. Supported values: [${Number.MIN_SAFE_INTEGER}-${Number.MAX_SAFE_INTEGER}]`
+      )
+    }
+    return momentConverter(duration_number, freqParam)
   }
 
   private static formatCategoricalType(
-    x: number | StructRow,
+    x: number | BigInt | StructRow,
     field: Field
   ): string {
     // Serialization for pandas.Interval and pandas.Period is provided by Arrow extensions
@@ -931,7 +910,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       }
       if (extensionName === "pandas.Period") {
         const { freq } = extensionMetadata
-        return Quiver.formatPeriod(x as number, freq)
+        return Quiver.formatPeriod(x as BigInt, freq)
       }
     }
     return String(x)
@@ -992,12 +971,12 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     if (typeName?.startsWith("period")) {
-      return Quiver.formatPeriodType(x as number, typeName as PeriodType)
+      return Quiver.formatPeriodType(x as BigInt, typeName as PeriodType)
     }
 
     if (typeName === "categorical") {
       return this.formatCategoricalType(
-        x as number | StructRow,
+        x as number | BigInt | StructRow,
         field as Field
       )
     }
