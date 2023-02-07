@@ -35,8 +35,8 @@ from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime.state.common import user_key_from_widget_id
 from streamlit.runtime.state.session_state import SessionState
-from streamlit.runtime.state.widgets import user_key_from_widget_id
 
 
 # TODO This class serves as a fallback option for elements that have not

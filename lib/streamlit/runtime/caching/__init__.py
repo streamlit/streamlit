@@ -28,7 +28,7 @@ from streamlit.runtime.caching.cache_resource_api import (
     CacheResourceAPI,
     _resource_caches,
 )
-from streamlit.runtime.state.session_state import WidgetMetadata
+from streamlit.runtime.state.common import WidgetMetadata
 
 CACHE_DOCS_URL = "https://docs.streamlit.io/library/advanced-features/caching"
 
