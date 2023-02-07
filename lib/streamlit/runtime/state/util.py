@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import hashlib
 from typing import Optional, Union
 
@@ -56,7 +57,7 @@ WidgetProto: TypeAlias = Union[
     TimeInput,
 ]
 
-GENERATED_WIDGET_ID_PREFIX: Final = "$$GENERATED_WIDGET_KEY"
+GENERATED_WIDGET_ID_PREFIX: Final = "$$GENERATED_WIDGET_ID"
 
 
 def compute_widget_id(
