@@ -12,10 +12,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import hashlib
-from typing import Optional
+from typing import Optional, Union
 
-from streamlit.runtime.state.session_state import GENERATED_WIDGET_KEY_PREFIX
-from streamlit.runtime.state.widgets import WidgetProto
+from typing_extensions import Final, TypeAlias
+
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Arrow_pb2 import Arrow
+from streamlit.proto.Button_pb2 import Button
+from streamlit.proto.CameraInput_pb2 import CameraInput
+from streamlit.proto.Checkbox_pb2 import Checkbox
+from streamlit.proto.ColorPicker_pb2 import ColorPicker
+from streamlit.proto.Components_pb2 import ComponentInstance
+from streamlit.proto.DateInput_pb2 import DateInput
+from streamlit.proto.DownloadButton_pb2 import DownloadButton
+from streamlit.proto.FileUploader_pb2 import FileUploader
+from streamlit.proto.MultiSelect_pb2 import MultiSelect
+from streamlit.proto.NumberInput_pb2 import NumberInput
+from streamlit.proto.Radio_pb2 import Radio
+from streamlit.proto.Selectbox_pb2 import Selectbox
+from streamlit.proto.Slider_pb2 import Slider
+from streamlit.proto.TextArea_pb2 import TextArea
+from streamlit.proto.TextInput_pb2 import TextInput
+from streamlit.proto.TimeInput_pb2 import TimeInput
+
+# Protobuf types for all widgets.
+WidgetProto: TypeAlias = Union[
+    Arrow,
+    Button,
+    CameraInput,
+    Checkbox,
+    ColorPicker,
+    ComponentInstance,
+    DateInput,
+    DownloadButton,
+    FileUploader,
+    MultiSelect,
+    NumberInput,
+    Radio,
+    Selectbox,
+    Slider,
+    TextArea,
+    TextInput,
+    TimeInput,
+]
+
+GENERATED_WIDGET_ID_PREFIX: Final = "$$GENERATED_WIDGET_KEY"
 
 
 def compute_widget_id(
@@ -35,7 +76,7 @@ def compute_widget_id(
     h = hashlib.new("md5")
     h.update(element_type.encode("utf-8"))
     h.update(element_proto.SerializeToString())
-    return f"{GENERATED_WIDGET_KEY_PREFIX}-{h.hexdigest()}-{user_key}"
+    return f"{GENERATED_WIDGET_ID_PREFIX}-{h.hexdigest()}-{user_key}"
 
 
 def user_key_from_widget_id(widget_id: str) -> Optional[str]:
@@ -49,3 +90,21 @@ def user_key_from_widget_id(widget_id: str) -> Optional[str]:
     user_key = widget_id.split("-", maxsplit=2)[-1]
     user_key = None if user_key == "None" else user_key
     return user_key
+
+
+def is_widget_id(key: str) -> bool:
+    """True if the given session_state key has the structure of a widget ID."""
+    return key.startswith(GENERATED_WIDGET_ID_PREFIX)
+
+
+def is_keyed_widget_id(key: str) -> bool:
+    """True if the given session_state key has the structure of a widget ID with a user_key."""
+    return is_widget_id(key) and not key.endswith("-None")
+
+
+def require_valid_user_key(key: str) -> None:
+    """Raise an Exception if the given user_key is invalid."""
+    if is_widget_id(key):
+        raise StreamlitAPIException(
+            f"Keys beginning with {GENERATED_WIDGET_ID_PREFIX} are reserved."
+        )

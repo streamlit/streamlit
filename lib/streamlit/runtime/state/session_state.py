@@ -39,6 +39,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+from streamlit.runtime.state.util import is_keyed_widget_id, is_widget_id
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 from streamlit.type_util import ValueFieldName, is_array_value_field_name
 
@@ -62,7 +63,6 @@ WidgetDeserializer: TypeAlias = Callable[[Any, str], T]
 WidgetSerializer: TypeAlias = Callable[[T], Any]
 
 
-GENERATED_WIDGET_KEY_PREFIX: Final = "$$GENERATED_WIDGET_KEY"
 STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
 SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
     f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
@@ -377,9 +377,9 @@ class SessionState:
         # happens when the streamlit server restarted or the cache was cleared),
         # then we receive a widget's state from a browser.
         for k in self._keys():
-            if not _is_widget_id(k) and not _is_internal_key(k):
+            if not is_widget_id(k) and not _is_internal_key(k):
                 state[k] = self[k]
-            elif _is_keyed_widget_id(k):
+            elif is_keyed_widget_id(k):
                 try:
                     key = wid_key_map[k]
                     state[key] = self[k]
@@ -600,7 +600,7 @@ class SessionState:
         self._old_state = {
             k: v
             for k, v in self._old_state.items()
-            if (k in active_widget_ids or not _is_widget_id(k))
+            if (k in active_widget_ids or not is_widget_id(k))
         }
 
     def _set_widget_metadata(self, widget_metadata: WidgetMetadata[Any]) -> None:
@@ -673,26 +673,8 @@ class SessionState:
         return [stat]
 
 
-def _is_widget_id(key: str) -> bool:
-    """True if the given session_state key has the structure of a widget ID."""
-    return key.startswith(GENERATED_WIDGET_KEY_PREFIX)
-
-
-def _is_keyed_widget_id(key: str) -> bool:
-    """True if the given session_state key has the structure of a widget ID with a user_key."""
-    return _is_widget_id(key) and not key.endswith("-None")
-
-
 def _is_internal_key(key: str) -> bool:
     return key.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
-
-
-def require_valid_user_key(key: str) -> None:
-    """Raise an Exception if the given user_key is invalid."""
-    if _is_widget_id(key):
-        raise StreamlitAPIException(
-            f"Keys beginning with {GENERATED_WIDGET_KEY_PREFIX} are reserved."
-        )
 
 
 @dataclass

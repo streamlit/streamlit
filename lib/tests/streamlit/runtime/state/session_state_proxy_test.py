@@ -22,8 +22,8 @@ import pytest
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import SafeSessionState, SessionState, SessionStateProxy
-from streamlit.runtime.state.session_state import (
-    GENERATED_WIDGET_KEY_PREFIX,
+from streamlit.runtime.state.util import (
+    GENERATED_WIDGET_ID_PREFIX,
     require_valid_user_key,
 )
 
@@ -45,7 +45,7 @@ def _create_mock_session_state(
     MagicMock(return_value=_create_mock_session_state({"foo": "bar"})),
 )
 class SessionStateProxyTests(unittest.TestCase):
-    reserved_key = f"{GENERATED_WIDGET_KEY_PREFIX}-some_key"
+    reserved_key = f"{GENERATED_WIDGET_ID_PREFIX}-some_key"
 
     def setUp(self):
         self.session_state_proxy = SessionStateProxy()

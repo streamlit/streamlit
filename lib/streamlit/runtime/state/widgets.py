@@ -14,28 +14,11 @@
 
 import textwrap
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Dict, Mapping, Optional, Union
+from typing import TYPE_CHECKING, Dict, Mapping, Optional
 
 from typing_extensions import Final, TypeAlias
 
 from streamlit.errors import DuplicateWidgetID
-from streamlit.proto.Arrow_pb2 import Arrow
-from streamlit.proto.Button_pb2 import Button
-from streamlit.proto.CameraInput_pb2 import CameraInput
-from streamlit.proto.Checkbox_pb2 import Checkbox
-from streamlit.proto.ColorPicker_pb2 import ColorPicker
-from streamlit.proto.Components_pb2 import ComponentInstance
-from streamlit.proto.DateInput_pb2 import DateInput
-from streamlit.proto.DownloadButton_pb2 import DownloadButton
-from streamlit.proto.FileUploader_pb2 import FileUploader
-from streamlit.proto.MultiSelect_pb2 import MultiSelect
-from streamlit.proto.NumberInput_pb2 import NumberInput
-from streamlit.proto.Radio_pb2 import Radio
-from streamlit.proto.Selectbox_pb2 import Selectbox
-from streamlit.proto.Slider_pb2 import Slider
-from streamlit.proto.TextArea_pb2 import TextArea
-from streamlit.proto.TextInput_pb2 import TextInput
-from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.session_state import (
     RegisterWidgetResult,
@@ -47,32 +30,15 @@ from streamlit.runtime.state.session_state import (
     WidgetMetadata,
     WidgetSerializer,
 )
-from streamlit.runtime.state.util import compute_widget_id, user_key_from_widget_id
+from streamlit.runtime.state.util import (
+    WidgetProto,
+    compute_widget_id,
+    user_key_from_widget_id,
+)
 from streamlit.type_util import ValueFieldName
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner import ScriptRunContext
-
-# Protobuf types for all widgets.
-WidgetProto: TypeAlias = Union[
-    Arrow,
-    Button,
-    CameraInput,
-    Checkbox,
-    ColorPicker,
-    ComponentInstance,
-    DateInput,
-    DownloadButton,
-    FileUploader,
-    MultiSelect,
-    NumberInput,
-    Radio,
-    Selectbox,
-    Slider,
-    TextArea,
-    TextInput,
-    TimeInput,
-]
 
 ElementType: TypeAlias = str
 
