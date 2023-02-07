@@ -104,11 +104,9 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
-      "Report a bug",
-      "Get help",
       "View app source",
       "Report bug with app",
-      "About",
+      "About & help",
     ])
 
     // @ts-ignore
@@ -121,10 +119,6 @@ describe("App", () => {
     expect(devMenuLabels).toEqual([
       "Developer options",
       "Clear cache",
-      "Streamlit Cloud",
-      "Report a Streamlit bug",
-      "Visit Streamlit docs",
-      "Visit Streamlit forums",
     ])
   })
 
@@ -147,9 +141,7 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
-      "Report a bug",
-      "Get help",
-      "About",
+      "About & help",
     ])
 
     // @ts-ignore
@@ -163,10 +155,6 @@ describe("App", () => {
       "Developer options",
       "Clear cache",
       "Deploy this app",
-      "Streamlit Cloud",
-      "Report a Streamlit bug",
-      "Visit Streamlit docs",
-      "Visit Streamlit forums",
     ])
   })
 
@@ -189,9 +177,7 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
-      "Report a bug",
-      "Get help",
-      "About",
+      "About & help",
     ])
 
     // @ts-ignore
@@ -205,10 +191,6 @@ describe("App", () => {
       "Developer options",
       "Clear cache",
       "Deploy this app",
-      "Streamlit Cloud",
-      "Report a Streamlit bug",
-      "Visit Streamlit docs",
-      "Visit Streamlit forums",
     ])
   })
 
@@ -354,7 +336,7 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
-      "About",
+      "About & help",
     ])
   })
 
@@ -383,8 +365,7 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
-      "Get help",
-      "About",
+      "About & help",
     ])
   })
 
@@ -416,9 +397,7 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
-      "Report a bug",
-      "Get help",
-      "About",
+      "About & help",
     ])
   })
 })
