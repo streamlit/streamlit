@@ -116,10 +116,7 @@ describe("App", () => {
       .prop("items")
       // @ts-ignore
       .map(item => item.label)
-    expect(devMenuLabels).toEqual([
-      "Developer options",
-      "Clear cache",
-    ])
+    expect(devMenuLabels).toEqual(["Developer options", "Clear cache"])
   })
 
   it("should render core set of menu elements", () => {
