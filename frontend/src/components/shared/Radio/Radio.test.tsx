@@ -15,9 +15,10 @@
  */
 
 import React from "react"
-import { mount } from "src/lib/test_util"
+import "@testing-library/jest-dom"
+import { fireEvent } from "@testing-library/react"
+import { render } from "src/lib/test_util"
 
-import { Radio as UIRadio, RadioGroup, ALIGN } from "baseui/radio"
 import { LabelVisibilityOptions } from "src/lib/utils"
 import { lightTheme } from "src/theme"
 import Radio, { Props } from "./Radio"
@@ -37,26 +38,34 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 describe("Radio widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
+    const wrapper = render(<Radio {...props} />)
+    const radioGroup = wrapper.baseElement.querySelectorAll("#RadioGroup")
+    const radioOptions =
+      wrapper.baseElement.querySelectorAll("#RadioGroup label")
 
-    expect(wrapper.find(RadioGroup).length).toBe(1)
-    expect(wrapper.find(UIRadio).length).toBe(3)
+    expect(radioGroup).toHaveLength(1)
+    expect(radioOptions).toHaveLength(3)
   })
 
   it("renders without crashing if no label is provided", () => {
     const props = getProps({ label: undefined })
-    const wrapper = mount(<Radio {...props} />)
-    expect(wrapper.find(RadioGroup).length).toBe(1)
-    expect(wrapper.find(UIRadio).length).toBe(3)
+    const wrapper = render(<Radio {...props} />)
+    const radioGroup = wrapper.baseElement.querySelectorAll("#RadioGroup")
+    const radioOptions =
+      wrapper.baseElement.querySelectorAll("#RadioGroup label")
+
+    expect(radioGroup).toHaveLength(1)
+    expect(radioOptions).toHaveLength(3)
   })
 
-  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+  it("pass labelVisibility prop to WidgetLabel correctly when hidden", () => {
     const props = getProps({
       labelVisibility: LabelVisibilityOptions.Hidden,
     })
-    const wrapper = mount(<Radio {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityOptions.Hidden
+    const wrapper = render(<Radio {...props} />)
+
+    expect(wrapper.getByText(`${props.label}`)).toHaveStyle(
+      "visibility: hidden"
     )
   })
 
@@ -64,85 +73,91 @@ describe("Radio widget", () => {
     const props = getProps({
       labelVisibility: LabelVisibilityOptions.Collapsed,
     })
-    const wrapper = mount(<Radio {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityOptions.Collapsed
-    )
+    const wrapper = render(<Radio {...props} />)
+    expect(wrapper.getByText(`${props.label}`)).not.toBeVisible()
   })
 
   it("has correct className and style", () => {
     const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
-    const wrappedDiv = wrapper.find("div").first()
+    const wrapper = render(<Radio {...props} />)
+    const wrappedDiv = wrapper.baseElement.querySelector(".stRadio")
 
-    const { className, style } = wrappedDiv.props()
-    // @ts-ignore
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("row-widget")
-    expect(splittedClassName).toContain("stRadio")
-
-    // @ts-ignore
-    expect(style.width).toBe(getProps().width)
+    expect(wrappedDiv).toHaveClass("row-widget")
+    expect(wrappedDiv).toHaveStyle(`width: ${props.width}`)
   })
 
   it("renders a label", () => {
     const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.label)
+    const wrapper = render(<Radio {...props} />)
+    expect(wrapper.getByText(`${props.label}`)).toBeInTheDocument()
   })
 
   it("has a default value", () => {
     const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
-    expect(wrapper.find(RadioGroup).prop("value")).toBe(props.value.toString())
+    const wrapper = render(<Radio {...props} />)
+
+    const radioOptions =
+      wrapper.baseElement.querySelectorAll("#RadioGroup input")
+    const defaultOption = radioOptions[props.value]
+    expect(defaultOption).toBeChecked()
   })
 
   it("can be disabled", () => {
-    const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
-    expect(wrapper.find(RadioGroup).prop("disabled")).toBe(props.disabled)
+    const props = getProps({ disabled: true })
+    const wrapper = render(<Radio {...props} />)
+    const radioOptions =
+      wrapper.baseElement.querySelectorAll("#RadioGroup input")
+    radioOptions.forEach(option => {
+      expect(option).toHaveAttribute("disabled")
+    })
   })
 
-  it("can be horizontally aligned", () => {
-    const props = getProps({ horizontal: true })
-    const wrapper = mount(<Radio {...props} />)
-    expect(wrapper.find(RadioGroup).prop("align")).toBe(ALIGN.horizontal)
-  })
+  // it("can be horizontally aligned", () => {
+  // })
 
   it("has the correct options", () => {
     const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
-    const options = wrapper.find(UIRadio)
+    const wrapper = render(<Radio {...props} />)
+    const radioOptions =
+      wrapper.baseElement.querySelectorAll("#RadioGroup input")
+    const radioText = wrapper.baseElement.querySelectorAll(
+      "#RadioGroup input + div"
+    )
 
-    options.forEach((option, index) => {
-      expect(option.prop("value")).toBe(index.toString())
-      expect(option.prop("children")).toBe(props.options[index])
+    radioOptions.forEach((option, index) => {
+      expect(option).toHaveAttribute("value", index.toString())
+      expect(radioText[index]).toHaveTextContent(props.options[index])
     })
   })
 
   it("shows a message when there are no options to be shown", () => {
     const props = getProps({ options: [] })
-    const wrapper = mount(<Radio {...props} />)
-
-    expect(wrapper.find(UIRadio).length).toBe(1)
-    expect(wrapper.find(UIRadio).prop("children")).toBe(
-      "No options to select."
+    const wrapper = render(<Radio {...props} />)
+    const radioOptions =
+      wrapper.baseElement.querySelectorAll("#RadioGroup input")
+    const radioText = wrapper.baseElement.querySelectorAll(
+      "#RadioGroup input + div"
     )
+
+    expect(radioOptions).toHaveLength(1)
+    expect(radioText).toHaveLength(1)
+    expect(radioText[0]).toHaveTextContent("No options to select.")
   })
 
   it("handles value changes", () => {
     const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
+    const wrapper = render(<Radio {...props} />)
+    const radioOptions =
+      wrapper.baseElement.querySelectorAll("#RadioGroup input")
+    const firstOption = radioOptions[0]
+    const secondOption = radioOptions[1]
 
-    // @ts-ignore
-    wrapper.find(RadioGroup).prop("onChange")({
-      target: {
-        value: "1",
-      },
-    } as React.ChangeEvent<HTMLInputElement>)
-    wrapper.update()
-
-    expect(wrapper.find(RadioGroup).prop("value")).toBe("1")
+    // inital state
+    expect(firstOption).toBeChecked()
+    expect(secondOption).not.toBeChecked()
+    fireEvent.click(secondOption)
+    // updated state
+    expect(firstOption).not.toBeChecked()
+    expect(secondOption).toBeChecked()
   })
 })

@@ -65,6 +65,7 @@ function Radio(props: Props): ReactElement {
   return (
     <div className="row-widget stRadio" style={style}>
       <WidgetLabel
+        data-testid="WidgetLabel"
         label={label}
         disabled={disabled}
         labelVisibility={labelVisibility}
@@ -76,6 +77,7 @@ function Radio(props: Props): ReactElement {
         )}
       </WidgetLabel>
       <RadioGroup
+        id="RadioGroup"
         onChange={handleChange}
         value={value.toString()}
         disabled={disabled}
