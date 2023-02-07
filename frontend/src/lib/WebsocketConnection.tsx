@@ -15,9 +15,10 @@
  */
 
 import styled from "@emotion/styled"
-import { BackMsg, ForwardMsg, IBackMsg } from "src/autogen/proto"
-
 import axios from "axios"
+
+import { BackMsg, ForwardMsg, IBackMsg } from "src/autogen/proto"
+import { IAllowedMessageOriginsResponse } from "src/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { ForwardMsgCache } from "src/lib/ForwardMessageCache"
 import { logError, logMessage, logWarning } from "src/lib/log"
@@ -35,17 +36,17 @@ const LOG = "WebsocketConnection"
 /**
  * The path where we should ping (via HTTP) to see if the server is up.
  */
-const SERVER_PING_PATH = "healthz"
+const SERVER_PING_PATH = "_stcore/health"
 
 /**
  * The path to fetch the whitelist for accepting cross-origin messages.
  */
-const ALLOWED_ORIGINS_PATH = "st-allowed-message-origins"
+const ALLOWED_ORIGINS_PATH = "_stcore/allowed-message-origins"
 
 /**
  * The path of the server's websocket endpoint.
  */
-const WEBSOCKET_STREAM_PATH = "stream"
+const WEBSOCKET_STREAM_PATH = "_stcore/stream"
 
 /**
  * Wait this long between pings, in millis.
@@ -106,13 +107,20 @@ interface Args {
    * Function to get the auth token set by the host of this app (if in a
    * relevant deployment scenario).
    */
-  getHostAuthToken: () => string | undefined
+  claimHostAuthToken: () => Promise<string | undefined>
+
+  /**
+   * Function to clear the withHostCommunication hoc's auth token. This should
+   * be called after the promise returned by claimHostAuthToken successfully
+   * resolves.
+   */
+  resetHostAuthToken: () => void
 
   /**
    * Function to set the list of origins that this app should accept
    * cross-origin messages from (if in a relevant deployment scenario).
    */
-  setHostAllowedOrigins: (allowedOrigins: string[]) => void
+  setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void
 }
 
 interface MessageQueue {
@@ -136,7 +144,7 @@ interface MessageQueue {
  *   CONNECTED<───────────────────────────┘
  *
  *
- *                    on fatal error
+ *                    on fatal error or call to .disconnect()
  *                    :
  *   <ANY_STATE> ──────────────> DISCONNECTED_FOREVER
  */
@@ -219,6 +227,10 @@ export class WebsocketConnection {
     return undefined
   }
 
+  public disconnect(): void {
+    this.setFsmState(ConnectionState.DISCONNECTED_FOREVER)
+  }
+
   // This should only be called inside stepFsm().
   private setFsmState(state: ConnectionState, errMsg?: string): void {
     logMessage(LOG, `New state: ${state}`)
@@ -245,7 +257,7 @@ export class WebsocketConnection {
         break
 
       case ConnectionState.DISCONNECTED_FOREVER:
-        this.cancelConnectionAttempt()
+        this.closeConnection()
         break
 
       default:
@@ -342,14 +354,36 @@ export class WebsocketConnection {
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
       this.args.onRetry,
-      this.args.setHostAllowedOrigins,
+      this.args.setAllowedOriginsResp,
       userCommandLine
     )
 
     this.stepFsm("SERVER_PING_SUCCEEDED")
   }
 
-  private connectToWebSocket(): void {
+  /**
+   * Get the session token to use to initialize a WebSocket connection.
+   *
+   * There are two scenarios that are considered here:
+   *   1. If this Streamlit is embedded in a page that will be passing an
+   *      external, opaque auth token to it, we get it using claimHostAuthToken
+   *      and return it. This only occurs in deployment environments where
+   *      we're not connecting to the usual Tornado server, so we don't have to
+   *      worry about what this token actually is/does.
+   *   2. Otherwise, claimHostAuthToken will resolve immediately to undefined,
+   *      in which case we return the sessionId of the last session this
+   *      browser tab connected to (or undefined if this is the first time this
+   *      tab has connected to the Streamlit server). This sessionId is used to
+   *      attempt to reconnect to an existing session to handle transient
+   *      disconnects.
+   */
+  private async getSessionToken(): Promise<string | undefined> {
+    const hostAuthToken = await this.args.claimHostAuthToken()
+    this.args.resetHostAuthToken()
+    return hostAuthToken || SessionInfo.lastSessionInfo?.sessionId
+  }
+
+  private async connectToWebSocket(): Promise<void> {
     const uri = buildWsUri(
       this.args.baseUriPartsList[this.uriIndex],
       WEBSOCKET_STREAM_PATH
@@ -374,10 +408,10 @@ export class WebsocketConnection {
     // Sec-WebSocket-Protocol is set, many clients expect the server to respond
     // with a selected subprotocol to use. We don't want that reply to be the
     // auth token, so we just hard-code it to "streamlit".
-    const hostAuthToken = this.args.getHostAuthToken()
+    const sessionToken = await this.getSessionToken()
     this.websocket = new WebSocket(uri, [
       "streamlit",
-      ...(hostAuthToken ? [hostAuthToken] : []),
+      ...(sessionToken ? [sessionToken] : []),
     ])
     this.websocket.binaryType = "arraybuffer"
 
@@ -406,7 +440,7 @@ export class WebsocketConnection {
     this.websocket.onclose = () => {
       if (checkWebsocket()) {
         logWarning(LOG, "WebSocket onclose")
-        this.cancelConnectionAttempt()
+        this.closeConnection()
         this.stepFsm("CONNECTION_CLOSED")
       }
     }
@@ -414,7 +448,7 @@ export class WebsocketConnection {
     this.websocket.onerror = () => {
       if (checkWebsocket()) {
         logError(LOG, "WebSocket onerror")
-        this.cancelConnectionAttempt()
+        this.closeConnection()
         this.stepFsm("CONNECTION_ERROR")
       }
     }
@@ -444,21 +478,21 @@ export class WebsocketConnection {
         // This should never happen! The only place we call
         // setConnectionTimeout() should be immediately before setting
         // this.websocket.
-        this.cancelConnectionAttempt()
+        this.closeConnection()
         this.stepFsm("FATAL_ERROR", "Null Websocket in setConnectionTimeout")
         return
       }
 
       if (this.websocket.readyState === 0 /* CONNECTING */) {
         logMessage(LOG, `${uri} timed out`)
-        this.cancelConnectionAttempt()
+        this.closeConnection()
         this.stepFsm("CONNECTION_TIMED_OUT")
       }
     }, WEBSOCKET_TIMEOUT_MS)
     logMessage(LOG, `Set WS timeout ${this.wsConnectionTimeoutId}`)
   }
 
-  private cancelConnectionAttempt(): void {
+  private closeConnection(): void {
     // Need to make sure the websocket is closed in the same function that
     // cancels the connection timer. Otherwise, due to javascript's concurrency
     // model, when the onclose event fires it can get handled in between the
@@ -558,7 +592,7 @@ export function doInitPings(
   minimumTimeoutMs: number,
   maximumTimeoutMs: number,
   retryCallback: OnRetry,
-  setHostAllowedOrigins: (allowedOrigins: string[]) => void,
+  setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void,
   userCommandLine?: string
 ): Promise<number> {
   const resolver = new Resolver<number>()
@@ -647,25 +681,11 @@ export function doInitPings(
     // not to do so as it's semantically cleaner to not give the healthcheck
     // endpoint additional responsibilities.
     Promise.all([
-      // NOTE: We temporarily avoid hitting the healthz endpoint for now
-      // because certain environments (notably GCP App Engine and Cloud Run)
-      // reserve the endpoint name, and the new /st-allowed-message-origins
-      // can be used as a healthcheck at the relatively cheap cost of some
-      // semantic clarity.
-      //
-      // We keep the Promise.all and just return a resolved promise in the
-      // first element of the array instead of actually pinging the /healthz
-      // endpoint to avoid having to change the structure of the code for this
-      // temporary change.
-      //
-      // Once we're able to pick up work on https://github.com/streamlit/streamlit/pull/5534
-      // again, our endpoints can be re-split into their original dedicated
-      // roles.
-      Promise.resolve(), // axios.get(healthzUri, { timeout: minimumTimeoutMs }),
+      axios.get(healthzUri, { timeout: minimumTimeoutMs }),
       axios.get(allowedOriginsUri, { timeout: minimumTimeoutMs }),
     ])
       .then(([_, originsResp]) => {
-        setHostAllowedOrigins(originsResp.data.allowedOrigins)
+        setAllowedOriginsResp(originsResp.data)
         resolver.resolve(uriNumber)
       })
       .catch(error => {

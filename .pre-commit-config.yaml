@@ -28,7 +28,7 @@ repos:
           - --target-version=py37
         files: \.py$|\.pyi$
   - repo: https://github.com/PyCQA/isort
-    rev: 5.10.1
+    rev: 5.11.5
     hooks:
       - id: isort
         args:
@@ -43,6 +43,8 @@ repos:
           - "--ignore-init-module-imports"
           - "--ignore-pass-after-docstring"
           - "--remove-unused-variables"
+        additional_dependencies:
+          - pyflakes==3.0.1
   - repo: local
     hooks:
       # Script ./scripts/run_in_subdirectory.py was used to work around a

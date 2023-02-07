@@ -14,7 +14,8 @@
 
 """A Python wrapper around Altair.
 Altair is a Python visualization library based on Vega-Lite,
-a nice JSON schema for expressing graphs and charts."""
+a nice JSON schema for expressing graphs and charts.
+"""
 
 from datetime import date
 from typing import TYPE_CHECKING, Hashable, cast
@@ -73,6 +74,10 @@ class LegacyAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -129,6 +134,10 @@ class LegacyAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -185,6 +194,10 @@ class LegacyAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(50, 3),
         ...     columns=["a", "b", "c"])
@@ -224,6 +237,7 @@ class LegacyAltairMixin:
         Example
         -------
 
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>> import altair as alt
@@ -360,7 +374,8 @@ def marshall(
 
     def id_transform(data):
         """Altair data transformer that returns a fake named dataset with the
-        object id."""
+        object id.
+        """
         datasets[id(data)] = data
         return {"name": str(id(data))}
 

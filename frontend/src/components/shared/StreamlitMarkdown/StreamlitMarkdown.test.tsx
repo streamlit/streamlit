@@ -19,7 +19,7 @@ import ReactMarkdown from "react-markdown"
 import { mount } from "src/lib/test_util"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
-
+import { colors } from "src/theme/primitives/colors"
 import StreamlitMarkdown, {
   LinkWithTargetBlank,
   createAnchorFromText,
@@ -213,6 +213,27 @@ describe("StreamlitMarkdown", () => {
     )
     expect(wrapper3.props().isButton).toEqual(true)
   })
+
+  it("colours text properly", () => {
+    const colorMapping = new Map(
+      Object.entries({
+        red: colors.red90,
+        blue: colors.blue80,
+        green: colors.green90,
+        violet: colors.purple80,
+        orange: colors.orange100,
+      })
+    )
+    for (const color of Object.keys(colorMapping)) {
+      const source = `:${color}[text]`
+      const wrapper = mount(
+        <StreamlitMarkdown source={source} allowHTML={false} />
+      )
+      expect(wrapper.find("span").prop("style")?.color).toEqual(
+        colorMapping.get(color)
+      )
+    }
+  })
 })
 
 const getHeadingProps = (
@@ -233,7 +254,7 @@ describe("Heading", () => {
     const props = getHeadingProps()
     const wrapper = mount(<Heading {...props} />)
     expect(wrapper.find("h1").text()).toEqual("hello world")
-    expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
+    expect(wrapper.find("RenderedMarkdown").at(1).text()).toEqual(
       "this is a new line"
     )
   })
@@ -242,7 +263,7 @@ describe("Heading", () => {
     const props = getHeadingProps({ body: "hello" })
     const wrapper = mount(<Heading {...props} />)
     expect(wrapper.find("h1").text()).toEqual("hello")
-    expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(0)
+    expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(1)
   })
 
   it("does not render ol block", () => {
@@ -269,17 +290,16 @@ describe("Heading", () => {
   it("does not render tables", () => {
     const props = getHeadingProps({
       body: `| Syntax | Description |
-    | ----------- | ----------- |
-    | Header      | Title       |
-    | Paragraph   | Text        |`,
+        | ----------- | ----------- |
+        | Header      | Title       |
+        | Paragraph   | Text        |`,
     })
     const wrapper = mount(<Heading {...props} />)
     expect(wrapper.find("h1").text()).toEqual(`| Syntax | Description |`)
-    expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
+    expect(wrapper.find("RenderedMarkdown").at(1).text()).toEqual(
       `| ----------- | ----------- |
-| Header      | Title       |
-| Paragraph   | Text        |
-`
+    | Header      | Title       |
+    | Paragraph   | Text        |`
     )
     expect(wrapper.find("table")).toHaveLength(0)
   })

@@ -17,7 +17,11 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Optional, cast
 
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
+from streamlit.elements.utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    get_label_visibility_proto_value,
+)
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -27,7 +31,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -57,8 +61,9 @@ class CheckboxMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> bool:
-        """Display a checkbox widget.
+        r"""Display a checkbox widget.
 
         Parameters
         ----------
@@ -66,6 +71,10 @@ class CheckboxMixin:
             A short label explaining to the user what this checkbox is for.
             The label can optionally contain Markdown and supports the following
             elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
         value : bool
             Preselect the checkbox when it first renders. This will be
             cast to bool internally.
@@ -85,6 +94,11 @@ class CheckboxMixin:
         disabled : bool
             An optional boolean, which disables the checkbox if set to True.
             The default is False. This argument can only be supplied by keyword.
+        label_visibility : "visible" or "hidden" or "collapsed"
+            The visibility of the label. If "hidden", the label doesn't show but there
+            is still empty space for it (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
 
         Returns
         -------
@@ -94,6 +108,7 @@ class CheckboxMixin:
         Example
         -------
         >>> import streamlit as st
+        >>>
         >>> agree = st.checkbox('I agree')
         >>>
         >>> if agree:
@@ -114,6 +129,7 @@ class CheckboxMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            label_visibility=label_visibility,
             ctx=ctx,
         )
 
@@ -128,6 +144,7 @@ class CheckboxMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         key = to_key(key)
@@ -135,6 +152,8 @@ class CheckboxMixin:
         check_session_state_rules(
             default_value=None if value is False else value, key=key
         )
+
+        maybe_raise_label_warnings(label, label_visibility)
 
         checkbox_proto = CheckboxProto()
         checkbox_proto.label = label
@@ -160,6 +179,10 @@ class CheckboxMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         checkbox_proto.disabled = disabled
+        checkbox_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if checkbox_state.value_changed:
             checkbox_proto.value = checkbox_state.value
             checkbox_proto.set_value = True

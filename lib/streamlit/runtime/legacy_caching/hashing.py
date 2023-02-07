@@ -187,7 +187,7 @@ hash_stacks = _HashStacks()
 
 class _Cells:
     """
-    This is basically a dict that allows us to push/pop frames of data.
+    Class which is basically a dict that allows us to push/pop frames of data.
 
     Python code objects are nested. In the following function:
 
@@ -823,8 +823,7 @@ then pass that to `hash_funcs` instead:
 %(hash_stack)s
 ```
 
-Please see the `hash_funcs` [documentation]
-(https://docs.streamlit.io/library/advanced-features/caching#the-hash_funcs-parameter)
+Please see the `hash_funcs` [documentation](https://docs.streamlit.io/library/advanced-features/caching#the-hash_funcs-parameter)
 for more details.
             """
             % args
@@ -948,8 +947,7 @@ then pass that to `hash_funcs` instead:
 %(hash_stack)s
 ```
 
-Please see the `hash_funcs` [documentation]
-(https://docs.streamlit.io/library/advanced-features/caching#the-hash_funcs-parameter)
+Please see the `hash_funcs` [documentation](https://docs.streamlit.io/library/advanced-features/caching#the-hash_funcs-parameter)
 for more details.
             """
             % args

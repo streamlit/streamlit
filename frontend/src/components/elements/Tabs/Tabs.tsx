@@ -90,6 +90,7 @@ function Tabs(props: Props): ReactElement {
               gap: theme.spacing.lg,
               marginBottom: `-${TAB_BORDER_HEIGHT}`,
               paddingBottom: TAB_BORDER_HEIGHT,
+              overflowY: "hidden",
               ...(isStale
                 ? {
                     opacity: 0.33,
@@ -126,6 +127,7 @@ function Tabs(props: Props): ReactElement {
                   source={nodeLabel}
                   allowHTML={false}
                   isLabel
+                  isTabs
                 />
               }
               key={index}

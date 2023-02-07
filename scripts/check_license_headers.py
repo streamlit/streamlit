@@ -34,7 +34,7 @@ IGNORE_PATTERN = re.compile(
     # Exclude CI files.
     r"^\.(github|circleci)/"
     # Exclude images.
-    r"|\.(?:png|gif|ttf|woff|otf|eot|woff2|ico|svg)$"
+    r"|\.(?:png|jpg|jpeg|gif|ttf|woff|otf|eot|woff2|ico|svg)$"
     # Exclude files, because they make it obvious which product they relate to.
     r"|(LICENSE|NOTICES|CODE_OF_CONDUCT\.md|README\.md|CONTRIBUTING\.md)$"
     # Exclude files, because they do not support comments
@@ -50,6 +50,7 @@ IGNORE_PATTERN = re.compile(
     r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini|pytest\.ini)$"
     r"|^lib/(test-requirements-with-tensorflow\.txt|test-requirements\.txt)$"
     r"|\.isort\.cfg$"
+    r"|\.credentials/\.gitignore$"
     # Excluding test files, because adding headers may cause tests to fail.
     r"|/(fixtures|__snapshots__|vendor|test_data|data)/"
     # Exclude vendored files.

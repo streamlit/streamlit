@@ -66,7 +66,7 @@ describe("FileUploadClient Upload", () => {
 
   function mockUploadResponseStatus(status: number): void {
     axiosMock
-      .onPost(buildHttpUri(MOCK_SERVER_URI, "upload_file"))
+      .onPost(buildHttpUri(MOCK_SERVER_URI, "_stcore/upload_file"))
       .reply((config: AxiosRequestConfig): any[] => {
         if (status !== 200) {
           return [status]
@@ -83,6 +83,7 @@ describe("FileUploadClient Upload", () => {
         }
 
         if (getCookie("_xsrf")) {
+          // @ts-ignore - TS errors that config.headers is possibly 'undefined`
           if (!("X-Xsrftoken" in config.headers)) {
             return [403]
           }

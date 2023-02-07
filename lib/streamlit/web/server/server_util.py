@@ -15,6 +15,9 @@
 """Server related utility functions"""
 
 from typing import Optional
+from urllib.parse import urljoin
+
+import tornado.web
 
 from streamlit import config, net_util, url_util
 
@@ -109,3 +112,14 @@ def _get_browser_address_bar_port() -> int:
     if config.get_option("global.developmentMode"):
         return 3000
     return int(config.get_option("browser.serverPort"))
+
+
+def emit_endpoint_deprecation_notice(
+    handler: tornado.web.RequestHandler, new_path: str
+) -> None:
+    """
+    Emits the warning about deprecation of HTTP endpoint in the HTTP header.
+    """
+    handler.set_header("Deprecation", True)
+    new_url = urljoin(f"{handler.request.protocol}://{handler.request.host}", new_path)
+    handler.set_header("Link", f'<{new_url}>; rel="alternate"')

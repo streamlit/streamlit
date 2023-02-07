@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.14.1"  # PEP-440
+VERSION = "1.17.0"  # PEP-440
 
 NAME = "streamlit"
 
@@ -37,7 +37,7 @@ INSTALL_REQUIRES = [
     "importlib-metadata>=1.4",
     "numpy",
     "packaging>=14.1",
-    "pandas>=0.21.0",
+    "pandas>=0.25",
     "pillow>=6.2.0",
     "protobuf<4,>=3.12",
     "pyarrow>=4.0",
@@ -62,12 +62,15 @@ INSTALL_REQUIRES = [
 SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
     "gitpython!=3.1.19",
     "pydeck>=0.1.dev5",
-    # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
-    "tornado>=5.0",
+    # Tornado 6.0.3 was the current Tornado version when Python 3.8, our earliest supported Python version,
+    # was released (Oct 14, 2019).
+    "tornado>=6.0.3",
 ]
 
 if not os.getenv("SNOWPARK_CONDA_BUILD"):
     INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
+
+EXTRA_REQUIRES = {"snowflake": ["snowflake-snowpark-python; python_version=='3.8'"]}
 
 
 class VerifyVersionCommand(install):
@@ -140,6 +143,7 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
     # Requirements
     install_requires=INSTALL_REQUIRES,
+    extras_require=EXTRA_REQUIRES,
     zip_safe=False,  # install source files not egg
     include_package_data=True,  # copy html and friends
     entry_points={"console_scripts": ["streamlit = streamlit.web.cli:main"]},

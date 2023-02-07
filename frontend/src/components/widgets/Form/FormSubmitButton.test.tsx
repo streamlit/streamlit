@@ -21,6 +21,7 @@ import React from "react"
 
 import { Button as ButtonProto } from "src/autogen/proto"
 
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import UIButton from "src/components/shared/Button"
 import { render, shallow } from "src/lib/test_util"
 import {
@@ -47,13 +48,17 @@ describe("FormSubmitButton", () => {
     })
   })
 
-  function getProps(props: Partial<Props> = {}): Props {
+  function getProps(
+    props: Partial<Props> = {},
+    useContainerWidth = false
+  ): Props {
     return {
       element: ButtonProto.create({
         id: "1",
         label: "Submit",
         formId: "mockFormId",
         help: "mockHelpText",
+        useContainerWidth,
       }),
       disabled: false,
       hasInProgressUpload: false,
@@ -88,16 +93,22 @@ describe("FormSubmitButton", () => {
     const wrappedUIButton = wrapper.find(UIButton)
 
     expect(wrappedUIButton.length).toBe(1)
-    expect(wrappedUIButton.props().children).toBe(getProps().element.label)
+    const markdownInsideWrappedUIButton =
+      wrappedUIButton.find(StreamlitMarkdown)
+    expect(markdownInsideWrappedUIButton.props().source).toBe(
+      getProps().element.label
+    )
   })
 
-  it("calls submitForm when clicked", () => {
+  it("calls submitForm when clicked", async () => {
     const props = getProps()
+    const user = userEvent.setup()
+
     jest.spyOn(props.widgetMgr, "submitForm")
 
     render(<FormSubmitButton {...props} />)
 
-    userEvent.click(screen.getByRole("button"))
+    await user.click(screen.getByRole("button"))
     expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(props.element)
   })
 
@@ -125,5 +136,19 @@ describe("FormSubmitButton", () => {
 
     wrapper2.unmount()
     expect(formsData.submitButtonCount.get("mockFormId")).toBe(0)
+  })
+
+  it("does not use container width by default", () => {
+    const wrapper = shallow(<FormSubmitButton {...getProps()} />)
+
+    const wrappedUIButton = wrapper.find(UIButton)
+    expect(wrappedUIButton.props().fluidWidth).toBe(false)
+  })
+
+  it("passes useContainerWidth property correctly", () => {
+    const wrapper = shallow(<FormSubmitButton {...getProps({}, true)} />)
+
+    const wrappedUIButton = wrapper.find(UIButton)
+    expect(wrappedUIButton.props().fluidWidth).toBe(true)
   })
 })

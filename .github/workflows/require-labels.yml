@@ -1,0 +1,20 @@
+name: Pull Request Labels
+
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: read
+
+    steps:
+      # v2=7b0461786d3bd0c6a8487e9b57814ba3e2c00227
+      - uses: mheap/github-action-required-labels@179af849240d834567e1a3d6dc781575eede757c
+        with:
+          mode: exactly
+          count: 1
+          labels: "security-assessment-completed"

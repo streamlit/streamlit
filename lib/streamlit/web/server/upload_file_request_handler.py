@@ -22,15 +22,15 @@ from streamlit.logger import get_logger
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager, UploadedFileRec
 from streamlit.web.server import routes, server_util
 
-# /upload_file/(optional session id)/(optional widget id)
-UPLOAD_FILE_ROUTE = "/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?"
+# /_stcore/upload_file/(optional session id)/(optional widget id)
+UPLOAD_FILE_ROUTE = (
+    r"/_stcore/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?"
+)
 LOGGER = get_logger(__name__)
 
 
 class UploadFileRequestHandler(tornado.web.RequestHandler):
-    """
-    Implements the POST /upload_file endpoint.
-    """
+    """Implements the POST /upload_file endpoint."""
 
     def initialize(
         self, file_mgr: UploadedFileManager, is_active_session: Callable[[str], bool]
@@ -103,7 +103,8 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
     def post(self, **kwargs):
         """Receive an uploaded file and add it to our UploadedFileManager.
-        Return the file's ID, so that the client can refer to it."""
+        Return the file's ID, so that the client can refer to it.
+        """
         args: Dict[str, List[bytes]] = {}
         files: Dict[str, List[Any]] = {}
 

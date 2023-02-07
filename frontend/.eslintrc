@@ -10,9 +10,8 @@
     "plugin:react/recommended",
     // Uses the recommended rules from the @typescript-eslint/eslint-plugin
     "plugin:@typescript-eslint/recommended",
-    // Uses eslint-config-prettier to disable ESLint rules
-    // from @typescript-eslint/eslint-plugin that would conflict with prettier
-    "prettier/@typescript-eslint",
+    "plugin:import/recommended",
+    "plugin:import/typescript",
     // Enables eslint-plugin-prettier and eslint-config-prettier.
     // This will display prettier errors as ESLint errors.
     // Make sure this is always the last configuration in the extends array.
@@ -32,6 +31,7 @@
   },
   // Ignore our auto-generated code
   "ignorePatterns": ["src/autogen/*"],
+  "plugins": ["no-relative-import-paths"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
   "rules": {
@@ -100,11 +100,21 @@
     ],
     // Disable a bunch of AirBNB rules we're currently in violation of.
     // TODO: For each one, either fix and reenable, or provide a justification.
+
+    // Surpresses compile warnings for vars already declared in the upper scope
+    "@typescript-eslint/no-shadow": "off",
+    // Surpresses compile warnings for use of an exported name as a property on the default (ex: React.useState vs. useState)
+    // TODO: Go through each instance and resolve -> import React, { useState } from "react" & call useState directly
+    "import/no-named-as-default-member": "off",
     "import/prefer-default-export": "off",
     "max-classes-per-file": "off",
     "no-shadow": "off",
     "no-param-reassign": "off",
-    "no-plusplus": "off"
+    "no-plusplus": "off",
+    "no-relative-import-paths/no-relative-import-paths": [
+      "error",
+      { "allowSameFolder": true, "rootDir": "src", "prefix": "src" }
+    ]
   },
   "settings": {
     "react": {
@@ -114,9 +124,7 @@
     },
     // Check for import violation in all JS-like files
     "import/resolver": {
-      "node": {
-        "extensions": [".js", ".jsx", ".ts", ".tsx", ".json"]
-      }
+      "typescript": true
     }
   }
 }

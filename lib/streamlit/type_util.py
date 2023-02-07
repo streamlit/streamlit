@@ -16,25 +16,31 @@
 
 from __future__ import annotations
 
+import contextlib
 import re
 import types
+from enum import Enum, auto
 from typing import (
     TYPE_CHECKING,
     Any,
+    Dict,
     Iterable,
     List,
     NamedTuple,
     Optional,
     Sequence,
+    Set,
+    Tuple,
     TypeVar,
     Union,
     cast,
     overload,
 )
 
+import numpy as np
 import pyarrow as pa
-from pandas import MultiIndex
-from pandas.api.types import infer_dtype
+from pandas import DataFrame, Index, MultiIndex, Series
+from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
 import streamlit as st
@@ -45,7 +51,6 @@ from streamlit import string_util
 if TYPE_CHECKING:
     import graphviz
     import sympy
-    from pandas import DataFrame, Index, Series
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
     from plotly.graph_objs import Figure
@@ -221,10 +226,12 @@ DataFrameLike: TypeAlias = "Union[DataFrame, Index, Series, Styler]"
 _DATAFRAME_COMPATIBLE_TYPES: Final[tuple[type, ...]] = (
     dict,
     list,
+    set,
+    tuple,
     type(None),
 )
 
-_DataFrameCompatible: TypeAlias = Union[dict, list, None]
+_DataFrameCompatible: TypeAlias = Union[dict, list, set, Tuple[Any], None]
 DataFrameCompatible: TypeAlias = Union[_DataFrameCompatible, DataFrameLike]
 
 _BYTES_LIKE_TYPES: Final[tuple[type, ...]] = (
@@ -233,6 +240,31 @@ _BYTES_LIKE_TYPES: Final[tuple[type, ...]] = (
 )
 
 BytesLike: TypeAlias = Union[bytes, bytearray]
+
+
+class DataFormat(Enum):
+    """DataFormat is used to determine the format of the data."""
+
+    UNKNOWN = auto()
+    EMPTY = auto()  # None
+    PANDAS_DATAFRAME = auto()  # pd.DataFrame
+    PANDAS_SERIES = auto()  # pd.Series
+    PANDAS_INDEX = auto()  # pd.Index
+    NUMPY_LIST = auto()  # np.array[Scalar]
+    NUMPY_MATRIX = auto()  # np.array[List[Scalar]]
+    PYARROW_TABLE = auto()  # pyarrow.Table
+    SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
+    PYSPARK_OBJECT = auto()  # pyspark.DataFrame
+    PANDAS_STYLER = auto()  # pandas Styler
+    LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
+    LIST_OF_ROWS = auto()  # List[List[Scalar]]
+    LIST_OF_VALUES = auto()  # List[Scalar]
+    TUPLE_OF_VALUES = auto()  # Tuple[Scalar]
+    SET_OF_VALUES = auto()  # Set[Scalar]
+    COLUMN_INDEX_MAPPING = auto()  # {column: {index: value}}
+    COLUMN_VALUE_MAPPING = auto()  # {column: List[values]}
+    COLUMN_SERIES_MAPPING = auto()  # {column: Series(values)}
+    KEY_VALUE_DICT = auto()  # {index: value}
 
 
 def is_dataframe(obj: object) -> TypeGuard[DataFrame]:
@@ -246,14 +278,16 @@ def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
 def is_snowpark_or_pyspark_data_object(obj: object) -> bool:
     """True if if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
     True when obj is a list which contains snowflake.snowpark.row.Row or True when obj is of type pyspark.sql.dataframe.DataFrame
-    False otherwise"""
+    False otherwise.
+    """
     return is_snowpark_data_object(obj) or is_pyspark_data_object(obj)
 
 
 def is_snowpark_data_object(obj: object) -> bool:
     """True if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
     True when obj is a list which contains snowflake.snowpark.row.Row,
-    False otherwise"""
+    False otherwise.
+    """
     if is_type(obj, _SNOWPARK_TABLE_TYPE_STR):
         return True
     if is_type(obj, _SNOWPARK_DF_TYPE_STR):
@@ -283,7 +317,8 @@ def is_dataframe_compatible(obj: object) -> TypeGuard[DataFrameCompatible]:
 
 def is_bytes_like(obj: object) -> TypeGuard[BytesLike]:
     """True if the type is considered bytes-like for the purposes of
-    protobuf data marshalling."""
+    protobuf data marshalling.
+    """
     return isinstance(obj, _BYTES_LIKE_TYPES)
 
 
@@ -333,6 +368,13 @@ def is_keras_model(obj: object) -> bool:
         or is_type(obj, "tensorflow.python.keras.engine.sequential.Sequential")
         or is_type(obj, "tensorflow.python.keras.engine.training.Model")
     )
+
+
+def is_list_of_scalars(data: Iterable[Any]) -> bool:
+    """Check if the list only contains scalar values."""
+    # Overview on all value that are interpreted as scalar:
+    # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
+    return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
 
 
 def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str, Any]]]:
@@ -438,17 +480,23 @@ def is_sequence(seq: Any) -> bool:
 
 
 def convert_anything_to_df(
-    df: Any, max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS
+    data: Any,
+    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
+    ensure_copy: bool = False,
 ) -> DataFrame:
     """Try to convert different formats to a Pandas Dataframe.
 
     Parameters
     ----------
-    df : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
+    data : ndarray, Iterable, dict, DataFrame, Styler, pa.Table, None, dict, list, or any
 
     max_unevaluated_rows: int
         If unevaluated data is detected this func will evaluate it,
         taking max_unevaluated_rows, defaults to 10k and 100 for st.table
+
+    ensure_copy: bool
+        If True, make sure to always return a copy of the data. If False, it depends on the
+        type of the data. For example, a Pandas DataFrame will be returned as-is.
 
     Returns
     -------
@@ -458,55 +506,55 @@ def convert_anything_to_df(
     # This is inefficient as the data will be converted back to Arrow
     # when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
-    if isinstance(df, pa.Table):
-        return df.to_pandas()
+    if isinstance(data, pa.Table):
+        return data.to_pandas()
 
-    if is_type(df, _PANDAS_DF_TYPE_STR):
-        return df
+    if is_type(data, _PANDAS_DF_TYPE_STR):
+        return data.copy() if ensure_copy else data
 
-    if is_pandas_styler(df):
-        return df.data
+    if is_pandas_styler(data):
+        return data.data.copy() if ensure_copy else data.data
 
-    import pandas as pd
-
-    if is_type(df, "numpy.ndarray") and len(df.shape) == 0:
-        return pd.DataFrame([])
+    if is_type(data, "numpy.ndarray"):
+        if len(data.shape) == 0:
+            return DataFrame([])
+        return DataFrame(data)
 
     if (
-        is_type(df, _SNOWPARK_DF_TYPE_STR)
-        or is_type(df, _SNOWPARK_TABLE_TYPE_STR)
-        or is_type(df, _PYSPARK_DF_TYPE_STR)
+        is_type(data, _SNOWPARK_DF_TYPE_STR)
+        or is_type(data, _SNOWPARK_TABLE_TYPE_STR)
+        or is_type(data, _PYSPARK_DF_TYPE_STR)
     ):
-        if is_type(df, _PYSPARK_DF_TYPE_STR):
-            df = df.limit(max_unevaluated_rows).toPandas()
+        if is_type(data, _PYSPARK_DF_TYPE_STR):
+            data = data.limit(max_unevaluated_rows).toPandas()
         else:
-            df = pd.DataFrame(df.take(max_unevaluated_rows))
-        if df.shape[0] == max_unevaluated_rows:
+            data = DataFrame(data.take(max_unevaluated_rows))
+        if data.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
                 "Call `collect()` on the dataframe to show more."
             )
-        return df
+        return data
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
     try:
-        return pd.DataFrame(df)
 
-    except ValueError:
+        return DataFrame(data)
+
+    except ValueError as ex:
+        if isinstance(data, dict):
+            with contextlib.suppress(ValueError):
+                # Try to use index orient as back-up to support key-value dicts
+                return DataFrame.from_dict(data, orient="index")
         raise errors.StreamlitAPIException(
-            """
-Unable to convert object of type `%(type)s` to `pandas.DataFrame`.
-
+            f"""
+Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
 Offending object:
 ```py
-%(object)s
+{data}
 ```"""
-            % {
-                "type": type(df),
-                "object": df,
-            }
-        )
+        ) from ex
 
 
 @overload
@@ -600,17 +648,54 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def _is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
+def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
+    if column.dtype in [
+        # timedelta64[ns] is supported by pyarrow but not in the Arrow JS:
+        # https://github.com/streamlit/streamlit/issues/4489
+        "timedelta64[ns]",
+        "complex64",
+        "complex128",
+        "complex256",
+    ]:
+        return True
 
-    # Check all columns for mixed types and complex128 type
-    # The dtype of mixed type columns is always object, the actual type of the column
-    # values can be determined via the infer_dtype function:
-    # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
+    if column.dtype == "object":
+        # The dtype of mixed type columns is always object, the actual type of the column
+        # values can be determined via the infer_dtype function:
+        # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
+        inferred_type = infer_dtype(column, skipna=True)
 
-    return (
-        column.dtype == "object" and infer_dtype(column) in ["mixed", "mixed-integer"]
-    ) or column.dtype == "complex128"
+        if inferred_type in [
+            "mixed-integer",
+            "complex",
+            "timedelta",
+            "timedelta64",
+        ]:
+            return True
+        elif inferred_type == "mixed":
+            # This includes most of the more complex/custom types (objects, dicts, lists, ...)
+            if len(column) == 0 or not hasattr(column, "iloc"):
+                # The column seems to be invalid, so we assume it is incompatible.
+                # But this would most likely never happen since empty columns
+                # cannot be mixed.
+                return True
+
+            # Get the first value to check if it is a supported list-like type.
+            first_value = column.iloc[0]
+
+            if (
+                not is_list_like(first_value)
+                # dicts are list-like, but have issues in Arrow JS (see comments in Quiver.ts)
+                or is_dict_like(first_value)
+                # Frozensets are list-like, but are not compatible with pyarrow.
+                or isinstance(first_value, frozenset)
+            ):
+                # This seems to be an incompatible list-like type
+                return True
+            return False
+    # We did not detect an incompatible type, so we assume it is compatible:
+    return False
 
 
 def fix_arrow_incompatible_column_types(
@@ -636,10 +721,13 @@ def fix_arrow_incompatible_column_types(
     -------
     The fixed dataframe.
     """
-
+    # Make a copy, but only initialize if necessary to preserve memory.
+    df_copy = None
     for col in selected_columns or df.columns:
-        if _is_colum_type_arrow_incompatible(df[col]):
-            df[col] = df[col].astype(str)
+        if is_colum_type_arrow_incompatible(df[col]):
+            if df_copy is None:
+                df_copy = df.copy()
+            df_copy[col] = df[col].astype(str)
 
     # The index can also contain mixed types
     # causing Arrow issues during conversion.
@@ -650,10 +738,12 @@ def fix_arrow_incompatible_column_types(
             df.index,
             MultiIndex,
         )
-        and _is_colum_type_arrow_incompatible(df.index)
+        and is_colum_type_arrow_incompatible(df.index)
     ):
-        df.index = df.index.astype(str)
-    return df
+        if df_copy is None:
+            df_copy = df.copy()
+        df_copy.index = df.index.astype(str)
+    return df_copy if df_copy is not None else df
 
 
 def data_frame_to_bytes(df: DataFrame) -> bytes:
@@ -667,9 +757,10 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
     """
     try:
         table = pa.Table.from_pandas(df)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError):
+    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
         _LOGGER.info(
-            "Applying automatic fixes for column types to make the dataframe Arrow-compatible."
+            "Applying automatic fixes for column types to make the dataframe Arrow-compatible.",
+            exc_info=ex,
         )
         df = fix_arrow_incompatible_column_types(df)
         table = pa.Table.from_pandas(df)
@@ -685,9 +776,170 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
         A bytes object to convert.
 
     """
-
     reader = pa.RecordBatchStreamReader(source)
     return reader.read_pandas()
+
+
+def determine_data_format(input_data: Any) -> DataFormat:
+    """Determine the data format of the input data.
+
+    Parameters
+    ----------
+    input_data : Any
+        The input data to determine the data format of.
+
+    Returns
+    -------
+    DataFormat
+        The data format of the input data.
+    """
+    if input_data is None:
+        return DataFormat.EMPTY
+    elif isinstance(input_data, DataFrame):
+        return DataFormat.PANDAS_DATAFRAME
+    elif isinstance(input_data, np.ndarray):
+        if len(input_data.shape) == 1:
+            # For technical reasons, we need to distinguish one
+            # one-dimensional numpy array from multidimensional ones.
+            return DataFormat.NUMPY_LIST
+        return DataFormat.NUMPY_MATRIX
+    elif isinstance(input_data, pa.Table):
+        return DataFormat.PYARROW_TABLE
+    elif isinstance(input_data, Series):
+        return DataFormat.PANDAS_SERIES
+    elif isinstance(input_data, Index):
+        return DataFormat.PANDAS_INDEX
+    elif is_pandas_styler(input_data):
+        return DataFormat.PANDAS_STYLER
+    elif is_snowpark_data_object(input_data):
+        return DataFormat.SNOWPARK_OBJECT
+    elif is_pyspark_data_object(input_data):
+        return DataFormat.PYSPARK_OBJECT
+    elif isinstance(input_data, (list, tuple, set)):
+        if is_list_of_scalars(input_data):
+            # -> one-dimensional data structure
+            if isinstance(input_data, tuple):
+                return DataFormat.TUPLE_OF_VALUES
+            if isinstance(input_data, set):
+                return DataFormat.SET_OF_VALUES
+            return DataFormat.LIST_OF_VALUES
+        else:
+            # -> Multi-dimensional data structure
+            # This should always contain at least one element,
+            # otherwise the values type from infer_dtype would have been empty
+            first_element = next(iter(input_data))
+            if isinstance(first_element, dict):
+                return DataFormat.LIST_OF_RECORDS
+            if isinstance(first_element, (list, tuple, set)):
+                return DataFormat.LIST_OF_ROWS
+    elif isinstance(input_data, dict):
+        if not input_data:
+            return DataFormat.KEY_VALUE_DICT
+        if len(input_data) > 0:
+            first_value = next(iter(input_data.values()))
+            if isinstance(first_value, dict):
+                return DataFormat.COLUMN_INDEX_MAPPING
+            if isinstance(first_value, (list, tuple)):
+                return DataFormat.COLUMN_VALUE_MAPPING
+            if isinstance(first_value, Series):
+                return DataFormat.COLUMN_SERIES_MAPPING
+            # In the future, we could potentially also support the tight & split formats here
+            if is_list_of_scalars(input_data.values()):
+                # Only use the key-value dict format if the values are only scalar values
+                return DataFormat.KEY_VALUE_DICT
+    return DataFormat.UNKNOWN
+
+
+def convert_df_to_data_format(
+    df: DataFrame, data_format: DataFormat
+) -> Union[
+    DataFrame,
+    Series,
+    Index,
+    Styler,
+    pa.Table,
+    np.ndarray[Any, np.dtype[Any]],
+    Tuple[Any],
+    List[Any],
+    Set[Any],
+    Dict[str, Any],
+]:
+    """Convert a dataframe to the specified data format.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to convert.
+
+    data_format : DataFormat
+        The data format to convert to.
+
+    Returns
+    -------
+    pd.DataFrame, pd.Index, Styler, pa.Table, np.ndarray, tuple, list, set, dict
+        The converted dataframe.
+    """
+    if data_format in [
+        DataFormat.EMPTY,
+        DataFormat.PANDAS_DATAFRAME,
+        DataFormat.SNOWPARK_OBJECT,
+        DataFormat.PYSPARK_OBJECT,
+        DataFormat.PANDAS_INDEX,
+        DataFormat.PANDAS_STYLER,
+    ]:
+        return df
+    elif data_format == DataFormat.NUMPY_LIST:
+        # It's a 1-dimensional array, so we only return
+        # the first column as numpy array
+        # Calling to_numpy() on the full DataFrame would result in:
+        # [[1], [2]] instead of [1, 2]
+        return np.ndarray(0) if df.empty else df.iloc[:, 0].to_numpy()
+    elif data_format == DataFormat.NUMPY_MATRIX:
+        return np.ndarray(0) if df.empty else df.to_numpy()
+    elif data_format == DataFormat.PYARROW_TABLE:
+        return pa.Table.from_pandas(df)
+    elif data_format == DataFormat.PANDAS_SERIES:
+        # Select first column in dataframe and create a new series based on the values
+        if len(df.columns) != 1:
+            raise ValueError(
+                f"DataFrame is expected to have a single column but has {len(df.columns)}."
+            )
+        return df[df.columns[0]]
+    elif data_format == DataFormat.LIST_OF_RECORDS:
+        return df.to_dict(orient="records")
+    elif data_format == DataFormat.LIST_OF_ROWS:
+        # to_numpy converts the dataframe to a list of rows
+        return df.to_numpy().tolist()
+    elif data_format == DataFormat.COLUMN_INDEX_MAPPING:
+        return df.to_dict(orient="dict")
+    elif data_format == DataFormat.COLUMN_VALUE_MAPPING:
+        return df.to_dict(orient="list")
+    elif data_format == DataFormat.COLUMN_SERIES_MAPPING:
+        return df.to_dict(orient="series")
+    elif data_format in [
+        DataFormat.LIST_OF_VALUES,
+        DataFormat.TUPLE_OF_VALUES,
+        DataFormat.SET_OF_VALUES,
+    ]:
+        return_list = []
+        if len(df.columns) == 1:
+            #  Get the first column and convert to list
+            return_list = df[df.columns[0]].tolist()
+        elif len(df.columns) >= 1:
+            raise ValueError(
+                f"DataFrame is expected to have a single column but has {len(df.columns)}."
+            )
+        if data_format == DataFormat.TUPLE_OF_VALUES:
+            return tuple(return_list)
+        if data_format == DataFormat.SET_OF_VALUES:
+            return set(return_list)
+        return return_list
+    elif data_format == DataFormat.KEY_VALUE_DICT:
+        # The key is expected to be the index -> this will return the first column
+        # as a dict with index as key.
+        return dict() if df.empty else df.iloc[:, 0].to_dict()
+
+    raise ValueError(f"Unsupported input data format: {data_format}")
 
 
 @overload

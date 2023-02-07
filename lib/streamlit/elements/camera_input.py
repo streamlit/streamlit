@@ -119,7 +119,7 @@ class CameraInputMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> SomeUploadedSnapshotFile:
-        """Display a widget that returns pictures from the user's webcam.
+        r"""Display a widget that returns pictures from the user's webcam.
 
         Parameters
         ----------
@@ -127,6 +127,24 @@ class CameraInputMixin:
             A short label explaining to the user what this widget is used for.
             The label can optionally contain Markdown and supports the following
             elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow

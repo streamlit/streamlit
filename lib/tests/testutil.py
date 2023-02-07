@@ -13,12 +13,43 @@
 # limitations under the License.
 
 """Utility functions to use in our tests."""
-
+import json
+import sys
 from contextlib import contextmanager
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 from unittest.mock import patch
 
 from streamlit import config
+from streamlit.runtime.scriptrunner import ScriptRunContext
+from streamlit.runtime.state import SafeSessionState, SessionState
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from tests.constants import SNOWFLAKE_CREDENTIAL_FILE
+
+if TYPE_CHECKING:
+    from snowflake.snowpark import Session
+
+
+def should_skip_pyspark_tests() -> bool:
+    """Disable pyspark unit tests in Python 3.11.
+    Pyspark is not compatible with Python 3.11 as of 2023.01.12, and results in test failures.
+    (Please remove this when pyspark is compatible!)
+    """
+    # See: https://pyreadiness.org/3.11/
+    # See: https://stackoverflow.com/questions/74579273/indexerror-tuple-index-out-of-range-when-creating-pyspark-dataframe
+    return sys.version_info >= (3, 11, 0)
+
+
+def create_mock_script_run_ctx() -> ScriptRunContext:
+    """Create a ScriptRunContext for use in tests."""
+    return ScriptRunContext(
+        session_id="mock_session_id",
+        _enqueue=lambda msg: None,
+        query_string="mock_query_string",
+        session_state=SafeSessionState(SessionState()),
+        uploaded_file_mgr=UploadedFileManager(),
+        page_script_hash="mock_page_script_hash",
+        user_info={"email": "mock@test.com"},
+    )
 
 
 @contextmanager
@@ -94,3 +125,15 @@ def normalize_md(txt: str) -> str:
     txt = txt.replace("OMG_LINK", "](")
 
     return txt.strip()
+
+
+@contextmanager
+def create_snowpark_session() -> "Session":
+    from snowflake.snowpark import Session
+
+    credential = json.loads(SNOWFLAKE_CREDENTIAL_FILE.read_text())
+    session = Session.builder.configs(credential).create()
+    try:
+        yield session
+    finally:
+        session.close()

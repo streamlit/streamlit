@@ -36,6 +36,7 @@ import {
   HostCommunicationState,
 } from "src/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 import { MetricsManager } from "src/lib/MetricsManager"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
@@ -57,6 +58,7 @@ jest.mock("src/lib/ConnectionManager")
 const getHostCommunicationState = (
   extend?: Partial<HostCommunicationState>
 ): HostCommunicationState => ({
+  authTokenPromise: Promise.resolve(undefined),
   forcedModalClose: false,
   hideSidebarNav: false,
   isOwner: true,
@@ -76,8 +78,9 @@ const getHostCommunicationProp = (
   currentState: getHostCommunicationState({}),
   onModalReset: jest.fn(),
   onPageChanged: jest.fn(),
+  resetAuthToken: jest.fn(),
   sendMessage: jest.fn(),
-  setAllowedOrigins: jest.fn(),
+  setAllowedOriginsResp: jest.fn(),
   ...extend,
 })
 
@@ -130,6 +133,8 @@ describe("App", () => {
       userMapboxToken: "mpt",
     } as SessionInfoArgs)
     MetricsManager.current = getMetricsManagerForTest()
+    // @ts-ignore
+    window.prerenderReady = false
   })
 
   afterEach(() => {
@@ -141,6 +146,16 @@ describe("App", () => {
     const wrapper = getWrapper()
 
     expect(wrapper.html()).not.toBeNull()
+  })
+
+  it("calls connectionManager.disconnect() when unmounting", () => {
+    const wrapper = getWrapper()
+    const instance = wrapper.instance() as App
+
+    wrapper.unmount()
+
+    // @ts-ignore
+    expect(instance.connectionManager.disconnect).toHaveBeenCalled()
   })
 
   it("reloads when streamlit server version changes", () => {
@@ -165,7 +180,7 @@ describe("App", () => {
         },
         sessionId: "sessionId",
         userInfo: {},
-        sessionState: {},
+        sessionStatus: {},
       },
     }
 
@@ -407,30 +422,6 @@ describe("App", () => {
       props.hostCommunication.currentState.requestedPageScriptHash
     ).toBeNull()
   })
-
-  it("should return the auth token set in hostCommunication from getHostAuthToken", () => {
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
-
-    // Use setProps (vs setting the auth token on component rendered) to
-    // simulate the auth token changing after the withHostCommunication hoc
-    // initially loads.
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({
-            authToken: "verySecureAuthToken",
-          }),
-        }),
-      })
-    )
-    wrapper.update()
-
-    const instance = wrapper.instance() as App
-
-    // @ts-ignore
-    expect(instance.getHostAuthToken()).toBe("verySecureAuthToken")
-  })
 })
 
 const mockGetBaseUriParts = (basePath?: string) => () => ({
@@ -459,7 +450,7 @@ describe("App.handleNewSession", () => {
         streamlitVersion: "streamlitVersion",
         pythonVersion: "pythonVersion",
       },
-      sessionState: {
+      sessionStatus: {
         runOnSave: false,
         scriptIsRunning: false,
       },
@@ -728,6 +719,44 @@ describe("App.handleNewSession", () => {
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
     expect(SessionInfo.isSet()).toBe(true)
+  })
+
+  it("should set window.prerenderReady to true after app script is run successfully first time", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    wrapper.setState({
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+      connectionState: ConnectionState.CONNECTING,
+    })
+    wrapper.update()
+    // @ts-ignore
+    expect(window.prerenderReady).toBe(false)
+
+    wrapper.setState({
+      scriptRunState: ScriptRunState.RUNNING,
+      connectionState: ConnectionState.CONNECTED,
+    })
+    wrapper.update()
+    // @ts-ignore
+    expect(window.prerenderReady).toBe(false)
+
+    wrapper.setState({
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+      connectionState: ConnectionState.CONNECTED,
+    })
+    wrapper.update()
+    // @ts-ignore
+    expect(window.prerenderReady).toBe(true)
+
+    // window.prerenderReady is set to true after first
+    wrapper.setState({
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+      connectionState: ConnectionState.CONNECTED,
+    })
+    wrapper.update()
+    // @ts-ignore
+    expect(window.prerenderReady).toBe(true)
   })
 
   it("plumbs appPages and currentPageScriptHash to the AppView component", () => {
@@ -1201,5 +1230,18 @@ describe("Test Main Menu shortcut functionality", () => {
     wrapper.instance().keyHandlers.CLEAR_CACHE()
 
     expect(wrapper.instance().openClearCacheDialog).toBeCalled()
+  })
+})
+
+describe("test app has printCallback method", () => {
+  it("test app has printCallback method", () => {
+    const props = getProps()
+    const wrapper = mount(
+      <iframe>
+        <App {...props} />
+      </iframe>
+    )
+    const appComponentInstance = wrapper.find(App).instance() as App
+    expect(appComponentInstance.printCallback).toBeDefined()
   })
 })

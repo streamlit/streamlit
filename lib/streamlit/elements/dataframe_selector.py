@@ -13,7 +13,8 @@
 # limitations under the License.
 
 """Selects between our two DataFrame serialization methods ("legacy" and
-"arrow") based on a config option"""
+"arrow") based on a config option.
+"""
 from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union, cast
 
 from typing_extensions import Literal
@@ -77,6 +78,7 @@ class DataFrameSelectorMixin:
 
         Examples
         --------
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>>
@@ -95,6 +97,10 @@ class DataFrameSelectorMixin:
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> df = pd.DataFrame(
         ...    np.random.randn(10, 20),
         ...    columns=('col %d' % i for i in range(20)))
@@ -131,6 +137,7 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>>
@@ -205,6 +212,7 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>>
@@ -291,6 +299,7 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>>
@@ -377,6 +386,7 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>>
@@ -434,6 +444,7 @@ class DataFrameSelectorMixin:
         Example
         -------
 
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>> import altair as alt
@@ -500,6 +511,7 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>>
@@ -554,6 +566,10 @@ class DataFrameSelectorMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> df1 = pd.DataFrame(
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))

@@ -40,8 +40,15 @@ all-devel: init develop pre-commit-install
 	@echo ""
 
 .PHONY: mini-devel
-# Get minimal dependencies and install Streamlit into Python environment -- but do not build the frontend.
+# Get minimal dependencies for development and install Streamlit into Python
+# environment -- but do not build the frontend.
 mini-devel: mini-init develop pre-commit-install
+
+.PHONY: build-deps
+# An even smaller installation than mini-devel. Installs the bare minimum
+# necessary to build Streamlit (by leaving out some dependencies necessary for
+# the development process). Does not build the frontend.
+build-deps: mini-init develop
 
 .PHONY: init
 # Install all Python and JS dependencies.
@@ -57,7 +64,7 @@ frontend: react-build
 
 .PHONY: setup
 setup:
-	pip install pip-tools pipenv ;
+	pip install pipenv
 
 .PHONY: pipenv-install
 pipenv-install: pipenv-dev-install py-test-install
@@ -74,9 +81,14 @@ pipenv-dev-install: lib/Pipfile
 SHOULD_INSTALL_TENSORFLOW := $(shell python scripts/should_install_tensorflow.py)
 .PHONY: py-test-install
 py-test-install: lib/test-requirements.txt
-	# As of Python 3.9, we're using pip's legacy-resolver when installing
+  	# As of Python 3.9, we're using pip's legacy-resolver when installing
 	# test-requirements.txt, because otherwise pip takes literal hours to finish.
-	pip install -r lib/test-requirements.txt --use-deprecated=legacy-resolver
+	# Skip --use-deprecated option, when building local E2E docker image, since it's not present in Python 3.7.11
+	if [ "${DOCKER}" = "true" ] ; then\
+  		pip install -r lib/test-requirements.txt;\
+  	else\
+		pip install -r lib/test-requirements.txt --use-deprecated=legacy-resolver;\
+	fi
 ifeq (${SHOULD_INSTALL_TENSORFLOW},true)
 	pip install -r lib/test-requirements-with-tensorflow.txt --use-deprecated=legacy-resolver
 else
@@ -113,6 +125,16 @@ pytest:
 		PYTHONPATH=. \
 		pytest -v \
 			--junitxml=test-reports/pytest/junit.xml \
+			-l tests/ \
+			$(PYTHON_MODULES)
+
+# Run Python integration tests for snowflake.
+pytest-snowflake:
+	cd lib; \
+		PYTHONPATH=. \
+		pytest -v \
+			--junitxml=test-reports/pytest/junit.xml \
+			--require-snowflake \
 			-l tests/ \
 			$(PYTHON_MODULES)
 
@@ -156,7 +178,7 @@ distribution:
 
 .PHONY: package
 # Build lib and frontend, and then run 'distribution'.
-package: mini-devel frontend distribution
+package: build-deps frontend distribution
 
 .PHONY: conda-distribution
 # Create conda distribution files in lib/conda-recipe/dist.
@@ -170,7 +192,7 @@ conda-distribution:
 
 .PHONY: conda-package
 # Build lib and frontend, and then run 'conda-distribution'
-conda-package: mini-devel frontend conda-distribution
+conda-package: build-deps frontend conda-distribution
 
 .PHONY: clean
 # Remove all generated files.
@@ -328,6 +350,12 @@ notices:
 	./scripts/append_license.sh frontend/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/public/vendor/bokeh/bokeh-LICENSE.txt
+	./scripts/append_license.sh frontend/public/vendor/viz/viz.js-LICENSE.txt
+	./scripts/append_license.sh frontend/src/vendor/twemoji-LICENSE.txt
+	./scripts/append_license.sh frontend/src/vendor/Segment-LICENSE.txt
+	./scripts/append_license.sh frontend/src/vendor/react-bootstrap-LICENSE.txt
+	./scripts/append_license.sh lib/streamlit/vendor/ipython/IPython-LICENSE.txt
 
 .PHONY: headers
 # Update the license header on all source files.

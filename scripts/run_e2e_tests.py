@@ -234,7 +234,6 @@ def run_test(
         # Loop until the test succeeds or is skipped.
         while result not in (SUCCESS, SKIP, QUIT):
             cypress_command = ["yarn", "cy:run", "--spec", specpath]
-            cypress_command.extend(["--reporter", "cypress-circleci-reporter"])
             cypress_command.extend(ctx.cypress_flags)
 
             click.echo(
@@ -484,6 +483,27 @@ def run_e2e_tests(
                         ctx,
                         str(spec_path),
                         ["streamlit", "run", "--ui.hideSidebarNav=false", test_path],
+                        show_output=verbose,
+                    )
+            elif basename(spec_path) == "staticfiles_app.spec.js":
+                test_name, _ = splitext(basename(spec_path))
+                test_name, _ = splitext(test_name)
+                test_path = join(
+                    ctx.tests_dir,
+                    "scripts",
+                    "staticfiles_apps",
+                    "streamlit_static_app.py",
+                )
+                if os.path.exists(test_path):
+                    run_test(
+                        ctx,
+                        str(spec_path),
+                        [
+                            "streamlit",
+                            "run",
+                            "--server.enableStaticServing=true",
+                            test_path,
+                        ],
                         show_output=verbose,
                     )
 

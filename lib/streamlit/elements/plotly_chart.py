@@ -35,6 +35,17 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
+try:
+    import plotly.io as pio
+
+    import streamlit.elements.lib.streamlit_plotly_theme
+
+    pio.templates.default = "streamlit"
+except ModuleNotFoundError:
+    # We have imports here because it takes too loo long to load the template default for the first graph to load
+    # We do nothing if Plotly is not installed. This is expected since Plotly is an optional dependency.
+    pass
+
 LOGGER: Final = get_logger(__name__)
 
 SharingMode: TypeAlias = Literal["streamlit", "private", "public", "secret"]
@@ -73,7 +84,7 @@ class PlotlyMixin:
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
         sharing: SharingMode = "streamlit",
-        theme: Union[None, Literal["streamlit"]] = None,
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display an interactive Plotly chart.
@@ -111,9 +122,10 @@ class PlotlyMixin:
 
         Example
         -------
-
         The example below comes straight from the examples at
         https://plot.ly/python:
+
+        >>> import streamlit as st
         >>> import numpy as np
         >>> import plotly.figure_factory as ff
         >>>

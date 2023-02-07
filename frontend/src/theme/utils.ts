@@ -374,7 +374,9 @@ export const createEmotionTheme = (
 
   const parsedColors = Object.entries(customColors).reduce(
     (colors: Record<string, string>, [key, color]) => {
+      // @ts-ignore
       if (isColor(color)) {
+        // @ts-ignore
         colors[key] = color
       } else if (isColor(`#${color}`)) {
         colors[key] = `#${color}`
@@ -655,6 +657,36 @@ export function getGray90(theme: Theme): string {
     : theme.colors.gray10
 }
 
+export function getMdRed(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.red80
+    : theme.colors.red70
+}
+
+export function getMdBlue(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.blue80
+    : theme.colors.blue50
+}
+
+export function getMdGreen(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.green90
+    : theme.colors.green60
+}
+
+export function getMdViolet(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.purple80
+    : theme.colors.purple50
+}
+
+export function getMdOrange(theme: Theme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.orange100
+    : theme.colors.orange60
+}
+
 function getBlueArrayAsc(theme: Theme): string[] {
   const { colors } = theme
   return [
@@ -694,9 +726,19 @@ export function getSequentialColorsArray(theme: Theme): string[] {
 }
 
 export function getDivergingColorsArray(theme: Theme): string[] {
-  return hasLightBackgroundColor(theme)
-    ? getBlueArrayDesc(theme)
-    : getBlueArrayAsc(theme)
+  const { colors } = theme
+  return [
+    colors.red100,
+    colors.red90,
+    colors.red70,
+    colors.red50,
+    colors.red30,
+    colors.blue30,
+    colors.blue50,
+    colors.blue70,
+    colors.blue90,
+    colors.blue100,
+  ]
 }
 
 export function getCategoricalColorsArray(theme: Theme): string[] {

@@ -47,15 +47,18 @@ class AlertMixin:
 
         Parameters
         ----------
-        icon : None
-            An optional parameter, that adds an emoji to the alert.
-            The default is None.
-            This argument can only be supplied by keyword.
         body : str
             The error text to display.
+        icon : str or None
+            An optional, keyword-only argument that specifies an emoji to use as
+            the icon for the alert. Shortcodes are not allowed, please use a
+            single character instead. E.g. "🚨", "🔥", "🤖", etc.
+            Defaults to None, which means no icon is displayed.
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.error('This is an error', icon="🚨")
 
         """
@@ -78,13 +81,16 @@ class AlertMixin:
         ----------
         body : str
             The warning text to display.
-        icon : None
-            An optional parameter, that adds an emoji to the alert.
-            The default is None.
-            This argument can only be supplied by keyword.
+        icon : str or None
+            An optional, keyword-only argument that specifies an emoji to use as
+            the icon for the alert. Shortcodes are not allowed, please use a
+            single character instead. E.g. "🚨", "🔥", "🤖", etc.
+            Defaults to None, which means no icon is displayed.
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.warning('This is a warning', icon="⚠️")
 
         """
@@ -107,13 +113,16 @@ class AlertMixin:
         ----------
         body : str
             The info text to display.
-        icon : None
-            An optional parameter, that adds an emoji to the alert.
-            The default is None.
-            This argument can only be supplied by keyword.
+        icon : str or None
+            An optional, keyword-only argument that specifies an emoji to use as
+            the icon for the alert. Shortcodes are not allowed, please use a
+            single character instead. E.g. "🚨", "🔥", "🤖", etc.
+            Defaults to None, which means no icon is displayed.
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.info('This is a purely informational message', icon="ℹ️")
 
         """
@@ -137,13 +146,16 @@ class AlertMixin:
         ----------
         body : str
             The success text to display.
-        icon : None
-            An optional parameter, that adds an emoji to the alert.
-            The default is None.
-            This argument can only be supplied by keyword.
+        icon : str or None
+            An optional, keyword-only argument that specifies an emoji to use as
+            the icon for the alert. Shortcodes are not allowed, please use a
+            single character instead. E.g. "🚨", "🔥", "🤖", etc.
+            Defaults to None, which means no icon is displayed.
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.success('This is a success message!', icon="✅")
 
         """

@@ -75,6 +75,10 @@ class ArrowMixin:
 
         Examples
         --------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> df = pd.DataFrame(
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
@@ -106,7 +110,10 @@ class ArrowMixin:
             proto.width = width
         if height:
             proto.height = height
+        proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
+
         marshall(proto, data, default_uuid)
+
         return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("_arrow_table")
@@ -123,6 +130,10 @@ class ArrowMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> df = pd.DataFrame(
         ...    np.random.randn(10, 5),
         ...    columns=("col %d" % i for i in range(5)))

@@ -188,4 +188,24 @@ describe("AppView element", () => {
       })
     )
   })
+
+  it("renders the Spacer and Footer when not embedded", () => {
+    jest
+      .spyOn(React, "useContext")
+      .mockImplementation(() => ({ wideMode: false, embedded: false }))
+    const wrapper = shallow(<AppView {...getProps()} />)
+
+    expect(wrapper.find("StyledAppViewBlockSpacer").exists()).toBe(true)
+    expect(wrapper.find("StyledAppViewFooter").exists()).toBe(true)
+  })
+
+  it("does not render the Spacer and Footer when embedded", () => {
+    jest
+      .spyOn(React, "useContext")
+      .mockImplementation(() => ({ wideMode: false, embedded: true }))
+    const wrapper = shallow(<AppView {...getProps()} />)
+
+    expect(wrapper.find("StyledAppViewBlockSpacer").exists()).toBe(false)
+    expect(wrapper.find("StyledAppViewFooter").exists()).toBe(false)
+  })
 })

@@ -15,24 +15,28 @@
  */
 
 import axios from "axios"
+import { WS } from "jest-websocket-mock"
+import { zip } from "lodash"
 import React, { Fragment } from "react"
-import WS from "jest-websocket-mock"
 
 import { BackMsg } from "src/autogen/proto"
 import { ConnectionState } from "src/lib/ConnectionState"
+import { SessionInfo } from "src/lib/SessionInfo"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   StyledBashCode,
   WebsocketConnection,
   doInitPings,
 } from "src/lib/WebsocketConnection"
-import { zip } from "lodash"
 
 const MOCK_ALLOWED_ORIGINS_RESPONSE = {
   data: {
     allowedOrigins: ["list", "of", "allowed", "origins"],
+    useExternalAuthToken: false,
   },
 }
+
+const MOCK_HEALTH_RESPONSE = { status: "ok" }
 
 describe("doInitPings", () => {
   const MOCK_PING_DATA = {
@@ -43,7 +47,7 @@ describe("doInitPings", () => {
     timeoutMs: 10,
     maxTimeoutMs: 100,
     retryCallback: jest.fn(),
-    setHostAllowedOrigins: jest.fn(),
+    setAllowedOriginsResp: jest.fn(),
     userCommandLine: "streamlit run not-a-real-script.py",
   }
 
@@ -54,7 +58,7 @@ describe("doInitPings", () => {
     originalAxiosGet = axios.get
     axios.get = jest.fn()
     MOCK_PING_DATA.retryCallback = jest.fn()
-    MOCK_PING_DATA.setHostAllowedOrigins = jest.fn()
+    MOCK_PING_DATA.setAllowedOriginsResp = jest.fn()
     originalPromiseAll = Promise.all
   })
 
@@ -63,13 +67,12 @@ describe("doInitPings", () => {
     Promise.all = originalPromiseAll
   })
 
-  // NOTE: Temporary test until we're able to rename the /healthz endpoint
-  it("does not call the /healthz endpoint when pinging server", async () => {
+  it("does call the /_stcore/health endpoint when pinging server", async () => {
     axios.get = jest.fn().mockImplementation(url => {
-      if (url.endsWith("/healthz")) {
-        throw Error("kaboom")
+      if (url.endsWith("_stcore/health")) {
+        return MOCK_HEALTH_RESPONSE
       }
-      if (url.endsWith("/st-allowed-message-origins")) {
+      if (url.endsWith("_stcore/allowed-message-origins")) {
         return MOCK_ALLOWED_ORIGINS_RESPONSE
       }
       return {}
@@ -80,12 +83,12 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
     expect(uriIndex).toEqual(0)
-    expect(MOCK_PING_DATA.setHostAllowedOrigins).toHaveBeenCalledWith(
-      MOCK_ALLOWED_ORIGINS_RESPONSE.data.allowedOrigins
+    expect(MOCK_PING_DATA.setAllowedOriginsResp).toHaveBeenCalledWith(
+      MOCK_ALLOWED_ORIGINS_RESPONSE.data
     )
   })
 
@@ -99,12 +102,12 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
     expect(uriIndex).toEqual(0)
-    expect(MOCK_PING_DATA.setHostAllowedOrigins).toHaveBeenCalledWith(
-      MOCK_ALLOWED_ORIGINS_RESPONSE.data.allowedOrigins
+    expect(MOCK_PING_DATA.setAllowedOriginsResp).toHaveBeenCalledWith(
+      MOCK_ALLOWED_ORIGINS_RESPONSE.data
     )
   })
 
@@ -119,12 +122,12 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
     expect(uriIndex).toEqual(1)
-    expect(MOCK_PING_DATA.setHostAllowedOrigins).toHaveBeenCalledWith(
-      MOCK_ALLOWED_ORIGINS_RESPONSE.data.allowedOrigins
+    expect(MOCK_PING_DATA.setAllowedOriginsResp).toHaveBeenCalledWith(
+      MOCK_ALLOWED_ORIGINS_RESPONSE.data
     )
   })
 
@@ -142,7 +145,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -167,7 +170,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -196,7 +199,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -223,7 +226,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -274,7 +277,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA_LOCALHOST.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA_LOCALHOST.retryCallback,
-      MOCK_PING_DATA_LOCALHOST.setHostAllowedOrigins,
+      MOCK_PING_DATA_LOCALHOST.setAllowedOriginsResp,
       MOCK_PING_DATA_LOCALHOST.userCommandLine
     )
 
@@ -314,7 +317,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -344,7 +347,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -373,7 +376,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -407,7 +410,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -450,7 +453,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -489,7 +492,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -507,7 +510,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback2,
-      MOCK_PING_DATA.setHostAllowedOrigins,
+      MOCK_PING_DATA.setAllowedOriginsResp,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -529,8 +532,9 @@ describe("WebsocketConnection", () => {
     onMessage: jest.fn(),
     onConnectionStateChange: jest.fn(),
     onRetry: jest.fn(),
-    getHostAuthToken: () => undefined,
-    setHostAllowedOrigins: jest.fn(),
+    claimHostAuthToken: () => Promise.resolve(undefined),
+    resetHostAuthToken: jest.fn(),
+    setAllowedOriginsResp: jest.fn(),
   }
 
   let client: WebsocketConnection
@@ -558,8 +562,20 @@ describe("WebsocketConnection", () => {
     Promise.all = originalPromiseAll
 
     // @ts-ignore
-    client.websocket.close()
+    if (client.websocket) {
+      // @ts-ignore
+      client.websocket.close()
+    }
     server.close()
+  })
+
+  it("disconnect closes connection and sets state to DISCONNECTED_FOREVER", () => {
+    client.disconnect()
+
+    // @ts-ignore
+    expect(client.state).toBe(ConnectionState.DISCONNECTED_FOREVER)
+    // @ts-ignore
+    expect(client.websocket).toBe(undefined)
   })
 
   it("increments message cache run count", () => {
@@ -616,8 +632,9 @@ describe("WebsocketConnection auth token handling", () => {
     onMessage: jest.fn(),
     onConnectionStateChange: jest.fn(),
     onRetry: jest.fn(),
-    getHostAuthToken: jest.fn(),
-    setHostAllowedOrigins: jest.fn(),
+    claimHostAuthToken: () => Promise.resolve(undefined),
+    resetHostAuthToken: jest.fn(),
+    setAllowedOriginsResp: jest.fn(),
   }
 
   let originalAxiosGet: any
@@ -632,29 +649,76 @@ describe("WebsocketConnection auth token handling", () => {
 
   afterEach(() => {
     axios.get = originalAxiosGet
+
+    SessionInfo.lastSessionInfo = undefined
   })
 
-  it("always sets first Sec-WebSocket-Protocol option to 'streamlit'", () => {
-    const ws = new WebsocketConnection(MOCK_SOCKET_DATA)
-    // @ts-ignore
-    ws.connectToWebSocket()
-
-    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
-      "streamlit",
-    ])
-  })
-
-  it("sets second Sec-WebSocket-Protocol option to value from getHostAuthToken", () => {
+  it("always sets first Sec-WebSocket-Protocol option to 'streamlit'", async () => {
+    const resetHostAuthToken = jest.fn()
     const ws = new WebsocketConnection({
       ...MOCK_SOCKET_DATA,
-      getHostAuthToken: () => "iAmAnAuthToken",
+      resetHostAuthToken,
     })
     // @ts-ignore
-    ws.connectToWebSocket()
+    await ws.connectToWebSocket()
 
-    expect(websocketSpy).toHaveBeenCalledWith("ws://localhost:1234/stream", [
-      "streamlit",
-      "iAmAnAuthToken",
-    ])
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit"]
+    )
+    expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
+  })
+
+  it("sets second Sec-WebSocket-Protocol option to value from claimHostAuthToken", async () => {
+    const resetHostAuthToken = jest.fn()
+    const ws = new WebsocketConnection({
+      ...MOCK_SOCKET_DATA,
+      claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
+      resetHostAuthToken,
+    })
+
+    // @ts-ignore
+    await ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "iAmAnAuthToken"]
+    )
+  })
+
+  it("sets second Sec-WebSocket-Protocol option to lastSessionId", async () => {
+    // @ts-ignore
+    SessionInfo.lastSessionInfo = { sessionId: "sessionId" }
+
+    const ws = new WebsocketConnection(MOCK_SOCKET_DATA)
+
+    // @ts-ignore
+    await ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "sessionId"]
+    )
+  })
+
+  it("prioritizes host provided auth token over lastSessionId if both set", async () => {
+    // @ts-ignore
+    SessionInfo.lastSessionInfo = { sessionId: "sessionId" }
+
+    const resetHostAuthToken = jest.fn()
+    const ws = new WebsocketConnection({
+      ...MOCK_SOCKET_DATA,
+      claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
+      resetHostAuthToken,
+    })
+
+    // @ts-ignore
+    await ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "iAmAnAuthToken"]
+    )
+    expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
 })

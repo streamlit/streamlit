@@ -37,12 +37,12 @@ def echo(code_location="above"):
 
     Example
     -------
-
+    >>> import streamlit as st
+    >>>
     >>> with st.echo():
     >>>     st.write('This code will be printed')
 
     """
-
     from streamlit import code, empty, source_util, warning
 
     if code_location == "below":

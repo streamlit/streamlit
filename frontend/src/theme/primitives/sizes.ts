@@ -20,4 +20,5 @@ export const sizes = {
   sidebarTopSpace: "6rem",
   sidebar: "21rem",
   contentMaxWidth: "46rem",
+  footerHeight: "2.5rem",
 }

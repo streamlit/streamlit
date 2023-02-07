@@ -21,6 +21,7 @@ from unittest.mock import Mock, PropertyMock, call, patch
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import streamlit as st
 from streamlit import type_util
@@ -30,6 +31,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import SessionStateProxy
 from tests.streamlit import pyspark_mocks
 from tests.streamlit.snowpark_mocks import DataFrame, Row
+from tests.testutil import should_skip_pyspark_tests
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -194,6 +196,9 @@ class StreamlitWriteTest(unittest.TestCase):
             )
             p.assert_called_once()
 
+    @pytest.mark.skipif(
+        should_skip_pyspark_tests(), reason="pyspark is incompatible with Python3.11"
+    )
     def test_pyspark_dataframe_write(self):
         """Test st.write with pyspark.sql.DataFrame."""
 

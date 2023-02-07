@@ -26,6 +26,7 @@ import tornado.httpserver
 import tornado.testing
 import tornado.web
 import tornado.websocket
+from parameterized import parameterized
 
 import streamlit.web.server.server
 from streamlit import config
@@ -102,18 +103,61 @@ class ServerTest(ServerTestCase):
             self.assertTrue(self.server.browser_is_connected)
 
             # Get this client's SessionInfo object
-            self.assertEqual(1, len(self.server._runtime._session_info_by_id))
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            self.assertEqual(1, self.server._runtime._session_mgr.num_active_sessions())
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
 
             # Close the connection
             ws_client.close()
             await asyncio.sleep(0.1)
             self.assertFalse(self.server.browser_is_connected)
 
-            # Ensure AppSession.shutdown() was called, and that our
-            # SessionInfo was cleared.
-            session_info.session.shutdown.assert_called_once()
-            self.assertEqual(0, len(self.server._runtime._session_info_by_id))
+            # Ensure AppSession.disconnect_file_watchers() was called, and that our
+            # session exists but is no longer active.
+            session_info.session.disconnect_file_watchers.assert_called_once()
+            self.assertEqual(0, self.server._runtime._session_mgr.num_active_sessions())
+            self.assertEqual(1, self.server._runtime._session_mgr.num_sessions())
+
+    @tornado.testing.gen_test
+    async def test_websocket_connect_to_nonexistent_session(self):
+        with _patch_local_sources_watcher(), self._patch_app_session():
+            await self.server.start()
+
+            ws_client = await self.ws_connect(existing_session_id="nonexistent_session")
+
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
+
+            self.assertNotEqual(session_info.session.id, "nonexistent_session")
+
+            ws_client.close()
+            await asyncio.sleep(0.1)
+
+    @tornado.testing.gen_test
+    async def test_websocket_disconnect_and_reconnect(self):
+        with _patch_local_sources_watcher(), self._patch_app_session():
+            await self.server.start()
+
+            ws_client = await self.ws_connect()
+            original_session_info = (
+                self.server._runtime._session_mgr.list_active_sessions()[0]
+            )
+
+            # Disconnect, reconnect with the same session_id, and confirm that the
+            # session was reused.
+            ws_client.close()
+            await asyncio.sleep(0.1)
+
+            ws_client = await self.ws_connect(
+                existing_session_id=original_session_info.session.id
+            )
+
+            self.assertEqual(self.server._runtime._session_mgr.num_active_sessions(), 1)
+            new_session_info = self.server._runtime._session_mgr.list_active_sessions()[
+                0
+            ]
+            self.assertEqual(new_session_info.session, original_session_info.session)
+
+            ws_client.close()
+            await asyncio.sleep(0.1)
 
     @tornado.testing.gen_test
     async def test_multiple_connections(self):
@@ -132,7 +176,7 @@ class ServerTest(ServerTestCase):
             self.assertTrue(self.server.browser_is_connected)
 
             # Assert that our session_infos are sane
-            session_infos = list(self.server._runtime._session_info_by_id.values())
+            session_infos = self.server._runtime._session_mgr.list_active_sessions()
             self.assertEqual(2, len(session_infos))
             self.assertNotEqual(
                 session_infos[0].session.id,
@@ -157,7 +201,7 @@ class ServerTest(ServerTestCase):
 
             # Connect to the server, and explicitly request compression.
             ws_client = await tornado.websocket.websocket_connect(
-                self.get_ws_url("/stream"), compression_options={}
+                self.get_ws_url("/_stcore/stream"), compression_options={}
             )
 
             # Ensure that the "permessage-deflate" extension is returned
@@ -173,7 +217,7 @@ class ServerTest(ServerTestCase):
 
             # Connect to the server, and explicitly request compression.
             ws_client = await tornado.websocket.websocket_connect(
-                self.get_ws_url("/stream"), compression_options={}
+                self.get_ws_url("/_stcore/stream"), compression_options={}
             )
 
             # Ensure that the "Sec-Websocket-Extensions" header is not
@@ -190,7 +234,7 @@ class ServerTest(ServerTestCase):
             await self.ws_connect()
 
             # Get the server's socket and session for this client
-            session_info = list(self.server._runtime._session_info_by_id.values())[0]
+            session_info = self.server._runtime._session_mgr.list_active_sessions()[0]
 
             with patch.object(
                 session_info.session, "flush_browser_queue"
@@ -217,7 +261,9 @@ class ServerTest(ServerTestCase):
                 # Our session should have been removed from the server as
                 # a result of the WebSocketClosedError.
                 self.assertIsNone(
-                    self.server._runtime._get_session_info(session_info.session.id)
+                    self.server._runtime._session_mgr.get_active_session_info(
+                        session_info.session.id
+                    )
                 )
 
 
@@ -357,9 +403,19 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         return server._create_app()
 
     def test_endpoint(self):
+        response = self.fetch("/_stcore/script-health-check")
+        self.assertEqual(200, response.code)
+        self.assertEqual(b"test_message", response.body)
+
+    def test_deprecated_endpoint(self):
         response = self.fetch("/script-health-check")
         self.assertEqual(200, response.code)
         self.assertEqual(b"test_message", response.body)
+        self.assertEqual(
+            response.headers["link"],
+            f'<http://127.0.0.1:{self.get_http_port()}/_stcore/script-health-check>; rel="alternate"',
+        )
+        self.assertEqual(response.headers["deprecation"], "True")
 
 
 class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
@@ -378,7 +434,9 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
 
     def get_app(self):
         server = Server("mock/script/path", "test command line")
-        server.does_script_run_without_error = self.does_script_run_without_error
+        server._runtime.does_script_run_without_error = (
+            self.does_script_run_without_error
+        )
         return server._create_app()
 
     def test_endpoint(self):

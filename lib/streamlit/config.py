@@ -80,7 +80,6 @@ def set_option(key: str, value: Any, where_defined: str = _USER_DEFINED) -> None
     where_defined : str
         Tells the config system where this was set.
     """
-
     with _config_lock:
         # Ensure that our config files have been parsed.
         get_config_options()
@@ -156,7 +155,7 @@ def get_options_for_section(section: str) -> Dict[str, Any]:
         The name of the config section to fetch options for.
 
     Returns
-    ----------
+    -------
     Dict[str, Any]
         A dict mapping the names of the options in the given section (without
         the section name as a prefix) to their values.
@@ -378,7 +377,6 @@ def _logger_log_level() -> str:
 
     Default: 'info'
     """
-
     if get_option("global.logLevel"):
         return str(get_option("global.logLevel"))
     elif get_option("global.developmentMode"):
@@ -443,13 +441,14 @@ _create_option(
 _create_option(
     "client.showErrorDetails",
     description="""
-        Controls whether uncaught app exceptions are displayed in the browser.
-        By default, this is set to True and Streamlit displays app exceptions
-        and associated tracebacks in the browser.
+        Controls whether uncaught app exceptions and deprecation warnings
+        are displayed in the browser. By default, this is set to True and
+        Streamlit displays app exceptions and associated tracebacks, and
+        deprecation warnings, in the browser.
 
-        If set to False, an exception will result in a generic message being
-        shown in the browser, and exceptions and tracebacks will be printed to
-        the console only.""",
+        If set to False, an exception or deprecation warning will result in
+        a generic message being shown in the browser, and exceptions, tracebacks,
+        and deprecation warnings will be printed to the console only.""",
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -646,7 +645,7 @@ _create_option(
 _create_option(
     "server.enableCORS",
     description="""
-    Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
+    Enables support for Cross-Origin Resource Sharing (CORS) protection, for added security.
 
     Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
     `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
@@ -695,6 +694,14 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "server.enableStaticServing",
+    description="""
+        Enable serving files from a `static` directory in the running app's directory.
+        """,
+    default_val=False,
+    type_=bool,
+)
 
 # Config Section: Browser #
 
@@ -995,7 +1002,6 @@ def _maybe_read_env_variable(value: Any) -> Any:
         variable.
 
     """
-
     if isinstance(value, str) and value.startswith("env:"):
         var_name = value[len("env:") :]
         env_var = os.environ.get(var_name)
@@ -1061,7 +1067,7 @@ def get_config_options(
         Config options that we received via CLI flag.
 
     Returns
-    ----------
+    -------
     Dict[str, ConfigOption]
         An ordered dict that maps config option names to their values.
     """
@@ -1183,7 +1189,6 @@ def on_config_parsed(
     Callable[[], bool]
         A function that the caller can use to deregister func.
     """
-
     # We need to use the same receiver when we connect or disconnect on the
     # Signal. If we don't do this, then the registered receiver won't be released
     # leading to a memory leak because the Signal will keep a reference of the

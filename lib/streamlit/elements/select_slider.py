@@ -119,7 +119,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> Union[T, Tuple[T, T]]:
-        """
+        r"""
         Display a slider widget to select items from a list.
 
         This also allows you to render a range slider by passing a two-element
@@ -136,6 +136,24 @@ class SelectSliderMixin:
             A short label explaining to the user what this slider is for.
             The label can optionally contain Markdown and supports the following
             elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
@@ -184,6 +202,8 @@ class SelectSliderMixin:
 
         Examples
         --------
+        >>> import streamlit as st
+        >>>
         >>> color = st.select_slider(
         ...     'Select a color of the rainbow',
         ...     options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'])
@@ -191,6 +211,8 @@ class SelectSliderMixin:
 
         And here's an example of a range select slider:
 
+        >>> import streamlit as st
+        >>>
         >>> start_color, end_color = st.select_slider(
         ...     'Select a range of color wavelength',
         ...     options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'],
@@ -263,6 +285,7 @@ class SelectSliderMixin:
         slider_value = as_index_list(value)
 
         slider_proto = SliderProto()
+        slider_proto.type = SliderProto.Type.SELECT_SLIDER
         slider_proto.label = label
         slider_proto.format = "%s"
         slider_proto.default[:] = slider_value

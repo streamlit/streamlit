@@ -54,11 +54,10 @@ export function isEmbeddedInIFrame(): boolean {
 }
 
 /**
- * Returns true if the frameElement and parent parameters indicate that we're in an
- * iframe.
+ * Returns true if the parent parameter indicates that we're in an iframe.
  */
 export function isInChildFrame(): boolean {
-  return window.parent !== window && !!window.frameElement
+  return window.parent !== window
 }
 
 /** Return an info Element protobuf with the given text. */
@@ -121,7 +120,17 @@ export function notNull<T>(value: T | null): value is T {
 export function notNullOrUndefined<T>(
   value: T | null | undefined
 ): value is T {
-  return value !== null && value !== undefined
+  return <T>value !== null && <T>value !== undefined
+}
+
+/**
+ * A type predicate that is true if the given value is either undefined
+ * or null.
+ */
+export function isNullOrUndefined<T>(
+  value: T | null | undefined
+): value is null | undefined {
+  return <T>value === null || <T>value === undefined
 }
 
 /**
@@ -203,4 +212,105 @@ export function labelVisibilityProtoValueToEnum(
     default:
       return LabelVisibilityOptions.Visible
   }
+}
+
+/**
+ * Looks for an IFrame with given className inside given querySet
+ */
+export function findAnIFrameWithClassName(
+  qs: NodeListOf<HTMLIFrameElement> | HTMLCollectionOf<HTMLIFrameElement>,
+  className: string
+): HTMLIFrameElement | null {
+  for (let i = 0; i < qs.length; i++) {
+    const cd = qs[i].contentDocument
+    if (cd && cd.getElementsByClassName(className).length > 0) {
+      return qs[i]
+    }
+  }
+  return null
+}
+
+/**
+ * Returns True if IFrame can be accessed otherwise returns False
+ */
+export function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
+  try {
+    if (iframe.contentWindow === null) return false
+    const doc = iframe.contentDocument || iframe.contentWindow.document
+    const html = doc.body.innerHTML
+    return html !== null && html !== ""
+  } catch (err) {
+    return false
+  }
+}
+
+/**
+ * Tries to get an IFrame in which Streamlit app is embedded on Cloud deployments.
+ * It assumes iframe has title="streamlitApp", iterates over IFrames,
+ * and looks which IFrame contains div with stAppId value, otherwise returns first found iFrame or null.
+ */
+export function getIFrameEnclosingApp(
+  embeddingId: string
+): HTMLIFrameElement | null {
+  if (!isInChildFrame()) {
+    return null
+  }
+  const embeddingIdClassName = getEmbeddingIdClassName(embeddingId)
+  const qsStreamlitAppStr = 'iframe[title="streamlitApp"]'
+  let qs = window.document.querySelectorAll(
+    qsStreamlitAppStr
+  ) as NodeListOf<HTMLIFrameElement>
+  let foundIFrame = findAnIFrameWithClassName(qs, embeddingIdClassName)
+  if (foundIFrame && !canAccessIFrame(foundIFrame)) {
+    return null
+  }
+  if (foundIFrame) {
+    return foundIFrame
+  }
+  if (window.parent) {
+    qs = window.parent.document.querySelectorAll(qsStreamlitAppStr)
+  }
+  foundIFrame = findAnIFrameWithClassName(qs, embeddingIdClassName)
+  if (foundIFrame && !canAccessIFrame(foundIFrame)) {
+    return null
+  }
+  if (foundIFrame) {
+    return foundIFrame
+  }
+  let htmlCollection = window.document.getElementsByTagName(
+    "iframe"
+  ) as HTMLCollectionOf<HTMLIFrameElement>
+  foundIFrame = findAnIFrameWithClassName(htmlCollection, embeddingIdClassName)
+  if (foundIFrame && !canAccessIFrame(foundIFrame)) {
+    return null
+  }
+  if (foundIFrame) {
+    return foundIFrame
+  }
+  if (window.parent) {
+    htmlCollection = window.parent.document.getElementsByTagName("iframe")
+  }
+  foundIFrame = findAnIFrameWithClassName(htmlCollection, embeddingIdClassName)
+  if (foundIFrame && !canAccessIFrame(foundIFrame)) {
+    return null
+  }
+  return foundIFrame
+}
+
+/**
+ * Returns UID generated based on current date and Math.random module
+ */
+export function generateUID(): string {
+  return (
+    Math.floor(Date.now() / 1000).toString(36) +
+    Math.random().toString(36).slice(-6)
+  )
+}
+
+/**
+ * Returns stAppEmbeddingId-${this.embeddingId} string,
+ * which is used as class to detect iFrame when printing
+ */
+export function getEmbeddingIdClassName(embeddingId: string): string {
+  return `stAppEmbeddingId-${embeddingId}`
 }

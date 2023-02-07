@@ -16,10 +16,11 @@ import asyncio
 import sys
 import time
 import traceback
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Awaitable, Dict, NamedTuple, Optional, Tuple
+from typing import Awaitable, Dict, NamedTuple, Optional, Tuple, Type
 
-from typing_extensions import Final, Protocol
+from typing_extensions import Final
 
 from streamlit import config
 from streamlit.logger import get_logger
@@ -27,8 +28,8 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.caching import (
-    get_memo_stats_provider,
-    get_singleton_stats_provider,
+    get_data_cache_stats_provider,
+    get_resource_cache_stats_provider,
 )
 from streamlit.runtime.forward_msg_cache import (
     ForwardMsgCache,
@@ -38,14 +39,23 @@ from streamlit.runtime.forward_msg_cache import (
 from streamlit.runtime.legacy_caching.caching import _mem_caches
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.media_file_storage import MediaFileStorage
+from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.runtime_util import is_cacheable_msg
-from streamlit.runtime.session_data import SessionData
+from streamlit.runtime.script_data import ScriptData
+from streamlit.runtime.session_manager import (
+    ActiveSessionInfo,
+    SessionClient,
+    SessionClientDisconnectedError,
+    SessionManager,
+    SessionStorage,
+)
 from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
 )
 from streamlit.runtime.stats import StatsManager
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.watcher import LocalSourcesWatcher
 
 # Wait for the script run result for 60s and if no result is available give up
@@ -54,26 +64,12 @@ SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
 LOGGER: Final = get_logger(__name__)
 
 
-class SessionClientDisconnectedError(Exception):
-    """Raised by operations on a disconnected SessionClient."""
-
-
 class RuntimeStoppedError(Exception):
     """Raised by operations on a Runtime instance that is stopped."""
 
 
-class SessionClient(Protocol):
-    """Interface for sending data to a session's client."""
-
-    def write_forward_msg(self, msg: ForwardMsg) -> None:
-        """Deliver a ForwardMsg to the client.
-
-        If the SessionClient has been disconnected, it should raise a
-        SessionClientDisconnectedError.
-        """
-
-
-class RuntimeConfig(NamedTuple):
+@dataclass(frozen=True)
+class RuntimeConfig:
     """Config options for StreamlitRuntime."""
 
     # The filesystem path of the Streamlit script to run.
@@ -86,28 +82,11 @@ class RuntimeConfig(NamedTuple):
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
 
+    # The SessionManager class to be used.
+    session_manager_class: Type[SessionManager] = WebsocketSessionManager
 
-class SessionInfo:
-    """Type stored in our _session_info_by_id dict.
-
-    For each AppSession, the Runtime tracks that session's
-    script_run_count. This is used to track the age of messages in
-    the ForwardMsgCache.
-    """
-
-    def __init__(self, client: SessionClient, session: AppSession):
-        """Initialize a SessionInfo instance.
-
-        Parameters
-        ----------
-        session : AppSession
-            The AppSession object.
-        client : SessionClient
-            The concrete SessionClient for this session.
-        """
-        self.session = session
-        self.client = client
-        self.script_run_count = 0
+    # The SessionStorage instance for the SessionManager to use.
+    session_storage: SessionStorage = field(default_factory=MemorySessionStorage)
 
 
 class RuntimeState(Enum):
@@ -191,9 +170,6 @@ class Runtime:
         self._main_script_path = config.script_path
         self._command_line = config.command_line or ""
 
-        # Mapping of AppSession.id -> SessionInfo.
-        self._session_info_by_id: Dict[str, SessionInfo] = {}
-
         self._state = RuntimeState.INITIAL
 
         # Initialize managers
@@ -202,15 +178,19 @@ class Runtime:
         self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
 
+        self._session_mgr = config.session_manager_class(
+            session_storage=config.session_storage,
+            uploaded_file_manager=self._uploaded_file_mgr,
+            message_enqueued_callback=self._enqueued_some_message,
+        )
+
         self._stats_mgr = StatsManager()
-        self._stats_mgr.register_provider(get_memo_stats_provider())
-        self._stats_mgr.register_provider(get_singleton_stats_provider())
+        self._stats_mgr.register_provider(get_data_cache_stats_provider())
+        self._stats_mgr.register_provider(get_resource_cache_stats_provider())
         self._stats_mgr.register_provider(_mem_caches)
         self._stats_mgr.register_provider(self._message_cache)
         self._stats_mgr.register_provider(self._uploaded_file_mgr)
-        self._stats_mgr.register_provider(
-            SessionStateStatProvider(self._session_info_by_id)
-        )
+        self._stats_mgr.register_provider(SessionStateStatProvider(self._session_mgr))
 
     @property
     def state(self) -> RuntimeState:
@@ -237,6 +217,12 @@ class Runtime:
         """A Future that completes when the Runtime's run loop has exited."""
         return self._get_async_objs().stopped
 
+    # NOTE: A few Runtime methods listed as threadsafe (get_client, _on_files_updated,
+    # and is_active_session) currently rely on the implementation detail that
+    # WebsocketSessionManager's get_active_session_info and is_active_session methods
+    # happen to be threadsafe. This may change with future SessionManager implementations,
+    # at which point we'll need to formalize our thread safety rules for each
+    # SessionManager method.
     def get_client(self, session_id: str) -> Optional[SessionClient]:
         """Get the SessionClient for the given session_id, or None
         if no such session exists.
@@ -245,7 +231,7 @@ class Runtime:
         -----
         Threading: SAFE. May be called on any thread.
         """
-        session_info = self._get_session_info(session_id)
+        session_info = self._session_mgr.get_active_session_info(session_id)
         if session_info is None:
             return None
         return session_info.client
@@ -258,22 +244,10 @@ class Runtime:
         -----
         Threading: SAFE. May be called on any thread.
         """
-        session_info = self._get_session_info(session_id)
-        if session_info is None:
-            # If an uploaded file doesn't belong to an existing session,
+        if not self._session_mgr.is_active_session(session_id):
+            # If an uploaded file doesn't belong to an active session,
             # remove it so it doesn't stick around forever.
             self._uploaded_file_mgr.remove_session_files(session_id)
-
-    def _get_session_info(self, session_id: str) -> Optional[SessionInfo]:
-        """Return the SessionInfo with the given id, or None if no such
-        session exists.
-
-        Notes
-        -----
-        Threading: SAFE. May be called on any thread. (But note that SessionInfo
-        mutations are not thread-safe!)
-        """
-        return self._session_info_by_id.get(session_id, None)
 
     async def start(self) -> None:
         """Start the runtime. This must be called only once, before
@@ -337,15 +311,15 @@ class Runtime:
         -----
         Threading: SAFE. May be called on any thread.
         """
-        # Dictionary membership is atomic in CPython, so this is thread-safe.
-        return session_id in self._session_info_by_id
+        return self._session_mgr.is_active_session(session_id)
 
-    def create_session(
+    def connect_session(
         self,
         client: SessionClient,
         user_info: Dict[str, Optional[str]],
+        existing_session_id: Optional[str] = None,
     ) -> str:
-        """Create a new session and return its unique ID.
+        """Create a new session (or connect to an existing one) and return its unique ID.
 
         Parameters
         ----------
@@ -370,34 +344,43 @@ class Runtime:
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
-            raise RuntimeStoppedError(f"Can't create_session (state={self._state})")
+            raise RuntimeStoppedError(f"Can't connect_session (state={self._state})")
 
-        async_objs = self._get_async_objs()
-
-        session = AppSession(
-            session_data=SessionData(self._main_script_path, self._command_line or ""),
-            uploaded_file_manager=self._uploaded_file_mgr,
-            message_enqueued_callback=self._enqueued_some_message,
-            local_sources_watcher=LocalSourcesWatcher(self._main_script_path),
+        session_id = self._session_mgr.connect_session(
+            client=client,
+            script_data=ScriptData(self._main_script_path, self._command_line or ""),
             user_info=user_info,
+            existing_session_id=existing_session_id,
         )
-
-        LOGGER.debug(
-            "Created new session for client %s. Session ID: %s", id(client), session.id
-        )
-
-        assert (
-            session.id not in self._session_info_by_id
-        ), f"session.id '{session.id}' registered multiple times!"
-
-        self._session_info_by_id[session.id] = SessionInfo(client, session)
         self._set_state(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
-        async_objs.has_connection.set()
+        self._get_async_objs().has_connection.set()
 
-        return session.id
+        return session_id
+
+    def create_session(
+        self,
+        client: SessionClient,
+        user_info: Dict[str, Optional[str]],
+        existing_session_id: Optional[str] = None,
+    ) -> str:
+        """Create a new session (or connect to an existing one) and return its unique ID.
+
+        Notes
+        -----
+        This method is simply an alias for connect_session added for backwards
+        compatibility.
+        """
+        LOGGER.warning("create_session is deprecated! Use connect_session instead.")
+        return self.connect_session(
+            client=client, user_info=user_info, existing_session_id=existing_session_id
+        )
 
     def close_session(self, session_id: str) -> None:
-        """Close a session. It will stop producing ForwardMsgs.
+        """Close and completely shut down a session.
+
+        This differs from disconnect_session in that it always completely shuts down a
+        session, permanently losing any associated state (session state, uploaded files,
+        etc.).
 
         This function may be called multiple times for the same session,
         which is not an error. (Subsequent calls just no-op.)
@@ -411,20 +394,33 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if session_id in self._session_info_by_id:
-            session_info = self._session_info_by_id[session_id]
-            del self._session_info_by_id[session_id]
-            session_info.session.shutdown()
+        self._session_mgr.close_session(session_id)
+        self._on_session_disconnected()
 
-        if (
-            self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
-            and len(self._session_info_by_id) == 0
-        ):
-            self._get_async_objs().has_connection.clear()
-            self._set_state(RuntimeState.NO_SESSIONS_CONNECTED)
+    def disconnect_session(self, session_id: str) -> None:
+        """Disconnect a session. It will stop producing ForwardMsgs.
+
+        Differs from close_session because disconnected sessions can be reconnected to
+        for a brief window (depending on the SessionManager/SessionStorage
+        implementations used by the runtime).
+
+        This function may be called multiple times for the same session,
+        which is not an error. (Subsequent calls just no-op.)
+
+        Parameters
+        ----------
+        session_id
+            The session's unique ID.
+
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the eventloop thread.
+        """
+        self._session_mgr.disconnect_session(session_id)
+        self._on_session_disconnected()
 
     def handle_backmsg(self, session_id: str, msg: BackMsg) -> None:
-        """Send a BackMsg to a connected session.
+        """Send a BackMsg to an active session.
 
         Parameters
         ----------
@@ -440,7 +436,7 @@ class Runtime:
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeStoppedError(f"Can't handle_backmsg (state={self._state})")
 
-        session_info = self._session_info_by_id.get(session_id)
+        session_info = self._session_mgr.get_active_session_info(session_id)
         if session_info is None:
             LOGGER.debug(
                 "Discarding BackMsg for disconnected session (id=%s)", session_id
@@ -470,7 +466,7 @@ class Runtime:
                 f"Can't handle_backmsg_deserialization_exception (state={self._state})"
             )
 
-        session_info = self._session_info_by_id.get(session_id)
+        session_info = self._session_mgr.get_active_session_info(session_id)
         if session_info is None:
             LOGGER.debug(
                 "Discarding BackMsg Exception for disconnected session (id=%s)",
@@ -503,8 +499,11 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
+        # NOTE: We create an AppSession directly here instead of using the
+        # SessionManager intentionally. This isn't a "real" session and is only being
+        # used to test that the script runs without error.
         session = AppSession(
-            session_data=SessionData(self._main_script_path, self._command_line),
+            script_data=ScriptData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=LocalSourcesWatcher(self._main_script_path),
@@ -571,18 +570,15 @@ class Runtime:
                 elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                     async_objs.need_send_data.clear()
 
-                    # Shallow-clone our sessions into a list, so we can iterate
-                    # over it and not worry about whether it's being changed
-                    # outside this coroutine.
-                    session_infos = list(self._session_info_by_id.values())
-
-                    for session_info in session_infos:
-                        msg_list = session_info.session.flush_browser_queue()
+                    for active_session_info in self._session_mgr.list_active_sessions():
+                        msg_list = active_session_info.session.flush_browser_queue()
                         for msg in msg_list:
                             try:
-                                self._send_message(session_info, msg)
+                                self._send_message(active_session_info, msg)
                             except SessionClientDisconnectedError:
-                                self.close_session(session_info.session.id)
+                                self._session_mgr.disconnect_session(
+                                    active_session_info.session.id
+                                )
 
                             # Yield for a tick after sending a message.
                             await asyncio.sleep(0)
@@ -603,9 +599,12 @@ class Runtime:
                     return_when=asyncio.FIRST_COMPLETED,
                 )
 
-            # Shut down all AppSessions
-            for session_info in list(self._session_info_by_id.values()):
-                session_info.session.shutdown()
+            # Shut down all AppSessions.
+            for session_info in self._session_mgr.list_sessions():
+                # NOTE: We want to fully shut down sessions when the runtime stops for
+                # now, but this may change in the future if/when our notion of a session
+                # is no longer so tightly coupled to a browser tab.
+                self._session_mgr.close_session(session_info.session.id)
 
             self._set_state(RuntimeState.STOPPED)
             async_objs.stopped.set_result(None)
@@ -619,7 +618,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 """
             )
 
-    def _send_message(self, session_info: SessionInfo, msg: ForwardMsg) -> None:
+    def _send_message(self, session_info: ActiveSessionInfo, msg: ForwardMsg) -> None:
         """Send a message to a client.
 
         If the client is likely to have already cached the message, we may
@@ -628,8 +627,8 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
 
         Parameters
         ----------
-        session_info : SessionInfo
-            The SessionInfo associated with websocket
+        session_info : ActiveSessionInfo
+            The ActiveSessionInfo associated with websocket
         msg : ForwardMsg
             The message to send to the client
 
@@ -697,3 +696,14 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         if self._async_objs is None:
             raise RuntimeError("Runtime hasn't started yet!")
         return self._async_objs
+
+    def _on_session_disconnected(self) -> None:
+        """Set the runtime state to NO_SESSIONS_CONNECTED if the last active
+        session was disconnected.
+        """
+        if (
+            self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
+            and self._session_mgr.num_active_sessions() == 0
+        ):
+            self._get_async_objs().has_connection.clear()
+            self._set_state(RuntimeState.NO_SESSIONS_CONNECTED)

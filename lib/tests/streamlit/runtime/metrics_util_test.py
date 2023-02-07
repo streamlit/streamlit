@@ -25,7 +25,7 @@ from parameterized import parameterized
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit.runtime import metrics_util
-from streamlit.runtime.caching import memo_decorator, singleton_decorator
+from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.web.server import websocket_headers
@@ -204,14 +204,14 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (magic_funcs.transparent_write, "magic"),
-            (st.experimental_memo.clear, "clear_memo"),
-            (st.experimental_singleton.clear, "clear_singleton"),
+            (st.cache_data.clear, "clear_data_caches"),
+            (st.cache_resource.clear, "clear_resource_caches"),
             (st.session_state.__setattr__, "session_state.set_attr"),
             (st.session_state.__setitem__, "session_state.set_item"),
-            (memo_decorator.MemoCache.write_result, "_cache_memo_object"),
+            (cache_data_api.DataCache.write_result, "_cache_data_object"),
             (
-                singleton_decorator.SingletonCache.write_result,
-                "_cache_singleton_object",
+                cache_resource_api.ResourceCache.write_result,
+                "_cache_resource_object",
             ),
             (caching._write_to_cache, "_cache_object"),
             (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
@@ -244,8 +244,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
     def test_public_api_commands(self):
         """All commands of the public API should be tracked with the correct name."""
-        ctx = get_script_run_ctx()
-
         # Some commands are currently not tracked for various reasons:
         ignored_commands = {
             "experimental_rerun",
@@ -256,40 +254,44 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             "get_option",
         }
 
-        public_commands = {
-            k
-            for k, v in st.__dict__.items()
-            if not k.startswith("_") and not isinstance(v, type(st))
-        }
+        # Create a list of all public API names in the `st` module (minus
+        # the ignored commands from above).
+        public_api_names = sorted(
+            [
+                k
+                for k, v in st.__dict__.items()
+                if not k.startswith("_")
+                and not isinstance(v, type(st))
+                and k not in ignored_commands
+            ]
+        )
 
-        for command_name in public_commands.difference(ignored_commands):
-            if command_name in ignored_commands:
+        for api_name in public_api_names:
+            st_func = getattr(st, api_name)
+            if not callable(st_func):
                 continue
-            command = getattr(st, command_name)
-            if callable(command):
-                # This will always throw an exception because of missing arguments
-                # This is fine since the command still get tracked
-                with contextlib.suppress(Exception):
-                    command()
 
-                self.assertGreater(
-                    len(ctx.tracked_commands),
-                    0,
-                    f"No command tracked for {command_name}",
-                )
+            # Reset tracked stats from previous calls.
+            ctx = get_script_run_ctx()
+            ctx.reset()
+            ctx.gather_usage_stats = True
 
-                # Sometimes also multiple commands are executed
-                # so we check the full list.
-                self.assertIn(
-                    command_name,
-                    [
-                        tracked_commands.name
-                        for tracked_commands in ctx.tracked_commands
-                    ],
-                )
+            # Call the API. This will often throw an exception due to missing
+            # arguments. But that's fine: the command will still be tracked.
+            with contextlib.suppress(Exception):
+                st_func()
 
-                ctx.reset()
-                ctx.gather_usage_stats = True
+            # Assert that the API name is in the list of tracked commands.
+            # (It's possible for multiple tracked commands to be issued as
+            # the result of a single API call.)
+            self.assertIn(
+                api_name,
+                [cmd.name for cmd in ctx.tracked_commands],
+                (
+                    f"When executing `st.{api_name}()`, we expect the string "
+                    f'"{api_name}" to be in the list of tracked commands.',
+                ),
+            )
 
     def test_command_tracking_limits(self):
         """Command tracking limits should be respected.

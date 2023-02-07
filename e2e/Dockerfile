@@ -33,6 +33,10 @@ ARG USER=circleci
 ARG HOME=/home/$USER
 ARG APP=$HOME/repo
 
+# DOCKER Variable is used to detect in Makefile wheter we are building E2E docker image,
+# which uses Python 3.7, in which we need to skip --use-deprecated=legacy-resolver flag
+ARG DOCKER=true
+
 USER root
 
 RUN usermod -u $UID $USER
@@ -54,6 +58,7 @@ RUN sudo apt-get update \
         apt-transport-https \
         apt-utils \
     && sudo apt-get install -y \
+        fonts-noto-color-emoji \
         gnupg \
         graphviz \
         libasound2 \

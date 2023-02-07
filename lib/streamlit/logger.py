@@ -59,7 +59,6 @@ def set_log_level(level: Union[str, int]) -> None:
 
 def setup_formatter(logger: logging.Logger) -> None:
     """Set up the console formatter for a given logger."""
-
     # Deregister any previous console loggers.
     if hasattr(logger, "streamlit_console_handler"):
         logger.removeHandler(logger.streamlit_console_handler)

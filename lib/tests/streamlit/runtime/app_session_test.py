@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import asyncio
+import gc
 import threading
 import unittest
 from asyncio import AbstractEventLoop
@@ -31,6 +32,7 @@ from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import (
     RerunData,
     ScriptRunContext,
@@ -39,7 +41,6 @@ from streamlit.runtime.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
 )
-from streamlit.runtime.session_data import SessionData
 from streamlit.runtime.state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
@@ -62,7 +63,7 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
         return_value=event_loop,
     ):
         return AppSession(
-            session_data=SessionData("/fake/script_path.py", "fake_command_line"),
+            script_data=ScriptData("/fake/script_path.py", "fake_command_line"),
             uploaded_file_manager=MagicMock(),
             message_enqueued_callback=None,
             local_sources_watcher=MagicMock(),
@@ -139,15 +140,15 @@ class AppSessionTest(unittest.TestCase):
         self.assertTrue("foo" not in session._session_state)
 
     @patch("streamlit.runtime.legacy_caching.clear_cache")
-    @patch("streamlit.runtime.caching.memo.clear")
-    @patch("streamlit.runtime.caching.singleton.clear")
+    @patch("streamlit.runtime.caching.cache_data.clear")
+    @patch("streamlit.runtime.caching.cache_resource.clear")
     def test_clear_cache_all_caches(
-        self, clear_singleton_cache, clear_memo_cache, clear_legacy_cache
+        self, clear_resource_caches, clear_data_caches, clear_legacy_cache
     ):
         session = _create_test_session()
         session._handle_clear_cache_request()
-        clear_singleton_cache.assert_called_once()
-        clear_memo_cache.assert_called_once()
+        clear_resource_caches.assert_called_once()
+        clear_data_caches.assert_called_once()
         clear_legacy_cache.assert_called_once()
 
     @patch(
@@ -235,7 +236,7 @@ class AppSessionTest(unittest.TestCase):
         # Assert that the ScriptRunner constructor was called.
         mock_scriptrunner.assert_called_once_with(
             session_id=session.id,
-            main_script_path=session._session_data.main_script_path,
+            main_script_path=session._script_data.main_script_path,
             client_state=session._client_state,
             session_state=session._session_state,
             uploaded_file_mgr=session._uploaded_file_mgr,
@@ -372,6 +373,83 @@ class AppSessionTest(unittest.TestCase):
 
         self.assertEqual(msg.debug_last_backmsg_id, "some backmsg id")
 
+    @patch("streamlit.runtime.app_session.config.on_config_parsed")
+    @patch("streamlit.runtime.app_session.source_util.register_pages_changed_callback")
+    @patch(
+        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.connect"
+    )
+    def test_registers_file_watchers(
+        self,
+        patched_secrets_connect,
+        patched_register_pages_changed_callback,
+        patched_on_config_parsed,
+    ):
+        session = _create_test_session()
+
+        session._local_sources_watcher.register_file_change_callback.assert_called_once_with(
+            session._on_source_file_changed
+        )
+        patched_on_config_parsed.assert_called_once_with(
+            session._on_source_file_changed, force_connect=True
+        )
+        patched_register_pages_changed_callback.assert_called_once_with(
+            session._on_pages_changed
+        )
+        patched_secrets_connect.assert_called_once_with(
+            session._on_secrets_file_changed
+        )
+
+    def test_recreates_local_sources_watcher_if_none(self):
+        session = _create_test_session()
+        session._local_sources_watcher = None
+
+        session.register_file_watchers()
+        self.assertIsNotNone(session._local_sources_watcher)
+
+    @patch(
+        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.disconnect"
+    )
+    def test_disconnect_file_watchers(self, patched_secrets_disconnect):
+        session = _create_test_session()
+
+        with patch.object(
+            session._local_sources_watcher, "close"
+        ) as patched_close_local_sources_watcher, patch.object(
+            session, "_stop_config_listener"
+        ) as patched_stop_config_listener, patch.object(
+            session, "_stop_pages_listener"
+        ) as patched_stop_pages_listener:
+            session.disconnect_file_watchers()
+
+            patched_close_local_sources_watcher.assert_called_once()
+            patched_stop_config_listener.assert_called_once()
+            patched_stop_pages_listener.assert_called_once()
+            patched_secrets_disconnect.assert_called_once_with(
+                session._on_secrets_file_changed
+            )
+
+            self.assertIsNone(session._local_sources_watcher)
+            self.assertIsNone(session._stop_config_listener)
+            self.assertIsNone(session._stop_pages_listener)
+
+    def test_disconnect_file_watchers_removes_refs(self):
+        """Test that calling disconnect_file_watchers on the AppSession
+        removes references to it so it is eligible to be garbage collected after the
+        method is called.
+        """
+        session = _create_test_session()
+
+        # Various listeners should have references to session file/pages/secrets changed
+        # handlers.
+        self.assertGreater(len(gc.get_referrers(session)), 0)
+
+        session.disconnect_file_watchers()
+        # Ensure that we don't count refs to session from an object that would have been
+        # garbage collected along with it.
+        gc.collect(2)
+
+        self.assertEqual(len(gc.get_referrers(session)), 0)
+
 
 def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
     if not overrides:
@@ -424,7 +502,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         orig_ctx = get_script_run_ctx()
         ctx = ScriptRunContext(
             session_id="TestSessionID",
-            _enqueue=session._session_data.enqueue,
+            _enqueue=session._enqueue_forward_msg,
             query_string="",
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
@@ -446,7 +524,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         # Yield to let the AppSession's callbacks run.
         await asyncio.sleep(0)
 
-        sent_messages = session._session_data._browser_queue._queue
+        sent_messages = session._browser_queue._queue
         self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
 
         # Note that we're purposefully not very thoroughly testing new_session
@@ -550,7 +628,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             side_effect=lambda: forward_msg_queue_events.append(CLEAR_QUEUE)
         )
 
-        session._session_data._browser_queue = mock_queue
+        session._browser_queue = mock_queue
 
         # Create an exception and have the session handle it.
         FAKE_EXCEPTION = RuntimeError("I am error")
@@ -575,7 +653,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
                     ),
                     CLEAR_QUEUE,
                     session._create_new_session_message(page_script_hash=""),
-                    session._create_session_state_changed_message(),
+                    session._create_session_status_changed_message(),
                 ]
             )
 
@@ -585,7 +663,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
                     session._create_script_finished_message(
                         ForwardMsg.FINISHED_SUCCESSFULLY
                     ),
-                    session._create_session_state_changed_message(),
+                    session._create_session_status_changed_message(),
                     session._create_exception_message(FAKE_EXCEPTION),
                 ]
             )

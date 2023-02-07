@@ -14,7 +14,7 @@
 
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 
-from streamlit.beta_util import function_beta_warning
+from streamlit.deprecation_util import deprecate_func_name
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -40,9 +40,10 @@ class LayoutsMixin:
 
         Examples
         --------
-
         Inserting elements using "with" notation:
 
+        >>> import streamlit as st
+        >>>
         >>> with st.container():
         ...    st.write("This is inside the container")
         ...
@@ -57,6 +58,8 @@ class LayoutsMixin:
 
         Inserting elements out of order:
 
+        >>> import streamlit as st
+        >>>
         >>> container = st.container()
         >>> container.write("This is inside the container")
         >>> st.write("This is outside the container")
@@ -84,8 +87,10 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
+        Columns can only be placed inside other columns up to one level of nesting.
+
         .. warning::
-            Currently, you may not put columns inside another column.
+            Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app.
 
         Parameters
         ----------
@@ -114,9 +119,10 @@ class LayoutsMixin:
 
         Examples
         --------
-
         You can use `with` notation to insert any element into a column:
 
+        >>> import streamlit as st
+        >>>
         >>> col1, col2, col3 = st.columns(3)
         >>>
         >>> with col1:
@@ -137,6 +143,9 @@ class LayoutsMixin:
 
         Or you can just call methods directly in the returned objects:
 
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>>
         >>> col1, col2 = st.columns([3, 1])
         >>> data = np.random.randn(10, 1)
         >>>
@@ -198,7 +207,7 @@ class LayoutsMixin:
 
     @gather_metrics("tabs")
     def tabs(self, tabs: Sequence[str]) -> Sequence["DeltaGenerator"]:
-        """Insert containers separated into tabs.
+        r"""Insert containers separated into tabs.
 
         Inserts a number of multi-element containers as tabs.
         Tabs are a navigational element that allows users to easily
@@ -220,6 +229,9 @@ class LayoutsMixin:
             supporting the following elements: Bold, Italics, Strikethroughs, Inline Code,
             Emojis, and Links.
 
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
 
         Returns
         -------
@@ -228,9 +240,10 @@ class LayoutsMixin:
 
         Examples
         --------
-
         You can use `with` notation to insert any element into a tab:
 
+        >>> import streamlit as st
+        >>>
         >>> tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
         >>>
         >>> with tab1:
@@ -251,6 +264,9 @@ class LayoutsMixin:
 
         Or you can just call methods directly in the returned objects:
 
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>>
         >>> tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
         >>> data = np.random.randn(10, 1)
         >>>
@@ -289,7 +305,7 @@ class LayoutsMixin:
 
     @gather_metrics("expander")
     def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
-        """Insert a multi-element container that can be expanded/collapsed.
+        r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
         and can be expanded or collapsed by the user. When collapsed, all that is
@@ -308,15 +324,20 @@ class LayoutsMixin:
             A string to use as the header for the expander. The label can optionally
             contain Markdown and supports the following elements: Bold, Italics,
             Strikethroughs, Inline Code, Emojis, and Links.
+
+            Unsupported elements are not displayed. Display unsupported elements
+            as literal characters by backslash-escaping them. E.g.
+            ``1\. Not an ordered list``.
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
 
         Examples
         --------
-
         You can use `with` notation to insert any element into an expander
 
+        >>> import streamlit as st
+        >>>
         >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
         >>> with st.expander("See explanation"):
@@ -333,6 +354,8 @@ class LayoutsMixin:
 
         Or you can just call methods directly in the returned objects:
 
+        >>> import streamlit as st
+        >>>
         >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
         >>> expander = st.expander("See explanation")
@@ -367,6 +390,6 @@ class LayoutsMixin:
         return cast("DeltaGenerator", self)
 
     # Deprecated beta_ functions
-    beta_container = function_beta_warning(container, "2021-11-02")
-    beta_expander = function_beta_warning(expander, "2021-11-02")
-    beta_columns = function_beta_warning(columns, "2021-11-02")
+    beta_container = deprecate_func_name(container, "beta_container", "2021-11-02")
+    beta_expander = deprecate_func_name(expander, "beta_expander", "2021-11-02")
+    beta_columns = deprecate_func_name(columns, "beta_columns", "2021-11-02")

@@ -14,20 +14,18 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
+from __future__ import annotations
+
 import sys
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Hashable,
     Iterable,
     NoReturn,
-    Optional,
-    Tuple,
     Type,
     TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -50,6 +48,7 @@ from streamlit.elements.button import ButtonMixin
 from streamlit.elements.camera_input import CameraInputMixin
 from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.color_picker import ColorPickerMixin
+from streamlit.elements.data_editor import DataEditorMixin
 from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.doc_string import HelpMixin
@@ -115,6 +114,10 @@ ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = (
 
 Value = TypeVar("Value")
 DG = TypeVar("DG", bound="DeltaGenerator")
+
+# Type aliases for Parent Block Types
+BlockType = str
+ParentBlockTypes = Iterable[BlockType]
 
 
 _use_warning_has_been_displayed: bool = False
@@ -187,6 +190,7 @@ class DeltaGenerator(
     ArrowMixin,
     ArrowAltairMixin,
     ArrowVegaLiteMixin,
+    DataEditorMixin,
     LegacyDataFrameMixin,
     LegacyAltairMixin,
     LegacyVegaLiteMixin,
@@ -225,10 +229,10 @@ class DeltaGenerator(
     # those, see above.
     def __init__(
         self,
-        root_container: Optional[int] = RootContainer.MAIN,
-        cursor: Optional[Cursor] = None,
-        parent: Optional["DeltaGenerator"] = None,
-        block_type: Optional[str] = None,
+        root_container: int | None = RootContainer.MAIN,
+        cursor: Cursor | None = None,
+        parent: DeltaGenerator | None = None,
+        block_type: str | None = None,
     ) -> None:
         """Inserts or updates elements in Streamlit apps.
 
@@ -267,7 +271,7 @@ class DeltaGenerator(
         self._block_type = block_type
 
         # If this an `st.form` block, this will get filled in.
-        self._form_data: Optional[FormData] = None
+        self._form_data: FormData | None = None
 
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
@@ -300,7 +304,7 @@ class DeltaGenerator(
         return False
 
     @property
-    def _active_dg(self) -> "DeltaGenerator":
+    def _active_dg(self) -> DeltaGenerator:
         """Return the DeltaGenerator that's currently 'active'.
         If we are the main DeltaGenerator, and are inside a `with` block that
         creates a container, our active_dg is that container. Otherwise,
@@ -318,7 +322,7 @@ class DeltaGenerator(
         return self
 
     @property
-    def _main_dg(self) -> "DeltaGenerator":
+    def _main_dg(self) -> DeltaGenerator:
         """Return this DeltaGenerator's root - that is, the top-level ancestor
         DeltaGenerator that we belong to (this generally means the st._main
         DeltaGenerator).
@@ -355,18 +359,21 @@ class DeltaGenerator(
         return wrapper
 
     @property
-    def _parent_block_types(self) -> Iterable[str]:
+    def _parent_block_types(self) -> ParentBlockTypes:
         """Iterate all the block types used by this DeltaGenerator and all
         its ancestor DeltaGenerators.
         """
-        current_dg: Optional[DeltaGenerator] = self
+        current_dg: DeltaGenerator | None = self
         while current_dg is not None:
             if current_dg._block_type is not None:
                 yield current_dg._block_type
             current_dg = current_dg._parent
 
+    def _count_num_of_parent_columns(self, parent_block_types: ParentBlockTypes) -> int:
+        return sum(1 for parent_block in parent_block_types if parent_block == "column")
+
     @property
-    def _cursor(self) -> Optional[Cursor]:
+    def _cursor(self) -> Cursor | None:
         """Return our Cursor. This will be None if we're not running in a
         ScriptThread - e.g., if we're running a "bare" script outside of
         Streamlit.
@@ -402,23 +409,23 @@ class DeltaGenerator(
     def _enqueue(  # type: ignore[misc]
         self,
         delta_type: str,
-        element_proto: "Message",
+        element_proto: Message,
         return_value: None,
-        last_index: Optional[Hashable] = None,
-        element_width: Optional[int] = None,
-        element_height: Optional[int] = None,
-    ) -> "DeltaGenerator":
+        last_index: Hashable | None = None,
+        element_width: int | None = None,
+        element_height: int | None = None,
+    ) -> DeltaGenerator:
         ...
 
     @overload
     def _enqueue(  # type: ignore[misc]
         self,
         delta_type: str,
-        element_proto: "Message",
+        element_proto: Message,
         return_value: Type[NoValue],
-        last_index: Optional[Hashable] = None,
-        element_width: Optional[int] = None,
-        element_height: Optional[int] = None,
+        last_index: Hashable | None = None,
+        element_width: int | None = None,
+        element_height: int | None = None,
     ) -> None:
         ...
 
@@ -426,11 +433,11 @@ class DeltaGenerator(
     def _enqueue(  # type: ignore[misc]
         self,
         delta_type: str,
-        element_proto: "Message",
+        element_proto: Message,
         return_value: Value,
-        last_index: Optional[Hashable] = None,
-        element_width: Optional[int] = None,
-        element_height: Optional[int] = None,
+        last_index: Hashable | None = None,
+        element_width: int | None = None,
+        element_height: int | None = None,
     ) -> Value:
         ...
 
@@ -438,35 +445,35 @@ class DeltaGenerator(
     def _enqueue(
         self,
         delta_type: str,
-        element_proto: "Message",
+        element_proto: Message,
         return_value: None = None,
-        last_index: Optional[Hashable] = None,
-        element_width: Optional[int] = None,
-        element_height: Optional[int] = None,
-    ) -> "DeltaGenerator":
+        last_index: Hashable | None = None,
+        element_width: int | None = None,
+        element_height: int | None = None,
+    ) -> DeltaGenerator:
         ...
 
     @overload
     def _enqueue(
         self,
         delta_type: str,
-        element_proto: "Message",
-        return_value: Union[None, Type[NoValue], Value] = None,
-        last_index: Optional[Hashable] = None,
-        element_width: Optional[int] = None,
-        element_height: Optional[int] = None,
-    ) -> Union["DeltaGenerator", None, Value]:
+        element_proto: Message,
+        return_value: Type[NoValue] | Value | None = None,
+        last_index: Hashable | None = None,
+        element_width: int | None = None,
+        element_height: int | None = None,
+    ) -> DeltaGenerator | Value | None:
         ...
 
     def _enqueue(
         self,
         delta_type: str,
-        element_proto: "Message",
-        return_value: Union[None, Type[NoValue], Value] = None,
-        last_index: Optional[Hashable] = None,
-        element_width: Optional[int] = None,
-        element_height: Optional[int] = None,
-    ) -> Union["DeltaGenerator", None, Value]:
+        element_proto: Message,
+        return_value: Type[NoValue] | Value | None = None,
+        last_index: Hashable | None = None,
+        element_width: int | None = None,
+        element_height: int | None = None,
+    ) -> DeltaGenerator | Value | None:
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
@@ -566,19 +573,31 @@ class DeltaGenerator(
     def _block(
         self,
         block_proto: Block_pb2.Block = Block_pb2.Block(),
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
 
         # Prevent nested columns & expanders by checking all parents.
         block_type = block_proto.WhichOneof("type")
         # Convert the generator to a list, so we can use it multiple times.
-        parent_block_types = frozenset(dg._parent_block_types)
-        if block_type == "column" and block_type in parent_block_types:
-            raise StreamlitAPIException(
-                "Columns may not be nested inside other columns."
+        parent_block_types = list(dg._parent_block_types)
+
+        if block_type == "column":
+            num_of_parent_columns = self._count_num_of_parent_columns(
+                parent_block_types
             )
-        if block_type == "expandable" and block_type in parent_block_types:
+            if (
+                self._root_container == RootContainer.SIDEBAR
+                and num_of_parent_columns > 0
+            ):
+                raise StreamlitAPIException(
+                    "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
+                )
+            if num_of_parent_columns > 1:
+                raise StreamlitAPIException(
+                    "Columns can only be placed inside other columns up to one level of nesting."
+                )
+        if block_type == "expandable" and block_type in frozenset(parent_block_types):
             raise StreamlitAPIException(
                 "Expanders may not be nested inside other expanders."
             )
@@ -622,11 +641,13 @@ class DeltaGenerator(
 
     def _legacy_add_rows(
         self: DG,
-        data: "Data" = None,
-        **kwargs: Union[
-            "DataFrame", "npt.NDArray[Any]", Iterable[Any], Dict[Hashable, Any], None
-        ],
-    ) -> Optional[DG]:
+        data: Data = None,
+        **kwargs: DataFrame
+        | npt.NDArray[Any]
+        | Iterable[Any]
+        | dict[Hashable, Any]
+        | None,
+    ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
@@ -641,6 +662,10 @@ class DeltaGenerator(
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> df1 = pd.DataFrame(
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
@@ -733,11 +758,13 @@ class DeltaGenerator(
 
     def _arrow_add_rows(
         self: DG,
-        data: "Data" = None,
-        **kwargs: Union[
-            "DataFrame", "npt.NDArray[Any]", Iterable[Any], Dict[Hashable, Any], None
-        ],
-    ) -> Optional[DG]:
+        data: Data = None,
+        **kwargs: DataFrame
+        | npt.NDArray[Any]
+        | Iterable[Any]
+        | dict[Hashable, Any]
+        | None,
+    ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
@@ -751,6 +778,10 @@ class DeltaGenerator(
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> df1 = pd.DataFrame(
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
@@ -850,12 +881,10 @@ def _maybe_melt_data_for_add_rows(
     data: DFT,
     delta_type: str,
     last_index: Any,
-) -> Tuple[Union[DFT, "DataFrame"], Union[int, Any]]:
+) -> tuple[DFT | DataFrame, int | Any]:
     import pandas as pd
 
-    def _melt_data(
-        df: "DataFrame", last_index: Any
-    ) -> Tuple["DataFrame", Union[int, Any]]:
+    def _melt_data(df: DataFrame, last_index: Any) -> tuple[DataFrame, int | Any]:
         if isinstance(df.index, pd.RangeIndex):
             old_step = _get_pandas_index_attr(df, "step")
 
@@ -901,9 +930,9 @@ def _maybe_melt_data_for_add_rows(
 
 
 def _get_pandas_index_attr(
-    data: "Union[DataFrame, Series]",
+    data: DataFrame | Series,
     attr: str,
-) -> Optional[Any]:
+) -> Any | None:
     return getattr(data.index, attr, None)
 
 
@@ -931,9 +960,9 @@ def _value_or_dg(value: Value, dg: DG) -> Value:
 
 
 def _value_or_dg(
-    value: Union[None, Type[NoValue], Value],
+    value: Type[NoValue] | Value | None,
     dg: DG,
-) -> Union[DG, None, Value]:
+) -> DG | Value | None:
     """Return either value, or None, or dg.
 
     This is needed because Widgets have meaningful return values. This is

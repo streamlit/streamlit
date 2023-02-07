@@ -21,9 +21,7 @@ class JSNumberBoundsException(Exception):
 
 
 class JSNumber(object):
-    """
-    Utility class. Exposes JavaScript Number constants.
-    """
+    """Utility class for exposing JavaScript Number constants."""
 
     # The largest int that can be represented with perfect precision
     # in JavaScript.
@@ -55,7 +53,7 @@ class JSNumber(object):
             in any exception that is thrown.
 
         Raises
-        -------
+        ------
         JSNumberBoundsException
             Raised with a human-readable explanation if the value falls outside
             JavaScript int bounds.
@@ -87,7 +85,7 @@ class JSNumber(object):
             in any exception that is thrown.
 
         Raises
-        -------
+        ------
         JSNumberBoundsException
             Raised with a human-readable explanation if the value falls outside
             JavaScript float bounds.

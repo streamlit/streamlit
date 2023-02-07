@@ -17,6 +17,10 @@ jobs:
   upload-whl:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read # This is required for actions/checkout
+      statuses: write # This is required for "Set S3 URL as Github status" step
+
     defaults:
       run:
         shell: bash --login -eo pipefail {0}
@@ -32,10 +36,12 @@ jobs:
         with:
           persist-credentials: false
           submodules: 'recursive'
-      - name: Set up Python 3.10
+      - name: Set Python version vars
+        uses: ./.github/actions/set_python_versions
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Create Wheel File
@@ -75,17 +81,36 @@ jobs:
           if [ "${BRANCH}" = "release/demo" ]
           then
             aws s3 cp "${WHEELFILE}" s3://core-previews/${PREVIEW_BRANCH}/streamlit-11.11.11-py2.py3-none-any.whl --acl public-read
-            echo -e "Wheel file download link: https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/streamlit-11.11.11-py2.py3-none-any.whl"
+            S3_URL="https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/streamlit-11.11.11-py2.py3-none-any.whl"
           else
             aws s3 cp "${WHEELFILE}" s3://core-previews/${PREVIEW_BRANCH}/ --acl public-read
-            echo -e "Wheel file download link: https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}"
+            S3_URL="https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}"
           fi
+          echo -e "Wheel file download link: ${S3_URL}"
 
           cd ../..
           # env variables don't carry over between gh action jobs
           echo "enable-setup=${{ env.AWS_ACCESS_KEY_ID != '' }}" >> $GITHUB_OUTPUT
           echo "preview-branch=$PREVIEW_BRANCH" >> $GITHUB_OUTPUT
-          echo "s3-url=https://core-previews.s3-us-west-2.amazonaws.com/${PREVIEW_BRANCH}/${WHEELFILE}" >> $GITHUB_OUTPUT
+          echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
+      - if: steps.exports.outputs.enable-setup == 'true' && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request' && github.event.sender.type == 'User'
+        name: Set S3 URL as Github Status
+        uses: actions/github-script@v6
+        env:
+          S3_URL: ${{ steps.exports.outputs.s3-url }}
+        with:
+          script: |
+            const { sha } = context.payload.pull_request.head
+            // For API documentation, see:
+            // https://docs.github.com/en/rest/commits/statuses?apiVersion=2022-11-28#create-a-commit-status
+            await github.request(`POST /repos/streamlit/streamlit/statuses/{sha}`, {
+              owner: 'streamlit',
+              repo: 'streamlit',
+              sha,
+              state: 'success',
+              target_url: process.env.S3_URL,
+              context: 'Wheel ready!'
+            })
 
   setup-preview:
     runs-on: ubuntu-latest

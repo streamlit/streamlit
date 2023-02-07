@@ -44,10 +44,14 @@ import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import {
   setCookie,
+  getIFrameEnclosingApp,
   hashString,
   isEmbeddedInIFrame,
+  isInChildFrame,
   notUndefined,
   getElementWidgetID,
+  generateUID,
+  getEmbeddingIdClassName,
 } from "src/lib/utils"
 import { BaseUriParts } from "src/lib/UriUtil"
 import {
@@ -65,7 +69,7 @@ import {
   PageProfile,
   SessionEvent,
   WidgetStates,
-  SessionState,
+  SessionStatus,
   Config,
   IGitInfo,
   GitInfo,
@@ -153,6 +157,7 @@ const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 declare global {
   interface Window {
     streamlitDebug: any
+    iFrameResizer: any
   }
 }
 
@@ -179,6 +184,8 @@ export class App extends PureComponent<Props, State> {
   private pendingElementsTimerRunning: boolean
 
   private readonly componentRegistry: ComponentRegistry
+
+  private readonly embeddingId: string = generateUID()
 
   constructor(props: Props) {
     super(props)
@@ -246,8 +253,10 @@ export class App extends PureComponent<Props, State> {
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
 
-    window.streamlitDebug = {}
-    window.streamlitDebug.closeConnection = this.closeConnection.bind(this)
+    window.streamlitDebug = {
+      disconnectWebsocket: this.debugDisconnectWebsocket,
+      shutdownRuntime: this.debugShutdownRuntime,
+    }
   }
 
   /**
@@ -280,12 +289,37 @@ export class App extends PureComponent<Props, State> {
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
-      getHostAuthToken: this.getHostAuthToken,
-      setHostAllowedOrigins: this.props.hostCommunication.setAllowedOrigins,
+      claimHostAuthToken: () =>
+        this.props.hostCommunication.currentState.authTokenPromise,
+      resetHostAuthToken: this.props.hostCommunication.resetAuthToken,
+      setAllowedOriginsResp:
+        this.props.hostCommunication.setAllowedOriginsResp,
     })
 
     if (isEmbeddedInIFrame()) {
       document.body.classList.add("embedded")
+    }
+
+    // Iframe resizer allows parent pages to get the height of the iframe
+    // contents. The parent page can then reset the height to match and
+    // avoid unnecessary scrollbars or large embeddings
+    if (isInChildFrame()) {
+      window.iFrameResizer = {
+        heightCalculationMethod: () => {
+          const taggedEls = document.querySelectorAll("[data-iframe-height]")
+          // Use ceil to avoid fractional pixels creating scrollbars.
+          const lowestBounds = Array.from(taggedEls).map(el =>
+            Math.ceil(el.getBoundingClientRect().bottom)
+          )
+
+          // The higher the value, the further down the page it is.
+          // Use maximum value to get the lowest of all tagged elements.
+          return Math.max(0, ...lowestBounds)
+        },
+      }
+
+      // @ts-ignore
+      import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
     this.props.hostCommunication.sendMessage({
@@ -296,7 +330,10 @@ export class App extends PureComponent<Props, State> {
     MetricsManager.current.enqueue("viewReport")
   }
 
-  componentDidUpdate(prevProps: Readonly<Props>): void {
+  componentDidUpdate(
+    prevProps: Readonly<Props>,
+    prevState: Readonly<State>
+  ): void {
     if (
       prevProps.hostCommunication.currentState.queryParams !==
       this.props.hostCommunication.currentState.queryParams
@@ -313,6 +350,28 @@ export class App extends PureComponent<Props, State> {
       this.onPageChange(requestedPageScriptHash)
       this.props.hostCommunication.onPageChanged()
     }
+    // @ts-ignore
+    if (window.prerenderReady === false && this.isAppInReadyState(prevState)) {
+      // @ts-ignore
+      window.prerenderReady = true
+    }
+  }
+
+  componentWillUnmount(): void {
+    // Needing to disconnect our connection manager + websocket connection is
+    // only needed here to handle the case in dev mode where react hot-reloads
+    // the client as a result of a source code change. In this scenario, the
+    // previous websocket connection is still connected, and the client and
+    // server end up in a reconnect loop because the server rejects attempts to
+    // connect to an already-connected session.
+    //
+    // This situation doesn't exist outside of dev mode because the whole App
+    // unmounting is either a page refresh or the browser tab closing.
+    //
+    // The optional chaining on connectionManager is needed to make typescript
+    // happy since connectionManager's type is `ConnectionManager | null`,
+    // but at this point it should always be set.
+    this.connectionManager?.disconnect()
   }
 
   showError(title: string, errorNode: ReactNode): void {
@@ -407,8 +466,8 @@ export class App extends PureComponent<Props, State> {
       dispatchProto(msgProto, "type", {
         newSession: (newSessionMsg: NewSession) =>
           this.handleNewSession(newSessionMsg),
-        sessionStateChanged: (msg: SessionState) =>
-          this.handleSessionStateChanged(msg),
+        sessionStatusChanged: (msg: SessionStatus) =>
+          this.handleSessionStatusChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
           this.handleSessionEvent(evtMsg),
         delta: (deltaMsg: Delta) =>
@@ -536,17 +595,17 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Handler for ForwardMsg.sessionStateChanged messages
-   * @param stateChangeProto a SessionState protobuf
+   * Handler for ForwardMsg.sessionStatusChanged messages
+   * @param statusChangeProto a SessionStatus protobuf
    */
-  handleSessionStateChanged = (stateChangeProto: SessionState): void => {
+  handleSessionStatusChanged = (statusChangeProto: SessionStatus): void => {
     this.setState((prevState: State) => {
       // Determine our new ScriptRunState
       let { scriptRunState } = prevState
       let { dialog } = prevState
 
       if (
-        stateChangeProto.scriptIsRunning &&
+        statusChangeProto.scriptIsRunning &&
         prevState.scriptRunState !== ScriptRunState.STOP_REQUESTED
       ) {
         // If the script is running, we change our ScriptRunState only
@@ -562,7 +621,7 @@ export class App extends PureComponent<Props, State> {
           dialog = undefined
         }
       } else if (
-        !stateChangeProto.scriptIsRunning &&
+        !statusChangeProto.scriptIsRunning &&
         prevState.scriptRunState !== ScriptRunState.RERUN_REQUESTED &&
         prevState.scriptRunState !== ScriptRunState.COMPILATION_ERROR
       ) {
@@ -597,7 +656,7 @@ export class App extends PureComponent<Props, State> {
       return {
         userSettings: {
           ...prevState.userSettings,
-          runOnSave: Boolean(stateChangeProto.runOnSave),
+          runOnSave: Boolean(statusChangeProto.runOnSave),
         },
         dialog,
         scriptRunState,
@@ -762,7 +821,7 @@ export class App extends PureComponent<Props, State> {
       pythonVersion: SessionInfo.current.pythonVersion,
     })
 
-    this.handleSessionStateChanged(initialize.sessionState)
+    this.handleSessionStatusChanged(initialize.sessionStatus)
   }
 
   /**
@@ -964,12 +1023,23 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Used by e2e tests to test disabling widgets
+   * Used by e2e tests to test disabling widgets.
    */
-  closeConnection(): void {
+  debugShutdownRuntime = (): void => {
     if (this.isServerConnected()) {
-      const backMsg = new BackMsg({ closeConnection: true })
-      backMsg.type = "closeConnection"
+      const backMsg = new BackMsg({ debugShutdownRuntime: true })
+      backMsg.type = "debugShutdownRuntime"
+      this.sendBackMsg(backMsg)
+    }
+  }
+
+  /**
+   * Used by e2e tests to test reconnect behavior.
+   */
+  debugDisconnectWebsocket = (): void => {
+    if (this.isServerConnected()) {
+      const backMsg = new BackMsg({ debugDisconnectWebsocket: true })
+      backMsg.type = "debugDisconnectWebsocket"
       this.sendBackMsg(backMsg)
     }
   }
@@ -1028,6 +1098,15 @@ export class App extends PureComponent<Props, State> {
 
   onPageChange = (pageScriptHash: string): void => {
     this.sendRerunBackMsg(undefined, pageScriptHash)
+  }
+
+  isAppInReadyState = (prevState: Readonly<State>): boolean => {
+    return (
+      this.state.connectionState === ConnectionState.CONNECTED &&
+      this.state.scriptRunState === ScriptRunState.NOT_RUNNING &&
+      prevState.scriptRunState === ScriptRunState.RUNNING &&
+      prevState.connectionState === ConnectionState.CONNECTED
+    )
   }
 
   sendRerunBackMsg = (
@@ -1173,12 +1252,6 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Returns the authToken set by the withHostCommunication hoc.
-   */
-  private getHostAuthToken = (): string | undefined =>
-    this.props.hostCommunication.currentState.authToken
-
-  /**
    * Updates the app body when there's a connection error.
    */
   handleConnectionError = (errNode: ReactNode): void => {
@@ -1217,6 +1290,34 @@ export class App extends PureComponent<Props, State> {
       aboutSectionMd: menuItems?.aboutSectionMd,
     }
     this.openDialog(newDialog)
+  }
+
+  /**
+   * Prints the app, if the app is in IFrame
+   * it prints the content of the IFrame.
+   * Before printing this function ensures the app has fully loaded,
+   * by checking if we're in ScriptRunState.NOT_RUNNING state.
+   */
+  printCallback = (): void => {
+    const { scriptRunState } = this.state
+    if (scriptRunState !== ScriptRunState.NOT_RUNNING) {
+      setTimeout(this.printCallback, 500)
+      return
+    }
+    let windowToPrint
+    try {
+      const htmlIFrameElement = getIFrameEnclosingApp(this.embeddingId)
+      if (htmlIFrameElement && htmlIFrameElement.contentWindow) {
+        windowToPrint = htmlIFrameElement.contentWindow.window
+      } else {
+        windowToPrint = window
+      }
+    } catch (err) {
+      windowToPrint = window
+    } finally {
+      if (!windowToPrint) windowToPrint = window
+      windowToPrint.print()
+    }
   }
 
   screencastCallback = (): void => {
@@ -1288,10 +1389,14 @@ export class App extends PureComponent<Props, State> {
     const { hideSidebarNav: hostHideSidebarNav } =
       this.props.hostCommunication.currentState
 
-    const outerDivClass = classNames("stApp", {
-      "streamlit-embedded": isEmbeddedInIFrame(),
-      "streamlit-wide": userSettings.wideMode,
-    })
+    const outerDivClass = classNames(
+      "stApp",
+      getEmbeddingIdClassName(this.embeddingId),
+      {
+        "streamlit-embedded": isEmbeddedInIFrame(),
+        "streamlit-wide": userSettings.wideMode,
+      }
+    )
 
     const renderedDialog: React.ReactNode = dialog
       ? StreamlitDialog({
@@ -1359,6 +1464,7 @@ export class App extends PureComponent<Props, State> {
                 clearCacheCallback={this.openClearCacheDialog}
                 settingsCallback={this.settingsCallback}
                 aboutCallback={this.aboutCallback}
+                printCallback={this.printCallback}
                 screencastCallback={this.screencastCallback}
                 screenCastState={this.props.screenCast.currentState}
                 hostMenuItems={

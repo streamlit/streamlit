@@ -9,6 +9,8 @@ jobs:
     uses: ./.github/workflows/python-versions.yml
     with:
       ref: ${{ github.ref_name }}
+    secrets:
+      PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
 
   run-javascript-tests:
     uses: ./.github/workflows/js-tests.yml
@@ -41,10 +43,12 @@ jobs:
           ref: ${{ github.ref_name }}
           persist-credentials: false
           submodules: 'recursive'
-      - name: Set up Python 3.10
+      - name: Set Python version vars
+        uses: ./.github/actions/set_python_versions
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       # Uses action to safely process user input (branch name) to prevent script injection attacks
@@ -89,9 +93,11 @@ jobs:
         if: ${{ success() }}
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          RUN_ID: ${{ github.run_id }}
         run: python scripts/slack_notifications.py candidate success
       - name: Failed Release Candidate Slack Message
         if: ${{ failure() }}
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          RUN_ID: ${{ github.run_id }}
         run: python scripts/slack_notifications.py candidate failure

@@ -40,7 +40,7 @@ import {
   UploadedStatus,
   UploadFileInfo,
   UploadingStatus,
-} from "../FileUploader/UploadFileInfo"
+} from "src/components/widgets/FileUploader/UploadFileInfo"
 import CameraInputButton from "./CameraInputButton"
 import { FacingMode } from "./SwitchFacingModeButton"
 import {
@@ -256,10 +256,16 @@ class CameraInput extends React.PureComponent<Props, State> {
   public componentDidUpdate = (prevProps: Props): void => {
     const { element, widgetMgr } = this.props
 
+    // TODO(vdonato): Rework this now that there's a short window where the app
+    // may reconnect to the server without losing its uploaded files. Just
+    // removing the if statement below (to avoid resetting widget state on a
+    // disconnect) seemed to work, but I'm not entirely sure if it's a complete
+    // fix.
+    //
     // Widgets are disabled if the app is not connected anymore.
     // If the app disconnects from the server, a new session is created and users
     // will lose access to the files they uploaded in their previous session.
-    // If we are reconnecting, reset the file uploader so that the widget is
+    // If we are reconnecting, reset the camera input so that the widget is
     // in sync with the new session.
     if (prevProps.disabled !== this.props.disabled && this.props.disabled) {
       this.reset()

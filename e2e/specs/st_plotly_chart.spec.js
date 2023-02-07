@@ -20,7 +20,7 @@ describe("st.plotly_chart", () => {
   });
 
   beforeEach(() => {
-    cy.get(".element-container").should("have.length", 10);
+    cy.get(".element-container").should("have.length", 16);
   });
 
   it("displays a plotly chart", () => {
@@ -28,11 +28,12 @@ describe("st.plotly_chart", () => {
       .find(".modebar-btn--logo")
       .should("have.attr", "data-title")
       .and("match", /Produced with Plotly/);
-  });
+});
 
   it("has consistent visuals", () => {
     cy.get(".element-container .stPlotlyChart")
       .each((el, idx) => {
+        cy.wrap(el).scrollIntoView()
         return cy.wrap(el).matchThemedSnapshots("plotly_chart" + idx);
       })
   });
