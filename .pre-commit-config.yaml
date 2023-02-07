@@ -19,6 +19,15 @@
 # the second commit should pass,
 # because the files were linted after trying to do the first commit.
 repos:
+  - repo: https://github.com/dhruvmanila/remove-print-statements
+    rev: v0.5.0
+    hooks:
+      - id: remove-print-statements
+        name: Check for print statements
+        args: ['--verbose', '--dry-run']
+        types: [ python ]
+        files: ^lib/streamlit
+        exclude: ^lib/streamlit/web/cli.py
   - repo: https://github.com/psf/black
     rev: 22.6.0
     hooks:
