@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 import textwrap
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Dict, Mapping, Optional, Union
@@ -39,7 +38,6 @@ from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.session_state import (
-    GENERATED_WIDGET_KEY_PREFIX,
     RegisterWidgetResult,
     T,
     WidgetArgs,
@@ -49,6 +47,7 @@ from streamlit.runtime.state.session_state import (
     WidgetMetadata,
     WidgetSerializer,
 )
+from streamlit.runtime.state.util import compute_widget_id, user_key_from_widget_id
 from streamlit.type_util import ValueFieldName
 
 if TYPE_CHECKING:
@@ -184,7 +183,7 @@ def register_widget(
         For both paths a widget return value is provided, allowing the widgets
         to be used in a non-streamlit setting.
     """
-    widget_id = _compute_widget_id(element_type, element_proto, user_key)
+    widget_id = compute_widget_id(element_type, element_proto, user_key)
     element_proto.id = widget_id
 
     # Create the widget's updated metadata, and register it with session_state.
@@ -198,19 +197,6 @@ def register_widget(
         callback_kwargs=kwargs,
     )
     return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
-
-
-def user_key_from_widget_id(widget_id: str) -> Optional[str]:
-    """Return the user key portion of a widget id, or None if the id does not
-    have a user key.
-
-    TODO This will incorrectly indicate no user key if the user actually provides
-    "None" as a key, but we can't avoid this kind of problem while storing the
-    string representation of the no-user-key sentinel as part of the widget id.
-    """
-    user_key = widget_id.split("-", maxsplit=2)[-1]
-    user_key = None if user_key == "None" else user_key
-    return user_key
 
 
 def register_widget_from_metadata(
@@ -329,23 +315,3 @@ def _build_duplicate_widget_message(
         )
 
     return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
-
-
-def _compute_widget_id(
-    element_type: str, element_proto: WidgetProto, user_key: Optional[str] = None
-) -> str:
-    """Compute the widget id for the given widget. This id is stable: a given
-    set of inputs to this function will always produce the same widget id output.
-
-    The widget id includes the user_key so widgets with identical arguments can
-    use it to be distinct.
-
-    The widget id includes an easily identified prefix, and the user_key as a
-    suffix, to make it easy to identify it and know if a key maps to it.
-
-    Does not mutate the element_proto object.
-    """
-    h = hashlib.new("md5")
-    h.update(element_type.encode("utf-8"))
-    h.update(element_proto.SerializeToString())
-    return f"{GENERATED_WIDGET_KEY_PREFIX}-{h.hexdigest()}-{user_key}"
