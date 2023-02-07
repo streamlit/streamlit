@@ -50,7 +50,7 @@ import {
   StyledAnchorsContent,
 } from "./styled-components"
 
-const ANCHOR_SEPARATOR = " | "
+const ANCHOR_SEPARATOR = " - "
 
 type PlainEventHandler = () => void
 
