@@ -92,6 +92,12 @@ function withExpandable(
               }),
               props: { className: "streamlit-expanderContent" },
             },
+            // allow fullscreen button to show
+            ContentAnimationContainer: {
+              style: {
+                overflow: "visible",
+              },
+            },
             PanelContainer: {
               style: () => ({
                 marginLeft: `${spacing.none} !important`,
