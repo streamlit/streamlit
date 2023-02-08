@@ -129,15 +129,6 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "http://colorbrewer2.org/",
         "Cynthia Brewer",
     ),
-    (
-        # MIT license: https://github.com/typicaljoe/taffydb/blob/master/License
-        "taffydb",
-        "2.6.2",
-        "UNKNOWN",
-        "git://github.com/typicaljoe/taffydb.git",
-        "http://taffydb.com/",
-        "Ian Smith",
-    ),
 }
 
 
