@@ -362,6 +362,18 @@ INTERVAL_TYPES_DF = pd.DataFrame(
     }
 )
 
+
+_offset_types = ["L", "S", "T", "H", "D", "W", "W-FRI", "Q", "Q-MAY"]
+
+PERIOD_TYPES_DF = pd.DataFrame(
+    [
+        [pd.Period(date, freq=offset_type) for date in ["1970-01-01", "2012-02-14"]]
+        + [None]
+        for offset_type in _offset_types
+    ],
+    index=_offset_types,
+)
+
 SPECIAL_TYPES_DF = pd.DataFrame(
     {
         "categorical": pd.Series(["a", "b", "c", "a", None]).astype("category"),
@@ -387,8 +399,6 @@ UNSUPPORTED_TYPES_DF = pd.DataFrame(
             (pd.Period("2022-03-14 11:52:00", freq="H") + pd.offsets.Hour(i))
             for i in range(3)
         ]
-        + [None],
-        "period[D]": [(pd.Period(random_date().date(), freq="D")) for _ in range(3)]
         + [None],
         "complex": pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j, None]),
         "timedelta": pd.Series(
