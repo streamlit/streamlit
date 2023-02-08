@@ -50,7 +50,7 @@ export type DataType =
   | StructRow // interval
   | Dictionary // categorical
   | Struct // dict
-  | BigInt // period
+  | bigint // period
 
 /**
  * A row-major grid of DataFrame index header values.
@@ -862,7 +862,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   private static formatPeriodType(
-    duration: BigInt,
+    duration: bigint,
     typeName: PeriodType
   ): string {
     const match = typeName.match(/period\[(.*)]/)
@@ -874,7 +874,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   private static formatPeriod(
-    duration: BigInt,
+    duration: bigint,
     freq: PeriodFrequency
   ): string {
     const [freqName, freqParam] = freq.split("-", 2)
@@ -883,17 +883,17 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     if (!momentConverter) {
       throw new Error(`Unsupported period frequency: ${freq}`)
     }
-    const duration_number = Number(duration)
-    if (!Number.isSafeInteger(duration_number)) {
+    const durationNumber = Number(duration)
+    if (!Number.isSafeInteger(durationNumber)) {
       throw new Error(
         `Unsupported value: ${duration}. Supported values: [${Number.MIN_SAFE_INTEGER}-${Number.MAX_SAFE_INTEGER}]`
       )
     }
-    return momentConverter(duration_number, freqParam)
+    return momentConverter(durationNumber, freqParam)
   }
 
   private static formatCategoricalType(
-    x: number | BigInt | StructRow,
+    x: number | bigint | StructRow,
     field: Field
   ): string {
     // Serialization for pandas.Interval and pandas.Period is provided by Arrow extensions
@@ -910,7 +910,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       }
       if (extensionName === "pandas.Period") {
         const { freq } = extensionMetadata
-        return Quiver.formatPeriod(x as BigInt, freq)
+        return Quiver.formatPeriod(x as bigint, freq)
       }
     }
     return String(x)
@@ -971,12 +971,12 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     if (typeName?.startsWith("period")) {
-      return Quiver.formatPeriodType(x as BigInt, typeName as PeriodType)
+      return Quiver.formatPeriodType(x as bigint, typeName as PeriodType)
     }
 
     if (typeName === "categorical") {
       return this.formatCategoricalType(
-        x as number | BigInt | StructRow,
+        x as number | bigint | StructRow,
         field as Field
       )
     }
