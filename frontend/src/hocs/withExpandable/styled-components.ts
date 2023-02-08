@@ -28,7 +28,6 @@ export const StyledExpandableContainer = styled.div(({ theme }) => ({
       textAlign: "center",
       paddingBottom: theme.spacing.lg,
       paddingTop: theme.spacing.lg,
-      overflow: "visible",
 
       "&:before": {
         content: '"empty"',
