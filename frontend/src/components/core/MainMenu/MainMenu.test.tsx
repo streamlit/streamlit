@@ -104,8 +104,6 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
-      "Report a bug",
-      "Get help",
       "View app source",
       "Report bug with app",
       "About",
@@ -147,8 +145,6 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
-      "Report a bug",
-      "Get help",
       "About",
     ])
 
@@ -189,8 +185,6 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
-      "Report a bug",
-      "Get help",
       "About",
     ])
 
@@ -388,6 +382,36 @@ describe("App", () => {
     ])
   })
 
+  it("should render report a bug in core menu", () => {
+    const menuItems = {
+      reportABugUrl: "testing",
+      hideGetHelp: false,
+      hideReportABug: false,
+      aboutSectionMd: "",
+    }
+    const props = getProps({ menuItems })
+    const wrapper = mount(<MainMenu {...props} />)
+    const popoverContent = wrapper.find("StatefulPopover").prop("content")
+    // @ts-ignore
+    const menuWrapper = mount(popoverContent(() => {}))
+
+    // @ts-ignore
+    const menuLabels = menuWrapper
+      .find("MenuStatefulContainer")
+      .at(0)
+      .prop("items")
+      // @ts-ignore
+      .map(item => item.label)
+    expect(menuLabels).toEqual([
+      "Rerun",
+      "Settings",
+      "Print",
+      "Record a screencast",
+      "Report a bug",
+      "About",
+    ])
+  })
+
   it("should not render dev menu when hostIsOwner is false and not on localhost", () => {
     // set isLocalhost to false by deleting window.location.
     // Source: https://www.benmvp.com/blog/mocking-window-location-methods-jest-jsdom/
@@ -416,8 +440,6 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
-      "Report a bug",
-      "Get help",
       "About",
     ])
   })

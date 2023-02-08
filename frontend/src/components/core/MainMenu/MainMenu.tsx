@@ -389,22 +389,24 @@ function MainMenu(props: Props): ReactElement {
       disabled: isServerDisconnected,
       label: "Save a snapshot",
     },
-    ...(!props.menuItems?.hideGetHelp && {
-      community: {
-        onClick: getOpenInWindowCallback(
-          props.menuItems?.getHelpUrl || COMMUNITY_URL
-        ),
-        label: "Get help",
-      },
-    }),
-    ...(!props.menuItems?.hideReportABug && {
-      report: {
-        onClick: getOpenInWindowCallback(
-          props.menuItems?.reportABugUrl || BUG_URL
-        ),
-        label: "Report a bug",
-      },
-    }),
+    ...(!props.menuItems?.hideGetHelp &&
+      props.menuItems?.getHelpUrl && {
+        community: {
+          onClick: getOpenInWindowCallback(
+            props.menuItems?.getHelpUrl || COMMUNITY_URL
+          ),
+          label: "Get help",
+        },
+      }),
+    ...(!props.menuItems?.hideReportABug &&
+      props.menuItems?.reportABugUrl && {
+        report: {
+          onClick: getOpenInWindowCallback(
+            props.menuItems?.reportABugUrl || BUG_URL
+          ),
+          label: "Report a bug",
+        },
+      }),
     settings: { onClick: props.settingsCallback, label: "Settings" },
     about: { onClick: props.aboutCallback, label: "About" },
   }
