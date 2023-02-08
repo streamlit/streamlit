@@ -56,13 +56,10 @@ def get_query_params() -> Dict[str, List[str]]:
     ctx = get_script_run_ctx()
     if ctx is None:
         return {}
-
-    query_params = parse.parse_qs(ctx.query_string)
-
-    # Drop any embed, embed_options query params
-    util.drop_key_query_params(query_params, keys_to_drop=EMBED_QUERY_PARAMS_KEYS)
-
-    return query_params
+    # Return new query params dict, but without embed, embed_options query params
+    return util.exclude_key_query_params(
+        parse.parse_qs(ctx.query_string), keys_to_exclude=EMBED_QUERY_PARAMS_KEYS
+    )
 
 
 @gather_metrics("experimental_set_query_params")
@@ -96,31 +93,47 @@ def set_query_params(**query_params: Any) -> None:
     if ctx is None:
         return
 
-    all_current_params = parse.parse_qs(ctx.query_string)
-    current_embed_params = util.extract_key_query_params(
-        all_current_params, param_key=EMBED_QUERY_PARAM
+    msg = ForwardMsg()
+    msg.page_info_changed.query_string = _ensure_no_embed_params(
+        query_params, ctx.query_string
     )
-    current_embed_options_params = util.extract_key_query_params(
-        all_current_params, param_key=EMBED_OPTIONS_QUERY_PARAM
-    )
-    current_embed_params = f"{current_embed_params}{current_embed_options_params}"
+    ctx.enqueue(msg)
 
-    # Drop any embed, embed_options query params
-    key_was_dropped = util.drop_key_query_params(
-        query_params, keys_to_drop=EMBED_QUERY_PARAMS_KEYS
+
+def _ensure_no_embed_params(
+    query_params: Dict[str, List[str]], query_string: str
+) -> str:
+    """Ensures there are no embed params set (raises StreamlitAPIException) if there is a try,
+    also makes sure old param values in query_string are preserved. Returns query_string : str."""
+    # Get query params dict without embed, embed_options params
+    query_params_without_embed = util.exclude_key_query_params(
+        query_params, keys_to_exclude=EMBED_QUERY_PARAMS_KEYS
     )
-    if key_was_dropped:
+    if query_params != query_params_without_embed:
         raise StreamlitAPIException(
             "Query param embed and embed_options (case-insensitive) cannot be set using set_query_params method."
         )
 
+    all_current_params = parse.parse_qs(query_string)
+    current_embed_params = "".join(
+        [
+            f"&{EMBED_QUERY_PARAM}={param}"
+            for param in util.extract_key_query_params(
+                all_current_params, param_key=EMBED_QUERY_PARAM
+            )
+        ]
+    )
+    current_embed_options_params = "".join(
+        [
+            f"&{EMBED_OPTIONS_QUERY_PARAM}={param}"
+            for param in util.extract_key_query_params(
+                all_current_params, param_key=EMBED_OPTIONS_QUERY_PARAM
+            )
+        ]
+    )
+    current_embed_params += current_embed_options_params
     query_string = parse.urlencode(query_params, doseq=True)
-    if len(query_string) > 0:
-        query_string += current_embed_params
-    else:
-        query_string = current_embed_params[1:]
 
-    ctx.query_string = query_string
-    msg = ForwardMsg()
-    msg.page_info_changed.query_string = ctx.query_string
-    ctx.enqueue(msg)
+    if query_string:
+        return query_string + current_embed_params
+    return current_embed_params[1:]

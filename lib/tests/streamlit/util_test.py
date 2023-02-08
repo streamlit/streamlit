@@ -14,7 +14,7 @@
 
 import random
 import unittest
-from typing import Dict, List
+from typing import Dict, List, Set
 from unittest.mock import patch
 
 import numpy as np
@@ -127,9 +127,9 @@ class UtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ({"x": ["a"]}, ["x"], {}, True),
-            ({"a": ["a1", "a2"], "b": ["b1", "b2"]}, ["a"], {"b": ["b1", "b2"]}, True),
-            ({"c": ["c1", "c2"]}, "no_existing_key", {"c": ["c1", "c2"]}, False),
+            ({"x": ["a"]}, ["x"], {}),
+            ({"a": ["a1", "a2"], "b": ["b1", "b2"]}, ["a"], {"b": ["b1", "b2"]}),
+            ({"c": ["c1", "c2"]}, "no_existing_key", {"c": ["c1", "c2"]}),
             (
                 {
                     "embed": ["true"],
@@ -137,13 +137,11 @@ class UtilTest(unittest.TestCase):
                 },
                 ["embed", "embed_options"],
                 {},
-                True,
             ),
             (
                 {"EMBED": ["TRUE"], "EMBED_OPTIONS": ["DISABLE_SCROLLING"]},
                 ["embed", "embed_options"],
                 {},
-                True,
             ),
         ]
     )
@@ -152,32 +150,34 @@ class UtilTest(unittest.TestCase):
         query_params: Dict[str, List[str]],
         keys_to_drop: List[str],
         result: Dict[str, List[str]],
-        found: bool,
     ):
-        self.assertEqual(util.drop_key_query_params(query_params, keys_to_drop), found)
-        self.assertDictEqual(query_params, result)
+        self.assertDictEqual(
+            util.exclude_key_query_params(query_params, keys_to_drop), result
+        )
 
     @parameterized.expand(
         [
-            ({"x": ["a"]}, "x", "&x=a"),
-            ({"a": ["a1"], "b": ["b1", "b2"]}, "a", "&a=a1"),
-            ({"c": ["c1", "c2"]}, "no_existing_key", ""),
+            ({"x": ["a"]}, "x", {"a"}),
+            ({"a": ["a1"], "b": ["b1", "b2"]}, "a", {"a1"}),
+            ({"c": ["c1", "c2"]}, "no_existing_key", set()),
             (
                 {
                     "embed": ["true"],
                     "embed_options": ["show_padding", "show_colored_line"],
                 },
                 "embed",
-                "&embed=true",
+                {"true"},
             ),
             (
                 {"EMBED": ["TRUE"], "EMBED_OPTIONS": ["DISABLE_SCROLLING"]},
                 "embed_options",
-                "&embed_options=disable_scrolling",
+                {"disable_scrolling"},
             ),
         ]
     )
     def test_extract_key_query_params(
-        self, query_params: Dict[str, List[str]], param_key: str, result: str
+        self, query_params: Dict[str, List[str]], param_key: str, result: Set[str]
     ):
-        self.assertEqual(util.extract_key_query_params(query_params, param_key), result)
+        self.assertSetEqual(
+            util.extract_key_query_params(query_params, param_key), result
+        )
