@@ -108,7 +108,7 @@ describe("Radio widget", () => {
     const radioOptions =
       wrapper.baseElement.querySelectorAll("#RadioGroup input")
     radioOptions.forEach(option => {
-      expect(option).toHaveAttribute("disabled")
+      expect(option).toBeDisabled()
     })
   })
 

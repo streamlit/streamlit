@@ -51,6 +51,10 @@ function Radio(props: Props): ReactElement {
     props.onChange(value)
   }, [value])
 
+  useEffect(() => {
+    setValue(props.value)
+  }, [props.value])
+
   const { theme, width, help, label, horizontal, labelVisibility } = props
   let { disabled } = props
   const { colors, radii } = theme
