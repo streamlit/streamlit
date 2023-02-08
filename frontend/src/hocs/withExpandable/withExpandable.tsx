@@ -80,7 +80,6 @@ function withExpandable(
                 marginRight: spacing.none,
                 marginTop: spacing.none,
                 marginBottom: spacing.none,
-                overflow: "visible",
                 paddingLeft: spacing.lg,
                 paddingRight: spacing.lg,
                 paddingTop: 0,
@@ -89,8 +88,15 @@ function withExpandable(
                 borderBottomStyle: "none",
                 borderRightStyle: "none",
                 borderLeftStyle: "none",
+                overflow: "visible",
               }),
               props: { className: "streamlit-expanderContent" },
+            },
+            // allow fullscreen button to show
+            ContentAnimationContainer: {
+              style: {
+                overflow: "visible",
+              },
             },
             PanelContainer: {
               style: () => ({
@@ -176,6 +182,7 @@ function withExpandable(
                 allowHTML={false}
                 isLabel
                 isExpander
+                style={{ overflow: "visible" }}
               />
             }
             key="panel"
