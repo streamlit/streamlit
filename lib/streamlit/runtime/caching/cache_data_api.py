@@ -23,16 +23,14 @@ import types
 from datetime import timedelta
 from typing import Any, Callable, TypeVar, Union, cast, overload
 
-from cachetools import TTLCache
 from typing_extensions import Literal, TypeAlias
 
 import streamlit as st
-from streamlit import util
+from streamlit import runtime
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.errors import StreamlitAPIException
-from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
+from streamlit.file_util import get_streamlit_file_path
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
@@ -48,11 +46,10 @@ from streamlit.runtime.caching.cached_message_replay import (
     MsgData,
     MultiCacheResults,
 )
-from streamlit.runtime.caching.storage import CacheStorage, CacheStorageContext
-from streamlit.runtime.caching.storage.cache_storage import (
-    OpenSourceCacheStorageFactory,
-)
-from streamlit.runtime.caching.storage.cache_storage_protocol import (
+from streamlit.runtime.caching.storage import (
+    CacheStorage,
+    CacheStorageContext,
+    CacheStorageFactory,
     CacheStorageKeyNotFoundError,
 )
 from streamlit.runtime.metrics_util import gather_metrics
@@ -150,6 +147,8 @@ class DataCaches(CacheStatsProvider):
         # haven't changed.
         with self._caches_lock:
             cache = self._function_caches.get(key)
+            # Fixme: [Karen] instead of comparing key,
+            #  we can override __eq__ in DataCache
             if (
                 cache is not None
                 and cache.ttl_seconds == ttl_seconds
@@ -172,7 +171,10 @@ class DataCaches(CacheStatsProvider):
                 max_entries=max_entries,
                 persist=persist,
             )
-            storage = OpenSourceCacheStorageFactory().create(cache_context)
+
+            cache_storage_factory = self._get_storage_factory()
+            storage = cache_storage_factory.create(cache_context)
+
             cache = DataCache(
                 key=key,
                 persist=persist,
@@ -224,6 +226,9 @@ class DataCaches(CacheStatsProvider):
             stats.extend(cache.get_stats())
         return stats
 
+    def _get_storage_factory(self) -> CacheStorageFactory:
+        return runtime.get_instance().cache_storage_factory
+
 
 # Singleton DataCaches instance
 _data_caches = DataCaches()
@@ -257,7 +262,9 @@ class CacheDataAPI:
 
         # Parameterize the decorator metric name.
         # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
-        self._decorator = gather_metrics(decorator_metric_name, self._decorator)  # type: ignore
+        self._decorator = gather_metrics(
+            decorator_metric_name, self._decorator
+        )  # type: ignore
         self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
@@ -506,10 +513,6 @@ class DataCache(Cache):
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
         self.persist = persist
-        # self._mem_cache: TTLCache[str, bytes] = TTLCache(
-        #     maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
-        # )
-        # self._mem_cache_lock = threading.Lock()
         self.allow_widgets = allow_widgets
 
     # TODO [Karen] think about this max_entries live here or in the storage
