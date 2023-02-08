@@ -115,25 +115,25 @@ def _ensure_no_embed_params(
         )
 
     all_current_params = parse.parse_qs(query_string)
-    current_embed_params = "".join(
-        [
-            f"&{EMBED_QUERY_PARAM}={param}"
-            for param in util.extract_key_query_params(
-                all_current_params, param_key=EMBED_QUERY_PARAM
-            )
-        ]
+    current_embed_params = parse.urlencode(
+        {
+            EMBED_QUERY_PARAM: [
+                param
+                for param in util.extract_key_query_params(
+                    all_current_params, param_key=EMBED_QUERY_PARAM
+                )
+            ],
+            EMBED_OPTIONS_QUERY_PARAM: [
+                param
+                for param in util.extract_key_query_params(
+                    all_current_params, param_key=EMBED_OPTIONS_QUERY_PARAM
+                )
+            ],
+        },
+        doseq=True,
     )
-    current_embed_options_params = "".join(
-        [
-            f"&{EMBED_OPTIONS_QUERY_PARAM}={param}"
-            for param in util.extract_key_query_params(
-                all_current_params, param_key=EMBED_OPTIONS_QUERY_PARAM
-            )
-        ]
-    )
-    current_embed_params += current_embed_options_params
     query_string = parse.urlencode(query_params, doseq=True)
 
     if query_string:
-        return query_string + current_embed_params
-    return current_embed_params[1:]
+        return f"{query_string}&{current_embed_params}"
+    return current_embed_params
