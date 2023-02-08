@@ -17,14 +17,33 @@
 syntax = "proto3";
 
 message Arrow {
+  // The serialized arrow dataframe
   bytes data = 1;
+  // Pandas styler information
   Styler styler = 2;
-  // width in CSS points
+  // Width in CSS points
   uint32 width = 3;
-  // height in CSS points
+  // Height in CSS points
   uint32 height = 4;
   // If True, will overwrite the dataframe width to fit to container.
   bool use_container_width = 5;
+  // The id of the widget, this is required if the dataframe is editable
+  string id = 6;
+  // Colum configuration as JSON
+  string columns = 7;
+  // Activate table editing
+  EditingMode editing_mode = 8;
+  // Deactivates editing
+  bool disabled = 9;
+  // The form ID of the widget, this is required if the dataframe is editable
+  string form_id = 10;
+
+  // Available editing modes:
+  enum EditingMode {
+    READ_ONLY = 0; // Read-only table.
+    FIXED = 1; // Activates editing but only allow editing of existing cells.
+    DYNAMIC = 2; // Activates editing and allow adding & deleting rows.
+  }
 }
 
 message Styler {

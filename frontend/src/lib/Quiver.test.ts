@@ -410,7 +410,7 @@ describe("Quiver", () => {
             pandas_type: "datetime",
             numpy_type: "datetime64[ns]",
           })
-        ).toEqual("1970-01-01T00:00:00")
+        ).toEqual("1970-01-01 00:00:00")
       })
 
       test("datetimetz", () => {
@@ -420,7 +420,7 @@ describe("Quiver", () => {
             numpy_type: "datetime64[ns]",
             meta: { timezone: "Europe/Moscow" },
           })
-        ).toEqual("1970-01-01T03:00:00+03:00")
+        ).toEqual("1970-01-01 03:00:00+03:00")
       })
 
       test("datetimetz with offset", () => {
@@ -430,7 +430,7 @@ describe("Quiver", () => {
             numpy_type: "datetime64[ns]",
             meta: { timezone: "+01:00" },
           })
-        ).toEqual("1970-01-01T01:00:00+01:00")
+        ).toEqual("1970-01-01 01:00:00+01:00")
       })
 
       test("interval datetime64[ns]", () => {
@@ -443,7 +443,7 @@ describe("Quiver", () => {
             pandas_type: "object",
             numpy_type: "interval[datetime64[ns], right]",
           })
-        ).toEqual("(2017-01-01T00:00:00, 2017-01-02T00:00:00]")
+        ).toEqual("(2017-01-01 00:00:00, 2017-01-02 00:00:00]")
       })
 
       test("interval float64", () => {

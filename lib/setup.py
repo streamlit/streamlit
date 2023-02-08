@@ -37,7 +37,7 @@ INSTALL_REQUIRES = [
     "importlib-metadata>=1.4",
     "numpy",
     "packaging>=14.1",
-    "pandas>=0.21.0",
+    "pandas>=0.25",
     "pillow>=6.2.0",
     "protobuf<4,>=3.12",
     "pyarrow>=4.0",
@@ -62,8 +62,9 @@ INSTALL_REQUIRES = [
 SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
     "gitpython!=3.1.19",
     "pydeck>=0.1.dev5",
-    # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
-    "tornado>=5.0",
+    # Tornado 6.0.3 was the current Tornado version when Python 3.8, our earliest supported Python version,
+    # was released (Oct 14, 2019).
+    "tornado>=6.0.3",
 ]
 
 if not os.getenv("SNOWPARK_CONDA_BUILD"):
