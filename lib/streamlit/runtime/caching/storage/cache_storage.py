@@ -27,8 +27,8 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorage,
     CacheStorageContext,
     CacheStorageError,
-    CacheStorageFactory,
     CacheStorageKeyNotFoundError,
+    CacheStorageManager,
 )
 
 _LOGGER = get_logger(__name__)
@@ -43,7 +43,7 @@ _CACHE_DIR_NAME = "cache"
 _CACHED_FILE_EXTENSION = "memo"
 
 
-class OpenSourceCacheStorageFactory(CacheStorageFactory):
+class OpenSourceCacheStorageManager(CacheStorageManager):
     def create(self, context: CacheStorageContext) -> OpenSourceCacheStorage:
         """Creates a new cache storage instance"""
         return OpenSourceCacheStorage(context)

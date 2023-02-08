@@ -34,7 +34,7 @@ from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.caching.storage.cache_storage import (
-    OpenSourceCacheStorageFactory,
+    OpenSourceCacheStorageManager,
 )
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
@@ -184,14 +184,14 @@ class Server:
         MediaFileHandler.initialize_storage(media_file_storage)
 
         # Initialize memory-disk cache storage
-        cache_storage_factory = OpenSourceCacheStorageFactory()
+        cache_storage_manager = OpenSourceCacheStorageManager()
 
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
                 command_line=command_line,
                 media_file_storage=media_file_storage,
-                cache_storage_factory=cache_storage_factory,
+                cache_storage_manager=cache_storage_manager,
             ),
         )
 

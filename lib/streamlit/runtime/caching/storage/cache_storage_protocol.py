@@ -72,13 +72,19 @@ class CacheStorage(Protocol):
         """Returns a list of stats in bytes for the cache storage per item"""
 
 
-class CacheStorageFactory(Protocol):
+class CacheStorageManager(Protocol):
     @abstractmethod
     def create(self, context: CacheStorageContext) -> CacheStorage:
         """Creates a new cache storage instance"""
         raise NotImplementedError
 
-    @abstractmethod
     def clear_all(self) -> None:
-        """Remove everything what possible from the cache storages in optimal way."""
+        """
+        Remove everything what possible from the cache storages in optimal way.
+        meaningful default behaviour is to raise NotImplementedError, so this is not
+        abstractmethod.
+
+        Cache data API will fall back to remove all available storages one by one
+        via storage.clear() method if clear_all raises NotImplementedError.
+        """
         raise NotImplementedError

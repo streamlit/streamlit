@@ -61,7 +61,7 @@ from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
-    from streamlit.runtime.caching.storage import CacheStorageFactory
+    from streamlit.runtime.caching.storage import CacheStorageManager
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
@@ -88,9 +88,9 @@ class RuntimeConfig:
     media_file_storage: MediaFileStorage
 
     # TODO[Karen]: maybe use field with default factory and remove
-    #  creation of OpenSourceCacheStorageFactory from server.py
-    #  field(default_factory=OpenSourceCacheStorageFactory)
-    cache_storage_factory: CacheStorageFactory
+    #  creation of OpenSourceCacheStorageManager from server.py
+    #  field(default_factory=OpenSourceCacheStorageManager)
+    cache_storage_manager: CacheStorageManager
 
     # The SessionManager class to be used.
     session_manager_class: Type[SessionManager] = WebsocketSessionManager
@@ -186,7 +186,7 @@ class Runtime:
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
-        self._cache_storage_factory = config.cache_storage_factory
+        self._cache_storage_manager = config.cache_storage_manager
 
         self._session_mgr = config.session_manager_class(
             session_storage=config.session_storage,
@@ -215,8 +215,8 @@ class Runtime:
         return self._uploaded_file_mgr
 
     @property
-    def cache_storage_factory(self) -> CacheStorageFactory:
-        return self._cache_storage_factory
+    def cache_storage_manager(self) -> CacheStorageManager:
+        return self._cache_storage_manager
 
     @property
     def media_file_mgr(self) -> MediaFileManager:

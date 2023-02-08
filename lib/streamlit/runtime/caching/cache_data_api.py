@@ -48,8 +48,8 @@ from streamlit.runtime.caching.cached_message_replay import (
 from streamlit.runtime.caching.storage import (
     CacheStorage,
     CacheStorageContext,
-    CacheStorageFactory,
     CacheStorageKeyNotFoundError,
+    CacheStorageManager,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
@@ -171,8 +171,8 @@ class DataCaches(CacheStatsProvider):
                 persist=persist,
             )
 
-            cache_storage_factory = self._get_storage_factory()
-            storage = cache_storage_factory.create(cache_context)
+            cache_storage_manager = self._get_storage_manager()
+            storage = cache_storage_manager.create(cache_context)
 
             cache = DataCache(
                 key=key,
@@ -196,7 +196,7 @@ class DataCaches(CacheStatsProvider):
             try:
                 # Try to remove with optimal way, if not possible fallback to
                 # remove all available storages one by one
-                self._get_storage_factory().clear_all()
+                self._get_storage_manager().clear_all()
             except NotImplementedError:
                 for data_cache in self._function_caches.values():
                     data_cache.clear()
@@ -214,8 +214,8 @@ class DataCaches(CacheStatsProvider):
             stats.extend(cache.get_stats())
         return stats
 
-    def _get_storage_factory(self) -> CacheStorageFactory:
-        return runtime.get_instance().cache_storage_factory
+    def _get_storage_manager(self) -> CacheStorageManager:
+        return runtime.get_instance().cache_storage_manager
 
 
 # Singleton DataCaches instance
