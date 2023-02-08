@@ -49,9 +49,7 @@ import {
   BUG_URL,
   COMMUNITY_URL,
   DEPLOY_URL,
-  ONLINE_DOCS_URL,
   STREAMLIT_CLOUD_URL,
-  TEAMS_URL,
 } from "src/urls"
 import {
   StyledMenuDivider,
@@ -434,26 +432,6 @@ function MainMenu(props: Props): ReactElement {
       label: "Clear cache",
       shortcut: "c",
     },
-    s4t: {
-      onClick: getOpenInWindowCallback(TEAMS_URL),
-      label: "Streamlit Cloud",
-    },
-    reportSt: {
-      onClick: getOpenInWindowCallback(BUG_URL),
-      label: "Report a Streamlit bug",
-    },
-    documentation: {
-      onClick: getOpenInWindowCallback(ONLINE_DOCS_URL),
-      label: "Visit Streamlit docs",
-    },
-    visitStForum: {
-      onClick: getOpenInWindowCallback(COMMUNITY_URL),
-      label: "Visit Streamlit forums",
-      styleProps: {
-        margin: "0 0 -.5rem 0",
-        padding: ".25rem 0 .25rem 1.5rem",
-      },
-    },
   }
 
   const hostMenuItems = props.hostMenuItems.map(item => {
@@ -502,10 +480,6 @@ function MainMenu(props: Props): ReactElement {
     coreDevMenuItems.developerOptions,
     coreDevMenuItems.clearCache,
     showDeploy && coreDevMenuItems.deployApp,
-    isLocalhost() && coreDevMenuItems.s4t,
-    coreDevMenuItems.reportSt,
-    coreDevMenuItems.documentation,
-    coreDevMenuItems.visitStForum,
   ]
 
   // Remove empty entries, and add dividers into menu options as needed.
