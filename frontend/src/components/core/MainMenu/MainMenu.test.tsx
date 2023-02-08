@@ -116,14 +116,7 @@ describe("App", () => {
       .prop("items")
       // @ts-ignore
       .map(item => item.label)
-    expect(devMenuLabels).toEqual([
-      "Developer options",
-      "Clear cache",
-      "Streamlit Cloud",
-      "Report a Streamlit bug",
-      "Visit Streamlit docs",
-      "Visit Streamlit forums",
-    ])
+    expect(devMenuLabels).toEqual(["Developer options", "Clear cache"])
   })
 
   it("should render core set of menu elements", () => {
@@ -159,10 +152,6 @@ describe("App", () => {
       "Developer options",
       "Clear cache",
       "Deploy this app",
-      "Streamlit Cloud",
-      "Report a Streamlit bug",
-      "Visit Streamlit docs",
-      "Visit Streamlit forums",
     ])
   })
 
@@ -199,10 +188,6 @@ describe("App", () => {
       "Developer options",
       "Clear cache",
       "Deploy this app",
-      "Streamlit Cloud",
-      "Report a Streamlit bug",
-      "Visit Streamlit docs",
-      "Visit Streamlit forums",
     ])
   })
 
