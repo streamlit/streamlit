@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import threading
 
 from cachetools import TTLCache
@@ -26,6 +27,7 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorage,
     CacheStorageContext,
     CacheStorageError,
+    CacheStorageFactory,
     CacheStorageKeyNotFoundError,
 )
 
@@ -41,10 +43,15 @@ _CACHE_DIR_NAME = "cache"
 _CACHED_FILE_EXTENSION = "memo"
 
 
-class OpenSourceCacheStorageFactory:
+class OpenSourceCacheStorageFactory(CacheStorageFactory):
     def create(self, context: CacheStorageContext) -> OpenSourceCacheStorage:
         """Creates a new cache storage instance"""
         return OpenSourceCacheStorage(context)
+
+    def clear_all(self) -> None:
+        cache_path = get_cache_folder_path()
+        if os.path.isdir(cache_path):
+            shutil.rmtree(cache_path)
 
 
 class OpenSourceCacheStorage(CacheStorage):
@@ -90,7 +97,7 @@ class OpenSourceCacheStorage(CacheStorage):
         if self.persist == "disk":
             self._remove_from_disk_cache(key)
 
-    def clear_all(self) -> None:
+    def clear(self) -> None:
         """Expires all keys for the current storage"""
 
         with self._mem_cache_lock:
@@ -181,3 +188,7 @@ class OpenSourceCacheStorage(CacheStorage):
             _CACHE_DIR_NAME,
             f"{self.function_key}-{value_key}.{_CACHED_FILE_EXTENSION}",
         )
+
+
+def get_cache_folder_path() -> str:
+    return get_streamlit_file_path(_CACHE_DIR_NAME)

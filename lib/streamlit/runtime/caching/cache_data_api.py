@@ -29,7 +29,6 @@ import streamlit as st
 from streamlit import runtime
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.errors import StreamlitAPIException
-from streamlit.file_util import get_streamlit_file_path
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
 from streamlit.runtime.caching.cache_type import CacheType
@@ -192,28 +191,17 @@ class DataCaches(CacheStatsProvider):
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
         with self._caches_lock:
-            # TODO: [Karen] We should call storage.clear_all() for each storage
-            # TODO: Only delete disk cache for functions related to the user's
-            #  current script.
-
-            # TODO: [Karen] current implementation (without abstraction) just remove
-            #  cache folder from disk. IT is faster than removing key by key, but after
-            #  abstraction of storage it is impossible to remove cache folder from disk
-            #  directly from DataCaches.
-            #  One possible solution is to delegate that responsibility to
-            #  StorageFactory (so it will became Manager instead of just Factory)
-
             # TODO: [Karen] We should also think about call storage.close() to
             #  release resources
+            try:
+                # Try to remove with optimal way, if not possible fallback to
+                # remove all available storages one by one
+                self._get_storage_factory().clear_all()
+            except NotImplementedError:
+                for data_cache in self._function_caches.values():
+                    data_cache.clear()
 
-            for data_cache in self._function_caches.values():
-                data_cache.clear()
             self._function_caches = {}
-
-            # self._function_caches = {}
-            # cache_path = get_cache_path()
-            # if os.path.isdir(cache_path):
-            #     shutil.rmtree(cache_path)
 
     def get_stats(self) -> list[CacheStat]:
         with self._caches_lock:
@@ -608,34 +596,7 @@ class DataCache(Cache):
         self.storage.set(key, pickled_entry)
 
     def _clear(self) -> None:
-        self.storage.clear_all()
-
-    # def _read_from_mem_cache(self, key: str) -> bytes:
-    #     with self._mem_cache_lock:
-    #         if key in self._mem_cache:
-    #             entry = bytes(self._mem_cache[key])
-    #             _LOGGER.debug("Memory cache first stage HIT: %s", key)
-    #             return entry
-    #
-    #         else:
-    #             _LOGGER.debug("Memory cache MISS: %s", key)
-    #             raise CacheKeyNotFoundError("Key not found in mem cache")
-
-    # TOREMOVE!!!!
-    # def _read_multi_results_from_mem_cache(self, key: str) -> MultiCacheResults:
-    #     """Look up the results and ensure it has the right type.
-    #
-    #     Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
-    #     entry is malformed.
-    #     """
-    #     pickled = self._read_from_mem_cache(key)
-    #     maybe_results = pickle.loads(pickled)
-    #     if isinstance(maybe_results, MultiCacheResults):
-    #         return maybe_results
-    #     else:
-    #         with self._mem_cache_lock:
-    #             del self._mem_cache[key]
-    #         raise CacheKeyNotFoundError()
+        self.storage.clear()
 
     def _read_multi_results_from_storage(self, key: str) -> MultiCacheResults:
         """Look up the results from storage and ensure it has the right type.
@@ -655,7 +616,3 @@ class DataCache(Cache):
         else:
             self.storage.delete(key)
             raise CacheKeyNotFoundError()
-
-
-def get_cache_path() -> str:
-    return get_streamlit_file_path(_CACHE_DIR_NAME)

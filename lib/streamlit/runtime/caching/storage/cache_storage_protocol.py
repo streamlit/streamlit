@@ -57,7 +57,7 @@ class CacheStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def clear_all(self) -> None:
+    def clear(self) -> None:
         """Expires all keys for the app"""
         raise NotImplementedError
 
@@ -76,4 +76,9 @@ class CacheStorageFactory(Protocol):
     @abstractmethod
     def create(self, context: CacheStorageContext) -> CacheStorage:
         """Creates a new cache storage instance"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def clear_all(self) -> None:
+        """Remove everything what possible from the cache storages in optimal way."""
         raise NotImplementedError
