@@ -81,8 +81,8 @@ function withExpandable(
                 marginTop: spacing.none,
                 marginBottom: spacing.none,
                 overflow: "visible",
-                paddingLeft: spacing.lg,
-                paddingRight: spacing.lg,
+                paddingLeft: spacing.threeXL,
+                paddingRight: spacing.threeXL,
                 paddingTop: 0,
                 paddingBottom: $expanded ? spacing.lg : 0,
                 borderTopStyle: "none",
@@ -123,8 +123,8 @@ function withExpandable(
                 borderLeftStyle: "none",
                 paddingBottom: spacing.md,
                 paddingTop: spacing.md,
-                paddingRight: spacing.lg,
-                paddingLeft: spacing.lg,
+                paddingRight: spacing.threeXL,
+                paddingLeft: spacing.threeXL,
                 ...(isStale
                   ? {
                       opacity: 0.33,
