@@ -14,6 +14,7 @@
 
 from typing import TYPE_CHECKING, Optional, Union, cast
 
+from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
@@ -117,12 +118,11 @@ class MarkdownMixin:
         >>> st.code(code, language='python')
 
         """
-        code_proto = MarkdownProto()
-        metadata = " showLineNumbers" if line_numbers else ""
-        markdown = f'```{language or "plaintext"}{metadata}\n{body}\n```'
-        code_proto.body = clean_text(markdown)
-        code_proto.element_type = MarkdownProto.Type.CODE
-        return self.dg._enqueue("markdown", code_proto)
+        code_proto = CodeProto()
+        code_proto.codeText = clean_text(body)
+        code_proto.language = language or "plaintext"
+        code_proto.show_line_numbers = line_numbers
+        return self.dg._enqueue("code", code_proto)
 
     @gather_metrics("caption")
     def caption(

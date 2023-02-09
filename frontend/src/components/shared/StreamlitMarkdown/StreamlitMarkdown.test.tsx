@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
-import { mount } from "src/lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
 import { colors } from "src/theme/primitives/colors"
@@ -26,9 +26,12 @@ import StreamlitMarkdown, {
   HeadingWithAnchor,
   Heading,
   HeadingProtoProps,
+  CustomCodeTag,
+  CustomCodeTagProps,
 } from "./StreamlitMarkdown"
 
 import { StyledLinkIconContainer } from "./styled-components"
+import CopyButton from "src/components/elements/CodeBlock/CopyButton"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -302,5 +305,57 @@ describe("Heading", () => {
     | Paragraph   | Text        |`
     )
     expect(wrapper.find("table")).toHaveLength(0)
+  })
+})
+
+const getBlockProps = (
+  props: Partial<CustomCodeTagProps> = {}
+): CustomCodeTagProps => ({
+  children: [
+    `
+    import streamlit as st
+
+    st.write("Hello")
+  `,
+  ],
+  node: { type: "element", tagName: "tagName", children: [] },
+  ...props,
+})
+
+describe("CustomCodeTag Element", () => {
+  it("should render without crashing", () => {
+    const props = getBlockProps()
+    const wrapper = shallow(<CustomCodeTag {...props} />)
+
+    expect(wrapper.find("StyledCodeBlock").length).toBe(1)
+  })
+
+  it("should render with language", () => {
+    const props = getBlockProps()
+    const wrapper = mount(<CustomCodeTag {...props} />)
+
+    expect(wrapper.find("StyledCodeBlock").length).toBe(1)
+  })
+
+  it("should default to python if no language specified", () => {
+    const props = getBlockProps()
+    const wrapper = mount(<CustomCodeTag {...props} />)
+    expect(wrapper.find("SyntaxHighlighter").prop("language")).toBe("python")
+  })
+
+  it("should render copy button when code block has content", () => {
+    const props = getBlockProps({
+      children: ["i am not empty"],
+    })
+    const wrapper = mount(<CustomCodeTag {...props} />)
+    expect(wrapper.find(CopyButton)).toHaveLength(1)
+  })
+
+  it("should not render copy button when code block is empty", () => {
+    const props = getBlockProps({
+      children: [""],
+    })
+    const wrapper = mount(<CustomCodeTag {...props} />)
+    expect(wrapper.find(CopyButton)).toHaveLength(0)
   })
 })
