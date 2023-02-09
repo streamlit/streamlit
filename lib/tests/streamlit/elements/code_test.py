@@ -23,48 +23,50 @@ class CodeElement(DeltaGeneratorTestCase):
     def test_st_code_default(self):
         """Test st.code() with default language (python)."""
         code = "print('Hello, %s!' % 'Streamlit')"
-        expected_body = "```python\n%s\n```" % code
 
-        st.code(code, language="python")
+        st.code(code)
         element = self.get_delta_from_queue().new_element
 
-        # st.code() creates a MARKDOWN text object that wraps
-        # the body inside a codeblock declaration
-        self.assertEqual(element.markdown.body, expected_body)
-        self.assertEqual(element.markdown.element_type, MarkdownProto.Type.CODE)
+        self.assertEqual(element.code.code_text, code)
+        self.assertEqual(element.code.show_line_numbers, False)
+        self.assertEqual(element.code.language, "python")
 
     def test_st_code_python(self):
         """Test st.code with python language."""
         code = "print('My string = %d' % my_value)"
         st.code(code, language="python")
-        expected_body = """```python\n%s\n```""" % code
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, expected_body.strip())
+        self.get_delta_from_queue().new_element
+        self.assertEqual(element.code.code_text, code)
+        self.assertEqual(element.code.show_line_numbers, False)
+        self.assertEqual(element.code.language, "python")
 
     def test_st_code_none(self):
         """Test st.code with None language."""
         code = "print('My string = %d' % my_value)"
         st.code(code, language=None)
-        expected_body = """```plaintext\n%s\n```""" % code
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, expected_body.strip())
+        self.get_delta_from_queue().new_element
+        self.assertEqual(element.code.code_text, code)
+        self.assertEqual(element.code.show_line_numbers, False)
+        self.assertEqual(element.code.language, "plaintext")
 
     def test_st_code_none_with_line_numbers(self):
         """Test st.code with None language and line numbers."""
         code = "print('My string = %d' % my_value)"
         st.code(code, language=None, line_numbers=True)
-        expected_body = """```plaintext showLineNumbers\n%s\n```""" % code
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, expected_body.strip())
+        self.get_delta_from_queue().new_element
+        self.assertEqual(element.code.code_text, code)
+        self.assertEqual(element.code.show_line_numbers, True)
+        self.assertEqual(element.code.language, "plaintext")
 
     def test_st_code_python_with_line_numbers(self):
         """Test st.code with Python language and line numbers."""
         code = "print('My string = %d' % my_value)"
         st.code(code, language="python", line_numbers=True)
-        expected_body = """```python showLineNumbers\n%s\n```""" % code
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, expected_body.strip())
+        self.get_delta_from_queue().new_element
+        self.assertEqual(element.code.code_text, code)
+        self.assertEqual(element.code.show_line_numbers, True)
+        self.assertEqual(element.code.language, "plaintext")
