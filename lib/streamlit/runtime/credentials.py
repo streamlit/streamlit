@@ -28,9 +28,11 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
+# Emoji can cause encoding errors on non-UTF-8 terminals
+# (See https://github.com/streamlit/streamlit/issues/2284.)
 # WT_SESSION is a Windows Terminal specific environment variable. If it exists,
 # we are on the latest Windows Terminal that supports emojis
-_SHOW_EMOJIS = not env_util.IS_WINDOWS or os.environ.get("WT_SESSION")
+_SHOW_EMOJIS = sys.stdout.encoding == "utf-8" and (not env_util.IS_WINDOWS or os.environ.get("WT_SESSION"))
 if env_util.IS_WINDOWS:
     _CONFIG_FILE_PATH = r"%userprofile%/.streamlit/config.toml"
 else:
