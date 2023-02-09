@@ -431,6 +431,10 @@ function MainMenu(props: Props): ReactElement {
       onClick: props.clearCacheCallback,
       label: "Clear cache",
       shortcut: "c",
+      styleProps: {
+        margin: "0 0 -.5rem 0",
+        padding: ".25rem 0 .25rem 1.5rem",
+      },
     },
   }
 
