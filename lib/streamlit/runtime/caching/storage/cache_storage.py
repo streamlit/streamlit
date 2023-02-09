@@ -110,7 +110,7 @@ class OpenSourceCacheStorage(CacheStorage):
 
     def get_stats(self) -> list[int]:
         """Returns a list of stats in bytes for the cache storage per item"""
-        return [1, 2, 3]
+        return []
 
     def close(self) -> None:
         """Closes the cache storage"""
