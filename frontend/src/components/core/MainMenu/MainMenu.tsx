@@ -520,7 +520,9 @@ function MainMenu(props: Props): ReactElement {
     }
   }
 
-  devLastMenuItem.styleProps = lastDevMenuItemStyleProps
+  if (devLastMenuItem != null) {
+    devLastMenuItem.styleProps = lastDevMenuItemStyleProps
+  }
 
   const { hostIsOwner } = props
 
