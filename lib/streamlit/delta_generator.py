@@ -47,6 +47,7 @@ from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.button import ButtonMixin
 from streamlit.elements.camera_input import CameraInputMixin
 from streamlit.elements.checkbox import CheckboxMixin
+from streamlit.elements.code import CodeMixin
 from streamlit.elements.color_picker import ColorPickerMixin
 from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
@@ -155,6 +156,7 @@ class DeltaGenerator(
     ButtonMixin,
     CameraInputMixin,
     CheckboxMixin,
+    CodeMixin,
     ColorPickerMixin,
     EmptyMixin,
     ExceptionMixin,
