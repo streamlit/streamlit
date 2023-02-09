@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, Union, cast
 
-from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
@@ -80,49 +79,6 @@ class MarkdownMixin:
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
 
         return self.dg._enqueue("markdown", markdown_proto)
-
-    @gather_metrics("code")
-    def code(
-        self,
-        body: SupportsStr,
-        language: Optional[str] = "python",
-        line_numbers: bool = False,
-    ) -> "DeltaGenerator":
-        """Display a code block with optional syntax highlighting.
-
-        (This is a convenience wrapper around ``st.markdown()``)
-
-        Parameters
-        ----------
-        body : str
-            The string to display as code.
-
-        language : str or None
-            The language that the code is written in, for syntax highlighting.
-            If ``None``, the code will be unstyled. Defaults to ``"python"``.
-
-            For a list of available ``language`` values, see:
-
-            https://github.com/react-syntax-highlighter/react-syntax-highlighter/blob/master/AVAILABLE_LANGUAGES_PRISM.MD
-
-        line_numbers : bool
-            An optional boolean indicating whether to show line numbers to the
-            left of the code block. Defaults to ``False``.
-
-        Example
-        -------
-        >>> import streamlit as st
-        >>>
-        >>> code = '''def hello():
-        ...     print("Hello, Streamlit!")'''
-        >>> st.code(code, language='python')
-
-        """
-        code_proto = CodeProto()
-        code_proto.codeText = clean_text(body)
-        code_proto.language = language or "plaintext"
-        code_proto.show_line_numbers = line_numbers
-        return self.dg._enqueue("code", code_proto)
 
     @gather_metrics("caption")
     def caption(
