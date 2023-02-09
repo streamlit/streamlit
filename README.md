@@ -35,7 +35,7 @@ x = st.slider("Select a value")
 st.write(x, "squared is", x * x)
 ```
 
-Now streamlit run it to open the app!
+Now run it to open the app!
 ```
 $ streamlit run streamlit_app.py
 ```
