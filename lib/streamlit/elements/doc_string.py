@@ -137,7 +137,6 @@ def _marshall(doc_string_proto: DocStringProto, obj: Any) -> None:
         doc_string_proto.doc_string = obj_docs
 
     obj_value = _get_value(obj, var_name)
-
     if obj_value is not None:
         doc_string_proto.value = obj_value
 
@@ -159,8 +158,7 @@ def _get_name(obj):
     #   st.help(bar.Baz(123))
     #
     #   The name is Baz
-    name = getattr(obj, "__name__", None)
-    return name
+    return getattr(obj, "__name__", None)
 
 
 def _get_module(obj):
@@ -198,10 +196,6 @@ def _get_signature(obj):
                 break
 
     return sig
-
-
-class UNSET:
-    pass
 
 
 def _get_docstring(obj):
@@ -243,8 +237,10 @@ def _get_variable_name():
     scriptrunner_frame = _get_scriptrunner_frame()
 
     if scriptrunner_frame is None:
-        # If there's no ScriptRunner frame, something weird is going on. This should never happen
-        # but let's bail out nicely just in case there's some valid edge case where this is OK.
+        # If there's no ScriptRunner frame, something weird is going on. This
+        # can happen when the script is executed with `python myscript.py`.
+        # Either way, let's bail out nicely just in case there's some valid
+        # edge case where this is OK.
         return None
 
     code_context = scriptrunner_frame.code_context
@@ -534,7 +530,7 @@ def _get_members(obj):
         members_for_sorting.append((weight, member))
 
     if members_for_sorting:
-        _, members = zip(*sorted(members_for_sorting, key=lambda x: (x[0], x[1].name)))
-        return members
+        sorted_members = sorted(members_for_sorting, key=lambda x: (x[0], x[1].name))
+        return [m for _, m in sorted_members]
 
     return []
