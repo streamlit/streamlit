@@ -135,7 +135,6 @@ def _ensure_no_embed_params(
     query_string = parse.urlencode(query_params, doseq=True)
 
     if query_string:
-        return (
-            f"{query_string}{'&' if current_embed_params else ''}{current_embed_params}"
-        )
+        separator = "&" if current_embed_params else ""
+        return separator.join([query_string, current_embed_params])
     return current_embed_params
