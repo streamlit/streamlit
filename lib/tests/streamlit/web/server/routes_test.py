@@ -22,8 +22,6 @@ import tornado.testing
 import tornado.web
 import tornado.websocket
 
-from streamlit import config
-from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.routes import ALLOWED_MESSAGE_ORIGINS
@@ -79,17 +77,17 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertIn("Set-Cookie", response.headers)
 
     def test_health_deprecated(self):
-        with self.assertLogs("streamlit.web.server.server_util") as logs:
-            response = self.fetch("/healthz")
-        self.assertEqual(
-            logs.records[0].getMessage(),
-            "Endpoint '/healthz' is deprecated. Please use '/_stcore/health' instead.",
-        )
+        response = self.fetch("/healthz")
         self.assertEqual(
             response.headers["link"],
             f'<http://127.0.0.1:{self.get_http_port()}/_stcore/health>; rel="alternate"',
         )
         self.assertEqual(response.headers["deprecation"], "True")
+
+    def test_new_health_endpoint_should_not_display_deprecation_warning(self):
+        response = self.fetch("/_stcore/health")
+        self.assertNotIn("link", response.headers)
+        self.assertNotIn("deprecation", response.headers)
 
 
 class MessageCacheHandlerTest(tornado.testing.AsyncHTTPTestCase):

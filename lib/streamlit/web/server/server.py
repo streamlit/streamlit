@@ -35,6 +35,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
+from streamlit.web.server.app_static_file_handler import AppStaticFileHandler
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 from streamlit.web.server.component_request_handler import ComponentRequestHandler
 from streamlit.web.server.media_file_handler import MediaFileHandler
@@ -284,6 +285,17 @@ class Server:
                             callback=lambda: self._runtime.does_script_run_without_error()
                         ),
                     )
+                ]
+            )
+
+        if config.get_option("server.enableStaticServing"):
+            routes.extend(
+                [
+                    (
+                        make_url_path_regex(base, "app/static/(.*)"),
+                        AppStaticFileHandler,
+                        {"path": file_util.get_app_static_dir(self.main_script_path)},
+                    ),
                 ]
             )
 
