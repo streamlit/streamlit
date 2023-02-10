@@ -19,8 +19,6 @@ export const DEPLOY_URL = "https://share.streamlit.io/deploy"
 export const STREAMLIT_CLOUD_URL = "https://streamlit.io/cloud"
 export const ONLINE_DOCS_URL = "https://docs.streamlit.io"
 export const COMMUNITY_URL = "https://discuss.streamlit.io"
-export const BUG_URL =
-  "https://github.com/streamlit/streamlit/issues/new/choose"
 
 /** The URL customers are directed to for troubleshooting components. */
 export const COMPONENT_DEVELOPER_URL =

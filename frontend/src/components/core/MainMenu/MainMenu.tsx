@@ -45,12 +45,7 @@ import {
 } from "src/hocs/withHostCommunication/types"
 import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
 import { MetricsManager } from "src/lib/MetricsManager"
-import {
-  BUG_URL,
-  COMMUNITY_URL,
-  DEPLOY_URL,
-  STREAMLIT_CLOUD_URL,
-} from "src/urls"
+import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/urls"
 import {
   StyledMenuDivider,
   StyledMenuItem,
@@ -390,18 +385,14 @@ function MainMenu(props: Props): ReactElement {
     ...(!props.menuItems?.hideGetHelp &&
       props.menuItems?.getHelpUrl && {
         community: {
-          onClick: getOpenInWindowCallback(
-            props.menuItems?.getHelpUrl || COMMUNITY_URL
-          ),
+          onClick: getOpenInWindowCallback(props.menuItems?.getHelpUrl),
           label: "Get help",
         },
       }),
     ...(!props.menuItems?.hideReportABug &&
       props.menuItems?.reportABugUrl && {
         report: {
-          onClick: getOpenInWindowCallback(
-            props.menuItems?.reportABugUrl || BUG_URL
-          ),
+          onClick: getOpenInWindowCallback(props.menuItems?.reportABugUrl),
           label: "Report a bug",
         },
       }),
