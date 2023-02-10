@@ -18,17 +18,17 @@ import { StyledPre } from "./styled-components"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import React, { ReactElement } from "react"
 
-export interface StyledSyntaxHighlighterProps {
+export interface StreamlitSyntaxHighlighterProps {
   children: string | string[]
-  language: string
+  language?: string | undefined
   showLineNumbers?: boolean | undefined
 }
 
-export const StreamlitSyntaxHighlighter = ({
+export default function StreamlitSyntaxHighlighter({
   language,
   showLineNumbers,
   children,
-}: StyledSyntaxHighlighterProps): ReactElement => {
+}: StreamlitSyntaxHighlighterProps): ReactElement {
   return (
     <StyledPre>
       <SyntaxHighlighter
@@ -44,5 +44,3 @@ export const StreamlitSyntaxHighlighter = ({
     </StyledPre>
   )
 }
-
-export default StreamlitSyntaxHighlighter

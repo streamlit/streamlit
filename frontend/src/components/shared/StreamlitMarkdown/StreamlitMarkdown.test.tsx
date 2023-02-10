@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
-import { mount, shallow } from "src/lib/test_util"
+import { mount, render } from "src/lib/test_util"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
 import { colors } from "src/theme/primitives/colors"
@@ -31,7 +31,6 @@ import StreamlitMarkdown, {
 } from "./StreamlitMarkdown"
 
 import { StyledLinkIconContainer } from "./styled-components"
-import CopyButton from "src/components/elements/CodeBlock/CopyButton"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -308,15 +307,14 @@ describe("Heading", () => {
   })
 })
 
-const getBlockProps = (
+const getCustomCodeTagProps = (
   props: Partial<CustomCodeTagProps> = {}
 ): CustomCodeTagProps => ({
   children: [
-    `
-    import streamlit as st
+    `import streamlit as st
 
-    st.write("Hello")
-  `,
+st.write("Hello")
+`,
   ],
   node: { type: "element", tagName: "tagName", children: [] },
   ...props,
@@ -324,38 +322,51 @@ const getBlockProps = (
 
 describe("CustomCodeTag Element", () => {
   it("should render without crashing", () => {
-    const props = getBlockProps()
-    const wrapper = shallow(<CustomCodeTag {...props} />)
+    const props = getCustomCodeTagProps()
+    const { baseElement } = render(<CustomCodeTag {...props} />)
 
-    expect(wrapper.find("StyledCodeBlock").length).toBe(1)
+    expect(baseElement.querySelectorAll("pre code")).toHaveLength(1)
   })
 
-  it("should render with language", () => {
-    const props = getBlockProps()
-    const wrapper = mount(<CustomCodeTag {...props} />)
+  it("should render as plaintext", () => {
+    const props = getCustomCodeTagProps({ className: "language-plaintext" })
+    const { baseElement } = render(<CustomCodeTag {...props} />)
 
-    expect(wrapper.find("StyledCodeBlock").length).toBe(1)
-  })
-
-  it("should default to python if no language specified", () => {
-    const props = getBlockProps()
-    const wrapper = mount(<CustomCodeTag {...props} />)
-    expect(wrapper.find("SyntaxHighlighter").prop("language")).toBe("python")
+    expect(baseElement.querySelector("pre code")?.outerHTML).toBe(
+      '<code class="language-plaintext" style="white-space: pre;"><span>import streamlit as st\n' +
+        "</span>\n" +
+        'st.write("Hello")</code>'
+    )
   })
 
   it("should render copy button when code block has content", () => {
-    const props = getBlockProps({
+    const props = getCustomCodeTagProps({
       children: ["i am not empty"],
     })
-    const wrapper = mount(<CustomCodeTag {...props} />)
-    expect(wrapper.find(CopyButton)).toHaveLength(1)
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+    expect(
+      baseElement.querySelectorAll('[title="Copy to clipboard"]')
+    ).toHaveLength(1)
   })
 
   it("should not render copy button when code block is empty", () => {
-    const props = getBlockProps({
+    const props = getCustomCodeTagProps({
       children: [""],
     })
-    const wrapper = mount(<CustomCodeTag {...props} />)
-    expect(wrapper.find(CopyButton)).toHaveLength(0)
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+    expect(
+      baseElement.querySelectorAll('[title="Copy to clipboard"]')
+    ).toHaveLength(0)
+  })
+
+  it("should render inline", () => {
+    const props = getCustomCodeTagProps({ inline: true })
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+    expect(baseElement.innerHTML).toBe(
+      "<div><code>" +
+        "import streamlit as st\n\n" +
+        'st.write("Hello")\n' +
+        "</code></div>"
+    )
   })
 })
