@@ -25,3 +25,19 @@ export const LocalStore = {
 
   ACTIVE_THEME: `${CACHED_THEME_BASE_KEY}-v${CACHED_THEME_VERSION}`,
 }
+
+// Method taken from
+// https://stackoverflow.com/questions/16427636/check-if-localstorage-is-available
+export const localStorageAvailable = (): boolean => {
+  const testData = "testData"
+
+  try {
+    const { localStorage } = window
+    localStorage.setItem(testData, testData)
+    localStorage.getItem(testData)
+    localStorage.removeItem(testData)
+  } catch (e) {
+    return false
+  }
+  return true
+}
