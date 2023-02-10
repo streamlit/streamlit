@@ -201,7 +201,7 @@ class DataCaches(CacheStatsProvider):
             except NotImplementedError:
                 for data_cache in self._function_caches.values():
                     data_cache.clear()
-
+            # TODO: [Karen] We should also think about call storage.close() here too.
             self._function_caches = {}
 
     def get_stats(self) -> list[CacheStat]:
