@@ -36,7 +36,7 @@ class CodeElement(DeltaGeneratorTestCase):
         code = "print('My string = %d' % my_value)"
         st.code(code, language="python")
 
-        self.get_delta_from_queue().new_element
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(element.code.code_text, code)
         self.assertEqual(element.code.show_line_numbers, False)
         self.assertEqual(element.code.language, "python")
@@ -46,7 +46,7 @@ class CodeElement(DeltaGeneratorTestCase):
         code = "print('My string = %d' % my_value)"
         st.code(code, language=None)
 
-        self.get_delta_from_queue().new_element
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(element.code.code_text, code)
         self.assertEqual(element.code.show_line_numbers, False)
         self.assertEqual(element.code.language, "plaintext")
@@ -56,7 +56,7 @@ class CodeElement(DeltaGeneratorTestCase):
         code = "print('My string = %d' % my_value)"
         st.code(code, language=None, line_numbers=True)
 
-        self.get_delta_from_queue().new_element
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(element.code.code_text, code)
         self.assertEqual(element.code.show_line_numbers, True)
         self.assertEqual(element.code.language, "plaintext")
@@ -66,7 +66,7 @@ class CodeElement(DeltaGeneratorTestCase):
         code = "print('My string = %d' % my_value)"
         st.code(code, language="python", line_numbers=True)
 
-        self.get_delta_from_queue().new_element
+        element = self.get_delta_from_queue().new_element
         self.assertEqual(element.code.code_text, code)
         self.assertEqual(element.code.show_line_numbers, True)
-        self.assertEqual(element.code.language, "plaintext")
+        self.assertEqual(element.code.language, "python")
