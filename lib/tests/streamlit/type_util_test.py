@@ -42,6 +42,7 @@ from tests.streamlit.data_mocks import (
     INTERVAL_TYPES_DF,
     LIST_TYPES_DF,
     NUMBER_TYPES_DF,
+    PERIOD_TYPES_DF,
     SHARED_TEST_CASES,
     SPECIAL_TYPES_DF,
     UNSUPPORTED_TYPES_DF,
