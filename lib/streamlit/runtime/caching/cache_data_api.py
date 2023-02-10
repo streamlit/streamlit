@@ -184,7 +184,8 @@ class DataCaches(CacheStatsProvider):
                 storage=storage,
             )
             # TODO [Karen]: Since we override old function cache with new one, we should
-            # also think about connected storage resource deallocation.
+            # also think about connected storage resource deallocation/close connection,
+            # before we override it with new one
             self._function_caches[key] = cache
             return cache
 

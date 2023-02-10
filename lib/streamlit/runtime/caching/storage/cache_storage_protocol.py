@@ -68,8 +68,10 @@ class CacheStorage(Protocol):
         """Closes the cache storage"""
         raise NotImplementedError
 
+    @abstractmethod
     def get_stats(self) -> list[int]:
         """Returns a list of stats in bytes for the cache storage per item"""
+        raise NotImplementedError
 
 
 class CacheStorageManager(Protocol):

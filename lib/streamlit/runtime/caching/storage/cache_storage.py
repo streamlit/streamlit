@@ -110,7 +110,9 @@ class OpenSourceCacheStorage(CacheStorage):
 
     def get_stats(self) -> list[int]:
         """Returns a list of stats in bytes for the cache storage per item"""
-        return []
+
+        with self._mem_cache_lock:
+            return [len(item_value) for item_value in self._mem_cache.values()]
 
     def close(self) -> None:
         """Closes the cache storage"""
