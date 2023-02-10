@@ -63,7 +63,7 @@ import {
 import "katex/dist/katex.min.css"
 import { StyledCopyButtonContainer } from "src/components/elements/CodeBlock/styled-components"
 import CopyButton from "src/components/elements/CodeBlock/CopyButton"
-import { StreamlitSyntaxHighlighter } from "src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
+import StreamlitSyntaxHighlighter from "src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 
 enum Tags {
   H1 = "h1",

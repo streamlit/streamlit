@@ -134,7 +134,6 @@ const CameraInput = React.lazy(
   () => import("src/components/widgets/CameraInput")
 )
 const Checkbox = React.lazy(() => import("src/components/widgets/Checkbox/"))
-
 const ColorPicker = React.lazy(
   () => import("src/components/widgets/ColorPicker")
 )

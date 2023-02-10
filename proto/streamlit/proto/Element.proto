@@ -109,7 +109,7 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
     Heading heading = 47;
-    Code code = 49;
+    Code code = 48;
     // Next ID: 49
   }
 
