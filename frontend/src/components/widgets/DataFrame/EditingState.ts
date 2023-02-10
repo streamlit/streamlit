@@ -64,7 +64,7 @@ class EditingState {
 
     // Loop through all edited cells and transform into the structure
     // we use for the JSON-compatible widget state:
-    // "<rowIndex>:<colIndex>` -> edited value
+    // "<rowIndex>:<colIndex>" -> edited value
     this.editedCells.forEach(
       (row: Map<number, GridCell>, rowIndex: number, _map) => {
         row.forEach((cell: GridCell, colIndex: number, _map) => {
@@ -103,6 +103,67 @@ class EditingState {
       v === undefined ? null : v
     )
     return json
+  }
+
+  /**
+   * Load the editing state from a JSON string.
+   *
+   * @param columns - The columns of the table
+   * @returns JSON string
+   */
+  fromJson(editingStateJson: string, columns: BaseColumn[]): void {
+    const editingState = JSON.parse(editingStateJson)
+    console.log(editingState)
+    // Map columns to column index
+    const columnsByIndex = new Map<number, BaseColumn>()
+    columns.forEach(column => {
+      columnsByIndex.set(column.indexNumber, column)
+    })
+
+    // Loop through all edited cells and transform into the structure
+    // we use for the editing state:
+    // row -> column -> GridCell
+    Object.keys(editingState.edited_cells).forEach(key => {
+      const [rowIndex, colIndex] = key.split(":").map(Number)
+      const column = columnsByIndex.get(colIndex)
+      if (column) {
+        const cell = column.getCell(editingState.edited_cells[key])
+        if (cell) {
+          if (this.editedCells.has(rowIndex) == false) {
+            this.editedCells.set(rowIndex, new Map())
+          }
+          this.editedCells.get(rowIndex)?.set(colIndex, cell)
+        }
+      }
+    })
+
+    // Loop through all added rows and transform into the format that
+    // we use for the editing state:
+    // List of column index -> edited value
+    editingState.added_rows.forEach((row: Record<number, any>) => {
+      const addedRow: Map<number, GridCell> = new Map()
+
+      // Initialize all cells in row with undefined (empty)
+      columns.forEach(column => {
+        addedRow.set(column.indexNumber, column.getCell(undefined))
+      })
+
+      // Set the cells that were actually edited in the row
+      Object.keys(row).forEach(colIndex => {
+        const column = columnsByIndex.get(Number(colIndex))
+
+        if (column) {
+          const cell = column.getCell(row[Number(colIndex)])
+          if (cell) {
+            addedRow.set(Number(colIndex), cell)
+          }
+        }
+      })
+      this.addedRows.push(addedRow)
+    })
+
+    // The deleted rows don't need to be transformed
+    this.deletedRows = editingState.deleted_rows
   }
 
   /**
