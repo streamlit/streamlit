@@ -270,30 +270,19 @@ class StHelpTest(DeltaGeneratorTestCase):
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual(len(ds.members), 5)
 
-        self.assertEqual(ds.members[0].name, "a")
-        self.assertEqual(ds.members[0].value, "1")
-        self.assertEqual(ds.members[0].doc_string, "")
-        self.assertEqual(ds.members[0].type, "int")
+        expected_outputs = [
+            ["a", "1", "", "int"],
+            ["b", "2", "", "int"],
+            ["e", "", "Property e", "property"],
+            ["classmethod1", "", "Class method 1", "method"],
+            ["staticmethod1", "", "Static method 1", "function"],
+        ]
 
-        self.assertEqual(ds.members[1].name, "b")
-        self.assertEqual(ds.members[1].value, "2")
-        self.assertEqual(ds.members[1].doc_string, "")
-        self.assertEqual(ds.members[1].type, "int")
-
-        self.assertEqual(ds.members[2].name, "e")
-        self.assertEqual(ds.members[2].value, "")
-        self.assertEqual(ds.members[2].doc_string, "Property e")
-        self.assertEqual(ds.members[2].type, "property")
-
-        self.assertEqual(ds.members[3].name, "classmethod1")
-        self.assertEqual(ds.members[3].value, "")
-        self.assertEqual(ds.members[3].doc_string, "Class method 1")
-        self.assertEqual(ds.members[3].type, "method")
-
-        self.assertEqual(ds.members[4].name, "staticmethod1")
-        self.assertEqual(ds.members[4].value, "")
-        self.assertEqual(ds.members[4].doc_string, "Static method 1")
-        self.assertEqual(ds.members[4].type, "function")
+        for i, expected in enumerate(expected_outputs):
+            self.assertEqual(ds.members[i].name, expected[0])
+            self.assertEqual(ds.members[i].value, expected[1])
+            self.assertEqual(ds.members[i].doc_string, expected[2])
+            self.assertEqual(ds.members[i].type, expected[3])
 
     def test_instance_members(self):
         class MyClass(object):
@@ -325,37 +314,18 @@ class StHelpTest(DeltaGeneratorTestCase):
         ds = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual(len(ds.members), 7)
 
-        self.assertEqual(ds.members[0].name, "a")
-        self.assertEqual(ds.members[0].value, "1")
-        self.assertEqual(ds.members[0].doc_string, "")
-        self.assertEqual(ds.members[0].type, "int")
+        expected_outputs = [
+            ["a", "1", "", "int"],
+            ["b", "2", "", "int"],
+            ["c", "3", "", "int"],
+            ["d", "4", "", "int"],
+            ["e", "", "Property e", "property"],
+            ["classmethod1", "", "Class method 1", "method"],
+            ["staticmethod1", "", "Static method 1", "function"],
+        ]
 
-        self.assertEqual(ds.members[1].name, "b")
-        self.assertEqual(ds.members[1].value, "2")
-        self.assertEqual(ds.members[1].doc_string, "")
-        self.assertEqual(ds.members[1].type, "int")
-
-        self.assertEqual(ds.members[2].name, "c")
-        self.assertEqual(ds.members[2].value, "3")
-        self.assertEqual(ds.members[2].doc_string, "")
-        self.assertEqual(ds.members[2].type, "int")
-
-        self.assertEqual(ds.members[3].name, "d")
-        self.assertEqual(ds.members[3].value, "4")
-        self.assertEqual(ds.members[3].doc_string, "")
-        self.assertEqual(ds.members[3].type, "int")
-
-        self.assertEqual(ds.members[4].name, "e")
-        self.assertEqual(ds.members[4].value, "")
-        self.assertEqual(ds.members[4].doc_string, "Property e")
-        self.assertEqual(ds.members[4].type, "property")
-
-        self.assertEqual(ds.members[5].name, "classmethod1")
-        self.assertEqual(ds.members[5].value, "")
-        self.assertEqual(ds.members[5].doc_string, "Class method 1")
-        self.assertEqual(ds.members[5].type, "method")
-
-        self.assertEqual(ds.members[6].name, "staticmethod1")
-        self.assertEqual(ds.members[6].value, "")
-        self.assertEqual(ds.members[6].doc_string, "Static method 1")
-        self.assertEqual(ds.members[6].type, "function")
+        for i, expected in enumerate(expected_outputs):
+            self.assertEqual(ds.members[i].name, expected[0])
+            self.assertEqual(ds.members[i].value, expected[1])
+            self.assertEqual(ds.members[i].doc_string, expected[2])
+            self.assertEqual(ds.members[i].type, expected[3])
