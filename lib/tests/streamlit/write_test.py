@@ -29,8 +29,6 @@ from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import SessionStateProxy
-from tests.streamlit import pyspark_mocks
-from tests.streamlit.snowpark_mocks import DataFrame, Row
 from tests.testutil import should_skip_pyspark_tests
 
 
@@ -181,6 +179,8 @@ class StreamlitWriteTest(unittest.TestCase):
 
     def test_snowpark_dataframe_write(self):
         """Test st.write with snowflake.snowpark.dataframe.DataFrame."""
+        # Import package inside the test so the test suite still runs even if you don't
+        # have this package.
         from tests.streamlit.snowpark_mocks import DataFrame, Row
 
         # SnowparkDataFrame should call streamlit.delta_generator.DeltaGenerator.dataframe
@@ -202,6 +202,8 @@ class StreamlitWriteTest(unittest.TestCase):
     )
     def test_pyspark_dataframe_write(self):
         """Test st.write with pyspark.sql.DataFrame."""
+        # Import package inside the test so the test suite still runs even if you don't
+        # have this package.
         from tests.streamlit import pyspark_mocks
 
         # PySpark DataFrame should call streamlit.delta_generator.DeltaGenerator.dataframe

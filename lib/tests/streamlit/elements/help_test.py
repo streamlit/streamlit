@@ -142,6 +142,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("int", ds.type)
         self.assertTrue(len(ds.doc_string) > 0)
 
+    # TODO: When we stop support for Python 3.7, uncomment this.
     # This doesn't even compile when running in 3.7, so I'm commenting it out.
     # Which means we can't test support for walrus in st.help :(
     # def test_walrus(self):
