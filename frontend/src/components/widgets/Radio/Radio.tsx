@@ -15,20 +15,29 @@
  */
 
 import React, { ReactElement, useState, useEffect } from "react"
-import UIRadio from "src/components/shared/Radio"
+import { withTheme } from "@emotion/react"
+import { Radio as UIRadio, RadioGroup, ALIGN } from "baseui/radio"
+import {
+  WidgetLabel,
+  StyledWidgetLabelHelpInline,
+} from "src/components/widgets/BaseWidget"
+import TooltipIcon from "src/components/shared/TooltipIcon"
+import { Placement } from "src/components/shared/Tooltip"
+import { Theme } from "src/theme"
 import { Radio as RadioProto } from "src/autogen/proto"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 
 export interface Props {
   disabled: boolean
+  theme: Theme
   element: RadioProto
   widgetMgr: WidgetStateManager
   width: number
 }
 
 function Radio(props: Props): ReactElement {
-  const { disabled, element, width, widgetMgr } = props
+  const { theme, element, width, widgetMgr } = props
 
   const initialValue = (): number => {
     // If WidgetStateManager knew a value for this widget, initialize to that.
@@ -38,12 +47,12 @@ function Radio(props: Props): ReactElement {
   }
 
   const [value, setStateValue] = useState(initialValue())
-  const [source, setSource] = useState({ fromUi: false })
+  const [source, setStateSource] = useState({ fromUi: false })
 
   const updateFromProtobuf = (): void => {
     element.setValue = false
     setStateValue(element.value)
-    setSource({ fromUi: false })
+    setStateSource({ fromUi: false })
   }
 
   const maybeUpdateFromProtobuf = (): void => {
@@ -55,12 +64,13 @@ function Radio(props: Props): ReactElement {
 
   const onFormCleared = (): void => {
     setStateValue(element.default)
-    setSource({ fromUi: true })
+    setStateSource({ fromUi: true })
   }
 
-  const handleChange = (selectedIndex: number): void => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const selectedIndex = parseInt(e.target.value, 10)
     setStateValue(selectedIndex)
-    setSource({ fromUi: true })
+    setStateSource({ fromUi: true })
   }
 
   useEffect(() => {
@@ -75,7 +85,7 @@ function Radio(props: Props): ReactElement {
     if (element.setValue) {
       updateFromProtobuf()
     } else {
-      setSource({ fromUi: false })
+      setStateSource({ fromUi: false })
     }
     // Add form-clear event handler.
     const formListener = widgetMgr.addFormClearedListener(
@@ -88,20 +98,99 @@ function Radio(props: Props): ReactElement {
   }, [])
 
   const { horizontal, options, label, labelVisibility, help } = element
+  const { colors, radii } = theme
+  const style = { width }
+  let { disabled } = props
+
+  if (options.length === 0) {
+    options.push("No options to select.")
+    disabled = true
+  }
 
   return (
-    <UIRadio
-      label={label}
-      onChange={handleChange}
-      options={options}
-      width={width}
-      disabled={disabled}
-      horizontal={horizontal}
-      labelVisibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
-      value={value}
-      help={help}
-    />
+    <div className="row-widget stRadio" style={style}>
+      <WidgetLabel
+        data-testid="WidgetLabel"
+        label={label}
+        disabled={disabled}
+        labelVisibility={labelVisibilityProtoValueToEnum(
+          labelVisibility?.value
+        )}
+      >
+        {help && (
+          <StyledWidgetLabelHelpInline>
+            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
+          </StyledWidgetLabelHelpInline>
+        )}
+      </WidgetLabel>
+      <RadioGroup
+        id="RadioGroup"
+        onChange={handleChange}
+        value={value.toString()}
+        disabled={disabled}
+        align={horizontal ? ALIGN.horizontal : ALIGN.vertical}
+        aria-label={label}
+      >
+        {options.map((option: string, index: number) => (
+          <UIRadio
+            key={index}
+            value={index.toString()}
+            overrides={{
+              Root: {
+                style: ({
+                  $isFocusVisible,
+                }: {
+                  $isFocusVisible: boolean
+                }) => ({
+                  marginBottom: 0,
+                  marginTop: 0,
+                  marginRight: "1rem",
+                  // Make left and right padding look the same visually.
+                  paddingLeft: 0,
+                  alignItems: "start",
+                  paddingRight: "2px",
+                  backgroundColor: $isFocusVisible
+                    ? colors.darkenedBgMix25
+                    : "",
+                  borderTopLeftRadius: radii.md,
+                  borderTopRightRadius: radii.md,
+                  borderBottomLeftRadius: radii.md,
+                  borderBottomRightRadius: radii.md,
+                }),
+              },
+              RadioMarkOuter: {
+                style: ({ $checked }: { $checked: boolean }) => ({
+                  width: "1rem",
+                  height: "1rem",
+                  marginTop: "0.35rem",
+                  marginRight: "0",
+                  backgroundColor:
+                    $checked && !disabled
+                      ? colors.primary
+                      : colors.fadedText40,
+                }),
+              },
+              RadioMarkInner: {
+                style: ({ $checked }: { $checked: boolean }) => ({
+                  height: $checked ? "6px" : ".75rem",
+                  width: $checked ? "6px" : ".75rem",
+                }),
+              },
+              Label: {
+                style: {
+                  color: disabled ? colors.fadedText40 : colors.bodyText,
+                  position: "relative",
+                  top: "1px",
+                },
+              },
+            }}
+          >
+            {option}
+          </UIRadio>
+        ))}
+      </RadioGroup>
+    </div>
   )
 }
 
-export default Radio
+export default withTheme(Radio)

@@ -21,7 +21,8 @@ import { act } from "react-dom/test-utils"
 import { render } from "src/lib/test_util"
 
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { Radio as RadioProto } from "src/autogen/proto"
+import { Radio as RadioProto, LabelVisibilityMessage } from "src/autogen/proto"
+import { lightTheme } from "src/theme"
 import Radio, { Props } from "./Radio"
 
 const getProps = (
@@ -35,6 +36,7 @@ const getProps = (
     options: ["a", "b", "c"],
     ...elementProps,
   }),
+  theme: lightTheme.emotion,
   width: 0,
   disabled: false,
   widgetMgr: new WidgetStateManager({
@@ -81,6 +83,40 @@ describe("Radio widget", () => {
     const props = getProps()
     const wrapper = render(<Radio {...props} />)
     expect(wrapper.getByText(`${props.element.label}`)).toBeInTheDocument()
+  })
+
+  it("renders properly if no label is provided", () => {
+    const props = getProps({ label: undefined })
+    const wrapper = render(<Radio {...props} />)
+    const radioGroup = wrapper.baseElement.querySelectorAll("#RadioGroup")
+    const radioOptions =
+      wrapper.baseElement.querySelectorAll("#RadioGroup label")
+
+    expect(radioGroup).toHaveLength(1)
+    expect(radioOptions).toHaveLength(3)
+  })
+
+  it("passes labelVisibility prop to WidgetLabel correctly when hidden", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+    const wrapper = render(<Radio {...props} />)
+
+    expect(wrapper.getByText(`${props.element.label}`)).toHaveStyle(
+      "visibility: hidden"
+    )
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({
+      labelVisibility: {
+        value: LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+    const wrapper = render(<Radio {...props} />)
+    expect(wrapper.getByText(`${props.element.label}`)).not.toBeVisible()
   })
 
   it("has a default value", () => {
@@ -158,7 +194,6 @@ describe("Radio widget", () => {
     )
   })
 
-  // Currently failing - listener to reset values not working
   it("resets its value when form is cleared", () => {
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
