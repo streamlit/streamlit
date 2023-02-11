@@ -52,6 +52,8 @@ export const StyledDocHeader = styled.div(({ theme }) => ({
   backgroundColor: theme.colors.docStringContainerBackground,
   fontSize: theme.fontSizes.sm,
 
+  overflow: ["auto", "overlay"],
+
   "&:not(:last-child)": {
     borderBottom: `1px solid ${theme.colors.fadedText05}`,
   },
@@ -59,8 +61,7 @@ export const StyledDocHeader = styled.div(({ theme }) => ({
 
 export const StyledDocString = styled.div(({ theme }) => ({
   whiteSpace: "pre",
-  overflowX: "auto",
-  overflowY: "auto",
+  overflow: ["auto", "overlay"],
   maxHeight: "30.5rem", // The extra 0.5rem is to show a little of the overflowing line.
   padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
   fontSize: theme.fontSizes.sm,
