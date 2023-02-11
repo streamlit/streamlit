@@ -50,12 +50,12 @@ class HelpMixin:
 
         Depending on the type of object that is passed in, this displays the
         object's name, type, value, signature, docstring, and member variables,
-        methods -- as well as the values/docstring of members and methods.
+        methods — as well as the values/docstring of members and methods.
 
         Parameters
         ----------
         obj : any
-            The object whose information should be displayed. If `None`, this
+            The object whose information should be displayed. If ``None``, this
             call will display help for Streamlit itself.
 
         Example
@@ -94,7 +94,7 @@ class HelpMixin:
         >>> st.help(fido)
 
         And if you're using Magic, you can get help for functions, classes,
-        and modules without even typing `st.help`:
+        and modules without even typing ``st.help``:
 
         >>> import streamlit as st
         >>> import pandas
