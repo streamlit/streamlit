@@ -13,14 +13,12 @@
 # limitations under the License.
 
 from datetime import datetime, time
-from unittest.mock import patch
 
 import pytest
 
-from tests.script_interactions import InteractiveScriptTests
+from streamlit.testing.script_interactions import InteractiveScriptTests
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class CheckboxTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
@@ -47,7 +45,6 @@ class CheckboxTest(InteractiveScriptTests):
 
 
 @pytest.mark.xfail(reason="button does not work correctly with session state")
-@patch("streamlit.source_util._cached_pages", new=None)
 class ButtonTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
@@ -72,7 +69,6 @@ class ButtonTest(InteractiveScriptTests):
         assert sr3.get("button")[1].value == False
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class MultiselectTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
@@ -101,7 +97,6 @@ class MultiselectTest(InteractiveScriptTests):
         assert set(sr3.get("multiselect")[1].value) == set(["zero", "one", "two"])
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class MarkdownTest(InteractiveScriptTests):
     def test_markdown(self):
         script = self.script_from_string(
@@ -189,7 +184,6 @@ class MarkdownTest(InteractiveScriptTests):
         assert len(sr.get("latex")) == 2
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class HeadingTest(InteractiveScriptTests):
     def test_title(self):
         script = self.script_from_string(
@@ -267,7 +261,6 @@ class HeadingTest(InteractiveScriptTests):
         assert len(sr.get("subheader")) == 2
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class SliderTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
@@ -303,7 +296,6 @@ class SliderTest(InteractiveScriptTests):
         assert s[4].value == 0.1
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class SelectSliderTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
@@ -324,3 +316,48 @@ class SelectSliderTest(InteractiveScriptTests):
         sr3 = sr2.get("select_slider")[1].set_range("yellow", "orange").run()
         assert sr3.get("select_slider")[0].value == "violet"
         assert sr3.get("select_slider")[1].value == ("orange", "yellow")
+
+
+class SelectboxTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "select_slider_test.py",
+            """
+            import pandas as pd
+            import streamlit as st
+
+            options = ("male", "female")
+            st.selectbox("selectbox 1", options, 1)
+            st.selectbox("selectbox 2", options, 0)
+            st.selectbox("selectbox 3", [])
+
+            lst = ['Python', 'C', 'C++', 'Java', 'Scala', 'Lisp', 'JavaScript', 'Go']
+            df = pd.DataFrame(lst)
+            st.selectbox("selectbox 4", df)
+            """,
+        )
+        sr = script.run()
+        assert sr.get("selectbox")[0].value == "female"
+        assert sr.get("selectbox")[1].value == "male"
+        assert sr.get("selectbox")[2].value is None
+        assert sr.get("selectbox")[3].value == "Python"
+
+        sr2 = sr.get("selectbox")[0].select("female").run()
+        sr3 = sr2.get("selectbox")[1].select("female").run()
+        sr4 = sr3.get("selectbox")[3].select("JavaScript").run()
+
+        assert sr4.get("selectbox")[0].value == "female"
+        assert sr4.get("selectbox")[1].value == "female"
+        assert sr4.get("selectbox")[2].value is None
+        assert sr4.get("selectbox")[3].value == "JavaScript"
+
+        sr5 = sr4.get("selectbox")[0].select_index(0).run()
+        sr6 = sr5.get("selectbox")[3].select_index(5).run()
+        assert sr6.get("selectbox")[0].value == "male"
+        assert sr6.get("selectbox")[3].value == "Lisp"
+
+        with pytest.raises(ValueError):
+            sr6.get("selectbox")[0].select("invalid").run()
+
+        with pytest.raises(IndexError):
+            sr6.get("selectbox")[0].select_index(42).run()

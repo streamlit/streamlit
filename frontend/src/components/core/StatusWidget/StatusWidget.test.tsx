@@ -208,7 +208,7 @@ describe("Tooltip element", () => {
 
 describe("Running Icon", () => {
   it("renders regular running gif before New Years", () => {
-    jest.useFakeTimers("modern")
+    jest.useFakeTimers()
     jest.setSystemTime(new Date("December 30, 2022 23:59:00"))
 
     const wrapper = mount(
@@ -222,7 +222,7 @@ describe("Running Icon", () => {
   })
 
   it("renders firework gif on Dec 31st", () => {
-    jest.useFakeTimers("modern")
+    jest.useFakeTimers()
     jest.setSystemTime(new Date("December 31, 2022 00:00:00"))
 
     const wrapper = mount(
@@ -237,7 +237,7 @@ describe("Running Icon", () => {
   })
 
   it("renders firework gif on Jan 6th", () => {
-    jest.useFakeTimers("modern")
+    jest.useFakeTimers()
     jest.setSystemTime(new Date("January 6, 2023 23:59:00"))
 
     const wrapper = mount(
@@ -251,7 +251,7 @@ describe("Running Icon", () => {
   })
 
   it("renders regular running gif after New Years", () => {
-    jest.useFakeTimers("modern")
+    jest.useFakeTimers()
     jest.setSystemTime(new Date("January 7, 2023 00:00:00"))
 
     const wrapper = mount(

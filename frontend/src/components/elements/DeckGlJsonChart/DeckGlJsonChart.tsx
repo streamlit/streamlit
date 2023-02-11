@@ -15,7 +15,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import DeckGL from "deck.gl"
+import { DeckGL } from "deck.gl"
 import isEqual from "lodash/isEqual"
 import { MapContext, StaticMap, NavigationControl } from "react-map-gl"
 import { withTheme } from "@emotion/react"

@@ -1232,3 +1232,16 @@ describe("Test Main Menu shortcut functionality", () => {
     expect(wrapper.instance().openClearCacheDialog).toBeCalled()
   })
 })
+
+describe("test app has printCallback method", () => {
+  it("test app has printCallback method", () => {
+    const props = getProps()
+    const wrapper = mount(
+      <iframe>
+        <App {...props} />
+      </iframe>
+    )
+    const appComponentInstance = wrapper.find(App).instance() as App
+    expect(appComponentInstance.printCallback).toBeDefined()
+  })
+})

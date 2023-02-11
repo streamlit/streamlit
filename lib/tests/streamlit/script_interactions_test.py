@@ -11,17 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from unittest.mock import patch
-
 import pytest
 
-from tests.script_interactions import InteractiveScriptTests
+from streamlit.testing.script_interactions import InteractiveScriptTests
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class InteractiveScriptTest(InteractiveScriptTests):
     def test_widgets_script(self):
-        script = self.script_from_filename("widgets_script.py")
+        script = self.script_from_filename(__file__, "widgets_script.py")
         sr = script.run()
 
         # main and sidebar
@@ -249,4 +246,4 @@ class InteractiveScriptTest(InteractiveScriptTests):
 
     def test_script_not_found(self):
         with pytest.raises(AssertionError):
-            self.script_from_filename("doesntexist.py")
+            self.script_from_filename(__file__, "doesntexist.py")

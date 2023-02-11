@@ -27,7 +27,7 @@ import merge from "lodash/merge"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
 import { logError } from "src/lib/log"
-import { LocalStore } from "src/lib/storageUtils"
+import { LocalStore, localStorageAvailable } from "src/lib/storageUtils"
 import {
   baseTheme,
   CachedTheme,
@@ -39,6 +39,7 @@ import {
   ThemeConfig,
   ThemeSpacing,
 } from "src/theme"
+
 import { fonts } from "./primitives/typography"
 
 export const AUTO_THEME_NAME = "Use system setting"
@@ -511,22 +512,6 @@ export const getSystemTheme = (): ThemeConfig => {
     window.matchMedia("(prefers-color-scheme: dark)").matches
     ? darkTheme
     : lightTheme
-}
-
-// Method taken from
-// https://stackoverflow.com/questions/16427636/check-if-localstorage-is-available
-export const localStorageAvailable = (): boolean => {
-  const testData = "testData"
-
-  try {
-    const { localStorage } = window
-    localStorage.setItem(testData, testData)
-    localStorage.getItem(testData)
-    localStorage.removeItem(testData)
-  } catch (e) {
-    return false
-  }
-  return true
 }
 
 export const getCachedTheme = (): ThemeConfig | null => {

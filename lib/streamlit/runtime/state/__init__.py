@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit.runtime.state.common import WidgetArgs as WidgetArgs
+from streamlit.runtime.state.common import WidgetCallback as WidgetCallback
+from streamlit.runtime.state.common import WidgetKwargs as WidgetKwargs
+
 # Explicitly re-export public symbols
 from streamlit.runtime.state.safe_session_state import (
     SafeSessionState as SafeSessionState,
@@ -23,9 +27,6 @@ from streamlit.runtime.state.session_state import SessionState as SessionState
 from streamlit.runtime.state.session_state import (
     SessionStateStatProvider as SessionStateStatProvider,
 )
-from streamlit.runtime.state.session_state import WidgetArgs as WidgetArgs
-from streamlit.runtime.state.session_state import WidgetCallback as WidgetCallback
-from streamlit.runtime.state.session_state import WidgetKwargs as WidgetKwargs
 from streamlit.runtime.state.session_state_proxy import (
     SessionStateProxy as SessionStateProxy,
 )

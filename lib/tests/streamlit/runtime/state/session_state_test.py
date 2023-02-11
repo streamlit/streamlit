@@ -30,16 +30,16 @@ from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
+from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX
 from streamlit.runtime.state.session_state import (
-    GENERATED_WIDGET_KEY_PREFIX,
     Serialized,
     Value,
     WidgetMetadata,
     WStates,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.testing.script_interactions import InteractiveScriptTests
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.script_interactions import InteractiveScriptTests
 
 identity = lambda x: x
 
@@ -132,8 +132,8 @@ class WStateTests(unittest.TestCase):
     def test_values(self):
         assert self.wstates.values() == {"5", 5}
 
-    def test_cull_nonexistent(self):
-        self.wstates.cull_nonexistent({"widget_id_1"})
+    def test_remove_stale_widgets(self):
+        self.wstates.remove_stale_widgets({"widget_id_1"})
         assert "widget_id_1" in self.wstates
         assert "widget_id_2" not in self.wstates
 
@@ -286,10 +286,9 @@ class SessionStateTest(DeltaGeneratorTestCase):
         patched_warning.assert_called_once()
 
 
-@patch("streamlit.source_util._cached_pages", new=None)
 class SessionStateInteractionTest(InteractiveScriptTests):
     def test_updates(self):
-        script = self.script_from_filename("linked_sliders.py")
+        script = self.script_from_filename(__file__, "linked_sliders.py")
         sr = script.run()
         assert sr.get("slider")[0].value == -100.0
         assert sr.get("markdown")[0].value == "Celsius `-100.0`"
@@ -501,7 +500,7 @@ class SessionStateMethodTests(unittest.TestCase):
         new_widget_state = WStates(
             {
                 "baz": Value("qux2"),
-                f"{GENERATED_WIDGET_KEY_PREFIX}-foo-None": Value("bar"),
+                f"{GENERATED_WIDGET_ID_PREFIX}-foo-None": Value("bar"),
             },
         )
         self.session_state = SessionState(
@@ -514,14 +513,14 @@ class SessionStateMethodTests(unittest.TestCase):
             "foo": "bar2",
             "baz": "qux2",
             "corge": "grault",
-            f"{GENERATED_WIDGET_KEY_PREFIX}-foo-None": "bar",
+            f"{GENERATED_WIDGET_ID_PREFIX}-foo-None": "bar",
         }
         assert self.session_state._new_session_state == {}
         assert self.session_state._new_widget_state == WStates()
 
     def test_clear_state(self):
         # Sanity test
-        keys = {"foo", "baz", "corge", f"{GENERATED_WIDGET_KEY_PREFIX}-foo-None"}
+        keys = {"foo", "baz", "corge", f"{GENERATED_WIDGET_ID_PREFIX}-foo-None"}
         self.assertEqual(keys, self.session_state._keys())
 
         # Clear state
@@ -541,7 +540,7 @@ class SessionStateMethodTests(unittest.TestCase):
         old_state = {"foo": "bar", "corge": "grault"}
         new_session_state = {}
         new_widget_state = WStates(
-            {f"{GENERATED_WIDGET_KEY_PREFIX}-baz": Serialized(WidgetStateProto())},
+            {f"{GENERATED_WIDGET_ID_PREFIX}-baz": Serialized(WidgetStateProto())},
         )
         self.session_state = SessionState(
             old_state, new_session_state, new_widget_state
@@ -609,8 +608,8 @@ class SessionStateMethodTests(unittest.TestCase):
         self.session_state._new_widget_state.set_from_value("foo", "bar")
         assert not self.session_state._widget_changed("foo")
 
-    def test_cull_nonexistent(self):
-        generated_widget_key = f"{GENERATED_WIDGET_KEY_PREFIX}-removed_widget"
+    def test_remove_stale_widgets(self):
+        generated_widget_key = f"{GENERATED_WIDGET_ID_PREFIX}-removed_widget"
 
         self.session_state._old_state = {
             "existing_widget": True,
@@ -621,7 +620,7 @@ class SessionStateMethodTests(unittest.TestCase):
         wstates = WStates()
         self.session_state._new_widget_state = wstates
 
-        self.session_state._cull_nonexistent({"existing_widget"})
+        self.session_state._remove_stale_widgets({"existing_widget"})
 
         assert self.session_state["existing_widget"] == True
         assert generated_widget_key not in self.session_state
@@ -636,7 +635,7 @@ class SessionStateMethodTests(unittest.TestCase):
         WIDGET_VALUE = 123
 
         metadata = WidgetMetadata(
-            id=f"{GENERATED_WIDGET_KEY_PREFIX}-0-widget_id_1",
+            id=f"{GENERATED_WIDGET_ID_PREFIX}-0-widget_id_1",
             deserializer=lambda _, __: WIDGET_VALUE,
             serializer=identity,
             value_type="int_value",
@@ -699,10 +698,10 @@ def test_map_set_del_3837_regression():
     to conveniently use the hypothesis `example` decorator."""
 
     meta1 = stst.mock_metadata(
-        "$$GENERATED_WIDGET_KEY-e3e70682-c209-4cac-629f-6fbed82c07cd-None", 0
+        "   $$GENERATED_WIDGET_ID-e3e70682-c209-4cac-629f-6fbed82c07cd-None", 0
     )
     meta2 = stst.mock_metadata(
-        "$$GENERATED_WIDGET_KEY-f728b4fa-4248-5e3a-0a5d-2f346baa9455-0", 0
+        "$$GENERATED_WIDGET_ID-f728b4fa-4248-5e3a-0a5d-2f346baa9455-0", 0
     )
     m = SessionState()
     m["0"] = 0

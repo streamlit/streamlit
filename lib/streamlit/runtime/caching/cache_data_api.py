@@ -39,8 +39,8 @@ from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundE
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
-    CachedFunction,
-    create_cache_wrapper,
+    CachedFunc,
+    CachedFuncInfo,
     ttl_to_seconds,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -71,8 +71,8 @@ CACHE_DATA_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.DATA)
 CachePersistType: TypeAlias = Union[Literal["disk"], None]
 
 
-class CacheDataFunction(CachedFunction):
-    """Implements the CachedFunction protocol for @st.cache_data"""
+class CachedDataFuncInfo(CachedFuncInfo):
+    """Implements the CachedFuncInfo interface for @st.cache_data"""
 
     def __init__(
         self,
@@ -415,8 +415,8 @@ class CacheDataAPI:
                     f"The cached function '{f.__name__}' has a TTL that will be "
                     f"ignored. Persistent cached functions currently don't support TTL."
                 )
-            return create_cache_wrapper(
-                CacheDataFunction(
+            return CachedFunc(
+                CachedDataFuncInfo(
                     func=f,
                     persist=persist_string,
                     show_spinner=show_spinner,
@@ -431,8 +431,8 @@ class CacheDataAPI:
         if func is None:
             return wrapper
 
-        return create_cache_wrapper(
-            CacheDataFunction(
+        return CachedFunc(
+            CachedDataFuncInfo(
                 func=cast(types.FunctionType, func),
                 persist=persist_string,
                 show_spinner=show_spinner,
@@ -468,6 +468,7 @@ class DataCache(Cache):
         display_name: str,
         allow_widgets: bool = False,
     ):
+        super().__init__()
         self.key = key
         self.display_name = display_name
         self.persist = persist
@@ -584,7 +585,7 @@ class DataCache(Cache):
         if self.persist == "disk":
             self._write_to_disk_cache(key, pickled_entry)
 
-    def clear(self) -> None:
+    def _clear(self) -> None:
         with self._mem_cache_lock:
             # We keep a lock for the entirety of the clear operation to avoid
             # disk cache race conditions.

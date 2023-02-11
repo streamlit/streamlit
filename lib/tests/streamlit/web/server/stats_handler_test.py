@@ -55,14 +55,9 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(expected_body, response.body)
 
     def test_deprecated_endpoint(self):
-        with self.assertLogs("streamlit.web.server.server_util") as logs:
-            response = self.fetch("/st-metrics")
+        response = self.fetch("/st-metrics")
 
         self.assertEqual(200, response.code)
-        self.assertEqual(
-            logs.records[0].getMessage(),
-            "Endpoint '/st-metrics' is deprecated. Please use '/_stcore/metrics' instead.",
-        )
         self.assertEqual(
             response.headers["link"],
             f'<http://127.0.0.1:{self.get_http_port()}/_stcore/metrics>; rel="alternate"',
@@ -99,6 +94,11 @@ class StatsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         ).encode("utf-8")
 
         self.assertEqual(expected_body, response.body)
+
+    def test_new_metrics_endpoint_should_not_display_deprecation_warning(self):
+        response = self.fetch("/_stcore/metrics")
+        self.assertNotIn("link", response.headers)
+        self.assertNotIn("deprecation", response.headers)
 
     def test_protobuf_stats(self):
         """Stats requests are returned in OpenMetrics protobuf format
