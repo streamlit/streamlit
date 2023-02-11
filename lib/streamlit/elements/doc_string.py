@@ -222,9 +222,6 @@ def _get_docstring(obj):
     return None
 
 
-_NEWLINES = re.compile(r"[\n\r]+")
-
-
 def _get_variable_name():
     """Try to get the name of the variable in the current line, as set by the user.
 
@@ -234,28 +231,12 @@ def _get_variable_name():
 
     The name is "foo"
     """
-    scriptrunner_frame = _get_scriptrunner_frame()
+    code = _get_current_line_of_code_as_str()
+    return _get_variable_name_from_code_str(code)
 
-    if scriptrunner_frame is None:
-        # If there's no ScriptRunner frame, something weird is going on. This
-        # can happen when the script is executed with `python myscript.py`.
-        # Either way, let's bail out nicely just in case there's some valid
-        # edge case where this is OK.
-        return None
 
-    code_context = scriptrunner_frame.code_context
-
-    if not code_context:
-        # Sometimes a frame has no code_context. This can happen inside certain exec() calls, for
-        # example. If this happens, we can't determine the variable name. Just return.
-        # For the background on why exec() doesn't produce code_context, see
-        # https://stackoverflow.com/a/12072941
-        return None
-
-    code_as_string = "".join(code_context)
-    cleaned_code = re.sub(_NEWLINES, "", code_as_string.strip())
-
-    tree = ast.parse(cleaned_code)
+def _get_variable_name_from_code_str(code):
+    tree = ast.parse(code)
 
     # Example:
     #
@@ -279,8 +260,6 @@ def _get_variable_name():
     if not _is_stcommand(tree, command_name="help") and not _is_stcommand(
         tree, command_name="write"
     ):
-        code = cleaned_code
-
         # A common pattern is to add "," at the end of a magic command to make it print.
         # This removes that final ",", so it looks nicer.
         if code.endswith(","):
@@ -317,9 +296,47 @@ def _get_variable_name():
         return None
 
     # Otherwise, return whatever is inside st.help(<-- here -->)
-    end_offset = getattr(arg_node, "end_col_offset", -1)
 
-    return cleaned_code[arg_node.col_offset : end_offset]
+    # But, if multiline, only return the first line.
+    code_lines = code.split("\n")
+    is_multiline = len(code_lines) > 1
+
+    if is_multiline:
+        first_lineno = arg_node.lineno - 1  # Lines are 1-indexed!
+        first_line = code_lines[first_lineno]
+        end_offset = None
+
+    else:
+        first_line = code_lines[0]
+        end_offset = getattr(arg_node, "end_col_offset", -1)
+
+    return first_line[arg_node.col_offset : end_offset]
+
+
+_NEWLINES = re.compile(r"[\n\r]+")
+
+
+def _get_current_line_of_code_as_str():
+    scriptrunner_frame = _get_scriptrunner_frame()
+
+    if scriptrunner_frame is None:
+        # If there's no ScriptRunner frame, something weird is going on. This
+        # can happen when the script is executed with `python myscript.py`.
+        # Either way, let's bail out nicely just in case there's some valid
+        # edge case where this is OK.
+        return None
+
+    code_context = scriptrunner_frame.code_context
+
+    if not code_context:
+        # Sometimes a frame has no code_context. This can happen inside certain exec() calls, for
+        # example. If this happens, we can't determine the variable name. Just return.
+        # For the background on why exec() doesn't produce code_context, see
+        # https://stackoverflow.com/a/12072941
+        return None
+
+    code_as_string = "".join(code_context)
+    return re.sub(_NEWLINES, "", code_as_string.strip())
 
 
 def _get_scriptrunner_frame():

@@ -15,11 +15,14 @@
 """st.help unit test."""
 import inspect
 import sys
+import unittest
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 
 import streamlit as st
+from streamlit.elements.doc_string import _get_variable_name_from_code_str
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -271,11 +274,11 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual(len(ds.members), 5)
 
         expected_outputs = [
-            ["a", "1", "", "int"],
-            ["b", "2", "", "int"],
-            ["e", "", "Property e", "property"],
-            ["classmethod1", "", "Class method 1", "method"],
-            ["staticmethod1", "", "Static method 1", "function"],
+            ("a", "1", "", "int"),
+            ("b", "2", "", "int"),
+            ("e", "", "Property e", "property"),
+            ("classmethod1", "", "Class method 1", "method"),
+            ("staticmethod1", "", "Static method 1", "function"),
         ]
 
         for i, expected in enumerate(expected_outputs):
@@ -315,13 +318,13 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual(len(ds.members), 7)
 
         expected_outputs = [
-            ["a", "1", "", "int"],
-            ["b", "2", "", "int"],
-            ["c", "3", "", "int"],
-            ["d", "4", "", "int"],
-            ["e", "", "Property e", "property"],
-            ["classmethod1", "", "Class method 1", "method"],
-            ["staticmethod1", "", "Static method 1", "function"],
+            ("a", "1", "", "int"),
+            ("b", "2", "", "int"),
+            ("c", "3", "", "int"),
+            ("d", "4", "", "int"),
+            ("e", "", "Property e", "property"),
+            ("classmethod1", "", "Class method 1", "method"),
+            ("staticmethod1", "", "Static method 1", "function"),
         ]
 
         for i, expected in enumerate(expected_outputs):
@@ -329,3 +332,132 @@ class StHelpTest(DeltaGeneratorTestCase):
             self.assertEqual(ds.members[i].value, expected[1])
             self.assertEqual(ds.members[i].doc_string, expected[2])
             self.assertEqual(ds.members[i].type, expected[3])
+
+
+st_calls = [
+    "st.help({0})",
+    "st.write({0})",
+]
+
+
+class GetVariableNameFromCodeStrTest(unittest.TestCase):
+    def test_st_help_no_arg(self):
+        actual = _get_variable_name_from_code_str("st.help()")
+        self.assertEqual(actual, None)
+
+    def test_variable_should_match_own_name(self):
+        tests = [
+            "a",
+            "a_b",
+            "a.b",
+            "a[b]",
+            "a[0]",
+            "a[0].c",
+            "a[0].c.foo()",
+        ]
+
+        for test in tests:
+            for st_call in st_calls:
+                # Wrap test in an st call.
+                code = st_call.format(test)
+
+                actual = _get_variable_name_from_code_str(code)
+                self.assertEqual(actual, test)
+
+    def test_constant_should_have_no_name(self):
+        tests = [
+            "None",
+            "0",
+            "1",
+            "123",
+            "False",
+            "True",
+            "'some string'",
+            "b'some bytes'",
+            "...",
+        ]
+
+        for test in tests:
+            for st_call in st_calls:
+                # Wrap test in an st call.
+                code = st_call.format(test)
+
+                actual = _get_variable_name_from_code_str(code)
+                self.assertEqual(actual, None)
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 8), reason="Walrus was introduced in Python 3.8"
+    )
+    def test_walrus_should_return_var_name(self):
+        for st_call in st_calls:
+            # Wrap test in an st call.
+            code = st_call.format("a := 123")
+
+            actual = _get_variable_name_from_code_str(code)
+            self.assertEqual(actual, "a")
+
+    def test_magic_should_just_echo(self):
+        tests = [
+            "a",
+            "a_b",
+            "a.b",
+            "a[b]",
+            "a[0]",
+            "a[0].c",
+            "a[0].c.foo()",
+            "None",
+            "0",
+            "1",
+            "123",
+            "False",
+            "True",
+            "'some string'",
+            "b'some bytes'",
+            "...",
+            "f'some {f} string'",
+            "[x for x in range(10)]",
+            "(x for x in range(10))",
+            "{x: None for x in range(10)}",
+        ]
+
+        for code in tests:
+            actual = _get_variable_name_from_code_str(code)
+            self.assertEqual(actual, code)
+
+        # Testing with comma at the end
+        tests += [
+            "foo()",
+        ]
+
+        for code in tests:
+            actual = _get_variable_name_from_code_str(code + ",")
+            self.assertEqual(actual, code)
+
+    def test_if_dont_know_just_echo(self):
+        tests = [
+            (test := "foo()", test),
+            (test := "[x for x in range(10)]", test),
+            (test := "(x for x in range(10))", test),
+            (test := "x for x in range(10)", "(x for x in range(10))"),
+            (test := "{x: None for x in range(10)}", test),
+        ]
+
+        for test, expected in tests:
+            for st_call in st_calls:
+                # Wrap test in an st call.
+                code = st_call.format(test)
+
+                actual = _get_variable_name_from_code_str(code)
+                self.assertEqual(actual, expected)
+
+    def test_multiline_gets_linearized(self):
+        test = """foo(
+            "bar"
+        )"""
+
+        for st_call in st_calls:
+            # Wrap test in an st call.
+            code = st_call.format(test)
+
+            actual = _get_variable_name_from_code_str(code)
+            self.assertEqual(actual, "foo(")
