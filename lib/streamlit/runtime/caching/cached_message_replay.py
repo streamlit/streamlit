@@ -39,7 +39,7 @@ from streamlit.runtime.scriptrunner.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
 )
-from streamlit.runtime.state.session_state import WidgetMetadata
+from streamlit.runtime.state.common import WidgetMetadata
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

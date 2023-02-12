@@ -204,6 +204,24 @@ describe("formatNumber", () => {
   ])("formats %p to %p with %p decimals", (value, decimals, expected) => {
     expect(formatNumber(value, decimals)).toEqual(expected)
   })
+
+  it.each([
+    [10, 0, "10"],
+    [10, 4, "10.0000"],
+    [10.123, 0, "10"],
+    [10.123, 1, "10.1"],
+    [10.123, 2, "10.12"],
+    [10.123, 3, "10.123"],
+    [10.123, 4, "10.1230"],
+    [10.123, 5, "10.12300"],
+    [0.123, 0, "0"],
+    [0.123, 1, "0.1"],
+  ])(
+    "formats %p to %p with %p decimals (keeps trailing zeros)",
+    (value, decimals, expected) => {
+      expect(formatNumber(value, decimals, true)).toEqual(expected)
+    }
+  )
 })
 
 describe("mergeColumnParameters", () => {

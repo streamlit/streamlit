@@ -22,11 +22,9 @@ import { Arrow as ArrowProto } from "src/autogen/proto"
 import { notNullOrUndefined } from "src/lib/utils"
 
 const ROW_HEIGHT = 35
-// Min column width used for manual and automatic resizing
-const MIN_COLUMN_WIDTH = 35
 // Min width for the resizable table container:
 // Based on one column at minimum width + 2 for borders + 1 to prevent overlap problem with selection ring.
-const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 3
+const MIN_TABLE_WIDTH = 52
 // Min height for the resizable table container:
 // Based on header + one column, and + 2 for borders + 1 to prevent overlap problem with selection ring.
 const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + 3
@@ -121,14 +119,31 @@ function useTableSizer(
     }
   }, [containerWidth])
 
+  // Reset the height if the number of rows changes (e.g. via add_rows):
   React.useLayoutEffect(() => {
-    // Reset the height if the number of rows changes (e.g. via add_rows)
     setResizableSize({
       width: resizableSize.width,
       height: initialHeight,
     })
   }, [numRows])
 
+  // Reset the width if the element width parameter was changed:
+  React.useLayoutEffect(() => {
+    setResizableSize({
+      width: initialWidth || "100%",
+      height: resizableSize.height,
+    })
+  }, [initialWidth])
+
+  // Reset the height if the element height parameter was changed:
+  React.useLayoutEffect(() => {
+    setResizableSize({
+      width: resizableSize.width,
+      height: initialHeight,
+    })
+  }, [initialHeight])
+
+  // Change sizing if the fullscreen mode is activated or deactivated:
   React.useLayoutEffect(() => {
     if (isFullScreen) {
       const stretchColumns: boolean =

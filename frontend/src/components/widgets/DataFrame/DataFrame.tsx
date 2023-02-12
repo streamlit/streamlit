@@ -33,7 +33,7 @@ import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import { WidgetInfo, WidgetStateManager } from "src/lib/WidgetStateManager"
-import { debounce } from "src/lib/utils"
+import { debounce, isNullOrUndefined } from "src/lib/utils"
 
 import EditingState from "./EditingState"
 import {
@@ -66,6 +66,9 @@ const MAX_COLUMN_AUTO_WIDTH = 500
 const DEBOUNCE_TIME_MS = 100
 // Token used for missing values (null, NaN, etc.)
 const NULL_VALUE_TOKEN = "None"
+// Number of rows that triggers some optimization features
+// for large tables.
+const LARGE_TABLE_ROWS_THRESHOLD = 150000
 
 export interface DataFrameProps {
   element: ArrowProto
@@ -160,13 +163,31 @@ function DataFrame({
     },
     []
   )
+
+  // This is done to keep some backwards compatibility
+  // so that old arrow proto messages from the st.dataframe
+  // would still work. Those messages don't have the
+  // editingMode field defined.
+  if (isNullOrUndefined(element.editingMode)) {
+    element.editingMode = ArrowProto.EditingMode.READ_ONLY
+  }
+
+  const { READ_ONLY, DYNAMIC } = ArrowProto.EditingMode
+
   // Number of rows of the table minus 1 for the header row:
-  const originalNumRows = Math.max(0, data.dimensions.rows - 1)
-  // For empty tables (editing mode != dynamic), we show an extra row that
+  const dataDimensions = data.dimensions
+  const originalNumRows = Math.max(0, dataDimensions.rows - 1)
+
+  // For empty tables, we show an extra row that
   // contains "empty" as a way to indicate that the table is empty.
-  const showEmptyState =
+  const isEmptyTable =
     originalNumRows === 0 &&
-    element.editingMode !== ArrowProto.EditingMode.DYNAMIC
+    // We don't show empty state for dynamic mode with a table that has
+    // data columns defined.
+    !(element.editingMode === DYNAMIC && dataDimensions.dataColumns > 0)
+
+  // For large tables, we apply some optimizations to handle large data
+  const isLargeTable = originalNumRows > LARGE_TABLE_ROWS_THRESHOLD
 
   const editingState = React.useRef<EditingState>(
     new EditingState(originalNumRows)
@@ -242,7 +263,7 @@ function DataFrame({
 
   const { onCellEdited, onPaste, onRowAppended, onDelete } = useDataEditor(
     columns,
-    element.editingMode !== ArrowProto.EditingMode.DYNAMIC,
+    element.editingMode !== DYNAMIC,
     editingState,
     getCellContent,
     getOriginalIndex,
@@ -355,19 +376,17 @@ function DataFrame({
           className="glideDataEditor"
           ref={dataEditorRef}
           columns={glideColumns}
-          rows={showEmptyState ? 1 : numRows}
+          rows={isEmptyTable ? 1 : numRows}
           minColumnWidth={MIN_COLUMN_WIDTH}
           maxColumnWidth={MAX_COLUMN_WIDTH}
           maxColumnAutoWidth={MAX_COLUMN_AUTO_WIDTH}
           rowHeight={rowHeight}
           headerHeight={rowHeight}
-          getCellContent={
-            showEmptyState ? getEmptyStateContent : getCellContent
-          }
+          getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
           onColumnResize={onColumnResize}
           // Freeze all index columns:
           freezeColumns={
-            showEmptyState
+            isEmptyTable
               ? 0
               : columns.filter((col: BaseColumn) => col.isIndex).length
           }
@@ -393,7 +412,10 @@ function DataFrame({
           // Activate search:
           keybindings={{ search: true, downFill: true }}
           // Header click is used for column sorting:
-          onHeaderClicked={showEmptyState ? undefined : sortColumn}
+          onHeaderClicked={
+            // Deactivate sorting for empty state and for large dataframes:
+            isEmptyTable || isLargeTable ? undefined : sortColumn
+          }
           gridSelection={gridSelection}
           onGridSelectionChange={setGridSelection}
           // Apply different styling to missing cells:
@@ -410,20 +432,17 @@ function DataFrame({
           // Add shadow for index columns and header on scroll:
           fixedShadowX={true}
           fixedShadowY={true}
-          // onPaste is deactivated in the read-only mode:
-          onPaste={false}
           experimental={{
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
             scrollbarWidthOverride: 1,
           }}
           // Add support for additional cells:
-          customRenderers={[
-            ...extraCellArgs.customRenderers,
-            DatetimePickerCell,
-          ]}
-          // If element is editable, add additional properties:
-          {...(!showEmptyState &&
-            element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+          customRenderers={extraCellArgs.customRenderers}
+          // The default setup is read only, and therefore we deactivate paste here:
+          onPaste={false}
+          // If element is editable, enable editing features:
+          {...(!isEmptyTable &&
+            element.editingMode !== READ_ONLY &&
             !disabled && {
               // Support fill handle for bulk editing:
               fillHandle: true,
@@ -434,24 +453,26 @@ function DataFrame({
               // Support deleting cells & rows:
               onDelete,
             })}
-          {...(element.editingMode === ArrowProto.EditingMode.DYNAMIC && {
-            // Support adding rows:
-            trailingRowOptions: {
-              sticky: false,
-              tint: true,
-            },
-            rowMarkerTheme: {
-              bgCell: theme.bgHeader,
-              bgCellMedium: theme.bgHeader,
-            },
-            rowMarkers: "checkbox",
-            rowSelectionMode: "auto",
-            rowSelect: disabled ? "none" : "multi",
-            // Support adding rows:
-            onRowAppended: disabled ? undefined : onRowAppended,
-            // Deactivate sorting, since it is not supported with dynamic editing:
-            onHeaderClicked: undefined,
-          })}
+          // If element is dynamic, enable adding & deleting rows:
+          {...(!isEmptyTable &&
+            element.editingMode === DYNAMIC && {
+              // Support adding rows:
+              trailingRowOptions: {
+                sticky: false,
+                tint: true,
+              },
+              rowMarkerTheme: {
+                bgCell: theme.bgHeader,
+                bgCellMedium: theme.bgHeader,
+              },
+              rowMarkers: "checkbox",
+              rowSelectionMode: "auto",
+              rowSelect: disabled ? "none" : "multi",
+              // Support adding rows:
+              onRowAppended: disabled ? undefined : onRowAppended,
+              // Deactivate sorting, since it is not supported with dynamic editing:
+              onHeaderClicked: undefined,
+            })}
         />
       </Resizable>
     </StyledResizableContainer>

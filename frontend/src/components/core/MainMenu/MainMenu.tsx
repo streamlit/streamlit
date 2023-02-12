@@ -270,6 +270,8 @@ const SubMenu = ({
             "data-testid": "main-menu-list",
           },
           style: {
+            backgroundColor: "inherit",
+
             ":focus": {
               outline: "none",
             },

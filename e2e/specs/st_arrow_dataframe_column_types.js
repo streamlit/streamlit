@@ -18,6 +18,8 @@ describe("st.dataframe supports a variety of column types", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
     cy.prepForElementSnapshots();
+    // Make the toolbar disappear to not interfere with snapshots (in wide mode)
+    cy.get("[data-testid='stToolbar']").invoke("css", "opacity", 0);
   });
 
   it("renders element correctly", () => {
@@ -29,7 +31,7 @@ describe("st.dataframe supports a variety of column types", () => {
     itself also has more advanced canvas based tests for some of the interactive features. */
 
     cy.get(".stDataFrame").each((el, idx) => {
-      return cy.wrap(el).matchThemedSnapshots("dataframe-types-" + idx);
+      return cy.wrap(el).matchThemedSnapshots("dataframe-column-types-" + idx);
     });
   });
 });

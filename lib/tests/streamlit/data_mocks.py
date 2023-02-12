@@ -191,8 +191,8 @@ SHARED_TEST_CASES = [
 
 
 def random_date() -> datetime:
-    start_date = datetime.fromisoformat("2018-01-31T09:24:31.488670+00:00")
-    end_date = datetime.fromisoformat("2022-01-31T09:24:31.488670+00:00")
+    start_date = datetime.fromisoformat("2018-01-31T09:24:31.123+00:00")
+    end_date = datetime.fromisoformat("2022-01-31T09:24:31.345+00:00")
 
     return (
         start_date
@@ -219,7 +219,7 @@ BASE_TYPES_DF = pd.DataFrame(
             None,
         ],
         "bool": [True, False, True, False, True, None],
-        "int64": [-5, 1, 2, 3, 4, 5],
+        "int64": [-5, 0, 1, 2, 3, None],
         "float64": [-0.1, 0, 0.1, 0.001, 1.1, None],
         "datetime": [
             datetime(2020, 1, 1, 0, 0, 0),
@@ -266,13 +266,12 @@ NUMBER_TYPES_DF = pd.DataFrame(
     }
 )
 
-# TODO: pd.to_datetime(df["str"]).dt.tz_localize("Europe/Moscow")
 DATETIME_TYPES_DF = pd.DataFrame(
     {
         "datetime": [random_date() for _ in range(8)] + [None],
         "time": [random_date().time() for _ in range(8)] + [None],
         "date": [random_date().date() for _ in range(8)] + [None],
-        "mixed datetime": [
+        "mixed_datetime": [
             random.choice(
                 [
                     pd.Timestamp(random_date()),
@@ -284,17 +283,17 @@ DATETIME_TYPES_DF = pd.DataFrame(
             for _ in range(8)
         ]
         + [None],
-        "pd_datetime + TZ": [
+        "pd_datetime_TZ": [
             (pd.to_datetime("2022-03-11 17:41:00-05:00")) for _ in range(8)
         ]
         + [None],
-        "datetime + UTC TZ": [
+        "datetime_UTC_TZ": [
             random_date().replace(tzinfo=timezone.utc) for _ in range(8)
         ]
         + [None],
         # TODO: Mixed timezones within a column will force the column to be of type object
         # It also seems to not work correctly.
-        "mixed timezones": [
+        "mixed_timezones": [
             random.choice(
                 [
                     random_date().replace(tzinfo=timezone.utc),
@@ -310,10 +309,10 @@ DATETIME_TYPES_DF = pd.DataFrame(
 
 LIST_TYPES_DF = pd.DataFrame(
     {
-        "string-list": pd.Series(
+        "string_list": pd.Series(
             [["a", "b", "c"], ["foo", "bar"], list(["lorem"]), [], None]
         ),
-        "number-set": pd.Series([{1, 2, 3}, {2, 3}, {4, 4}, set(), None]),
+        "number_set": pd.Series([{1, 2, 3}, {2, 3}, {4, 4}, set(), None]),
         "boolean_tuple": [
             (True, False),
             (False, True, True),
@@ -321,7 +320,7 @@ LIST_TYPES_DF = pd.DataFrame(
             tuple(),
             None,
         ],
-        "dict-list": [
+        "dict_list": [
             [{"foo": random.randint(0, 1000), "bar": "blub"} for _ in range(2)]
             for _ in range(4)
         ]
@@ -367,7 +366,7 @@ SPECIAL_TYPES_DF = pd.DataFrame(
     {
         "categorical": pd.Series(["a", "b", "c", "a", None]).astype("category"),
         "decimal": pd.Series(
-            [Decimal("1.1"), Decimal("2.2"), Decimal("10000"), Decimal("-2.2123"), None]
+            [Decimal("1.1"), Decimal("2.2"), Decimal("1000"), Decimal("2.212"), None]
         ),
         "bytes": pd.Series(
             [
@@ -387,20 +386,26 @@ UNSUPPORTED_TYPES_DF = pd.DataFrame(
         "period[H]": [
             (pd.Period("2022-03-14 11:52:00", freq="H") + pd.offsets.Hour(i))
             for i in range(3)
-        ],
-        "period[D]": [(pd.Period(random_date().date(), freq="D")) for _ in range(3)],
-        "complex": pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]),
+        ]
+        + [None],
+        "period[D]": [(pd.Period(random_date().date(), freq="D")) for _ in range(3)]
+        + [None],
+        "complex": pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j, None]),
         "timedelta": pd.Series(
-            [pd.Timedelta("1 days"), np.timedelta64(366, "D"), pd.Timedelta("2 hours")]
+            [
+                pd.Timedelta("1 days"),
+                np.timedelta64(366, "D"),
+                pd.Timedelta("2 hours"),
+                None,
+            ]
         ),
-        "decimal": pd.Series([Decimal("1.1"), Decimal("2.2"), Decimal("10000")]),
-        "mixed-integer": pd.Series([1, 2, "3"]),
-        "mixed-types": pd.Series([2.1, "3", True]),
+        "mixed_integer": pd.Series([1, 2, "3", None]),
+        "mixed_types": pd.Series([2.1, "3", True, None]),
         "frozenset": pd.Series(
-            [frozenset([1, 2]), frozenset([3, 4]), frozenset([5, 6])]
+            [frozenset([1, 2]), frozenset([3, 4]), frozenset([5, 6]), None]
         ),
-        "dicts": pd.Series([{"a": 1}, {"b": 2}, {"c": 2}]),
-        "objects": pd.Series([TestObject(), TestObject(), TestObject()]),
+        "dicts": pd.Series([{"a": 1}, {"b": 2}, {"c": 2}, None]),
+        "objects": pd.Series([TestObject(), TestObject(), TestObject(), None]),
         # TODO(lukasmasuch): Not supported, but currently leads to error
         # "mixed_types_list": pd.Series(
         #     [random.choice([1, 1.0, None, "foo"]) for _ in range(10)]

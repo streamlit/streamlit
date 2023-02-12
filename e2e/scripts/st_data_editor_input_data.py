@@ -17,7 +17,7 @@ import random
 import numpy as np
 
 import streamlit as st
-from tests.streamlit.type_util_test import SHARED_TEST_CASES
+from tests.streamlit.data_mocks import SHARED_TEST_CASES
 
 np.random.seed(0)
 random.seed(0)
@@ -29,4 +29,5 @@ for i, test_case in enumerate(SHARED_TEST_CASES):
     data = test_case[0]
     data_format = str(test_case[1].expected_data_format)
     st.subheader(data_format)
-    st.experimental_data_editor(data, key=i)
+    st.experimental_data_editor(data, key=f"{i}-fixed")
+    st.experimental_data_editor(data, num_rows="dynamic", key=f"{i}-dynamic")

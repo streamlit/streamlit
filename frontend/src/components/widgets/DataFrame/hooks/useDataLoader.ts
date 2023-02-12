@@ -16,6 +16,7 @@
 
 import React from "react"
 
+import { merge } from "lodash"
 import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
 
 import { Quiver } from "src/lib/Quiver"
@@ -100,51 +101,20 @@ export function applyColumnConfig(
     return columnProps
   }
 
-  return {
-    ...columnProps,
-    // Update title:
-    ...(notNullOrUndefined(columnConfig.title)
-      ? {
-          title: columnConfig.title,
-        }
-      : {}),
-    // Update width:
-    ...(notNullOrUndefined(columnConfig.width)
-      ? {
-          width: columnConfig.width,
-        }
-      : {}),
-    // Select a column type:
-    ...(notNullOrUndefined(columnConfig.type)
-      ? {
-          customType: columnConfig.type.toLowerCase().trim(),
-        }
-      : {}),
-    // Update editable state:
-    ...(notNullOrUndefined(columnConfig.editable)
-      ? {
-          isEditable: columnConfig.editable,
-        }
-      : {}),
-    // Update hidden state:
-    ...(notNullOrUndefined(columnConfig.hidden)
-      ? {
-          isHidden: columnConfig.hidden,
-        }
-      : {}),
-    // Add column type metadata:
-    ...(notNullOrUndefined(columnConfig.metadata)
-      ? {
-          columnTypeMetadata: columnConfig.metadata,
-        }
-      : {}),
-    // Add column alignment:
-    ...(notNullOrUndefined(columnConfig.alignment)
-      ? {
-          contentAlignment: columnConfig.alignment,
-        }
-      : {}),
-  } as BaseColumnProps
+  // This will update all column props with the user-defined config for all
+  // configuration option that are not undefined:
+  return merge(
+    { ...columnProps },
+    {
+      title: columnConfig.title,
+      width: columnConfig.width,
+      customType: columnConfig.type?.toLowerCase().trim(),
+      isEditable: columnConfig.editable,
+      isHidden: columnConfig.hidden,
+      columnTypeMetadata: columnConfig.metadata,
+      contentAlignment: columnConfig.alignment,
+    }
+  ) as BaseColumnProps
 }
 
 /**

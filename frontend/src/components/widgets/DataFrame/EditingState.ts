@@ -54,12 +54,17 @@ class EditingState {
     })
 
     const currentState = {
+      // We use snake case here since this is the widget state
+      // that is sent and used in the backend. Therefore, it should
+      // conform with the Python naming conventions.
       edited_cells: {} as Record<string, any>,
       added_rows: [] as Record<number, any>[],
       deleted_rows: [] as number[],
     }
 
-    // Prepare edited cells
+    // Loop through all edited cells and transform into the structure
+    // we use for the JSON-compatible widget state:
+    // "<rowIndex>:<colIndex>` -> edited value
     this.editedCells.forEach(
       (row: Map<number, GridCell>, rowIndex: number, _map) => {
         row.forEach((cell: GridCell, colIndex: number, _map) => {
@@ -72,7 +77,9 @@ class EditingState {
       }
     )
 
-    // Prepare added rows
+    // Loop through all added rows and transform into the format that
+    // we use for the JSON-compatible widget state:
+    // List of column index -> edited value
     this.addedRows.forEach((row: Map<number, GridCell>) => {
       const addedRow: Record<number, any> = {}
       row.forEach((cell: GridCell, colIndex: number, _map) => {
@@ -87,7 +94,9 @@ class EditingState {
       currentState.added_rows.push(addedRow)
     })
 
+    // The deleted rows don't need to be transformed
     currentState.deleted_rows = this.deletedRows
+
     // Convert undefined values to null, otherwise this is removed here since
     // undefined does not exist in JSON.
     const json = JSON.stringify(currentState, (k, v) =>

@@ -381,6 +381,10 @@ const RawElementNodeRenderer = (
           data={node.quiverElement as Quiver}
           width={width}
           height={height}
+          // Arrow dataframe can be used as a widget (data_editor) or
+          // an element (dataframe). We only want to set the key in case of
+          // it being used as a widget. For the non-widget usage, the id will
+          // be undefined.
           {...(arrowProto.id && {
             key: arrowProto.id,
           })}
