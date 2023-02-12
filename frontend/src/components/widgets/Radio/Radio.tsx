@@ -38,6 +38,10 @@ export interface Props {
 
 function Radio(props: Props): ReactElement {
   const { theme, element, width, widgetMgr } = props
+  let { disabled } = props
+  const { colors, radii } = theme
+  const style = { width }
+  const { horizontal, options, label, labelVisibility, help } = element
 
   const initialValue = (): number => {
     // If WidgetStateManager knew a value for this widget, initialize to that.
@@ -62,9 +66,13 @@ function Radio(props: Props): ReactElement {
     }
   }
 
-  const onFormCleared = (): void => {
-    setStateValue(element.default)
-    setStateSource({ fromUi: true })
+  const checkNoOptions = (): void => {
+    if (options.length === 0) {
+      options.push("No options to select.")
+    }
+    if (options[0] === "No options to select.") {
+      disabled = true
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -73,13 +81,10 @@ function Radio(props: Props): ReactElement {
     setStateSource({ fromUi: true })
   }
 
-  useEffect(() => {
-    props.widgetMgr.setIntValue(element, value, source)
-  }, [value, source])
-
-  useEffect(() => {
-    maybeUpdateFromProtobuf()
-  })
+  const onFormCleared = (): void => {
+    setStateValue(element.default)
+    setStateSource({ fromUi: true })
+  }
 
   useEffect(() => {
     if (element.setValue) {
@@ -97,15 +102,15 @@ function Radio(props: Props): ReactElement {
     }
   }, [])
 
-  const { horizontal, options, label, labelVisibility, help } = element
-  const { colors, radii } = theme
-  const style = { width }
-  let { disabled } = props
+  useEffect(() => {
+    props.widgetMgr.setIntValue(element, value, source)
+  }, [value, source])
 
-  if (options.length === 0) {
-    options.push("No options to select.")
-    disabled = true
-  }
+  useEffect(() => {
+    maybeUpdateFromProtobuf()
+  })
+
+  checkNoOptions()
 
   return (
     <div className="row-widget stRadio" style={style}>
