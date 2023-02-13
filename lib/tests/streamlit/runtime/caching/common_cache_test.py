@@ -207,6 +207,21 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         self.assertEqual([5], call_count)
 
     @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_cached_member_function(self, _, cache_decorator):
+        """Our cache decorators can be applied to a class member function."""
+
+        class TestClass:
+            @cache_decorator
+            def foo(_self):
+                # We underscore-prefix `_self`, because our class is not hashable.
+                return "it works!"
+
+        obj = TestClass()
+        self.assertEqual("it works!", obj.foo())
+
+    @parameterized.expand(
         [
             ("cache_data", cache_data, CACHE_DATA_MESSAGE_REPLAY_CTX),
             ("cache_resource", cache_resource, CACHE_RESOURCE_MESSAGE_REPLAY_CTX),
