@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import DeckGL from "deck.gl"
+import { DeckGL } from "deck.gl"
 import { shallow } from "src/lib/test_util"
 import { lightTheme } from "src/theme"
 

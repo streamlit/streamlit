@@ -77,6 +77,7 @@ import { getAlertKind } from "src/components/elements/Alert/Alert"
 import Maybe from "src/components/core/Maybe/"
 import { FormSubmitContent } from "src/components/widgets/Form"
 import { Heading } from "src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import AppContext from "src/components/core/AppContext"
 
 import {
   BaseBlockProps,
@@ -227,16 +228,6 @@ const RawElementNodeRenderer = (
         <Balloons scriptRunId={props.scriptRunId} />
       )
 
-    case "arrowDataFrame":
-      return (
-        <ArrowDataFrame
-          element={node.element.arrowDataFrame as ArrowProto}
-          data={node.quiverElement as Quiver}
-          width={width}
-          height={height}
-        />
-      )
-
     case "arrowTable":
       return <ArrowTable element={node.quiverElement as Quiver} />
 
@@ -380,6 +371,27 @@ const RawElementNodeRenderer = (
       return <Video width={width} element={node.element.video as VideoProto} />
 
     // Widgets
+    case "arrowDataFrame": {
+      const arrowProto = node.element.arrowDataFrame as ArrowProto
+      widgetProps.disabled = widgetProps.disabled || arrowProto.disabled
+
+      return (
+        <ArrowDataFrame
+          element={arrowProto}
+          data={node.quiverElement as Quiver}
+          width={width}
+          height={height}
+          // Arrow dataframe can be used as a widget (data_editor) or
+          // an element (dataframe). We only want to set the key in case of
+          // it being used as a widget. For the non-widget usage, the id will
+          // be undefined.
+          {...(arrowProto.id && {
+            key: arrowProto.id,
+          })}
+          {...widgetProps}
+        />
+      )
+    }
 
     case "button": {
       const buttonProto = node.element.button as ButtonProto
@@ -612,6 +624,7 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
+  const { isFullScreen } = React.useContext(AppContext)
   const { node } = props
 
   const elementType = node.element.type || ""
@@ -636,7 +649,9 @@ const ElementNodeRenderer = (
     <Maybe enable={enable}>
       <StyledElementContainer
         data-stale={isStale}
-        isStale={isStale}
+        // Applying stale opacity in fullscreen mode
+        // causes the fullscreen overlay to be transparent.
+        isStale={isStale && !isFullScreen}
         width={width}
         className={"element-container"}
         elementType={elementType}
