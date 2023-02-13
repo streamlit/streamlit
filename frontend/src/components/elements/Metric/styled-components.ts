@@ -31,6 +31,9 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
   fontFamily: theme.genericFonts.bodyFont,
   lineHeight: theme.lineHeights.normal,
   verticalAlign: "middle",
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
 }))
 
 export const StyledMetricLabelText = styled(

@@ -41,3 +41,10 @@ with col2:
     st.metric("Test 4", -4.56, 1.23, label_visibility="hidden")
 with col3:
     st.metric("Test 5", -4.56, 1.23, label_visibility="collapsed")
+
+st.metric(
+    label="Example metric",
+    help="Something should feel right...",
+    value=150.59,
+    delta="Very high",
+)

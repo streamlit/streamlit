@@ -142,4 +142,13 @@ describe("st.metric", () => {
       ).matchThemedSnapshots("metric-label-collapse");
     });
   });
+
+  describe("Help button should properly show up in the right place", () => {
+    it("checks the help button with a screenshot", () => {
+      cy.getIndexed(
+        '[data-testid="metric-container"]',
+        7
+      ).matchThemedSnapshots("metric-help");
+    })
+  })
 });
