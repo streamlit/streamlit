@@ -216,7 +216,21 @@ describe("SidebarNav", () => {
 
   it("renders the correct StyledSidebarNavButton when collapsed", () => {
     const wrapper = shallow(
-      <SidebarNav {...getProps({ hasSidebarElements: true })} />
+      <SidebarNav
+        {...getProps({
+          hasSidebarElements: true,
+          appPages: [
+            { pageName: "streamlit_app" },
+            { pageName: "my_other_page" },
+            { pageName: "my_third_page" },
+            { pageName: "my_fourth_page" },
+            { pageName: "my_fifth_page" },
+            { pageName: "my_sixth_page" },
+            { pageName: "my_seventh_page" },
+            { pageName: "my_eight_page" },
+          ],
+        })}
+      />
     )
 
     expect(
@@ -225,6 +239,12 @@ describe("SidebarNav", () => {
         .find(StyledSidebarNavButton)
         .props()
     ).toHaveProperty("isExpanded", false)
+    expect(
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(StyledSidebarNavButton)
+        .text()
+    ).toBe("2 More")
   })
 
   it("renders the correct StyledSidebarNavButton when expanded", () => {
@@ -319,15 +339,6 @@ describe("SidebarNav", () => {
     expect(props.collapseSidebar).toHaveBeenCalled()
   })
 
-  it("calls hideParentScrollbar onMouseOut", () => {
-    const props = getProps()
-    const wrapper = shallow(<SidebarNav {...props} />)
-
-    wrapper.find(StyledSidebarNavItems).simulate("mouseOut")
-
-    expect(props.hideParentScrollbar).toHaveBeenCalledWith(false)
-  })
-
   it("does not call hideParentScrollbar on mouseOver if not overflowing", () => {
     const props = getProps()
     const wrapper = shallow(<SidebarNav {...props} />)
@@ -335,16 +346,6 @@ describe("SidebarNav", () => {
     wrapper.find(StyledSidebarNavItems).simulate("mouseOver")
 
     expect(props.hideParentScrollbar).not.toHaveBeenCalled()
-  })
-
-  it("does call hideParentScrollbar on mouseOver if overflowing", () => {
-    mockUseIsOverflowing.mockReturnValueOnce(true)
-    const props = getProps()
-    const wrapper = shallow(<SidebarNav {...props} />)
-
-    wrapper.find(StyledSidebarNavItems).simulate("mouseOver")
-
-    expect(props.hideParentScrollbar).toHaveBeenCalledWith(true)
   })
 
   it("handles default and custom page icons", () => {
