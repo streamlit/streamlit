@@ -35,7 +35,7 @@ class CacheStorageContext:
     function_key: str
     ttl_seconds: float | None = None
     max_entries: int | None = None
-    persist: Literal["disk"] | None = None  # TODO: [Karen] import type from memo
+    persist: Literal["disk"] | None = None
 
 
 class CacheStorage(Protocol):
@@ -88,3 +88,11 @@ class CacheStorageManager(Protocol):
         via storage.clear() method if clear_all raises NotImplementedError.
         """
         raise NotImplementedError
+
+    def check_context(self, context: CacheStorageContext, function_name: str) -> None:
+        """
+        Checks if the context is valid for the storage manager.
+        This method should not return anything, but log message or raise an exception
+        if the context is invalid.
+        """
+        pass

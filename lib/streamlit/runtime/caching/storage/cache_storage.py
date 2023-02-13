@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import math
 import os
 import shutil
 import threading
@@ -53,18 +54,38 @@ class OpenSourceCacheStorageManager(CacheStorageManager):
         if os.path.isdir(cache_path):
             shutil.rmtree(cache_path)
 
+    def check_context(self, context: CacheStorageContext, function_name: str) -> None:
+        if (
+            context.persist == "disk"
+            and context.ttl_seconds is not None
+            and not math.isinf(context.ttl_seconds)
+        ):
+            _LOGGER.warning(
+                f"The cached function '{function_name}' has a TTL that will be "
+                f"ignored. Persistent cached functions currently don't support TTL."
+            )
+
 
 class OpenSourceCacheStorage(CacheStorage):
     def __init__(self, context: CacheStorageContext):
         self.function_key = context.function_key
         self.persist = context.persist
-        self.ttl_seconds = context.ttl_seconds
+        self._ttl_seconds = context.ttl_seconds
+        self._max_entries = context.max_entries
         self._mem_cache: TTLCache[str, bytes] = TTLCache(
-            maxsize=context.max_entries,
+            maxsize=self.max_entries,
             ttl=self.ttl_seconds,
             timer=cache_utils.TTLCACHE_TIMER,
         )
         self._mem_cache_lock = threading.Lock()
+
+    @property
+    def ttl_seconds(self) -> float:
+        return self._ttl_seconds if self._ttl_seconds is not None else math.inf
+
+    @property
+    def max_entries(self) -> float:
+        return float(self._max_entries) if self._max_entries is not None else math.inf
 
     def get(self, key: str) -> bytes:
         """Returns the stored value for the key or None if the key is not present"""

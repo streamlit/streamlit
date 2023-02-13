@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import math
 import pickle
 import threading
 import types
@@ -93,6 +92,8 @@ class CachedDataFuncInfo(CachedFuncInfo):
         self.max_entries = max_entries
         self.ttl = ttl
 
+        self.validate_params()
+
     @property
     def cache_type(self) -> CacheType:
         return CacheType.DATA
@@ -116,6 +117,17 @@ class CachedDataFuncInfo(CachedFuncInfo):
             allow_widgets=self.allow_widgets,
         )
 
+    def validate_params(self):
+        """ "
+        Validate the params passed to @st.cache_data are compatible with cache storage
+        """
+        _data_caches.validate_cache_params(
+            function_name=self.func.__name__,
+            persist=self.persist,
+            max_entries=self.max_entries,
+            ttl=self.ttl,
+        )
+
 
 class DataCaches(CacheStatsProvider):
     """Manages all DataCache instances"""
@@ -128,7 +140,7 @@ class DataCaches(CacheStatsProvider):
         self,
         key: str,
         persist: CachePersistType,
-        max_entries: int | float | None,
+        max_entries: int | None,
         ttl: int | float | timedelta | None,
         display_name: str,
         allow_widgets: bool,
@@ -137,10 +149,8 @@ class DataCaches(CacheStatsProvider):
 
         If it doesn't exist, create a new one with the given params.
         """
-        if max_entries is None:
-            max_entries = math.inf
 
-        ttl_seconds = ttl_to_seconds(ttl)
+        ttl_seconds = ttl_to_seconds(ttl, allow_none=True)
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
@@ -164,24 +174,24 @@ class DataCaches(CacheStatsProvider):
                 max_entries,
                 ttl,
             )
-            cache_context = CacheStorageContext(
+
+            cache_context = self.create_cache_storage_context(
                 function_key=key,
                 ttl_seconds=ttl_seconds,
                 max_entries=max_entries,
                 persist=persist,
             )
-
-            cache_storage_manager = self._get_storage_manager()
+            cache_storage_manager = self.get_storage_manager()
             storage = cache_storage_manager.create(cache_context)
 
             cache = DataCache(
                 key=key,
+                storage=storage,
                 persist=persist,
                 max_entries=max_entries,
                 ttl_seconds=ttl_seconds,
                 display_name=display_name,
                 allow_widgets=allow_widgets,
-                storage=storage,
             )
             # TODO [Karen]: Since we override old function cache with new one, we should
             # also think about connected storage resource deallocation/close connection,
@@ -197,7 +207,7 @@ class DataCaches(CacheStatsProvider):
             try:
                 # Try to remove with optimal way, if not possible fallback to
                 # remove all available storages one by one
-                self._get_storage_manager().clear_all()
+                self.get_storage_manager().clear_all()
             except NotImplementedError:
                 for data_cache in self._function_caches.values():
                     data_cache.clear()
@@ -215,7 +225,42 @@ class DataCaches(CacheStatsProvider):
             stats.extend(cache.get_stats())
         return stats
 
-    def _get_storage_manager(self) -> CacheStorageManager:
+    def validate_cache_params(
+        self,
+        function_name: str,
+        persist: CachePersistType,
+        max_entries: int | None,
+        ttl: int | float | timedelta | None,
+    ) -> None:
+        """Validate that the cache params are valid for given storage."""
+
+        ttl_seconds = ttl_to_seconds(ttl, allow_none=True)
+
+        cache_context = self.create_cache_storage_context(
+            function_key="DUMMY_KEY",  # Pass dummy key, since we don't have function
+            # key yet, and we use context to validate params
+            ttl_seconds=ttl_seconds,
+            max_entries=max_entries,
+            persist=persist,
+        )
+        self.get_storage_manager().check_context(cache_context, function_name)
+
+    def create_cache_storage_context(
+        self,
+        function_key: str,
+        persist: CachePersistType,
+        ttl_seconds: float | None,
+        max_entries: int | None,
+    ) -> CacheStorageContext:
+
+        return CacheStorageContext(
+            function_key=function_key,
+            ttl_seconds=ttl_seconds,
+            max_entries=max_entries,
+            persist=persist,
+        )
+
+    def get_storage_manager(self) -> CacheStorageManager:
         return runtime.get_instance().cache_storage_manager
 
 
@@ -251,9 +296,9 @@ class CacheDataAPI:
 
         # Parameterize the decorator metric name.
         # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
-        self._decorator = gather_metrics(
+        self._decorator = gather_metrics(  # type: ignore[assignment]
             decorator_metric_name, self._decorator
-        )  # type: ignore
+        )
         self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
@@ -434,13 +479,6 @@ class CacheDataAPI:
         self._maybe_show_deprecation_warning()
 
         def wrapper(f):
-            # We use wrapper function here instead of lambda function to be able to log
-            # warning in case both persist="disk" and ttl parameters specified
-            if persist == "disk" and ttl is not None:
-                _LOGGER.warning(
-                    f"The cached function '{f.__name__}' has a TTL that will be "
-                    f"ignored. Persistent cached functions currently don't support TTL."
-                )
             return CachedFunc(
                 CachedDataFuncInfo(
                     func=f,
@@ -452,8 +490,6 @@ class CacheDataAPI:
                 )
             )
 
-        # Support passing the params via function decorator, e.g.
-        # @st.cache_data(persist=True, show_spinner=False)
         if func is None:
             return wrapper
 
@@ -488,12 +524,12 @@ class DataCache(Cache):
     def __init__(
         self,
         key: str,
+        storage: CacheStorage,
         persist: CachePersistType,
-        max_entries: float,
-        ttl_seconds: float,
+        max_entries: int | None,
+        ttl_seconds: float | None,
         display_name: str,
         allow_widgets: bool = False,
-        storage: CacheStorage = None,
     ):
         super().__init__()
         self.key = key
