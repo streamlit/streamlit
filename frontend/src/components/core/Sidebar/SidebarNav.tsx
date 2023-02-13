@@ -59,7 +59,7 @@ const SidebarNav = ({
   const isLocalStorageSet = localStorage.getItem("navExpanded") !== null
   const shouldNavExpand =
     isLocalStorageSet && localStorage.getItem("navExpanded") === "true"
-  const pageLimit = shouldNavExpand === true ? -1 : 6
+  const pageLimit = shouldNavExpand === true ? appPages.length : 6
 
   const [expanded, setExpanded] = useState(
     hasSidebarElements === true ? false : shouldNavExpand
@@ -75,7 +75,7 @@ const SidebarNav = ({
   const toggleExpanded = useCallback(() => {
     if (!expanded) {
       setExpanded(true)
-      setPagesToShow(-1)
+      setPagesToShow(appPages.length)
       localStorage.setItem("navExpanded", "true")
     } else {
       setExpanded(false)
