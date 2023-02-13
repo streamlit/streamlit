@@ -29,7 +29,7 @@ import { logError } from "src/lib/log"
 
 import { Type as ArrowType } from "src/lib/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
-import { DatetimePickerCell } from "src/components/widgets/DataFrame/customCells/DatetimePickerCell"
+import { DatePickerCell } from "src/components/widgets/DataFrame/customCells/DatePickerCell"
 
 /**
  * Interface used for defining the properties (configuration options) of a column.
@@ -370,164 +370,53 @@ export function formatNumber(
   return ""
 }
 
-export function isValidDate(date: any): boolean {
+/**
+ * Converts the given value of unknown type to a date without
+ * the risks of any exceptions.
+ *
+ * @param value - The value to convert to a date.
+ *
+ * @returns The converted date or null if the value cannot be interpreted as a date.
+ */
+export function toSafeDate(value: any): Date | null | undefined {
+  if (isNullOrUndefined(value)) {
+    return null
+  }
+
+  if (typeof value === "string" && value.trim().length === 0) {
+    // Empty string should return null
+    return null
+  }
+
   try {
-    if (typeof date === "string") {
-      if (isStringButNumber(date)) {
-        return isDateNotNaN(new Date(Number(date)))
+    if (typeof value === "bigint") {
+      // Python datetime uses microseconds, but JS & Moment uses milliseconds
+      return new Date(Number(value) / 1000)
+    }
+
+    let parsedTimestamp = Number(value)
+    if (!isNaN(parsedTimestamp)) {
+      // It was parsed as a valid number (unix timestamp)
+      return new Date(parsedTimestamp)
+    }
+
+    if (typeof value === "string") {
+      // Try to parse string via native Date:
+      const parsedDate = new Date(value)
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate
       }
-      // attempt replacing spaces with a T because
-      // python datetime removes T
-      const modifiedDate = new Date(date.replace(" ", "T"))
-      return isDateNotNaN(modifiedDate) || isDateNotNaN(new Date(date))
+
+      // Try to parse string via momentJS:
+      const parsedMomentDate = moment(value)
+      if (parsedMomentDate.isValid()) {
+        return parsedMomentDate.toDate()
+      }
     }
-    return isDateNotNaN(new Date(date))
   } catch (error) {
-    logError(error)
-    return false
-  }
-}
-
-export function isStringButNumber(val: any): boolean {
-  if (typeof val === "string" && !Number.isNaN(Number(val))) {
-    return true
-  }
-  return false
-}
-
-export function isDateNotNaN(date: Date): boolean {
-  return !Number.isNaN(date.getTime())
-}
-
-export function removeZeroMillisecondsInISOString(date: string): string {
-  return date.replace(".000", "")
-}
-
-export function removeTInString(date: string): string {
-  return date.replace("T", " ")
-}
-
-export function getDateCell(
-  props: BaseColumnProps,
-  data: any,
-  type: string
-): GridCell {
-  const defaultFormat = getDefaultFormatDateCell(type)
-
-  const parameters = {
-    ...(props.columnTypeMetadata || {}),
+    // Do nothing here
   }
 
-  const cellTemplate = {
-    kind: GridCellKind.Custom,
-    allowOverlay: true,
-    copyData: "",
-    contentAlign: props.contentAlignment,
-    data: {
-      kind: "DatetimePickerCell",
-      date: undefined,
-      displayDate: "",
-      format: parameters.format ?? defaultFormat,
-      type,
-    },
-  } as DatetimePickerCell
-
-  if (isNullOrUndefined(data)) {
-    return {
-      ...cellTemplate,
-      allowOverlay: true,
-      // missing value
-      copyData: "",
-      isMissingValue: true,
-      data: {
-        kind: "DatetimePickerCell",
-        date: undefined,
-        displayDate: "",
-        format: cellTemplate.data.format,
-        type,
-      },
-    } as DatetimePickerCell
-  }
-
-  try {
-    // Python datetime uses microseconds, but JS & Moment uses milliseconds
-    if (typeof data === "bigint") {
-      data = Number(data) / 1000
-    }
-
-    if (!isValidDate(data)) {
-      return getErrorCell(`Incompatible Date value: ${data}`)
-    }
-
-    let dataDate: Date
-    if (isStringButNumber(data)) {
-      // 60000 => 60 minute / 1 second * 100 millisecond / 1 sec
-      dataDate = new Date(
-        Number(data) + new Date().getTimezoneOffset() * 60000
-      )
-    } else {
-      // safe to do new Date() because checked through isValidDate()
-      dataDate = new Date(data)
-    }
-
-    const copyData = getCopyDataForDate(dataDate, type)
-    const displayDate = removeTInString(
-      removeZeroMillisecondsInISOString(
-        moment.utc(dataDate).format(cellTemplate.data.format)
-      )
-    )
-    return {
-      ...cellTemplate,
-      allowOverlay: true,
-      copyData,
-      data: {
-        kind: "DatetimePickerCell",
-        date: dataDate,
-        displayDate,
-        format: cellTemplate.data.format,
-        type,
-      },
-    } as DatetimePickerCell
-  } catch (error) {
-    return getErrorCell(`Incompatible date value: ${data}`)
-  }
-}
-
-export function getDefaultFormatDateCell(type: string): string {
-  switch (type) {
-    case "date":
-      return "YYYY / MM / DD"
-    case "datetime-local":
-      return "YYYY-MM-DDTHH:mm:ss.SSS"
-    case "time":
-      return "HH:mm:ss.SSS"
-    default:
-      return ""
-  }
-}
-
-export function getDateCellContent(cell: DatetimePickerCell): string | null {
-  return !notNullOrUndefined(cell.data.date)
-    ? null
-    : cell.data.date.toISOString()
-}
-
-export function getCopyDataForDate(date: Date, type: string): string {
-  switch (type) {
-    case "time": {
-      // datetime.time is only hours, minutes, etc
-      const withoutYearAndMonth =
-        (date.getHours() * 60 * 60 +
-          date.getMinutes() * 60 +
-          date.getSeconds()) *
-          1000 +
-        date.getMilliseconds()
-      return toSafeString(withoutYearAndMonth)
-    }
-    case "datetime-local":
-    case "date":
-      return date.toISOString()
-    default:
-      return ""
-  }
+  // Unable to interpret this value as a date:
+  return undefined
 }

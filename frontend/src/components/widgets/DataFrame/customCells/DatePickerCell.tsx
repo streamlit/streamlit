@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import React from "react"
+import styled from "@emotion/styled"
+
 import {
   CustomCell,
   CustomRenderer,
@@ -24,13 +25,24 @@ import {
   TextCellEntry,
 } from "@glideapps/glide-data-grid"
 
-interface DatetimePickerCellProps {
-  readonly kind: "DatetimePickerCell"
-  readonly date: Date | undefined
+export const StyledInputBox = styled.input`
+  min-height: 26px;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  font-size: var(--gdg-editor-font-size);
+  font-family: var(--gdg-font-family);
+  color: var(--gdg-text-dark);
+  ::-webkit-calendar-picker-indicator {
+    background-color: white;
+  }
+`
+
+export interface DatePickerCellProps {
+  readonly kind: "datetime-picker-cell"
+  readonly date: Date | undefined | null
   readonly displayDate: string
-  readonly format: any
-  readonly type: DateKind
-  readonly readonly?: boolean
+  readonly format: DateKind
   readonly min?: string
   readonly max?: string
   readonly step?: string
@@ -40,9 +52,9 @@ export type DateKind = "date" | "time" | "datetime-local"
 
 export const formatValueForHTMLInput = (
   dateKind: DateKind,
-  date: Date | undefined
+  date: Date | undefined | null
 ): string => {
-  if (date === undefined) {
+  if (date === undefined || date === null) {
     return ""
   }
   switch (dateKind) {
@@ -53,17 +65,18 @@ export const formatValueForHTMLInput = (
     case "time":
       return date.toISOString().split("T")[1].replace("Z", "")
     default:
-      return ""
+      throw new Error(`Unknown date kind ${dateKind}`)
   }
 }
 
-export type DatetimePickerCell = CustomCell<DatetimePickerCellProps>
+export type DatePickerCell = CustomCell<DatePickerCellProps>
 
-const Editor: ReturnType<ProvideEditorCallback<DatetimePickerCell>> = cell => {
+const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
   const cellData = cell.value.data
-  const { min, max, step, readonly, type, displayDate } = cellData
-  const value = formatValueForHTMLInput(type, cellData.date)
-  if (readonly) {
+  const { min, max, step, format, displayDate } = cellData
+  const value = formatValueForHTMLInput(format, cellData.date)
+  console.log(value)
+  if (cell.value.readonly) {
     return (
       <TextCellEntry
         highlight={true}
@@ -74,24 +87,31 @@ const Editor: ReturnType<ProvideEditorCallback<DatetimePickerCell>> = cell => {
       />
     )
   }
+
   return (
-    <input
+    <StyledInputBox
+      data-testid={"date-picker-cell"}
       required
-      style={{ minHeight: 26, border: "none", outline: "none" }}
-      type={type}
-      value={value}
+      type={format}
+      defaultValue={value}
+      // TODO: use default value instead? value={value}
       min={min}
       max={max}
       step={step}
       autoFocus={true}
       onChange={event => {
-        if (event.target.value === "") {
+        console.log(event)
+        if (!event.target.validity.valid && event.target.validity.badInput) {
+          // do nothing
+        } else if (
+          !event.target.validity.valid ||
+          isNaN(event.target.valueAsNumber)
+        ) {
+          // The user has cleared the date, contribute as undefined
           cell.onChange({
             ...cell.value,
             data: {
               ...cell.value.data,
-              // just set the value to undefined if submitted (enter or clicking out)
-              // escape still works
               date: undefined,
             },
           })
@@ -102,7 +122,7 @@ const Editor: ReturnType<ProvideEditorCallback<DatetimePickerCell>> = cell => {
               ...cell.value.data,
               // use valueAsNumber because valueAsDate is null for "datetime-local"
               // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/datetime-local#technical_summary
-              date: new Date(event.target.valueAsNumber) ?? cellData.date,
+              date: new Date(event.target.valueAsNumber),
             },
           })
         }
@@ -111,10 +131,10 @@ const Editor: ReturnType<ProvideEditorCallback<DatetimePickerCell>> = cell => {
   )
 }
 
-const renderer: CustomRenderer<DatetimePickerCell> = {
+const renderer: CustomRenderer<DatePickerCell> = {
   kind: GridCellKind.Custom,
-  isMatch: (cell: CustomCell): cell is DatetimePickerCell =>
-    (cell.data as any).kind === "DatetimePickerCell",
+  isMatch: (cell: CustomCell): cell is DatePickerCell =>
+    (cell.data as any).kind === "datetime-picker-cell",
   draw: (args, cell) => {
     const { displayDate } = cell.data
     drawTextCell(args, displayDate, cell.contentAlign)
@@ -123,6 +143,30 @@ const renderer: CustomRenderer<DatetimePickerCell> = {
   provideEditor: () => ({
     editor: Editor,
   }),
+  onPaste: (v, d) => {
+    let parseDateTimestamp: number = NaN
+    // We only try to parse the value if it is not empty/undefined/null:
+    if (v) {
+      // Support for unix timestamps (milliseconds since 1970-01-01):
+      parseDateTimestamp = new Number(v).valueOf()
+
+      if (Number.isNaN(parseDateTimestamp)) {
+        // Support for parsing ISO 8601 date strings:
+        parseDateTimestamp = Date.parse(v)
+        if (d.format === "time" && Number.isNaN(parseDateTimestamp)) {
+          // The pasted value was not a valid date string
+          // Try to interpret value as time string instead (HH:mm:ss)
+          parseDateTimestamp = Date.parse(`1970-01-01T${v}Z`)
+        }
+      }
+    }
+    return {
+      ...d,
+      date: Number.isNaN(parseDateTimestamp)
+        ? undefined
+        : new Date(parseDateTimestamp),
+    }
+  },
 }
 
 export default renderer
