@@ -51,11 +51,20 @@ const SidebarNav = ({
   onPageChange,
   pageLinkBaseUrl,
 }: Props): ReactElement | null => {
-  if (appPages.length < 2) {
+  const pageQuantity = appPages.length
+  let shouldAlwaysExpand = false
+  // There are three main scenarios to consider here:
+  // 1. If there are less than two pages, we don't need the navigation, so exit the function.
+  if (pageQuantity < 2) {
     return null
   }
+  // 2. If there are less than 7 pages, we don't need the collapse/expand functionality,
+  // so let's make sure we have a way to bypass those options
+  else if (pageQuantity <= 6) {
+    shouldAlwaysExpand = true
+  }
 
-  // Check localStorage to see if the user has a preference set
+  // 3. If we have more than 6, then let's first check localStorage to see if the user has a preference set
   const isLocalStorageSet = localStorage.getItem("navExpanded") !== null
   const shouldNavExpand =
     isLocalStorageSet && localStorage.getItem("navExpanded") === "true"
@@ -159,7 +168,7 @@ const SidebarNav = ({
 
       {hasSidebarElements && (
         <StyledSidebarNavSeparatorContainer isExpanded={expanded}>
-          {!expanded && (
+          {!expanded && shouldAlwaysExpand === false && (
             <StyledSidebarNavButton
               isExpanded={expanded}
               onClick={toggleExpanded}
@@ -167,7 +176,7 @@ const SidebarNav = ({
               {appPages.length - pagesToShow} More
             </StyledSidebarNavButton>
           )}
-          {expanded && (
+          {expanded && shouldAlwaysExpand === false && (
             <StyledSidebarNavButton
               isExpanded={expanded}
               onClick={toggleExpanded}

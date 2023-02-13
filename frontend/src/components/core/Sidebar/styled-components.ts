@@ -82,6 +82,13 @@ export interface StyledSidebarNavSeparatorContainerProps {
 export const StyledSidebarNavSeparatorContainer =
   styled.div<StyledSidebarNavSeparatorContainerProps>(({ theme }) => ({
     borderBottom: `1px solid ${theme.colors.fadedText10}`,
+
+    // If the separator is visible, but empty, that means we have
+    // sidebar elements below the nav, but less than 6 pages, so
+    // we need to enlarge its margin (which is often occupied by the expand/collapse buttons)
+    "&:empty": {
+      marginTop: theme.spacing.md,
+    },
   }))
 
 export const StyledSidebarNavLinkContainer = styled.div(({ theme }) => ({
