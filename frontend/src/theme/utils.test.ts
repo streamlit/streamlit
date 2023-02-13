@@ -34,7 +34,6 @@ import {
   isColor,
   isPresetTheme,
   toThemeInput,
-  localStorageAvailable,
   getCachedTheme,
   removeCachedTheme,
   setCachedTheme,
@@ -102,17 +101,6 @@ describe("Cached theme helpers", () => {
   afterEach(() => {
     jest.restoreAllMocks()
     window.localStorage.clear()
-  })
-
-  describe("localStorageAvailable", () => {
-    it("returns false if a localStorage function explodes", () => {
-      breakLocalStorage()
-      expect(localStorageAvailable()).toBe(false)
-    })
-
-    it("returns true if all localStorage functions work", () => {
-      expect(localStorageAvailable()).toBe(true)
-    })
   })
 
   describe("getCachedTheme", () => {
