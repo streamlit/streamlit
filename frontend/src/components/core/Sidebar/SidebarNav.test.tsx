@@ -214,14 +214,38 @@ describe("SidebarNav", () => {
     )
   })
 
+  it("doesn't render the StyledSidebarNavButton if pages < 6", () => {
+    const wrapper = shallow(
+      <SidebarNav
+        {...getProps({
+          hasSidebarElements: true,
+          appPages: [
+            { pageName: "my_first_page" },
+            { pageName: "my_second_page" },
+            { pageName: "my_third_page" },
+            { pageName: "my_fourth_page" },
+            { pageName: "my_fifth_page" },
+          ],
+        })}
+      />
+    )
+
+    expect(
+      wrapper
+        .find(StyledSidebarNavSeparatorContainer)
+        .find(StyledSidebarNavButton)
+        .exists()
+    ).toBe(false)
+  })
+
   it("renders the correct StyledSidebarNavButton when collapsed", () => {
     const wrapper = shallow(
       <SidebarNav
         {...getProps({
           hasSidebarElements: true,
           appPages: [
-            { pageName: "streamlit_app" },
-            { pageName: "my_other_page" },
+            { pageName: "my_first_page" },
+            { pageName: "my_second_page" },
             { pageName: "my_third_page" },
             { pageName: "my_fourth_page" },
             { pageName: "my_fifth_page" },
@@ -253,7 +277,21 @@ describe("SidebarNav", () => {
     // returns false.
     mockUseIsOverflowing.mockReturnValueOnce(true)
     const wrapper = shallow(
-      <SidebarNav {...getProps({ hasSidebarElements: true })} />
+      <SidebarNav
+        {...getProps({
+          hasSidebarElements: true,
+          appPages: [
+            { pageName: "my_first_page" },
+            { pageName: "my_second_page" },
+            { pageName: "my_third_page" },
+            { pageName: "my_fourth_page" },
+            { pageName: "my_fifth_page" },
+            { pageName: "my_sixth_page" },
+            { pageName: "my_seventh_page" },
+            { pageName: "my_eight_page" },
+          ],
+        })}
+      />
     )
 
     wrapper.find(StyledSidebarNavButton).prop("onClick")!(mockClickEvent)
@@ -292,7 +330,21 @@ describe("SidebarNav", () => {
 
     // Need mount > shallow here so that toHaveStyleRule can be used.
     const wrapper = mount(
-      <SidebarNav {...getProps({ hasSidebarElements: true })} />
+      <SidebarNav
+        {...getProps({
+          hasSidebarElements: true,
+          appPages: [
+            { pageName: "my_first_page" },
+            { pageName: "my_second_page" },
+            { pageName: "my_third_page" },
+            { pageName: "my_fourth_page" },
+            { pageName: "my_fifth_page" },
+            { pageName: "my_sixth_page" },
+            { pageName: "my_seventh_page" },
+            { pageName: "my_eight_page" },
+          ],
+        })}
+      />
     )
 
     act(() => {
