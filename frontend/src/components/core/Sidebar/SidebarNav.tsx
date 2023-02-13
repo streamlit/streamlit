@@ -48,7 +48,6 @@ const SidebarNav = ({
   collapseSidebar,
   currentPageScriptHash,
   hasSidebarElements,
-  hideParentScrollbar,
   onPageChange,
   pageLinkBaseUrl,
 }: Props): ReactElement | null => {
