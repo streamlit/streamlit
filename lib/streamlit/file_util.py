@@ -17,12 +17,16 @@ import errno
 import fnmatch
 import io
 import os
+from pathlib import Path
 
 from streamlit import env_util, util
 from streamlit.string_util import is_binary_string
 
 # Configuration and credentials are stored inside the ~/.streamlit folder
 CONFIG_FOLDER_NAME = ".streamlit"
+
+# If enableStaticServing is enabled, static file served from the ./static folder
+APP_STATIC_FOLDER_NAME = "static"
 
 
 def get_encoded_file_data(data, encoding="auto"):
@@ -118,6 +122,13 @@ def get_static_dir():
     return os.path.normpath(os.path.join(dirname, "static"))
 
 
+def get_app_static_dir(main_script_path: str) -> str:
+    """Get the folder where app static files live"""
+    main_script_path = Path(main_script_path)
+    static_dir = main_script_path.parent / APP_STATIC_FOLDER_NAME
+    return os.path.abspath(static_dir)
+
+
 def get_assets_dir():
     """Get the folder where static assets live."""
     dirname = os.path.dirname(os.path.normpath(__file__))
@@ -166,6 +177,16 @@ def file_is_in_folder_glob(filepath, folderpath_glob) -> bool:
 
     file_dir = os.path.dirname(filepath) + "/"
     return fnmatch.fnmatch(file_dir, folderpath_glob)
+
+
+def get_directory_size(directory: str) -> int:
+    """Return the size of a directory in bytes."""
+    total_size = 0
+    for dirpath, _, filenames in os.walk(directory):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    return total_size
 
 
 def file_in_pythonpath(filepath) -> bool:

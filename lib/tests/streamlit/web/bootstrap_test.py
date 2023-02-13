@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os.path
 import sys
 import unittest
 from io import StringIO
@@ -20,7 +20,6 @@ from unittest.mock import Mock, patch
 import matplotlib
 
 from streamlit import config
-from streamlit.runtime.secrets import SECRETS_FILE_LOC
 from streamlit.web import bootstrap
 from streamlit.web.bootstrap import NEW_VERSION_TEXT
 from tests import testutil
@@ -309,6 +308,53 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         out = sys.stdout.getvalue()
         self.assertIn("Streamlit requires Git 2.7.0 or later, but you have 1.2.3.", out)
 
+    @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
+    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
+    def test_maybe_print_static_folder_warning_called_once_on_server_start(
+        self, mock_maybe_print_static_folder_warning
+    ):
+        """We should trigger _maybe_print_static_folder_warning on server start."""
+        bootstrap._on_server_start(Mock())
+        mock_maybe_print_static_folder_warning.assert_called_once()
+
+    @patch("os.path.isdir", Mock(return_value=False))
+    @patch("click.secho")
+    def test_maybe_print_static_folder_warning_if_folder_doesnt_exist(self, mock_echo):
+        """We should print a warning when static folder does not exist."""
+
+        with testutil.patch_config_options({"server.enableStaticServing": True}):
+            bootstrap._maybe_print_static_folder_warning("app_root/main_script_path")
+            mock_echo.assert_called_once_with(
+                "WARNING: Static file serving is enabled, but no static folder found "
+                f"at {os.path.abspath('app_root/static')}. To disable static file "
+                f"serving, set server.enableStaticServing to false.",
+                fg="yellow",
+            )
+
+    @patch("os.path.isdir", Mock(return_value=True))
+    @patch(
+        "streamlit.file_util.get_directory_size",
+        Mock(return_value=(2 * bootstrap.MAX_APP_STATIC_FOLDER_SIZE)),
+    )
+    @patch("click.secho")
+    def test_maybe_print_static_folder_warning_if_folder_is_too_large(self, mock_echo):
+        """
+        We should print a warning and disable static files serving when static
+        folder total size is too large.
+        """
+
+        with testutil.patch_config_options(
+            {"server.enableStaticServing": True}
+        ), patch.object(config, "set_option") as mock_set_option:
+            bootstrap._maybe_print_static_folder_warning("app_root/main_script_path")
+            mock_echo.assert_called_once_with(
+                "WARNING: Static folder size is larger than 1GB. "
+                "Static file serving has been disabled.",
+                fg="yellow",
+            )
+            mock_set_option.assert_called_once_with("server.enableStaticServing", False)
+
     @patch("streamlit.config.get_config_options")
     def test_load_config_options(self, patched_get_config_options):
         """Test that bootstrap.load_config_options parses the keys properly and
@@ -337,6 +383,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         )
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
@@ -344,6 +391,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         mock_load_secrets.assert_called_once()
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap.LOGGER.error")
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_error):

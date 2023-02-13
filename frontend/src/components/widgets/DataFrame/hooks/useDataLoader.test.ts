@@ -35,14 +35,16 @@ import {
 } from "src/components/widgets/DataFrame/columns"
 import EditingState from "src/components/widgets/DataFrame/EditingState"
 
-import useDataLoader, {
+import useDataLoader from "./useDataLoader"
+
+import {
   ColumnConfigProps,
   applyColumnConfig,
   getColumnConfig,
   getColumnType,
   INDEX_IDENTIFIER,
   COLUMN_POSITION_PREFIX,
-} from "./useDataLoader"
+} from "./useColumnLoader"
 
 const MOCK_COLUMNS: BaseColumn[] = [
   NumberColumn({

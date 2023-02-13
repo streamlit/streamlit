@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.17.0"  # PEP-440
+VERSION = "1.18.0"  # PEP-440
 
 NAME = "streamlit"
 
@@ -62,8 +62,9 @@ INSTALL_REQUIRES = [
 SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
     "gitpython!=3.1.19",
     "pydeck>=0.1.dev5",
-    # 5.0 has a fix for etag header: https://github.com/tornadoweb/tornado/issues/2262
-    "tornado>=5.0",
+    # Tornado 6.0.3 was the current Tornado version when Python 3.8, our earliest supported Python version,
+    # was released (Oct 14, 2019).
+    "tornado>=6.0.3",
 ]
 
 if not os.getenv("SNOWPARK_CONDA_BUILD"):
