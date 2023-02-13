@@ -181,8 +181,17 @@ describe("EditingState class", () => {
       `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`
     )
   })
-  it("converts JSON to editing state via from JSON", () => {
-    const MOCK_WIDGET_STATE = `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`
+
+  it.each([
+    [
+      `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`,
+    ],
+    [`{"edited_cells":{},"added_rows":[],"deleted_rows":[]}`],
+    [
+      `{"edited_cells":{},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[]}`,
+    ],
+    [`{"edited_cells":{},"added_rows":[],"deleted_rows":[1]}`],
+  ])("converts JSON to editing state: %p", (editingStateJson: string) => {
     const NUM_OF_ROWS = 3
     const editingState = new EditingState(NUM_OF_ROWS)
 
@@ -212,8 +221,8 @@ describe("EditingState class", () => {
         id: "column_2",
       }),
     ]
-    editingState.fromJson(MOCK_WIDGET_STATE, MOCK_COLUMNS)
+    editingState.fromJson(editingStateJson, MOCK_COLUMNS)
     // Test again if the edits where applied correctly:
-    expect(editingState.toJson(MOCK_COLUMNS)).toEqual(MOCK_WIDGET_STATE)
+    expect(editingState.toJson(MOCK_COLUMNS)).toEqual(editingStateJson)
   })
 })
