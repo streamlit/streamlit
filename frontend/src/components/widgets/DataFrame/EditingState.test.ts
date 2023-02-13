@@ -181,4 +181,39 @@ describe("EditingState class", () => {
       `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`
     )
   })
+  it("converts JSON to editing state via from JSON", () => {
+    const MOCK_WIDGET_STATE = `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`
+    const NUM_OF_ROWS = 3
+    const editingState = new EditingState(NUM_OF_ROWS)
+
+    const MOCK_COLUMN_PROPS = {
+      id: "column_1",
+      title: "column_1",
+      indexNumber: 0,
+      arrowType: {
+        pandas_type: "unicode",
+        numpy_type: "object",
+      },
+      isEditable: false,
+      isHidden: false,
+      isIndex: false,
+      isStretched: false,
+    } as BaseColumnProps
+
+    const MOCK_COLUMNS = [
+      TextColumn({
+        ...MOCK_COLUMN_PROPS,
+        indexNumber: 0,
+        id: "column_1",
+      }),
+      TextColumn({
+        ...MOCK_COLUMN_PROPS,
+        indexNumber: 1,
+        id: "column_2",
+      }),
+    ]
+    editingState.fromJson(MOCK_WIDGET_STATE, MOCK_COLUMNS)
+    // Test again if the edits where applied correctly:
+    expect(editingState.toJson(MOCK_COLUMNS)).toEqual(MOCK_WIDGET_STATE)
+  })
 })
