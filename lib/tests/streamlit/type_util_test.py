@@ -16,6 +16,7 @@ import unittest
 from collections import namedtuple
 from datetime import date
 from decimal import Decimal
+from typing import Any
 from unittest.mock import patch
 
 import numpy as np
@@ -27,6 +28,7 @@ from parameterized import parameterized
 
 from streamlit import type_util
 from streamlit.type_util import (
+    DataFormat,
     convert_anything_to_df,
     data_frame_to_bytes,
     fix_arrow_incompatible_column_types,
@@ -40,8 +42,10 @@ from tests.streamlit.data_mocks import (
     INTERVAL_TYPES_DF,
     LIST_TYPES_DF,
     NUMBER_TYPES_DF,
+    SHARED_TEST_CASES,
     SPECIAL_TYPES_DF,
     UNSUPPORTED_TYPES_DF,
+    TestCaseMetadata,
     TestObject,
 )
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
@@ -124,6 +128,21 @@ class TypeUtilTest(unittest.TestCase):
             data_frame_to_bytes(df2)
         except Exception as ex:
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
+
+    @parameterized.expand(
+        SHARED_TEST_CASES,
+    )
+    def test_convert_anything_to_df(
+        self,
+        input_data: Any,
+        metadata: TestCaseMetadata,
+    ):
+        """Test that `convert_anything_to_df` correctly converts
+        a variety of types to a DataFrame.
+        """
+        converted_df = type_util.convert_anything_to_df(input_data)
+        self.assertEqual(converted_df.shape[0], metadata.expected_rows)
+        self.assertEqual(converted_df.shape[1], metadata.expected_cols)
 
     def test_convert_anything_to_df_ensure_copy(self):
         """Test that `convert_anything_to_df` creates a copy of the original
@@ -434,4 +453,78 @@ dtype: object""",
                 is_snowpark_data_object(
                     snowpark_session.sql("SELECT 40+2 as COL1").cache_result()
                 )
+            )
+
+    @parameterized.expand(
+        SHARED_TEST_CASES,
+    )
+    def test_determine_data_format(
+        self,
+        input_data: Any,
+        metadata: TestCaseMetadata,
+    ):
+        """Test that `determine_data_format` correctly determines the
+        data format of a variety of data structures/types.
+        """
+        data_format = type_util.determine_data_format(input_data)
+        self.assertEqual(
+            data_format,
+            metadata.expected_data_format,
+            f"{str(input_data)} is expected to be {metadata.expected_data_format} but was {data_format}.",
+        )
+
+    @parameterized.expand(
+        SHARED_TEST_CASES,
+    )
+    def test_convert_df_to_data_format(
+        self,
+        input_data: Any,
+        metadata: TestCaseMetadata,
+    ):
+        """Test that `convert_df_to_data_format` correctly converts a
+        DataFrame to the specified data format.
+        """
+        converted_df = type_util.convert_anything_to_df(input_data)
+        self.assertEqual(converted_df.shape[0], metadata.expected_rows)
+        self.assertEqual(converted_df.shape[1], metadata.expected_cols)
+
+        if metadata.expected_data_format == DataFormat.UNKNOWN:
+            with self.assertRaises(ValueError):
+                type_util.convert_df_to_data_format(
+                    converted_df, metadata.expected_data_format
+                )
+            # We don't have to do any other tests for unknown data formats.
+        else:
+            converted_data = type_util.convert_df_to_data_format(
+                converted_df, metadata.expected_data_format
+            )
+
+            # Some data formats are converted to DataFrames instead of
+            # the original data type/structure.
+            if metadata.expected_data_format in [
+                DataFormat.SNOWPARK_OBJECT,
+                DataFormat.PYSPARK_OBJECT,
+                DataFormat.PANDAS_INDEX,
+                DataFormat.PANDAS_STYLER,
+                DataFormat.EMPTY,
+            ]:
+                assert isinstance(converted_data, pd.DataFrame)
+                self.assertEqual(converted_data.shape[0], metadata.expected_rows)
+                self.assertEqual(converted_data.shape[1], metadata.expected_cols)
+            else:
+                self.assertEqual(type(converted_data), type(input_data))
+                # Sets in python are unordered, so we can't compare them this way.
+                if metadata.expected_data_format != DataFormat.SET_OF_VALUES:
+                    self.assertEqual(str(converted_data), str(input_data))
+                    pd.testing.assert_frame_equal(
+                        converted_df, type_util.convert_anything_to_df(converted_data)
+                    )
+
+    def test_convert_df_to_data_format_with_unknown_data_format(self):
+        """Test that `convert_df_to_data_format` raises a ValueError when
+        passed an unknown data format.
+        """
+        with self.assertRaises(ValueError):
+            type_util.convert_df_to_data_format(
+                pd.DataFrame({"a": [1, 2, 3]}), DataFormat.UNKNOWN
             )
