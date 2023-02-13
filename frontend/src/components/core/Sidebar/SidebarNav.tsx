@@ -22,7 +22,6 @@ import * as reactDeviceDetect from "react-device-detect"
 import { IAppPage } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
 import { EmojiIcon } from "src/components/shared/Icon"
-import { useIsOverflowing } from "src/lib/Hooks"
 
 import {
   StyledSidebarNavContainer,
@@ -70,28 +69,16 @@ const SidebarNav = ({
     hasSidebarElements === true ? 6 : pageLimit
   )
   const navItemsRef = useRef<HTMLUListElement>(null)
-  const isOverflowing = useIsOverflowing(navItemsRef)
   // We use React.useContext here instead of destructuring it in the imports
   // above so that we can mock it in tests.
   const { getBaseUriParts } = React.useContext(AppContext)
-
-  const onMouseOver = useCallback(() => {
-    if (isOverflowing) {
-      hideParentScrollbar(true)
-    }
-  }, [isOverflowing, hideParentScrollbar])
-
-  const onMouseOut = useCallback(
-    () => hideParentScrollbar(false),
-    [hideParentScrollbar]
-  )
 
   const toggleExpanded = useCallback(() => {
     if (!expanded) {
       setExpanded(true)
       setPagesToShow(-1)
       localStorage.setItem("navExpanded", "true")
-    } else if (expanded) {
+    } else {
       setExpanded(false)
       setPagesToShow(6)
       localStorage.setItem("navExpanded", "false")
@@ -103,10 +90,7 @@ const SidebarNav = ({
       <StyledSidebarNavItems
         ref={navItemsRef}
         isExpanded={expanded}
-        isOverflowing={isOverflowing}
         hasSidebarElements={hasSidebarElements}
-        onMouseOver={onMouseOver}
-        onMouseOut={onMouseOut}
       >
         {appPages
           .slice(0, pagesToShow)
@@ -175,10 +159,7 @@ const SidebarNav = ({
       </StyledSidebarNavItems>
 
       {hasSidebarElements && (
-        <StyledSidebarNavSeparatorContainer
-          isExpanded={expanded}
-          isOverflowing={isOverflowing}
-        >
+        <StyledSidebarNavSeparatorContainer isExpanded={expanded}>
           {!expanded && (
             <StyledSidebarNavButton
               isExpanded={expanded}

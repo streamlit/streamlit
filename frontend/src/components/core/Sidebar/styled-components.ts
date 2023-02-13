@@ -22,10 +22,6 @@ export interface StyledSidebarProps {
   sidebarWidth: string
 }
 
-export interface StyledSidebarNavButtonProps {
-  isExpanded: boolean
-}
-
 export const StyledSidebar = styled.section<StyledSidebarProps>(
   ({ theme, isCollapsed, sidebarWidth }) => {
     const minWidth = isCollapsed ? 0 : Math.min(244, window.innerWidth)
@@ -62,12 +58,11 @@ export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
 
 export interface StyledSidebarNavItemsProps {
   isExpanded: boolean
-  isOverflowing: boolean
   hasSidebarElements: boolean
 }
 
 export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
-  ({ isExpanded, isOverflowing, hasSidebarElements, theme }) => {
+  ({ isExpanded, hasSidebarElements, theme }) => {
     const isExpandedPaddingBottom = isExpanded ? theme.spacing.threeXS : 0
     const paddingBottom = hasSidebarElements ? isExpandedPaddingBottom : 0
 
@@ -82,7 +77,6 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
 
 export interface StyledSidebarNavSeparatorContainerProps {
   isExpanded: boolean
-  isOverflowing: boolean
 }
 
 export const StyledSidebarNavSeparatorContainer =
@@ -258,6 +252,10 @@ export const StyledResizeHandle = styled.div(({ theme }) => ({
     backgroundImage: `linear-gradient(to right, transparent 20%, ${theme.colors.fadedText20} 28%, transparent 36%)`,
   },
 }))
+
+export interface StyledSidebarNavButtonProps {
+  isExpanded: boolean
+}
 
 export const StyledSidebarNavButton =
   styled.button<StyledSidebarNavButtonProps>(({ theme }) => ({
