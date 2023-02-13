@@ -96,6 +96,10 @@ export const StyledAppViewBlockContainer =
           : bottomEmbedPadding,
         minWidth: isWideMode ? "auto" : undefined,
         maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
+
+        [`@media print`]: {
+          minWidth: "100%",
+        },
       }
     }
   )
