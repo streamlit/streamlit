@@ -39,8 +39,6 @@ class CacheStorageContext:
 
 
 class CacheStorage(Protocol):
-    WORK_WITH_PERSIST_KEYWORD: ClassVar[bool]
-
     @abstractmethod
     def get(self, key: str) -> bytes:
         """Returns the stored value for the key or None if the key is not present"""

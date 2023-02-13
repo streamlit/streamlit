@@ -55,8 +55,6 @@ class OpenSourceCacheStorageManager(CacheStorageManager):
 
 
 class OpenSourceCacheStorage(CacheStorage):
-    WORK_WITH_PERSIST_KEYWORD = True
-
     def __init__(self, context: CacheStorageContext):
         self.function_key = context.function_key
         self.persist = context.persist
