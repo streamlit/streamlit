@@ -22,6 +22,7 @@ import * as reactDeviceDetect from "react-device-detect"
 import { IAppPage } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
 import { EmojiIcon } from "src/components/shared/Icon"
+import { localStorageAvailable } from "src/lib/storageUtils"
 
 import {
   StyledSidebarNavContainer,
@@ -65,9 +66,9 @@ const SidebarNav = ({
   }
 
   // 3. If we have more than 6, then let's first check localStorage to see if the user has a preference set
-  const isLocalStorageSet = localStorage.getItem("navExpanded") !== null
-  const shouldNavExpand =
-    isLocalStorageSet && localStorage.getItem("navExpanded") === "true"
+  const shouldNavExpand = localStorageAvailable()
+    ? localStorage.getItem("navExpanded") === "true"
+    : false
   const pageLimit = shouldNavExpand === true ? appPages.length : 6
 
   const [expanded, setExpanded] = useState(
