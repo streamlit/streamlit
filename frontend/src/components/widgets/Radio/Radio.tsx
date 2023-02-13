@@ -50,7 +50,9 @@ function Radio(props: Props): ReactElement {
     return storedValue !== undefined ? storedValue : element.default
   }
 
+  // Tracks value specified by user via UI
   const [value, setStateValue] = useState(initialValue())
+  // Tracks whether the value was changed by the user
   const [source, setStateSource] = useState({ fromUi: false })
 
   const updateFromProtobuf = (): void => {
@@ -81,6 +83,10 @@ function Radio(props: Props): ReactElement {
     setStateSource({ fromUi: true })
   }
 
+  /**
+   * If we're part of a clear_on_submit form, this will be called when our
+   * form is submitted. Restore our default value and update the WidgetManager.
+   */
   const onFormCleared = (): void => {
     setStateValue(element.default)
     setStateSource({ fromUi: true })
@@ -92,16 +98,18 @@ function Radio(props: Props): ReactElement {
     } else {
       setStateSource({ fromUi: false })
     }
-    // Add form-clear event handler.
+    // Add form-clear event handler
     const formListener = widgetMgr.addFormClearedListener(
       element.formId,
       onFormCleared
     )
+    // Remove form-clear listener when component unmounts
     return function cleanup() {
       formListener.disconnect()
     }
   }, [])
 
+  // Commit state value/source to the WidgetStateManager.
   useEffect(() => {
     props.widgetMgr.setIntValue(element, value, source)
   }, [value, source])
@@ -110,6 +118,7 @@ function Radio(props: Props): ReactElement {
     maybeUpdateFromProtobuf()
   })
 
+  // Verify options has at least one choice, otherwise disable the widget
   checkNoOptions()
 
   return (
