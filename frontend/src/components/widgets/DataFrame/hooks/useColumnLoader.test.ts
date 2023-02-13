@@ -245,16 +245,18 @@ describe("useColumnLoader hook", () => {
       return useColumnLoader(element, data, false)
     })
 
-    expect(result.current.columns.length).toBe(3)
+    const { columns } = result.current
 
-    expect(result.current.columns[0].title).toBe("")
-    expect(result.current.columns[0].isIndex).toBe(true)
+    expect(columns.length).toBe(3)
 
-    expect(result.current.columns[1].title).toBe("c1")
-    expect(result.current.columns[1].isIndex).toBe(false)
+    expect(columns[0].title).toBe("")
+    expect(columns[0].isIndex).toBe(true)
 
-    expect(result.current.columns[2].title).toBe("c2")
-    expect(result.current.columns[2].isIndex).toBe(false)
+    expect(columns[1].title).toBe("c1")
+    expect(columns[1].isIndex).toBe(false)
+
+    expect(columns[2].title).toBe("c2")
+    expect(columns[2].isIndex).toBe(false)
   })
 
   it("activates colum stretch if configured by user", () => {

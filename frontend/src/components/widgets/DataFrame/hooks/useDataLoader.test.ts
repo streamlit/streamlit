@@ -24,97 +24,49 @@ import { Arrow as ArrowProto } from "src/autogen/proto"
 import { UNICODE } from "src/lib/mocks/arrow"
 import {
   BaseColumn,
-  ObjectColumn,
   TextColumn,
-  BooleanColumn,
-  CategoricalColumn,
-  ListColumn,
-  NumberColumn,
-  ColumnCreator,
   isErrorCell,
 } from "src/components/widgets/DataFrame/columns"
 import EditingState from "src/components/widgets/DataFrame/EditingState"
 
 import useDataLoader from "./useDataLoader"
 
-import {
-  ColumnConfigProps,
-  applyColumnConfig,
-  getColumnConfig,
-  getColumnType,
-  INDEX_IDENTIFIER,
-  COLUMN_POSITION_PREFIX,
-} from "./useColumnLoader"
-
+// These columns are based on the UNICODE mock arrow table:
 const MOCK_COLUMNS: BaseColumn[] = [
-  NumberColumn({
-    id: "index_col",
-    title: "",
+  TextColumn({
+    arrowType: { meta: null, numpy_type: "object", pandas_type: "unicode" },
+    id: "index-0",
     indexNumber: 0,
-    arrowType: {
-      pandas_type: "int64",
-      numpy_type: "int64",
-    },
     isEditable: false,
     isHidden: false,
     isIndex: true,
     isStretched: false,
-  }),
-  NumberColumn({
-    id: "column_1",
-    title: "column_1",
-    indexNumber: 1,
-    arrowType: {
-      pandas_type: "int64",
-      numpy_type: "int64",
-    },
-    isEditable: false,
-    isHidden: false,
-    isIndex: false,
-    isStretched: false,
+    title: "",
   }),
   TextColumn({
-    id: "column_2",
-    title: "column_2",
-    indexNumber: 2,
-    arrowType: {
-      pandas_type: "unicode",
-      numpy_type: "object",
-    },
+    arrowType: { meta: null, numpy_type: "object", pandas_type: "unicode" },
+    id: "column-c1-0",
+    indexNumber: 1,
     isEditable: false,
     isHidden: false,
     isIndex: false,
     isStretched: false,
+    title: "c1",
+  }),
+  TextColumn({
+    arrowType: { meta: null, numpy_type: "object", pandas_type: "unicode" },
+    columnTypeMetadata: undefined,
+    id: "column-c2-1",
+    indexNumber: 2,
+    isEditable: false,
+    isHidden: false,
+    isIndex: false,
+    isStretched: false,
+    title: "c2",
   }),
 ]
 
 describe("useDataLoader hook", () => {
-  it("creates columns from the Arrow data", () => {
-    const element = ArrowProto.create({
-      data: UNICODE,
-    })
-    const data = new Quiver(element)
-    const numRows = data.dimensions.rows
-
-    const { result } = renderHook(() => {
-      const editingState = React.useRef<EditingState>(
-        new EditingState(numRows)
-      )
-      return useDataLoader(element, data, numRows, false, editingState)
-    })
-
-    expect(result.current.columns.length).toBe(3)
-
-    expect(result.current.columns[0].title).toBe("")
-    expect(result.current.columns[0].isIndex).toBe(true)
-
-    expect(result.current.columns[1].title).toBe("c1")
-    expect(result.current.columns[1].isIndex).toBe(false)
-
-    expect(result.current.columns[2].title).toBe("c2")
-    expect(result.current.columns[2].isIndex).toBe(false)
-  })
-
   it("creates a glide-data-grid compatible callback to access cells", () => {
     const element = ArrowProto.create({
       data: UNICODE,
@@ -126,32 +78,29 @@ describe("useDataLoader hook", () => {
       const editingState = React.useRef<EditingState>(
         new EditingState(numRows)
       )
-      return useDataLoader(element, data, numRows, false, editingState)
+      return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
     })
-
-    const { columns } = result.current
-    expect(columns.length).toBe(3)
 
     // Row 1
     expect(
-      columns[0].getCellValue(result.current.getCellContent([0, 0]))
+      MOCK_COLUMNS[0].getCellValue(result.current.getCellContent([0, 0]))
     ).toBe("i1")
     expect(
-      columns[1].getCellValue(result.current.getCellContent([1, 0]))
+      MOCK_COLUMNS[1].getCellValue(result.current.getCellContent([1, 0]))
     ).toBe("foo")
     expect(
-      columns[2].getCellValue(result.current.getCellContent([2, 0]))
+      MOCK_COLUMNS[2].getCellValue(result.current.getCellContent([2, 0]))
     ).toBe("1")
 
     // Row 2
     expect(
-      columns[0].getCellValue(result.current.getCellContent([0, 1]))
+      MOCK_COLUMNS[0].getCellValue(result.current.getCellContent([0, 1]))
     ).toBe("i2")
     expect(
-      columns[1].getCellValue(result.current.getCellContent([1, 1]))
+      MOCK_COLUMNS[1].getCellValue(result.current.getCellContent([1, 1]))
     ).toBe("bar")
     expect(
-      columns[2].getCellValue(result.current.getCellContent([2, 1]))
+      MOCK_COLUMNS[2].getCellValue(result.current.getCellContent([2, 1]))
     ).toBe("2")
 
     // if row out of bounds. return error cell
@@ -180,14 +129,12 @@ describe("useDataLoader hook", () => {
         data: "edited",
         allowOverlay: true,
       })
-      return useDataLoader(element, data, numRows, false, editingState)
+      return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
     })
 
     // Check if value got edited
     expect(
-      result.current.columns[1].getCellValue(
-        result.current.getCellContent([1, 0])
-      )
+      MOCK_COLUMNS[1].getCellValue(result.current.getCellContent([1, 0]))
     ).toEqual("edited")
   })
 
@@ -205,14 +152,12 @@ describe("useDataLoader hook", () => {
         new EditingState(numRows)
       )
       editingState.current.deleteRow(0)
-      return useDataLoader(element, data, numRows, false, editingState)
+      return useDataLoader(data, MOCK_COLUMNS, numRows, editingState)
     })
 
     // Should return value of second row
     expect(
-      result.current.columns[1].getCellValue(
-        result.current.getCellContent([1, 0])
-      )
+      MOCK_COLUMNS[1].getCellValue(result.current.getCellContent([1, 0]))
     ).toEqual("bar")
   })
 })
