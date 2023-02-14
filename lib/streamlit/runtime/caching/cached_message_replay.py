@@ -282,6 +282,9 @@ class CachedMessageReplayContext(threading.local):
             return
         if len(self._cached_message_stack) >= 1:
             id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id)
+            # Arrow dataframes have an ID but only set it when used as data editor
+            # widgets, so we have to check that the ID has been actually set to
+            # know if an element is a widget.
             if isinstance(element_proto, Widget) and element_proto.id:
                 wid = element_proto.id
                 # TODO replace `Message` with a more precise type

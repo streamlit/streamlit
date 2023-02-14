@@ -971,7 +971,7 @@ class WidgetReplayInteractionTest(InteractiveScriptTests):
 
 class WidgetReplayTest(InteractiveScriptTests):
     def test_arrow_replay(self):
-        """Regression test for GH#6103"""
+        """Regression test for https://github.com/streamlit/streamlit/issues/6103"""
         script = self.script_from_filename(__file__, "arrow_replay.py")
 
         sr = script.run()
