@@ -31,6 +31,19 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
   fontFamily: theme.genericFonts.bodyFont,
   lineHeight: theme.lineHeights.normal,
   verticalAlign: "middle",
+  display: "flex",
+
+  // Styles to truncate the text inside the StyledStreamlitMarkdown div.
+  // This ensures we can truncate the label while keeping "display: flex" on the
+  // element above, so we can have the help tooltip icon next to the label.
+  "& > div": {
+    overflow: "hidden",
+
+    "& > p": {
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+    },
+  },
 }))
 
 export const StyledMetricLabelText = styled(
