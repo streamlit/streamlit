@@ -214,7 +214,7 @@ function useColumnLoader(
       return !column.isHidden
     })
 
-  // If all columns got filtered out, we add a an empty index column
+  // If all columns got filtered out, we add an empty index column
   // to prevent errors from glide-data-grid.
   const columns =
     configuredColumns.length > 0

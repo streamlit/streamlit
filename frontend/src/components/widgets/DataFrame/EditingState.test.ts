@@ -191,6 +191,7 @@ describe("EditingState class", () => {
       `{"edited_cells":{},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[]}`,
     ],
     [`{"edited_cells":{},"added_rows":[],"deleted_rows":[1]}`],
+    [`{"edited_cells":{"0:0":"foo"},"added_rows":[],"deleted_rows":[]}`],
   ])("converts JSON to editing state: %p", (editingStateJson: string) => {
     const NUM_OF_ROWS = 3
     const editingState = new EditingState(NUM_OF_ROWS)
@@ -222,7 +223,7 @@ describe("EditingState class", () => {
       }),
     ]
     editingState.fromJson(editingStateJson, MOCK_COLUMNS)
-    // Test again if the edits where applied correctly:
+    // Test again if the edits were applied correctly:
     expect(editingState.toJson(MOCK_COLUMNS)).toEqual(editingStateJson)
   })
 })

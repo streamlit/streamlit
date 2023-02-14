@@ -113,7 +113,6 @@ class EditingState {
    */
   fromJson(editingStateJson: string, columns: BaseColumn[]): void {
     const editingState = JSON.parse(editingStateJson)
-    console.log(editingState)
     // Map columns to column index
     const columnsByIndex = new Map<number, BaseColumn>()
     columns.forEach(column => {
