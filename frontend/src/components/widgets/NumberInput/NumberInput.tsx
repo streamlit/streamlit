@@ -223,46 +223,33 @@ class NumberInput extends React.PureComponent<Props, State> {
     this.setState({ isFocused: true })
   }
 
-  private static findIndexOfSpecifier(format: string): number | undefined {
-    const formatSpecifiers = ["%d", "%e", "%f", "%g", "%i", "%u"]
-    let resultIndex: number | undefined
-    formatSpecifiers.forEach((specifier: string) => {
-      const index = format.indexOf(specifier)
-      if (index >= 0) {
-        if (resultIndex === undefined) {
-          resultIndex = index
-        } else {
-          throw new Error("Malformed format string.")
-        }
-      }
-    })
-    return resultIndex
-  }
-
   private getNumberFromFormattedString(value: string): number | undefined {
     const format = getNonEmptyString(this.props.element.format)
     if (!format) {
       throw new Error("No format object available on number input element.")
     }
 
-    const specifierIndex = NumberInput.findIndexOfSpecifier(format)
-    if (specifierIndex === undefined) {
+    const specifier = /(%[^%]?.*?(d|e|f|g|i|u))/
+    const match = specifier.exec(format)
+
+    if (match === null) {
       throw new Error("No specifier in format.")
     }
 
-    const formatPrefix = format.substring(0, specifierIndex)
+    const formatPrefix = format.slice(0, match.index)
     const unescapeFormatPrefix = formatPrefix.replaceAll("%%", "%")
-    const valuePrefix = value.substring(0, unescapeFormatPrefix.length)
+    const valuePrefix = value.slice(0, unescapeFormatPrefix.length)
 
     if (valuePrefix !== unescapeFormatPrefix) {
       return undefined
     }
 
-    const formatSuffix = format.substring(specifierIndex + 2)
+    const formatSuffix = format.slice(match.length)
     const unescapedFormatSuffix = formatSuffix.replaceAll("%%", "%")
-    const valueSuffix = value.substring(
-      value.length - unescapedFormatSuffix.length
-    )
+    const valueSuffix =
+      unescapedFormatSuffix.length > 0
+        ? value.slice(-unescapedFormatSuffix.length)
+        : ""
 
     const suffixIndex = value.length - unescapedFormatSuffix.length
     if (valueSuffix !== unescapedFormatSuffix) {
