@@ -189,7 +189,7 @@ class CachedFunc:
         self._info = info
         self._function_key = _make_function_key(info.cache_type, info.func)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> Any:
         """The wrapper. We'll only call our underlying function on a cache miss."""
 
         name = self._info.func.__qualname__
