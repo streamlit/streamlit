@@ -41,12 +41,15 @@ class CacheStorageContext:
 class CacheStorage(Protocol):
     @abstractmethod
     def get(self, key: str) -> bytes:
-        """Returns the stored value for the key or None if the key is not present"""
+        """
+        Returns the stored value for the key or raises
+        a CacheStorageKeyNotFoundError if the key is not found
+        """
         raise NotImplementedError
 
     @abstractmethod
     def set(self, key: str, value: bytes) -> None:
-        """Sets the value for a given key with a ttl expressed in milliseconds"""
+        """Sets the value for a given key"""
         raise NotImplementedError
 
     @abstractmethod
@@ -56,26 +59,33 @@ class CacheStorage(Protocol):
 
     @abstractmethod
     def clear(self) -> None:
-        """Expires all keys for the app"""
+        """Remove all keys for the storage"""
         raise NotImplementedError
 
-    # TODO[Karen]: Think about should we have a close method for storage?
-    #  to potentially close the connection to the storage in case of a remote storage
-    @abstractmethod
     def close(self) -> None:
-        """Closes the cache storage"""
-        raise NotImplementedError
+        """
+        Closes the cache storage, it is optional to implement, and should be used
+        to close open resources, before we delete the storage instance.
+        e.g. close the database connection etc.
+        """
+        pass
 
-    @abstractmethod
     def get_stats(self) -> list[int]:
-        """Returns a list of stats in bytes for the cache storage per item"""
-        raise NotImplementedError
+        """
+        Returns a list of sizes in bytes for the cache storage per item,
+        This method is optional to implement.
+        """
+        return []
 
 
 class CacheStorageManager(Protocol):
     @abstractmethod
     def create(self, context: CacheStorageContext) -> CacheStorage:
-        """Creates a new cache storage instance"""
+        """
+        Creates a new cache storage instance
+        Please note that the ttl, max_entries and other context fields are specific
+        for whole storage, not for each key.
+        """
         raise NotImplementedError
 
     def clear_all(self) -> None:
@@ -94,5 +104,8 @@ class CacheStorageManager(Protocol):
         Checks if the context is valid for the storage manager.
         This method should not return anything, but log message or raise an exception
         if the context is invalid.
+
+        In case of raising an exception, we not handle it and let the exception to be
+        raised.
         """
         pass

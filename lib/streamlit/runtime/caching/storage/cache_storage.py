@@ -117,7 +117,7 @@ class OpenSourceCacheStorage(CacheStorage):
             self._remove_from_disk_cache(key)
 
     def clear(self) -> None:
-        """Expires all keys for the current storage"""
+        """Delete all keys for the current storage"""
 
         with self._mem_cache_lock:
             # We keep a lock for the entirety of the clear operation to avoid
@@ -183,10 +183,7 @@ class OpenSourceCacheStorage(CacheStorage):
 
     def _remove_from_mem_cache(self, key: str) -> None:
         with self._mem_cache_lock:
-            try:
-                del self._mem_cache[key]
-            except KeyError:
-                pass
+            self._mem_cache.pop(key, None)
 
     def _remove_from_disk_cache(self, key: str) -> None:
         """Delete a cache file from disk. If the file does not exist on disk,
