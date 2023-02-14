@@ -16,223 +16,36 @@
 
 import React from "react"
 
-import { merge } from "lodash"
 import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
 
 import { Quiver } from "src/lib/Quiver"
-import { Arrow as ArrowProto } from "src/autogen/proto"
-import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
-import { logWarning, logError } from "src/lib/log"
+import { logError } from "src/lib/log"
 
-import {
-  getColumnTypeFromArrow,
-  getAllColumnsFromArrow,
-  getCellFromArrow,
-  getEmptyIndexColumn,
-} from "src/components/widgets/DataFrame/arrowUtils"
+import { getCellFromArrow } from "src/components/widgets/DataFrame/arrowUtils"
 import EditingState from "src/components/widgets/DataFrame/EditingState"
 import {
   BaseColumn,
-  BaseColumnProps,
   getErrorCell,
-  ObjectColumn,
-  ColumnTypes,
-  ColumnCreator,
 } from "src/components/widgets/DataFrame/columns"
 
-// Using this ID for column config will apply the config to all index columns
-export const INDEX_IDENTIFIER = "index"
-// Prefix used in the config column mapping when referring to a column via the numeric position
-export const COLUMN_POSITION_PREFIX = "col:"
-
-/**
- * Options to configure columns.
- */
-export interface ColumnConfigProps {
-  width?: number
-  title?: string
-  type?: string
-  hidden?: boolean
-  editable?: boolean
-  metadata?: Record<string, unknown>
-  alignment?: string
-}
-
-/**
- * Apply the user-defined column configuration if supplied.
- *
- * @param columnProps - The column properties to apply the config to.
- * @param columnConfigMapping - The user-defined column configuration mapping.
- *
- * @return the column properties with the config applied.
- */
-export function applyColumnConfig(
-  columnProps: BaseColumnProps,
-  columnConfigMapping: Map<string | number, ColumnConfigProps>
-): BaseColumnProps {
-  if (!columnConfigMapping) {
-    // No column config configured
-    return columnProps
-  }
-
-  let columnConfig
-  if (columnConfigMapping.has(columnProps.title)) {
-    // Config is configured based on the column title
-    columnConfig = columnConfigMapping.get(columnProps.title)
-  } else if (
-    columnConfigMapping.has(
-      `${COLUMN_POSITION_PREFIX}${columnProps.indexNumber}`
-    )
-  ) {
-    // Config is configured based on the column position, e.g. col:0 -> first column
-    columnConfig = columnConfigMapping.get(
-      `${COLUMN_POSITION_PREFIX}${columnProps.indexNumber}`
-    )
-  } else if (
-    columnProps.isIndex &&
-    columnConfigMapping.has(INDEX_IDENTIFIER)
-  ) {
-    // Config is configured for the index column (or all index columns for multi-index)
-    columnConfig = columnConfigMapping.get(INDEX_IDENTIFIER)
-  }
-
-  if (!columnConfig) {
-    // No column config found for this column
-    return columnProps
-  }
-
-  // This will update all column props with the user-defined config for all
-  // configuration option that are not undefined:
-  return merge(
-    { ...columnProps },
-    {
-      title: columnConfig.title,
-      width: columnConfig.width,
-      customType: columnConfig.type?.toLowerCase().trim(),
-      isEditable: columnConfig.editable,
-      isHidden: columnConfig.hidden,
-      columnTypeMetadata: columnConfig.metadata,
-      contentAlignment: columnConfig.alignment,
-    }
-  ) as BaseColumnProps
-}
-
-/**
- * Extracts the user-defined column configuration from the proto message.
- *
- * @param element - The proto message of the dataframe element.
- *
- * @returns the user-defined column configuration.
- */
-export function getColumnConfig(element: ArrowProto): Map<string, any> {
-  if (!element.columns) {
-    return new Map()
-  }
-  try {
-    return new Map(Object.entries(JSON.parse(element.columns)))
-  } catch (error) {
-    // This is not expected to happen, but if it does, we'll return an empty map
-    // and log the error to the console.
-    logError(error)
-    return new Map()
-  }
-}
-
-type DataLoaderReturn = {
-  columns: BaseColumn[]
-} & Pick<DataEditorProps, "getCellContent">
-
-/**
- * Get the column type (creator class of column type) for the given column properties.
- *
- * @param column - The column properties.
- *
- * @returns the column creator of the corresponding column type.
- */
-export function getColumnType(column: BaseColumnProps): ColumnCreator {
-  // Create a column instance based on the column properties
-  let ColumnType: ColumnCreator | undefined
-  if (notNullOrUndefined(column.customType)) {
-    if (ColumnTypes.has(column.customType)) {
-      ColumnType = ColumnTypes.get(column.customType)
-    } else {
-      logWarning(
-        `Unknown column type configured in column configuration: ${column.customType}`
-      )
-    }
-  }
-  if (isNullOrUndefined(ColumnType)) {
-    // Load based on arrow type
-    ColumnType = getColumnTypeFromArrow(column.arrowType)
-  }
-  return ColumnType
-}
+type DataLoaderReturn = Pick<DataEditorProps, "getCellContent">
 
 /**
  * Custom hook that handles all data loading capabilities for the interactive data table.
  * This also includes the logic to load and configure columns.
  *
- * @param element - The proto message of the dataframe element
  * @param data - The Arrow data extracted from the proto message
  * @param numRows - The number of rows of the current state (includes row additions/deletions)
- * @param disabled - Whether the widget is disabled
  * @param editingState - The editing state of the data editor
  *
  * @returns the columns and the cell content getter compatible with glide-data-grid.
  */
 function useDataLoader(
-  element: ArrowProto,
   data: Quiver,
+  columns: BaseColumn[],
   numRows: number,
-  disabled: boolean,
   editingState: React.MutableRefObject<EditingState>
 ): DataLoaderReturn {
-  // TODO(lukasmasuch): We might use state to store the column config as additional optimization?
-  const columnConfigMapping = getColumnConfig(element)
-
-  const stretchColumns: boolean =
-    element.useContainerWidth ||
-    (notNullOrUndefined(element.width) && element.width > 0)
-
-  // Converts the columns from Arrow into columns compatible with glide-data-grid
-  const configuredColumns: BaseColumn[] = getAllColumnsFromArrow(data)
-    .map(column => {
-      // Apply column configurations
-      let updatedColumn = {
-        ...column,
-        ...applyColumnConfig(column, columnConfigMapping),
-        isStretched: stretchColumns,
-      } as BaseColumnProps
-
-      const ColumnType = getColumnType(updatedColumn)
-
-      // Make sure editing is deactivated if the column is read-only, disabled,
-      // or a not editable type.
-      if (
-        element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
-        disabled ||
-        ColumnType.isEditableType === false
-      ) {
-        updatedColumn = {
-          ...updatedColumn,
-          isEditable: false,
-        }
-      }
-
-      return ColumnType(updatedColumn)
-    })
-    .filter(column => {
-      // Filter out all columns that are hidden
-      return !column.isHidden
-    })
-
-  // If all columns got filtered out, we add a an empty index column
-  // to prevent errors from glide-data-grid.
-  const columns =
-    configuredColumns.length > 0
-      ? configuredColumns
-      : [ObjectColumn(getEmptyIndexColumn())]
-
   const getCellContent = React.useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
       if (col > columns.length - 1) {
@@ -280,7 +93,6 @@ function useDataLoader(
   )
 
   return {
-    columns,
     getCellContent,
   }
 }
