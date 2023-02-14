@@ -994,3 +994,12 @@ class WidgetReplayInteractionTest(InteractiveScriptTests):
         sr4 = sr3.get("checkbox")[0].uncheck().run()
         sr5 = sr4.get("button")[0].click().run()
         assert sr5.get("text")[0].value == "['foo']"
+
+
+class WidgetReplayTest(InteractiveScriptTests):
+    def test_arrow_replay(self):
+        """Regression test for https://github.com/streamlit/streamlit/issues/6103"""
+        script = self.script_from_filename(__file__, "arrow_replay.py")
+
+        sr = script.run()
+        assert len(sr.get("exception")) == 0
