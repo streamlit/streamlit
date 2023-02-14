@@ -156,6 +156,18 @@ class CachedFuncInfo:
         raise NotImplementedError
 
 
+def make_cached_func_wrapper(info: CachedFuncInfo) -> Any:
+    cached_func = CachedFunc(info)
+
+    @functools.wraps(info.func)
+    def wrapper(*args, **kwargs):
+        return cached_func.get_result(func_args=args, func_kwargs=kwargs)
+
+    wrapper.clear = cached_func.clear
+
+    return wrapper
+
+
 class CachedFunc:
     """A callable wrapper around a CachedFuncInfo. We create and return a new
     CachedFunc instance from the `@st.cache_data` and `@st.cache_resource`
@@ -168,13 +180,15 @@ class CachedFunc:
 
         functools.update_wrapper(self, info.func)
 
-    def __call__(self, *args, **kwargs) -> Any:
+    def get_result(
+        self, func_args: tuple[Any, ...], func_kwargs: dict[str, Any]
+    ) -> Any:
         """The wrapper. We'll only call our underlying function on a cache miss."""
 
         name = self._info.func.__qualname__
 
         if isinstance(self._info.show_spinner, bool):
-            if len(args) == 0 and len(kwargs) == 0:
+            if len(func_args) == 0 and len(func_kwargs) == 0:
                 message = f"Running `{name}()`."
             else:
                 message = f"Running `{name}(...)`."
@@ -183,9 +197,9 @@ class CachedFunc:
 
         if self._info.show_spinner or isinstance(self._info.show_spinner, str):
             with spinner(message):
-                return self._get_or_create_cached_value(args, kwargs)
+                return self._get_or_create_cached_value(func_args, func_kwargs)
         else:
-            return self._get_or_create_cached_value(args, kwargs)
+            return self._get_or_create_cached_value(func_args, func_kwargs)
 
     def _get_or_create_cached_value(
         self, func_args: tuple[Any, ...], func_kwargs: dict[str, Any]
