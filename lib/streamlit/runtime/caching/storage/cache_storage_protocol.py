@@ -17,7 +17,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from dataclasses import dataclass
 
-from typing_extensions import ClassVar, Literal, Protocol
+from typing_extensions import Literal, Protocol
 
 
 class CacheStorageError(Exception):
@@ -30,7 +30,31 @@ class CacheStorageKeyNotFoundError(CacheStorageError):
 
 @dataclass(frozen=True)
 class CacheStorageContext:
-    """Context passed to the cache storage"""
+    """
+    Context passed to the cache storage during initialization
+    This is the normalized parameters that are passed to CacheStorageManager.create()
+    method.
+
+    Parameters
+    ----------
+    function_key: str
+        A hash computed based on function name and source code decorated
+        by st.cache_data
+
+    ttl_seconds : float or None
+        The time-to-live for the keys in storage, in seconds. If None, the entry
+        will never expire.
+
+    max_entries : int or None
+        The maximum number of entries to store in the cache storage.
+        If None, the cache storage will not limit the number of entries.
+
+    persist : Literal["disk"] or None
+        The persistence mode for the cache storage.
+        Legacy parameter, that used in Streamlit current cache storage implementation.
+        Could be ignored by cache storage implementation, if storage does not support
+        persistence or it persistent by default.
+    """
 
     function_key: str
     ttl_seconds: float | None = None
@@ -54,7 +78,7 @@ class CacheStorage(Protocol):
 
     @abstractmethod
     def delete(self, key: str) -> None:
-        """Expires a given key"""
+        """Delete a given key"""
         raise NotImplementedError
 
     @abstractmethod
@@ -84,7 +108,7 @@ class CacheStorageManager(Protocol):
         """
         Creates a new cache storage instance
         Please note that the ttl, max_entries and other context fields are specific
-        for whole storage, not for each key.
+        for whole storage, not for individual key.
         """
         raise NotImplementedError
 
@@ -107,5 +131,18 @@ class CacheStorageManager(Protocol):
 
         In case of raising an exception, we not handle it and let the exception to be
         raised.
+
+        check_context is called only once at the moment of creating cache_data
+        decorator for specific function, so it is not called for every cache hit.
+
+        Parameters
+        ----------
+        context: CacheStorageContext
+            The context to check for the storage manager, dummy function_key in context
+            will be used, since it is not computed at the point of calling this method.
+        function_name: str
+            The name of the function that is decorated by st.cache_data, could be used
+            in the error log message.
         """
+
         pass
