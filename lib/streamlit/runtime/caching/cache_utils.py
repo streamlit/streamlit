@@ -26,7 +26,7 @@ import types
 from abc import abstractmethod
 from collections import defaultdict
 from datetime import timedelta
-from typing import Any
+from typing import Any, Callable
 
 from streamlit import type_util
 from streamlit.elements.spinner import spinner
@@ -156,39 +156,46 @@ class CachedFuncInfo:
         raise NotImplementedError
 
 
-def make_cached_func_wrapper(info: CachedFuncInfo) -> Any:
+def make_cached_func_wrapper(info: CachedFuncInfo) -> Callable[..., Any]:
+    """Create a callable wrapper around a CachedFunctionInfo.
+
+    Calling the wrapper will return the cached value if it's already been
+    computed, and will call the underlying function to compute and cache the
+    value otherwise.
+
+    The wrapper also has a `clear` function that can be called to clear
+    all of the wrapper's cached values.
+    """
     cached_func = CachedFunc(info)
+
+    # We'd like to simply return `cached_func`, which is already a Callable.
+    # But using `functools.update_wrapper` on the CachedFunc instance
+    # itself results in errors when our caching decorators are used to decorate
+    # member functions. (See https://github.com/streamlit/streamlit/issues/6109)
 
     @functools.wraps(info.func)
     def wrapper(*args, **kwargs):
-        return cached_func.get_result(func_args=args, func_kwargs=kwargs)
+        return cached_func(*args, **kwargs)
 
-    wrapper.clear = cached_func.clear
+    # Give our wrapper its `clear` function.
+    # (This results in a spurious mypy error that we suppress.)
+    wrapper.clear = cached_func.clear  # type: ignore
 
     return wrapper
 
 
 class CachedFunc:
-    """A callable wrapper around a CachedFuncInfo. We create and return a new
-    CachedFunc instance from the `@st.cache_data` and `@st.cache_resource`
-    decorators.
-    """
-
     def __init__(self, info: CachedFuncInfo):
         self._info = info
         self._function_key = _make_function_key(info.cache_type, info.func)
 
-        functools.update_wrapper(self, info.func)
-
-    def get_result(
-        self, func_args: tuple[Any, ...], func_kwargs: dict[str, Any]
-    ) -> Any:
+    def __call__(self, *args, **kwargs):
         """The wrapper. We'll only call our underlying function on a cache miss."""
 
         name = self._info.func.__qualname__
 
         if isinstance(self._info.show_spinner, bool):
-            if len(func_args) == 0 and len(func_kwargs) == 0:
+            if len(args) == 0 and len(kwargs) == 0:
                 message = f"Running `{name}()`."
             else:
                 message = f"Running `{name}(...)`."
@@ -197,9 +204,9 @@ class CachedFunc:
 
         if self._info.show_spinner or isinstance(self._info.show_spinner, str):
             with spinner(message):
-                return self._get_or_create_cached_value(func_args, func_kwargs)
+                return self._get_or_create_cached_value(args, kwargs)
         else:
-            return self._get_or_create_cached_value(func_args, func_kwargs)
+            return self._get_or_create_cached_value(args, kwargs)
 
     def _get_or_create_cached_value(
         self, func_args: tuple[Any, ...], func_kwargs: dict[str, Any]
