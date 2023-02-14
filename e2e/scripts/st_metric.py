@@ -41,3 +41,21 @@ with col2:
     st.metric("Test 4", -4.56, 1.23, label_visibility="hidden")
 with col3:
     st.metric("Test 5", -4.56, 1.23, label_visibility="collapsed")
+
+col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
+
+with col1:
+    st.metric(
+        label="Example metric",
+        help="Something should feel right",
+        value=150.59,
+        delta="Very high",
+    )
+
+with col2:
+    st.metric(
+        label="really long label because i want ellipses to appear",
+        help="this is a really long help and i want ellipses to appear",
+        value=2000000,
+        delta="-800000",
+    )
