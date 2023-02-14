@@ -101,12 +101,10 @@ const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
       autoFocus={true}
       onChange={event => {
         console.log(event)
-        if (!event.target.validity.valid && event.target.validity.badInput) {
-          // do nothing
-        } else if (
-          !event.target.validity.valid ||
-          isNaN(event.target.valueAsNumber)
-        ) {
+        // if (!event.target.validity.valid && event.target.validity.badInput) {
+        //   // do nothing
+        // } else if (
+        if (isNaN(event.target.valueAsNumber)) {
           // The user has cleared the date, contribute as undefined
           cell.onChange({
             ...cell.value,

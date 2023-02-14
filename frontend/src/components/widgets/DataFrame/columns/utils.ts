@@ -383,6 +383,14 @@ export function toSafeDate(value: any): Date | null | undefined {
     return null
   }
 
+  // Return the value as-is if it is already a date
+  if (value instanceof Date) {
+    if (!isNaN(value.getTime())) {
+      return value
+    }
+    return undefined
+  }
+
   if (typeof value === "string" && value.trim().length === 0) {
     // Empty string should return null
     return null
@@ -411,6 +419,17 @@ export function toSafeDate(value: any): Date | null | undefined {
       const parsedMomentDate = moment(value)
       if (parsedMomentDate.isValid()) {
         return parsedMomentDate.toDate()
+      }
+
+      // The pasted value was not a valid date string
+      // Try to interpret value as time string instead (HH:mm:ss)
+      const parsedMomentTime = moment(value, [
+        moment.HTML5_FMT.TIME_MS, // HH:mm:ss.SSS
+        moment.HTML5_FMT.TIME_SECONDS, // HH:mm:ss
+        moment.HTML5_FMT.TIME, // HH:mm
+      ])
+      if (parsedMomentTime.isValid()) {
+        return parsedMomentTime.toDate()
       }
     }
   } catch (error) {

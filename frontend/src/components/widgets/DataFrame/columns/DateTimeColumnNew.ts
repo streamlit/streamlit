@@ -38,6 +38,7 @@ export interface DateTimeColumnParams {
 function BaseDateTimeColumn(
   props: BaseColumnProps,
   defaultFormat: string,
+  defaultStep: string,
   inputType: "datetime-local" | "time" | "date",
   toISOString: (date: Date) => string
 ): BaseColumn {
@@ -45,11 +46,12 @@ function BaseDateTimeColumn(
     // Default parameters:
     {
       format: defaultFormat,
+      step: defaultStep,
     },
     // User parameters:
     props.columnTypeMetadata
   ) as DateTimeColumnParams
-
+  console.log(props.title, props.arrowType)
   const cellTemplate = {
     kind: GridCellKind.Custom,
     allowOverlay: true,
@@ -114,9 +116,10 @@ export function DateTimeColumn(props: BaseColumnProps): BaseColumn {
   return BaseDateTimeColumn(
     props,
     "YYYY-MM-DD HH:mm:ss",
+    "1",
     "datetime-local",
     (date: Date): string => {
-      return date.toISOString().replace("Z", "")
+      return date.toISOString()
     }
   )
 }
@@ -127,6 +130,7 @@ export function TimeColumn(props: BaseColumnProps): BaseColumn {
   return BaseDateTimeColumn(
     props,
     "HH:mm:ss.SSS",
+    "0.1",
     "time",
     (date: Date): string => {
       // Return only the time part
@@ -141,6 +145,7 @@ export function DateColumn(props: BaseColumnProps): BaseColumn {
   return BaseDateTimeColumn(
     props,
     "YYYY-MM-DD",
+    "1",
     "date",
     (date: Date): string => {
       // Return only the date part

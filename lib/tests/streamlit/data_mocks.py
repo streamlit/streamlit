@@ -287,6 +287,8 @@ DATETIME_TYPES_DF = pd.DataFrame(
             (pd.to_datetime("2022-03-11 17:41:00-05:00")) for _ in range(8)
         ]
         + [None],
+        "pd_datetime_TZ_2": [(pd.to_datetime("2022-03-11 17:41:00")) for _ in range(8)]
+        + [None],
         "datetime_UTC_TZ": [
             random_date().replace(tzinfo=timezone.utc) for _ in range(8)
         ]
