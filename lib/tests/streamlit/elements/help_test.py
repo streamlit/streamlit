@@ -435,20 +435,31 @@ class GetVariableNameFromCodeStrTest(unittest.TestCase):
 
     def test_if_dont_know_just_echo(self):
         tests = [
-            (test := "foo()", test),
-            (test := "[x for x in range(10)]", test),
-            (test := "(x for x in range(10))", test),
-            (test := "x for x in range(10)", "(x for x in range(10))"),
-            (test := "{x: None for x in range(10)}", test),
+            "foo()",
+            "[x for x in range(10)]",
+            "(x for x in range(10))",
+            "{x: None for x in range(10)}",
         ]
 
-        for test, expected in tests:
+        for test in tests:
             for st_call in st_calls:
                 # Wrap test in an st call.
                 code = st_call.format(test)
 
                 actual = _get_variable_name_from_code_str(code)
-                self.assertEqual(actual, expected)
+                self.assertEqual(actual, test)
+
+        # Python re-adds the () around generator expressions, so we
+        # test this case separately.
+        test = "x for x in range(10)"
+        expected = "(x for x in range(10))"
+
+        for st_call in st_calls:
+            # Wrap test in an st call.
+            code = st_call.format(test)
+
+            actual = _get_variable_name_from_code_str(code)
+            self.assertEqual(actual, expected)
 
     def test_multiline_gets_linearized(self):
         test = """foo(
