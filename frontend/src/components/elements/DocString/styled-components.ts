@@ -37,7 +37,7 @@ export interface StyledDocContainerProps {
 }
 
 export const StyledDocContainer = styled.span<StyledDocContainerProps>(
-  ({ theme, width }) => ({
+  ({ theme }) => ({
     display: "flex",
     flexDirection: "column",
     borderRadius: theme.radii.md,
@@ -50,13 +50,9 @@ export const StyledDocContainer = styled.span<StyledDocContainerProps>(
 export const StyledDocHeader = styled.div(({ theme }) => ({
   padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
   backgroundColor: theme.colors.docStringContainerBackground,
+  borderBottom: `1px solid ${theme.colors.fadedText05}`,
   fontSize: theme.fontSizes.sm,
-
   overflow: ["auto", "overlay"],
-
-  "&:not(:last-child)": {
-    borderBottom: `1px solid ${theme.colors.fadedText05}`,
-  },
 }))
 
 export const StyledDocString = styled.div(({ theme }) => ({
