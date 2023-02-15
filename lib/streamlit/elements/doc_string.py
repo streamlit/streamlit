@@ -232,6 +232,10 @@ def _get_variable_name():
     The name is "foo"
     """
     code = _get_current_line_of_code_as_str()
+
+    if code is None:
+        return None
+
     return _get_variable_name_from_code_str(code)
 
 
