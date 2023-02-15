@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from typing_extensions import Final
 
+import streamlit
 from streamlit.logger import get_logger
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.proto.DocString_pb2 import Member as MemberProto
@@ -45,7 +46,7 @@ CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
 
 class HelpMixin:
     @gather_metrics("help")
-    def help(self, obj: Any = None) -> "DeltaGenerator":
+    def help(self, obj: Any = streamlit) -> "DeltaGenerator":
         """Display help and other information for a given object.
 
         Depending on the type of object that is passed in, this displays the
@@ -55,8 +56,8 @@ class HelpMixin:
         Parameters
         ----------
         obj : any
-            The object whose information should be displayed. If ``None``, this
-            call will display help for Streamlit itself.
+            The object whose information should be displayed. If left
+            unspecified, this call will display help for Streamlit itself.
 
         Example
         -------
@@ -105,11 +106,6 @@ class HelpMixin:
         >>> # Get help for Streamlit itself:
         >>> st
         """
-        if obj is None:
-            import streamlit
-
-            obj = streamlit
-
         doc_string_proto = DocStringProto()
         _marshall(doc_string_proto, obj)
         return self.dg._enqueue("doc_string", doc_string_proto)

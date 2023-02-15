@@ -50,6 +50,18 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("module", ds.type)
         self.assertTrue(ds.doc_string.startswith("Streamlit."))
 
+    def test_none_arg(self):
+        """When st.help is called with None as an argument, don't show Streamlit docs."""
+
+        with patch_varname_getter():
+            st.help(None)
+
+        ds = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual("", ds.name)
+        self.assertEqual("None", ds.value)
+        self.assertEqual("NoneType", ds.type)
+        self.assertEqual("", ds.doc_string)
+
     def test_basic_func_with_doc(self):
         """Test basic function with docstring."""
 
@@ -145,7 +157,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("int", ds.type)
         self.assertTrue(len(ds.doc_string) > 0)
 
-    # TODO: When we stop support for Python 3.7, uncomment this.
+    # TODO: When we stop supporting Python 3.7, uncomment this.
     # This doesn't even compile when running in 3.7, so I'm commenting it out.
     # Which means we can't test support for walrus in st.help :(
     # def test_walrus(self):
