@@ -144,7 +144,7 @@ describe("st.metric", () => {
   });
 });
 
-describe("Check that ellipses occurs and the help shows up in the correct spot", () => {
+describe("Check that ellipses shows up and the help shows up in the correct spot", () => {
   it("Check Metric Snapshot", () => {
     cy.getIndexed(
       '[data-testid="metric-container"]',

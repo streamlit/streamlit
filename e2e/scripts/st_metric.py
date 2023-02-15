@@ -51,11 +51,3 @@ with col1:
         value=150.59,
         delta="Very high",
     )
-
-with col2:
-    st.metric(
-        label="really long label because i want ellipses to appear",
-        help="this is a really long help and i want ellipses to appear",
-        value=2000000,
-        delta="-800000",
-    )
