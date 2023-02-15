@@ -760,8 +760,9 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
         table = pa.Table.from_pandas(df)
     except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
         _LOGGER.info(
+            "Serialization of dataframe to Arrow table was unsuccessful due to: %s. "
             "Applying automatic fixes for column types to make the dataframe Arrow-compatible.",
-            exc_info=ex,
+            ex,
         )
         df = fix_arrow_incompatible_column_types(df)
         table = pa.Table.from_pandas(df)

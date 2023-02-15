@@ -179,8 +179,9 @@ test("processDisplayData should remove line breaks", () => {
   expect(processDisplayData("\nhello\n\nworld")).toBe(" hello  world")
 })
 
-test("applyPandasStylerCss should apply css to a cells", () => {
-  const CSS_STYLES = `
+describe("applyPandasStylerCss", () => {
+  it("should apply css to a cells", () => {
+    const CSS_STYLES = `
   #T_f116e_row10_col0, #T_f116e_row10_col1, #T_f116e_row10_col3 { color: red }
   #T_f116e_row0_col1, #T_f116e_row1_col0 { color: white; background-color: pink }
   #T_f116e_row0_col2 { color: red; opacity: 20% }
@@ -188,37 +189,51 @@ test("applyPandasStylerCss should apply css to a cells", () => {
   #T_f116e_row3_col3, #T_f116e_row12_col1 { color: white; background-color: darkblue; color: white; background-color: pink }
   #T_f116e_row11_col10, #T_f116e_row11_col10 {  background-color: darkblue }`
 
-  const MOCK_CELL = getTextCell(true, false)
-  let styledCell = applyPandasStylerCss(
-    MOCK_CELL,
-    "#T_f116e_row11_col10",
-    CSS_STYLES
-  )
-  expect(styledCell.themeOverride).toEqual({
-    bgCell: "darkblue",
+    const MOCK_CELL = getTextCell(true, false)
+    let styledCell = applyPandasStylerCss(
+      MOCK_CELL,
+      "#T_f116e_row11_col10",
+      CSS_STYLES
+    )
+    expect(styledCell.themeOverride).toEqual({
+      bgCell: "darkblue",
+    })
+
+    styledCell = applyPandasStylerCss(
+      MOCK_CELL,
+      "#T_f116e_row0_col2",
+      CSS_STYLES
+    )
+    expect(styledCell.themeOverride).toEqual({
+      textDark: "red",
+    })
+
+    styledCell = applyPandasStylerCss(
+      MOCK_CELL,
+      "#T_f116e_row3_col3",
+      CSS_STYLES
+    )
+    expect(styledCell.themeOverride).toEqual({
+      bgCell: "pink",
+      textDark: "white",
+    })
+
+    styledCell = applyPandasStylerCss(MOCK_CELL, "invalid_key", CSS_STYLES)
+    expect(styledCell.themeOverride).toEqual({})
   })
 
-  styledCell = applyPandasStylerCss(
-    MOCK_CELL,
-    "#T_f116e_row0_col2",
-    CSS_STYLES
-  )
-  expect(styledCell.themeOverride).toEqual({
-    textDark: "red",
+  it("should use a grey color when background is yellow", () => {
+    const CSS_STYLES = `#T_f116e_row0_col0 { background-color: yellow }`
+    const styledCell = applyPandasStylerCss(
+      getTextCell(true, false),
+      "#T_f116e_row0_col0",
+      CSS_STYLES
+    )
+    expect(styledCell.themeOverride).toEqual({
+      bgCell: "yellow",
+      textDark: "#31333F",
+    })
   })
-
-  styledCell = applyPandasStylerCss(
-    MOCK_CELL,
-    "#T_f116e_row3_col3",
-    CSS_STYLES
-  )
-  expect(styledCell.themeOverride).toEqual({
-    bgCell: "pink",
-    textDark: "white",
-  })
-
-  styledCell = applyPandasStylerCss(MOCK_CELL, "invalid_key", CSS_STYLES)
-  expect(styledCell.themeOverride).toEqual({})
 })
 
 describe("getIndexFromArrow", () => {

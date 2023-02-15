@@ -109,6 +109,14 @@ export function applyPandasStylerCss(
     themeOverride.bgCell = backgroundColor
   }
 
+  if (backgroundColor === "yellow" && fontColor === undefined) {
+    // Yellow is used by pandas styler as the default highlight color.
+    // But yellow won't work well with our default font color in dark mode.
+    // Therefore, we are overriding the font color to our dark font color which
+    // always works well with yellow background.
+    themeOverride.textDark = "#31333F"
+  }
+
   if (themeOverride) {
     // Apply the background and font color in the theme override
     return {

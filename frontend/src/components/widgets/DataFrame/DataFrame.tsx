@@ -43,6 +43,7 @@ import {
   useDataEditor,
   useColumnSizer,
   useColumnSort,
+  useColumnLoader,
 } from "./hooks"
 import {
   BaseColumn,
@@ -207,8 +208,27 @@ function DataFrame({
     setNumRows(editingState.current.getNumRows())
   }, [originalNumRows])
 
-  const { columns: originalColumns, getCellContent: getOriginalCellContent } =
-    useDataLoader(element, data, numRows, disabled, editingState)
+  const { columns: originalColumns } = useColumnLoader(element, data, disabled)
+
+  // On the first rendering, try to load initial widget state if
+  // it exist. This is required in the case that other elements
+  // are inserted before this widget.
+  React.useEffect(() => {
+    if (element.editingMode !== READ_ONLY) {
+      const initialWidgetValue = widgetMgr.getStringValue(element)
+      if (initialWidgetValue) {
+        editingState.current.fromJson(initialWidgetValue, originalColumns)
+        setNumRows(editingState.current.getNumRows())
+      }
+    }
+  }, [])
+
+  const { getCellContent: getOriginalCellContent } = useDataLoader(
+    data,
+    originalColumns,
+    numRows,
+    editingState
+  )
 
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
@@ -232,31 +252,29 @@ function DataFrame({
         clearSelection()
       }
 
-      if (triggerRerun) {
-        // Use debounce to prevent rapid updates to the widget state.
-        debounce(DEBOUNCE_TIME_MS, () => {
-          const currentEditingState = editingState.current.toJson(columns)
-          let currentWidgetState = widgetMgr.getStringValue(
-            element as WidgetInfo
+      // Use debounce to prevent rapid updates to the widget state.
+      debounce(DEBOUNCE_TIME_MS, () => {
+        const currentEditingState = editingState.current.toJson(columns)
+        let currentWidgetState = widgetMgr.getStringValue(
+          element as WidgetInfo
+        )
+
+        if (currentWidgetState === undefined) {
+          // Create an empty widget state
+          currentWidgetState = new EditingState(0).toJson([])
+        }
+
+        // Only update if there is actually a difference between editing and widget state
+        if (currentEditingState !== currentWidgetState) {
+          widgetMgr.setStringValue(
+            element as WidgetInfo,
+            currentEditingState,
+            {
+              fromUi: triggerRerun,
+            }
           )
-
-          if (currentWidgetState === undefined) {
-            // Create an empty widget state
-            currentWidgetState = new EditingState(0).toJson([])
-          }
-
-          // Only update if there is actually a difference between editing and widget state
-          if (currentEditingState !== currentWidgetState) {
-            widgetMgr.setStringValue(
-              element as WidgetInfo,
-              currentEditingState,
-              {
-                fromUi: true,
-              }
-            )
-          }
-        })()
-      }
+        }
+      })()
     },
     [widgetMgr, element, numRows]
   )

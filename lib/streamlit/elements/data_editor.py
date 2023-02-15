@@ -60,6 +60,7 @@ from streamlit.type_util import (
     DataFormat,
     DataFrameGenericAlias,
     Key,
+    is_type,
     maybe_convert_datetime_date_edit_df,
     maybe_convert_datetime_time_edit_df,
     to_key,
@@ -484,12 +485,12 @@ class DataEditorMixin:
             The data to edit in the data editor.
 
         width : int or None
-            Desired width of the data editor expressed in pixels. If None, the width
-            will be automatically calculated based on the container width.
+            Desired width of the data editor expressed in pixels. If None, the width will
+            be automatically determined.
 
         height : int or None
-            Desired height of the data editor expressed in pixels. If None, a
-            default height is used.
+            Desired height of the data editor expressed in pixels. If None, the height will
+            be automatically determined.
 
         use_container_width : bool
             If True, set the data editor width to the width of the parent container.
@@ -577,12 +578,18 @@ class DataEditorMixin:
         data_df = type_util.convert_anything_to_df(data, ensure_copy=True)
 
         # Check if the index is supported.
-        # Theoretically, we could also support Int64Index and Float64Index here,
-        # but those indices are deprecated and will be removed in the future.
-        if type(data_df.index) not in [
-            pd.RangeIndex,
-            pd.Index,
-        ]:
+        if not (
+            type(data_df.index)
+            in [
+                pd.RangeIndex,
+                pd.Index,
+            ]
+            # We need to check these index types without importing, since they are deprecated
+            # and planned to be removed soon.
+            or is_type(data_df.index, "pandas.core.indexes.numeric.Int64Index")
+            or is_type(data_df.index, "pandas.core.indexes.numeric.Float64Index")
+            or is_type(data_df.index, "pandas.core.indexes.numeric.UInt64Index")
+        ):
             raise StreamlitAPIException(
                 f"The type of the dataframe index - {type(data_df.index).__name__} - is not "
                 "yet supported by the data editor."
