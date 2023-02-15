@@ -545,14 +545,15 @@ class DataCache(Cache):
     def get_stats(self) -> list[CacheStat]:
         stats: list[CacheStat] = []
 
-        for item_byte_length in self.storage.get_stats():
-            stats.append(
-                CacheStat(
-                    category_name="st_cache_data",
-                    cache_name=self.display_name,
-                    byte_length=item_byte_length,
+        if hasattr(self.storage, "get_stats") and callable(self.storage.get_stats):
+            for item_byte_length in self.storage.get_stats():
+                stats.append(
+                    CacheStat(
+                        category_name="st_cache_data",
+                        cache_name=self.display_name,
+                        byte_length=item_byte_length,
+                    )
                 )
-            )
         return stats
 
     def read_result(self, key: str) -> CachedResult:

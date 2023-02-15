@@ -44,10 +44,10 @@ _CACHE_DIR_NAME = "cache"
 _CACHED_FILE_EXTENSION = "memo"
 
 
-class OpenSourceCacheStorageManager(CacheStorageManager):
-    def create(self, context: CacheStorageContext) -> OpenSourceCacheStorage:
+class LocalCacheStorageManager(CacheStorageManager):
+    def create(self, context: CacheStorageContext) -> LocalCacheStorage:
         """Creates a new cache storage instance"""
-        return OpenSourceCacheStorage(context)
+        return LocalCacheStorage(context)
 
     def clear_all(self) -> None:
         cache_path = get_cache_folder_path()
@@ -66,7 +66,7 @@ class OpenSourceCacheStorageManager(CacheStorageManager):
             )
 
 
-class OpenSourceCacheStorage(CacheStorage):
+class LocalCacheStorage(CacheStorage):
     def __init__(self, context: CacheStorageContext):
         self.function_key = context.function_key
         self.persist = context.persist

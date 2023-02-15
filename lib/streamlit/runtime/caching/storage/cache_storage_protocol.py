@@ -94,13 +94,6 @@ class CacheStorage(Protocol):
         """
         pass
 
-    def get_stats(self) -> list[int]:
-        """
-        Returns a list of sizes in bytes for the cache storage per item,
-        This method is optional to implement.
-        """
-        return []
-
 
 class CacheStorageManager(Protocol):
     @abstractmethod
