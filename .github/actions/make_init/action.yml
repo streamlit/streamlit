@@ -35,7 +35,7 @@ runs:
         sudo apt update
         # protobuf, pyodbc, dot, & graphviz dependencies
         sudo apt install -y gnupg \
-            unixodbc-dev \
+            unixodbc-dev=2.3.9-5 \
             graphviz \
             libgvc6 \
             protobuf-compiler
