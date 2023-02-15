@@ -33,8 +33,8 @@ from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundE
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
-    CachedFunc,
     CachedFuncInfo,
+    make_cached_func_wrapper,
     ttl_to_seconds,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -479,7 +479,7 @@ class CacheDataAPI:
         self._maybe_show_deprecation_warning()
 
         def wrapper(f):
-            return CachedFunc(
+            return make_cached_func_wrapper(
                 CachedDataFuncInfo(
                     func=f,
                     persist=persist_string,
@@ -493,7 +493,7 @@ class CacheDataAPI:
         if func is None:
             return wrapper
 
-        return CachedFunc(
+        return make_cached_func_wrapper(
             CachedDataFuncInfo(
                 func=cast(types.FunctionType, func),
                 persist=persist_string,
