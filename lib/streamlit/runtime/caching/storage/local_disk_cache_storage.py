@@ -18,12 +18,9 @@ import os
 import shutil
 import threading
 
-from cachetools import TTLCache
-
 from streamlit import util
 from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorage,
     CacheStorageContext,
@@ -31,8 +28,9 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorageKeyNotFoundError,
     CacheStorageManager,
 )
-
-_LOGGER = get_logger(__name__)
+from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
+    InMemoryCacheStorageWrapper,
+)
 
 # Streamlit directory where persisted @st.cache_data objects live.
 # (This is the same directory that @st.cache persisted objects live.
@@ -43,11 +41,41 @@ _CACHE_DIR_NAME = "cache"
 # (`@st.cache_data` was originally called `@st.memo`)
 _CACHED_FILE_EXTENSION = "memo"
 
+_LOGGER = get_logger(__name__)
 
-class LocalCacheStorageManager(CacheStorageManager):
-    def create(self, context: CacheStorageContext) -> LocalCacheStorage:
-        """Creates a new cache storage instance"""
-        return LocalCacheStorage(context)
+
+class LocalDiskCacheStorageManager(CacheStorageManager):
+    def create(self, context: CacheStorageContext) -> LocalDiskCacheStorage:
+        """Creates a new local disk cache storage instance"""
+        return LocalDiskCacheStorage(context)
+
+    def clear_all(self) -> None:
+        cache_path = get_cache_folder_path()
+        if os.path.isdir(cache_path):
+            shutil.rmtree(cache_path)
+
+    def check_context(self, context: CacheStorageContext, function_name: str) -> None:
+        if context.ttl_seconds is not None and not math.isinf(context.ttl_seconds):
+            # TODO [Karen]: Rewrite warning message
+            _LOGGER.warning(
+                """I AM MANAGER FOR DISK CACHE LOCAL STORAGE, AND I AM WANT TO SAY,
+                THAT I AM NOT SUPPORTED TTL, AND I ALWAYS PERSIST FILES ON DISK"""
+            )
+        if context.persist != "disk":
+            _LOGGER.warning(
+                "I AM MANAGER FOR DISK CACHE LOCAL STORAGE, "
+                "AND I AM WANT TO SAY, THAT I AM ALWAYS PERSIST VALUES TO "
+                "DISK REGARDLESS OF THE VALUE OF THE 'persist' PARAMETER"
+            )
+
+
+class InMemoryWrappedLocalDiskCacheStorageManager(CacheStorageManager):
+    def create(self, context: CacheStorageContext) -> CacheStorage:
+        """Creates a new cache storage instance wrapped with in-memory cache facade"""
+        persist_storage = LocalDiskCacheStorage(context)
+        return InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
 
     def clear_all(self) -> None:
         cache_path = get_cache_folder_path()
@@ -66,18 +94,13 @@ class LocalCacheStorageManager(CacheStorageManager):
             )
 
 
-class LocalCacheStorage(CacheStorage):
+class LocalDiskCacheStorage(CacheStorage):
     def __init__(self, context: CacheStorageContext):
         self.function_key = context.function_key
         self.persist = context.persist
         self._ttl_seconds = context.ttl_seconds
         self._max_entries = context.max_entries
-        self._mem_cache: TTLCache[str, bytes] = TTLCache(
-            maxsize=self.max_entries,
-            ttl=self.ttl_seconds,
-            timer=cache_utils.TTLCACHE_TIMER,
-        )
-        self._mem_cache_lock = threading.Lock()
+        self._cache_lock = threading.Lock()
 
     @property
     def ttl_seconds(self) -> float:
@@ -88,62 +111,14 @@ class LocalCacheStorage(CacheStorage):
         return float(self._max_entries) if self._max_entries is not None else math.inf
 
     def get(self, key: str) -> bytes:
-        """Returns the stored value for the key or None if the key is not present"""
-        try:
-            entry_bytes = self._read_from_mem_cache(key)
+        """Returns the stored value for the key or raises an exception
+        if the key is not present"""
 
-        except CacheStorageKeyNotFoundError as e:
-            if self.persist == "disk":
-                entry_bytes = self._read_from_disk_cache(key)
-                self._write_to_mem_cache(key, entry_bytes)
-            else:
-                raise e
-        return entry_bytes
-
-    def set(
-        self,
-        key: str,
-        value: bytes,
-    ) -> None:
-        """Sets the value for a given key with a ttl expressed in milliseconds"""
-        self._write_to_mem_cache(key, value)
-        if self.persist == "disk":
-            self._write_to_disk_cache(key, value)
-
-    def delete(self, key: str) -> None:
-        """Expires a given key"""
-        self._remove_from_mem_cache(key)
-        if self.persist == "disk":
-            self._remove_from_disk_cache(key)
-
-    def clear(self) -> None:
-        """Delete all keys for the current storage"""
-
-        with self._mem_cache_lock:
-            # We keep a lock for the entirety of the clear operation to avoid
-            # disk cache race conditions.
-            for key in self._mem_cache.keys():
-                self._remove_from_disk_cache(key)
-
-            self._mem_cache.clear()
-
-    def get_stats(self) -> list[int]:
-        """Returns a list of stats in bytes for the cache storage per item"""
-
-        with self._mem_cache_lock:
-            return [len(item_value) for item_value in self._mem_cache.values()]
-
-    def close(self) -> None:
-        """Closes the cache storage"""
-
-    def _read_from_disk_cache(self, key: str) -> bytes:
-        path = self._get_file_path(key)
+        path = self._get_cache_file_path(key)
         try:
             with streamlit_read(path, binary=True) as input:
                 value = input.read()
-                _LOGGER.debug("Disk cache first stage HIT: %s!!!!!!!!!!!!!!!", key)
-                # The value is a pickled CachedResult, but we don't unpickle it yet
-                # so we can avoid having to repickle it when writing to the mem_cache
+                _LOGGER.debug("Disk cache first stage HIT: %s!!! !!! !!! !!! !!!", key)
                 return bytes(value)
         except FileNotFoundError:
             raise CacheStorageKeyNotFoundError("Key not found in disk cache")
@@ -151,22 +126,12 @@ class LocalCacheStorage(CacheStorage):
             _LOGGER.error(ex)
             raise CacheStorageError("Unable to read from cache") from ex
 
-    def _read_from_mem_cache(self, key: str) -> bytes:
-        with self._mem_cache_lock:
-            if key in self._mem_cache:
-                entry = bytes(self._mem_cache[key])
-                _LOGGER.debug("Memory cache first stage HIT: %s", key)
-                return entry
-
-            else:
-                _LOGGER.debug("Memory cache MISS: %s", key)
-                raise CacheStorageKeyNotFoundError("Key not found in mem cache")
-
-    def _write_to_disk_cache(self, key: str, pickled_value: bytes) -> None:
-        path = self._get_file_path(key)
+    def set(self, key: str, value: bytes) -> None:
+        """Sets the value for a given key"""
+        path = self._get_cache_file_path(key)
         try:
             with streamlit_write(path, binary=True) as output:
-                output.write(pickled_value)
+                output.write(value)
         except util.Error as e:
             _LOGGER.debug(e)
             # Clean up file so we don't leave zero byte files.
@@ -177,19 +142,11 @@ class LocalCacheStorage(CacheStorage):
                 pass
             raise CacheStorageError("Unable to write to cache") from e
 
-    def _write_to_mem_cache(self, key: str, entry_bytes: bytes) -> None:
-        with self._mem_cache_lock:
-            self._mem_cache[key] = entry_bytes
-
-    def _remove_from_mem_cache(self, key: str) -> None:
-        with self._mem_cache_lock:
-            self._mem_cache.pop(key, None)
-
-    def _remove_from_disk_cache(self, key: str) -> None:
+    def delete(self, key: str) -> None:
         """Delete a cache file from disk. If the file does not exist on disk,
         return silently. If another exception occurs, log it. Does not throw.
         """
-        path = self._get_file_path(key)
+        path = self._get_cache_file_path(key)
         try:
             os.remove(path)
         except FileNotFoundError:
@@ -200,11 +157,28 @@ class LocalCacheStorage(CacheStorage):
                 "Unable to remove a file from the disk cache", exc_info=ex
             )
 
-    def _get_file_path(self, value_key: str) -> str:
+    def clear(self) -> None:
+        """Delete all keys for the current storage"""
+        cache_dir = get_cache_folder_path()
+
+        for fname in os.listdir(cache_dir):
+            if self._is_cache_file(fname):
+                os.remove(os.path.join(cache_dir, fname))
+
+    def close(self) -> None:
+        """Closes the cache storage"""
+
+    def _get_cache_file_path(self, value_key: str) -> str:
         """Return the path of the disk cache file for the given value."""
         return get_streamlit_file_path(
             _CACHE_DIR_NAME,
             f"{self.function_key}-{value_key}.{_CACHED_FILE_EXTENSION}",
+        )
+
+    def _is_cache_file(self, fname: str) -> bool:
+        """Return true if the given file name is a cache file for this storage."""
+        return fname.startswith(f"{self.function_key}-") and fname.endswith(
+            f".{_CACHED_FILE_EXTENSION}"
         )
 
 
