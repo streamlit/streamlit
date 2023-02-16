@@ -395,8 +395,8 @@ SPECIAL_TYPES_DF = pd.DataFrame(
 
 UNSUPPORTED_TYPES_DF = pd.DataFrame(
     {
-        "period[H]": [
-            (pd.Period("2022-03-14 11:52:00", freq="H") + pd.offsets.Hour(i))
+        "period[B]": [
+            (pd.Period("2022-03-10", freq="B") + pd.offsets.BusinessDay(i))
             for i in range(3)
         ]
         + [None],
