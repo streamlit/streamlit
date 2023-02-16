@@ -25,6 +25,7 @@ from streamlit.elements.slider import SliderScalar, SliderScalarT, SliderSerde, 
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
+from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
@@ -181,10 +182,26 @@ class Latex(Markdown):
 
 
 @dataclass(init=False)
-class Code(Markdown):
-    def __init__(self, proto: MarkdownProto, root: ElementTree):
-        super().__init__(proto, root)
+class Code(Element):
+    proto: CodeProto
+
+    type: str
+    language: str
+    show_line_numbers: bool
+    root: ElementTree = field(repr=False)
+    key: None
+
+    def __init__(self, proto: CodeProto, root: ElementTree):
+        self.proto = proto
+        self.key = None
+        self.language = proto.language
+        self.show_line_numbers = proto.show_line_numbers
+        self.root = root
         self.type = "code"
+
+    @property
+    def value(self) -> str:
+        return self.proto.code_text
 
 
 @runtime_checkable
@@ -872,8 +889,6 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     new_node = Caption(elt.markdown, root=root)
                 elif elt.markdown.element_type == MarkdownProto.Type.LATEX:
                     new_node = Latex(elt.markdown, root=root)
-                elif elt.markdown.element_type == MarkdownProto.Type.CODE:
-                    new_node = Code(elt.markdown, root=root)
                 else:
                     raise ValueError(
                         f"Unknown markdown type {elt.markdown.element_type}"
@@ -904,6 +919,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     raise ValueError(f"Slider with unknown type {elt.slider}")
             elif elt.WhichOneof("type") == "button":
                 new_node = Button(elt.button, root=root)
+            elif elt.WhichOneof("type") == "code":
+                new_node = Code(elt.code, root=root)
             else:
                 new_node = Element(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":

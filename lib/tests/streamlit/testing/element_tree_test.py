@@ -142,7 +142,7 @@ class MarkdownTest(InteractiveScriptTests):
 
         assert sr.get("code")
         assert sr.get("code")[0].type == "code"
-        assert sr.get("code")[0].value == "```python\nimport streamlit as st\n```"
+        assert sr.get("code")[0].value == "import streamlit as st"
 
     def test_latex(self):
         script = self.script_from_string(
