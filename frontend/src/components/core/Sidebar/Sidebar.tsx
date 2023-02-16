@@ -317,7 +317,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                 <Icon content={Close} size="lg" />
               </Button>
             </StyledSidebarCloseButton>
-            {!hideSidebarNav && (
+            {hasPageNavAbove && (
               <SidebarNav
                 appPages={appPages}
                 collapseSidebar={this.toggleCollapse}
