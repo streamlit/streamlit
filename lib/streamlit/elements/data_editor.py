@@ -535,7 +535,7 @@ class DataEditorMixin:
            https://doc-data-editor.streamlit.app/
            height: 350px
 
-        You can also allow the user to add and delete rows by setting `num_rows` to "dynamic":
+        You can also allow the user to add and delete rows by setting ``num_rows`` to "dynamic":
 
         >>> import streamlit as st
         >>> import pandas as pd
