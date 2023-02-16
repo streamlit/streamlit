@@ -867,7 +867,8 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   ): string {
     const match = typeName.match(/period\[(.*)]/)
     if (match === null) {
-      throw new Error(`Invalid period type: ${typeName}`)
+      console.error(`Invalid period type: ${typeName}`)
+      return String(duration)
     }
     const [, freq] = match
     return this.formatPeriod(duration, freq as PeriodFrequency)
@@ -881,13 +882,15 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     const momentConverter =
       PERIOD_TYPE_FORMATTERS[freqName as SupportedPandasOffsetType]
     if (!momentConverter) {
-      throw new Error(`Unsupported period frequency: ${freq}`)
+      console.error(`Unsupported period frequency: ${freq}`)
+      return String(duration)
     }
     const durationNumber = Number(duration)
     if (!Number.isSafeInteger(durationNumber)) {
-      throw new Error(
+      console.error(
         `Unsupported value: ${duration}. Supported values: [${Number.MIN_SAFE_INTEGER}-${Number.MAX_SAFE_INTEGER}]`
       )
+      return String(duration)
     }
     return momentConverter(durationNumber, freqParam)
   }
