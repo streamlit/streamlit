@@ -51,6 +51,7 @@ export interface SidebarProps {
 
 interface State {
   collapsedSidebar: boolean
+  collapsedSidebarNav: boolean
   sidebarWidth: string
   lastInnerWidth: number
 
@@ -68,6 +69,20 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     return parseInt(value, 10) - 0.02
   }
 
+  public static getSidebarNavPreference(): boolean {
+    const value = localStorageAvailable()
+      ? localStorage.getItem("navExpanded")
+      : undefined
+
+    // Should expand by default
+    if (value && value === "true") {
+      return true
+    }
+
+    // Should collapse by default
+    return false
+  }
+
   private sidebarRef = React.createRef<HTMLDivElement>()
 
   constructor(props: SidebarProps) {
@@ -80,8 +95,16 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       ? localStorage.getItem("sidebarWidth")
       : undefined
 
+    const cachedSidebarNavExpandedPreference =
+      Sidebar.getSidebarNavPreference()
+
     this.state = {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
+      collapsedSidebarNav: Sidebar.shouldNavCollapse(
+        props.appPages.length,
+        props.hasElements,
+        cachedSidebarNavExpandedPreference
+      ),
       sidebarWidth: cachedSidebarWidth || Sidebar.minWidth,
       lastInnerWidth: window ? window.innerWidth : Infinity,
       hideScrollbar: false,
@@ -92,12 +115,27 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.mediumBreakpointPx = Sidebar.calculateMaxBreakpoint(
       this.props.theme.breakpoints.md
     )
+
+    const cachedSidebarNavExpandedPreference =
+      Sidebar.getSidebarNavPreference()
+
     // Immediately expand/collapse sidebar when initialSidebarState changes.
     if (this.props.initialSidebarState !== prevProps.initialSidebarState) {
       this.setState({
         collapsedSidebar: Sidebar.shouldCollapse(
           this.props,
           this.mediumBreakpointPx
+        ),
+      })
+    }
+
+    // Change collapse/expand preference if there are widgets on the page
+    if (this.props.hasElements !== prevProps.hasElements) {
+      this.setState({
+        collapsedSidebarNav: Sidebar.shouldNavCollapse(
+          this.props.appPages.length,
+          this.props.hasElements,
+          cachedSidebarNavExpandedPreference
         ),
       })
     }
@@ -119,6 +157,23 @@ class Sidebar extends PureComponent<SidebarProps, State> {
         return innerWidth ? innerWidth <= mediumBreakpointPx : false
       }
     }
+  }
+
+  static shouldNavCollapse(
+    pageQuantity: number,
+    hasElements: boolean,
+    collapsedPreference: boolean
+  ): boolean {
+    // If we have less than 7 pages, or the current page has no widgets below, it should always be expanded
+    if (pageQuantity < 7 || !hasElements) {
+      return false
+    }
+    // If none of the conditions above are met, let's check the user's preference
+    if (collapsedPreference === true) {
+      return false
+    }
+    // Finally, if none of the above are met, let's collapse the nav
+    return true
   }
 
   componentDidMount(): void {
@@ -196,7 +251,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   // BUG(tvst): X button should have same color as hamburger.
   // BUG(tvst): X and > buttons should have same margins as hamburger.
   public render(): ReactNode {
-    const { collapsedSidebar, sidebarWidth, hideScrollbar } = this.state
+    const {
+      collapsedSidebar,
+      sidebarWidth,
+      hideScrollbar,
+      collapsedSidebarNav,
+    } = this.state
     const {
       appPages,
       chevronDownshift,
@@ -261,6 +321,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
               <SidebarNav
                 appPages={appPages}
                 collapseSidebar={this.toggleCollapse}
+                collapseNav={collapsedSidebarNav}
                 currentPageScriptHash={currentPageScriptHash}
                 hasSidebarElements={hasElements}
                 hideParentScrollbar={this.hideScrollbar}

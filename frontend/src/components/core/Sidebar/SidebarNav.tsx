@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useCallback, useRef, useState } from "react"
+import React, {
+  ReactElement,
+  useCallback,
+  useRef,
+  useState,
+  useEffect,
+} from "react"
 // We import react-device-detect in this way so that tests can mock its
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"
@@ -39,6 +45,7 @@ export interface Props {
   collapseSidebar: () => void
   currentPageScriptHash: string
   hasSidebarElements: boolean
+  collapseNav: boolean
   hideParentScrollbar: (newValue: boolean) => void
   onPageChange: (pageName: string) => void
   pageLinkBaseUrl: string
@@ -47,52 +54,48 @@ export interface Props {
 const SidebarNav = ({
   appPages,
   collapseSidebar,
+  collapseNav,
   currentPageScriptHash,
   hasSidebarElements,
   onPageChange,
   pageLinkBaseUrl,
 }: Props): ReactElement | null => {
-  const pageQuantity = appPages.length
-  let shouldAlwaysExpand = false
-  // There are three main scenarios to consider here:
-  // 1. If there are less than two pages, we don't need the navigation, so exit the function.
-  if (pageQuantity < 2) {
-    return null
-  }
-  // 2. If there are less than 7 pages, we don't need the collapse/expand functionality,
-  // so let's make sure we have a way to bypass those options
-  else if (pageQuantity <= 6) {
-    shouldAlwaysExpand = true
-  }
-
-  // 3. If we have more than 6, then let's first check localStorage to see if the user has a preference set
-  const shouldNavExpand = localStorageAvailable()
-    ? localStorage.getItem("navExpanded") === "true"
-    : false
-  const pageLimit = shouldNavExpand === true ? appPages.length : 6
-
-  const [expanded, setExpanded] = useState(
-    hasSidebarElements === true ? false : shouldNavExpand
-  )
+  const [expanded, setExpanded] = useState(!collapseNav)
   const [pagesToShow, setPagesToShow] = useState(
-    hasSidebarElements === true ? 6 : pageLimit
+    collapseNav === true ? 6 : appPages.length
   )
   const navItemsRef = useRef<HTMLUListElement>(null)
+  const toggleButtonRef = useRef<HTMLButtonElement>(null)
   // We use React.useContext here instead of destructuring it in the imports
   // above so that we can mock it in tests.
   const { getBaseUriParts } = React.useContext(AppContext)
 
-  const toggleExpanded = useCallback(() => {
-    if (!expanded) {
-      setExpanded(true)
-      setPagesToShow(appPages.length)
-      localStorage.setItem("navExpanded", "true")
-    } else {
-      setExpanded(false)
-      setPagesToShow(6)
-      localStorage.setItem("navExpanded", "false")
+  const toggleExpanded = useCallback(
+    (target = null) => {
+      if (!expanded) {
+        setExpanded(true)
+        setPagesToShow(appPages.length)
+
+        if (target === toggleButtonRef.current && localStorageAvailable()) {
+          localStorage.setItem("navExpanded", "true")
+        }
+      } else {
+        setExpanded(false)
+        setPagesToShow(6)
+
+        if (target === toggleButtonRef.current && localStorageAvailable()) {
+          localStorage.setItem("navExpanded", "false")
+        }
+      }
+    },
+    [expanded]
+  )
+
+  useEffect(() => {
+    if (collapseNav !== !expanded) {
+      toggleExpanded()
     }
-  }, [expanded])
+  }, [collapseNav])
 
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
@@ -145,8 +148,8 @@ const SidebarNav = ({
                         // we want to expand the nav items by default, to prevent layout shift.
                         // We're also checking if the user isn't clicking on the active page,
                         // to avoid expanding/collapsing the menu in that scenario.
-                        if (!isActive && hasSidebarElements && !expanded) {
-                          toggleExpanded()
+                        if (hasSidebarElements && !isActive && !expanded) {
+                          toggleExpanded(e.target)
                         }
                         if (reactDeviceDetect.isMobile) {
                           collapseSidebar()
@@ -169,22 +172,13 @@ const SidebarNav = ({
 
       {hasSidebarElements && (
         <StyledSidebarNavSeparatorContainer isExpanded={expanded}>
-          {!expanded && shouldAlwaysExpand === false && (
-            <StyledSidebarNavButton
-              isExpanded={expanded}
-              onClick={toggleExpanded}
-            >
-              {appPages.length - pagesToShow} More
-            </StyledSidebarNavButton>
-          )}
-          {expanded && shouldAlwaysExpand === false && (
-            <StyledSidebarNavButton
-              isExpanded={expanded}
-              onClick={toggleExpanded}
-            >
-              View less
-            </StyledSidebarNavButton>
-          )}
+          <StyledSidebarNavButton
+            isExpanded={expanded}
+            onClick={e => toggleExpanded(e.target)}
+            ref={toggleButtonRef}
+          >
+            {expanded ? "View less" : `${appPages.length - pagesToShow} More`}
+          </StyledSidebarNavButton>
         </StyledSidebarNavSeparatorContainer>
       )}
     </StyledSidebarNavContainer>

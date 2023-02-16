@@ -54,6 +54,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   ],
   collapseSidebar: jest.fn(),
   currentPageScriptHash: "",
+  collapseNav: false,
   hasSidebarElements: false,
   hideParentScrollbar: jest.fn(),
   onPageChange: jest.fn(),

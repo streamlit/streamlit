@@ -1496,7 +1496,11 @@ export class App extends PureComponent<Props, State> {
               appPages={this.state.appPages}
               onPageChange={this.onPageChange}
               currentPageScriptHash={currentPageScriptHash}
-              hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
+              hideSidebarNav={
+                hideSidebarNav ||
+                hostHideSidebarNav ||
+                this.state.appPages.length < 2
+              }
               pageLinkBaseUrl={
                 this.props.hostCommunication.currentState.pageLinkBaseUrl
               }
