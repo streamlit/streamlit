@@ -143,3 +143,12 @@ describe("st.metric", () => {
     });
   });
 });
+
+describe("Check that ellipses shows up and the help shows up in the correct spot", () => {
+  it("Check Metric Snapshot", () => {
+    cy.getIndexed(
+      '[data-testid="metric-container"]',
+      7
+    ).matchThemedSnapshots("metric-help-and-ellipses");
+  });
+})

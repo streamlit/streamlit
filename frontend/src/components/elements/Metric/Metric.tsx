@@ -87,15 +87,15 @@ export default function Metric({ element }: MetricProps): ReactElement {
             allowHTML={false}
             isLabel
           />
-          {element.help && (
-            <StyledWidgetLabelHelpInline>
-              <TooltipIcon
-                content={element.help}
-                placement={Placement.TOP_RIGHT}
-              />
-            </StyledWidgetLabelHelpInline>
-          )}
         </StyledTruncateText>
+        {element.help && (
+          <StyledWidgetLabelHelpInline>
+            <TooltipIcon
+              content={element.help}
+              placement={Placement.TOP_RIGHT}
+            />
+          </StyledWidgetLabelHelpInline>
+        )}
       </StyledMetricLabelText>
       <StyledMetricValueText data-testid="stMetricValue">
         <StyledTruncateText> {element.body} </StyledTruncateText>
