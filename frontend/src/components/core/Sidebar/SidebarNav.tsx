@@ -170,17 +170,15 @@ const SidebarNav = ({
           )}
       </StyledSidebarNavItems>
 
-      {hasSidebarElements && (
-        <StyledSidebarNavSeparatorContainer isExpanded={expanded}>
-          <StyledSidebarNavButton
-            isExpanded={expanded}
-            onClick={e => toggleExpanded(e.target)}
-            ref={toggleButtonRef}
-          >
-            {expanded ? "View less" : `${appPages.length - pagesToShow} More`}
-          </StyledSidebarNavButton>
-        </StyledSidebarNavSeparatorContainer>
-      )}
+      <StyledSidebarNavSeparatorContainer isExpanded={expanded}>
+        <StyledSidebarNavButton
+          isExpanded={expanded}
+          onClick={e => toggleExpanded(e.target)}
+          ref={toggleButtonRef}
+        >
+          {expanded ? "View less" : `${appPages.length - pagesToShow} More`}
+        </StyledSidebarNavButton>
+      </StyledSidebarNavSeparatorContainer>
     </StyledSidebarNavContainer>
   )
 }
