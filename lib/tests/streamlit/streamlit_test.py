@@ -159,6 +159,8 @@ class StreamlitTest(unittest.TestCase):
                 "experimental_data_editor",
                 "get_option",
                 "set_option",
+                "experimental_modal_form",
+                "experimental_modal_alert",
             },
         )
 

@@ -397,13 +397,14 @@ const RawElementNodeRenderer = (
       const buttonProto = node.element.button as ButtonProto
       widgetProps.disabled = widgetProps.disabled || buttonProto.disabled
       if (buttonProto.isFormSubmitter) {
-        const { formId } = buttonProto
+        const { formId, isModalCloseButton } = buttonProto
         const hasInProgressUpload =
           props.formsData.formsWithUploads.has(formId)
         return (
           <FormSubmitContent
             element={buttonProto}
             width={width}
+            isModalCloseButton={isModalCloseButton}
             hasInProgressUpload={hasInProgressUpload}
             {...widgetProps}
           />

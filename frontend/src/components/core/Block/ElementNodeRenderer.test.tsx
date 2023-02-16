@@ -77,6 +77,7 @@ function getProps(
     componentRegistry: new ComponentRegistry(() => undefined),
     formsData: createFormsData(),
     width: 1000,
+    closeModal: null,
     ...props,
   }
 }

@@ -104,6 +104,8 @@ export interface Props {
    */
   isExpander?: boolean
   isTabs?: boolean
+
+  isInModal?: boolean | null
 }
 
 /**
@@ -369,6 +371,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
       isCheckbox,
       isExpander,
       isTabs,
+      isInModal,
     } = this.props
     const isInSidebar = this.context
 
@@ -378,6 +381,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isInSidebar={isInSidebar}
         isLabel={isLabel}
         isCheckbox={isCheckbox}
+        isInModal={isInModal}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
       >

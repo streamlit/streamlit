@@ -166,6 +166,7 @@ warning = _main.warning
 write = _main.write
 color_picker = _main.color_picker
 
+
 # Legacy
 _legacy_dataframe = _main._legacy_dataframe
 _legacy_table = _main._legacy_table
@@ -211,3 +212,5 @@ experimental_set_query_params = _set_query_params
 experimental_show = _show
 experimental_rerun = _rerun
 experimental_data_editor = _main.experimental_data_editor
+experimental_modal_form = _main.experimental_modal_form
+experimental_modal_alert = _main.experimental_modal_alert

@@ -15,6 +15,7 @@
  */
 
 import styled from "@emotion/styled"
+import { getBlackWhenLightBackgroundWhiteOtherwise } from "src/theme"
 
 export const StyledFormSubmitContent = styled.div(() => ({
   display: "flex",
@@ -28,4 +29,35 @@ export const StyledForm = styled.div(({ theme }) => ({
 
 export const StyledErrorContainer = styled.div(({ theme }) => ({
   marginTop: theme.spacing.lg,
+}))
+
+export const StyledModalCloseButtonWrapper = styled.div(({ theme }) => ({
+  position: "fixed",
+  bottom: "12px",
+  right: "13px",
+  zIndex: theme.zIndices.modalButtons,
+}))
+
+export const StyledModalCloseIconButton = styled.button(({ theme }) => ({
+  border: "none",
+  background: "none",
+  outline: "none",
+  ":focus": {
+    border: "none",
+    background: "none",
+    outline: "none",
+  },
+  ":hover": {
+    cursor: "pointer",
+  },
+  svg: {
+    color: getBlackWhenLightBackgroundWhiteOtherwise(theme),
+    ":hover": {
+      cursor: "pointer",
+    },
+  },
+  position: "fixed",
+  top: "1em",
+  right: "1em",
+  zIndex: theme.zIndices.modalButtons,
 }))

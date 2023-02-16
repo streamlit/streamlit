@@ -22,6 +22,7 @@ import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/utils"
 import withExpandable from "src/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
+import { Modal } from "src/components/widgets/Modal"
 import Tabs from "src/components/elements/Tabs"
 
 import {
@@ -98,6 +99,31 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       >
         {child}
       </Form>
+    )
+  }
+
+  if (node.deltaBlock.type === "modal") {
+    const { formId, clearOnSubmit, body, type, alert, title } = node.deltaBlock
+      .modal as BlockProto.Modal
+    const submitButtonCount = props.formsData.submitButtonCount.get(formId)
+    const hasSubmitButton =
+      submitButtonCount !== undefined && submitButtonCount > 0
+    return (
+      <Modal
+        formId={formId}
+        clearOnSubmit={clearOnSubmit}
+        hasSubmitButton={hasSubmitButton}
+        scriptRunState={props.scriptRunState}
+        widgetMgr={props.widgetMgr}
+        openModalId={props.openModalId}
+        closeModal={props.closeModal}
+        body={body}
+        type={type}
+        alert={alert}
+        title={title}
+      >
+        {child}
+      </Modal>
     )
   }
 

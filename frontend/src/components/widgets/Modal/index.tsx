@@ -14,4 +14,4 @@
  * limitations under the License.
  */
 
-export { default, getAlertKind } from "./Alert"
+export { Modal } from "./Modal"

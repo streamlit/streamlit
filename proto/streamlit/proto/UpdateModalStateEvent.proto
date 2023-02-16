@@ -1,4 +1,4 @@
-/**
+/**!
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,4 +14,8 @@
  * limitations under the License.
  */
 
-export { default, getAlertKind } from "./Alert"
+syntax = "proto3";
+
+message UpdateModalStateEvent {
+  string open_modal_id = 1;
+}

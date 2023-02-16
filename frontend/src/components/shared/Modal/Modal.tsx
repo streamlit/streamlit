@@ -66,9 +66,10 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
 
 export interface ModalBodyProps {
   children: ReactNode
+  noPadding?: boolean
 }
 
-function ModalBody({ children }: ModalBodyProps): ReactElement {
+function ModalBody({ children, noPadding }: ModalBodyProps): ReactElement {
   const { colors, fontSizes, spacing }: Theme = useTheme()
 
   return (
@@ -78,10 +79,10 @@ function ModalBody({ children }: ModalBodyProps): ReactElement {
         marginLeft: spacing.none,
         marginRight: spacing.none,
         marginBottom: spacing.none,
-        paddingTop: spacing.xl,
-        paddingRight: spacing.xl,
-        paddingBottom: spacing.xl,
-        paddingLeft: spacing.xl,
+        paddingTop: noPadding ? 0 : spacing.xl,
+        paddingRight: noPadding ? 0 : spacing.xl,
+        paddingBottom: noPadding ? 0 : spacing.xl,
+        paddingLeft: noPadding ? 0 : spacing.xl,
         color: colors.bodyText,
         fontSize: fontSizes.md,
         overflowY: "auto",
