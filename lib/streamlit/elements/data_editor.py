@@ -531,6 +531,10 @@ class DataEditorMixin:
         >>> favorite_command = edited_df.loc[edited_df["rating"].idxmax()]["command"]
         >>> st.markdown(f"Your favorite command is **{favorite_command}** 🎈")
 
+        .. output::
+           https://doc-data-editor.streamlit.app/
+           height: 350px
+
         You can also allow the user to add and delete rows by setting `num_rows` to "dynamic":
 
         >>> import streamlit as st
@@ -547,6 +551,10 @@ class DataEditorMixin:
         >>>
         >>> favorite_command = edited_df.loc[edited_df["rating"].idxmax()]["command"]
         >>> st.markdown(f"Your favorite command is **{favorite_command}** 🎈")
+
+        .. output::
+           https://doc-data-editor1.streamlit.app/
+           height: 450px
 
         """
 
