@@ -272,7 +272,6 @@ export const StyledSidebarNavButton =
     border: "none",
     paddingLeft: theme.spacing.twoXL,
     marginTop: theme.spacing.threeXS,
-    marginBottom: theme.spacing.twoXL,
     background: "transparent",
 
     "&:focus": {
