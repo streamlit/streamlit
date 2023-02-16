@@ -42,6 +42,12 @@ function BaseDateTimeColumn(
   inputType: "datetime-local" | "time" | "date",
   toISOString: (date: Date) => string
 ): BaseColumn {
+  console.log(
+    moment.tz("2018-11-09T10:00:00", "Australia/Sydney").toISOString()
+  )
+  console.log(moment.tz("2018-11-08T12:00:00", "UTC").toISOString())
+  console.log(moment.tz("2018-11-08T12:00:00", "+05:00").toISOString())
+  console.log(moment.tz("2018-11-08T12:00:00", "-05:00").toISOString())
   const parameters = mergeColumnParameters(
     // Default parameters:
     {
@@ -51,7 +57,7 @@ function BaseDateTimeColumn(
     // User parameters:
     props.columnTypeMetadata
   ) as DateTimeColumnParams
-  console.log(props.title, props.arrowType)
+
   const cellTemplate = {
     kind: GridCellKind.Custom,
     allowOverlay: true,
