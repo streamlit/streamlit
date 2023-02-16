@@ -137,6 +137,33 @@ describe("Sidebar Component", () => {
     )
   })
 
+  it("does not render the SidebarNav component if 0 appPages", () => {
+    const wrapper = renderSideBar({
+      appPages: [],
+    })
+
+    expect(wrapper.find(SidebarNav).exists()).toBe(false)
+  })
+
+  it("does not render the SidebarNav component if 1 appPages", () => {
+    const wrapper = renderSideBar({
+      appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
+    })
+
+    expect(wrapper.find(SidebarNav).exists()).toBe(false)
+  })
+
+  it("does render the SidebarNav component if 2 appPages", () => {
+    const wrapper = renderSideBar({
+      appPages: [
+        { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+        { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
+      ],
+    })
+
+    expect(wrapper.find(SidebarNav).exists()).toBe(false)
+  })
+
   it("uses the default chevron spacing if chevronDownshift is zero", () => {
     const wrapper = renderSideBar({
       chevronDownshift: 0,

@@ -54,7 +54,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   ],
   collapseSidebar: jest.fn(),
   currentPageScriptHash: "",
-  collapseNav: false,
+  collapseNav: true,
   hasSidebarElements: false,
   hideParentScrollbar: jest.fn(),
   onPageChange: jest.fn(),
@@ -70,20 +70,6 @@ describe("SidebarNav", () => {
 
     // @ts-ignore
     reactDeviceDetect.isMobile = false
-  })
-
-  it("returns null if 0 appPages (may be true before the first script run)", () => {
-    const wrapper = shallow(<SidebarNav {...getProps({ appPages: [] })} />)
-    expect(wrapper.getElement()).toBeNull()
-  })
-
-  it("returns null if 1 appPage", () => {
-    const wrapper = shallow(
-      <SidebarNav
-        {...getProps({ appPages: [{ pageName: "streamlit_app" }] })}
-      />
-    )
-    expect(wrapper.getElement()).toBeNull()
   })
 
   it("replaces underscores with spaces in pageName", () => {
@@ -258,18 +244,11 @@ describe("SidebarNav", () => {
       />
     )
 
-    expect(
-      wrapper
-        .find(StyledSidebarNavSeparatorContainer)
-        .find(StyledSidebarNavButton)
-        .props()
-    ).toHaveProperty("isExpanded", false)
-    expect(
-      wrapper
-        .find(StyledSidebarNavSeparatorContainer)
-        .find(StyledSidebarNavButton)
-        .text()
-    ).toBe("2 More")
+    expect(wrapper.find(StyledSidebarNavButton).props()).toHaveProperty(
+      "isExpanded",
+      false
+    )
+    expect(wrapper.find(StyledSidebarNavButton).text()).toBe("2 More")
   })
 
   it("renders the correct StyledSidebarNavButton when expanded", () => {
@@ -296,18 +275,11 @@ describe("SidebarNav", () => {
     )
 
     wrapper.find(StyledSidebarNavButton).prop("onClick")!(mockClickEvent)
-    expect(
-      wrapper
-        .find(StyledSidebarNavSeparatorContainer)
-        .find(StyledSidebarNavButton)
-        .props()
-    ).toHaveProperty("isExpanded", true)
-    expect(
-      wrapper
-        .find(StyledSidebarNavSeparatorContainer)
-        .find(StyledSidebarNavButton)
-        .text()
-    ).toBe("View less")
+    expect(wrapper.find(StyledSidebarNavButton).props()).toHaveProperty(
+      "isExpanded",
+      true
+    )
+    expect(wrapper.find(StyledSidebarNavButton).text()).toBe("View less")
   })
 
   it("is collapsed by default if there are widgets on the sidebar", () => {
@@ -320,7 +292,9 @@ describe("SidebarNav", () => {
 
   it("is expanded by default if no widgets are present on the sidebar", () => {
     const wrapper = mount(
-      <SidebarNav {...getProps({ hasSidebarElements: false })} />
+      <SidebarNav
+        {...getProps({ hasSidebarElements: false, collapseNav: false })}
+      />
     )
 
     expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(true)
