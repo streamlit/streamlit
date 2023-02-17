@@ -38,7 +38,10 @@ class BaseConnection(ABC, Generic[T]):
         if connection_name == "default":
             connection_name = self.default_connection_name()
 
-        connections_section = secrets_singleton.get("connections")
+        connections_section = None
+        if secrets_singleton.load_if_toml_exists():
+            connections_section = secrets_singleton.get("connections")
+
         if type(connections_section) is not AttrDict:
             return {}
 
