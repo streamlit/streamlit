@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 
-REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host", "port"}
+REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
 class SQL(BaseConnection["Engine"]):
@@ -56,7 +56,7 @@ class SQL(BaseConnection["Engine"]):
                 username=secrets["username"],
                 password=secrets.get("password"),
                 host=secrets["host"],
-                port=int(secrets["port"]),
+                port=int(secrets["port"]) if "port" in secrets else None,
                 database=secrets.get("database"),
             )
 
