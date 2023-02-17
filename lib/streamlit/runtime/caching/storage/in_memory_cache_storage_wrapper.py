@@ -32,7 +32,6 @@ _LOGGER = get_logger(__name__)
 class InMemoryCacheStorageWrapper(CacheStorage):
     def __init__(self, persist_storage: CacheStorage, context: CacheStorageContext):
         self.function_key = context.function_key
-        self.persist = context.persist
         self._ttl_seconds = context.ttl_seconds
         self._max_entries = context.max_entries
         self._mem_cache: TTLCache[str, bytes] = TTLCache(
@@ -52,29 +51,26 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         return float(self._max_entries) if self._max_entries is not None else math.inf
 
     def get(self, key: str) -> bytes:
-        """Returns the stored value for the key or None if the key is not present"""
+        """
+        Returns the stored value for the key or raise CacheStorageKeyNotFoundError if
+        the key is not found
+        """
         try:
             entry_bytes = self._read_from_mem_cache(key)
-
-        except CacheStorageKeyNotFoundError as e:
-            if self.persist == "disk":
-                entry_bytes = self._persist_storage.get(key)
-                self._write_to_mem_cache(key, entry_bytes)
-            else:
-                raise e
+        except CacheStorageKeyNotFoundError:
+            entry_bytes = self._persist_storage.get(key)
+            self._write_to_mem_cache(key, entry_bytes)
         return entry_bytes
 
     def set(self, key: str, value: bytes) -> None:
         """Sets the value for a given key"""
         self._write_to_mem_cache(key, value)
-        if self.persist == "disk":
-            self._persist_storage.set(key, value)
+        self._persist_storage.set(key, value)
 
     def delete(self, key: str) -> None:
         """Delete a given key"""
         self._remove_from_mem_cache(key)
-        if self.persist == "disk":
-            self._persist_storage.delete(key)
+        self._persist_storage.delete(key)
 
     def clear(self) -> None:
         """Delete all keys for the current storage"""  # TODO[Karen]: Rewrite docstring

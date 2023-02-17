@@ -44,31 +44,6 @@ _CACHED_FILE_EXTENSION = "memo"
 _LOGGER = get_logger(__name__)
 
 
-class LocalDiskCacheStorageManager(CacheStorageManager):
-    def create(self, context: CacheStorageContext) -> LocalDiskCacheStorage:
-        """Creates a new local disk cache storage instance"""
-        return LocalDiskCacheStorage(context)
-
-    def clear_all(self) -> None:
-        cache_path = get_cache_folder_path()
-        if os.path.isdir(cache_path):
-            shutil.rmtree(cache_path)
-
-    def check_context(self, context: CacheStorageContext, function_name: str) -> None:
-        if context.ttl_seconds is not None and not math.isinf(context.ttl_seconds):
-            # TODO [Karen]: Rewrite warning message
-            _LOGGER.warning(
-                """I AM MANAGER FOR DISK CACHE LOCAL STORAGE, AND I AM WANT TO SAY,
-                THAT I AM NOT SUPPORTED TTL, AND I ALWAYS PERSIST FILES ON DISK"""
-            )
-        if context.persist != "disk":
-            _LOGGER.warning(
-                "I AM MANAGER FOR DISK CACHE LOCAL STORAGE, "
-                "AND I AM WANT TO SAY, THAT I AM ALWAYS PERSIST VALUES TO "
-                "DISK REGARDLESS OF THE VALUE OF THE 'persist' PARAMETER"
-            )
-
-
 class InMemoryWrappedLocalDiskCacheStorageManager(CacheStorageManager):
     def create(self, context: CacheStorageContext) -> CacheStorage:
         """Creates a new cache storage instance wrapped with in-memory cache facade"""
@@ -111,59 +86,70 @@ class LocalDiskCacheStorage(CacheStorage):
         return float(self._max_entries) if self._max_entries is not None else math.inf
 
     def get(self, key: str) -> bytes:
-        """Returns the stored value for the key or raises an exception
-        if the key is not present"""
-
-        path = self._get_cache_file_path(key)
-        try:
-            with streamlit_read(path, binary=True) as input:
-                value = input.read()
-                _LOGGER.debug("Disk cache first stage HIT: %s!!! !!! !!! !!! !!!", key)
-                return bytes(value)
-        except FileNotFoundError:
-            raise CacheStorageKeyNotFoundError("Key not found in disk cache")
-        except Exception as ex:
-            _LOGGER.error(ex)
-            raise CacheStorageError("Unable to read from cache") from ex
+        """
+        Returns the stored value for the key if persisted,
+        raise CacheStorageKeyNotFoundError if not found, or not configured
+        with persist="disk"
+        """
+        if self.persist == "disk":
+            path = self._get_cache_file_path(key)
+            try:
+                with streamlit_read(path, binary=True) as input:
+                    value = input.read()
+                    _LOGGER.debug(
+                        "Disk cache first stage HIT: %s!!! !!! !!! !!! !!!", key
+                    )
+                    return bytes(value)
+            except FileNotFoundError:
+                raise CacheStorageKeyNotFoundError("Key not found in disk cache")
+            except Exception as ex:
+                _LOGGER.error(ex)
+                raise CacheStorageError("Unable to read from cache") from ex
+        else:
+            raise CacheStorageKeyNotFoundError(
+                "Key lookup on disk cache doesn't happen"
+            )
 
     def set(self, key: str, value: bytes) -> None:
         """Sets the value for a given key"""
-        path = self._get_cache_file_path(key)
-        try:
-            with streamlit_write(path, binary=True) as output:
-                output.write(value)
-        except util.Error as e:
-            _LOGGER.debug(e)
-            # Clean up file so we don't leave zero byte files.
+        if self.persist == "disk":
+            path = self._get_cache_file_path(key)
             try:
-                os.remove(path)
-            except (FileNotFoundError, IOError, OSError):
-                # If we can't remove the file, it's not a big deal.
-                pass
-            raise CacheStorageError("Unable to write to cache") from e
+                with streamlit_write(path, binary=True) as output:
+                    output.write(value)
+            except util.Error as e:
+                _LOGGER.debug(e)
+                # Clean up file so we don't leave zero byte files.
+                try:
+                    os.remove(path)
+                except (FileNotFoundError, IOError, OSError):
+                    # If we can't remove the file, it's not a big deal.
+                    pass
+                raise CacheStorageError("Unable to write to cache") from e
 
     def delete(self, key: str) -> None:
         """Delete a cache file from disk. If the file does not exist on disk,
         return silently. If another exception occurs, log it. Does not throw.
         """
-        path = self._get_cache_file_path(key)
-        try:
-            os.remove(path)
-        except FileNotFoundError:
-            # The file is already removed.
-            pass
-        except Exception as ex:
-            _LOGGER.exception(
-                "Unable to remove a file from the disk cache", exc_info=ex
-            )
+        if self.persist == "disk":
+            path = self._get_cache_file_path(key)
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                # The file is already removed.
+                pass
+            except Exception as ex:
+                _LOGGER.exception(
+                    "Unable to remove a file from the disk cache", exc_info=ex
+                )
 
     def clear(self) -> None:
         """Delete all keys for the current storage"""
         cache_dir = get_cache_folder_path()
 
-        for fname in os.listdir(cache_dir):
-            if self._is_cache_file(fname):
-                os.remove(os.path.join(cache_dir, fname))
+        for file_name in os.listdir(cache_dir):
+            if self._is_cache_file(file_name):
+                os.remove(os.path.join(cache_dir, file_name))
 
     def close(self) -> None:
         """Closes the cache storage"""
