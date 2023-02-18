@@ -82,6 +82,7 @@ class AppSessionTest(unittest.TestCase):
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
+        # TODO: Add a mock for CacheStorageManager
         Runtime._instance = mock_runtime
 
     def tearDown(self) -> None:

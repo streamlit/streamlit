@@ -22,6 +22,9 @@ from unittest.mock import MagicMock
 
 from streamlit import source_util
 from streamlit.runtime import Runtime
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    InMemoryWrappedDummyCacheStorageManager,
+)
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.testing.local_script_runner import LocalScriptRunner
@@ -35,9 +38,11 @@ class InteractiveScriptTests(unittest.TestCase):
         self.tmp_script_dir = tempfile.TemporaryDirectory()
 
         mock_runtime = MagicMock(spec=Runtime)
+        # TODO[KAREN]: Add cache_manager to mock_runtime
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
+        mock_runtime.cache_storage_manager = InMemoryWrappedDummyCacheStorageManager()
         Runtime._instance = mock_runtime
 
         with source_util._pages_cache_lock:

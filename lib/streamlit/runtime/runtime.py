@@ -87,7 +87,7 @@ class RuntimeConfig:
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
 
-    # TODO[Karen]: maybe use field with default factory and remove
+    # TODO [Karen]: maybe use field with default factory and remove
     #  creation of OpenSourceCacheStorageManager from server.py
     #  field(default_factory=OpenSourceCacheStorageManager)
     cache_storage_manager: CacheStorageManager

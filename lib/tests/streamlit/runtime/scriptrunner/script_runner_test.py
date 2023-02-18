@@ -82,6 +82,7 @@ class ScriptRunnerTest(AsyncTestCase):
     def setUp(self) -> None:
         super().setUp()
         mock_runtime = MagicMock(spec=Runtime)
+        # TODO[KAREN]: Add cache_manager to mock_runtime
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )

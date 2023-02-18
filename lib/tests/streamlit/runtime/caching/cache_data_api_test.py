@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import pickle
 import re
 import threading
@@ -29,11 +30,9 @@ import streamlit as st
 from streamlit import file_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Text_pb2 import Text as TextProto
+from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cache_data_api
-from streamlit.runtime.caching.cache_data_api import (
-    get_cache_path,
-    get_data_cache_stats_provider,
-)
+from streamlit.runtime.caching.cache_data_api import get_data_cache_stats_provider
 from streamlit.runtime.caching.cache_errors import CacheError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cached_message_replay import (
@@ -41,6 +40,13 @@ from streamlit.runtime.caching.cached_message_replay import (
     ElementMsgData,
     MultiCacheResults,
     _make_widget_key,
+)
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    InMemoryWrappedDummyCacheStorageManager,
+)
+from streamlit.runtime.caching.storage.local_disk_cache_storage import (
+    InMemoryWrappedLocalDiskCacheStorageManager,
+    get_cache_folder_path,
 )
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
@@ -74,6 +80,9 @@ class CacheDataTest(unittest.TestCase):
     def setUp(self) -> None:
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = InMemoryWrappedDummyCacheStorageManager()
+        Runtime._instance = mock_runtime
 
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
@@ -163,11 +172,19 @@ class CacheDataTest(unittest.TestCase):
 class CacheDataPersistTest(DeltaGeneratorTestCase):
     """st.cache_data disk persistence tests"""
 
+    def setUp(self) -> None:
+        super().setUp()
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = (
+            InMemoryWrappedLocalDiskCacheStorageManager()
+        )
+        Runtime._instance = mock_runtime
+
     def tearDown(self) -> None:
         st.cache_data.clear()
         super().tearDown()
 
-    @patch("streamlit.runtime.caching.cache_data_api.streamlit_write")
+    @patch("streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write")
     def test_dont_persist_by_default(self, mock_write):
         @st.cache_data
         def foo():
@@ -176,7 +193,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         foo()
         mock_write.assert_not_called()
 
-    @patch("streamlit.runtime.caching.cache_data_api.streamlit_write")
+    @patch("streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write")
     def test_persist_path(self, mock_write):
         """Ensure we're writing to ~/.streamlit/cache/*.memo"""
 
@@ -199,7 +216,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         mock_open(read_data=pickle.dumps(as_cached_result("mock_pickled_value"))),
     )
     @patch(
-        "streamlit.runtime.caching.cache_data_api.streamlit_read",
+        "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_read",
         wraps=file_util.streamlit_read,
     )
     def test_read_persisted_data(self, mock_read):
@@ -214,9 +231,9 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         self.assertEqual("mock_pickled_value", data)
 
     @patch("streamlit.file_util.os.stat", MagicMock())
-    @patch("streamlit.file_util.open", mock_open(read_data="bad_pickled_value"))
+    @patch("streamlit.file_util.open", mock_open(read_data=b"bad_pickled_value"))
     @patch(
-        "streamlit.runtime.caching.cache_data_api.streamlit_read",
+        "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_read",
         wraps=file_util.streamlit_read,
     )
     def test_read_bad_persisted_data(self, mock_read):
@@ -251,7 +268,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         # If the cache dir exists, we should delete it.
         with patch("os.path.isdir", MagicMock(return_value=True)):
             st.cache_data.clear()
-            mock_rmtree.assert_called_once_with(get_cache_path())
+            mock_rmtree.assert_called_once_with(get_cache_folder_path())
 
         mock_rmtree.reset_mock()
 
@@ -265,7 +282,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         "streamlit.file_util.open",
         wraps=mock_open(read_data=pickle.dumps(as_cached_result("mock_pickled_value"))),
     )
-    @patch("streamlit.runtime.caching.cache_data_api.os.remove")
+    @patch("streamlit.runtime.caching.storage.local_disk_cache_storage.os.remove")
     def test_clear_one_disk_cache(self, mock_os_remove: Mock, mock_open: Mock):
         """A memoized function's clear_cache() property should just clear
         that function's cache."""
@@ -287,10 +304,15 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
             mock_open.call_args_list[1][0][0],
         }
 
+        created_files_base_names = [
+            os.path.basename(filename) for filename in created_filenames
+        ]
+
         mock_os_remove.assert_not_called()
 
-        # Clear foo's cache
-        foo.clear()
+        with patch("os.listdir", MagicMock(return_value=created_files_base_names)):
+            # Clear foo's cache
+            foo.clear()
 
         # os.remove should have been called once for each of our created cache files
         self.assertEqual(2, mock_os_remove.call_count)
@@ -325,7 +347,10 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         assert text == ["1"]
 
     @patch("streamlit.file_util.os.stat", MagicMock())
-    @patch("streamlit.runtime.caching.cache_data_api.streamlit_write", MagicMock())
+    @patch(
+        "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write",
+        MagicMock(),
+    )
     @patch(
         "streamlit.file_util.open",
         wraps=mock_open(read_data=pickle.dumps(1)),
@@ -339,7 +364,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         # Executes normally, without raising any errors
         foo(1)
 
-    @patch("streamlit.runtime.caching.cache_data_api.streamlit_write")
+    @patch("streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write")
     def test_warning_memo_ttl_persist(self, _):
         """Using @st.cache_data with ttl and persist produces a warning."""
         with self.assertLogs(
@@ -366,7 +391,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
             ("False", False, False),
         ]
     )
-    @patch("streamlit.runtime.caching.cache_data_api.streamlit_write")
+    @patch("streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write")
     def test_persist_param_value(
         self,
         _,
@@ -392,6 +417,9 @@ class CacheDataStatsProviderTest(unittest.TestCase):
     def setUp(self):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = InMemoryWrappedDummyCacheStorageManager()
+        Runtime._instance = mock_runtime
 
         # Guard against external tests not properly cache-clearing
         # in their teardowns.
