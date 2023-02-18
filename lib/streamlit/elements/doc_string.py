@@ -84,7 +84,7 @@ class HelpMixin:
         >>>
         >>>   def __init__(self, breed, color):
         >>>     self.breed = breed
-        >>>     self.color = colod
+        >>>     self.color = color
         >>>
         >>>   def bark(self):
         >>>     return 'Woof!'
