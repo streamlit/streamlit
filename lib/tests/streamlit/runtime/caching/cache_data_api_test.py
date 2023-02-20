@@ -230,8 +230,11 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         mock_read.assert_called_once()
         self.assertEqual("mock_pickled_value", data)
 
+    # TODO [KAREN] Current test work because we coudn't convert string to bytes without
+    #  specifying enconding, we additionally should write test that checks behaviour
+    #  when bad binary data given, that when unpickled to correspond to our format.
     @patch("streamlit.file_util.os.stat", MagicMock())
-    @patch("streamlit.file_util.open", mock_open(read_data=b"bad_pickled_value"))
+    @patch("streamlit.file_util.open", mock_open(read_data="bad_pickled_value"))
     @patch(
         "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_read",
         wraps=file_util.streamlit_read,
@@ -368,7 +371,8 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
     def test_warning_memo_ttl_persist(self, _):
         """Using @st.cache_data with ttl and persist produces a warning."""
         with self.assertLogs(
-            "streamlit.runtime.caching.cache_data_api", level=logging.WARNING
+            "streamlit.runtime.caching.storage.local_disk_cache_storage",
+            level=logging.WARNING,
         ) as logs:
 
             @st.cache_data(ttl=60, persist="disk")

@@ -47,6 +47,7 @@ from streamlit.runtime.caching.cached_message_replay import (
 from streamlit.runtime.caching.storage import (
     CacheStorage,
     CacheStorageContext,
+    CacheStorageError,
     CacheStorageKeyNotFoundError,
     CacheStorageManager,
 )
@@ -565,6 +566,8 @@ class DataCache(Cache):
             pickled_entry = self.storage.get(key)
         except CacheStorageKeyNotFoundError as e:
             raise CacheKeyNotFoundError(str(e)) from e
+        except CacheStorageError as e:
+            raise CacheError(str(e)) from e
 
         try:
             entry = pickle.loads(pickled_entry)

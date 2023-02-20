@@ -19,6 +19,9 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorageContext as CacheStorageContext,
 )
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
+    CacheStorageError as CacheStorageError,
+)
+from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorageKeyNotFoundError as CacheStorageKeyNotFoundError,
 )
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
