@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import json
+import pickle
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from typing import (
@@ -605,6 +606,10 @@ class SessionState:
     def get_stats(self) -> list[CacheStat]:
         stat = CacheStat("st_session_state", "", asizeof(self))
         return [stat]
+
+    def check_serializable(self) -> None:
+        for k in self:
+            pickle.dumps(self[k])
 
 
 def _is_internal_key(key: str) -> bool:

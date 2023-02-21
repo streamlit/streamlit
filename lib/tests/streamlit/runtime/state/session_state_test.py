@@ -647,6 +647,17 @@ class SessionStateMethodTests(unittest.TestCase):
         assert not wsr.value_changed
         assert self.session_state["widget_id_1"] == WIDGET_VALUE
 
+    def test_detect_unserializable(self):
+        self.session_state.check_serializable()
+
+        def nested():
+            return lambda x: x
+
+        lam_func = nested()
+        self.session_state["unserializable"] = lam_func
+        with pytest.raises(Exception):
+            self.session_state.check_serializable()
+
 
 @given(state=stst.session_state())
 def test_compact_idempotent(state):
