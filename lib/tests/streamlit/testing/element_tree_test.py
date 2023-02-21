@@ -193,14 +193,16 @@ class HeadingTest(InteractiveScriptTests):
 
             st.title("This is a title")
             st.title("This is a title with anchor", anchor="anchor text")
+            st.title("This is a title with hidden anchor", anchor=False)
             """,
         )
         sr = script.run()
 
-        assert len(sr.get("title")) == 2
+        assert len(sr.get("title")) == 3
         assert sr.get("title")[1].tag == "h1"
         assert sr.get("title")[1].anchor == "anchor text"
         assert sr.get("title")[1].value == "This is a title with anchor"
+        assert sr.get("title")[2].hide_anchor
 
     def test_header(self):
         script = self.script_from_string(
@@ -210,14 +212,16 @@ class HeadingTest(InteractiveScriptTests):
 
             st.header("This is a header")
             st.header("This is a header with anchor", anchor="header anchor text")
+            st.header("This is a header with hidden anchor", anchor=False)
             """,
         )
         sr = script.run()
 
-        assert len(sr.get("header")) == 2
+        assert len(sr.get("header")) == 3
         assert sr.get("header")[1].tag == "h2"
         assert sr.get("header")[1].anchor == "header anchor text"
         assert sr.get("header")[1].value == "This is a header with anchor"
+        assert sr.get("header")[2].hide_anchor
 
     def test_subheader(self):
         script = self.script_from_string(
@@ -230,14 +234,16 @@ class HeadingTest(InteractiveScriptTests):
                 "This is a subheader with anchor",
                 anchor="subheader anchor text"
             )
+            st.subheader("This is a subheader with hidden anchor", anchor=False)
             """,
         )
         sr = script.run()
 
-        assert len(sr.get("subheader")) == 2
+        assert len(sr.get("subheader")) == 3
         assert sr.get("subheader")[1].tag == "h3"
         assert sr.get("subheader")[1].anchor == "subheader anchor text"
         assert sr.get("subheader")[1].value == "This is a subheader with anchor"
+        assert sr.get("subheader")[2].hide_anchor
 
     def test_heading_elements_by_type(self):
         script = self.script_from_string(
