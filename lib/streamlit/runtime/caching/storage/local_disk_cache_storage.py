@@ -156,9 +156,9 @@ class LocalDiskCacheStorage(CacheStorage):
 
     def _get_cache_file_path(self, value_key: str) -> str:
         """Return the path of the disk cache file for the given value."""
-        return get_streamlit_file_path(
-            _CACHE_DIR_NAME,
-            f"{self.function_key}-{value_key}.{_CACHED_FILE_EXTENSION}",
+        cache_dir = get_cache_folder_path()
+        return os.path.join(
+            cache_dir, f"{self.function_key}-{value_key}.{_CACHED_FILE_EXTENSION}"
         )
 
     def _is_cache_file(self, fname: str) -> bool:
