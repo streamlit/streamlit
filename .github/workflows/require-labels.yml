@@ -18,3 +18,8 @@ jobs:
           mode: exactly
           count: 1
           labels: "security-assessment-completed"
+      - uses: mheap/github-action-required-labels@179af849240d834567e1a3d6dc781575eede757c
+        with:
+          mode: exactly
+          count: 0
+          labels: "do-not-merge"

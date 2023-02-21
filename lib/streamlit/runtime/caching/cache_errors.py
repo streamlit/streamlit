@@ -23,6 +23,8 @@ from streamlit.errors import (
 )
 from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
 
+CACHE_DOCS_URL = "https://docs.streamlit.io/library/advanced-features/caching"
+
 
 def get_cached_func_name_md(func: Any) -> str:
     """Get markdown representation of the function name."""
@@ -161,10 +163,10 @@ class UnserializableReturnValueError(MarkdownFormattedException):
             self,
             f"""
             Cannot serialize the return value (of type {get_return_value_type(return_value)}) in {get_cached_func_name_md(func)}.
-            `st.experimental_memo` uses [pickle](https://docs.python.org/3/library/pickle.html) to
+            `st.cache_data` uses [pickle](https://docs.python.org/3/library/pickle.html) to
             serialize the function’s return value and safely store it in the cache without mutating the original object. Please convert the return value to a pickle-serializable type.
             If you want to cache unserializable objects such as database connections or Tensorflow
-            sessions, use `st.experimental_singleton` instead (see [our docs](https://docs.streamlit.io/library/advanced-features/experimental-cache-primitives) for differences).""",
+            sessions, use `st.cache_resource` instead (see [our docs]({CACHE_DOCS_URL}) for differences).""",
         )
 
 

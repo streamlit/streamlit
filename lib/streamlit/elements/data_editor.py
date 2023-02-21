@@ -471,12 +471,12 @@ class DataEditorMixin:
             The data to edit in the data editor.
 
         width : int or None
-            Desired width of the data editor expressed in pixels. If None, the width
-            will be automatically calculated based on the container width.
+            Desired width of the data editor expressed in pixels. If None, the width will
+            be automatically determined.
 
         height : int or None
-            Desired height of the data editor expressed in pixels. If None, a
-            default height is used.
+            Desired height of the data editor expressed in pixels. If None, the height will
+            be automatically determined.
 
         use_container_width : bool
             If True, set the data editor width to the width of the parent container.
@@ -531,7 +531,11 @@ class DataEditorMixin:
         >>> favorite_command = edited_df.loc[edited_df["rating"].idxmax()]["command"]
         >>> st.markdown(f"Your favorite command is **{favorite_command}** 🎈")
 
-        You can also allow the user to add and delete rows by setting `num_rows` to "dynamic":
+        .. output::
+           https://doc-data-editor.streamlit.app/
+           height: 350px
+
+        You can also allow the user to add and delete rows by setting ``num_rows`` to "dynamic":
 
         >>> import streamlit as st
         >>> import pandas as pd
@@ -547,6 +551,10 @@ class DataEditorMixin:
         >>>
         >>> favorite_command = edited_df.loc[edited_df["rating"].idxmax()]["command"]
         >>> st.markdown(f"Your favorite command is **{favorite_command}** 🎈")
+
+        .. output::
+           https://doc-data-editor1.streamlit.app/
+           height: 450px
 
         """
 
