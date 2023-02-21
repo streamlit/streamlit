@@ -32,6 +32,7 @@ from pympler.asizeof import asizeof
 from typing_extensions import Final, TypeAlias
 
 import streamlit as st
+from streamlit import config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -607,9 +608,13 @@ class SessionState:
         stat = CacheStat("st_session_state", "", asizeof(self))
         return [stat]
 
-    def check_serializable(self) -> None:
+    def _check_serializable(self) -> None:
         for k in self:
             pickle.dumps(self[k])
+
+    def maybe_check_serializable(self) -> None:
+        if config.get_option("runner.onlySerializableSessionState"):
+            self._check_serializable()
 
 
 def _is_internal_key(key: str) -> bool:
