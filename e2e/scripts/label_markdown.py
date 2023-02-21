@@ -14,34 +14,40 @@
 
 import streamlit as st
 
-# Valid button markdown: italics, bold, strikethrough & emoji
-st.button("*Fancy* **Stop** ~Button~ :traffic_light:")
-# Invalid button markdown: code & link
-st.button("Test `Code` [Link](www.example.com)")
-
-
-# Valid widget/expander/tab label markdown: italics, bold, strikethrough, emoji, link, code
-st.checkbox("**Agree** to the thing :thumbsup:")
-
-st.metric(label="Temperature = *Spicy* :hot_pepper:", value="105 °F", delta=None)
-
-st.radio(
-    "What's your favorite `coding` language? :computer:",
-    ("Python", "Javascript", "Ruby"),
+# Valid markdown: italics, bold, strikethrough, emojis, code, & colored text
+st.button("*Fancy* **Stop** ~Button~ :smile: `some code` - :violet[colored text]")
+st.download_button(
+    "*Fancy* **Stop** ~Button~ :smile: `code` - :violet[colored text]",
+    "This is some text",
 )
 
-st.selectbox(
-    "How would you like to be [contacted](https://dictionary.cambridge.org/us/dictionary/english/contacted)?",
-    ("Carrier Pidgeon", "Email", "Mobile phone"),
-)
+# Invalid button markdown: links
+st.button("Test [Link](www.example.com)")
+st.download_button("Download [Link](www.example.com)", "some text")
 
-table = """Table:
-| Syntax | Description |
-| ----------- | ----------- |
-| Header | Title |
-| Paragraph | Text |
-"""
-expand = st.expander("An **expander**.. with surprises ~~widgets~~ inside :cyclone:")
-expand.text_area(table)
+# Valid checkbox markdown: italics, bold, strikethrough, emoji, link, code
+st.checkbox("*Fancy* **Checkbox** ~Label~ :smile: `some code` - :violet[colored text]")
 
-tab1, tab2, tab3 = st.tabs(["**Cat** :cat:", "*Dog* :dog:", "~~Owl~~ :owl:"])
+
+# st.metric(label="Temperature = *Spicy* :hot_pepper:", value="105 °F", delta=None)
+
+# st.radio(
+#     "What's your favorite `coding` language? :computer:",
+#     ("Python", "Javascript", "Ruby"),
+# )
+
+# st.selectbox(
+#     "How would you like to be [contacted](https://dictionary.cambridge.org/us/dictionary/english/contacted)?",
+#     ("Carrier Pidgeon", "Email", "Mobile phone"),
+# )
+
+# table = """Table:
+# | Syntax | Description |
+# | ----------- | ----------- |
+# | Header | Title |
+# | Paragraph | Text |
+# """
+# expand = st.expander("An **expander**.. with surprises ~~widgets~~ inside :cyclone:")
+# expand.text_area(table)
+
+# tab1, tab2, tab3 = st.tabs(["**Cat** :cat:", "*Dog* :dog:", "~~Owl~~ :owl:"])

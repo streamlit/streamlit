@@ -43,10 +43,10 @@ export const StyledStreamlitMarkdown =
       const labelFontSize = isLabel && !isCheckbox
       return {
         fontFamily: theme.genericFonts.bodyFont,
-        marginBottom: `-${theme.spacing.lg}`,
         ...sharedMarkdownStyle(theme),
         p: {
           wordBreak: "break-word",
+          marginBottom: 0,
           ...(labelFontSize ? { fontSize: theme.fontSizes.sm } : {}),
         },
 

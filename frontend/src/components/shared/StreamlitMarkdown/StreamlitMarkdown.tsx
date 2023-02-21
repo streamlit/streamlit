@@ -83,27 +83,19 @@ export interface Props {
   isCaption?: boolean
 
   /**
-   * Only allows italics, bold, strikethrough, and emojis in button/download button labels,
-   * does not allow colored text
-   */
-  isButton?: boolean
-
-  /**
-   * Only allows italics, bold, strikethrough, emojis, links, and code in widget/expander/tab labels
+   * Indicates widget labels & restricts allowed elements
    */
   isLabel?: boolean
 
   /**
-   * Checkbox has larger label font sizing - same allowed elements as other widgets ^,
-   * does not allow colored text
+   * Does not allow links
    */
-  isCheckbox?: boolean
+  isButton?: boolean
 
   /**
-   * Does not allow colored text
+   * Checkbox has larger label font sizing
    */
-  isExpander?: boolean
-  isTabs?: boolean
+  isCheckbox?: boolean
 }
 
 /**
@@ -237,22 +229,14 @@ export interface RenderedMarkdownProps {
   overrideComponents?: Components
 
   /**
-   * Only allows italics, bold, strikethrough, and emojis in button/download button labels,
-   * does not allow colored text
-   */
-  isButton?: boolean
-
-  /**
-   * Only allows italics, bold, strikethrough, emojis, links, and code in widget/expander/tab labels
+   * Indicates widget labels & restricts allowed elements
    */
   isLabel?: boolean
 
   /**
-   * Does not allow colored text
+   * Does not allow links
    */
-  isCheckbox?: boolean
-  isExpander?: boolean
-  isTabs?: boolean
+  isButton?: boolean
 }
 
 export function RenderedMarkdown({
@@ -261,9 +245,6 @@ export function RenderedMarkdown({
   overrideComponents,
   isLabel,
   isButton,
-  isCheckbox,
-  isExpander,
-  isTabs,
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
@@ -317,14 +298,45 @@ export function RenderedMarkdown({
     rehypePlugins.push(rehypeRaw)
   }
 
-  // limits allowed markdown, default is allow all
-  let allowed
+  // Option A: disallowed elements
+  // Sets disallowed markdown for widget labels
+  let disallowed
   if (isLabel) {
-    allowed = ["p", "em", "strong", "del", "code", "a", "span"]
+    // Restricts images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
+    disallowed = [
+      "img",
+      "table",
+      "thead",
+      "tbody",
+      "tr",
+      "th",
+      "td",
+      "h1",
+      "h2",
+      "h3",
+      "ul",
+      "ol",
+      "li",
+      "input",
+      "hr",
+      "blockquote",
+    ]
+
+    if (isButton) {
+      // Button labels can't have links
+      disallowed.push("a")
+    }
   }
-  if (isButton || isCheckbox || isExpander || isTabs) {
-    allowed = ["p", "em", "strong", "del"]
-  }
+
+  // // Option B: allowed elements
+  // // limits allowed markdown, default is allow all
+  // let allowed
+  // if (isLabel) {
+  //    allowed = ["p", "em", "strong", "del", "code", "span", "a"]
+  //  if (isButton) {
+  //      allowed.pop()
+  //  }
+  // }
 
   return (
     <ErrorBoundary>
@@ -333,7 +345,10 @@ export function RenderedMarkdown({
         rehypePlugins={rehypePlugins}
         components={renderers}
         transformLinkUri={transformLinkUri}
-        allowedElements={allowed}
+        // allowedElements={allowed}
+        disallowedElements={disallowed}
+        // unwrap and render text from invalid markdown
+        unwrapDisallowed={true}
       >
         {source}
       </ReactMarkdown>
@@ -367,8 +382,6 @@ class StreamlitMarkdown extends PureComponent<Props> {
       isLabel,
       isButton,
       isCheckbox,
-      isExpander,
-      isTabs,
     } = this.props
     const isInSidebar = this.context
 
@@ -385,10 +398,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
           source={source}
           allowHTML={allowHTML}
           isLabel={isLabel}
-          isCheckbox={isCheckbox}
           isButton={isButton}
-          isExpander={isExpander}
-          isTabs={isTabs}
         />
       </StyledStreamlitMarkdown>
     )
