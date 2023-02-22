@@ -1,4 +1,4 @@
-/**
+/**!
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,4 +14,23 @@
  * limitations under the License.
  */
 
-export { default, getAlertKind } from "./Alert"
+syntax = "proto3";
+
+message AlertTypeMessage {
+
+  // We use separate AlertType message instead of just defining Enum and
+  // use it in other widgets proto files due to protobuf js error, when just
+  // enum defined and imported
+  // https://github.com/protobufjs/protobuf.js/issues/1414
+  enum AlertTypeOptions {
+    DEFAULT = 0;
+    ERROR = 1;
+    WARNING = 2;
+    INFO = 3;
+    SUCCESS = 4;
+    NONE = 5;
+  }
+
+  AlertTypeOptions value = 1;
+
+}

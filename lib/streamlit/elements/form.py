@@ -14,13 +14,14 @@
 from __future__ import annotations
 
 import textwrap
-from typing import TYPE_CHECKING, NamedTuple, cast
+from typing import TYPE_CHECKING, NamedTuple, Optional, cast
 
 from typing_extensions import Literal
 
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
+from streamlit.proto.AlertTypeMessage_pb2 import AlertTypeMessage
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
@@ -87,7 +88,7 @@ def is_in_form(dg: DeltaGenerator) -> bool:
     return current_form_id(dg) != ""
 
 
-def _build_duplicate_form_message(user_key: str | None = None) -> str:
+def build_duplicate_form_message(user_key: str | None = None) -> str:
     if user_key is not None:
         message = textwrap.dedent(
             f"""
@@ -112,6 +113,22 @@ def _build_duplicate_form_message(user_key: str | None = None) -> str:
         )
 
     return message.strip("\n")
+
+
+def build_form_id(key: str) -> str:
+    """Builds form id, based on key if given, first ensuring duplicate key rules."""
+
+    # A form is uniquely identified by its key.
+    form_id = key
+
+    ctx = get_script_run_ctx()
+    if ctx is not None:
+        new_form_id = form_id not in ctx.form_ids_this_run
+        if new_form_id:
+            ctx.form_ids_this_run.add(form_id)
+        else:
+            raise StreamlitAPIException(build_duplicate_form_message(key))
+    return form_id
 
 
 class FormMixin:
@@ -187,16 +204,7 @@ class FormMixin:
 
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
-        # A form is uniquely identified by its key.
-        form_id = key
-
-        ctx = get_script_run_ctx()
-        if ctx is not None:
-            new_form_id = form_id not in ctx.form_ids_this_run
-            if new_form_id:
-                ctx.form_ids_this_run.add(form_id)
-            else:
-                raise StreamlitAPIException(_build_duplicate_form_message(key))
+        form_id = build_form_id(key)
 
         block_proto = Block_pb2.Block()
         block_proto.form.form_id = form_id
@@ -294,6 +302,10 @@ class FormMixin:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
+        is_modal_close_button: bool = False,
+        can_modal_be_closed: bool = True,
+        modal_title: str = "",
+        alert_type: Optional[AlertTypeMessage.AlertTypeOptions.ValueType] = None,
         ctx: ScriptRunContext | None = None,
     ) -> bool:
         form_id = current_form_id(self.dg)
@@ -303,12 +315,16 @@ class FormMixin:
             key=submit_button_key,
             help=help,
             is_form_submitter=True,
+            modal_title=modal_title,
+            is_modal_close_button=is_modal_close_button,
+            can_modal_be_closed=can_modal_be_closed,
             on_click=on_click,
             args=args,
             kwargs=kwargs,
             type=type,
             disabled=disabled,
             use_container_width=use_container_width,
+            alert_type=alert_type,
             ctx=ctx,
         )
 

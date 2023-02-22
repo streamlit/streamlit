@@ -165,6 +165,8 @@ video = _main.video
 warning = _main.warning
 write = _main.write
 color_picker = _main.color_picker
+dialog = _main.dialog
+alert = _main.alert
 
 # Legacy
 _legacy_dataframe = _main._legacy_dataframe

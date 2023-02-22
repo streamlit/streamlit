@@ -18,6 +18,8 @@ import React, { ReactElement, ReactNode } from "react"
 
 import { Notification, KIND } from "baseui/notification"
 import { StyledAlertContent } from "./styled-components"
+import { Theme } from "src/theme/index"
+import { useTheme } from "@emotion/react"
 
 export enum Kind {
   ERROR = "error",
@@ -51,6 +53,7 @@ export interface AlertContainerProps {
   width?: number
   kind: Kind
   children: ReactNode
+  inModal?: boolean | null
 }
 
 /**
@@ -67,7 +70,9 @@ export default function AlertContainer({
   kind,
   width,
   children,
+  inModal,
 }: AlertContainerProps): ReactElement {
+  const { spacing }: Theme = useTheme()
   return (
     <Notification
       kind={getNotificationKind(kind)}
@@ -78,6 +83,8 @@ export default function AlertContainer({
             marginBottom: 0,
             marginLeft: 0,
             marginRight: 0,
+            paddingBottom: inModal ? spacing.threeXL : "16px",
+            paddingRight: inModal ? spacing.fourXL : "16px",
             width: width ? width.toString() : undefined,
             border: 0,
           },

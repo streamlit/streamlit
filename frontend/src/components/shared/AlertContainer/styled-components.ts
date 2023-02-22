@@ -25,7 +25,7 @@ export const StyledAlertContent = styled.div(({ theme }) => ({
     paddingLeft: theme.spacing.lg,
     border: `1px solid ${theme.colors.fadedText10}`,
 
-    "pre, code": {
+    "pre, code, span, h1, h2, h3, h4, h5": {
       backgroundColor: theme.colors.transparent,
       color: "inherit",
     },
@@ -36,7 +36,7 @@ export const StyledAlertContent = styled.div(({ theme }) => ({
     padding: theme.spacing.none,
   },
 
-  "pre, code": {
+  "pre, code, span, h1, h2, h3, h4, h5": {
     color: "inherit",
   },
 

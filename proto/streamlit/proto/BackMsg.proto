@@ -62,6 +62,8 @@ message BackMsg {
     // runtime. This message is IGNORED unless the runtime is configured with
     // global.developmentMode = True.
     bool debug_shutdown_runtime = 15;
+
+    bool close_modal = 16;
   }
 
   // An ID used to associate this BackMsg with the corresponding ForwardMsgs
@@ -71,5 +73,5 @@ message BackMsg {
 
   reserved 1, 2, 3, 4, 8, 9, 10;
 
-  // Next: 16
+  // Next: 17
 }

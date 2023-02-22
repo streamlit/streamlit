@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/AlertTypeMessage.proto";
+
 message Block {
   oneof type {
     Vertical vertical = 1;
@@ -25,6 +27,7 @@ message Block {
     Form form = 5;
     TabContainer tab_container = 6;
     Tab tab = 7;
+    Modal modal = 9;
   }
 
   bool allow_empty = 8;
@@ -58,5 +61,22 @@ message Block {
     string label = 1;
   }
 
-  // Next ID: 9
+  enum ModalType {
+    ALERT = 0;
+    FORM = 1;
+  }
+
+  message Modal {
+    string title = 1;
+    string body = 2;
+    string form_id = 3;
+    string icon = 4;
+    bool clear_on_submit = 5;
+    bool can_be_closed = 6;
+    bool unsafe_allow_html = 7;
+    ModalType type = 8;
+    AlertTypeMessage alert = 9;
+  }
+
+  // Next ID: 10
 }

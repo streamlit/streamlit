@@ -59,6 +59,15 @@ def _generate_scriptrun_id() -> str:
     return str(uuid.uuid4())
 
 
+def create_update_open_modal_id_modal_event(open_modal_id: str = "") -> ForwardMsg:
+    """Create ForwardMsg which sets open_modal_id protobuf.
+    By default it's empty, which should close the modal.
+    """
+    msg = ForwardMsg()
+    msg.update_modal_state_event.open_modal_id = open_modal_id
+    return msg
+
+
 class AppSession:
     """
     Contains session data for a single "user" of an active app
@@ -282,6 +291,8 @@ class AppSession:
                 self._handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == "stop_script":
                 self._handle_stop_script_request()
+            elif msg_type == "close_modal":
+                self._handle_close_modal()
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -711,6 +722,12 @@ class AppSession:
         caching.cache_data.clear()
         caching.cache_resource.clear()
         self._session_state.clear()
+
+    def _handle_close_modal(self) -> None:
+        """Closes any currently open modal, by enqueueing ForwardMsg with empty open_modal_id."""
+        # empty open_modal_id should effectively close the modal
+        msg = create_update_open_modal_id_modal_event(open_modal_id="")
+        self._enqueue_forward_msg(msg)
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.

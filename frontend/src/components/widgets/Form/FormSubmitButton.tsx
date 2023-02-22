@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, useEffect } from "react"
-import { Button as ButtonProto } from "src/autogen/proto"
+import { AlertTypeMessage, Button as ButtonProto } from "src/autogen/proto"
 import UIButton, {
   ButtonTooltip,
   Kind,
@@ -23,17 +23,33 @@ import UIButton, {
 } from "src/components/shared/Button"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown/index"
+import { X as CloseIcon } from "react-feather"
+import {
+  StyledModalCloseIconButton,
+  StyledModalCloseButtonWrapper,
+} from "src/components/widgets/Form/styled-components"
+import AlertTypeOptions = AlertTypeMessage.AlertTypeOptions
 
 export interface Props {
   disabled: boolean
   element: ButtonProto
   hasInProgressUpload: boolean
+  isModalCloseButton?: boolean
+  canModalBeClosed?: boolean
   widgetMgr: WidgetStateManager
   width: number
 }
 
 export function FormSubmitButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, hasInProgressUpload, width } = props
+  const {
+    disabled,
+    element,
+    widgetMgr,
+    hasInProgressUpload,
+    width,
+    isModalCloseButton,
+    canModalBeClosed,
+  } = props
   const { formId } = element
   const style = { width }
   const kind =
@@ -52,22 +68,54 @@ export function FormSubmitButton(props: Props): ReactElement {
       data-testid="stFormSubmitButton"
       style={style}
     >
-      <ButtonTooltip help={element.help}>
-        <UIButton
-          kind={kind}
-          size={Size.SMALL}
-          fluidWidth={element.useContainerWidth || false}
-          disabled={disabled || hasInProgressUpload}
+      {isModalCloseButton &&
+      canModalBeClosed &&
+      element.alert &&
+      element.alert?.value === AlertTypeOptions.NONE ? (
+        <StyledModalCloseIconButton
+          modalHasHeader={
+            !!(element.modalTitle && element.modalTitle?.length > 0)
+          }
           onClick={() => widgetMgr.submitForm(element)}
         >
-          <StreamlitMarkdown
-            source={element.label}
-            allowHTML={false}
-            isLabel
-            isButton
-          />
-        </UIButton>
-      </ButtonTooltip>
+          <CloseIcon className="icon" size={18} />
+        </StyledModalCloseIconButton>
+      ) : isModalCloseButton ? (
+        <StyledModalCloseButtonWrapper>
+          <ButtonTooltip help={element.help}>
+            <UIButton
+              kind={
+                canModalBeClosed ? Kind.MODAL_ALERT_BUTTON : Kind.HIDDEN_BUTTON
+              }
+              alertType={element.alert}
+              size={Size.SMALL}
+              fluidWidth={element.useContainerWidth || false}
+              disabled={disabled || hasInProgressUpload}
+              onClick={() => widgetMgr.submitForm(element)}
+              autoFocus={true}
+            >
+              OK
+            </UIButton>
+          </ButtonTooltip>
+        </StyledModalCloseButtonWrapper>
+      ) : (
+        <ButtonTooltip help={element.help}>
+          <UIButton
+            kind={kind}
+            size={Size.SMALL}
+            fluidWidth={element.useContainerWidth || false}
+            disabled={disabled || hasInProgressUpload}
+            onClick={() => widgetMgr.submitForm(element)}
+          >
+            <StreamlitMarkdown
+              source={element.label}
+              allowHTML={false}
+              isLabel
+              isButton
+            />
+          </UIButton>
+        </ButtonTooltip>
+      )}
     </div>
   )
 }

@@ -17,12 +17,18 @@
 import styled from "@emotion/styled"
 import { StyledEmojiIcon } from "src/components/shared/Icon/styled-components"
 
-export const StyledIconAlertContent = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: theme.spacing.sm,
+export interface StyledIconAlertContentProps {
+  inModal?: boolean | null
+}
 
-  [StyledEmojiIcon as any]: {
-    position: "relative",
-    top: "2px",
-  },
-}))
+export const StyledIconAlertContent = styled.div<StyledIconAlertContentProps>(
+  ({ theme, inModal }) => ({
+    display: "flex",
+    gap: theme.spacing.sm,
+
+    [StyledEmojiIcon as any]: {
+      position: "relative",
+      top: inModal ? "17px" : "2px",
+    },
+  })
+)

@@ -152,6 +152,10 @@ class RunWarningTest(unittest.TestCase):
                 "video",
                 "warning",
                 "write",
+                "dialog",
+                "alert",
+                "open",
+                "close",
             },
         )
 

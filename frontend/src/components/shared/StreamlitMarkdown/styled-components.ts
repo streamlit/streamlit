@@ -22,6 +22,7 @@ export interface StyledStreamlitMarkdownProps {
   isInSidebar: boolean
   isLabel?: boolean
   isCheckbox?: boolean
+  isInModal?: boolean | null
 }
 
 function convertRemToEm(s: string): string {
@@ -38,12 +39,15 @@ function sharedMarkdownStyle(theme: Theme): any {
 
 export const StyledStreamlitMarkdown =
   styled.div<StyledStreamlitMarkdownProps>(
-    ({ theme, isCaption, isInSidebar, isLabel, isCheckbox }) => {
+    ({ theme, isCaption, isInSidebar, isLabel, isCheckbox, isInModal }) => {
       // Widget Labels have smaller font size with exception of Checkbox
+      const { spacing } = theme
       const labelFontSize = isLabel && !isCheckbox
       return {
         fontFamily: theme.genericFonts.bodyFont,
         marginBottom: `-${theme.spacing.lg}`,
+        paddingBottom: isInModal ? spacing.threeXL : undefined,
+        paddingRight: isInModal ? spacing.fourXL : undefined,
         ...sharedMarkdownStyle(theme),
         p: {
           wordBreak: "break-word",

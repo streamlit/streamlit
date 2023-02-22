@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/AlertTypeMessage.proto";
+
 message Button {
   string id = 1;
   string label = 2;
@@ -30,4 +32,12 @@ message Button {
   string type = 7;
   bool disabled = 8;
   bool use_container_width = 9;
+
+  // If true, this is a modal close button. The frontend will render button as Close mark inside modal.
+  bool is_modal_close_button = 10;
+  bool can_modal_be_closed = 11;
+  string modal_title = 12;
+  AlertTypeMessage alert = 13;
+
+  // NEXT: 13
 }
