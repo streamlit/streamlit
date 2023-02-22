@@ -57,6 +57,7 @@ class CacheStorageContext:
     """
 
     function_key: str
+    function_display_name: str
     ttl_seconds: float | None = None
     max_entries: int | None = None
     persist: Literal["disk"] | None = None
@@ -116,7 +117,7 @@ class CacheStorageManager(Protocol):
         """
         raise NotImplementedError
 
-    def check_context(self, context: CacheStorageContext, function_name: str) -> None:
+    def check_context(self, context: CacheStorageContext) -> None:
         """
         Checks if the context is valid for the storage manager.
         This method should not return anything, but log message or raise an exception

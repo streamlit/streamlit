@@ -38,7 +38,6 @@ class InteractiveScriptTests(unittest.TestCase):
         self.tmp_script_dir = tempfile.TemporaryDirectory()
 
         mock_runtime = MagicMock(spec=Runtime)
-        # TODO[KAREN]: Add cache_manager to mock_runtime
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )

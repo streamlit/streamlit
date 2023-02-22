@@ -35,6 +35,7 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
         super().setUp()
         self.context = CacheStorageContext(
             function_key="func-key",
+            function_display_name="func-display-name",
             persist="disk",
         )
         self.storage = LocalDiskCacheStorage(self.context)

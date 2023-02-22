@@ -57,15 +57,16 @@ class InMemoryWrappedLocalDiskCacheStorageManager(CacheStorageManager):
         if os.path.isdir(cache_path):
             shutil.rmtree(cache_path)
 
-    def check_context(self, context: CacheStorageContext, function_name: str) -> None:
+    def check_context(self, context: CacheStorageContext) -> None:
         if (
             context.persist == "disk"
             and context.ttl_seconds is not None
             and not math.isinf(context.ttl_seconds)
         ):
             _LOGGER.warning(
-                f"The cached function '{function_name}' has a TTL that will be "
-                f"ignored. Persistent cached functions currently don't support TTL."
+                f"The cached function '{context.function_display_name}' has a TTL "
+                "that will be ignored. Persistent cached functions currently don't "
+                "support TTL."
             )
 
 

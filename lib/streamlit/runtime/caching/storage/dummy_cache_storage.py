@@ -35,7 +35,7 @@ class InMemoryWrappedDummyCacheStorageManager(CacheStorageManager):
     def clear_all(self) -> None:
         pass
 
-    def check_context(self, context: CacheStorageContext, function_name: str) -> None:
+    def check_context(self, context: CacheStorageContext) -> None:
         pass
 
 
@@ -47,7 +47,7 @@ class DummyCacheStorageManager(CacheStorageManager):
     def clear_all(self) -> None:
         pass
 
-    def check_context(self, context: CacheStorageContext, function_name: str) -> None:
+    def check_context(self, context: CacheStorageContext) -> None:
         pass
 
 

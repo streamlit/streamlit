@@ -25,6 +25,7 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorageContext,
     CacheStorageKeyNotFoundError,
 )
+from streamlit.runtime.stats import CacheStat
 
 _LOGGER = get_logger(__name__)
 
@@ -32,6 +33,7 @@ _LOGGER = get_logger(__name__)
 class InMemoryCacheStorageWrapper(CacheStorage):
     def __init__(self, persist_storage: CacheStorage, context: CacheStorageContext):
         self.function_key = context.function_key
+        self.function_display_name = context.function_display_name
         self._ttl_seconds = context.ttl_seconds
         self._max_entries = context.max_entries
         self._mem_cache: TTLCache[str, bytes] = TTLCache(
@@ -78,11 +80,20 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             self._mem_cache.clear()
         self._persist_storage.clear()
 
-    def get_stats(self) -> list[int]:
+    def get_stats(self) -> list[CacheStat]:
         """Returns a list of stats in bytes for the cache memory storage per item"""
+        stats = []
 
         with self._mem_cache_lock:
-            return [len(item_value) for item_value in self._mem_cache.values()]
+            for item in self._mem_cache.values():
+                stats.append(
+                    CacheStat(
+                        category_name="st_cache_data",
+                        cache_name=self.function_display_name,
+                        byte_length=len(item),
+                    )
+                )
+        return stats
 
     def close(self) -> None:
         """Closes the cache storage"""

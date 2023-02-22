@@ -826,8 +826,6 @@ class CommonCacheThreadingTest(unittest.TestCase):
     # The number of threads to run our tests on
     NUM_THREADS = 50
 
-    # TODO [Karen] maybe rewrite to its own base class/mixin that mocks
-    #  cache_storage_manager in Runtime
     def setUp(self):
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.cache_storage_manager = InMemoryWrappedDummyCacheStorageManager()

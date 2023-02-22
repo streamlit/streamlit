@@ -160,8 +160,6 @@ class DataCaches(CacheStatsProvider):
         # haven't changed.
         with self._caches_lock:
             cache = self._function_caches.get(key)
-            # Fixme: [Karen] instead of comparing key,
-            #  we can override __eq__ in DataCache
             if (
                 cache is not None
                 and cache.ttl_seconds == ttl_seconds
@@ -169,6 +167,19 @@ class DataCaches(CacheStatsProvider):
                 and cache.persist == persist
             ):
                 return cache
+
+            # Close the existing cache's storage, if it exists.
+            if cache is not None:
+                _LOGGER.debug(
+                    "Closing existing DataCache storage "
+                    "(key=%s, persist=%s, max_entries=%s, ttl=%s) "
+                    "before creating new one with different params",
+                    key,
+                    persist,
+                    max_entries,
+                    ttl,
+                )
+                cache.storage.close()
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug(
@@ -181,6 +192,7 @@ class DataCaches(CacheStatsProvider):
 
             cache_context = self.create_cache_storage_context(
                 function_key=key,
+                function_name=display_name,
                 ttl_seconds=ttl_seconds,
                 max_entries=max_entries,
                 persist=persist,
@@ -197,17 +209,12 @@ class DataCaches(CacheStatsProvider):
                 display_name=display_name,
                 allow_widgets=allow_widgets,
             )
-            # TODO [Karen]: Since we override old function cache with new one, we should
-            # also think about connected storage resource deallocation/close connection,
-            # before we override it with new one
             self._function_caches[key] = cache
             return cache
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
         with self._caches_lock:
-            # TODO: [Karen] We should also think about call storage.close() to
-            #  release resources
             try:
                 # Try to remove with optimal way, if not possible fallback to
                 # remove all available storages one by one
@@ -215,7 +222,7 @@ class DataCaches(CacheStatsProvider):
             except NotImplementedError:
                 for data_cache in self._function_caches.values():
                     data_cache.clear()
-            # TODO: [Karen] We should also think about call storage.close() here too.
+                    data_cache.storage.close()
             self._function_caches = {}
 
     def get_stats(self) -> list[CacheStat]:
@@ -241,17 +248,18 @@ class DataCaches(CacheStatsProvider):
         ttl_seconds = ttl_to_seconds(ttl, allow_none=True)
 
         cache_context = self.create_cache_storage_context(
-            function_key="DUMMY_KEY",  # Pass dummy key, since we don't have function
-            # key yet, and we use context to validate params
+            function_key="DUMMY_KEY",
+            function_name=function_name,
             ttl_seconds=ttl_seconds,
             max_entries=max_entries,
             persist=persist,
         )
-        self.get_storage_manager().check_context(cache_context, function_name)
+        self.get_storage_manager().check_context(cache_context)
 
     def create_cache_storage_context(
         self,
         function_key: str,
+        function_name: str,
         persist: CachePersistType,
         ttl_seconds: float | None,
         max_entries: int | None,
@@ -259,6 +267,7 @@ class DataCaches(CacheStatsProvider):
 
         return CacheStorageContext(
             function_key=function_key,
+            function_display_name=function_name,
             ttl_seconds=ttl_seconds,
             max_entries=max_entries,
             persist=persist,
@@ -552,21 +561,11 @@ class DataCache(Cache):
         self.persist = persist
         self.allow_widgets = allow_widgets
 
-    # TODO [Karen] think about this max_entries live here or in the storage
-
     def get_stats(self) -> list[CacheStat]:
-        stats: list[CacheStat] = []
 
-        if hasattr(self.storage, "get_stats") and callable(self.storage.get_stats):
-            for item_byte_length in self.storage.get_stats():
-                stats.append(
-                    CacheStat(
-                        category_name="st_cache_data",
-                        cache_name=self.display_name,
-                        byte_length=item_byte_length,
-                    )
-                )
-        return stats
+        if isinstance(self.storage, CacheStatsProvider):
+            return self.storage.get_stats()
+        return []
 
     def read_result(self, key: str) -> CachedResult:
         """Read a value and messages from the cache. Raise `CacheKeyNotFoundError`
