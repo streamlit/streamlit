@@ -73,6 +73,28 @@ describe("multipage apps", () => {
     cy.get(".element-container .stMarkdown h2").should("contain", "Page 4");
   });
 
+  it("can collapse the sidebar nav", () => {
+    cy.get('[data-testid="stSidebarNav"] button').click();
+
+    cy.get('[data-testid="stSidebarNav"] button').should("contain", "1 More");
+
+    cy.prepForElementSnapshots();
+
+    cy.get("[data-testid='stSidebarNav']").matchThemedSnapshots(
+      "multipage-apps-sidebar-nav-collapsed"
+    );
+  });
+
+  it("renders widgets below the navigation", () => {
+    cy.loadApp("http://localhost:3000/page_6");
+
+    cy.prepForElementSnapshots();
+
+    cy.get("[data-testid='stSidebar']").matchThemedSnapshots(
+      "multipage-apps-sidebar-nav-with-widgets"
+    );
+  });
+
   it("serves the react app and displays the page not found modal if the page does not exist", () => {
     cy.loadApp("http://localhost:3000/not_a_page");
 
