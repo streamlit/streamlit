@@ -23,24 +23,16 @@ with col2:
 with col3:
     st.metric("Apples I've eaten", "23k", " -20", "off")
 
-" "
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.selectbox("Pick one", [])
-with col2:
-    st.metric("Test 2", -4.56, 1.23, "inverse")
-with col3:
-    st.slider("Pick another")
-
-
 with col1:
     st.metric("Test 3", -4.56, 1.23, label_visibility="visible")
 with col2:
     st.metric("Test 4", -4.56, 1.23, label_visibility="hidden")
 with col3:
     st.metric("Test 5", -4.56, 1.23, label_visibility="collapsed")
+
+st.metric(
+    "User growth and a relatively long title", 123, help="testing help without a column"
+)
 
 col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
 

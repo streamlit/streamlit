@@ -115,6 +115,15 @@ describe("st.metric", () => {
     });
   });
 
+  describe("Test that the help shows up in the correct spot without columns", () => {
+    it("Check Metric Snapshot", () => {
+      cy.getIndexed(
+        '[data-testid="metric-container"]',
+        6
+      ).matchThemedSnapshots("metric-with-help");
+    });
+  })
+
   describe("Hides label correctly when label_visibility set to hidden", () => {
     it("Check Metric Snapshot", () => {
       cy.getIndexed("[data-testid='stMetricLabel']", 5).should(
@@ -124,7 +133,7 @@ describe("st.metric", () => {
 
       cy.getIndexed(
         '[data-testid="metric-container"]',
-        5
+        4
       ).matchThemedSnapshots("metric-label-hidden");
     });
   });
@@ -138,13 +147,13 @@ describe("st.metric", () => {
 
       cy.getIndexed(
         '[data-testid="metric-container"]',
-        6
+        5
       ).matchThemedSnapshots("metric-label-collapse");
     });
   });
 });
 
-describe("Check that ellipses shows up and the help shows up in the correct spot", () => {
+describe("Check that ellipses shows up and the help shows up in the correct spot with less space", () => {
   it("Check Metric Snapshot", () => {
     cy.getIndexed(
       '[data-testid="metric-container"]',
