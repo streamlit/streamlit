@@ -390,6 +390,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isCaption={Boolean(isCaption)}
         isInSidebar={isInSidebar}
         isLabel={isLabel}
+        isButton={isButton}
         isCheckbox={isCheckbox}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}

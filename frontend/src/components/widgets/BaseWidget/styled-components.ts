@@ -37,10 +37,6 @@ export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
     verticalAlign: "middle",
     flexDirection: "row",
     alignItems: "center",
-    // Handles labels with invalid markdown - ReactMarkdown wraps the text in a div
-    div: {
-      display: "inline-block",
-    },
   })
 )
 
