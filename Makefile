@@ -62,6 +62,10 @@ mini-init: setup pipenv-dev-install react-init protobuf
 # Build frontend into static files.
 frontend: react-build
 
+.PHONY: frontendFast
+# Build frontend into static files without TypeChecking and EsLint.
+frontendFast: react-build-fast
+
 .PHONY: setup
 setup:
 	pip install pipenv
@@ -275,6 +279,12 @@ react-init:
 .PHONY: react-build
 react-build:
 	cd frontend/ ; yarn run build
+	rsync -av --delete --delete-excluded --exclude=reports \
+		frontend/build/ lib/streamlit/static/
+
+.PHONY: react-build-fast
+react-build-fast:
+	cd frontend/ ; yarn run buildFast
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
 
