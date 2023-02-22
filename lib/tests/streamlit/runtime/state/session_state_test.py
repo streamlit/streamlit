@@ -348,7 +348,7 @@ class SessionStateInteractionTest(InteractiveScriptTests):
                 """,
             )
             sr = script.run()
-            assert sr.get("exception")
+            assert not sr.get("exception")
 
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
