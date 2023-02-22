@@ -204,10 +204,10 @@ describe("label markdown", () => {
             ["valid", "link"],
         ]
 
-        cy.get(".stFileUploader").should("have.length", 4);
+        cy.get('[data-testid="stFileUploader"]').should("have.length", 4);
 
         cases.forEach(([type, name], index) => {
-            cy.getIndexed(".stFileUploader", index).matchThemedSnapshots(`fileUploader-${type}-${name}`);
+            cy.getIndexed('[data-testid="stFileUploader"]', index).matchThemedSnapshots(`fileUploader-${type}-${name}`);
         })
     });
 
@@ -219,10 +219,10 @@ describe("label markdown", () => {
             ["valid", "link"],
         ]
 
-        cy.get(".stColorPicker").should("have.length", 4);
+        cy.get('[data-testid="stColorPicker"]').should("have.length", 4);
 
         cases.forEach(([type, name], index) => {
-            cy.getIndexed(".stColorPicker", index).matchThemedSnapshots(`colorPicker-${type}-${name}`);
+            cy.getIndexed('[data-testid="stColorPicker"]', index).matchThemedSnapshots(`colorPicker-${type}-${name}`);
         })
     });
 
