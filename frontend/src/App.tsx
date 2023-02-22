@@ -603,7 +603,7 @@ export class App extends PureComponent<Props, State> {
       // Determine our new ScriptRunState
       let { scriptRunState } = prevState
       let { dialog } = prevState
-
+      console.info("some js changes")
       if (
         statusChangeProto.scriptIsRunning &&
         prevState.scriptRunState !== ScriptRunState.STOP_REQUESTED
