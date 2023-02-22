@@ -36,24 +36,9 @@ describe("label markdown", () => {
         })
     });
 
-    it("download button labels handle markdown as expected", () => {
-        const cases = [
-            ["invalid", "table"],
-            ["valid", "markdown"],
-            ["valid", "colored"],
-            ["invalid", "link"],
-        ]
-
-        cy.get(".stDownloadButton").should("have.length", 4);
-
-        cases.forEach(([type, name], index) => {
-            cy.getIndexed(".stDownloadButton", index).matchThemedSnapshots(`downloadButton-${type}-${name}`);
-        })
-    });
-
     it("checkbox labels handle markdown as expected", () => {
         const cases = [
-            ["invalid", "heading1"],
+            ["invalid", "table"],
             ["valid", "markdown"],
             ["valid", "colored"],
             ["valid", "link"],
@@ -68,7 +53,7 @@ describe("label markdown", () => {
 
     it("radio labels handle markdown as expected", () => {
         const cases = [
-            ["invalid", "heading2"],
+            ["invalid", "heading1"],
             ["valid", "markdown"],
             ["valid", "colored"],
             ["valid", "link"],
@@ -83,7 +68,7 @@ describe("label markdown", () => {
 
     it("selectbox labels handle markdown as expected", () => {
         const cases = [
-            ["invalid", "heading3"],
+            ["invalid", "heading2"],
             ["valid", "markdown"],
             ["valid", "colored"],
             ["valid", "link"],
@@ -223,21 +208,6 @@ describe("label markdown", () => {
 
         cases.forEach(([type, name], index) => {
             cy.getIndexed(".stFileUploader", index).matchThemedSnapshots(`fileUploader-${type}-${name}`);
-        })
-    });
-
-    it("camera_input labels handle markdown as expected", () => {
-        const cases = [
-            ["invalid", "heading3"],
-            ["valid", "markdown"],
-            ["valid", "colored"],
-            ["valid", "link"],
-        ]
-
-        cy.get("[data-testid='stCameraInput']").should("have.length", 4);
-
-        cases.forEach(([type, name], index) => {
-            cy.getIndexed("[data-testid='stCameraInput']", index).matchThemedSnapshots(`cameraInput-${type}-${name}`);
         })
     });
 

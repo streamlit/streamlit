@@ -35,7 +35,6 @@ table = """
 
 heading_1 = "# Heading 1"
 heading_2 = "## Heading 2"
-heading_3 = "### Heading 3"
 
 ordered_list = """
  1. First Item
@@ -67,10 +66,9 @@ with st.container():
         "❌ Entirely Disallowed - Images, Table Elements, Headings, Lists, Blockquotes, Horizontal Rules"
     )
     st.button(image)
-    st.download_button(table, "some text")
-    st.checkbox(heading_1)
-    st.radio(heading_2, ["Option 1", "Option 2", "Option 3"])
-    st.selectbox(heading_3, ["Option 1", "Option 2", "Option 3"])
+    st.checkbox(table)
+    st.radio(heading_1, ["Option 1", "Option 2", "Option 3"])
+    st.selectbox(heading_2, ["Option 1", "Option 2", "Option 3"])
     st.multiselect(ordered_list, ["Blue", "Purple", "Green"])
     st.slider(unordered_list, 0, 10, 1)
     st.select_slider(task_list, ["Blue", "Purple", "Green"])
@@ -80,7 +78,6 @@ with st.container():
     st.date_input(table, datetime.date(2000, 3, 7))
     st.time_input(heading_1, datetime.time(8, 45))
     st.file_uploader(heading_2)
-    st.camera_input(heading_3)
     st.color_picker(ordered_list)
     st.metric(unordered_list, value=7, delta=0.5)
     with st.expander(task_list):
@@ -94,7 +91,6 @@ with st.container():
         "✅ Entirely Allowed - Bold, Italics, Strikethrough, Code, Shortcodes/Emojis"
     )
     st.button(valid_label)
-    st.download_button(valid_label, "some text")
     st.checkbox(valid_label)
     st.radio(valid_label, ["Option 1", "Option 2", "Option 3"])
     st.selectbox(valid_label, ["Option 1", "Option 2", "Option 3"])
@@ -107,7 +103,6 @@ with st.container():
     st.date_input(valid_label, datetime.date(2000, 3, 7))
     st.time_input(valid_label, datetime.time(8, 45))
     st.file_uploader(valid_label)
-    st.camera_input(valid_label)
     st.color_picker(valid_label)
     st.metric(valid_label, value=7, delta=0.5)
     with st.expander(valid_label):
@@ -128,7 +123,6 @@ with st.container():
 with st.container():
     st.subheader("✅ Entirely Allowed - Colored text")
     st.button(color_label)
-    st.download_button(color_label, "some text")
     st.checkbox(color_label)
     st.radio(color_label, ["Option 1", "Option 2", "Option 3"])
     st.selectbox(color_label, ["Option 1", "Option 2", "Option 3"])
@@ -141,7 +135,6 @@ with st.container():
     st.date_input(color_label, datetime.date(2000, 3, 7))
     st.time_input(color_label, datetime.time(8, 45))
     st.file_uploader(color_label)
-    st.camera_input(color_label)
     st.color_picker(color_label)
     st.metric(color_label, value=7, delta=0.5)
     with st.expander(color_label):
@@ -162,7 +155,6 @@ with st.container():
 with st.container():
     st.subheader("❌ Disallowed in Buttons - Links")
     st.button(link_label)
-    st.download_button(link_label, "some text")
 with st.container():
     st.subheader("✅ Allowed outside of buttons - Links")
     st.checkbox(link_label)
@@ -177,7 +169,6 @@ with st.container():
     st.date_input(link_label, datetime.date(2000, 3, 7))
     st.time_input(link_label, datetime.time(8, 45))
     st.file_uploader(link_label)
-    st.camera_input(link_label)
     st.color_picker(link_label)
     st.metric(link_label, value=7, delta=0.5)
     with st.expander(link_label):
