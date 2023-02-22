@@ -314,6 +314,7 @@ class ConfigTest(unittest.TestCase):
                 "client.caching",
                 "client.displayEnabled",
                 "client.showErrorDetails",
+                "client.toolbarMode",
                 "theme.base",
                 "theme.primaryColor",
                 "theme.backgroundColor",

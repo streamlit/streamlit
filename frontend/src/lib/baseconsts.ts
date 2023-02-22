@@ -48,3 +48,9 @@ export const FETCH_PARAMS: RequestInit = {
  * StatusWidget.
  */
 export const RERUN_PROMPT_MODAL_DIALOG = false
+
+/**
+ * Feature flag for https://github.com/streamlit/streamlit/pull/6223/files
+ * If this is true, we show a deploy button in the toolbar.
+ */
+export const SHOW_DEPLOY_BUTTON = false

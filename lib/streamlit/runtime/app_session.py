@@ -730,6 +730,22 @@ class AppSession:
         self._enqueue_forward_msg(self._create_session_status_changed_message())
 
 
+def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
+    config_key = "client.toolbarMode"
+    config_value = config.get_option(config_key)
+    enum_value: Optional[Config.ToolbarMode.ValueType] = getattr(
+        Config.ToolbarMode, config_value.upper()
+    )
+    if enum_value is None:
+        allowed_values = ", ".join(k.lower() for k in Config.ToolbarMode.keys())
+        raise ValueError(
+            f"Config {config_key!r} expects to have one of "
+            f"the following values: {allowed_values}. "
+            f"Current value: {config_value}"
+        )
+    return enum_value
+
+
 def _populate_config_msg(msg: Config) -> None:
     msg.gather_usage_stats = config.get_option("browser.gatherUsageStats")
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
@@ -737,6 +753,7 @@ def _populate_config_msg(msg: Config) -> None:
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
     msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")
+    msg.toolbar_mode = _get_toolbar_mode()
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:
