@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Type, TypeVar, overload
+import re
+from typing import Any, Dict, Type, TypeVar, overload
 
-from typing_extensions import Literal
+from typing_extensions import Final, Literal
 
 from streamlit.connections.base_connection import BaseConnection
 from streamlit.connections.file_connection import FileSystem
@@ -100,6 +101,14 @@ def connection(
     ...
 
 
+MODULE_EXTRACTION_REGEX = re.compile(r"No module named \'(.+)\'")
+MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
+    "fsspec": "fsspec",
+    "sqlalchemy": "sqlalchemy",
+    "snowflake.snowpark": "snowflake-snowpark-python",
+}
+
+
 # TODO(vdonato): Write a docstring for this function.
 # TODO(vdonato): Maybe support st.connection.sql() syntax as an alias for
 #                st.connection("sql") if we decide we want to do that.
@@ -123,9 +132,14 @@ def connection(connection_class, name="default", **kwargs):
             **kwargs,
         )
     except ModuleNotFoundError as e:
-        # TODO(vdonato): Finalize what we want this error message to be. We just add
-        # some generic text for now to demonstrate that we can add to the default
-        # error message.
-        raise ModuleNotFoundError(
-            f"{str(e)}. You may need to install this package to use this connection."
-        )
+        err_string = str(e)
+        missing_module = re.search(MODULE_EXTRACTION_REGEX, err_string)
+
+        extra_info = "You may be missing a dependency required to use this connection."
+        if missing_module:
+            pypi_package = MODULES_TO_PYPI_PACKAGES.get(missing_module.group(1))
+            if pypi_package:
+                extra_info = f"You need to install the '{pypi_package}' package to use this connection."
+
+        # TODO(vdonato): Finalize this error message.
+        raise ModuleNotFoundError(f"{str(e)}. {extra_info}")
