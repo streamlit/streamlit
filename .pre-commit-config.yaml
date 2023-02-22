@@ -60,16 +60,22 @@ repos:
         pass_filenames: true
       - id: typecheck
         name: Typecheck
+        always_run: true
         entry: yarn --cwd frontend tsc --noEmit
         files: \.js$|\.jsx$|\.ts$|\.tsx$
         language: node
         pass_filenames: false
+        stages:
+          - manual
       - id: eslint
         name: Eslint
+        always_run: true
         entry: ./scripts/run_in_subdirectory.py frontend/ yarn lint -- --fix
         files: ^frontend/src/.*(.js|\.jsx|\.ts|\.tsx)$
         language: node
         pass_filenames: true
+        stages:
+          - manual
       - id: license-headers
         name: Checks that all files have the required license headers
         entry: ./scripts/check_license_headers.py
