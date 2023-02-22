@@ -144,13 +144,6 @@ const SidebarNav = ({
                       onClick={e => {
                         e.preventDefault()
                         onPageChange(pageScriptHash as string)
-                        // If there are widgets on the sidebar after page change,
-                        // we want to expand the nav items by default, to prevent layout shift.
-                        // We're also checking if the user isn't clicking on the active page,
-                        // to avoid expanding/collapsing the menu in that scenario.
-                        if (hasSidebarElements && !isActive && !expanded) {
-                          toggleExpanded(e.target)
-                        }
                         if (reactDeviceDetect.isMobile) {
                           collapseSidebar()
                         }
