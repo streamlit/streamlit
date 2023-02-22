@@ -96,7 +96,12 @@ describe("Sidebar Component", () => {
   })
 
   it("hides scrollbar when hideScrollbar is called", () => {
-    const wrapper = renderSideBar({})
+    const wrapper = renderSideBar({
+      appPages: [
+        { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+        { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
+      ],
+    })
 
     expect(wrapper.find("StyledSidebarContent")).toHaveStyleRule(
       "overflow",
@@ -161,7 +166,7 @@ describe("Sidebar Component", () => {
       ],
     })
 
-    expect(wrapper.find(SidebarNav).exists()).toBe(false)
+    expect(wrapper.find(SidebarNav).exists()).toBe(true)
   })
 
   it("uses the default chevron spacing if chevronDownshift is zero", () => {
