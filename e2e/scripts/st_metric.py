@@ -34,6 +34,8 @@ st.metric(
     "User growth and a relatively long title", 123, help="testing help without a column"
 )
 
+st.metric("label title", None, None, help="testing help without a column")
+
 col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
 
 with col1:
