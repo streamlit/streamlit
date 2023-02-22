@@ -627,8 +627,6 @@ class DataCache(Cache):
         try:
             multi_cache_results = self._read_multi_results_from_storage(key)
         except (CacheKeyNotFoundError, pickle.UnpicklingError):
-            # TODO: [Karen] move pickle.UnpicklingError to
-            #  _read_multi_results_from_storage
             pass
 
         if multi_cache_results is None:

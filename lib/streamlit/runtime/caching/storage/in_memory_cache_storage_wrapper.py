@@ -75,7 +75,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self._persist_storage.delete(key)
 
     def clear(self) -> None:
-        """Delete all keys for the current storage"""  # TODO[Karen]: Rewrite docstring
+        """Delete all keys for the in memory cache, and also the persistent storage"""
         with self._mem_cache_lock:
             self._mem_cache.clear()
         self._persist_storage.clear()
