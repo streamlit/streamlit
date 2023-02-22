@@ -62,15 +62,11 @@ export interface StyledSidebarNavItemsProps {
 }
 
 export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
-  ({ isExpanded, hasSidebarElements, theme }) => {
-    const isExpandedPaddingBottom = isExpanded ? theme.spacing.threeXS : 0
-    const paddingBottom = hasSidebarElements ? isExpandedPaddingBottom : 0
-
+  ({ theme }) => {
     return {
       listStyle: "none",
       margin: 0,
       paddingTop: theme.sizes.sidebarTopSpace,
-      paddingBottom,
     }
   }
 )
