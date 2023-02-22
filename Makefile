@@ -278,8 +278,8 @@ react-build:
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
 
-.PHONY: frontendFast
-frontendFast:
+.PHONY: frontend-fast
+frontend-fast:
 	cd frontend/ ; yarn run buildFast
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
