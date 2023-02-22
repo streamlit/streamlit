@@ -230,9 +230,6 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         mock_read.assert_called_once()
         self.assertEqual("mock_pickled_value", data)
 
-    # TODO [KAREN] Current test work because we coudn't convert string to bytes without
-    #  specifying enconding, we additionally should write test that checks behaviour
-    #  when bad binary data given, that when unpickled to correspond to our format.
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch("streamlit.file_util.open", mock_open(read_data="bad_pickled_value"))
     @patch(
@@ -250,6 +247,24 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
             foo()
         mock_read.assert_called_once()
         self.assertEqual("Unable to read from cache", str(error.exception))
+
+    @patch("streamlit.file_util.os.stat", MagicMock())
+    @patch("streamlit.file_util.open", mock_open(read_data=b"bad_binary_pickled_value"))
+    @patch(
+        "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_read",
+        wraps=file_util.streamlit_read,
+    )
+    def test_read_bad_persisted_binary_data(self, mock_read):
+        """If our persisted data is bad, we raise an exception."""
+
+        @st.cache_data(persist="disk")
+        def foo():
+            return "actual_value"
+
+        with self.assertRaises(CacheError) as error:
+            foo()
+        mock_read.assert_called_once()
+        self.assertIn("Failed to unpickle", str(error.exception))
 
     def test_bad_persist_value(self):
         """Throw an error if an invalid value is passed to 'persist'."""
