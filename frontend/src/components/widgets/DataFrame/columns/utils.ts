@@ -25,11 +25,9 @@ import {
 import { toString, merge, isArray } from "lodash"
 import moment from "moment"
 import numbro from "numbro"
-import { logError } from "src/lib/log"
 
 import { Type as ArrowType } from "src/lib/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
-import { DatePickerCell } from "src/components/widgets/DataFrame/customCells/DatePickerCell"
 
 /**
  * Interface used for defining the properties (configuration options) of a column.
@@ -398,32 +396,26 @@ export function toSafeDate(value: any): Date | null | undefined {
 
   try {
     if (typeof value === "bigint") {
-      // Python datetime uses microseconds, but JS & Moment uses milliseconds
+      // bigint is used by Arrow for time values in microseconds,
+      // but JS & Moment uses milliseconds for Date objects
       return new Date(Number(value) / 1000)
     }
 
-    let parsedTimestamp = Number(value)
+    const parsedTimestamp = Number(value)
     if (!isNaN(parsedTimestamp)) {
       // It was parsed as a valid number (unix timestamp)
       return new Date(parsedTimestamp)
     }
 
     if (typeof value === "string") {
-      // Try to parse string via native Date:
-      const parsedDate = new Date(value)
-      if (!isNaN(parsedDate.getTime())) {
-        return parsedDate
-      }
-
       // Try to parse string via momentJS:
-      const parsedMomentDate = moment(value)
+      const parsedMomentDate = moment.utc(value)
       if (parsedMomentDate.isValid()) {
         return parsedMomentDate.toDate()
       }
-
       // The pasted value was not a valid date string
       // Try to interpret value as time string instead (HH:mm:ss)
-      const parsedMomentTime = moment(value, [
+      const parsedMomentTime = moment.utc(value, [
         moment.HTML5_FMT.TIME_MS, // HH:mm:ss.SSS
         moment.HTML5_FMT.TIME_SECONDS, // HH:mm:ss
         moment.HTML5_FMT.TIME, // HH:mm
@@ -433,7 +425,7 @@ export function toSafeDate(value: any): Date | null | undefined {
       }
     }
   } catch (error) {
-    // Do nothing here
+    return undefined
   }
 
   // Unable to interpret this value as a date:

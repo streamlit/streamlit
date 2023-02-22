@@ -22,7 +22,7 @@ import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
 
 import { ColumnCreator } from "./utils"
-import { DateTimeColumn, TimeColumn, DateColumn } from "./DateTimeColumnNew"
+import { DateTimeColumn, TimeColumn, DateColumn } from "./DateTimeColumn"
 
 export * from "./utils"
 

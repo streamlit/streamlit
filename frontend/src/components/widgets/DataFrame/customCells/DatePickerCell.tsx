@@ -43,6 +43,7 @@ export interface DatePickerCellProps {
   readonly date: Date | undefined | null
   readonly displayDate: string
   readonly format: DateKind
+  readonly timezoneOffset?: number
   readonly min?: string
   readonly max?: string
   readonly step?: string
@@ -74,8 +75,14 @@ export type DatePickerCell = CustomCell<DatePickerCellProps>
 const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
   const cellData = cell.value.data
   const { min, max, step, format, displayDate } = cellData
-  const value = formatValueForHTMLInput(format, cellData.date)
-  console.log(value)
+  const timezoneOffsetMillis = cellData.timezoneOffset
+    ? cellData.timezoneOffset * 60 * 1000
+    : 0
+  let date = cellData.date
+  if (timezoneOffsetMillis && date) {
+    date = new Date(date.getTime() + timezoneOffsetMillis)
+  }
+  const value = formatValueForHTMLInput(format, date)
   if (cell.value.readonly) {
     return (
       <TextCellEntry
@@ -120,7 +127,9 @@ const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
               ...cell.value.data,
               // use valueAsNumber because valueAsDate is null for "datetime-local"
               // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/datetime-local#technical_summary
-              date: new Date(event.target.valueAsNumber),
+              date: new Date(
+                event.target.valueAsNumber - timezoneOffsetMillis
+              ),
             },
           })
         }
@@ -138,11 +147,15 @@ const renderer: CustomRenderer<DatePickerCell> = {
     drawTextCell(args, displayDate, cell.contentAlign)
     return true
   },
+  measure: (ctx, cell) => {
+    const { displayDate } = cell.data
+    return ctx.measureText(displayDate).width + 16
+  },
   provideEditor: () => ({
     editor: Editor,
   }),
   onPaste: (v, d) => {
-    let parseDateTimestamp: number = NaN
+    let parseDateTimestamp = NaN
     // We only try to parse the value if it is not empty/undefined/null:
     if (v) {
       // Support for unix timestamps (milliseconds since 1970-01-01):

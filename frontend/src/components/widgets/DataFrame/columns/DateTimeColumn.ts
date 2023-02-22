@@ -15,7 +15,7 @@
  */
 
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-import moment from "moment"
+import moment, { Moment } from "moment"
 
 import {
   BaseColumn,
@@ -26,37 +26,57 @@ import {
   toSafeString,
 } from "src/components/widgets/DataFrame/columns/utils"
 import { DatePickerCell } from "src/components/widgets/DataFrame/customCells/DatePickerCell"
-import { isNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
+
+function applyTimezone(momentDate: Moment, timezone: string): Moment {
+  if (timezone.startsWith("+") || timezone.startsWith("-")) {
+    // Timezone is a UTC offset (e.g. "+05:00" or "-08:00")
+    momentDate = momentDate.utcOffset(timezone, false)
+  } else {
+    // Timezone is a timezone name (e.g. "America/New_York" or "UTC")
+    momentDate = momentDate.tz(timezone)
+  }
+  return momentDate
+}
 
 export interface DateTimeColumnParams {
   readonly format?: string
-  readonly min?: string
-  readonly max?: string
   readonly step?: string
+  // A timezone identifier, e.g. "America/New_York", "+05:00", or "UTC"
+  readonly timezone?: string
 }
 
 function BaseDateTimeColumn(
+  kind: string,
   props: BaseColumnProps,
-  defaultFormat: string,
+  defaultFormat: string, // used for rendering and copy data
   defaultStep: string,
   inputType: "datetime-local" | "time" | "date",
-  toISOString: (date: Date) => string
+  toISOString: (date: Date) => string,
+  timezone?: string
 ): BaseColumn {
-  console.log(
-    moment.tz("2018-11-09T10:00:00", "Australia/Sydney").toISOString()
-  )
-  console.log(moment.tz("2018-11-08T12:00:00", "UTC").toISOString())
-  console.log(moment.tz("2018-11-08T12:00:00", "+05:00").toISOString())
-  console.log(moment.tz("2018-11-08T12:00:00", "-05:00").toISOString())
   const parameters = mergeColumnParameters(
     // Default parameters:
     {
       format: defaultFormat,
       step: defaultStep,
+      timezone,
     },
     // User parameters:
     props.columnTypeMetadata
   ) as DateTimeColumnParams
+
+  let defaultTimezoneOffset: number | undefined = undefined
+  if (notNullOrUndefined(parameters.timezone)) {
+    // We try to determine the timezone offset based on today's date
+    // This is needed for the date picker to work correctly when the value is null
+    try {
+      defaultTimezoneOffset =
+        applyTimezone(moment(), parameters.timezone)?.utcOffset() || undefined
+    } catch (error) {
+      // Do nothing
+    }
+  }
 
   const cellTemplate = {
     kind: GridCellKind.Custom,
@@ -69,8 +89,6 @@ function BaseDateTimeColumn(
       kind: "datetime-picker-cell",
       date: undefined,
       displayDate: "",
-      min: parameters.min,
-      max: parameters.max,
       step: parameters.step,
       format: inputType,
     },
@@ -78,15 +96,16 @@ function BaseDateTimeColumn(
 
   return {
     ...props,
-    kind: "datetime",
+    kind,
     sortMode: "default",
     isEditable: true,
     getCell(data?: any): GridCell {
       const cellData = toSafeDate(data)
-      // TODO: show errors if date is < min or > max
 
       let copyData = ""
       let displayDate = ""
+      // Initilize with default offset base on today's date
+      let timezoneOffset = defaultTimezoneOffset
 
       if (cellData === undefined) {
         return getErrorCell(
@@ -96,9 +115,42 @@ function BaseDateTimeColumn(
       }
 
       if (cellData !== null) {
-        copyData = toISOString(cellData)
-        displayDate = moment.utc(cellData).format(parameters.format)
+        // Convert to moment object
+        let momentDate = moment.utc(cellData)
+
+        if (!momentDate.isValid()) {
+          // The moment date should never be invalid here.
+          return getErrorCell(
+            toSafeString(cellData),
+            `This should never happen. Please report this bug. \nError: ${momentDate.toString()}`
+          )
+        }
+
+        if (parameters.timezone) {
+          try {
+            momentDate = applyTimezone(momentDate, parameters.timezone)
+          } catch (error) {
+            return getErrorCell(
+              momentDate.toISOString(),
+              `Failed to adjust to the provided timezone: ${parameters.timezone}. \nError: ${error}`
+            )
+          }
+
+          timezoneOffset = momentDate.utcOffset()
+        }
+
+        try {
+          displayDate = momentDate.format(parameters.format)
+        } catch (error) {
+          return getErrorCell(
+            momentDate.toISOString(),
+            `Failed to format the date for rendering with: ${parameters.format}. \nError: ${error}`
+          )
+        }
+        // Copy data should always use the default format
+        copyData = momentDate.format(defaultFormat)
       }
+
       return {
         ...cellTemplate,
         copyData,
@@ -107,6 +159,7 @@ function BaseDateTimeColumn(
           ...cellTemplate.data,
           date: cellData,
           displayDate,
+          timezoneOffset,
         },
       } as DatePickerCell
     },
@@ -119,14 +172,20 @@ function BaseDateTimeColumn(
 }
 
 export function DateTimeColumn(props: BaseColumnProps): BaseColumn {
+  const timezone: string | undefined = props.arrowType?.meta?.timezone
+
   return BaseDateTimeColumn(
+    "datetime",
     props,
-    "YYYY-MM-DD HH:mm:ss",
+    notNullOrUndefined(timezone)
+      ? "YYYY-MM-DD HH:mm:ssZ"
+      : "YYYY-MM-DD HH:mm:ss",
     "1",
     "datetime-local",
     (date: Date): string => {
       return date.toISOString()
-    }
+    },
+    timezone
   )
 }
 
@@ -134,12 +193,13 @@ DateTimeColumn.isEditableType = true
 
 export function TimeColumn(props: BaseColumnProps): BaseColumn {
   return BaseDateTimeColumn(
+    "time",
     props,
     "HH:mm:ss.SSS",
     "0.1",
     "time",
     (date: Date): string => {
-      // Return only the time part
+      // Only return the time part of the ISO string:
       return date.toISOString().split("T")[1].replace("Z", "")
     }
   )
@@ -149,12 +209,13 @@ TimeColumn.isEditableType = true
 
 export function DateColumn(props: BaseColumnProps): BaseColumn {
   return BaseDateTimeColumn(
+    "date",
     props,
     "YYYY-MM-DD",
     "1",
     "date",
     (date: Date): string => {
-      // Return only the date part
+      // Only return the date part of the ISO string:
       return date.toISOString().split("T")[0]
     }
   )
