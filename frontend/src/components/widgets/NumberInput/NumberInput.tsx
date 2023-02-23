@@ -244,7 +244,7 @@ class NumberInput extends React.PureComponent<Props, State> {
       return undefined
     }
 
-    const formatSuffix = format.slice(match.length)
+    const formatSuffix = format.slice(match[0].length)
     const unescapedFormatSuffix = formatSuffix.replaceAll("%%", "%")
     const valueSuffix =
       unescapedFormatSuffix.length > 0
