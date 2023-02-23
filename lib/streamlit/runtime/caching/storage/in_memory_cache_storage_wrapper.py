@@ -31,6 +31,24 @@ _LOGGER = get_logger(__name__)
 
 
 class InMemoryCacheStorageWrapper(CacheStorage):
+    """
+    In-memory cache storage wrapper.
+
+    This class wraps a cache storage and adds an in-memory cache facade,
+    which is used to reduce the number of calls to the storage.
+
+    The in-memory cache is a TTL cache, which means that the entries are
+    automatically removed if a given time to live (TTL) has passed.
+
+    The in-memory cache is also an LRU cache, which means that the entries
+    are automatically removed if the cache size exceeds a given maxsize.
+
+    If the storage implements its strategy for maxsize, it is recommended
+    (but not necessary) that the storage implement the same LRU strategy,
+    otherwise a situation may arise when different items are deleted from
+    the memory cache and from the storage.
+    """
+
     def __init__(self, persist_storage: CacheStorage, context: CacheStorageContext):
         self.function_key = context.function_key
         self.function_display_name = context.function_display_name

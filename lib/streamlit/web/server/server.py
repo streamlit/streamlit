@@ -33,11 +33,9 @@ from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
-from streamlit.runtime.caching.storage.local_disk_cache_storage import (
-    InMemoryWrappedLocalDiskCacheStorageManager,
-)
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
+from streamlit.web.cache_storage_manager_config import get_cache_storage_manager
 from streamlit.web.server.app_static_file_handler import AppStaticFileHandler
 from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 from streamlit.web.server.component_request_handler import ComponentRequestHandler
@@ -183,15 +181,12 @@ class Server:
         media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
         MediaFileHandler.initialize_storage(media_file_storage)
 
-        # Initialize memory-disk cache storage
-        cache_storage_manager = InMemoryWrappedLocalDiskCacheStorageManager()
-
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
                 command_line=command_line,
                 media_file_storage=media_file_storage,
-                cache_storage_manager=cache_storage_manager,
+                cache_storage_manager=get_cache_storage_manager(),
             ),
         )
 

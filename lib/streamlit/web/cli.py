@@ -26,10 +26,8 @@ import streamlit.web.bootstrap as bootstrap
 from streamlit import config as _config
 from streamlit.case_converters import to_snake_case
 from streamlit.config_option import ConfigOption
-from streamlit.runtime.caching.storage.local_disk_cache_storage import (
-    InMemoryWrappedLocalDiskCacheStorageManager,
-)
 from streamlit.runtime.credentials import Credentials, check_credentials
+from streamlit.web.cache_storage_manager_config import get_cache_storage_manager
 
 ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 
@@ -264,9 +262,7 @@ def cache_clear():
     else:
         print(f"Nothing to clear at {cache_path}.")
 
-    # TODO [Karen] Find a better place to initiate cache_storage_manager,
-    #  and use it both here and in server.py when initiating Runtime
-    cache_storage_manager = InMemoryWrappedLocalDiskCacheStorageManager()
+    cache_storage_manager = get_cache_storage_manager()
     cache_storage_manager.clear_all()
     caching.cache_resource.clear()
 
