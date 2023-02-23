@@ -33,7 +33,7 @@ from typing_extensions import Final, TypeAlias
 
 import streamlit as st
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.state.common import (
@@ -614,7 +614,11 @@ class SessionState:
         pickleability by just trying it.
         """
         for k in self:
-            pickle.dumps(self[k])
+            try:
+                pickle.dumps(self[k])
+            except Exception as e:
+                err_msg = f"Unserializable data found in Session State with key '{k}'."
+                raise UnserializableSessionStateError(err_msg) from e
 
     def maybe_check_serializable(self) -> None:
         """Verify that session state can be serialized, if the relevant config
