@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { getCookie, setCookie } from "./utils"
+import {
+  getCookie,
+  setCookie,
+  isEmbed,
+  getEmbedUrlParams,
+  EMBED_QUERY_PARAM_VALUES,
+  EMBED_QUERY_PARAM_KEY,
+} from "./utils"
 
 describe("getCookie", () => {
   afterEach(() => {
@@ -94,5 +101,167 @@ describe("setCookie", () => {
     document.cookie = "flavor=chocolatechip"
     setCookie("flavor")
     expect(document.cookie).toEqual("")
+  })
+})
+
+describe("embedParamValues", () => {
+  const embedParamValuesShouldHave = [
+    "show_colored_line",
+    "show_toolbar",
+    "show_padding",
+    "disable_scrolling",
+    "show_footer",
+    "light_theme",
+    "dark_theme",
+    "true",
+  ]
+  it("embedParamValues have correct values", () => {
+    expect(EMBED_QUERY_PARAM_VALUES.length).toBe(
+      embedParamValuesShouldHave.length
+    )
+    embedParamValuesShouldHave.forEach(value => {
+      expect(EMBED_QUERY_PARAM_VALUES.includes(value.toLowerCase())).toBe(true)
+    })
+  })
+})
+
+describe("getEmbedUrlParams", () => {
+  let windowSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    windowSpy = jest.spyOn(window, "window", "get")
+  })
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+  })
+
+  it("getEmbedUrlParams should contain true when ?embed=true", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed=true",
+      },
+    }))
+    expect(getEmbedUrlParams(EMBED_QUERY_PARAM_KEY).has("true")).toBe(true)
+  })
+
+  it("getEmbedUrlParams should contain true when ?EMBED=TRUE", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?EMBED=TRUE",
+      },
+    }))
+    expect(getEmbedUrlParams(EMBED_QUERY_PARAM_KEY).has("true")).toBe(true)
+  })
+
+  it("getEmbedUrlParams is case insensitive, should contain true when ?EmBeD=TrUe", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?EmBeD=TrUe",
+      },
+    }))
+    expect(getEmbedUrlParams(EMBED_QUERY_PARAM_KEY).has("true")).toBe(true)
+  })
+
+  it("getEmbedUrlParams is empty, when params are invalid", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed=no&embed=text&embed=zero",
+      },
+    }))
+    expect(getEmbedUrlParams(EMBED_QUERY_PARAM_KEY).size).toBe(0)
+  })
+
+  it("getEmbedUrlParams is empty, when there is no query string", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "",
+      },
+    }))
+    expect(getEmbedUrlParams(EMBED_QUERY_PARAM_KEY).size).toBe(0)
+  })
+
+  it("getEmbedUrlParams is empty, when there is query string without embed param", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?text=a&x=b&c=a",
+      },
+    }))
+    expect(getEmbedUrlParams(EMBED_QUERY_PARAM_KEY).size).toBe(0)
+  })
+
+  it("getEmbedUrlParams with EMBED_QUERY_PARAM_KEY reads only ?embed param", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed=true&embed=true&a=x",
+      },
+    }))
+    expect(getEmbedUrlParams(EMBED_QUERY_PARAM_KEY).size).toBe(1)
+  })
+})
+
+describe("isEmbed", () => {
+  let windowSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    windowSpy = jest.spyOn(window, "window", "get")
+  })
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+  })
+
+  it("isEmbed should return true when ?embed=true", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed=true",
+      },
+    }))
+    expect(isEmbed()).toBe(true)
+  })
+
+  it("isEmbed should return true when ?embed=TRUE", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed=TRUE",
+      },
+    }))
+    expect(isEmbed()).toBe(true)
+  })
+
+  it("isEmbed is case insensitive, so should return true when ?embed=TrUe", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?EmBeD=TrUe",
+      },
+    }))
+    expect(isEmbed()).toBe(true)
+  })
+
+  it("isEmbed returns true, when there is at least one occurrence of ?embed=true", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed=text&embed=true",
+      },
+    }))
+    expect(isEmbed()).toBe(true)
+  })
+
+  it("isEmbed returns false, when no url param is set", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "",
+      },
+    }))
+    expect(isEmbed()).toBe(false)
+  })
+
+  it("isEmbed returns false when embed url param is any string other than true", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "randomText",
+      },
+    }))
+    expect(isEmbed()).toBe(false)
   })
 })
