@@ -56,6 +56,8 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
         boxShadow: "none",
         maxWidth: "none",
         minWidth: "100%",
+        width: "100% !important",
+        paddingTop: "1rem",
       },
     }
   }
@@ -83,6 +85,10 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
       margin: 0,
       paddingTop: theme.sizes.sidebarTopSpace,
       paddingBottom: theme.spacing.lg,
+
+      "@media print": {
+        paddingTop: theme.spacing.sm,
+      },
 
       "&::before": isOverflowing
         ? {
@@ -208,6 +214,10 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
       "&:focus-visible": {
         backgroundColor: theme.colors.darkenedBgMix15,
+      },
+
+      [`@media print`]: {
+        paddingLeft: theme.spacing.none,
       },
     }
   }
