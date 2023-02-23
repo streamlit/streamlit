@@ -319,32 +319,38 @@ class SessionStateInteractionTest(InteractiveScriptTests):
         assert sr5.get("slider")[1].value == 212.0
 
     def test_serializable_check(self):
+        """When the config option is on, adding unserializable data to session
+        state should result in an exception.
+        """
         with patch_config_options({"runner.onlySerializableSessionState": True}):
             script = self.script_from_string(
                 "unserializable.py",
                 """
                 import streamlit as st
 
-                def nested():
+                def unserializable_data():
                     return lambda x: x
 
-                st.session_state.unserializable = nested()
+                st.session_state.unserializable = unserializable_data()
                 """,
             )
             sr = script.run()
             assert sr.get("exception")
 
     def test_serializable_check_off(self):
+        """When the config option is off, adding unserializable data to session
+        state should work without errors.
+        """
         with patch_config_options({"runner.onlySerializableSessionState": False}):
             script = self.script_from_string(
                 "unserializable.py",
                 """
                 import streamlit as st
 
-                def nested():
+                def unserializable_data():
                     return lambda x: x
 
-                st.session_state.unserializable = nested()
+                st.session_state.unserializable = unserializable_data()
                 """,
             )
             sr = script.run()

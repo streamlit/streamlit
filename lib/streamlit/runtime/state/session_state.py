@@ -609,10 +609,18 @@ class SessionState:
         return [stat]
 
     def _check_serializable(self) -> None:
+        """Verify that everything added to session state can be serialized.
+        We use pickleability as the metric for serializability, and test for
+        pickleability by just trying it.
+        """
         for k in self:
             pickle.dumps(self[k])
 
     def maybe_check_serializable(self) -> None:
+        """Verify that session state can be serialized, if the relevant config
+        option is set.
+
+        See `_check_serializable` for details."""
         if config.get_option("runner.onlySerializableSessionState"):
             self._check_serializable()
 
