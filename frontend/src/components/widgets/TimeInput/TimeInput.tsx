@@ -58,7 +58,7 @@ class TimeInput extends PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    console.info("hello")
+    console.info("hello test")
     if (this.props.element.setValue) {
       this.updateFromProtobuf()
     } else {
