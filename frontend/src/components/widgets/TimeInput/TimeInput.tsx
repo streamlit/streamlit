@@ -75,6 +75,7 @@ class TimeInput extends PureComponent<Props, State> {
   }
 
   private maybeUpdateFromProtobuf(): void {
+    console.info("push some unchecked changes")
     const { setValue } = this.props.element
     if (setValue) {
       this.updateFromProtobuf()
