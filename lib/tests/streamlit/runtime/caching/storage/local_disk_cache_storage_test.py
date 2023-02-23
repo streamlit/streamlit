@@ -48,6 +48,7 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
 
     def tearDown(self):
         super().tearDown()
+        self.storage.clear()
         self.patch_get_cache_folder_path.stop()
         self.tempdir.cleanup()
 
@@ -63,6 +64,7 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
         self.assertEqual(self.storage.get("some-key"), b"some-value")
 
     def test_storage_set(self):
+        """Test that storage.set() writes the correct value to disk."""
         self.storage.set("new-key", b"new-value")
         self.assertTrue(os.path.exists(self.tempdir.path + "/func-key-new-key.memo"))
 

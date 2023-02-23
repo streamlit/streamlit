@@ -39,18 +39,6 @@ class InMemoryWrappedDummyCacheStorageManager(CacheStorageManager):
         pass
 
 
-class DummyCacheStorageManager(CacheStorageManager):
-    def create(self, context: CacheStorageContext) -> CacheStorage:
-        """Creates a new cache storage instance wrapped with in-memory cache facade"""
-        return DummyCacheStorage()
-
-    def clear_all(self) -> None:
-        pass
-
-    def check_context(self, context: CacheStorageContext) -> None:
-        pass
-
-
 class DummyCacheStorage(CacheStorage):
     def get(self, key: str) -> bytes:
         """
