@@ -439,6 +439,7 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        columns: Optional[ColumnConfigMapping] = None,
     ) -> EditableData:
         pass
 
@@ -456,6 +457,7 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        columns: Optional[ColumnConfigMapping] = None,
     ) -> pd.DataFrame:
         pass
 
@@ -473,6 +475,7 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        columns: Optional[ColumnConfigMapping] = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -572,7 +575,7 @@ class DataEditorMixin:
 
         """
 
-        columns_config: ColumnConfigMapping = {}
+        columns_config: ColumnConfigMapping = columns or {}
 
         data_format = type_util.determine_data_format(data)
         if data_format == DataFormat.UNKNOWN:
