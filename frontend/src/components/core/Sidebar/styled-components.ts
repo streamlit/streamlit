@@ -56,36 +56,24 @@ export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
   position: "relative",
 }))
 
-export interface StyledSidebarNavItemsProps {
-  isExpanded: boolean
-  hasSidebarElements: boolean
-}
-
-export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
-  ({ theme }) => {
-    return {
-      listStyle: "none",
-      margin: 0,
-      paddingTop: theme.sizes.sidebarTopSpace,
-    }
+export const StyledSidebarNavItems = styled.ul(({ theme }) => {
+  return {
+    listStyle: "none",
+    margin: 0,
+    paddingTop: theme.sizes.sidebarTopSpace,
   }
-)
+})
 
-export interface StyledSidebarNavSeparatorContainerProps {
-  isExpanded: boolean
-}
+export const StyledSidebarNavSeparatorContainer = styled.div(({ theme }) => ({
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
 
-export const StyledSidebarNavSeparatorContainer =
-  styled.div<StyledSidebarNavSeparatorContainerProps>(({ theme }) => ({
-    borderBottom: `1px solid ${theme.colors.fadedText10}`,
-
-    // If the separator is visible, but empty, that means we have
-    // sidebar elements below the nav, but less than 6 pages, so
-    // we need to enlarge its margin (which is often occupied by the expand/collapse buttons)
-    "&:empty": {
-      marginTop: theme.spacing.md,
-    },
-  }))
+  // If the separator is visible, but empty, that means we have
+  // sidebar elements below the nav, but less than 6 pages, so
+  // we need to enlarge its margin (which is often occupied by the expand/collapse buttons)
+  "&:empty": {
+    marginTop: theme.spacing.md,
+  },
+}))
 
 export const StyledSidebarNavLinkContainer = styled.div(({ theme }) => ({
   display: "flex",
@@ -256,25 +244,20 @@ export const StyledResizeHandle = styled.div(({ theme }) => ({
   },
 }))
 
-export interface StyledSidebarNavButtonProps {
-  isExpanded: boolean
-}
+export const StyledSidebarNavButton = styled.button(({ theme }) => ({
+  color: theme.colors.fadedText60,
+  fontSize: theme.fontSizes.twoSm,
+  padding: 0,
+  border: "none",
+  paddingLeft: theme.spacing.twoXL,
+  marginTop: theme.spacing.threeXS,
+  background: "transparent",
 
-export const StyledSidebarNavButton =
-  styled.button<StyledSidebarNavButtonProps>(({ theme }) => ({
-    color: theme.colors.fadedText60,
-    fontSize: theme.fontSizes.twoSm,
-    padding: 0,
-    border: "none",
-    paddingLeft: theme.spacing.twoXL,
-    marginTop: theme.spacing.threeXS,
-    background: "transparent",
+  "&:focus": {
+    outline: "none",
+  },
 
-    "&:focus": {
-      outline: "none",
-    },
-
-    "&:hover": {
-      color: theme.colors.bodyText,
-    },
-  }))
+  "&:hover": {
+    color: theme.colors.bodyText,
+  },
+}))

@@ -99,11 +99,7 @@ const SidebarNav = ({
 
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
-      <StyledSidebarNavItems
-        ref={navItemsRef}
-        isExpanded={expanded}
-        hasSidebarElements={hasSidebarElements}
-      >
+      <StyledSidebarNavItems ref={navItemsRef}>
         {appPages
           .slice(0, pagesToShow)
           .map(
@@ -165,16 +161,13 @@ const SidebarNav = ({
 
       {appPages.length > 6 && (
         <StyledSidebarNavButton
-          isExpanded={expanded}
           onClick={e => toggleExpanded(e.target)}
           ref={toggleButtonRef}
         >
           {expanded ? "View less" : `${appPages.length - pagesToShow} More`}
         </StyledSidebarNavButton>
       )}
-      {hasSidebarElements && (
-        <StyledSidebarNavSeparatorContainer isExpanded={expanded} />
-      )}
+      {hasSidebarElements && <StyledSidebarNavSeparatorContainer />}
     </StyledSidebarNavContainer>
   )
 }
