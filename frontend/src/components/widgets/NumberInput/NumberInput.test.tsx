@@ -349,16 +349,16 @@ describe("NumberInput widget", () => {
     })
 
     it("calls onChange", () => {
-      const props = getIntProps({ default: 10 })
+      const props = getIntProps({ default: 10, format: "%d" })
       const wrapper = shallow(<NumberInput {...props} />)
-
       const InputWrapper = wrapper.find(UIInput)
 
       // @ts-ignore
       InputWrapper.props().onChange({
+        // @ts-ignore
         target: {
           // @ts-ignore
-          value: 1,
+          value: "1",
         },
       })
 

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import numbers
+import re
 from dataclasses import dataclass
 from textwrap import dedent
 from typing import Optional, Union, cast
@@ -253,24 +254,40 @@ class NumberInputMixin:
             if format is None:
                 format = "%d" if int_value else "%0.2f"
 
+            # Ensure that the format is valid. It should have a format specifier.
+            exp = re.compile(r"(%[^%]?.*?(a|d|e|E|f|F|g|G|i|o|x|X|u))")
+            match = exp.match(format)
+            if match is None:
+                raise StreamlitAPIException(
+                    "Number input format string is missing format specifier."
+                )
+
+            # Ensure that the format only has one match
+            found_format = match.group()
+            ambiguous = exp.match(found_format[0:-1])
+            if ambiguous is not None:
+                raise StreamlitAPIException(
+                    "Format string " + found_format + " is ambiguous."
+                )
+
             # Warn user if they format an int type as a float or vice versa.
             # todo: Doesn't happen because back message when formatted as an int
             #       restricts the data sent to be an int.
             if (
-                ("%d" in format) or ("%u" in format) or ("%i" in format)
+                ("d" in found_format) or ("u" in found_format) or ("i" in found_format)
             ) and float_value:
                 import streamlit as st
 
                 st.warning(
                     "Warning: NumberInput value below has type float,"
-                    f" but format {format} displays as integer."
+                    f" but format {found_format} displays as integer."
                 )
-            elif "%f" in format and int_value:
+            elif "f" in found_format and int_value:
                 import streamlit as st
 
                 st.warning(
                     "Warning: NumberInput value below has type int so is"
-                    f" displayed as int despite format string {format}."
+                    f" displayed as int despite format string {found_format}."
                 )
 
         if step is None:

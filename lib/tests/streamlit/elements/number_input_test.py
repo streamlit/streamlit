@@ -171,8 +171,6 @@ class NumberInputTest(DeltaGeneratorTestCase):
     def test_error_on_invalid_formats(self):
         BAD_FORMATS = [
             "blah",
-            "a%f",
-            "a%.3f",
             "%d%d",
         ]
         for fmt in BAD_FORMATS:

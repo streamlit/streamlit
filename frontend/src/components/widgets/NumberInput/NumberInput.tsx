@@ -229,7 +229,7 @@ class NumberInput extends React.PureComponent<Props, State> {
       throw new Error("No format object available on number input element.")
     }
 
-    const specifier = /(%[^%]?.*?(d|e|f|g|i|u))/
+    const specifier = /(%[^%]?.*?(a|d|e|E|f|F|g|G|i|o|x|X|u))/
     const match = specifier.exec(format)
 
     if (match === null) {
@@ -273,11 +273,11 @@ class NumberInput extends React.PureComponent<Props, State> {
   private onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    const targetValue = e.target.value.trim()
+    const targetValue = e.target.value
 
     let parsedValue
     try {
-      parsedValue = this.getNumberFromFormattedString(targetValue)
+      parsedValue = this.getNumberFromFormattedString(targetValue.trim())
     } catch (ex) {
       // Ignore the caught exception.  We want customers to be able to
       // make mistakes in their data input and have the opportunity to
