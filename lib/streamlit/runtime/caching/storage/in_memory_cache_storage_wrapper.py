@@ -34,7 +34,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     """
     In-memory cache storage wrapper.
 
-    This class wraps a cache storage and adds an in-memory cache facade,
+    This class wraps a cache storage and adds an in-memory cache front layer,
     which is used to reduce the number of calls to the storage.
 
     The in-memory cache is a TTL cache, which means that the entries are

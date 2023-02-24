@@ -60,15 +60,6 @@ from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
 
-# Streamlit directory where persisted @st.cache_data objects live.
-# (This is the same directory that @st.cache persisted objects live.
-# But @st.cache_data uses a different extension, so they don't overlap.)
-_CACHE_DIR_NAME = "cache"
-
-# The extension for our persisted @st.cache_data objects.
-# (`@st.cache_data` was originally called `@st.memo`)
-_CACHED_FILE_EXTENSION = "memo"
-
 CACHE_DATA_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.DATA)
 
 # The cache persistence options we support: "disk" or None
@@ -216,8 +207,8 @@ class DataCaches(CacheStatsProvider):
         """Clear all in-memory and on-disk caches."""
         with self._caches_lock:
             try:
-                # Try to remove with optimal way, if not possible fallback to
-                # remove all available storages one by one
+                # try to remove in optimal way; if not possible, fallback to remove all
+                # available storages one by one
                 self.get_storage_manager().clear_all()
             except NotImplementedError:
                 for data_cache in self._function_caches.values():
@@ -622,8 +613,7 @@ class DataCache(Cache):
 
         multi_cache_results: MultiCacheResults | None = None
 
-        # Try to find in mem cache, falling back to disk, then falling back
-        # to a new result instance
+        # Try to find in cache storage, then falling back to a new result instance
         try:
             multi_cache_results = self._read_multi_results_from_storage(key)
         except (CacheKeyNotFoundError, pickle.UnpicklingError):

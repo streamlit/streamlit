@@ -158,7 +158,7 @@ class LocalDiskCacheStorage(CacheStorage):
                 os.remove(os.path.join(cache_dir, file_name))
 
     def close(self) -> None:
-        """Closes the cache storage"""
+        """Dummy implementation of close, we don't need to actually "close" anything"""
 
     def _get_cache_file_path(self, value_key: str) -> str:
         """Return the path of the disk cache file for the given value."""
