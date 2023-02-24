@@ -20,7 +20,6 @@ import {
   Element,
 } from "src/autogen/proto"
 import _ from "lodash"
-import url from "url"
 import xxhash from "xxhashjs"
 
 /**
@@ -46,11 +45,121 @@ export function debounce(delay: number, fn: any): any {
 }
 
 /**
- * Returns true if the URL parameters indicated that we're embedded in an
- * iframe.
+ * Embed query param values, which can be set in ?embed={value}, all should be lowercase
  */
-export function isEmbeddedInIFrame(): boolean {
-  return url.parse(window.location.href, true).query.embed === "true"
+export const EMBED_QUERY_PARAM_KEY = "embed"
+export const EMBED_OPTIONS_QUERY_PARAM_KEY = "embed_options"
+export const EMBED_SHOW_COLORED_LINE = "show_colored_line"
+export const EMBED_SHOW_TOOLBAR = "show_toolbar"
+export const EMBED_SHOW_PADDING = "show_padding"
+export const EMBED_DISABLE_SCROLLING = "disable_scrolling"
+export const EMBED_SHOW_FOOTER = "show_footer"
+export const EMBED_LIGHT_THEME = "light_theme"
+export const EMBED_DARK_THEME = "dark_theme"
+export const EMBED_TRUE = "true"
+export const EMBED_QUERY_PARAM_VALUES = [
+  EMBED_SHOW_COLORED_LINE,
+  EMBED_SHOW_TOOLBAR,
+  EMBED_SHOW_PADDING,
+  EMBED_DISABLE_SCROLLING,
+  EMBED_SHOW_FOOTER,
+  EMBED_LIGHT_THEME,
+  EMBED_DARK_THEME,
+  EMBED_TRUE,
+]
+
+/**
+ * Returns list of defined in EMBED_QUERY_PARAM_VALUES url params of given key
+ * (EMBED_QUERY_PARAM_KEY, EMBED_OPTIONS_QUERY_PARAM_KEY). Is case insensitive.
+ */
+export function getEmbedUrlParams(embedKey: string): Set<string> {
+  const embedUrlParams = new Set<string>()
+  const urlParams = new URLSearchParams(window.location.search)
+  urlParams.forEach((paramValue, paramKey) => {
+    paramKey = paramKey.toString().toLowerCase()
+    paramValue = paramValue.toString().toLowerCase()
+    if (
+      paramKey === embedKey &&
+      EMBED_QUERY_PARAM_VALUES.includes(paramValue)
+    ) {
+      embedUrlParams.add(paramValue)
+    }
+  })
+  return embedUrlParams
+}
+
+/**
+ * Returns true if the URL parameters contain ?embed=true (case insensitive).
+ */
+export function isEmbed(): boolean {
+  return getEmbedUrlParams(EMBED_QUERY_PARAM_KEY).has(EMBED_TRUE)
+}
+
+/**
+ * Returns true if the URL parameters contain ?embed=true&embed_options=show_colored_line (case insensitive).
+ */
+export function isColoredLineDisplayed(): boolean {
+  return (
+    isEmbed() &&
+    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
+      EMBED_SHOW_COLORED_LINE
+    )
+  )
+}
+
+/**
+ * Returns true if the URL parameters contain ?embed=true&embed_options=show_toolbar (case insensitive).
+ */
+export function isToolbarDisplayed(): boolean {
+  return (
+    isEmbed() &&
+    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_SHOW_TOOLBAR)
+  )
+}
+
+/**
+ * Returns true if the URL parameters contain ?embed=true&embed_options=disable_scrolling (case insensitive).
+ */
+export function isScrollingHidden(): boolean {
+  return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
+    EMBED_DISABLE_SCROLLING
+  )
+}
+
+/**
+ * Returns true if the URL parameters contain ?embed=true&embed_options=show_footer (case insensitive).
+ */
+export function isFooterDisplayed(): boolean {
+  return (
+    isEmbed() &&
+    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_SHOW_FOOTER)
+  )
+}
+
+/**
+ * Returns true if the URL parameters contain ?embed=true&embed_options=show_padding (case insensitive).
+ */
+export function isPaddingDisplayed(): boolean {
+  return (
+    isEmbed() &&
+    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_SHOW_PADDING)
+  )
+}
+
+/**
+ * Returns true if the URL parameters contain ?embed_options=light_theme (case insensitive).
+ */
+export function isLightTheme(): boolean {
+  return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
+    EMBED_LIGHT_THEME
+  )
+}
+
+/**
+ * Returns true if the URL parameters contain ?embed_options=dark_theme (case insensitive).
+ */
+export function isDarkTheme(): boolean {
+  return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_DARK_THEME)
 }
 
 /**
