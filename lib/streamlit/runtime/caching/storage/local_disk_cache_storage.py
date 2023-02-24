@@ -104,9 +104,7 @@ class LocalDiskCacheStorage(CacheStorage):
             try:
                 with streamlit_read(path, binary=True) as input:
                     value = input.read()
-                    _LOGGER.debug(
-                        "Disk cache first stage HIT: %s!!! !!! !!! !!! !!!", key
-                    )
+                    _LOGGER.debug("Disk cache HIT: %s", key)
                     return bytes(value)
             except FileNotFoundError:
                 raise CacheStorageKeyNotFoundError("Key not found in disk cache")

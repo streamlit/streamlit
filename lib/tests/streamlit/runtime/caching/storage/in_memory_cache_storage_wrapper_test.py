@@ -14,10 +14,16 @@
 
 """Unit tests for InMemoryCacheStorageWrapper"""
 import unittest
+from unittest.mock import patch
 
 from parameterized import parameterized
+from testfixtures import TempDirectory
 
-from streamlit.runtime.caching.storage import CacheStorage, CacheStorageContext
+from streamlit.runtime.caching.storage import (
+    CacheStorage,
+    CacheStorageContext,
+    CacheStorageKeyNotFoundError,
+)
 from streamlit.runtime.caching.storage.dummy_cache_storage import DummyCacheStorage
 from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
     InMemoryCacheStorageWrapper,
@@ -38,6 +44,19 @@ dummy_cache_storage = DummyCacheStorage()
 class InMemoryCacheStorageWrapperTest(unittest.TestCase):
     """Unit tests for InMemoryCacheStorageWrapper"""
 
+    def setUp(self) -> None:
+        self.tempdir = TempDirectory(create=True)
+        self.patch_get_cache_folder_path = patch(
+            "streamlit.runtime.caching.storage.local_disk_cache_storage.get_cache_folder_path",
+            return_value=self.tempdir.path,
+        )
+        self.patch_get_cache_folder_path.start()
+
+    def tearDown(self):
+        super().tearDown()
+        self.patch_get_cache_folder_path.stop()
+        self.tempdir.cleanup()
+
     @parameterized.expand([(local_disk_cache_storage,), (dummy_cache_storage,)])
     def test_in_memory_cache_storage_wrapper_works_with_any_storage(
         self, storage: CacheStorage
@@ -47,3 +66,96 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         an exception
         """
         InMemoryCacheStorageWrapper(persist_storage=storage, context=context)
+
+    def test_in_memory_cache_storage_wrapper_get_key_in_persist_storage(self):
+        """
+        Test that storage.get() returns the value from persist storage
+        if value doesn't exist in memory.
+        """
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+
+        persist_storage.set("some-key", b"some-value")
+        with patch.object(
+            persist_storage, "get", wraps=persist_storage.get
+        ) as mock_persist_get:
+            self.assertEqual(wrapped_storage.get("some-key"), b"some-value")
+            mock_persist_get.assert_called_once_with("some-key")
+
+            # Call get again to make that underlying storage is not called again
+            self.assertEqual(wrapped_storage.get("some-key"), b"some-value")
+            mock_persist_get.assert_called_once()
+
+    def test_in_memory_cache_storage_wrapper_get_key_in_memory_storage(self):
+        """
+        Test that storage.get() returns the value from in_memory storage
+        if value exists in memory.
+        """
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+
+        wrapped_storage.set("some-key", b"some-value")
+
+        with patch.object(
+            persist_storage, "get", wraps=persist_storage.get
+        ) as mock_persist_get:
+            self.assertEqual(wrapped_storage.get("some-key"), b"some-value")
+            mock_persist_get.assert_not_called()
+
+    def test_in_memory_cache_storage_wrapper_set(self):
+        """
+        Test that storage.set() sets value both in in-memory cache and
+        in persist storage
+        """
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+
+        persist_storage.set("some-key", b"some-value")
+        with patch.object(
+            persist_storage, "set", wraps=persist_storage.set
+        ) as mock_persist_set:
+            wrapped_storage.set("some-key", b"some-value")
+            mock_persist_set.assert_called_once_with("some-key", b"some-value")
+
+        self.assertEqual(wrapped_storage.get("some-key"), b"some-value")
+
+    def test_in_memory_cache_storage_wrapper_delete(self):
+        """
+        Test that storage.delete() deletes value both in in-memory cache
+        and in persist storage
+        """
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+
+        wrapped_storage.set("some-key", b"some-value")
+        with patch.object(
+            persist_storage, "delete", wraps=persist_storage.delete
+        ) as mock_persist_delete:
+            wrapped_storage.delete("some-key")
+            mock_persist_delete.assert_called_once_with("some-key")
+
+        with self.assertRaises(CacheStorageKeyNotFoundError):
+            wrapped_storage.get("some-key")
+
+    def test_in_memory_cache_storage_wrapper_close(self):
+        """
+        Test that storage.close() closes the underlying persist storage
+        """
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+
+        with patch.object(
+            persist_storage, "close", wraps=persist_storage.close
+        ) as mock_persist_close:
+            wrapped_storage.close()
+            mock_persist_close.assert_called_once()
