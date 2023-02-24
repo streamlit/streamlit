@@ -13,21 +13,131 @@
 # limitations under the License.
 
 """Unit tests for LocalDiskCacheStorage and LocalDiskCacheStorageManager"""
+import logging
+import math
 import os.path
+import shutil
 import unittest
 from unittest.mock import MagicMock, patch
 
 from testfixtures import TempDirectory
 
 from streamlit import util
+from streamlit.logger import get_logger
 from streamlit.runtime.caching.storage import (
     CacheStorageContext,
     CacheStorageError,
     CacheStorageKeyNotFoundError,
 )
+from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
+    InMemoryCacheStorageWrapper,
+)
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
+    InMemoryWrappedLocalDiskCacheStorageManager,
     LocalDiskCacheStorage,
 )
+
+
+class InMemoryWrappedLocalDiskCacheStorageManagerTest(unittest.TestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.tempdir = TempDirectory(create=True)
+        self.patch_get_cache_folder_path = patch(
+            "streamlit.runtime.caching.storage.local_disk_cache_storage.get_cache_folder_path",
+            return_value=self.tempdir.path,
+        )
+        self.patch_get_cache_folder_path.start()
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        self.patch_get_cache_folder_path.stop()
+        self.tempdir.cleanup()
+
+    def test_create_persist_context(self):
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            persist="disk",
+            ttl_seconds=60,
+            max_entries=100,
+        )
+        manager = InMemoryWrappedLocalDiskCacheStorageManager()
+        storage = manager.create(context)
+        self.assertIsInstance(storage, InMemoryCacheStorageWrapper)
+        self.assertEqual(storage.ttl_seconds, 60)
+        self.assertEqual(storage.max_entries, 100)
+
+    def test_create_not_persist_context(self):
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            persist=None,
+            ttl_seconds=None,
+            max_entries=None,
+        )
+        manager = InMemoryWrappedLocalDiskCacheStorageManager()
+        storage = manager.create(context)
+        self.assertIsInstance(storage, InMemoryCacheStorageWrapper)
+        self.assertEqual(storage.ttl_seconds, math.inf)
+        self.assertEqual(storage.max_entries, math.inf)
+
+    def test_check_context_with_persist_and_ttl(self):
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            persist="disk",
+            ttl_seconds=60,
+            max_entries=100,
+        )
+
+        with self.assertLogs(
+            "streamlit.runtime.caching.storage.local_disk_cache_storage",
+            level=logging.WARNING,
+        ) as logs:
+            manager = InMemoryWrappedLocalDiskCacheStorageManager()
+            manager.check_context(context)
+
+            output = "".join(logs.output)
+            self.assertIn(
+                "The cached function 'func-display-name' has a TTL that will be "
+                "ignored. Persistent cached functions currently don't support TTL.",
+                output,
+            )
+
+    def test_check_context_without_persist(self):
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            persist=None,
+            ttl_seconds=60,
+            max_entries=100,
+        )
+
+        with self.assertLogs(
+            "streamlit.runtime.caching.storage.local_disk_cache_storage",
+            level=logging.WARNING,
+        ) as logs:
+            manager = InMemoryWrappedLocalDiskCacheStorageManager()
+            manager.check_context(context)
+
+            # assertLogs is being used as a context manager, but it also checks
+            # that some log output was captured, so we have to let it capture something
+            get_logger(
+                "streamlit.runtime.caching.storage.local_disk_cache_storage"
+            ).warning("irrelevant warning so assertLogs passes")
+
+            output = "".join(logs.output)
+            self.assertNotIn(
+                "The cached function 'func-display-name' has a TTL that will be "
+                "ignored. Persistent cached functions currently don't support TTL.",
+                output,
+            )
+
+    @patch("shutil.rmtree", wraps=shutil.rmtree)
+    def test_clear_all(self, mock_rmtree):
+        manager = InMemoryWrappedLocalDiskCacheStorageManager()
+        manager.clear_all()
+        mock_rmtree.assert_called_once()
 
 
 class LocalDiskPersistCacheStorageTest(unittest.TestCase):
