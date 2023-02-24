@@ -49,14 +49,9 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
     width: theme.sizes.full,
     overflow: disableScrolling ? "hidden" : "auto",
     alignItems: "center",
+
     "&:focus": {
       outline: "none",
-    },
-    "@media print": {
-      "@-moz-document url-prefix()": {
-        display: "block",
-      },
-      overflow: "visible",
     },
 
     // Added so sidebar overlays main app content on
@@ -67,6 +62,11 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
       left: 0,
       right: 0,
       bottom: 0,
+    },
+
+    "@media print": {
+      position: "relative",
+      display: "block",
     },
   })
 )
@@ -101,6 +101,11 @@ export const StyledAppViewBlockContainer =
           : bottomEmbedPadding,
         minWidth: isWideMode ? "auto" : undefined,
         maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
+
+        [`@media print`]: {
+          minWidth: "100%",
+          paddingTop: 0,
+        },
       }
     }
   )
