@@ -278,6 +278,13 @@ react-build:
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
 
+.PHONY: frontend-fast
+# Build frontend into static files faster by setting BUILD_AS_FAST_AS_POSSIBLE=true flag, which disables eslint and typechecking.
+frontend-fast:
+	cd frontend/ ; yarn run buildFast
+	rsync -av --delete --delete-excluded --exclude=reports \
+		frontend/build/ lib/streamlit/static/
+
 .PHONY: jslint
 # Lint the JS code
 jslint:
@@ -307,7 +314,7 @@ jsformat:
 # Run JS unit tests.
 jstest:
 ifndef CIRCLECI
-	cd frontend; yarn run test
+	cd frontend; TESTPATH=$(TESTPATH) yarn run test
 else
 	# Previously we used --runInBand here, which just completely turns off parallelization.
 	# But since our CircleCI instance has 2 CPUs, use maxWorkers instead:
