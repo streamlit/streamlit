@@ -180,7 +180,8 @@ class TypeUtilTest(unittest.TestCase):
     @parameterized.expand(
         [
             # Complex numbers:
-            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
+            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j], dtype=np.complex64), True),
+            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j], dtype=np.complex128), True),
             # Timedelta:
             (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
             # Mixed-integer types:
