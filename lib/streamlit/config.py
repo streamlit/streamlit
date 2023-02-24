@@ -515,7 +515,7 @@ _create_option(
 )
 
 _create_option(
-    "runner.onlySerializableSessionState",
+    "runner.enforceSerializableSessionState",
     description="""
         Warn about adding unserializable data to Session State. Some execution
         environments may require serializing all data in Session State, so

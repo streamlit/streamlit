@@ -322,7 +322,7 @@ class SessionStateInteractionTest(InteractiveScriptTests):
         """When the config option is on, adding unserializable data to session
         state should result in an exception.
         """
-        with patch_config_options({"runner.onlySerializableSessionState": True}):
+        with patch_config_options({"runner.enforceSerializableSessionState": True}):
             script = self.script_from_string(
                 "unserializable.py",
                 """
@@ -341,7 +341,7 @@ class SessionStateInteractionTest(InteractiveScriptTests):
         """When the config option is off, adding unserializable data to session
         state should work without errors.
         """
-        with patch_config_options({"runner.onlySerializableSessionState": False}):
+        with patch_config_options({"runner.enforceSerializableSessionState": False}):
             script = self.script_from_string(
                 "unserializable.py",
                 """

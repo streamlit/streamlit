@@ -625,7 +625,7 @@ class SessionState:
         option is set.
 
         See `_check_serializable` for details."""
-        if config.get_option("runner.onlySerializableSessionState"):
+        if config.get_option("runner.enforceSerializableSessionState"):
             self._check_serializable()
 
 
