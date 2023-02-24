@@ -16,7 +16,6 @@ from __future__ import annotations
 import math
 import os
 import shutil
-import threading
 
 from streamlit import util
 from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
@@ -71,12 +70,20 @@ class InMemoryWrappedLocalDiskCacheStorageManager(CacheStorageManager):
 
 
 class LocalDiskCacheStorage(CacheStorage):
+    """
+    Cache storage that persists data to disk
+    This is the default cache storage for @st.cache_data
+
+    Thread safety note: this class is not thread-safe. It is the responsibility of the
+    caller to ensure that it is only used from a single thread.
+    We hold `compute_value_lock in the `Cache` class to ensure this.
+    """
+
     def __init__(self, context: CacheStorageContext):
         self.function_key = context.function_key
         self.persist = context.persist
         self._ttl_seconds = context.ttl_seconds
         self._max_entries = context.max_entries
-        self._cache_lock = threading.Lock()
 
     @property
     def ttl_seconds(self) -> float:
