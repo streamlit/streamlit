@@ -14,6 +14,7 @@
 
 import random
 import unittest
+from typing import Dict, List, Set
 from unittest.mock import patch
 
 import numpy as np
@@ -123,3 +124,60 @@ class UtilTest(unittest.TestCase):
     def test_unsuccessful_index_(self, input, find_value):
         with self.assertRaises(ValueError):
             util.index_(input, find_value)
+
+    @parameterized.expand(
+        [
+            ({"x": ["a"]}, ["x"], {}),
+            ({"a": ["a1", "a2"], "b": ["b1", "b2"]}, ["a"], {"b": ["b1", "b2"]}),
+            ({"c": ["c1", "c2"]}, "no_existing_key", {"c": ["c1", "c2"]}),
+            (
+                {
+                    "embed": ["true"],
+                    "embed_options": ["show_padding", "show_colored_line"],
+                },
+                ["embed", "embed_options"],
+                {},
+            ),
+            (
+                {"EMBED": ["TRUE"], "EMBED_OPTIONS": ["DISABLE_SCROLLING"]},
+                ["embed", "embed_options"],
+                {},
+            ),
+        ]
+    )
+    def test_drop_key_query_params(
+        self,
+        query_params: Dict[str, List[str]],
+        keys_to_drop: List[str],
+        result: Dict[str, List[str]],
+    ):
+        self.assertDictEqual(
+            util.exclude_key_query_params(query_params, keys_to_drop), result
+        )
+
+    @parameterized.expand(
+        [
+            ({"x": ["a"]}, "x", {"a"}),
+            ({"a": ["a1"], "b": ["b1", "b2"]}, "a", {"a1"}),
+            ({"c": ["c1", "c2"]}, "no_existing_key", set()),
+            (
+                {
+                    "embed": ["true"],
+                    "embed_options": ["show_padding", "show_colored_line"],
+                },
+                "embed",
+                {"true"},
+            ),
+            (
+                {"EMBED": ["TRUE"], "EMBED_OPTIONS": ["DISABLE_SCROLLING"]},
+                "embed_options",
+                {"disable_scrolling"},
+            ),
+        ]
+    )
+    def test_extract_key_query_params(
+        self, query_params: Dict[str, List[str]], param_key: str, result: Set[str]
+    ):
+        self.assertSetEqual(
+            util.extract_key_query_params(query_params, param_key), result
+        )
