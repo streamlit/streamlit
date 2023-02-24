@@ -264,8 +264,8 @@ class NumberInputMixin:
 
             # Ensure that the format only has one match
             found_format = match.group()
-            ambiguous = exp.match(found_format[0:-1])
-            if ambiguous is not None:
+            ambiguous = found_format.find("%", 1)
+            if ambiguous > 0:
                 raise StreamlitAPIException(
                     "Format string " + found_format + " is ambiguous."
                 )
