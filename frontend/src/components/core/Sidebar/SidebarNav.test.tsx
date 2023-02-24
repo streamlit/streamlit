@@ -244,10 +244,6 @@ describe("SidebarNav", () => {
       />
     )
 
-    expect(wrapper.find(StyledSidebarNavButton).props()).toHaveProperty(
-      "isExpanded",
-      false
-    )
     expect(wrapper.find(StyledSidebarNavButton).text()).toBe("2 More")
   })
 
@@ -275,19 +271,30 @@ describe("SidebarNav", () => {
     )
 
     wrapper.find(StyledSidebarNavButton).prop("onClick")!(mockClickEvent)
-    expect(wrapper.find(StyledSidebarNavButton).props()).toHaveProperty(
-      "isExpanded",
-      true
-    )
     expect(wrapper.find(StyledSidebarNavButton).text()).toBe("View less")
   })
 
   it("is collapsed by default if there are widgets on the sidebar", () => {
     const wrapper = mount(
-      <SidebarNav {...getProps({ hasSidebarElements: true })} />
+      <SidebarNav
+        {...getProps({
+          hasSidebarElements: true,
+          appPages: [
+            { pageName: "my_first_page" },
+            { pageName: "my_second_page" },
+            { pageName: "my_third_page" },
+            { pageName: "my_fourth_page" },
+            { pageName: "my_fifth_page" },
+            { pageName: "my_sixth_page" },
+            { pageName: "my_seventh_page" },
+            { pageName: "my_eight_page" },
+          ],
+        })}
+      />
     )
 
-    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
+    expect(wrapper.prop("hasSidebarElements")).toBe(true)
+    expect(wrapper.find("StyledSidebarNavItems li")).toHaveLength(6)
   })
 
   it("is expanded by default if no widgets are present on the sidebar", () => {
@@ -297,7 +304,8 @@ describe("SidebarNav", () => {
       />
     )
 
-    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(true)
+    expect(wrapper.prop("hasSidebarElements")).toBe(false)
+    expect(wrapper.find("StyledSidebarNavItems li")).toHaveLength(2)
   })
 
   it("toggles to expanded and back when the StyledSidebarNavButton is clicked", () => {
@@ -327,14 +335,14 @@ describe("SidebarNav", () => {
     })
     wrapper.update()
 
-    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(true)
+    expect(wrapper.find("StyledSidebarNavItems li")).toHaveLength(8)
 
     act(() => {
       wrapper.find(StyledSidebarNavButton).prop("onClick")!(mockClickEvent)
     })
     wrapper.update()
 
-    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
+    expect(wrapper.find("StyledSidebarNavItems li")).toHaveLength(6)
   })
 
   it("passes the pageScriptHash to onPageChange if a link is clicked", () => {
