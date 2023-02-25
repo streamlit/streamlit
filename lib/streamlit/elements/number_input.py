@@ -255,8 +255,8 @@ class NumberInputMixin:
                 format = "%d" if int_value else "%0.2f"
 
             # Ensure that the format is valid. It should have a format specifier.
-            exp = re.compile(r"(%[^%]?.*?(a|d|e|E|f|F|g|G|i|o|x|X|u))")
-            match = exp.match(format)
+            exp = re.compile(r"(%[^%]?.*?[adeEfFgGioxXu])")
+            match = exp.search(format)
             if match is None:
                 raise StreamlitAPIException(
                     "Number input format string is missing format specifier."
@@ -264,8 +264,8 @@ class NumberInputMixin:
 
             # Ensure that the format only has one match
             found_format = match.group()
-            ambiguous = found_format.find("%", 1)
-            if ambiguous > 0:
+            additional_format_count = found_format.find("%", 1)
+            if additional_format_count > 0:
                 raise StreamlitAPIException(
                     "Format string " + found_format + " is ambiguous."
                 )

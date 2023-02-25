@@ -133,6 +133,11 @@ class NumberInputTest(DeltaGeneratorTestCase):
             "11 and the `max_value` of 0, inclusively." == str(exc_message.value)
         )
 
+    def test_accepts_valid_additional_characters(self):
+        FORMATS = ["$%dk", "%d%%", "%8.3f", "%+010d"]
+        for fmt in FORMATS:
+            st.number_input("label", format=fmt)
+
     def test_accept_valid_formats(self):
         # note: We decided to accept %u even though it is slightly problematic.
         #       See https://github.com/streamlit/streamlit/pull/943

@@ -229,7 +229,7 @@ class NumberInput extends React.PureComponent<Props, State> {
       throw new Error("No format object available on number input element.")
     }
 
-    const specifier = /(%[^%]?.*?(a|d|e|E|f|F|g|G|i|o|x|X|u))/
+    const specifier = /(%[^%]?.*?[adeEfFgGioxXu])/
     const match = specifier.exec(format)
 
     if (match === null) {

@@ -22,7 +22,7 @@ describe("st.number_input", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stNumberInput").should("have.length", 9);
+    cy.get(".stNumberInput").should("have.length", 13);
 
     cy.get(".stNumberInput").each((el, idx) => {
       // @ts-ignore
@@ -42,7 +42,11 @@ describe("st.number_input", () => {
         'value 7: " 0.0 "' +
         'value 8: " 0.0 "' +
         'value 9: " 0.0 "' +
-        "number input changed: False"
+        "number input changed: False" +
+        'value 10: " 2 "' +
+        'value 11: " -10.23456 "' +
+        'value 12: " 33 "' +
+        'value 13: " 0 "'
     );
   });
 
@@ -76,7 +80,11 @@ describe("st.number_input", () => {
         'value 7: " 0.0 "' +
         'value 8: " 0.0 "' +
         'value 9: " 0.0 "' +
-        "number input changed: False"
+        "number input changed: False" +
+        'value 10: " 2 "' +
+        'value 11: " -10.23456 "' +
+        'value 12: " 33 "' +
+        'value 13: " 0 "'
     );
   });
 
@@ -98,13 +106,17 @@ describe("st.number_input", () => {
         'value 7: " 0.0 "' +
         'value 8: " 0.0 "' +
         'value 9: " 0.0 "' +
-        "number input changed: False"
+        "number input changed: False" +
+        'value 10: " 2 "' +
+        'value 11: " -10.23456 "' +
+        'value 12: " 33 "' +
+        'value 13: " 0 "'
     );
   });
 
   it("has the correct step value when clicked", () => {
     cy.get(".stNumberInput button.step-up")
-      .should("have.length.at.least", 9)
+      .should("have.length.at.least", 13)
       .each((el, idx) => {
         // skip disabled widget
         if (idx != 5) {
@@ -126,7 +138,11 @@ describe("st.number_input", () => {
         'value 7: " 0.01 "' +
         'value 8: " 0.01 "' +
         'value 9: " 0.01 "' +
-        "number input changed: True"
+        "number input changed: True" +
+        'value 10: " 3 "' +
+        'value 11: " -10.22456 "' +
+        'value 12: " 34 "' +
+        'value 13: " 1 "'
     );
   });
 
@@ -146,7 +162,21 @@ describe("st.number_input", () => {
         'value 7: " 0.0 "' +
         'value 8: " 0.0 "' +
         'value 9: " 0.0 "' +
-        "number input changed: False"
+        "number input changed: False" +
+        'value 10: " 2 "' +
+        'value 11: " -10.23456 "' +
+        'value 12: " 33 "' +
+        'value 13: " 0 "'
     );
   });
+
+  it("displays advanced formatting correctly", () => {
+    let vals = ['0.00', '1', '1', '0', '0', '0.00', '0.00', '0.00',
+    '0.00', '2', ' -10.235', '+000000033', '$0k']
+    cy.get(".stNumberInput input")
+    .should("have.length.at.least", 13)
+    .each((el, idx) => {
+      cy.wrap(el).should('have.value', vals[idx])
+    })
+  })
 });

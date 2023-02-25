@@ -47,3 +47,15 @@ if runtime.exists():
     st.number_input("number input 9", key="number_input9", on_change=on_change)
     st.write('value 9: "', st.session_state.number_input9, '"')
     st.write("number input changed:", "number_input_changed" in st.session_state)
+
+i10 = st.number_input("formatted 1", value=2, format="%+u")
+st.write('value 10: "', i10, '"')
+
+i11 = st.number_input("formatted 2", value=-10.23456, format="%8.3f")
+st.write('value 11: "', i11, '"')
+
+i12 = st.number_input("formatted 3", value=33, format="%+010d")
+st.write('value 12: "', i12, '"')
+
+i13 = st.number_input("formatted 4", value=0, format="$%dk")
+st.write('value 13: "', i13, '"')
