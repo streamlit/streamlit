@@ -255,7 +255,7 @@ class NumberInputMixin:
                 format = "%d" if int_value else "%0.2f"
 
             # Ensure that the format is valid. It should have a format specifier.
-            exp = re.compile(r"(%[^%]?.*?[adeEfFgGioxXu])")
+            exp = re.compile(r"(%[-+ 0#]?\d*(\.\d+)?[adeEfFgGioxXu])")
             match = exp.search(format)
             if match is None:
                 raise StreamlitAPIException(
