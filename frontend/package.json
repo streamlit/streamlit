@@ -128,7 +128,7 @@
     "@emotion/jest": "^11.10.5",
     "@loaders.gl/images": "^3.2.13",
     "@testing-library/dom": "^8.19.0",
-    "@testing-library/jest-dom": "^5.16.1",
+    "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^12.1.4",
     "@testing-library/react-hooks": "^8.0.1",
     "@testing-library/user-event": "^14.0.0",

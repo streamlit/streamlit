@@ -298,7 +298,6 @@ export function RenderedMarkdown({
     rehypePlugins.push(rehypeRaw)
   }
 
-  // Option A: disallowed elements
   // Sets disallowed markdown for widget labels
   let disallowed
   if (isLabel) {
@@ -323,20 +322,10 @@ export function RenderedMarkdown({
     ]
 
     if (isButton) {
-      // Button labels can't have links
+      // Button labels additionally restrict links
       disallowed.push("a")
     }
   }
-
-  // // Option B: allowed elements
-  // // limits allowed markdown, default is allow all
-  // let allowed
-  // if (isLabel) {
-  //    allowed = ["p", "em", "strong", "del", "code", "span", "a"]
-  //  if (isButton) {
-  //      allowed.pop()
-  //  }
-  // }
 
   return (
     <ErrorBoundary>
@@ -345,7 +334,6 @@ export function RenderedMarkdown({
         rehypePlugins={rehypePlugins}
         components={renderers}
         transformLinkUri={transformLinkUri}
-        // allowedElements={allowed}
         disallowedElements={disallowed}
         // unwrap and render text from invalid markdown
         unwrapDisallowed={true}
