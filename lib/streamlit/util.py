@@ -18,7 +18,7 @@ import functools
 import hashlib
 import os
 import subprocess
-from typing import Any, Dict, Iterable, List, Mapping, TypeVar
+from typing import Any, Dict, Iterable, List, Mapping, Set, TypeVar
 
 from typing_extensions import Final
 
@@ -154,3 +154,31 @@ def calc_md5(s: str) -> str:
     h = hashlib.new("md5")
     h.update(s.encode("utf-8"))
     return h.hexdigest()
+
+
+def exclude_key_query_params(
+    query_params: Dict[str, List[str]], keys_to_exclude: List[str]
+) -> Dict[str, List[str]]:
+    """Returns new object query_params : Dict[str, List[str]], but without keys defined with keys_to_drop : List[str]."""
+    return {
+        key: value
+        for key, value in query_params.items()
+        if key.lower() not in keys_to_exclude
+    }
+
+
+def extract_key_query_params(
+    query_params: Dict[str, List[str]], param_key: str
+) -> Set[str]:
+    """Extracts key (case-insensitive) query params from Dict, and returns them as Set of str."""
+    return set(
+        [
+            item.lower()
+            for sublist in [
+                [value.lower() for value in query_params[key]]
+                for key in query_params.keys()
+                if key.lower() == param_key and query_params.get(key)
+            ]
+            for item in sublist
+        ]
+    )

@@ -28,21 +28,30 @@ export interface HeaderProps {
 }
 
 function Header({ isStale, children }: HeaderProps): ReactElement {
-  const { wideMode, embedded } = React.useContext(AppContext)
+  const { wideMode, embedded, showToolbar, showColoredLine } =
+    React.useContext(AppContext)
 
+  let showHeader = true
+  if (embedded) {
+    showHeader = showToolbar || showColoredLine
+  }
   return (
     <StyledHeader
+      showHeader={showHeader}
       isWideMode={wideMode}
-      isEmbedded={embedded}
       // The tabindex below is required for testing.
       tabIndex={-1}
       isStale={isStale}
       data-testid="stHeader"
     >
-      <StyledHeaderDecoration data-testid="stDecoration" />
-      <StyledHeaderToolbar data-testid="stToolbar">
-        {children}
-      </StyledHeaderToolbar>
+      {showColoredLine && (
+        <StyledHeaderDecoration data-testid="stDecoration" />
+      )}
+      {showToolbar && (
+        <StyledHeaderToolbar data-testid="stToolbar">
+          {children}
+        </StyledHeaderToolbar>
+      )}
     </StyledHeader>
   )
 }
