@@ -92,7 +92,7 @@ const SidebarNav = ({
   )
 
   useEffect(() => {
-    if (collapseNav !== !expanded) {
+    if (collapseNav === expanded) {
       toggleExpanded()
     }
   }, [collapseNav])

@@ -71,10 +71,10 @@ export const StyledSidebarNavItems = styled.ul(({ theme }) => {
     listStyle: "none",
     margin: 0,
     paddingTop: theme.sizes.sidebarTopSpace,
-    
+
     "@media print": {
       paddingTop: theme.spacing.sm,
-    }
+    },
   }
 })
 
