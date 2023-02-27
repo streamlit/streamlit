@@ -336,6 +336,7 @@ class SessionStateInteractionTest(InteractiveScriptTests):
             )
             sr = script.run()
             assert sr.get("exception")
+            assert "pickle" in sr.get("exception")[0].proto.exception.message
 
     def test_serializable_check_off(self):
         """When the config option is off, adding unserializable data to session

@@ -617,7 +617,10 @@ class SessionState:
             try:
                 pickle.dumps(self[k])
             except Exception as e:
-                err_msg = f"Unserializable data found in Session State with key '{k}'."
+                err_msg = f"""Cannot serialize the value (of type {type(self[k])}) of '{k}' in st.session_state.
+                Streamlit has been configured to use [pickle](https://docs.python.org/3/library/pickle.html) to
+                serialize session_state values. Please convert the value to a pickle-serializable type. To learn
+                more about this behavior, see [our docs](https://docs.streamlit.io/knowledge-base/using-streamlit/<future kb article>). """
                 raise UnserializableSessionStateError(err_msg) from e
 
     def maybe_check_serializable(self) -> None:
