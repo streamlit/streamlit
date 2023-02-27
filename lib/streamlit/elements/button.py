@@ -79,11 +79,25 @@ class ButtonMixin:
         label : str
             A short label explaining to the user what this button is for.
             The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, and Emojis.
+            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
 
-            Unsupported elements are not displayed. Display unsupported elements
-            as literal characters by backslash-escaping them. E.g.
-            ``1\. Not an ordered list``.
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so any text they contain renders.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -182,11 +196,25 @@ class ButtonMixin:
         label : str
             A short label explaining to the user what this button is for.
             The label can optionally contain Markdown and supports the following
-            elements: Bold, Italics, Strikethroughs, and Emojis.
+            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
 
-            Unsupported elements are not displayed. Display unsupported elements
-            as literal characters by backslash-escaping them. E.g.
-            ``1\. Not an ordered list``.
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so any text they contain renders.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         data : str or bytes or file
             The contents of the file to be downloaded. See example below for
             caching techniques to avoid recomputing this data unnecessarily.
