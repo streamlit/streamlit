@@ -366,12 +366,13 @@ INTERVAL_TYPES_DF = pd.DataFrame(
 _offset_types = ["L", "S", "T", "H", "D", "W", "W-FRI", "Q", "Q-MAY"]
 
 PERIOD_TYPES_DF = pd.DataFrame(
-    [
-        [pd.Period(date, freq=offset_type) for date in ["1970-01-01", "2012-02-14"]]
-        + [None]
+    {
+        offset_type: (
+            [pd.Period(date, freq=offset_type) for date in ["1970-01-01", "2012-02-14"]]
+            + [None]
+        )
         for offset_type in _offset_types
-    ],
-    index=_offset_types,
+    }
 )
 
 SPECIAL_TYPES_DF = pd.DataFrame(
