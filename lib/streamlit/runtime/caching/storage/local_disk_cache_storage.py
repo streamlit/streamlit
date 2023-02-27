@@ -113,7 +113,7 @@ class LocalDiskCacheStorage(CacheStorage):
                 raise CacheStorageError("Unable to read from cache") from ex
         else:
             raise CacheStorageKeyNotFoundError(
-                "Key lookup on disk cache doesn't happen"
+                f"Local disk cache storage is disabled (persist={self.persist})"
             )
 
     def set(self, key: str, value: bytes) -> None:

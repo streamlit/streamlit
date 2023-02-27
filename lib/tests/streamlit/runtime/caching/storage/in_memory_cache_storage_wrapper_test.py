@@ -16,11 +16,9 @@
 import unittest
 from unittest.mock import patch
 
-from parameterized import parameterized
 from testfixtures import TempDirectory
 
 from streamlit.runtime.caching.storage import (
-    CacheStorage,
     CacheStorageContext,
     CacheStorageKeyNotFoundError,
 )
@@ -31,14 +29,6 @@ from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorage,
 )
-
-context = CacheStorageContext(
-    function_key="func-key",
-    function_display_name="func-display-name",
-    persist="disk",
-)
-local_disk_cache_storage = LocalDiskCacheStorage(context)
-dummy_cache_storage = DummyCacheStorage()
 
 
 class InMemoryCacheStorageWrapperTest(unittest.TestCase):
@@ -57,21 +47,44 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         self.patch_get_cache_folder_path.stop()
         self.tempdir.cleanup()
 
-    @parameterized.expand([(local_disk_cache_storage,), (dummy_cache_storage,)])
-    def test_in_memory_cache_storage_wrapper_works_with_any_storage(
-        self, storage: CacheStorage
-    ):
+    def get_storage_context(self):
+        return CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            persist="disk",
+        )
+
+    def test_in_memory_cache_storage_wrapper_works_with_local_disk_storage(self):
         """
-        InMemoryCacheStorageWrapper should work with any storage without raising
+        InMemoryCacheStorageWrapper should work with local disk storage without raising
         an exception
         """
-        InMemoryCacheStorageWrapper(persist_storage=storage, context=context)
+        context = self.get_storage_context()
+
+        InMemoryCacheStorageWrapper(
+            persist_storage=LocalDiskCacheStorage(context),
+            context=context,
+        )
+
+    def test_in_memory_cache_storage_wrapper_works_with_dummy_storage(self):
+        """
+        InMemoryCacheStorageWrapper should work with dummy storage without raising
+        an exception
+        """
+        context = self.get_storage_context()
+
+        InMemoryCacheStorageWrapper(
+            persist_storage=DummyCacheStorage(),
+            context=context,
+        )
 
     def test_in_memory_cache_storage_wrapper_get_key_in_persist_storage(self):
         """
         Test that storage.get() returns the value from persist storage
         if value doesn't exist in memory.
         """
+
+        context = self.get_storage_context()
         persist_storage = LocalDiskCacheStorage(context)
         wrapped_storage = InMemoryCacheStorageWrapper(
             persist_storage=persist_storage, context=context
@@ -93,6 +106,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         Test that storage.get() returns the value from in_memory storage
         if value exists in memory.
         """
+        context = self.get_storage_context()
         persist_storage = LocalDiskCacheStorage(context)
         wrapped_storage = InMemoryCacheStorageWrapper(
             persist_storage=persist_storage, context=context
@@ -111,6 +125,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         Test that storage.set() sets value both in in-memory cache and
         in persist storage
         """
+        context = self.get_storage_context()
         persist_storage = LocalDiskCacheStorage(context)
         wrapped_storage = InMemoryCacheStorageWrapper(
             persist_storage=persist_storage, context=context
@@ -130,6 +145,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         Test that storage.delete() deletes value both in in-memory cache
         and in persist storage
         """
+        context = self.get_storage_context()
         persist_storage = LocalDiskCacheStorage(context)
         wrapped_storage = InMemoryCacheStorageWrapper(
             persist_storage=persist_storage, context=context
@@ -149,6 +165,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         """
         Test that storage.close() closes the underlying persist storage
         """
+        context = self.get_storage_context()
         persist_storage = LocalDiskCacheStorage(context)
         wrapped_storage = InMemoryCacheStorageWrapper(
             persist_storage=persist_storage, context=context

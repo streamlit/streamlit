@@ -112,9 +112,12 @@ class CachedDataFuncInfo(CachedFuncInfo):
             allow_widgets=self.allow_widgets,
         )
 
-    def validate_params(self):
-        """ "
+    def validate_params(self) -> None:
+        """
         Validate the params passed to @st.cache_data are compatible with cache storage
+
+        When called, this method could log warnings if cache params are invalid
+        for current storage.
         """
         _data_caches.validate_cache_params(
             function_name=self.func.__name__,
