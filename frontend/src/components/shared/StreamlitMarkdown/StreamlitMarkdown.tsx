@@ -92,6 +92,7 @@ export interface Props {
    * Only allows italics, bold, strikethrough, emojis, links, and code in widget/expander/tab labels
    */
   isLabel?: boolean
+  isModal?: boolean
 
   /**
    * Checkbox has larger label font sizing - same allowed elements as other widgets ^,
@@ -253,6 +254,7 @@ export interface RenderedMarkdownProps {
   isCheckbox?: boolean
   isExpander?: boolean
   isTabs?: boolean
+  isModal?: boolean
 }
 
 export function RenderedMarkdown({
@@ -264,6 +266,7 @@ export function RenderedMarkdown({
   isCheckbox,
   isExpander,
   isTabs,
+  isModal,
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
@@ -322,6 +325,22 @@ export function RenderedMarkdown({
   if (isLabel) {
     allowed = ["p", "em", "strong", "del", "code", "a", "span"]
   }
+  if (isModal) {
+    allowed = [
+      "p",
+      "em",
+      "strong",
+      "del",
+      "code",
+      "a",
+      "span",
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+    ]
+  }
   if (isButton || isCheckbox || isExpander || isTabs) {
     allowed = ["p", "em", "strong", "del"]
   }
@@ -369,6 +388,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
       isCheckbox,
       isExpander,
       isTabs,
+      isModal,
     } = this.props
     const isInSidebar = this.context
 
@@ -377,6 +397,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isCaption={Boolean(isCaption)}
         isInSidebar={isInSidebar}
         isLabel={isLabel}
+        isModal={isModal}
         isCheckbox={isCheckbox}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
@@ -389,6 +410,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
           isButton={isButton}
           isExpander={isExpander}
           isTabs={isTabs}
+          isModal={isModal}
         />
       </StyledStreamlitMarkdown>
     )

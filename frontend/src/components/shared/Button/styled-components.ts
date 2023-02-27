@@ -17,7 +17,8 @@
 import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
-import { Theme } from "src/theme"
+import { Theme, hasLightBackgroundColor } from "src/theme"
+import { Alert } from "src/autogen/proto"
 
 export enum Kind {
   PRIMARY = "primary",
@@ -30,6 +31,7 @@ export enum Kind {
   PRIMARY_FORM_SUBMIT = "primaryFormSubmit",
   SECONDARY_FORM_SUBMIT = "secondaryFormSubmit",
   HEADER_BUTTON = "header",
+  MODAL_ALERT_BUTTON = "modalAlert",
 }
 
 export enum Size {
@@ -47,6 +49,7 @@ export interface ButtonProps {
   fluidWidth?: boolean
   children: ReactNode
   autoFocus?: boolean
+  alertType?: Alert.Format | null
 }
 
 type RequiredButtonProps = Required<ButtonProps>
@@ -310,3 +313,105 @@ export const StyledTooltipMobile = styled.div(({ theme }) => ({
     display: "block",
   },
 }))
+
+export const StyledModalAlertButton = styled(
+  StyledBaseButton
+)<RequiredButtonProps>(({ size, theme, alertType }) => {
+  let backgroundColor = theme.colors.lightenedBg05
+  let border = `1px solid ${theme.colors.fadedText10}`
+  let hoverBorderColor = theme.colors.primary
+  let hoverColor = theme.colors.primary
+  let activeColor = hasLightBackgroundColor(theme)
+    ? theme.colors.fadedText80
+    : theme.colors.white
+  let activeBorderColor = border
+  let activeBackgroundColor = backgroundColor
+  let focusBorderColor = border
+  let focusColor = activeColor
+  let otherBorderColor = theme.colors.fadedText10
+  let otherBackgroundColor = theme.colors.transparent
+  let otherColor = theme.colors.fadedText40
+  if (alertType && alertType === Alert.Format.SUCCESS) {
+    backgroundColor = theme.colors.successBg
+    border = `1px solid ${theme.colors.successBg}`
+    hoverBorderColor = theme.colors.success
+    hoverColor = theme.colors.success
+    activeColor = theme.colors.success
+    activeBorderColor = theme.colors.success
+    activeBackgroundColor = theme.colors.successBg
+    focusBorderColor = theme.colors.success
+    focusColor = theme.colors.success
+    otherBorderColor = theme.colors.successBg
+    otherBackgroundColor = theme.colors.successBg
+    otherColor = theme.colors.success
+  } else if (alertType && alertType === Alert.Format.WARNING) {
+    backgroundColor = theme.colors.warningBg
+    border = `1px solid ${theme.colors.warningBg}`
+    hoverBorderColor = theme.colors.warning
+    hoverColor = theme.colors.warning
+    activeColor = theme.colors.warning
+    activeBorderColor = theme.colors.warning
+    activeBackgroundColor = theme.colors.warningBg
+    focusBorderColor = theme.colors.warning
+    focusColor = theme.colors.warning
+    otherBorderColor = theme.colors.warningBg
+    otherBackgroundColor = theme.colors.warningBg
+    otherColor = theme.colors.warning
+  } else if (alertType && alertType === Alert.Format.ERROR) {
+    backgroundColor = theme.colors.dangerBg
+    border = `1px solid ${theme.colors.dangerBg}`
+    hoverBorderColor = theme.colors.danger
+    hoverColor = theme.colors.danger
+    activeColor = theme.colors.danger
+    activeBorderColor = theme.colors.danger
+    activeBackgroundColor = theme.colors.dangerBg
+    focusBorderColor = theme.colors.danger
+    focusColor = theme.colors.danger
+    otherBorderColor = theme.colors.dangerBg
+    otherBackgroundColor = theme.colors.dangerBg
+    otherColor = theme.colors.danger
+  } else if (alertType && alertType === Alert.Format.INFO) {
+    backgroundColor = theme.colors.infoBg
+    border = `1px solid ${theme.colors.infoBg}`
+    hoverBorderColor = theme.colors.info
+    hoverColor = theme.colors.info
+    activeColor = theme.colors.info
+    activeBorderColor = theme.colors.info
+    activeBackgroundColor = theme.colors.infoBg
+    focusBorderColor = theme.colors.info
+    focusColor = theme.colors.info
+    otherBorderColor = theme.colors.infoBg
+    otherBackgroundColor = theme.colors.infoBg
+    otherColor = theme.colors.info
+  }
+  return {
+    position: "absolute",
+    right: "12px",
+    bottom: "12px",
+    backgroundColor: backgroundColor,
+    border: border,
+    "&:hover": {
+      borderColor: hoverBorderColor,
+      color: hoverColor,
+    },
+    "&:active": {
+      color: activeColor,
+      borderColor: activeBorderColor,
+      backgroundColor: activeBackgroundColor,
+    },
+    "&:focus": {
+      boxShadow: "none",
+    },
+    "&:focus:not(:active)": {
+      borderColor: focusBorderColor,
+      color: focusColor,
+      boxShadow: "none",
+    },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      borderColor: otherBorderColor,
+      backgroundColor: otherBackgroundColor,
+      color: otherColor,
+      cursor: "not-allowed",
+    },
+  }
+})

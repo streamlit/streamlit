@@ -69,6 +69,7 @@ from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
 from streamlit.elements.metric import MetricMixin
+from streamlit.elements.modal_alert import ModalAlertMixin
 from streamlit.elements.multiselect import MultiSelectMixin
 from streamlit.elements.number_input import NumberInputMixin
 from streamlit.elements.plotly_chart import PlotlyMixin
@@ -195,6 +196,7 @@ class DeltaGenerator(
     LegacyAltairMixin,
     LegacyVegaLiteMixin,
     DataFrameSelectorMixin,
+    ModalAlertMixin,
 ):
     """Creator of Delta protobuf messages.
 

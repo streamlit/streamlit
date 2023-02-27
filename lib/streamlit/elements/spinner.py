@@ -19,6 +19,10 @@ from typing import Iterator
 import streamlit as st
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 
+# Set the message 0.1 seconds in the future to avoid annoying
+# flickering if this spinner runs too quickly.
+DELAY_SECS = 0.1
+
 
 @contextlib.contextmanager
 def spinner(text: str = "In progress...") -> Iterator[None]:
@@ -55,9 +59,6 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
         with caching.suppress_cached_st_function_warning():
             message = st.empty()
 
-    # Set the message 0.1 seconds in the future to avoid annoying
-    # flickering if this spinner runs too quickly.
-    DELAY_SECS = 0.1
     display_message = True
     display_message_lock = threading.Lock()
 

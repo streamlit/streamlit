@@ -50,6 +50,7 @@ import {
   Text as TextProto,
   Video as VideoProto,
   Heading as HeadingProto,
+  ModalAlert as ModalAlertProto,
 } from "src/autogen/proto"
 
 import React, { ReactElement, Suspense } from "react"
@@ -154,6 +155,9 @@ const TextInput = React.lazy(() => import("src/components/widgets/TextInput/"))
 const TimeInput = React.lazy(() => import("src/components/widgets/TimeInput/"))
 const NumberInput = React.lazy(
   () => import("src/components/widgets/NumberInput/")
+)
+const ModalAlert = React.lazy(
+  () => import("src/components/elements/ModalAlert/")
 )
 
 export interface ElementNodeRendererProps extends BaseBlockProps {
@@ -611,6 +615,12 @@ const RawElementNodeRenderer = (
           width={width}
           {...widgetProps}
         />
+      )
+    }
+
+    case "modalAlert": {
+      return (
+        <ModalAlert element={node.element.modalAlert as ModalAlertProto} />
       )
     }
 

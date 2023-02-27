@@ -58,6 +58,7 @@ import "streamlit/proto/TimeInput.proto";
 import "streamlit/proto/VegaLiteChart.proto";
 import "streamlit/proto/Video.proto";
 import "streamlit/proto/Heading.proto";
+import "streamlit/proto/ModalAlert.proto";
 
 // An element which can be displayed on the screen.
 message Element {
@@ -108,8 +109,9 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
     Heading heading = 47;
+    ModalAlert modal_alert = 48;
 
-    // Next ID: 48
+    // Next ID: 49
   }
 
   reserved 9;

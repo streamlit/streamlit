@@ -29,6 +29,7 @@ import {
   StyledPrimaryFormSubmitButton,
   StyledSecondaryFormSubmitButton,
   StyledHeaderButton,
+  StyledModalAlertButton,
 } from "./styled-components"
 
 function Button({
@@ -39,6 +40,7 @@ function Button({
   fluidWidth,
   children,
   autoFocus,
+  alertType,
 }: ButtonPropsT): ReactElement {
   let ComponentType = StyledPrimaryButton
 
@@ -60,6 +62,8 @@ function Button({
     ComponentType = StyledSecondaryFormSubmitButton
   } else if (kind === Kind.HEADER_BUTTON) {
     ComponentType = StyledHeaderButton
+  } else if (kind === Kind.MODAL_ALERT_BUTTON) {
+    ComponentType = StyledModalAlertButton
   }
 
   return (
@@ -70,6 +74,7 @@ function Button({
       disabled={disabled || false}
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
+      alertType={alertType || null}
     >
       {children}
     </ComponentType>

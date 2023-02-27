@@ -48,7 +48,7 @@ function getNotificationKind(
 }
 
 export interface AlertContainerProps {
-  width?: number
+  width?: number | string
   kind: Kind
   children: ReactNode
 }

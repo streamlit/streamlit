@@ -15,33 +15,24 @@
  */
 
 import styled from "@emotion/styled"
+import { StyledEmojiIcon } from "src/components/shared/Icon/styled-components"
 
-export const StyledAlertContent = styled.div(({ theme }) => ({
-  pre: {
-    backgroundColor: theme.colors.transparent,
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg,
-    paddingRight: theme.spacing.lg,
-    paddingLeft: theme.spacing.lg,
-    border: `1px solid ${theme.colors.fadedText10}`,
+export const StyledIconAlertContent = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: theme.spacing.sm,
 
-    "pre, code, span, h1, h2, h3, h4, h5": {
-      backgroundColor: theme.colors.transparent,
-      color: "inherit",
-    },
+  [StyledEmojiIcon as any]: {
+    position: "relative",
+    top: "2px",
   },
+}))
 
-  code: {
-    backgroundColor: theme.colors.transparent,
-    padding: theme.spacing.none,
-  },
+export const StyledIconAlertContentWithTitle = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: theme.spacing.sm,
 
-  "pre, code, span, h1, h2, h3, h4, h5": {
-    color: "inherit",
-  },
-
-  a: {
-    color: "inherit",
-    textDecoration: "underline",
+  [StyledEmojiIcon as any]: {
+    position: "relative",
+    top: "17px",
   },
 }))
