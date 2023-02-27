@@ -92,14 +92,18 @@ class LocalScriptRunner(ScriptRunner):
         """Return all messages in our ForwardMsgQueue."""
         return self.forward_msg_queue._queue
 
-    def run(self, widget_state: WidgetStates | None = None) -> ElementTree:
+    def run(
+        self,
+        widget_state: WidgetStates | None = None,
+        timeout: float = 3,
+    ) -> ElementTree:
         """Run the script, and parse the output messages for querying
         and interaction."""
         rerun_data = RerunData(widget_states=widget_state)
         self.request_rerun(rerun_data)
         if not self._script_thread:
             self.start()
-        require_widgets_deltas(self)
+        require_widgets_deltas(self, timeout)
         tree = parse_tree_from_messages(self.forward_msgs())
         tree.script_path = self.script_path
         tree._session_state = self.session_state

@@ -39,23 +39,19 @@ export const StyledAppViewContainer = styled.div(({ theme }) => ({
 
 export interface StyledAppViewMainProps {
   isEmbedded: boolean
+  disableScrolling: boolean
 }
 
 export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
-  ({ isEmbedded, theme }) => ({
+  ({ disableScrolling, theme }) => ({
     display: "flex",
     flexDirection: "column",
     width: theme.sizes.full,
-    overflow: isEmbedded ? "hidden" : "auto",
+    overflow: disableScrolling ? "hidden" : "auto",
     alignItems: "center",
+
     "&:focus": {
       outline: "none",
-    },
-    "@media print": {
-      "@-moz-document url-prefix()": {
-        display: "block",
-      },
-      overflow: "visible",
     },
 
     // Added so sidebar overlays main app content on
@@ -67,19 +63,28 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
       right: 0,
       bottom: 0,
     },
+
+    "@media print": {
+      position: "relative",
+      display: "block",
+    },
   })
 )
 
 export interface StyledAppViewBlockContainerProps {
   isWideMode: boolean
-  isEmbedded: boolean
+  showPadding: boolean
+  addPaddingForHeader: boolean
 }
 
 export const StyledAppViewBlockContainer =
   styled.div<StyledAppViewBlockContainerProps>(
-    ({ isWideMode, isEmbedded, theme }) => {
-      const topEmbedPadding = isEmbedded ? "1rem" : "6rem"
-      const bottomEmbedPadding = isEmbedded ? "1rem" : "10rem"
+    ({ isWideMode, showPadding, addPaddingForHeader, theme }) => {
+      let topEmbedPadding: string = showPadding ? "6rem" : "1rem"
+      if (addPaddingForHeader && !showPadding) {
+        topEmbedPadding = "3rem"
+      }
+      const bottomEmbedPadding = showPadding ? "10rem" : "1rem"
       const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
       return {
         width: theme.sizes.full,
@@ -96,6 +101,11 @@ export const StyledAppViewBlockContainer =
           : bottomEmbedPadding,
         minWidth: isWideMode ? "auto" : undefined,
         maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
+
+        [`@media print`]: {
+          minWidth: "100%",
+          paddingTop: 0,
+        },
       }
     }
   )
@@ -147,13 +157,13 @@ export const StyledAppViewFooter = styled.footer<StyledAppViewFooterProps>(
 )
 
 export interface StyledIFrameResizerAnchorProps {
-  isEmbedded: boolean
+  hasFooter: boolean
 }
 
 // The anchor appears above the footer, so we need to offset it by the footer
 // if the app is not embedded.
 export const StyledIFrameResizerAnchor =
-  styled.div<StyledIFrameResizerAnchorProps>(({ theme, isEmbedded }) => ({
+  styled.div<StyledIFrameResizerAnchorProps>(({ theme, hasFooter }) => ({
     position: "relative",
-    bottom: isEmbedded ? "0" : `-${theme.sizes.footerHeight}`,
+    bottom: hasFooter ? `-${theme.sizes.footerHeight}` : "0",
   }))
