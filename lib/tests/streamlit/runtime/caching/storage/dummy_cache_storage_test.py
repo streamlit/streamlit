@@ -21,11 +21,11 @@ from streamlit.runtime.caching.storage import (
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     DummyCacheStorage,
-    InMemoryWrappedDummyCacheStorageManager,
+    DummyCacheStorageManager,
 )
 
 
-class InMemoryWrappedDummyCacheStorageManagerTest(unittest.TestCase):
+class DummyCacheStorageManagerTest(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
         self.context = CacheStorageContext(
@@ -34,7 +34,7 @@ class InMemoryWrappedDummyCacheStorageManagerTest(unittest.TestCase):
             persist="disk",
         )
         self.dummy_cache_storage = DummyCacheStorage()
-        self.storage_manager = InMemoryWrappedDummyCacheStorageManager()
+        self.storage_manager = DummyCacheStorageManager()
         self.storage = self.storage_manager.create(self.context)
 
     def tearDown(self):
@@ -42,23 +42,39 @@ class InMemoryWrappedDummyCacheStorageManagerTest(unittest.TestCase):
         self.storage_manager.clear_all()
 
     def test_in_memory_wrapped_dummy_cache_storage_get_not_found(self):
+        """
+        Test that storage.get() returns CacheStorageKeyNotFoundError when key is not
+        present.
+        """
         with self.assertRaises(CacheStorageKeyNotFoundError):
             self.storage.get("some-key")
 
     def test_in_memory_wrapped_dummy_cache_storage_get_found(self):
+        """
+        Test that storage.get() returns the value when key is present.
+        """
         self.storage.set("some-key", b"some-value")
         self.assertEqual(self.storage.get("some-key"), b"some-value")
 
     def test_in_memory_wrapped_dummy_cache_storage_storage_set(self):
+        """
+        Test that storage.set() sets the value correctly.
+        """
         self.storage.set("new-key", b"new-value")
         self.assertEqual(self.storage.get("new-key"), b"new-value")
 
     def test_in_memory_wrapped_dummy_cache_storage_storage_set_override(self):
+        """
+        Test that storage.set() overrides the value.
+        """
         self.storage.set("another_key", b"another_value")
         self.storage.set("another_key", b"new_value")
         self.assertEqual(self.storage.get("another_key"), b"new_value")
 
     def test_in_memory_wrapped_dummy_cache_storage_storage_delete(self):
+        """
+        Test that storage.delete() deletes the value correctly.
+        """
         self.storage.set("new-key", b"new-value")
         self.storage.delete("new-key")
         with self.assertRaises(CacheStorageKeyNotFoundError):

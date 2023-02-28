@@ -51,10 +51,10 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     DummyCacheStorage,
-    InMemoryWrappedDummyCacheStorageManager,
+    DummyCacheStorageManager,
 )
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
-    InMemoryWrappedLocalDiskCacheStorageManager,
+    LocalDiskCacheStorageManager,
     get_cache_folder_path,
 )
 from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -90,7 +90,7 @@ class CacheDataTest(unittest.TestCase):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         mock_runtime = MagicMock(spec=Runtime)
-        mock_runtime.cache_storage_manager = InMemoryWrappedDummyCacheStorageManager()
+        mock_runtime.cache_storage_manager = DummyCacheStorageManager()
         Runtime._instance = mock_runtime
 
     def tearDown(self):
@@ -184,9 +184,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
     def setUp(self) -> None:
         super().setUp()
         mock_runtime = MagicMock(spec=Runtime)
-        mock_runtime.cache_storage_manager = (
-            InMemoryWrappedLocalDiskCacheStorageManager()
-        )
+        mock_runtime.cache_storage_manager = LocalDiskCacheStorageManager()
         Runtime._instance = mock_runtime
 
     def tearDown(self) -> None:
@@ -446,7 +444,7 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         mock_runtime = MagicMock(spec=Runtime)
-        mock_runtime.cache_storage_manager = InMemoryWrappedDummyCacheStorageManager()
+        mock_runtime.cache_storage_manager = DummyCacheStorageManager()
         Runtime._instance = mock_runtime
 
         # Guard against external tests not properly cache-clearing

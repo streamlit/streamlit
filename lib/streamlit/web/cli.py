@@ -27,7 +27,9 @@ from streamlit import config as _config
 from streamlit.case_converters import to_snake_case
 from streamlit.config_option import ConfigOption
 from streamlit.runtime.credentials import Credentials, check_credentials
-from streamlit.web.cache_storage_manager_config import get_cache_storage_manager
+from streamlit.web.cache_storage_manager_config import (
+    create_default_cache_storage_manager,
+)
 
 ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 
@@ -262,7 +264,7 @@ def cache_clear():
     else:
         print(f"Nothing to clear at {cache_path}.")
 
-    cache_storage_manager = get_cache_storage_manager()
+    cache_storage_manager = create_default_cache_storage_manager()
     cache_storage_manager.clear_all()
     caching.cache_resource.clear()
 

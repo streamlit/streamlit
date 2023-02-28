@@ -39,7 +39,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     _make_widget_key,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
-    InMemoryWrappedDummyCacheStorageManager,
+    DummyCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.scriptrunner import (
@@ -692,7 +692,7 @@ class CommonCacheTTLTest(unittest.TestCase):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         mock_runtime = MagicMock(spec=Runtime)
-        mock_runtime.cache_storage_manager = InMemoryWrappedDummyCacheStorageManager()
+        mock_runtime.cache_storage_manager = DummyCacheStorageManager()
         Runtime._instance = mock_runtime
 
     def tearDown(self):
@@ -828,7 +828,7 @@ class CommonCacheThreadingTest(unittest.TestCase):
 
     def setUp(self):
         mock_runtime = MagicMock(spec=Runtime)
-        mock_runtime.cache_storage_manager = InMemoryWrappedDummyCacheStorageManager()
+        mock_runtime.cache_storage_manager = DummyCacheStorageManager()
         Runtime._instance = mock_runtime
 
     def tearDown(self):

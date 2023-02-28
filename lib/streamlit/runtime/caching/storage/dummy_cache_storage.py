@@ -24,7 +24,7 @@ from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
 )
 
 
-class InMemoryWrappedDummyCacheStorageManager(CacheStorageManager):
+class DummyCacheStorageManager(CacheStorageManager):
     def create(self, context: CacheStorageContext) -> CacheStorage:
         """Creates a new cache storage instance wrapped with in-memory cache facade"""
         persist_storage = DummyCacheStorage()
@@ -33,7 +33,7 @@ class InMemoryWrappedDummyCacheStorageManager(CacheStorageManager):
         )
 
     def clear_all(self) -> None:
-        pass
+        raise NotImplementedError
 
     def check_context(self, context: CacheStorageContext) -> None:
         pass

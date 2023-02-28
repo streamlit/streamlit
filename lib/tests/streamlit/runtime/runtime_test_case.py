@@ -20,7 +20,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
-    InMemoryWrappedDummyCacheStorageManager,
+    DummyCacheStorageManager,
 )
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.script_data import ScriptData
@@ -103,7 +103,7 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             session_manager_class=MockSessionManager,
             session_storage=mock.MagicMock(),
-            cache_storage_manager=InMemoryWrappedDummyCacheStorageManager(),
+            cache_storage_manager=DummyCacheStorageManager(),
         )
         self.runtime = Runtime(config)
 

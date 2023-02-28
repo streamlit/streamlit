@@ -33,12 +33,12 @@ from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
     InMemoryCacheStorageWrapper,
 )
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
-    InMemoryWrappedLocalDiskCacheStorageManager,
     LocalDiskCacheStorage,
+    LocalDiskCacheStorageManager,
 )
 
 
-class InMemoryWrappedLocalDiskCacheStorageManagerTest(unittest.TestCase):
+class LocalDiskCacheStorageManagerTest(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
         self.tempdir = TempDirectory(create=True)
@@ -54,6 +54,11 @@ class InMemoryWrappedLocalDiskCacheStorageManagerTest(unittest.TestCase):
         self.tempdir.cleanup()
 
     def test_create_persist_context(self):
+        """
+        Tests that LocalDiskCacheStorageManager.create()
+        returns a LocalDiskCacheStorage with correct parameters from context, if
+        persist="disk"
+        """
         context = CacheStorageContext(
             function_key="func-key",
             function_display_name="func-display-name",
@@ -61,13 +66,18 @@ class InMemoryWrappedLocalDiskCacheStorageManagerTest(unittest.TestCase):
             ttl_seconds=60,
             max_entries=100,
         )
-        manager = InMemoryWrappedLocalDiskCacheStorageManager()
+        manager = LocalDiskCacheStorageManager()
         storage = manager.create(context)
         self.assertIsInstance(storage, InMemoryCacheStorageWrapper)
         self.assertEqual(storage.ttl_seconds, 60)
         self.assertEqual(storage.max_entries, 100)
 
     def test_create_not_persist_context(self):
+        """
+        Tests that LocalDiskCacheStorageManager.create()
+        returns a LocalDiskCacheStorage with correct parameters from context, if
+        persist is None
+        """
         context = CacheStorageContext(
             function_key="func-key",
             function_display_name="func-display-name",
@@ -75,13 +85,17 @@ class InMemoryWrappedLocalDiskCacheStorageManagerTest(unittest.TestCase):
             ttl_seconds=None,
             max_entries=None,
         )
-        manager = InMemoryWrappedLocalDiskCacheStorageManager()
+        manager = LocalDiskCacheStorageManager()
         storage = manager.create(context)
         self.assertIsInstance(storage, InMemoryCacheStorageWrapper)
         self.assertEqual(storage.ttl_seconds, math.inf)
         self.assertEqual(storage.max_entries, math.inf)
 
     def test_check_context_with_persist_and_ttl(self):
+        """
+        Tests that LocalDiskCacheStorageManager.check_context() writes a warning
+        in logs when persist="disk" and ttl_seconds is not None
+        """
         context = CacheStorageContext(
             function_key="func-key",
             function_display_name="func-display-name",
@@ -94,7 +108,7 @@ class InMemoryWrappedLocalDiskCacheStorageManagerTest(unittest.TestCase):
             "streamlit.runtime.caching.storage.local_disk_cache_storage",
             level=logging.WARNING,
         ) as logs:
-            manager = InMemoryWrappedLocalDiskCacheStorageManager()
+            manager = LocalDiskCacheStorageManager()
             manager.check_context(context)
 
             output = "".join(logs.output)
@@ -105,6 +119,10 @@ class InMemoryWrappedLocalDiskCacheStorageManagerTest(unittest.TestCase):
             )
 
     def test_check_context_without_persist(self):
+        """
+        Tests that LocalDiskCacheStorageManager.check_context() does not write a warning
+        in logs when persist is None and ttl_seconds is NOT None
+        """
         context = CacheStorageContext(
             function_key="func-key",
             function_display_name="func-display-name",
@@ -117,7 +135,7 @@ class InMemoryWrappedLocalDiskCacheStorageManagerTest(unittest.TestCase):
             "streamlit.runtime.caching.storage.local_disk_cache_storage",
             level=logging.WARNING,
         ) as logs:
-            manager = InMemoryWrappedLocalDiskCacheStorageManager()
+            manager = LocalDiskCacheStorageManager()
             manager.check_context(context)
 
             # assertLogs is being used as a context manager, but it also checks
@@ -135,7 +153,11 @@ class InMemoryWrappedLocalDiskCacheStorageManagerTest(unittest.TestCase):
 
     @patch("shutil.rmtree", wraps=shutil.rmtree)
     def test_clear_all(self, mock_rmtree):
-        manager = InMemoryWrappedLocalDiskCacheStorageManager()
+        """
+        Tests that LocalDiskCacheStorageManager.clear_all() calls shutil.rmtree
+        to remove the cache folder
+        """
+        manager = LocalDiskCacheStorageManager()
         manager.clear_all()
         mock_rmtree.assert_called_once()
 
@@ -186,16 +208,25 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
         MagicMock(side_effect=util.Error("mock exception")),
     )
     def test_storage_set_error(self):
+        """
+        Test that storage.set() raises an exception when it fails to write to disk.
+        """
         with self.assertRaises(CacheStorageError) as e:
             self.storage.set("uniqueKey", b"new-value")
         self.assertEqual(str(e.exception), "Unable to write to cache")
 
     def test_storage_set_override(self):
+        """
+        Test that storage.set() overrides the value of an existing key.
+        """
         self.storage.set("another_key", b"another_value")
         self.storage.set("another_key", b"new_value")
         self.assertEqual(self.storage.get("another_key"), b"new_value")
 
     def test_storage_delete(self):
+        """
+        Test that storage.delete() removes the correct file from disk.
+        """
         self.storage.set("new-key", b"new-value")
         self.assertTrue(os.path.exists(self.tempdir.path + "/func-key-new-key.memo"))
         self.storage.delete("new-key")
@@ -205,6 +236,9 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
             self.storage.get("new-key")
 
     def test_storage_clear(self):
+        """
+        Test that storage.clear() removes all storage files from disk.
+        """
         self.storage.set("some-key", b"some-value")
         self.storage.set("another-key", b"another-value")
         self.assertTrue(os.path.exists(self.tempdir.path + "/func-key-some-key.memo"))
@@ -229,5 +263,5 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
         self.assertEqual(os.listdir(self.tempdir.path), [])
 
     def test_storage_close(self):
-        # Test that close does not raise any exception
+        """Test that storage.close() does not raise any exception."""
         self.storage.close()

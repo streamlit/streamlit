@@ -359,7 +359,7 @@ class CliTest(unittest.TestCase):
 
     @patch("streamlit.runtime.legacy_caching.clear_cache")
     @patch(
-        "streamlit.runtime.caching.storage.local_disk_cache_storage.InMemoryWrappedLocalDiskCacheStorageManager.clear_all"
+        "streamlit.runtime.caching.storage.local_disk_cache_storage.LocalDiskCacheStorageManager.clear_all"
     )
     @patch("streamlit.runtime.caching.cache_resource.clear")
     def test_cache_clear_all_caches(

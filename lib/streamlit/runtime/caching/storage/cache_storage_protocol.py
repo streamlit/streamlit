@@ -131,6 +131,8 @@ class CacheStorageManager(Protocol):
         decorated functions,
         - Validating the context for the cache storages.
         - Optionally clearing all cache storages in optimal way.
+
+    It should be created during Runtime initialization.
     """
 
     @abstractmethod
@@ -155,11 +157,17 @@ class CacheStorageManager(Protocol):
         Cache data API will fall back to remove all available storages one by one
         via storage.clear() method if clear_all raises NotImplementedError.
 
+        Raises
+        ------
+        NotImplementedError
+            Raised if the storage manager does not provide an ability to clear
+            all storages at once in optimal way.
+
         Notes
         -----
         Threading: This method could be called from multiple threads.
-        This is a responsibility of the concrete implementation to ensure thread safety
-        guarantees.
+        This is a responsibility of the concrete implementation to ensure
+        thread safety guarantees.
         """
         raise NotImplementedError
 

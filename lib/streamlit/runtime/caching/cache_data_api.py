@@ -55,7 +55,7 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorageImproperlyConfigured,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
-    InMemoryWrappedDummyCacheStorageManager,
+    DummyCacheStorageManager,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
@@ -213,7 +213,9 @@ class DataCaches(CacheStatsProvider):
         """Clear all in-memory and on-disk caches."""
         with self._caches_lock:
             try:
-                # try to remove in optimal way; if not possible, fallback to remove all
+                # try to remove in optimal way if such ability provided by
+                # storage manager clear_all method;
+                # if not implemented, fallback to remove all
                 # available storages one by one
                 self.get_storage_manager().clear_all()
             except NotImplementedError:
@@ -285,10 +287,8 @@ class DataCaches(CacheStatsProvider):
         else:
             # When running in "raw mode", we can't access the CacheStorageManager,
             # so we're falling back to InMemoryCache.
-            _LOGGER.warning(
-                "No runtime found, using InMemoryWrappedDummyCacheStorageManager"
-            )
-            return InMemoryWrappedDummyCacheStorageManager()
+            _LOGGER.warning("No runtime found, using DummyCacheStorageManager")
+            return DummyCacheStorageManager()
 
 
 # Singleton DataCaches instance

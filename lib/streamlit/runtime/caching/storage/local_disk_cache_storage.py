@@ -43,7 +43,7 @@ _CACHED_FILE_EXTENSION = "memo"
 _LOGGER = get_logger(__name__)
 
 
-class InMemoryWrappedLocalDiskCacheStorageManager(CacheStorageManager):
+class LocalDiskCacheStorageManager(CacheStorageManager):
     def create(self, context: CacheStorageContext) -> CacheStorage:
         """Creates a new cache storage instance wrapped with in-memory cache facade"""
         persist_storage = LocalDiskCacheStorage(context)

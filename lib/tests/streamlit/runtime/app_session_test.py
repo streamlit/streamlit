@@ -30,7 +30,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
-    InMemoryWrappedDummyCacheStorageManager,
+    DummyCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
@@ -85,7 +85,7 @@ class AppSessionTest(unittest.TestCase):
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
-        mock_runtime.cache_storage_manager = InMemoryWrappedDummyCacheStorageManager()
+        mock_runtime.cache_storage_manager = DummyCacheStorageManager()
         Runtime._instance = mock_runtime
 
     def tearDown(self) -> None:
