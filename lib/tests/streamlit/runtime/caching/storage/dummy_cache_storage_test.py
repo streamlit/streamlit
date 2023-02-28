@@ -37,10 +37,6 @@ class DummyCacheStorageManagerTest(unittest.TestCase):
         self.storage_manager = DummyCacheStorageManager()
         self.storage = self.storage_manager.create(self.context)
 
-    def tearDown(self):
-        super().tearDown()
-        self.storage_manager.clear_all()
-
     def test_in_memory_wrapped_dummy_cache_storage_get_not_found(self):
         """
         Test that storage.get() returns CacheStorageKeyNotFoundError when key is not
