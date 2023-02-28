@@ -48,12 +48,13 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     otherwise a situation may arise when different items are deleted from
     the memory cache and from the storage.
 
-    Thread safety note: this class is not thread-safe. It is the responsibility of the
-    caller to ensure that it is only used from a single thread.
-    We hold `compute_value_lock in the `Cache` for @st.cache_data class to ensure this.
-
-    Also, we hold self._mem_cache_lock for working with this self._mem_cache object.
-    However, we do not hold this lock when calling into the underlying storage.
+    Notes
+    -----
+    Threading: in-memory caching layer is thread safe: we hold self._mem_cache_lock for
+    working with this self._mem_cache object.
+    However, we do not hold this lock when calling into the underlying storage,
+    so it is the responsibility of the that storage to ensure that it is safe to use
+    it from multiple threads.
     """
 
     def __init__(self, persist_storage: CacheStorage, context: CacheStorageContext):

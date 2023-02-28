@@ -41,7 +41,16 @@ from streamlit.runtime.caching.cached_message_replay import (
     MultiCacheResults,
     _make_widget_key,
 )
+from streamlit.runtime.caching.storage import (
+    CacheStorage,
+    CacheStorageContext,
+    CacheStorageManager,
+)
+from streamlit.runtime.caching.storage.cache_storage_protocol import (
+    CacheStorageImproperlyConfigured,
+)
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    DummyCacheStorage,
     InMemoryWrappedDummyCacheStorageManager,
 )
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
@@ -492,6 +501,42 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         )
 
 
+class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
+    """st.cache_data disk persistence tests"""
+
+    def setUp(self) -> None:
+        super().setUp()
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = AlwaysFailingTestCacheStorageManager()
+        Runtime._instance = mock_runtime
+
+    def test_error_logged_and_raised_on_improperly_configured_cache_data(self):
+        with self.assertRaises(CacheStorageImproperlyConfigured) as e, self.assertLogs(
+            "streamlit.runtime.caching.cache_data_api", level=logging.ERROR
+        ) as logs:
+
+            @st.cache_data(persist="disk")
+            def foo():
+                return "data"
+
+        self.assertEqual(str(e.exception), "This CacheStorageManager always fails")
+        output = "".join(logs.output)
+        self.assertIn("This CacheStorageManager always fails", output)
+
+
 def get_byte_length(value):
     """Return the byte length of the pickled value."""
     return len(pickle.dumps(value))
+
+
+class AlwaysFailingTestCacheStorageManager(CacheStorageManager):
+    """A CacheStorageManager that always fails in check_context."""
+
+    def create(self, context: CacheStorageContext) -> CacheStorage:
+        return DummyCacheStorage()
+
+    def clear_all(self) -> None:
+        pass
+
+    def check_context(self, context: CacheStorageContext) -> None:
+        raise CacheStorageImproperlyConfigured("This CacheStorageManager always fails")

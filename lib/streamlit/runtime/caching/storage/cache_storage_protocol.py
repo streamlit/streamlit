@@ -28,6 +28,13 @@ class CacheStorageKeyNotFoundError(CacheStorageError):
     """Raised when the key is not found in the cache storage"""
 
 
+class CacheStorageImproperlyConfigured(CacheStorageError):
+    """
+    Raised if the cache storage manager is not able to work with
+    provided CacheStorageContext.
+    """
+
+
 @dataclass(frozen=True)
 class CacheStorageContext:
     """
@@ -64,11 +71,29 @@ class CacheStorageContext:
 
 
 class CacheStorage(Protocol):
+    """
+    Cache storage protocol, that should be implemented by the concrete cache storages.
+    Used to store cached values for a single `@st.cache_data` decorated function
+    serialized as bytes.
+
+    CacheStorage instances should be created by `CacheStorageManager.create()` method.
+
+    Notes
+    -----
+    Threading: The methods of this protocol could be called from multiple threads.
+    This is a responsibility of the concrete implementation to ensure thread safety
+    guarantees.
+    """
+
     @abstractmethod
     def get(self, key: str) -> bytes:
         """
-        Returns the stored value for the key or raises
-        a CacheStorageKeyNotFoundError if the key is not found
+        Returns the stored value for the key.
+
+        Raises
+        ------
+        CacheStorageKeyNotFoundError
+            Raised if the key is not in the storage.
         """
         raise NotImplementedError
 
@@ -97,12 +122,27 @@ class CacheStorage(Protocol):
 
 
 class CacheStorageManager(Protocol):
+    """
+    Cache storage manager protocol, that should be implemented by the concrete
+    cache storage managers.
+
+    It is responsible for:
+        - Creating cache storage instances for the specific
+        decorated functions,
+        - Validating the context for the cache storages.
+        - Optionally clearing all cache storages in optimal way.
+    """
+
     @abstractmethod
     def create(self, context: CacheStorageContext) -> CacheStorage:
         """
         Creates a new cache storage instance
         Please note that the ttl, max_entries and other context fields are specific
         for whole storage, not for individual key.
+
+        Notes
+        -----
+        Threading: Should be safe to call from any thread.
         """
         raise NotImplementedError
 
@@ -114,6 +154,12 @@ class CacheStorageManager(Protocol):
 
         Cache data API will fall back to remove all available storages one by one
         via storage.clear() method if clear_all raises NotImplementedError.
+
+        Notes
+        -----
+        Threading: This method could be called from multiple threads.
+        This is a responsibility of the concrete implementation to ensure thread safety
+        guarantees.
         """
         raise NotImplementedError
 
@@ -124,7 +170,7 @@ class CacheStorageManager(Protocol):
         if the context is invalid.
 
         In case of raising an exception, we not handle it and let the exception to be
-        raised.
+        propagated.
 
         check_context is called only once at the moment of creating cache_data
         decorator for specific function, so it is not called for every cache hit.
@@ -134,9 +180,17 @@ class CacheStorageManager(Protocol):
         context: CacheStorageContext
             The context to check for the storage manager, dummy function_key in context
             will be used, since it is not computed at the point of calling this method.
-        function_name: str
-            The name of the function that is decorated by st.cache_data, could be used
-            in the error log message.
+
+        Raises
+        ------
+        CacheStorageImproperlyConfigured
+            Raised if the cache storage manager is not able to work with provided
+            CacheStorageContext. When possible we should log message instead, since
+            this exception will be propagated to the user.
+
+        Notes
+        -----
+        Threading: Should be safe to call from any thread.
         """
 
         pass

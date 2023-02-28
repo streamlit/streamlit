@@ -51,6 +51,9 @@ from streamlit.runtime.caching.storage import (
     CacheStorageKeyNotFoundError,
     CacheStorageManager,
 )
+from streamlit.runtime.caching.storage.cache_storage_protocol import (
+    CacheStorageImproperlyConfigured,
+)
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     InMemoryWrappedDummyCacheStorageManager,
 )
@@ -248,7 +251,16 @@ class DataCaches(CacheStatsProvider):
             max_entries=max_entries,
             persist=persist,
         )
-        self.get_storage_manager().check_context(cache_context)
+        try:
+            self.get_storage_manager().check_context(cache_context)
+        except CacheStorageImproperlyConfigured as e:
+            _LOGGER.error(
+                "Cache params for function %s are incompatible with current "
+                "cache storage manager: %s",
+                function_name,
+                e,
+            )
+            raise
 
     def create_cache_storage_context(
         self,

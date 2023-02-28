@@ -73,10 +73,6 @@ class LocalDiskCacheStorage(CacheStorage):
     """
     Cache storage that persists data to disk
     This is the default cache storage for @st.cache_data
-
-    Thread safety note: this class is not thread-safe. It is the responsibility of the
-    caller to ensure that it is only used from a single thread.
-    We hold `compute_value_lock in the `Cache` class to ensure this.
     """
 
     def __init__(self, context: CacheStorageContext):
