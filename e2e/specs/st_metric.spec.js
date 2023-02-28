@@ -142,7 +142,7 @@ describe("st.metric", () => {
 
       cy.getIndexed(
         '[data-testid="metric-container"]',
-        5
+        3
       ).matchThemedSnapshots("metric-label-hidden");
     });
   });
