@@ -335,7 +335,7 @@ export function RenderedMarkdown({
         components={renderers}
         transformLinkUri={transformLinkUri}
         disallowedElements={disallowed}
-        // unwrap and render text from invalid markdown
+        // unwrap and render children from invalid markdown
         unwrapDisallowed={true}
       >
         {source}
