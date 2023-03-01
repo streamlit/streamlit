@@ -201,7 +201,7 @@ describe("SidebarNav", () => {
     )
   })
 
-  it("doesn't render the StyledSidebarNavButton if pages < 6", () => {
+  it("doesn't render the StyledSidebarNavButton if pages <= 6", () => {
     const wrapper = shallow(
       <SidebarNav
         {...getProps({
