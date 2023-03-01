@@ -23,6 +23,7 @@ import Icon from "src/components/shared/Icon"
 import Button, { Kind } from "src/components/shared/Button"
 import { IAppPage, PageConfig } from "src/autogen/proto"
 import { Theme } from "src/theme"
+import { localStorageAvailable } from "src/lib/storageUtils"
 
 import {
   StyledSidebar,
@@ -74,10 +75,14 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.mediumBreakpointPx = Sidebar.calculateMaxBreakpoint(
       props.theme.breakpoints.md
     )
+
+    const cachedSidebarWidth = localStorageAvailable()
+      ? localStorage.getItem("sidebarWidth")
+      : undefined
+
     this.state = {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
-      sidebarWidth:
-        window.localStorage.getItem("sidebarWidth") || Sidebar.minWidth,
+      sidebarWidth: cachedSidebarWidth || Sidebar.minWidth,
       lastInnerWidth: window ? window.innerWidth : Infinity,
       hideScrollbar: false,
     }
@@ -145,14 +150,19 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     const newWidth = width.toString()
 
     this.setState({ sidebarWidth: newWidth })
-    window.localStorage.setItem("sidebarWidth", newWidth)
+
+    if (localStorageAvailable()) {
+      window.localStorage.setItem("sidebarWidth", newWidth)
+    }
   }
 
   resetSidebarWidth = (event: any): void => {
     // Double clicking on the resize handle resets sidebar to default width
     if (event.detail === 2) {
       this.setState({ sidebarWidth: Sidebar.minWidth })
-      window.localStorage.setItem("sidebarWidth", Sidebar.minWidth)
+      if (localStorageAvailable()) {
+        window.localStorage.setItem("sidebarWidth", Sidebar.minWidth)
+      }
     }
   }
 

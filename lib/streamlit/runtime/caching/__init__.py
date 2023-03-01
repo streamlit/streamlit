@@ -23,14 +23,13 @@ from streamlit.runtime.caching.cache_data_api import (
     CacheDataAPI,
     _data_caches,
 )
+from streamlit.runtime.caching.cache_errors import CACHE_DOCS_URL as CACHE_DOCS_URL
 from streamlit.runtime.caching.cache_resource_api import (
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
     CacheResourceAPI,
     _resource_caches,
 )
-from streamlit.runtime.state.session_state import WidgetMetadata
-
-CACHE_DOCS_URL = "https://docs.streamlit.io/library/advanced-features/caching"
+from streamlit.runtime.state.common import WidgetMetadata
 
 
 def save_element_message(

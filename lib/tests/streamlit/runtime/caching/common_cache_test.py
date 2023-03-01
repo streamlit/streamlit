@@ -207,6 +207,33 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         self.assertEqual([5], call_count)
 
     @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_cached_member_function(self, _, cache_decorator):
+        """Our cache decorators can be applied to class member functions."""
+
+        class TestClass:
+            @cache_decorator
+            def member_func(_self):
+                # We underscore-prefix `_self`, because our class is not hashable.
+                return "member func!"
+
+            @classmethod
+            @cache_decorator
+            def class_method(cls):
+                return "class method!"
+
+            @staticmethod
+            @cache_decorator
+            def static_method():
+                return "static method!"
+
+        obj = TestClass()
+        self.assertEqual("member func!", obj.member_func())
+        self.assertEqual("class method!", obj.class_method())
+        self.assertEqual("static method!", obj.static_method())
+
+    @parameterized.expand(
         [
             ("cache_data", cache_data, CACHE_DATA_MESSAGE_REPLAY_CTX),
             ("cache_resource", cache_resource, CACHE_RESOURCE_MESSAGE_REPLAY_CTX),
@@ -967,3 +994,12 @@ class WidgetReplayInteractionTest(InteractiveScriptTests):
         sr4 = sr3.get("checkbox")[0].uncheck().run()
         sr5 = sr4.get("button")[0].click().run()
         assert sr5.get("text")[0].value == "['foo']"
+
+
+class WidgetReplayTest(InteractiveScriptTests):
+    def test_arrow_replay(self):
+        """Regression test for https://github.com/streamlit/streamlit/issues/6103"""
+        script = self.script_from_filename(__file__, "arrow_replay.py")
+
+        sr = script.run()
+        assert len(sr.get("exception")) == 0
