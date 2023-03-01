@@ -45,7 +45,7 @@ _LOGGER = get_logger(__name__)
 
 class LocalDiskCacheStorageManager(CacheStorageManager):
     def create(self, context: CacheStorageContext) -> CacheStorage:
-        """Creates a new cache storage instance wrapped with in-memory cache facade"""
+        """Creates a new cache storage instance wrapped with in-memory cache layer"""
         persist_storage = LocalDiskCacheStorage(context)
         return InMemoryCacheStorageWrapper(
             persist_storage=persist_storage, context=context

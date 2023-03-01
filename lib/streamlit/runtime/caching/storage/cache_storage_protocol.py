@@ -12,6 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+""" Declares the CacheStorageContext dataclass, which contains parameter information for
+each function decorated by @st.cache_data ( for example: ttl, max_entries e.t.c.)
+
+Declares the CacheStorageManager protocol, which implementations are used
+to create CacheStorage instances and to optionally clear all cache storages,
+that were created by this manager, and to check if the context is valid for the storage.
+
+Declares the CacheStorage protocol, which implementations are used to store cached
+values for a single `@st.cache_data` decorated function serialized as bytes.
+
+How these classes work together
+-------------------------------
+- CacheStorageContext : this is a dataclass that contains the parameters from
+@st.cache_data that are passed to the CacheStorageManager.create() method.
+
+- CacheStorageManager : each instance of this is able to create CacheStorage
+instances, and optionally to clear data of all cache storages.
+
+- CacheStorage : each instance of this is able to get, set, delete, and clear
+entries for a single @st.cache_data decorated function.
+"""
+
 from __future__ import annotations
 
 from abc import abstractmethod
