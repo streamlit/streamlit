@@ -82,17 +82,22 @@ class MapMixin:
     ) -> "DeltaGenerator":
         """Display a map with points on it.
 
-        This is a wrapper around st.pydeck_chart to quickly create scatterplot
-        charts on top of a map, with auto-centering and auto-zoom.
+        This is a wrapper around ``st.pydeck_chart`` to quickly create
+        scatterplot charts on top of a map, with auto-centering and auto-zoom.
 
-        When using this command, we advise all users to use a personal Mapbox
-        token. This ensures the map tiles used in this chart are more
-        robust. You can do this with the mapbox.token config option.
+        When using this command, Mapbox provides the map tiles to render map
+        content. Note that Mapbox is a third-party product, the use of which is
+        governed by Mapbox's Terms of Use.
 
-        To get a token for yourself, create an account at
-        https://mapbox.com. It's free! (for moderate usage levels). For more
-        info on how to set config options, see
-        https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options
+        Mapbox requires users to register and provide a token before users can
+        request map tiles. Currently, Streamlit provides this token for you, but
+        this could change at any time. We strongly recommend all users create and
+        use their own personal Mapbox token to avoid any disruptions to their
+        experience. You can do this with the ``mapbox.token`` config option.
+
+        To get a token for yourself, create an account at https://mapbox.com.
+        For more info on how to set config options, see
+        https://docs.streamlit.io/library/advanced-features/configuration
 
         Parameters
         ----------
