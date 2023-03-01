@@ -5,10 +5,10 @@
   "homepage": "./",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
-    "start": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",
-    "build": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false craco build",
-    "test": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js",
-    "test:coverage": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
+    "start": "env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",
+    "build": "env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false craco build",
+    "test": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js",
+    "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
@@ -26,6 +26,7 @@
     ]
   },
   "dependencies": {
+    "@bokeh/bokehjs": "2.4.3",
     "@deck.gl/core": "^8.8.23",
     "@deck.gl/json": "^8.8.23",
     "@emotion-icons/emotion-icon": "^4.1.0",
@@ -88,7 +89,7 @@
     "react-debounce-render": "^8.0.2",
     "react-device-detect": "^2.2.2",
     "react-dom": "^17.0.2",
-    "react-dropzone": "^12.1.0",
+    "react-dropzone": "12.1.0",
     "react-feather": "^2.0.10",
     "react-google-login": "^5.1.21",
     "react-hotkeys": "^1.1.4",
