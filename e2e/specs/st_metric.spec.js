@@ -19,7 +19,7 @@ describe("st.metric", () => {
     cy.loadApp("http://localhost:3000/");
   });
 
-  describe("Test first metric", () => {
+  describe("Test first metric in first row", () => {
     it("displays the correct label text", () => {
       cy.getIndexed("[data-testid='stMetricLabel']", 0).should(
         "have.text",
@@ -42,46 +42,46 @@ describe("st.metric", () => {
     });
   });
 
-  describe("Test second metric", () => {
+  describe("Test second metric in first row", () => {
     it("displays the correct label text", () => {
-      cy.getIndexed("[data-testid='stMetricLabel']", 1).should(
+      cy.getIndexed("[data-testid='stMetricLabel']", 2).should(
         "have.text",
         "S&P 500"
       );
     });
 
     it("displays the correct value text", () => {
-      cy.getIndexed("[data-testid='stMetricValue']", 1).should(
+      cy.getIndexed("[data-testid='stMetricValue']", 2).should(
         "have.text",
         " -4.56 "
       );
     });
 
     it("displays the correct delta text", () => {
-      cy.getIndexed("[data-testid='stMetricDelta']", 1).should(
+      cy.getIndexed("[data-testid='stMetricDelta']", 2).should(
         "have.text",
         " -50 "
       );
     });
   });
 
-  describe("Test third metric", () => {
+  describe("Test third metric in the first row", () => {
     it("displays the correct metric label text", () => {
-      cy.getIndexed("[data-testid='stMetricLabel']", 2).should(
+      cy.getIndexed("[data-testid='stMetricLabel']", 4).should(
         "have.text",
         "Apples I've eaten"
       );
     });
 
     it("displays the correct metric value text", () => {
-      cy.getIndexed("[data-testid='stMetricValue']", 2).should(
+      cy.getIndexed("[data-testid='stMetricValue']", 4).should(
         "have.text",
         " 23k "
       );
     });
 
     it("displays the correct metric delta text", () => {
-      cy.getIndexed("[data-testid='stMetricDelta']", 2).should(
+      cy.getIndexed("[data-testid='stMetricDelta']", 4).should(
         "have.text",
         " -20 "
       );
@@ -101,7 +101,7 @@ describe("st.metric", () => {
     it("Check Metric Snapshot", () => {
       cy.getIndexed(
         '[data-testid="metric-container"]',
-        1
+        2
       ).matchThemedSnapshots("metric-container-red");
     });
   });
@@ -110,45 +110,63 @@ describe("st.metric", () => {
     it("Check Metric Snapshot", () => {
       cy.getIndexed(
         '[data-testid="metric-container"]',
-        2
+        4
       ).matchThemedSnapshots("metric-container-gray");
     });
   });
 
+  describe("Test that the help shows up in the correct spot without columns", () => {
+    it("Check Metric Snapshot", () => {
+      cy.getIndexed(
+        '[data-testid="metric-container"]',
+        6
+      ).matchThemedSnapshots("metric-with-help");
+    });
+  })
+
+  describe("Test that None results in a - in the value", () => {
+    it("Check Metric Snapshot", () => {
+      cy.getIndexed(
+        '[data-testid="metric-container"]',
+        7
+      ).matchThemedSnapshots("metric-with-none-value");
+    });
+  })
+
   describe("Hides label correctly when label_visibility set to hidden", () => {
     it("Check Metric Snapshot", () => {
-      cy.getIndexed("[data-testid='stMetricLabel']", 5).should(
+      cy.getIndexed("[data-testid='stMetricLabel']", 3).should(
         "have.text",
         "Test 4"
       );
 
       cy.getIndexed(
         '[data-testid="metric-container"]',
-        5
+        3
       ).matchThemedSnapshots("metric-label-hidden");
     });
   });
 
   describe("Collapses label correctly when label_visibility set to collapse", () => {
     it("Check Metric Snapshot", () => {
-      cy.getIndexed("[data-testid='stMetricLabel']", 6).should(
+      cy.getIndexed("[data-testid='stMetricLabel']", 5).should(
         "have.text",
         "Test 5"
       );
 
       cy.getIndexed(
         '[data-testid="metric-container"]',
-        6
+        5
       ).matchThemedSnapshots("metric-label-collapse");
     });
   });
 });
 
-describe("Check that ellipses shows up and the help shows up in the correct spot", () => {
+describe("Check that ellipses shows up and the help shows up in the correct spot with less space", () => {
   it("Check Metric Snapshot", () => {
     cy.getIndexed(
       '[data-testid="metric-container"]',
-      7
+      8
     ).matchThemedSnapshots("metric-help-and-ellipses");
   });
 })
