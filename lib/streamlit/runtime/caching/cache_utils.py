@@ -60,7 +60,7 @@ TTLCACHE_TIMER = time.monotonic
 
 @overload
 def ttl_to_seconds(
-    ttl: float | timedelta | None, *, allow_none: Literal[True]
+    ttl: float | timedelta | None, *, coerce_none_to_inf: Literal[False]
 ) -> float | None:
     ...
 
@@ -71,12 +71,12 @@ def ttl_to_seconds(ttl: float | timedelta | None) -> float:
 
 
 def ttl_to_seconds(
-    ttl: float | timedelta | None, *, allow_none: bool = False
+    ttl: float | timedelta | None, *, coerce_none_to_inf: bool = True
 ) -> float | None:
     """
     Convert a ttl value to a float representing "number of seconds".
     """
-    if not allow_none and ttl is None:
+    if coerce_none_to_inf and ttl is None:
         return math.inf
     if isinstance(ttl, timedelta):
         return ttl.total_seconds()

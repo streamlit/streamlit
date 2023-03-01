@@ -151,7 +151,7 @@ class DataCaches(CacheStatsProvider):
         If it doesn't exist, create a new one with the given params.
         """
 
-        ttl_seconds = ttl_to_seconds(ttl, allow_none=True)
+        ttl_seconds = ttl_to_seconds(ttl, coerce_none_to_inf=False)
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
@@ -244,7 +244,7 @@ class DataCaches(CacheStatsProvider):
     ) -> None:
         """Validate that the cache params are valid for given storage."""
 
-        ttl_seconds = ttl_to_seconds(ttl, allow_none=True)
+        ttl_seconds = ttl_to_seconds(ttl, coerce_none_to_inf=False)
 
         cache_context = self.create_cache_storage_context(
             function_key="DUMMY_KEY",
