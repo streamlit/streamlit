@@ -28,17 +28,15 @@ class CacheStorageKeyNotFoundError(CacheStorageError):
     """Raised when the key is not found in the cache storage"""
 
 
-class CacheStorageImproperlyConfigured(CacheStorageError):
-    """
-    Raised if the cache storage manager is not able to work with
+class InvalidCacheStorageContext(CacheStorageError):
+    """Raised if the cache storage manager is not able to work with
     provided CacheStorageContext.
     """
 
 
 @dataclass(frozen=True)
 class CacheStorageContext:
-    """
-    Context passed to the cache storage during initialization
+    """Context passed to the cache storage during initialization
     This is the normalized parameters that are passed to CacheStorageManager.create()
     method.
 
@@ -71,8 +69,7 @@ class CacheStorageContext:
 
 
 class CacheStorage(Protocol):
-    """
-    Cache storage protocol, that should be implemented by the concrete cache storages.
+    """Cache storage protocol, that should be implemented by the concrete cache storages.
     Used to store cached values for a single `@st.cache_data` decorated function
     serialized as bytes.
 
@@ -87,8 +84,7 @@ class CacheStorage(Protocol):
 
     @abstractmethod
     def get(self, key: str) -> bytes:
-        """
-        Returns the stored value for the key.
+        """Returns the stored value for the key.
 
         Raises
         ------
@@ -113,8 +109,7 @@ class CacheStorage(Protocol):
         raise NotImplementedError
 
     def close(self) -> None:
-        """
-        Closes the cache storage, it is optional to implement, and should be used
+        """Closes the cache storage, it is optional to implement, and should be used
         to close open resources, before we delete the storage instance.
         e.g. close the database connection etc.
         """
@@ -122,8 +117,7 @@ class CacheStorage(Protocol):
 
 
 class CacheStorageManager(Protocol):
-    """
-    Cache storage manager protocol, that should be implemented by the concrete
+    """Cache storage manager protocol, that should be implemented by the concrete
     cache storage managers.
 
     It is responsible for:
@@ -137,8 +131,7 @@ class CacheStorageManager(Protocol):
 
     @abstractmethod
     def create(self, context: CacheStorageContext) -> CacheStorage:
-        """
-        Creates a new cache storage instance
+        """Creates a new cache storage instance
         Please note that the ttl, max_entries and other context fields are specific
         for whole storage, not for individual key.
 
@@ -149,8 +142,7 @@ class CacheStorageManager(Protocol):
         raise NotImplementedError
 
     def clear_all(self) -> None:
-        """
-        Remove everything what possible from the cache storages in optimal way.
+        """Remove everything what possible from the cache storages in optimal way.
         meaningful default behaviour is to raise NotImplementedError, so this is not
         abstractmethod.
 
@@ -172,8 +164,7 @@ class CacheStorageManager(Protocol):
         raise NotImplementedError
 
     def check_context(self, context: CacheStorageContext) -> None:
-        """
-        Checks if the context is valid for the storage manager.
+        """Checks if the context is valid for the storage manager.
         This method should not return anything, but log message or raise an exception
         if the context is invalid.
 
@@ -191,7 +182,7 @@ class CacheStorageManager(Protocol):
 
         Raises
         ------
-        CacheStorageImproperlyConfigured
+        InvalidCacheStorageContext
             Raised if the cache storage manager is not able to work with provided
             CacheStorageContext. When possible we should log message instead, since
             this exception will be propagated to the user.

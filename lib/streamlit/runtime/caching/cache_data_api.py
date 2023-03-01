@@ -52,7 +52,7 @@ from streamlit.runtime.caching.storage import (
     CacheStorageManager,
 )
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    CacheStorageImproperlyConfigured,
+    InvalidCacheStorageContext,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     DummyCacheStorageManager,
@@ -255,7 +255,7 @@ class DataCaches(CacheStatsProvider):
         )
         try:
             self.get_storage_manager().check_context(cache_context)
-        except CacheStorageImproperlyConfigured as e:
+        except InvalidCacheStorageContext as e:
             _LOGGER.error(
                 "Cache params for function %s are incompatible with current "
                 "cache storage manager: %s",

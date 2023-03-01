@@ -47,7 +47,7 @@ from streamlit.runtime.caching.storage import (
     CacheStorageManager,
 )
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    CacheStorageImproperlyConfigured,
+    InvalidCacheStorageContext,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     DummyCacheStorage,
@@ -509,7 +509,7 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
         Runtime._instance = mock_runtime
 
     def test_error_logged_and_raised_on_improperly_configured_cache_data(self):
-        with self.assertRaises(CacheStorageImproperlyConfigured) as e, self.assertLogs(
+        with self.assertRaises(InvalidCacheStorageContext) as e, self.assertLogs(
             "streamlit.runtime.caching.cache_data_api", level=logging.ERROR
         ) as logs:
 
@@ -537,4 +537,4 @@ class AlwaysFailingTestCacheStorageManager(CacheStorageManager):
         pass
 
     def check_context(self, context: CacheStorageContext) -> None:
-        raise CacheStorageImproperlyConfigured("This CacheStorageManager always fails")
+        raise InvalidCacheStorageContext("This CacheStorageManager always fails")
