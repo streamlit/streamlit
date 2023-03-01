@@ -51,7 +51,7 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     DummyCacheStorage,
-    DummyCacheStorageManager,
+    MemoryCacheStorageManager,
 )
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
@@ -90,7 +90,7 @@ class CacheDataTest(unittest.TestCase):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         mock_runtime = MagicMock(spec=Runtime)
-        mock_runtime.cache_storage_manager = DummyCacheStorageManager()
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         Runtime._instance = mock_runtime
 
     def tearDown(self):
@@ -444,7 +444,7 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         mock_runtime = MagicMock(spec=Runtime)
-        mock_runtime.cache_storage_manager = DummyCacheStorageManager()
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         Runtime._instance = mock_runtime
 
         # Guard against external tests not properly cache-clearing

@@ -24,7 +24,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
-    DummyCacheStorageManager,
+    MemoryCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
@@ -70,7 +70,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         self.media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
 
         mock_runtime = MagicMock(spec=Runtime)
-        mock_runtime.cache_storage_manager = DummyCacheStorageManager()
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         mock_runtime.media_file_mgr = MediaFileManager(self.media_file_storage)
         Runtime._instance = mock_runtime
 

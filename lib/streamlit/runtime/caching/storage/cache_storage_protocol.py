@@ -146,8 +146,9 @@ class CacheStorageManager(Protocol):
         meaningful default behaviour is to raise NotImplementedError, so this is not
         abstractmethod.
 
-        Cache data API will fall back to remove all available storages one by one
-        via storage.clear() method if clear_all raises NotImplementedError.
+        The method is optional to implement: cache data API will fall back to remove
+        all available storages one by one via storage.clear() method
+        if clear_all raises NotImplementedError.
 
         Raises
         ------

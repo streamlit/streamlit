@@ -23,7 +23,7 @@ from unittest.mock import MagicMock
 from streamlit import source_util
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
-    DummyCacheStorageManager,
+    MemoryCacheStorageManager,
 )
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
@@ -41,7 +41,7 @@ class InteractiveScriptTests(unittest.TestCase):
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
-        mock_runtime.cache_storage_manager = DummyCacheStorageManager()
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         Runtime._instance = mock_runtime
 
         with source_util._pages_cache_lock:

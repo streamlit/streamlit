@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for DummyCacheStorage and DummyCacheStorageManager"""
+"""Unit tests for DummyCacheStorage and MemoryCacheStorageManager"""
 import unittest
 
 from streamlit.runtime.caching.storage import (
@@ -21,7 +21,7 @@ from streamlit.runtime.caching.storage import (
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     DummyCacheStorage,
-    DummyCacheStorageManager,
+    MemoryCacheStorageManager,
 )
 
 
@@ -34,7 +34,7 @@ class DummyCacheStorageManagerTest(unittest.TestCase):
             persist="disk",
         )
         self.dummy_cache_storage = DummyCacheStorage()
-        self.storage_manager = DummyCacheStorageManager()
+        self.storage_manager = MemoryCacheStorageManager()
         self.storage = self.storage_manager.create(self.context)
 
     def test_in_memory_wrapped_dummy_cache_storage_get_not_found(self):

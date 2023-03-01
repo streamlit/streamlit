@@ -55,7 +55,7 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
     InvalidCacheStorageContext,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
-    DummyCacheStorageManager,
+    MemoryCacheStorageManager,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
@@ -242,7 +242,14 @@ class DataCaches(CacheStatsProvider):
         max_entries: int | None,
         ttl: int | float | timedelta | None,
     ) -> None:
-        """Validate that the cache params are valid for given storage."""
+        """Validate that the cache params are valid for given storage.
+
+        Raises
+        ------
+        InvalidCacheStorageContext
+            Raised if the cache storage manager is not able to work with provided
+            CacheStorageContext.
+        """
 
         ttl_seconds = ttl_to_seconds(ttl, coerce_none_to_inf=False)
 
@@ -287,8 +294,8 @@ class DataCaches(CacheStatsProvider):
         else:
             # When running in "raw mode", we can't access the CacheStorageManager,
             # so we're falling back to InMemoryCache.
-            _LOGGER.warning("No runtime found, using DummyCacheStorageManager")
-            return DummyCacheStorageManager()
+            _LOGGER.warning("No runtime found, using MemoryCacheStorageManager")
+            return MemoryCacheStorageManager()
 
 
 # Singleton DataCaches instance
