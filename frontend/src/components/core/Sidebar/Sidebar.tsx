@@ -160,14 +160,14 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   static shouldNavCollapse(
     pageQuantity: number,
     hasElements: boolean,
-    collapsedPreference: boolean
+    expandedPreference: boolean
   ): boolean {
     // If we have less than 7 pages, or the current page has no widgets below, it should always be expanded
     if (pageQuantity < 7 || !hasElements) {
       return false
     }
     // If none of the conditions above are met, let's check the user's preference
-    if (collapsedPreference === true) {
+    if (expandedPreference === true) {
       return false
     }
     // Finally, if none of the above are met, let's collapse the nav
