@@ -51,6 +51,7 @@ ACCEPTABLE_LICENSES = {
     "WTFPL",  # http://www.wtfpl.net/about/
     # Dual-licenses are acceptable if at least one of the two licenses is
     # acceptable.
+    "(LGPL-2.0 or MIT)",
     "(MIT OR Apache-2.0)",
     "(MPL-2.0 OR Apache-2.0)",
     "(MIT OR CC0-1.0)",
