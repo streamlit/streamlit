@@ -130,13 +130,15 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     }
 
     // Change collapse/expand preference if there are widgets on the page
-    this.setState({
-      collapsedSidebarNav: Sidebar.shouldNavCollapse(
-        this.props.appPages.length,
-        this.props.hasElements,
-        cachedSidebarNavExpandedPreference
-      ),
-    })
+    if (this.props.hasElements !== prevProps.hasElements) {
+      this.setState({
+        collapsedSidebarNav: Sidebar.shouldNavCollapse(
+          this.props.appPages.length,
+          this.props.hasElements,
+          cachedSidebarNavExpandedPreference
+        ),
+      })
+    }
   }
 
   static shouldCollapse(
