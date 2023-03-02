@@ -19,11 +19,12 @@ import time
 import unittest
 from datetime import timedelta
 from typing import Any, List
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.runtime import Runtime
 from streamlit.runtime.caching import (
     CACHE_DATA_MESSAGE_REPLAY_CTX,
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
@@ -36,6 +37,9 @@ from streamlit.runtime.caching.cache_utils import CachedResult
 from streamlit.runtime.caching.cached_message_replay import (
     MultiCacheResults,
     _make_widget_key,
+)
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    MemoryCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.scriptrunner import (
@@ -687,6 +691,9 @@ class CommonCacheTTLTest(unittest.TestCase):
     def setUp(self) -> None:
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        Runtime._instance = mock_runtime
 
     def tearDown(self):
         cache_data.clear()
@@ -818,6 +825,11 @@ class CommonCacheTTLTest(unittest.TestCase):
 class CommonCacheThreadingTest(unittest.TestCase):
     # The number of threads to run our tests on
     NUM_THREADS = 50
+
+    def setUp(self):
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        Runtime._instance = mock_runtime
 
     def tearDown(self):
         # Some of these tests reach directly into CALL_STACK data and twiddle it.

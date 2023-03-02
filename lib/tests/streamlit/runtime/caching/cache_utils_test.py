@@ -30,6 +30,21 @@ class CacheUtilsTest(unittest.TestCase):
             ("None", None, math.inf),
         ]
     )
-    def test_ttl_to_seconds(self, _, input_value: Any, expected_seconds: float):
+    def test_ttl_to_seconds_coerced(self, _, input_value: Any, expected_seconds: float):
         """Test the various types of input that ttl_to_seconds accepts."""
         self.assertEqual(expected_seconds, ttl_to_seconds(input_value))
+
+    @parameterized.expand(
+        [
+            ("float", 3.5, 3.5),
+            ("timedelta", timedelta(minutes=3), 60 * 3),
+            ("None", None, None),
+        ]
+    )
+    def test_ttl_to_seconds_not_coerced(
+        self, _, input_value: Any, expected_seconds: float
+    ):
+        """Test the various types of input that ttl_to_seconds accepts."""
+        self.assertEqual(
+            expected_seconds, ttl_to_seconds(input_value, coerce_none_to_inf=False)
+        )

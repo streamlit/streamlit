@@ -27,6 +27,9 @@ from streamlit import config as _config
 from streamlit.case_converters import to_snake_case
 from streamlit.config_option import ConfigOption
 from streamlit.runtime.credentials import Credentials, check_credentials
+from streamlit.web.cache_storage_manager_config import (
+    create_default_cache_storage_manager,
+)
 
 ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
 
@@ -253,7 +256,7 @@ def cache():
 
 @cache.command("clear")
 def cache_clear():
-    """Clear st.cache, st.memo, and st.singleton caches."""
+    """Clear st.cache, st.cache_data, and st.cache_resource caches."""
     result = legacy_caching.clear_cache()
     cache_path = legacy_caching.get_cache_path()
     if result:
@@ -261,7 +264,13 @@ def cache_clear():
     else:
         print(f"Nothing to clear at {cache_path}.")
 
-    caching.cache_data.clear()
+    # in this `streamlit cache clear` cli command we cannot use the
+    # `cache_storage_manager from runtime (since runtime is not initialized)
+    # so we create a new cache_storage_manager instance that used in runtime,
+    # and call clear_all() method for it.
+    # This will not remove the in-memory cache.
+    cache_storage_manager = create_default_cache_storage_manager()
+    cache_storage_manager.clear_all()
     caching.cache_resource.clear()
 
 

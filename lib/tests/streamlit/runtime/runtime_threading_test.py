@@ -50,6 +50,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
                     media_file_storage=MagicMock(),
                     session_manager_class=MagicMock,
                     session_storage=MagicMock(),
+                    cache_storage_manager=MagicMock(),
                 )
                 queue.put(Runtime(config))
             except BaseException as e:
