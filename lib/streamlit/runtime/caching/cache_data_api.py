@@ -279,7 +279,6 @@ class DataCaches(CacheStatsProvider):
         ttl_seconds: float | None,
         max_entries: int | None,
     ) -> CacheStorageContext:
-
         return CacheStorageContext(
             function_key=function_key,
             function_display_name=function_name,
