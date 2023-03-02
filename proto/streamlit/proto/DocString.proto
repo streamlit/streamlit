@@ -18,20 +18,33 @@ syntax = "proto3";
 
 // Formatted text
 message DocString {
-  // The name the user gave to the variable holding this object.
-  string name = 1;
 
-  // The type of the object.
-  string type = 2;
+  // [DEPRECATED] The name of the object.
+  //string name = 1;
+
+  // [DEPRECATED] The module of the object
+  //string module = 2;
+
 
   // The doc string.
   string doc_string = 3;
 
+  // The type of the object.
+  string type = 4;
+
+  // [DEPRECATED] The signature of the object, if it's a function. Else, unset.
+  //string signature = 5;
+
+  // The name the user gave to the variable holding this object.
+  string name = 6;
+
   // A string representation of this object's value.
-  string value = 4;
+  string value = 7;
 
   // List of this object's methods and member variables.
-  repeated Member members = 5;
+  repeated Member members = 8;
+
+  reserved 1, 2, 5;
 }
 
 
