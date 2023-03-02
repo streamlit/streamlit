@@ -1,0 +1,17 @@
+name: Build info
+description: Sets common environment variables that are needed for other build steps
+
+outputs:
+  PYTHON_VERSIONS:
+    description: Python versions for which tests will be run
+    value: ${{ steps.build_info.outputs.PYTHON_VERSIONS }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set Python version vars
+      id: build_info
+      run: ./.github/scripts/build_info.py
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      shell: bash --login -eo pipefail {0}

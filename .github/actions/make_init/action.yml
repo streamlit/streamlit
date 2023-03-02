@@ -26,7 +26,10 @@ runs:
         cache: 'yarn'
         cache-dependency-path: '**/yarn.lock'
     - name: Initialize React
-      run: make react-init
+      run: |
+        # Create the cache directory if it does not exist.
+        mkdir -p $(yarn cache dir)
+        make react-init
       shell: bash --login -eo pipefail {0}
     - name: Install Dependencies
       run: |

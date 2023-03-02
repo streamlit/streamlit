@@ -27,14 +27,14 @@ defaults:
   run:
     shell: bash --login -eo pipefail {0}
 
+env:
+  FORCE_COLOR: "1"
+
 jobs:
-  py_version:
+  build_info:
     runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: false
-      matrix:
-        min-or-max: ["min", "max"]
+    name: "Build info"
 
     steps:
       - name: Checkout Streamlit code
@@ -43,15 +43,38 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: 'recursive'
-
-      # Set $PYTHON_VERSION from either $PYTHON_MIN_VERSION or $PYTHON_MAX_VERSION,
-      # depending on our 'min-or-max' strategy matrix value.
+          fetch-depth: 2
       - name: Set Python version vars
-        uses: ./.github/actions/set_python_versions
-      - if: ${{ matrix.min-or-max == 'min' }}
-        run: echo "PYTHON_VERSION=${{ env.PYTHON_MIN_VERSION }}" >> $GITHUB_ENV
-      - if: ${{ matrix.min-or-max == 'max' }}
-        run: echo "PYTHON_VERSION=${{ env.PYTHON_MAX_VERSION }}" >> $GITHUB_ENV
+        id: build_info
+        uses: ./.github/actions/build_info
+
+    outputs:
+      PYTHON_VERSIONS: ${{ steps.build_info.outputs.PYTHON_VERSIONS }}
+
+  py_version:
+    needs:
+      - build_info
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: "${{ fromJson(needs.build_info.outputs.PYTHON_VERSIONS) }}"
+
+    name: >
+      Python ${{ matrix.python_version }}: Python tests, Integration tests, CLI Smoke tests
+
+    env:
+      PYTHON_VERSION: ${{ matrix.python_version }}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          submodules: 'recursive'
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
@@ -72,6 +95,70 @@ jobs:
         run: make integration-tests
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
+      - name: Set CONSTRAINTS_FILE env variable
+        if: ${{ always() }}
+        run: |
+          mkdir -p /tmp/constraints
+          echo "CONSTRAINTS_FILE=/tmp/constraints/constraints-${PYTHON_VERSION}.txt" >> $GITHUB_ENV
+      - name: Generate constraint file for Python ${{ env.PYTHON_VERSION }}
+        if: ${{ always() }}
+        run: |
+          pip freeze | grep -v "\-e git" | tee "${CONSTRAINTS_FILE}"
+      - name: Diff constraint file
+        if: ${{ always() }}
+        run: |
+          CONSTRAINT_URL="https://raw.githubusercontent.com/streamlit/streamlit/constraints-develop/constraints-${PYTHON_VERSION}.txt"
+          diff -y <(echo "Old"; curl -s "${CONSTRAINT_URL}") <(echo "New"; cat "${CONSTRAINTS_FILE}") || true
+      - name: Upload constraints file
+        uses: actions/upload-artifact@v3
+        with:
+          name: constraints
+          path: ${{ env.CONSTRAINTS_FILE }}
+          if-no-files-found: error
+
+  py_constraint:
+    needs:
+      - py_version
+    permissions:
+      # Additional permission needed to upload constraints
+      contents: write
+
+    runs-on: ubuntu-latest
+    if: github.repository == 'streamlit/streamlit' && github.event_name == 'push' && github.ref_name == 'develop'
+    env:
+      TARGET_BRANCH: constraints-${{ github.ref_name }}
+
+    steps:
+      - name: Checkout branch "${{ env.TARGET_BRANCH }}"
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: constraints
+          path: .
+
+      - name: Commit and push constraint files
+        run: |
+          git add .
+          git config --local user.email "core+streamlitbot-github@streamlit.io"
+          git config --local user.name "Automated GitHub Actions commit"
+          if ! git diff --cached --color --exit-code --ignore-matching-lines="^#.*"
+          then
+            git commit --all --message "Updating constraints. Github run id:${GITHUB_RUN_ID}
+
+            This update in constraints is automatically committed by the CI based on
+            '${GITHUB_REF}' in the '${GITHUB_REPOSITORY}' repository with commit sha ${GITHUB_SHA}.
+
+            The action that build those constraints can be found at https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/
+            "
+            git push "origin" "HEAD:${TARGET_BRANCH}";
+          else
+            echo "No changes"
+          fi
+        env:
+          TARGET_BRANCH: constraints-${{ github.ref_name }}
 
   py_snowflake:
     runs-on: ubuntu-latest
@@ -87,6 +174,9 @@ jobs:
         (github.event_name == 'schedule')
         )
 
+    name: >
+      Python 3.8: Python tests for Snowflake
+
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
@@ -97,7 +187,7 @@ jobs:
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
         with:
-          python-version: "3.8"
+          python-version: '3.8'
       - name: Decrypt credentials
         run: ./.github/scripts/decrypt_credentials.sh
         env:
