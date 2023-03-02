@@ -175,9 +175,14 @@ Cypress.Commands.add("getIndexed", (selector, index) =>
 // attempting to take snapshots. This command removes the problematic parts to
 // avoid this issue.
 Cypress.Commands.add("prepForElementSnapshots", () => {
-  // Make the ribbon decoration line disappear as it can occasionally get
+  // Look for the ribbon and if its found,
+  // make the ribbon decoration line disappear as it can occasionally get
   // caught when a snapshot is taken.
-  cy.get("[data-testid='stDecoration']").invoke("css", "display", "none")
+  cy.get(".stApp").then($body => {
+    if ($body.find("[data-testid='stDecoration']").length > 0) {
+      cy.get("[data-testid='stDecoration']").invoke("css", "display", "none")
+    }
+  })
 
   // Similarly, the header styling can sometimes interfere with the snapshot
   // for elements near the top of the page.

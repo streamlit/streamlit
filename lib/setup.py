@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.18.1"  # PEP-440
+VERSION = "1.19.0"  # PEP-440
 
 NAME = "streamlit"
 
@@ -37,7 +37,7 @@ INSTALL_REQUIRES = [
     "importlib-metadata>=1.4",
     "numpy",
     "packaging>=14.1",
-    "pandas>=0.25",
+    "pandas<2,>=0.25",
     "pillow>=6.2.0",
     "protobuf<4,>=3.12",
     "pyarrow>=4.0",

@@ -31,13 +31,25 @@ export const StyledTruncateText = styled.div(({ theme }) => ({
   fontFamily: theme.genericFonts.bodyFont,
   lineHeight: theme.lineHeights.normal,
   verticalAlign: "middle",
+
+  // Styles to truncate the text inside the StyledStreamlitMarkdown div.
+  "& > div": {
+    overflow: "hidden",
+
+    "& > p": {
+      textOverflow: "ellipsis",
+      overflow: "hidden",
+    },
+  },
 }))
 
 export const StyledMetricLabelText = styled(
   StyledWidgetLabel
 )<StyledMetricLabelTextProps>(({ visibility }) => ({
   marginBottom: 0,
-  display: visibility === LabelVisibilityOptions.Collapsed ? "none" : "flex",
+  display: visibility === LabelVisibilityOptions.Collapsed ? "none" : "grid",
+  gridTemplateColumns:
+    visibility === LabelVisibilityOptions.Collapsed ? "initial" : "auto 1fr",
   visibility:
     visibility === LabelVisibilityOptions.Hidden ? "hidden" : "visible",
 }))
