@@ -70,9 +70,8 @@ class LocalDiskCacheStorageManager(CacheStorageManager):
 
 
 class LocalDiskCacheStorage(CacheStorage):
-    """
-    Cache storage that persists data to disk
-    This is the default cache storage for @st.cache_data
+    """Cache storage that persists data to disk
+    This is the default cache persistence layer for @st.cache_data
     """
 
     def __init__(self, context: CacheStorageContext):
