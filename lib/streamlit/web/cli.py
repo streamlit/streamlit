@@ -264,6 +264,11 @@ def cache_clear():
     else:
         print(f"Nothing to clear at {cache_path}.")
 
+    # in this `streamlit cache clear` cli command we cannot use the
+    # `cache_storage_manager from runtime (since runtime is not initialized)
+    # so we create a new cache_storage_manager instance that used in runtime,
+    # and call clear_all() method for it.
+    # This will not remove the in-memory cache.
     cache_storage_manager = create_default_cache_storage_manager()
     cache_storage_manager.clear_all()
     caching.cache_resource.clear()

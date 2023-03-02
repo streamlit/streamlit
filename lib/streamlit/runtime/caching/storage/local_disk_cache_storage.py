@@ -11,6 +11,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+"""Declares the LocalDiskCacheStorageManager class, which is used
+to create LocalDiskCacheStorage instances wrapped by InMemoryCacheStorageWrapper,
+InMemoryCacheStorageWrapper wrapper allows to have first layer of in-memory cache,
+before accessing to LocalDiskCacheStorage itself.
+
+Declares the LocalDiskCacheStorage class, which is used to store cached
+values on disk.
+
+How these classes work together
+-------------------------------
+
+- LocalDiskCacheStorageManager : each instance of this is able
+to create LocalDiskCacheStorage instances wrapped by InMemoryCacheStorageWrapper,
+and to clear data from cache storage folder. It is also LocalDiskCacheStorageManager
+responsibility to check if the context is valid for the storage, and to log warning
+if the context is not valid.
+
+- LocalDiskCacheStorage : each instance of this is able to get, set, delete, and clear
+entries from disk for a single @st.cache_data decorated function if `persist="disk"`
+is used in CacheStorageContext.
+"""
+
 from __future__ import annotations
 
 import math

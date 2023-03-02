@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """ Declares the CacheStorageContext dataclass, which contains parameter information for
-each function decorated by @st.cache_data ( for example: ttl, max_entries e.t.c.)
+each function decorated by @st.cache_data (for example: ttl, max_entries e.t.c.)
 
 Declares the CacheStorageManager protocol, which implementations are used
 to create CacheStorage instances and to optionally clear all cache storages,
