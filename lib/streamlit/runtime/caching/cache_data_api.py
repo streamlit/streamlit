@@ -413,9 +413,10 @@ class CacheDataAPI:
             for an unbounded cache. (When a new entry is added to a full cache,
             the oldest cached entry will be removed.) The default is None.
 
-        show_spinner : boolean
+        show_spinner : boolean or string
             Enable the spinner. Default is True to show a spinner when there is
-            a cache miss.
+            a "cache miss" and the cached data is being created. If string,
+            value of show_spinner param will be used for spinner text.
 
         persist : str or boolean or None
             Optional location to persist cached data to. Passing "disk" (or True)
@@ -574,7 +575,6 @@ class DataCache(Cache):
         self.allow_widgets = allow_widgets
 
     def get_stats(self) -> list[CacheStat]:
-
         if isinstance(self.storage, CacheStatsProvider):
             return self.storage.get_stats()
         return []
