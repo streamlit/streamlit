@@ -23,7 +23,7 @@ from typing import Callable, Dict, Optional
 
 from blinker import Signal
 
-from streamlit import config, runtime, source_util, util
+from streamlit import config, experimental_user, runtime, source_util, util
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
@@ -491,6 +491,11 @@ class ScriptRunner:
 
             if config.get_option("runner.magicEnabled"):
                 filebody = magic.add_magic(filebody, script_path)
+
+            user = experimental_user()
+            email = user.get("email", "anonymous")
+            ip = user.get("ip", "unknown ip")
+            _LOGGER.info(f"{email} {ip} access script {script_path}")
 
             code = compile(
                 filebody,

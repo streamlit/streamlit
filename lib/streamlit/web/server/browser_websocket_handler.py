@@ -104,6 +104,14 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         else:
             user_info["email"] = email
 
+        remote_ip = (
+            self.request.headers.get("X-Real-IP")
+            or self.request.headers.get("X-Forwarded-For")
+            or self.request.remote_ip
+        )
+
+        user_info["ip"] = remote_ip
+
         existing_session_id = None
         try:
             ws_protocols = [
