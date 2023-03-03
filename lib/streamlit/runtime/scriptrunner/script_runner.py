@@ -496,7 +496,7 @@ class ScriptRunner:
             user = UserInfoProxy()
             email = user.get("email", "anonymous")
             ip = user.get("ip", "unknown ip")
-            _LOGGER.info(f"{email} {ip} access script {script_path}")
+            _LOGGER.info(f"{email} [{ip}] access script {script_path}")
 
             code = compile(
                 filebody,
