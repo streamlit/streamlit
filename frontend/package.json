@@ -115,7 +115,7 @@
     "styletron-react": "^6.1.0",
     "typed-signals": "^2.5.0",
     "unist-util-visit": "^4.1.2",
-    "vega": "^5.22.1",
+    "vega": "^5.23.0",
     "vega-embed": "^6.21.0",
     "vega-interpreter": "^1.0.4",
     "vega-lite": "^5.6.0",
