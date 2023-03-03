@@ -261,6 +261,7 @@ export class App extends PureComponent<Props, State> {
     this.pendingElementsBuffer = this.state.elements
 
     window.streamlitDebug = {
+      clearForwardMsgCache: this.debugClearForwardMsgCache,
       disconnectWebsocket: this.debugDisconnectWebsocket,
       shutdownRuntime: this.debugShutdownRuntime,
     }
@@ -1038,7 +1039,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Used by e2e tests to test disabling widgets.
+   * Test-only method used by e2e tests to test disabling widgets.
    */
   debugShutdownRuntime = (): void => {
     if (this.isServerConnected()) {
@@ -1049,7 +1050,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Used by e2e tests to test reconnect behavior.
+   * Test-only method used by e2e tests to test reconnect behavior.
    */
   debugDisconnectWebsocket = (): void => {
     if (this.isServerConnected()) {
@@ -1057,6 +1058,21 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "debugDisconnectWebsocket"
       this.sendBackMsg(backMsg)
     }
+  }
+
+  /**
+   * Test-only method used by e2e tests to test fetching cached ForwardMsgs
+   * from the server.
+   */
+  debugClearForwardMsgCache = (): void => {
+    if (!isLocalhost()) {
+      return
+    }
+
+    // It's not a problem that we're mucking around with private fields since
+    // this is a test-only method anyway.
+    // @ts-ignore
+    this.connectionManager?.connection?.cache.messages.clear()
   }
 
   /**

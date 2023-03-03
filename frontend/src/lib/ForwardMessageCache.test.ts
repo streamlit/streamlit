@@ -16,7 +16,10 @@
 
 import { ForwardMsg } from "src/autogen/proto"
 import fetchMock from "fetch-mock"
-import { ForwardMsgCache } from "src/lib/ForwardMessageCache"
+import {
+  FETCH_MESSAGE_PATH,
+  ForwardMsgCache,
+} from "src/lib/ForwardMessageCache"
 import { buildHttpUri } from "src/lib/UriUtil"
 
 const MOCK_SERVER_URI = {
@@ -77,7 +80,11 @@ function mockGetMessageResponse(msg: ForwardMsg): void {
     method: "get",
   }
 
-  fetchMock.mock(buildHttpUri(MOCK_SERVER_URI, "message"), response, options)
+  fetchMock.mock(
+    buildHttpUri(MOCK_SERVER_URI, FETCH_MESSAGE_PATH),
+    response,
+    options
+  )
 }
 
 /**
@@ -91,7 +98,11 @@ function mockMissingMessageResponse(msg: ForwardMsg): void {
     method: "get",
   }
 
-  fetchMock.mock(buildHttpUri(MOCK_SERVER_URI, "message"), response, options)
+  fetchMock.mock(
+    buildHttpUri(MOCK_SERVER_URI, FETCH_MESSAGE_PATH),
+    response,
+    options
+  )
 }
 
 beforeEach(() => {

@@ -19,6 +19,8 @@ import { logMessage } from "src/lib/log"
 import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
 import { ensureError } from "./ErrorHandling"
 
+export const FETCH_MESSAGE_PATH = "_stcore/message"
+
 class CacheEntry {
   public readonly encodedMsg: Uint8Array
 
@@ -145,7 +147,7 @@ export class ForwardMsgCache {
       )
     }
 
-    const url = buildHttpUri(serverURI, `message?hash=${hash}`)
+    const url = buildHttpUri(serverURI, `${FETCH_MESSAGE_PATH}?hash=${hash}`)
     const rsp = await fetch(url)
     if (!rsp.ok) {
       // `fetch` doesn't reject for bad HTTP statuses, so
