@@ -46,7 +46,14 @@ import {
   setCookie,
   getIFrameEnclosingApp,
   hashString,
-  isEmbeddedInIFrame,
+  isEmbed,
+  isPaddingDisplayed,
+  isToolbarDisplayed,
+  isColoredLineDisplayed,
+  isScrollingHidden,
+  isFooterDisplayed,
+  isLightTheme,
+  isDarkTheme,
   isInChildFrame,
   notUndefined,
   getElementWidgetID,
@@ -76,7 +83,7 @@ import {
   IAppPage,
   AppPage,
 } from "src/autogen/proto"
-import { without, concat } from "lodash"
+import { without, concat, noop } from "lodash"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
 import { SessionInfo } from "src/lib/SessionInfo"
@@ -254,6 +261,7 @@ export class App extends PureComponent<Props, State> {
     this.pendingElementsBuffer = this.state.elements
 
     window.streamlitDebug = {
+      clearForwardMsgCache: this.debugClearForwardMsgCache,
       disconnectWebsocket: this.debugDisconnectWebsocket,
       shutdownRuntime: this.debugShutdownRuntime,
     }
@@ -296,7 +304,7 @@ export class App extends PureComponent<Props, State> {
         this.props.hostCommunication.setAllowedOriginsResp,
     })
 
-    if (isEmbeddedInIFrame()) {
+    if (isScrollingHidden()) {
       document.body.classList.add("embedded")
     }
 
@@ -895,9 +903,17 @@ export class App extends PureComponent<Props, State> {
     ) {
       const successful =
         status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-      // Notify any subscribers of this event (and do it on the next cycle of
-      // the event loop)
       window.setTimeout(() => {
+        // Set the theme if url query param ?embed_options=[light,dark]_theme is set
+        const [light, dark] = this.props.theme.availableThemes.slice(1, 3)
+        if (isLightTheme()) {
+          this.setAndSendTheme(light)
+        } else if (isDarkTheme()) {
+          this.setAndSendTheme(dark)
+        } else noop() // Do nothing when ?embed_options=[light,dark]_theme is not set
+
+        // Notify any subscribers of this event (and do it on the next cycle of
+        // the event loop)
         this.state.scriptFinishedHandlers.map(handler => handler())
       }, 0)
 
@@ -1023,7 +1039,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Used by e2e tests to test disabling widgets.
+   * Test-only method used by e2e tests to test disabling widgets.
    */
   debugShutdownRuntime = (): void => {
     if (this.isServerConnected()) {
@@ -1034,7 +1050,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Used by e2e tests to test reconnect behavior.
+   * Test-only method used by e2e tests to test reconnect behavior.
    */
   debugDisconnectWebsocket = (): void => {
     if (this.isServerConnected()) {
@@ -1042,6 +1058,21 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "debugDisconnectWebsocket"
       this.sendBackMsg(backMsg)
     }
+  }
+
+  /**
+   * Test-only method used by e2e tests to test fetching cached ForwardMsgs
+   * from the server.
+   */
+  debugClearForwardMsgCache = (): void => {
+    if (!isLocalhost()) {
+      return
+    }
+
+    // It's not a problem that we're mucking around with private fields since
+    // this is a test-only method anyway.
+    // @ts-ignore
+    this.connectionManager?.connection?.cache.messages.clear()
   }
 
   /**
@@ -1393,7 +1424,7 @@ export class App extends PureComponent<Props, State> {
       "stApp",
       getEmbeddingIdClassName(this.embeddingId),
       {
-        "streamlit-embedded": isEmbeddedInIFrame(),
+        "streamlit-embedded": isEmbed(),
         "streamlit-wide": userSettings.wideMode,
       }
     )
@@ -1415,7 +1446,6 @@ export class App extends PureComponent<Props, State> {
           initialSidebarState,
           layout,
           wideMode: userSettings.wideMode,
-          embedded: isEmbeddedInIFrame(),
           isFullScreen,
           setFullScreen: this.handleFullScreen,
           addScriptFinishedHandler: this.addScriptFinishedHandler,
@@ -1427,6 +1457,12 @@ export class App extends PureComponent<Props, State> {
           sidebarChevronDownshift:
             this.props.hostCommunication.currentState.sidebarChevronDownshift,
           getBaseUriParts: this.getBaseUriParts,
+          embedded: isEmbed(),
+          showPadding: !isEmbed() || isPaddingDisplayed(),
+          disableScrolling: isScrollingHidden(),
+          showFooter: !isEmbed() || isFooterDisplayed(),
+          showToolbar: !isEmbed() || isToolbarDisplayed(),
+          showColoredLine: !isEmbed() || isColoredLineDisplayed(),
         }}
       >
         <HotKeys

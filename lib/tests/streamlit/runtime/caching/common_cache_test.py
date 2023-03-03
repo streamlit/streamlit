@@ -19,11 +19,12 @@ import time
 import unittest
 from datetime import timedelta
 from typing import Any, List
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.runtime import Runtime
 from streamlit.runtime.caching import (
     CACHE_DATA_MESSAGE_REPLAY_CTX,
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
@@ -36,6 +37,9 @@ from streamlit.runtime.caching.cache_utils import CachedResult
 from streamlit.runtime.caching.cached_message_replay import (
     MultiCacheResults,
     _make_widget_key,
+)
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    MemoryCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.scriptrunner import (
@@ -205,6 +209,33 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         # **kwarg (VAR_KEYWORD)
         foo(1, 2, 3, kwarg1=4, _kwarg2=5, kwarg3=None, _kwarg4=7)
         self.assertEqual([5], call_count)
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_cached_member_function(self, _, cache_decorator):
+        """Our cache decorators can be applied to class member functions."""
+
+        class TestClass:
+            @cache_decorator
+            def member_func(_self):
+                # We underscore-prefix `_self`, because our class is not hashable.
+                return "member func!"
+
+            @classmethod
+            @cache_decorator
+            def class_method(cls):
+                return "class method!"
+
+            @staticmethod
+            @cache_decorator
+            def static_method():
+                return "static method!"
+
+        obj = TestClass()
+        self.assertEqual("member func!", obj.member_func())
+        self.assertEqual("class method!", obj.class_method())
+        self.assertEqual("static method!", obj.static_method())
 
     @parameterized.expand(
         [
@@ -660,6 +691,9 @@ class CommonCacheTTLTest(unittest.TestCase):
     def setUp(self) -> None:
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        Runtime._instance = mock_runtime
 
     def tearDown(self):
         cache_data.clear()
@@ -791,6 +825,11 @@ class CommonCacheTTLTest(unittest.TestCase):
 class CommonCacheThreadingTest(unittest.TestCase):
     # The number of threads to run our tests on
     NUM_THREADS = 50
+
+    def setUp(self):
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        Runtime._instance = mock_runtime
 
     def tearDown(self):
         # Some of these tests reach directly into CALL_STACK data and twiddle it.
@@ -967,3 +1006,12 @@ class WidgetReplayInteractionTest(InteractiveScriptTests):
         sr4 = sr3.get("checkbox")[0].uncheck().run()
         sr5 = sr4.get("button")[0].click().run()
         assert sr5.get("text")[0].value == "['foo']"
+
+
+class WidgetReplayTest(InteractiveScriptTests):
+    def test_arrow_replay(self):
+        """Regression test for https://github.com/streamlit/streamlit/issues/6103"""
+        script = self.script_from_filename(__file__, "arrow_replay.py")
+
+        sr = script.run()
+        assert len(sr.get("exception")) == 0

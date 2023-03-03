@@ -16,31 +16,25 @@
 
 from __future__ import annotations
 
-import math
-import os
 import pickle
-import shutil
 import threading
 import types
 from datetime import timedelta
 from typing import Any, Callable, TypeVar, Union, cast, overload
 
-from cachetools import TTLCache
 from typing_extensions import Literal, TypeAlias
 
 import streamlit as st
-from streamlit import util
+from streamlit import runtime
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.errors import StreamlitAPIException
-from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     Cache,
-    CachedFunc,
     CachedFuncInfo,
+    make_cached_func_wrapper,
     ttl_to_seconds,
 )
 from streamlit.runtime.caching.cached_message_replay import (
@@ -50,20 +44,24 @@ from streamlit.runtime.caching.cached_message_replay import (
     MsgData,
     MultiCacheResults,
 )
+from streamlit.runtime.caching.storage import (
+    CacheStorage,
+    CacheStorageContext,
+    CacheStorageError,
+    CacheStorageKeyNotFoundError,
+    CacheStorageManager,
+)
+from streamlit.runtime.caching.storage.cache_storage_protocol import (
+    InvalidCacheStorageContext,
+)
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    MemoryCacheStorageManager,
+)
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 _LOGGER = get_logger(__name__)
-
-# Streamlit directory where persisted @st.cache_data objects live.
-# (This is the same directory that @st.cache persisted objects live.
-# But @st.cache_data uses a different extension, so they don't overlap.)
-_CACHE_DIR_NAME = "cache"
-
-# The extension for our persisted @st.cache_data objects.
-# (`@st.cache_data` was originally called `@st.memo`)
-_CACHED_FILE_EXTENSION = "memo"
 
 CACHE_DATA_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.DATA)
 
@@ -92,6 +90,8 @@ class CachedDataFuncInfo(CachedFuncInfo):
         self.max_entries = max_entries
         self.ttl = ttl
 
+        self.validate_params()
+
     @property
     def cache_type(self) -> CacheType:
         return CacheType.DATA
@@ -115,6 +115,20 @@ class CachedDataFuncInfo(CachedFuncInfo):
             allow_widgets=self.allow_widgets,
         )
 
+    def validate_params(self) -> None:
+        """
+        Validate the params passed to @st.cache_data are compatible with cache storage
+
+        When called, this method could log warnings if cache params are invalid
+        for current storage.
+        """
+        _data_caches.validate_cache_params(
+            function_name=self.func.__name__,
+            persist=self.persist,
+            max_entries=self.max_entries,
+            ttl=self.ttl,
+        )
+
 
 class DataCaches(CacheStatsProvider):
     """Manages all DataCache instances"""
@@ -127,7 +141,7 @@ class DataCaches(CacheStatsProvider):
         self,
         key: str,
         persist: CachePersistType,
-        max_entries: int | float | None,
+        max_entries: int | None,
         ttl: int | float | timedelta | None,
         display_name: str,
         allow_widgets: bool,
@@ -136,10 +150,8 @@ class DataCaches(CacheStatsProvider):
 
         If it doesn't exist, create a new one with the given params.
         """
-        if max_entries is None:
-            max_entries = math.inf
 
-        ttl_seconds = ttl_to_seconds(ttl)
+        ttl_seconds = ttl_to_seconds(ttl, coerce_none_to_inf=False)
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
@@ -153,6 +165,19 @@ class DataCaches(CacheStatsProvider):
             ):
                 return cache
 
+            # Close the existing cache's storage, if it exists.
+            if cache is not None:
+                _LOGGER.debug(
+                    "Closing existing DataCache storage "
+                    "(key=%s, persist=%s, max_entries=%s, ttl=%s) "
+                    "before creating new one with different params",
+                    key,
+                    persist,
+                    max_entries,
+                    ttl,
+                )
+                cache.storage.close()
+
             # Create a new cache object and put it in our dict
             _LOGGER.debug(
                 "Creating new DataCache (key=%s, persist=%s, max_entries=%s, ttl=%s)",
@@ -161,8 +186,20 @@ class DataCaches(CacheStatsProvider):
                 max_entries,
                 ttl,
             )
+
+            cache_context = self.create_cache_storage_context(
+                function_key=key,
+                function_name=display_name,
+                ttl_seconds=ttl_seconds,
+                max_entries=max_entries,
+                persist=persist,
+            )
+            cache_storage_manager = self.get_storage_manager()
+            storage = cache_storage_manager.create(cache_context)
+
             cache = DataCache(
                 key=key,
+                storage=storage,
                 persist=persist,
                 max_entries=max_entries,
                 ttl_seconds=ttl_seconds,
@@ -175,13 +212,17 @@ class DataCaches(CacheStatsProvider):
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
         with self._caches_lock:
+            try:
+                # try to remove in optimal way if such ability provided by
+                # storage manager clear_all method;
+                # if not implemented, fallback to remove all
+                # available storages one by one
+                self.get_storage_manager().clear_all()
+            except NotImplementedError:
+                for data_cache in self._function_caches.values():
+                    data_cache.clear()
+                    data_cache.storage.close()
             self._function_caches = {}
-
-            # TODO: Only delete disk cache for functions related to the user's
-            #  current script.
-            cache_path = get_cache_path()
-            if os.path.isdir(cache_path):
-                shutil.rmtree(cache_path)
 
     def get_stats(self) -> list[CacheStat]:
         with self._caches_lock:
@@ -193,6 +234,67 @@ class DataCaches(CacheStatsProvider):
         for cache in function_caches.values():
             stats.extend(cache.get_stats())
         return stats
+
+    def validate_cache_params(
+        self,
+        function_name: str,
+        persist: CachePersistType,
+        max_entries: int | None,
+        ttl: int | float | timedelta | None,
+    ) -> None:
+        """Validate that the cache params are valid for given storage.
+
+        Raises
+        ------
+        InvalidCacheStorageContext
+            Raised if the cache storage manager is not able to work with provided
+            CacheStorageContext.
+        """
+
+        ttl_seconds = ttl_to_seconds(ttl, coerce_none_to_inf=False)
+
+        cache_context = self.create_cache_storage_context(
+            function_key="DUMMY_KEY",
+            function_name=function_name,
+            ttl_seconds=ttl_seconds,
+            max_entries=max_entries,
+            persist=persist,
+        )
+        try:
+            self.get_storage_manager().check_context(cache_context)
+        except InvalidCacheStorageContext as e:
+            _LOGGER.error(
+                "Cache params for function %s are incompatible with current "
+                "cache storage manager: %s",
+                function_name,
+                e,
+            )
+            raise
+
+    def create_cache_storage_context(
+        self,
+        function_key: str,
+        function_name: str,
+        persist: CachePersistType,
+        ttl_seconds: float | None,
+        max_entries: int | None,
+    ) -> CacheStorageContext:
+        return CacheStorageContext(
+            function_key=function_key,
+            function_display_name=function_name,
+            ttl_seconds=ttl_seconds,
+            max_entries=max_entries,
+            persist=persist,
+        )
+
+    def get_storage_manager(self) -> CacheStorageManager:
+        if runtime.exists():
+            return runtime.get_instance().cache_storage_manager
+        else:
+            # When running in "raw mode", we can't access the CacheStorageManager,
+            # so we're falling back to InMemoryCache.
+            _LOGGER.warning("No runtime found, using MemoryCacheStorageManager")
+            return MemoryCacheStorageManager()
 
 
 # Singleton DataCaches instance
@@ -227,7 +329,9 @@ class CacheDataAPI:
 
         # Parameterize the decorator metric name.
         # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
-        self._decorator = gather_metrics(decorator_metric_name, self._decorator)  # type: ignore
+        self._decorator = gather_metrics(  # type: ignore[assignment]
+            decorator_metric_name, self._decorator
+        )
         self._deprecation_warning = deprecation_warning
 
     # Type-annotate the decorator function.
@@ -309,9 +413,10 @@ class CacheDataAPI:
             for an unbounded cache. (When a new entry is added to a full cache,
             the oldest cached entry will be removed.) The default is None.
 
-        show_spinner : boolean
+        show_spinner : boolean or string
             Enable the spinner. Default is True to show a spinner when there is
-            a cache miss.
+            a "cache miss" and the cached data is being created. If string,
+            value of show_spinner param will be used for spinner text.
 
         persist : str or boolean or None
             Optional location to persist cached data to. Passing "disk" (or True)
@@ -408,14 +513,7 @@ class CacheDataAPI:
         self._maybe_show_deprecation_warning()
 
         def wrapper(f):
-            # We use wrapper function here instead of lambda function to be able to log
-            # warning in case both persist="disk" and ttl parameters specified
-            if persist == "disk" and ttl is not None:
-                _LOGGER.warning(
-                    f"The cached function '{f.__name__}' has a TTL that will be "
-                    f"ignored. Persistent cached functions currently don't support TTL."
-                )
-            return CachedFunc(
+            return make_cached_func_wrapper(
                 CachedDataFuncInfo(
                     func=f,
                     persist=persist_string,
@@ -426,12 +524,10 @@ class CacheDataAPI:
                 )
             )
 
-        # Support passing the params via function decorator, e.g.
-        # @st.cache_data(persist=True, show_spinner=False)
         if func is None:
             return wrapper
 
-        return CachedFunc(
+        return make_cached_func_wrapper(
             CachedDataFuncInfo(
                 func=cast(types.FunctionType, func),
                 persist=persist_string,
@@ -462,42 +558,26 @@ class DataCache(Cache):
     def __init__(
         self,
         key: str,
+        storage: CacheStorage,
         persist: CachePersistType,
-        max_entries: float,
-        ttl_seconds: float,
+        max_entries: int | None,
+        ttl_seconds: float | None,
         display_name: str,
         allow_widgets: bool = False,
     ):
         super().__init__()
         self.key = key
         self.display_name = display_name
+        self.storage = storage
+        self.ttl_seconds = ttl_seconds
+        self.max_entries = max_entries
         self.persist = persist
-        self._mem_cache: TTLCache[str, bytes] = TTLCache(
-            maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
-        )
-        self._mem_cache_lock = threading.Lock()
         self.allow_widgets = allow_widgets
 
-    @property
-    def max_entries(self) -> float:
-        return cast(float, self._mem_cache.maxsize)
-
-    @property
-    def ttl_seconds(self) -> float:
-        return cast(float, self._mem_cache.ttl)
-
     def get_stats(self) -> list[CacheStat]:
-        stats: list[CacheStat] = []
-        with self._mem_cache_lock:
-            for item_key, item_value in self._mem_cache.items():
-                stats.append(
-                    CacheStat(
-                        category_name="st_cache_data",
-                        cache_name=self.display_name,
-                        byte_length=len(item_value),
-                    )
-                )
-        return stats
+        if isinstance(self.storage, CacheStatsProvider):
+            return self.storage.get_stats()
+        return []
 
     def read_result(self, key: str) -> CachedResult:
         """Read a value and messages from the cache. Raise `CacheKeyNotFoundError`
@@ -505,21 +585,18 @@ class DataCache(Cache):
         be unpickled.
         """
         try:
-            pickled_entry = self._read_from_mem_cache(key)
-
-        except CacheKeyNotFoundError as e:
-            if self.persist == "disk":
-                pickled_entry = self._read_from_disk_cache(key)
-                self._write_to_mem_cache(key, pickled_entry)
-            else:
-                raise e
+            pickled_entry = self.storage.get(key)
+        except CacheStorageKeyNotFoundError as e:
+            raise CacheKeyNotFoundError(str(e)) from e
+        except CacheStorageError as e:
+            raise CacheError(str(e)) from e
 
         try:
             entry = pickle.loads(pickled_entry)
             if not isinstance(entry, MultiCacheResults):
                 # Loaded an old cache file format, remove it and let the caller
                 # rerun the function.
-                self._remove_from_disk_cache(key)
+                self.storage.delete(key)
                 raise CacheKeyNotFoundError()
 
             ctx = get_script_run_ctx()
@@ -557,16 +634,11 @@ class DataCache(Cache):
 
         multi_cache_results: MultiCacheResults | None = None
 
-        # Try to find in mem cache, falling back to disk, then falling back
-        # to a new result instance
+        # Try to find in cache storage, then falling back to a new result instance
         try:
-            multi_cache_results = self._read_multi_results_from_mem_cache(key)
+            multi_cache_results = self._read_multi_results_from_storage(key)
         except (CacheKeyNotFoundError, pickle.UnpicklingError):
-            if self.persist == "disk":
-                try:
-                    multi_cache_results = self._read_multi_results_from_disk_cache(key)
-                except CacheKeyNotFoundError:
-                    pass
+            pass
 
         if multi_cache_results is None:
             multi_cache_results = MultiCacheResults(widget_ids=widgets, results={})
@@ -581,115 +653,26 @@ class DataCache(Cache):
         except (pickle.PicklingError, TypeError) as exc:
             raise CacheError(f"Failed to pickle {key}") from exc
 
-        self._write_to_mem_cache(key, pickled_entry)
-        if self.persist == "disk":
-            self._write_to_disk_cache(key, pickled_entry)
+        self.storage.set(key, pickled_entry)
 
     def _clear(self) -> None:
-        with self._mem_cache_lock:
-            # We keep a lock for the entirety of the clear operation to avoid
-            # disk cache race conditions.
-            for key in self._mem_cache.keys():
-                self._remove_from_disk_cache(key)
+        self.storage.clear()
 
-            self._mem_cache.clear()
-
-    def _read_from_mem_cache(self, key: str) -> bytes:
-        with self._mem_cache_lock:
-            if key in self._mem_cache:
-                entry = bytes(self._mem_cache[key])
-                _LOGGER.debug("Memory cache first stage HIT: %s", key)
-                return entry
-
-            else:
-                _LOGGER.debug("Memory cache MISS: %s", key)
-                raise CacheKeyNotFoundError("Key not found in mem cache")
-
-    def _read_multi_results_from_mem_cache(self, key: str) -> MultiCacheResults:
-        """Look up the results and ensure it has the right type.
+    def _read_multi_results_from_storage(self, key: str) -> MultiCacheResults:
+        """Look up the results from storage and ensure it has the right type.
 
         Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
         entry is malformed.
         """
-        pickled = self._read_from_mem_cache(key)
+        try:
+            pickled = self.storage.get(key)
+        except CacheStorageKeyNotFoundError as e:
+            raise CacheKeyNotFoundError(str(e)) from e
+
         maybe_results = pickle.loads(pickled)
+
         if isinstance(maybe_results, MultiCacheResults):
             return maybe_results
         else:
-            with self._mem_cache_lock:
-                del self._mem_cache[key]
+            self.storage.delete(key)
             raise CacheKeyNotFoundError()
-
-    def _read_from_disk_cache(self, key: str) -> bytes:
-        path = self._get_file_path(key)
-        try:
-            with streamlit_read(path, binary=True) as input:
-                value = input.read()
-                _LOGGER.debug("Disk cache first stage HIT: %s", key)
-                # The value is a pickled CachedResult, but we don't unpickle it yet
-                # so we can avoid having to repickle it when writing to the mem_cache
-                return bytes(value)
-        except FileNotFoundError:
-            raise CacheKeyNotFoundError("Key not found in disk cache")
-        except Exception as ex:
-            _LOGGER.error(ex)
-            raise CacheError("Unable to read from cache") from ex
-
-    def _read_multi_results_from_disk_cache(self, key: str) -> MultiCacheResults:
-        """Look up the results from disk and ensure it has the right type.
-
-        Raises a `CacheKeyNotFoundError` if the key has no entry, or if the
-        entry is the wrong type, which usually means it was written by another
-        version of streamlit.
-        """
-        pickled = self._read_from_disk_cache(key)
-        maybe_results = pickle.loads(pickled)
-        if isinstance(maybe_results, MultiCacheResults):
-            return maybe_results
-        else:
-            self._remove_from_disk_cache(key)
-            raise CacheKeyNotFoundError("Key not found in disk cache")
-
-    def _write_to_mem_cache(self, key: str, pickled_value: bytes) -> None:
-        with self._mem_cache_lock:
-            self._mem_cache[key] = pickled_value
-
-    def _write_to_disk_cache(self, key: str, pickled_value: bytes) -> None:
-        path = self._get_file_path(key)
-        try:
-            with streamlit_write(path, binary=True) as output:
-                output.write(pickled_value)
-        except util.Error as e:
-            _LOGGER.debug(e)
-            # Clean up file so we don't leave zero byte files.
-            try:
-                os.remove(path)
-            except (FileNotFoundError, IOError, OSError):
-                # If we can't remove the file, it's not a big deal.
-                pass
-            raise CacheError("Unable to write to cache") from e
-
-    def _remove_from_disk_cache(self, key: str) -> None:
-        """Delete a cache file from disk. If the file does not exist on disk,
-        return silently. If another exception occurs, log it. Does not throw.
-        """
-        path = self._get_file_path(key)
-        try:
-            os.remove(path)
-        except FileNotFoundError:
-            # The file is already removed.
-            pass
-        except Exception as ex:
-            _LOGGER.exception(
-                "Unable to remove a file from the disk cache", exc_info=ex
-            )
-
-    def _get_file_path(self, value_key: str) -> str:
-        """Return the path of the disk cache file for the given value."""
-        return get_streamlit_file_path(
-            _CACHE_DIR_NAME, f"{self.key}-{value_key}.{_CACHED_FILE_EXTENSION}"
-        )
-
-
-def get_cache_path() -> str:
-    return get_streamlit_file_path(_CACHE_DIR_NAME)

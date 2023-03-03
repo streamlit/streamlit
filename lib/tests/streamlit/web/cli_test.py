@@ -13,18 +13,24 @@
 # limitations under the License.
 
 """Unit tests for the Streamlit CLI."""
-
+import contextlib
 import os
+import subprocess
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
+import pytest
 import requests
 import requests_mock
 from click.testing import CliRunner
 from parameterized import parameterized
+from requests.adapters import HTTPAdapter
 from testfixtures import tempdir
+from urllib3 import Retry
 
 import streamlit
 import streamlit.web.bootstrap
@@ -358,12 +364,14 @@ class CliTest(unittest.TestCase):
         self.assertEqual(0, result.exit_code)
 
     @patch("streamlit.runtime.legacy_caching.clear_cache")
-    @patch("streamlit.runtime.caching.cache_data.clear")
+    @patch(
+        "streamlit.runtime.caching.storage.local_disk_cache_storage.LocalDiskCacheStorageManager.clear_all"
+    )
     @patch("streamlit.runtime.caching.cache_resource.clear")
     def test_cache_clear_all_caches(
         self, clear_resource_caches, clear_data_caches, clear_legacy_cache
     ):
-        """cli.clear_cache should clear st.cache, st.memo and st.singleton"""
+        """cli.clear_cache should clear st.cache, st.cache_data and st.cache_resource"""
         self.runner.invoke(cli, ["cache", "clear"])
         clear_resource_caches.assert_called_once()
         clear_data_caches.assert_called_once()
@@ -422,3 +430,91 @@ class CliTest(unittest.TestCase):
         ):
             self.runner.invoke(cli, ["activate", "reset"])
             mock_credential.reset.assert_called()
+
+
+class HTTPServerIntegrationTest(unittest.TestCase):
+    def get_http_session(self) -> requests.Session:
+        http_session = requests.Session()
+        http_session.mount(
+            "https://", HTTPAdapter(max_retries=Retry(total=10, backoff_factor=0.2))
+        )
+        http_session.mount("http://", HTTPAdapter(max_retries=None))
+        return http_session
+
+    def test_ssl(self):
+        with contextlib.ExitStack() as exit_stack:
+            tmp_home = exit_stack.enter_context(tempfile.TemporaryDirectory())
+            (Path(tmp_home) / ".streamlit").mkdir()
+            (Path(tmp_home) / ".streamlit" / "credentials.toml").write_text(
+                '[general]\nemail = ""'
+            )
+            cert_file = Path(tmp_home) / "cert.cert"
+            key_file = Path(tmp_home) / "key.key"
+            pem_file = Path(tmp_home) / "public.pem"
+
+            subprocess.check_call(
+                [
+                    "openssl",
+                    "req",
+                    "-x509",
+                    "-newkey",
+                    "rsa:4096",
+                    "-keyout",
+                    str(key_file),
+                    "-out",
+                    str(cert_file),
+                    "-sha256",
+                    "-days",
+                    "365",
+                    "-nodes",
+                    "-subj",
+                    "/CN=localhost",
+                    # sublectAltName is required by modern browsers
+                    # See: https://github.com/urllib3/urllib3/issues/497
+                    "-addext",
+                    "subjectAltName = DNS:localhost",
+                ]
+            )
+            subprocess.check_call(
+                [
+                    "openssl",
+                    "x509",
+                    "-inform",
+                    "PEM",
+                    "-in",
+                    str(cert_file),
+                    "-out",
+                    str(pem_file),
+                ]
+            )
+            https_session = exit_stack.enter_context(self.get_http_session())
+            proc = exit_stack.enter_context(
+                subprocess.Popen(
+                    [
+                        sys.executable,
+                        "-m",
+                        "streamlit",
+                        "hello",
+                        "--global.developmentMode=False",
+                        "--server.sslCertFile",
+                        str(cert_file),
+                        "--server.sslKeyFile",
+                        str(key_file),
+                        "--server.headless",
+                        "true",
+                    ],
+                    env={**os.environ, "HOME": tmp_home},
+                )
+            )
+            try:
+                response = https_session.get(
+                    "https://localhost:8501/healthz", verify=str(pem_file)
+                )
+                response.raise_for_status()
+                assert response.text == "ok"
+                # HTTP traffic is restricted
+                with pytest.raises(requests.exceptions.ConnectionError):
+                    response = https_session.get("http://localhost:8501/healthz")
+                    response.raise_for_status()
+            finally:
+                proc.kill()
