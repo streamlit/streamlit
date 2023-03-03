@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """ Declares the CacheStorageContext dataclass, which contains parameter information for
-each function decorated by @st.cache_data (for example: ttl, max_entries e.t.c.)
+each function decorated by `@st.cache_data` (for example: ttl, max_entries e.t.c.)
 
 Declares the CacheStorageManager protocol, which implementations are used
 to create CacheStorage instances and to optionally clear all cache storages,
@@ -25,13 +25,13 @@ values for a single `@st.cache_data` decorated function serialized as bytes.
 How these classes work together
 -------------------------------
 - CacheStorageContext : this is a dataclass that contains the parameters from
-@st.cache_data that are passed to the CacheStorageManager.create() method.
+`@st.cache_data` that are passed to the CacheStorageManager.create() method.
 
 - CacheStorageManager : each instance of this is able to create CacheStorage
 instances, and optionally to clear data of all cache storages.
 
 - CacheStorage : each instance of this is able to get, set, delete, and clear
-entries for a single @st.cache_data decorated function.
+entries for a single `@st.cache_data` decorated function.
 """
 
 from __future__ import annotations
@@ -66,7 +66,10 @@ class CacheStorageContext:
     ----------
     function_key: str
         A hash computed based on function name and source code decorated
-        by st.cache_data
+        by `@st.cache_data`
+
+    function_display_name: str
+        The display name of the function that is decorated by `@st.cache_data`
 
     ttl_seconds : float or None
         The time-to-live for the keys in storage, in seconds. If None, the entry
@@ -194,7 +197,7 @@ class CacheStorageManager(Protocol):
         In case of raising an exception, we not handle it and let the exception to be
         propagated.
 
-        check_context is called only once at the moment of creating cache_data
+        check_context is called only once at the moment of creating `@st.cache_data`
         decorator for specific function, so it is not called for every cache hit.
 
         Parameters
