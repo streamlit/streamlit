@@ -5,8 +5,8 @@
   "homepage": "./",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
-    "start": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",
-    "build": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false craco build",
+    "start": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true ",
+    "build": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=true craco build",
     "buildFast": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false BUILD_AS_FAST_AS_POSSIBLE=true craco build",
     "test": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
@@ -221,7 +221,6 @@
   "devDependencies": {
     "@babel/core": "^7.20.7",
     "@babel/plugin-proposal-private-property-in-object": "^7.20.5",
-    "@craco/craco": "^7.0.0",
     "@emotion/babel-plugin": "^11.7.2",
     "@emotion/jest": "^11.10.5",
     "@loaders.gl/images": "^3.2.13",
