@@ -5,29 +5,81 @@
   "homepage": "./",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
-    "start": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",
-    "build": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false craco build",
-    "buildFast": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false BUILD_AS_FAST_AS_POSSIBLE=true craco build",
-    "test": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
+    "start": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",
+    "build": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false craco build",
+    "buildFast": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false BUILD_AS_FAST_AS_POSSIBLE=true craco build",
+    "test": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src",
-    "eject": "react-scripts eject"
+    "build:lib": "yarn build:lib-src && yarn build:lib-type",
+    "build:lib-src": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false NODE_ENV=production BABEL_ENV=production npx babel src --out-dir lib --extensions \".js,.mjs,.jsx,.ts,.tsx\" && cp -R ./src/autogen ./lib/autogen && cp -R ./src/assets ./lib/assets",
+    "build:lib-type": "tsc -P tsconfig.lib.json && tsc-alias -p tsconfig.lib.json"
   },
   "jest": {
-    "resetMocks": false,
-    "snapshotSerializers": [
-      "enzyme-to-json/serializer"
+    "roots": [
+      "<rootDir>/src"
     ],
+    "collectCoverageFrom": [
+      "src/**/*.{js,jsx,ts,tsx}",
+      "!src/**/*.d.ts"
+    ],
+    "setupFiles": [
+      "react-app-polyfill/jsdom"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/src/setupTests.js"
+    ],
+    "testMatch": [
+      "<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}",
+      "<rootDir>/src/**/*.{spec,test}.{js,jsx,ts,tsx}"
+    ],
+    "testEnvironment": "jsdom",
+    "transform": {
+      "^.+\\.(js|jsx|mjs|cjs|ts|tsx)$": "<rootDir>/config/jest/babelTransform.js",
+      "^.+\\.css$": "<rootDir>/config/jest/cssTransform.js",
+      "^(?!.*\\.(js|jsx|mjs|cjs|ts|tsx|css|json)$)": "<rootDir>/config/jest/fileTransform.js"
+    },
+    "transformIgnorePatterns": [
+      "[/\\\\]node_modules[/\\\\].+\\.(js|jsx|mjs|cjs|ts|tsx)$",
+      "^.+\\.module\\.(css|sass|scss)$"
+    ],
+    "modulePaths": [],
+    "moduleNameMapper": {
+      "^react-native$": "react-native-web",
+      "^.+\\.module\\.(css|sass|scss)$": "identity-obj-proxy",
+      "^src/(.*)$": "<rootDir>/src/$1"
+    },
+    "moduleFileExtensions": [
+      "web.js",
+      "js",
+      "web.ts",
+      "ts",
+      "web.tsx",
+      "tsx",
+      "json",
+      "web.jsx",
+      "jsx",
+      "node"
+    ],
+    "watchPlugins": [
+      "jest-watch-typeahead/filename",
+      "jest-watch-typeahead/testname"
+    ],
+    "resetMocks": false,
     "coverageReporters": [
       "text",
       "html"
+    ],
+    "snapshotSerializers": [
+      "enzyme-to-json/serializer"
     ]
   },
   "dependencies": {
+    "@babel/core": "^7.16.0",
     "@deck.gl/core": "^8.8.23",
     "@deck.gl/json": "^8.8.23",
     "@emotion-icons/emotion-icon": "^4.1.0",
@@ -50,46 +102,76 @@
     "@luma.gl/gltools": "^8.5.18",
     "@luma.gl/shadertools": "^8.5.18",
     "@luma.gl/webgl": "^8.5.18",
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.5.3",
+    "@svgr/webpack": "^5.5.0",
     "apache-arrow": "^11.0.0",
     "axios": "^0.27.2",
+    "babel-jest": "^27.4.2",
+    "babel-loader": "^8.2.3",
+    "babel-plugin-named-asset-import": "^0.3.8",
+    "babel-preset-react-app": "^10.0.1",
     "baseui": "12.2.0",
-    "camelcase": "^7.0.1",
+    "bfj": "^7.0.2",
+    "browserslist": "^4.18.1",
+    "camelcase": "^6.2.1",
+    "case-sensitive-paths-webpack-plugin": "^2.4.0",
     "classnames": "^2.3.2",
     "clipboard": "^2.0.11",
     "color2k": "^2.0.2",
     "copy-to-clipboard": "^3.3.3",
+    "css-loader": "^6.5.1",
+    "css-minimizer-webpack-plugin": "^3.2.0",
     "d3": "^7.8.2",
     "d3-graphviz": "^2.6.1",
     "decamelize": "^4.0.0",
     "deck.gl": "^8.8.23",
     "dompurify": "^2.4.3",
+    "dotenv": "^10.0.0",
+    "dotenv-expand": "^5.1.0",
+    "eslint": "^8.3.0",
+    "eslint-config-react-app": "^7.0.1",
+    "eslint-webpack-plugin": "^3.1.1",
+    "file-loader": "^6.2.0",
+    "fs-extra": "^10.0.0",
     "fzy.js": "^0.4.1",
     "gl-matrix": "^3.2.1",
     "hoist-non-react-statics": "^3.3.2",
+    "html-webpack-plugin": "^5.5.0",
     "humanize-string": "^2.1.0",
+    "identity-obj-proxy": "^3.0.0",
     "iframe-resizer": "^4.3.3",
     "immer": "^9.0.19",
     "immutable": "^4.2.3",
+    "jest": "^27.4.3",
+    "jest-resolve": "^27.4.2",
+    "jest-watch-typeahead": "^1.0.0",
     "json5": "^2.2.3",
     "katex": "^0.16.4",
     "lodash": "^4.17.21",
     "mapbox-gl": "^1.13.2",
+    "mini-css-extract-plugin": "^2.4.5",
     "moment": "^2.29.4",
     "moment-duration-format": "^2.3.2",
     "moment-timezone": "^0.5.40",
     "node-emoji": "^1.11.0",
     "numbro": "^2.3.6",
     "plotly.js": "^2.18.1",
+    "postcss": "^8.4.4",
+    "postcss-flexbugs-fixes": "^5.0.2",
+    "postcss-loader": "^6.2.1",
+    "postcss-normalize": "^10.0.1",
+    "postcss-preset-env": "^7.0.1",
     "prismjs": "^1.29.0",
+    "prompts": "^2.4.2",
     "protobufjs": "^7.2.0",
     "protobufjs-cli": "^1.1.0",
     "query-string": "^8.1.0",
     "re-resizable": "^6.9.9",
-    "react": "^17.0.2",
+    "react-app-polyfill": "^3.0.0",
     "react-color": "^2.18.1",
     "react-debounce-render": "^8.0.2",
+    "react-dev-utils": "^12.0.1",
     "react-device-detect": "^2.2.2",
-    "react-dom": "^17.0.2",
     "react-dropzone": "^12.1.0",
     "react-feather": "^2.0.10",
     "react-google-login": "^5.1.21",
@@ -99,6 +181,7 @@
     "react-map-gl": "^5.3.21",
     "react-markdown": "^8.0.4",
     "react-plotly.js": "^2.6.0",
+    "react-refresh": "^0.11.0",
     "react-syntax-highlighter": "^15.5.0",
     "react-transition-group": "^4.4.5",
     "react-virtualized": "^9.21.2",
@@ -110,16 +193,29 @@
     "remark-emoji": "^3.1.0",
     "remark-gfm": "^3.0.1",
     "remark-math": "^5.1.1",
+    "resolve": "^1.20.0",
+    "resolve-url-loader": "^4.0.0",
     "sass": "^1.58.0",
+    "sass-loader": "^12.3.0",
+    "semver": "^7.3.5",
+    "source-map-loader": "^3.0.0",
     "sprintf-js": "^1.1.2",
+    "style-loader": "^3.3.1",
     "styletron-engine-atomic": "^1.5.0",
     "styletron-react": "^6.1.0",
+    "tailwindcss": "^3.0.2",
+    "terser-webpack-plugin": "^5.2.5",
+    "tsc-alias": "^1.8.2",
     "typed-signals": "^2.5.0",
     "unist-util-visit": "^4.1.2",
     "vega": "^5.22.1",
     "vega-embed": "^6.21.0",
     "vega-interpreter": "^1.0.4",
     "vega-lite": "^5.6.0",
+    "webpack": "^5.64.4",
+    "webpack-dev-server": "^4.6.0",
+    "webpack-manifest-plugin": "^4.0.2",
+    "workbox-webpack-plugin": "^6.4.1",
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
@@ -199,13 +295,16 @@
     "prettier": "^2.8.3",
     "prop-types": "^15.7.2",
     "react-responsive-carousel": "^3.2.23",
-    "react-scripts": "5.0.1",
     "source-map-explorer": "^2.5.3",
     "start-server-and-test": "^1.15.3",
     "timezone-mock": "^1.3.6",
     "typescript": "^4.9.5",
     "util": "^0.12.5",
     "webpack": "5.75.0"
+  },
+  "peerDependencies": {
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
   },
   "resolutions": {
     "@types/html-minifier-terser": "^7.0.0",
@@ -257,5 +356,13 @@
     "not dead",
     "not ie <= 11",
     "not op_mini all"
-  ]
+  ],
+  "babel": {
+    "presets": [
+      "react-app"
+    ]
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  }
 }
