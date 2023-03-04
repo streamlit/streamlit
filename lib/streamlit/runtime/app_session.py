@@ -180,7 +180,7 @@ class AppSession:
         self._stop_pages_listener = source_util.register_pages_changed_callback(
             self._on_pages_changed
         )
-        secrets_singleton._file_change_listener.connect(self._on_secrets_file_changed)
+        secrets_singleton.file_change_listener.connect(self._on_secrets_file_changed)
 
     def disconnect_file_watchers(self) -> None:
         """Disconnect the file watcher handlers registered by register_file_watchers."""
@@ -191,9 +191,7 @@ class AppSession:
         if self._stop_pages_listener is not None:
             self._stop_pages_listener()
 
-        secrets_singleton._file_change_listener.disconnect(
-            self._on_secrets_file_changed
-        )
+        secrets_singleton.file_change_listener.disconnect(self._on_secrets_file_changed)
 
         self._local_sources_watcher = None
         self._stop_config_listener = None
@@ -416,7 +414,7 @@ class AppSession:
             self._enqueue_forward_msg(self._create_file_change_message())
 
     def _on_secrets_file_changed(self, _) -> None:
-        """Called when `secrets._file_change_listener` emits a Signal."""
+        """Called when `secrets.file_change_listener` emits a Signal."""
 
         # NOTE: At the time of writing, this function only calls `_on_source_file_changed`.
         # The reason behind creating this function instead of just passing `_on_source_file_changed`
