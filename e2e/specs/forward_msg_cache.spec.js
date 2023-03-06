@@ -14,4 +14,19 @@
  * limitations under the License.
  */
 
-export { default } from "./CodeBlock"
+describe("ForwardMsgCache test", () => {
+  beforeEach(() => {
+    cy.loadApp("http://localhost:3000/");
+  });
+
+  it("can fetch missing cached messages from the server", () => {
+    cy.window().then((win) => {
+      win.streamlitDebug.clearForwardMsgCache();
+    });
+
+    cy.rerunScript();
+    cy.waitForRerun();
+
+    cy.get('[role="dialog"]').should("not.exist");
+  });
+});

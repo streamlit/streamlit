@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import ReactMarkdown from "react-markdown"
-import { mount } from "src/lib/test_util"
+import { mount, render } from "src/lib/test_util"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
 import { colors } from "src/theme/primitives/colors"
@@ -26,6 +26,8 @@ import StreamlitMarkdown, {
   HeadingWithAnchor,
   Heading,
   HeadingProtoProps,
+  CustomCodeTag,
+  CustomCodeTagProps,
 } from "./StreamlitMarkdown"
 
 import { StyledLinkIconContainer } from "./styled-components"
@@ -302,5 +304,69 @@ describe("Heading", () => {
     | Paragraph   | Text        |`
     )
     expect(wrapper.find("table")).toHaveLength(0)
+  })
+})
+
+const getCustomCodeTagProps = (
+  props: Partial<CustomCodeTagProps> = {}
+): CustomCodeTagProps => ({
+  children: [
+    `import streamlit as st
+
+st.write("Hello")
+`,
+  ],
+  node: { type: "element", tagName: "tagName", children: [] },
+  ...props,
+})
+
+describe("CustomCodeTag Element", () => {
+  it("should render without crashing", () => {
+    const props = getCustomCodeTagProps()
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+
+    expect(baseElement.querySelectorAll("pre code")).toHaveLength(1)
+  })
+
+  it("should render as plaintext", () => {
+    const props = getCustomCodeTagProps({ className: "language-plaintext" })
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+
+    expect(baseElement.querySelector("pre code")?.outerHTML).toBe(
+      '<code class="language-plaintext" style="white-space: pre;"><span>import streamlit as st\n' +
+        "</span>\n" +
+        'st.write("Hello")</code>'
+    )
+  })
+
+  it("should render copy button when code block has content", () => {
+    const props = getCustomCodeTagProps({
+      children: ["i am not empty"],
+    })
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+    expect(
+      baseElement.querySelectorAll('[title="Copy to clipboard"]')
+    ).toHaveLength(1)
+  })
+
+  it("should not render copy button when code block is empty", () => {
+    const props = getCustomCodeTagProps({
+      children: [""],
+    })
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+    expect(
+      baseElement.querySelectorAll('[title="Copy to clipboard"]')
+    ).toHaveLength(0)
+  })
+
+  it("should render inline", () => {
+    const props = getCustomCodeTagProps({ inline: true })
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+    expect(baseElement.innerHTML).toBe(
+      "<div><code>" +
+        "import streamlit as st\n\n" +
+        'st.write("Hello")\n' +
+        "</code></div>"
+    )
   })
 })
