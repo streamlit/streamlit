@@ -23,9 +23,7 @@ const resolve = require("resolve")
 const HtmlWebpackPlugin = require("html-webpack-plugin")
 const CaseSensitivePathsPlugin = require("case-sensitive-paths-webpack-plugin")
 const InlineChunkHtmlPlugin = require("react-dev-utils/InlineChunkHtmlPlugin")
-const TerserPlugin = require("terser-webpack-plugin")
 const MiniCssExtractPlugin = require("mini-css-extract-plugin")
-const CssMinimizerPlugin = require("css-minimizer-webpack-plugin")
 const { WebpackManifestPlugin } = require("webpack-manifest-plugin")
 const InterpolateHtmlPlugin = require("react-dev-utils/InterpolateHtmlPlugin")
 const WorkboxWebpackPlugin = require("workbox-webpack-plugin")
@@ -147,8 +145,7 @@ module.exports = function (webpackEnv) {
             // https://github.com/facebook/create-react-app/issues/2677
             ident: "postcss",
             config: false,
-            plugins: !useTailwind
-              ? [
+            plugins: [
                   "postcss-flexbugs-fixes",
                   [
                     "postcss-preset-env",
@@ -164,19 +161,6 @@ module.exports = function (webpackEnv) {
                   // which in turn let's users customize the target behavior as per their needs.
                   "postcss-normalize",
                 ]
-              : [
-                  "tailwindcss",
-                  "postcss-flexbugs-fixes",
-                  [
-                    "postcss-preset-env",
-                    {
-                      autoprefixer: {
-                        flexbox: "no-2009",
-                      },
-                      stage: 3,
-                    },
-                  ],
-                ],
           },
           sourceMap: isEnvProduction ? shouldUseSourceMap : isEnvDevelopment,
         },
@@ -217,6 +201,13 @@ module.exports = function (webpackEnv) {
     // These are the "entry points" to our application.
     // This means they will be the "root" imports that are included in JS bundle.
     entry: paths.appIndexJs,
+    // needed to output as a module
+    experiments: {
+      outputModule: true,
+    },
+    library: {
+      type: "module",
+    },
     output: {
       // The build folder.
       path: paths.appBuild,
@@ -225,8 +216,8 @@ module.exports = function (webpackEnv) {
       // There will be one main bundle, and one file per asynchronous chunk.
       // In development, it does not produce real files.
       filename: isEnvProduction
-        ? "static/js/[name].[contenthash:8].js"
-        : isEnvDevelopment && "static/js/bundle.js",
+        ? "module.js"
+        : isEnvDevelopment && "module.js",
       // There are also additional JS chunk files if you use code splitting.
       chunkFilename: isEnvProduction
         ? "static/js/[name].[contenthash:8].chunk.js"
@@ -541,22 +532,7 @@ module.exports = function (webpackEnv) {
             inject: true,
             template: paths.appHtml,
           },
-          isEnvProduction
-            ? {
-                minify: {
-                  removeComments: true,
-                  collapseWhitespace: true,
-                  removeRedundantAttributes: true,
-                  useShortDoctype: true,
-                  removeEmptyAttributes: true,
-                  removeStyleLinkTypeAttributes: true,
-                  keepClosingSlash: true,
-                  minifyJS: true,
-                  minifyCSS: true,
-                  minifyURLs: true,
-                },
-              }
-            : undefined
+          undefined
         )
       ),
       // Inlines the webpack runtime script. This script is too small to warrant
