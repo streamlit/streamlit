@@ -274,11 +274,12 @@ describe("SidebarNav", () => {
     expect(wrapper.find(StyledSidebarNavButton).text()).toBe("View less")
   })
 
-  it("is collapsed by default if there are widgets on the sidebar", () => {
+  it("shows only 6 nav items if collapseNav is true", () => {
     const wrapper = mount(
       <SidebarNav
         {...getProps({
-          hasSidebarElements: true,
+          hasSidebarElements: false,
+          collapseNav: true,
           appPages: [
             { pageName: "my_first_page" },
             { pageName: "my_second_page" },
@@ -293,8 +294,30 @@ describe("SidebarNav", () => {
       />
     )
 
-    expect(wrapper.prop("hasSidebarElements")).toBe(true)
-    expect(wrapper.find("StyledSidebarNavItems li")).toHaveLength(6)
+    expect(wrapper.find("StyledSidebarNavLinkContainer")).toHaveLength(6)
+  })
+
+  it("shows all nav items if collapseNav is false", () => {
+    const wrapper = mount(
+      <SidebarNav
+        {...getProps({
+          hasSidebarElements: false,
+          collapseNav: false,
+          appPages: [
+            { pageName: "my_first_page" },
+            { pageName: "my_second_page" },
+            { pageName: "my_third_page" },
+            { pageName: "my_fourth_page" },
+            { pageName: "my_fifth_page" },
+            { pageName: "my_sixth_page" },
+            { pageName: "my_seventh_page" },
+            { pageName: "my_eight_page" },
+          ],
+        })}
+      />
+    )
+
+    expect(wrapper.find("StyledSidebarNavLinkContainer")).toHaveLength(8)
   })
 
   it("is expanded by default if no widgets are present on the sidebar", () => {
