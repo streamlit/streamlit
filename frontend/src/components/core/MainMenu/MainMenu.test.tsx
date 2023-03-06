@@ -31,6 +31,7 @@ import {
   UncommittedChanges,
   UntrackedFiles,
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs"
+import { MetricsManager } from "src/lib/MetricsManager"
 
 import MainMenu, { Props } from "./MainMenu"
 import { waitFor } from "@testing-library/dom"
@@ -56,6 +57,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   menuItems: {},
   hostIsOwner: false,
   gitInfo: null,
+  metricsMgr: new MetricsManager(),
   ...extend,
 })
 
