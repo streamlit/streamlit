@@ -188,8 +188,8 @@ class CachedResourceFuncInfo(CachedFuncInfo):
 
 
 class CacheResourceAPI:
-    """Implements the public st.cache_resource API: the @st.cache_resource decorator,
-    and st.cache_resource.clear().
+    """Implements the public st.cache_resource API
+    Specifically, the @st.cache_resource decorator, and st.cache_resource.clear().
     """
 
     def __init__(

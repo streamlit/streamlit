@@ -307,8 +307,8 @@ def get_data_cache_stats_provider() -> CacheStatsProvider:
 
 
 class CacheDataAPI:
-    """Implements the public st.cache_data API: the @st.cache_data decorator, and
-    st.cache_data.clear().
+    """Implements the public st.cache_data API
+    Specifically, the @st.cache_data decorator, and st.cache_data.clear().
     """
 
     def __init__(
