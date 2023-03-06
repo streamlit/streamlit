@@ -6,8 +6,8 @@
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true ",
-    "build": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=true craco build",
-    "buildFast": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false BUILD_AS_FAST_AS_POSSIBLE=true craco build",
+    "build": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=true webpack",
+    "buildFast": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false BUILD_AS_FAST_AS_POSSIBLE=true webpack",
     "test": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
@@ -15,6 +15,7 @@
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src",
+    "webpack_test": "NODE_ENV='production' webpack build --config ./config/webpack.config.js --stats verbose",
     "build:lib": "yarn build:lib-src && yarn build:lib-type",
     "build:lib-src": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false NODE_ENV=production BABEL_ENV=production npx babel src --out-dir lib --extensions \".js,.mjs,.jsx,.ts,.tsx\" && cp -R ./src/autogen ./lib/autogen && cp -R ./src/assets ./lib/assets",
     "build:lib-type": "tsc -P tsconfig.lib.json && tsc-alias -p tsconfig.lib.json"
@@ -79,7 +80,6 @@
     ]
   },
   "dependencies": {
-    "@babel/core": "^7.16.0",
     "@deck.gl/core": "^8.8.23",
     "@deck.gl/json": "^8.8.23",
     "@emotion-icons/emotion-icon": "^4.1.0",
@@ -128,7 +128,6 @@
     "dompurify": "^2.4.3",
     "dotenv": "^10.0.0",
     "dotenv-expand": "^5.1.0",
-    "eslint": "^8.3.0",
     "eslint-config-react-app": "^7.0.1",
     "eslint-webpack-plugin": "^4.0.0",
     "file-loader": "^6.2.0",
@@ -212,7 +211,6 @@
     "vega-embed": "^6.21.0",
     "vega-interpreter": "^1.0.4",
     "vega-lite": "^5.6.0",
-    "webpack": "^5.75.0",
     "webpack-dev-server": "^4.6.0",
     "webpack-manifest-plugin": "^5.0.0",
     "workbox-webpack-plugin": "^6.5.4",
@@ -221,6 +219,7 @@
   "devDependencies": {
     "@babel/core": "^7.20.7",
     "@babel/plugin-proposal-private-property-in-object": "^7.20.5",
+    "@babel/preset-env": "^7.20.2",
     "@emotion/babel-plugin": "^11.7.2",
     "@emotion/jest": "^11.10.5",
     "@loaders.gl/images": "^3.2.13",
@@ -265,7 +264,9 @@
     "@typescript-eslint/parser": "^5.51.0",
     "@wojtekmaj/enzyme-adapter-react-17": "^0.8.0",
     "axios-mock-adapter": "^1.21.2",
+    "babel-cli": "^6.26.0",
     "babel-plugin-emotion": "^11.0.0",
+    "babel-plugin-tsconfig-paths-module-resolver": "^1.0.4",
     "buffer": "^6.0.3",
     "cypress": "^6.3.0",
     "cypress-file-upload": "^5.0.8",
@@ -295,13 +296,16 @@
     "path": "^0.12.7",
     "prettier": "^2.8.3",
     "prop-types": "^15.7.2",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
     "react-responsive-carousel": "^3.2.23",
     "source-map-explorer": "^2.5.3",
     "start-server-and-test": "^1.15.3",
     "timezone-mock": "^1.3.6",
     "typescript": "^4.9.5",
     "util": "^0.12.5",
-    "webpack": "5.75.0"
+    "webpack": "5.75.0",
+    "webpack-cli": "^5.0.1"
   },
   "peerDependencies": {
     "react": "^17.0.2",
@@ -358,11 +362,6 @@
     "not ie <= 11",
     "not op_mini all"
   ],
-  "babel": {
-    "presets": [
-      "react-app"
-    ]
-  },
   "eslintConfig": {
     "extends": "react-app"
   }

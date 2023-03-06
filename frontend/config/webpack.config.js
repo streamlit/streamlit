@@ -205,38 +205,26 @@ module.exports = function (webpackEnv) {
     experiments: {
       outputModule: true,
     },
-    library: {
-      type: "module",
-    },
+    devtool: false,
     output: {
+      library: {
+        type: "module",
+      },
       // The build folder.
       path: paths.appBuild,
       // Add /* filename */ comments to generated require()s in the output.
       pathinfo: isEnvDevelopment,
-      // There will be one main bundle, and one file per asynchronous chunk.
-      // In development, it does not produce real files.
-      filename: isEnvProduction
-        ? "module.js"
-        : isEnvDevelopment && "module.js",
-      // There are also additional JS chunk files if you use code splitting.
-      chunkFilename: isEnvProduction
-        ? "static/js/[name].[contenthash:8].chunk.js"
-        : isEnvDevelopment && "static/js/[name].chunk.js",
-      assetModuleFilename: "static/media/[name].[hash][ext]",
-      // webpack uses `publicPath` to determine where the app is being served from.
-      // It requires a trailing slash, or the file assets will get an incorrect path.
-      // We inferred the "public path" (such as / or /my-project) from homepage.
-      publicPath: paths.publicUrlOrPath,
-      // Point sourcemap entries to original disk location (format as URL on Windows)
-      devtoolModuleFilenameTemplate: isEnvProduction
-        ? info =>
-            path
-              .relative(paths.appSrc, info.absoluteResourcePath)
-              .replace(/\\/g, "/")
-        : isEnvDevelopment &&
-          (info =>
-            path.resolve(info.absoluteResourcePath).replace(/\\/g, "/")),
+      filename: "module.js",
+      environment: {
+        module: true,
+        dynamicImport: true,   // Note you need to enable `dynamicImport ` here
+      },
     },
+    externals: {
+      'react': 'react', // Case matters here 
+      'react-dom' : 'reactDOM' // Case matters here 
+     },
+    externalsType: "import",
     cache: {
       type: "filesystem",
       version: createEnvironmentHash(env.raw),
@@ -372,15 +360,6 @@ module.exports = function (webpackEnv) {
                 customize: require.resolve(
                   "babel-preset-react-app/webpack-overrides"
                 ),
-                presets: [
-                  [
-                    require.resolve("babel-preset-react-app"),
-                    {
-                      runtime: hasJsxRuntime ? "automatic" : "classic",
-                    },
-                  ],
-                ],
-
                 plugins: [
                   isEnvDevelopment &&
                     shouldUseReactRefresh &&
@@ -402,7 +381,6 @@ module.exports = function (webpackEnv) {
               exclude: /@babel(?:\/|\\{1,2})runtime/,
               loader: require.resolve("babel-loader"),
               options: {
-                babelrc: false,
                 configFile: false,
                 compact: false,
                 presets: [
