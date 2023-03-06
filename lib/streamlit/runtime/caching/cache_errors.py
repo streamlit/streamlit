@@ -115,8 +115,8 @@ a cache "miss", which can lead to unexpected results.
 
 How to fix this:
 * Move the %(st_func_name)s call outside %(func_name)s.
-* Or, if you know what you're doing, use `@st.%(decorator_name)s(suppress_st_warning=True)`
-to suppress the warning.
+* Or, if you know what you're doing, use `@st.%(decorator_name)s(experimental_allow_widgets=True)`
+to enable widget replay and suppress this warning.
             """
             % args
         ).strip("\n")
