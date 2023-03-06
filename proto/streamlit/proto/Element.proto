@@ -26,6 +26,7 @@ import "streamlit/proto/Button.proto";
 import "streamlit/proto/DownloadButton.proto";
 import "streamlit/proto/CameraInput.proto";
 import "streamlit/proto/Checkbox.proto";
+import "streamlit/proto/Code.proto";
 import "streamlit/proto/ColorPicker.proto";
 import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/DateInput.proto";
@@ -108,8 +109,8 @@ message Element {
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
     Heading heading = 47;
-
-    // Next ID: 48
+    Code code = 48;
+    // Next ID: 49
   }
 
   reserved 9;

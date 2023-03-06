@@ -29,7 +29,7 @@ NAME = "streamlit"
 # And if you do add one, make the required version as general as possible.
 # But include relevant lower bounds for any features we use from our dependencies.
 INSTALL_REQUIRES = [
-    "altair>=3.2.0",
+    "altair<5,>=3.2.0",
     "blinker>=1.0.0",
     "cachetools>=4.0",
     "click>=7.0",
@@ -37,7 +37,7 @@ INSTALL_REQUIRES = [
     "importlib-metadata>=1.4",
     "numpy",
     "packaging>=14.1",
-    "pandas>=0.25",
+    "pandas<2,>=0.25",
     "pillow>=6.2.0",
     "protobuf<4,>=3.12",
     "pyarrow>=4.0",

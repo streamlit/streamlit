@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, Union, cast
 
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -30,7 +30,7 @@ class MarkdownMixin:
     def markdown(
         self, body: SupportsStr, unsafe_allow_html: bool = False
     ) -> "DeltaGenerator":
-        """Display string formatted as Markdown.
+        r"""Display string formatted as Markdown.
 
         Parameters
         ----------
@@ -79,42 +79,6 @@ class MarkdownMixin:
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
 
         return self.dg._enqueue("markdown", markdown_proto)
-
-    @gather_metrics("code")
-    def code(
-        self, body: SupportsStr, language: Optional[str] = "python"
-    ) -> "DeltaGenerator":
-        """Display a code block with optional syntax highlighting.
-
-        (This is a convenience wrapper around `st.markdown()`)
-
-        Parameters
-        ----------
-        body : str
-            The string to display as code.
-
-        language : str or None
-            The language that the code is written in, for syntax highlighting.
-            If ``None``, the code will be unstyled. Defaults to ``"python"``.
-
-            For a list of available ``language`` values, see:
-
-            https://github.com/react-syntax-highlighter/react-syntax-highlighter/blob/master/AVAILABLE_LANGUAGES_PRISM.MD
-
-        Example
-        -------
-        >>> import streamlit as st
-        >>>
-        >>> code = '''def hello():
-        ...     print("Hello, Streamlit!")'''
-        >>> st.code(code, language='python')
-
-        """
-        code_proto = MarkdownProto()
-        markdown = f'```{language or ""}\n{body}\n```'
-        code_proto.body = clean_text(markdown)
-        code_proto.element_type = MarkdownProto.Type.CODE
-        return self.dg._enqueue("markdown", code_proto)
 
     @gather_metrics("caption")
     def caption(

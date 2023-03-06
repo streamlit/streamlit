@@ -26,7 +26,9 @@ import types
 from abc import abstractmethod
 from collections import defaultdict
 from datetime import timedelta
-from typing import Any, Callable
+from typing import Any, Callable, overload
+
+from typing_extensions import Literal
 
 from streamlit import type_util
 from streamlit.elements.spinner import spinner
@@ -56,11 +58,25 @@ _LOGGER = get_logger(__name__)
 TTLCACHE_TIMER = time.monotonic
 
 
+@overload
+def ttl_to_seconds(
+    ttl: float | timedelta | None, *, coerce_none_to_inf: Literal[False]
+) -> float | None:
+    ...
+
+
+@overload
 def ttl_to_seconds(ttl: float | timedelta | None) -> float:
-    """Convert a ttl value to a float representing "number of seconds".
-    If ttl is None, return Infinity.
+    ...
+
+
+def ttl_to_seconds(
+    ttl: float | timedelta | None, *, coerce_none_to_inf: bool = True
+) -> float | None:
     """
-    if ttl is None:
+    Convert a ttl value to a float representing "number of seconds".
+    """
+    if coerce_none_to_inf and ttl is None:
         return math.inf
     if isinstance(ttl, timedelta):
         return ttl.total_seconds()

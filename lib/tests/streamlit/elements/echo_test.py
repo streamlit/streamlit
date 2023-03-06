@@ -46,9 +46,7 @@ class EchoTest(DeltaGeneratorTestCase):
                 def do_y(self):
                     pass
 
-        echo_str = """```python
-
-st.write("Hello")
+        echo_str = """st.write("Hello")
 
 "hi"
 
@@ -62,13 +60,10 @@ class MyClass(object):
         pass
 
     def do_y(self):
-        pass
-
-
-```"""
+        pass"""
 
         element = self.get_delta_from_queue(echo_index).new_element
-        self.assertEqual(echo_str, element.markdown.body)
+        self.assertEqual(echo_str, element.code.code_text)
 
         element = self.get_delta_from_queue(output_index).new_element
         self.assertEqual("Hello", element.markdown.body)
@@ -78,11 +73,7 @@ class MyClass(object):
     def test_root_level_echo(self):
         import tests.streamlit.echo_test_data.root_level_echo
 
-        echo_str = """```python
-a = 123
-
-
-```"""
+        echo_str = "a = 123"
 
         element = self.get_delta_from_queue(0).new_element
-        self.assertEqual(echo_str, element.markdown.body)
+        self.assertEqual(echo_str, element.code.code_text)
