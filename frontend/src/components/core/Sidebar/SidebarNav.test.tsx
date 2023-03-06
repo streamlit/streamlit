@@ -345,6 +345,64 @@ describe("SidebarNav", () => {
     expect(wrapper.find("StyledSidebarNavItems li")).toHaveLength(6)
   })
 
+  it("is unexpanded by default", () => {
+    // Need mount > shallow here so that toHaveStyleRule can be used.
+    const wrapper = mount(
+      <SidebarNav {...getProps({ hasSidebarElements: true })} />
+    )
+
+    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
+    expect(wrapper.find("StyledSidebarNavItems")).toHaveStyleRule(
+      "max-height",
+      "33vh"
+    )
+  })
+
+  it("toggles to expanded and back when the StyledSidebarNavButton is clicked", () => {
+    mockUseIsOverflowing.mockReturnValueOnce(true)
+
+    // Need mount > shallow here so that toHaveStyleRule can be used.
+    const wrapper = mount(
+      <SidebarNav
+        {...getProps({
+          hasSidebarElements: true,
+          appPages: [
+            { pageName: "my_first_page" },
+            { pageName: "my_second_page" },
+            { pageName: "my_third_page" },
+            { pageName: "my_fourth_page" },
+            { pageName: "my_fifth_page" },
+            { pageName: "my_sixth_page" },
+            { pageName: "my_seventh_page" },
+            { pageName: "my_eight_page" },
+          ],
+        })}
+      />
+    )
+
+    act(() => {
+      wrapper.find(StyledSidebarNavButton).prop("onClick")!(mockClickEvent)
+    })
+    wrapper.update()
+
+    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(true)
+    expect(wrapper.find(StyledSidebarNavItems)).toHaveStyleRule(
+      "max-height",
+      "75vh"
+    )
+
+    act(() => {
+      wrapper.find(StyledSidebarNavButton).prop("onClick")!(mockClickEvent)
+    })
+    wrapper.update()
+
+    expect(wrapper.find(StyledSidebarNavItems).prop("isExpanded")).toBe(false)
+    expect(wrapper.find(StyledSidebarNavItems)).toHaveStyleRule(
+      "max-height",
+      "33vh"
+    )
+  })
+
   it("passes the pageScriptHash to onPageChange if a link is clicked", () => {
     const props = getProps()
     const wrapper = shallow(<SidebarNav {...props} />)
@@ -381,6 +439,16 @@ describe("SidebarNav", () => {
     wrapper.find(StyledSidebarNavItems).simulate("mouseOver")
 
     expect(props.hideParentScrollbar).not.toHaveBeenCalled()
+  })
+
+  it("does call hideParentScrollbar on mouseOver if overflowing", () => {
+    mockUseIsOverflowing.mockReturnValueOnce(true)
+    const props = getProps()
+    const wrapper = shallow(<SidebarNav {...props} />)
+
+    wrapper.find(StyledSidebarNavItems).simulate("mouseOver")
+
+    expect(props.hideParentScrollbar).toHaveBeenCalledWith(true)
   })
 
   it("handles default and custom page icons", () => {

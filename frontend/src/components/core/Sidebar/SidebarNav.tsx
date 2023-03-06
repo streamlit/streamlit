@@ -28,6 +28,7 @@ import * as reactDeviceDetect from "react-device-detect"
 import { IAppPage } from "src/autogen/proto"
 import AppContext from "src/components/core/AppContext"
 import { EmojiIcon } from "src/components/shared/Icon"
+import { useIsOverflowing } from "src/lib/Hooks"
 import { localStorageAvailable } from "src/lib/storageUtils"
 
 import {
@@ -54,9 +55,10 @@ export interface Props {
 const SidebarNav = ({
   appPages,
   collapseSidebar,
-  collapseNav,
   currentPageScriptHash,
   hasSidebarElements,
+  collapseNav,
+  hideParentScrollbar,
   onPageChange,
   pageLinkBaseUrl,
 }: Props): ReactElement | null => {
@@ -65,10 +67,22 @@ const SidebarNav = ({
     collapseNav === true ? 6 : appPages.length
   )
   const navItemsRef = useRef<HTMLUListElement>(null)
+  const isOverflowing = useIsOverflowing(navItemsRef)
   const toggleButtonRef = useRef<HTMLButtonElement>(null)
   // We use React.useContext here instead of destructuring it in the imports
   // above so that we can mock it in tests.
   const { getBaseUriParts } = React.useContext(AppContext)
+
+  const onMouseOver = useCallback(() => {
+    if (isOverflowing) {
+      hideParentScrollbar(true)
+    }
+  }, [isOverflowing, hideParentScrollbar])
+
+  const onMouseOut = useCallback(
+    () => hideParentScrollbar(false),
+    [hideParentScrollbar]
+  )
 
   const toggleExpanded = useCallback(
     (target = null) => {
@@ -99,7 +113,14 @@ const SidebarNav = ({
 
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
-      <StyledSidebarNavItems ref={navItemsRef}>
+      <StyledSidebarNavItems
+        ref={navItemsRef}
+        isExpanded={expanded}
+        isOverflowing={isOverflowing}
+        hasSidebarElements={hasSidebarElements}
+        onMouseOver={onMouseOver}
+        onMouseOut={onMouseOut}
+      >
         {appPages
           .slice(0, pagesToShow)
           .map(

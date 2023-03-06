@@ -66,17 +66,57 @@ export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
   position: "relative",
 }))
 
-export const StyledSidebarNavItems = styled.ul(({ theme }) => {
-  return {
-    listStyle: "none",
-    margin: 0,
-    paddingTop: theme.sizes.sidebarTopSpace,
+export interface StyledSidebarNavItemsProps {
+  isExpanded: boolean
+  isOverflowing: boolean
+  hasSidebarElements: boolean
+}
 
-    "@media print": {
-      paddingTop: theme.spacing.sm,
-    },
+export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
+  ({ isExpanded, isOverflowing, hasSidebarElements, theme }) => {
+    const isExpandedMaxHeight = isExpanded ? "75vh" : "33vh"
+    const maxHeight = hasSidebarElements ? isExpandedMaxHeight : "100vh"
+
+    return {
+      maxHeight,
+      listStyle: "none",
+      overflow: ["auto", "overlay"],
+      margin: 0,
+      marginTop: theme.sizes.sidebarTopSpace,
+
+      "@media print": {
+        paddingTop: theme.spacing.sm,
+      },
+
+      "&::before": isOverflowing
+        ? {
+            content: '" "',
+            backgroundImage: `linear-gradient(0deg, transparent, ${theme.colors.bgColor})`,
+            width: "100%",
+            height: "2rem",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            pointerEvents: "none",
+          }
+        : null,
+
+      "&::after": isOverflowing
+        ? {
+            content: '" "',
+            backgroundImage: `linear-gradient(0deg, ${theme.colors.bgColor}, transparent)`,
+            height: "2rem",
+            position: "absolute",
+            bottom: "2rem",
+            left: 0,
+            right: 0,
+            pointerEvents: "none",
+          }
+        : null,
+    }
   }
-})
+)
 
 export const StyledSidebarNavSeparatorContainer = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.colors.fadedText10}`,

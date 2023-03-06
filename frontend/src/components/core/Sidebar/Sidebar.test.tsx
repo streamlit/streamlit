@@ -169,30 +169,6 @@ describe("Sidebar Component", () => {
     expect(wrapper.find(SidebarNav).exists()).toBe(true)
   })
 
-  it("uses the default chevron spacing if chevronDownshift is zero", () => {
-    const wrapper = renderSideBar({
-      chevronDownshift: 0,
-      initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-    })
-
-    expect(wrapper.find("StyledSidebarCollapsedControl")).toHaveStyleRule(
-      "top",
-      spacing.sm
-    )
-  })
-
-  it("uses the given chevron spacing if chevronDownshift is nonzero", () => {
-    const wrapper = renderSideBar({
-      chevronDownshift: 50,
-      initialSidebarState: PageConfig.SidebarState.COLLAPSED,
-    })
-
-    expect(wrapper.find("StyledSidebarCollapsedControl")).toHaveStyleRule(
-      "top",
-      "50px"
-    )
-  })
-
   it("renders SidebarNav component", () => {
     const appPages = [
       { pageName: "streamlit_app", pageScriptHash: "page_hash" },
