@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import { vectorFromArray } from "apache-arrow"
-import { Writer } from "protobufjs"
 import {
   ArrowNamedDataSet,
   Block as BlockProto,
@@ -25,11 +23,13 @@ import {
   IArrowVegaLiteChart,
   NamedDataSet,
 } from "src/autogen/proto"
-import { mockDataFrame as mockDataFrameData } from "src/components/elements/DataFrame/mock"
 import { IndexTypeName } from "src/lib/Quiver"
-import { AppNode, AppRoot, BlockNode, ElementNode } from "./AppNode"
+import { mockDataFrame as mockDataFrameData } from "src/components/elements/DataFrame/mock"
+import { Writer } from "protobufjs"
+import { vectorFromArray } from "apache-arrow"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
+import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
 import { getMetricsManagerForTest } from "./MetricsManagerTestUtils"
 import { UNICODE } from "./mocks/arrow"
 
