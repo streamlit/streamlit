@@ -476,10 +476,10 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
-    return new AppRoot(new BlockNode([main, sidebar]), metricsMgr)
+    return new AppRoot(metricsMgr, new BlockNode([main, sidebar]))
   }
 
-  public constructor(root: BlockNode, metricsMgr: MetricsManager) {
+  public constructor(metricsMgr: MetricsManager, root: BlockNode) {
     this.root = root
     this.metricsMgr = metricsMgr
 
@@ -584,12 +584,12 @@ export class AppRoot {
       this.sidebar.clearStaleNodes(currentScriptRunId) || new BlockNode()
 
     return new AppRoot(
+      this.metricsMgr,
       new BlockNode(
         [main, sidebar],
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
-      ),
-      this.metricsMgr
+      )
     )
   }
 
@@ -609,8 +609,8 @@ export class AppRoot {
   ): AppRoot {
     const elementNode = new ElementNode(element, metadata, scriptRunId)
     return new AppRoot(
-      this.root.setIn(deltaPath, elementNode, scriptRunId),
-      this.metricsMgr
+      this.metricsMgr,
+      this.root.setIn(deltaPath, elementNode, scriptRunId)
     )
   }
 
@@ -629,8 +629,8 @@ export class AppRoot {
 
     const blockNode = new BlockNode(children, block, scriptRunId)
     return new AppRoot(
-      this.root.setIn(deltaPath, blockNode, scriptRunId),
-      this.metricsMgr
+      this.metricsMgr,
+      this.root.setIn(deltaPath, blockNode, scriptRunId)
     )
   }
 
@@ -646,8 +646,8 @@ export class AppRoot {
 
     const elementNode = existingNode.addRows(namedDataSet, scriptRunId)
     return new AppRoot(
-      this.root.setIn(deltaPath, elementNode, scriptRunId),
-      this.metricsMgr
+      this.metricsMgr,
+      this.root.setIn(deltaPath, elementNode, scriptRunId)
     )
   }
 
@@ -663,8 +663,8 @@ export class AppRoot {
 
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
     return new AppRoot(
-      this.root.setIn(deltaPath, elementNode, scriptRunId),
-      this.metricsMgr
+      this.metricsMgr,
+      this.root.setIn(deltaPath, elementNode, scriptRunId)
     )
   }
 }
