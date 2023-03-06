@@ -123,9 +123,28 @@ class AppSessionTest(unittest.TestCase):
 
         mock_scriptrunner.reset_mock()
 
-        # A 2nd shutdown call should have no affect.
+        # A 2nd shutdown call should have no effect.
         session.shutdown()
         mock_scriptrunner.request_stop.assert_not_called()
+
+    def test_request_script_stop(self):
+        """Verify that request_script_stop forwards the request to the scriptrunner."""
+        session = _create_test_session()
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
+        session.request_script_stop()
+        mock_scriptrunner.request_stop.assert_called()
+
+    def test_request_script_stop_no_scriptrunner(self):
+        """Test that calling request_script_stop when there is no scriptrunner doesn't
+        result in an error.
+        """
+        session = _create_test_session()
+        session._scriptrunner = None
+
+        # Nothing else to do here aside from ensuring that no exception is thrown.
+        session.request_script_stop()
 
     def test_unique_id(self):
         """Each AppSession should have a unique ID"""
@@ -685,7 +704,6 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         ) as handle_backmsg_exception, patch.object(
             session, "_handle_clear_cache_request"
         ) as handle_clear_cache_request:
-
             error = Exception("explode!")
             handle_clear_cache_request.side_effect = error
 
