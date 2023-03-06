@@ -82,13 +82,6 @@ export class MetricsManager {
 
   private metadata: DeployedAppMetadata = {}
 
-  /**
-   * Singleton MetricsManager object. The reason we're using a singleton here
-   * instead of just exporting a module-level instance is so we can easily
-   * override it in tests.
-   */
-  public static current: MetricsManager = new MetricsManager()
-
   public initialize({
     gatherUsageStats,
   }: {
