@@ -15,13 +15,13 @@
  */
 
 import React, {
+  CSSProperties,
+  Fragment,
+  FunctionComponent,
+  HTMLProps,
+  PureComponent,
   ReactElement,
   ReactNode,
-  PureComponent,
-  CSSProperties,
-  HTMLProps,
-  FunctionComponent,
-  Fragment,
 } from "react"
 import { visit } from "unist-util-visit"
 import { useTheme } from "@emotion/react"
@@ -40,7 +40,7 @@ import { Link as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import AppContext from "src/components/core/AppContext"
-import CodeBlock, { CodeTag } from "src/components/elements/CodeBlock/"
+import CodeBlock from "src/components/elements/CodeBlock/"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
 import ErrorBoundary from "src/components/shared/ErrorBoundary/"
@@ -53,14 +53,17 @@ import {
 } from "src/theme/index"
 
 import {
-  StyledStreamlitMarkdown,
-  StyledLinkIconContainer,
-  StyledLinkIcon,
-  StyledHeaderContent,
   StyledHeaderContainer,
+  StyledHeaderContent,
+  StyledLinkIcon,
+  StyledLinkIconContainer,
+  StyledStreamlitMarkdown,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
+import { StyledCopyButtonContainer } from "src/components/elements/CodeBlock/styled-components"
+import CopyButton from "src/components/elements/CodeBlock/CopyButton"
+import StreamlitSyntaxHighlighter from "src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 
 enum Tags {
   H1 = "h1",
@@ -255,6 +258,41 @@ export interface RenderedMarkdownProps {
   isTabs?: boolean
 }
 
+export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
+  ReactMarkdownProps & { inline?: boolean }
+
+/**
+ * Renders code tag with highlighting based on requested language.
+ */
+export const CustomCodeTag: FunctionComponent<CustomCodeTagProps> = ({
+  node,
+  inline,
+  className,
+  children,
+  ...props
+}) => {
+  const match = /language-(\w+)/.exec(className || "")
+  const codeText = String(children).trim().replace(/\n$/, "")
+
+  const language = (match && match[1]) || ""
+  return !inline ? (
+    <>
+      {codeText && (
+        <StyledCopyButtonContainer>
+          <CopyButton text={codeText} />
+        </StyledCopyButtonContainer>
+      )}
+      <StreamlitSyntaxHighlighter language={language} showLineNumbers={false}>
+        {codeText}
+      </StreamlitSyntaxHighlighter>
+    </>
+  ) : (
+    <code className={className} {...props}>
+      {children}
+    </code>
+  )
+}
+
 export function RenderedMarkdown({
   allowHTML,
   source,
@@ -267,7 +305,7 @@ export function RenderedMarkdown({
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
-    code: CodeTag,
+    code: CustomCodeTag,
     a: LinkWithTargetBlank,
     h1: CustomHeading,
     h2: CustomHeading,

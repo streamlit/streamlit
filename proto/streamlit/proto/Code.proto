@@ -1,4 +1,4 @@
-/**
+/**!
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,4 +14,14 @@
  * limitations under the License.
  */
 
-export { default } from "./CodeBlock"
+syntax = "proto3";
+
+// st.code
+message Code {
+  // Content to display.
+  string code_text = 1;
+
+  string language = 2;
+
+  bool show_line_numbers = 3;
+}
