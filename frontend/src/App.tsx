@@ -14,100 +14,100 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, ReactNode } from "react"
-import moment from "moment"
-import { HotKeys, KeyMap } from "react-hotkeys"
-import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
+import { enableAllPlugins as enableImmerPlugins } from "immer"
+import { concat, noop, without } from "lodash"
+import moment from "moment"
+import React, { PureComponent, ReactNode } from "react"
+import { HotKeys, KeyMap } from "react-hotkeys"
 
-// Other local imports.
-import AppContext from "src/components/core/AppContext"
-import AppView from "src/components/core/AppView"
-import StatusWidget from "src/components/core/StatusWidget"
-import MainMenu, { isLocalhost } from "src/components/core/MainMenu"
-import ToolbarActions from "src/components/core/ToolbarActions"
-import Header from "src/components/core/Header"
+// Used to import fonts + responsive reboot items
+import "src/assets/css/theme.scss"
 import {
-  DialogProps,
-  DialogType,
-  StreamlitDialog,
-} from "src/components/core/StreamlitDialog/"
-import { ConnectionManager } from "src/lib/ConnectionManager"
-import { PerformanceEvents } from "src/lib/profiler/PerformanceEvents"
-import {
-  createFormsData,
-  FormsData,
-  WidgetStateManager,
-} from "src/lib/WidgetStateManager"
-import { ConnectionState } from "src/lib/ConnectionState"
-import { ScriptRunState } from "src/lib/ScriptRunState"
-import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
-import {
-  setCookie,
-  getIFrameEnclosingApp,
-  hashString,
-  isEmbed,
-  isPaddingDisplayed,
-  isToolbarDisplayed,
-  isColoredLineDisplayed,
-  isScrollingHidden,
-  isFooterDisplayed,
-  isLightTheme,
-  isDarkTheme,
-  isInChildFrame,
-  notUndefined,
-  getElementWidgetID,
-  generateUID,
-  getEmbeddingIdClassName,
-} from "src/lib/utils"
-import { BaseUriParts } from "src/lib/UriUtil"
-import {
+  AppPage,
   BackMsg,
+  Config,
   CustomThemeConfig,
   Delta,
   ForwardMsg,
   ForwardMsgMetadata,
+  GitInfo,
+  IAppPage,
+  IGitInfo,
   Initialize,
   NewSession,
   PageConfig,
   PageInfo,
   PageNotFound,
-  PagesChanged,
   PageProfile,
+  PagesChanged,
   SessionEvent,
-  WidgetStates,
   SessionStatus,
-  Config,
-  IGitInfo,
-  GitInfo,
-  IAppPage,
-  AppPage,
+  WidgetStates,
 } from "src/autogen/proto"
-import { without, concat, noop } from "lodash"
 
-import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
-import { SessionInfo } from "src/lib/SessionInfo"
-import { MetricsManager } from "src/lib/MetricsManager"
-import { FileUploadClient } from "src/lib/FileUploadClient"
-import { logError, logMessage } from "src/lib/log"
-import { AppRoot } from "src/lib/AppNode"
+// Other local imports.
+import AppContext from "src/components/core/AppContext"
+import AppView from "src/components/core/AppView"
+import Header from "src/components/core/Header"
+import MainMenu, { isLocalhost } from "src/components/core/MainMenu"
+import StatusWidget from "src/components/core/StatusWidget"
+import {
+  DialogProps,
+  DialogType,
+  StreamlitDialog,
+} from "src/components/core/StreamlitDialog/"
 
 import { UserSettings } from "src/components/core/StreamlitDialog/UserSettings"
-import { ComponentRegistry } from "src/components/widgets/CustomComponent"
+import ToolbarActions from "src/components/core/ToolbarActions"
 import { handleFavicon } from "src/components/elements/Favicon"
+import { ComponentRegistry } from "src/components/widgets/CustomComponent"
+import { AppRoot } from "src/lib/AppNode"
+
+import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
+import { ConnectionManager } from "src/lib/ConnectionManager"
+import { ConnectionState } from "src/lib/ConnectionState"
+import { FileUploadClient } from "src/lib/FileUploadClient"
+import { logError, logMessage } from "src/lib/log"
+import { PerformanceEvents } from "src/lib/profiler/PerformanceEvents"
+import { ScriptRunState } from "src/lib/ScriptRunState"
+import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { BaseUriParts } from "src/lib/UriUtil"
+import {
+  generateUID,
+  getElementWidgetID,
+  getEmbeddingIdClassName,
+  getIFrameEnclosingApp,
+  hashString,
+  isColoredLineDisplayed,
+  isDarkTheme,
+  isEmbed,
+  isFooterDisplayed,
+  isInChildFrame,
+  isLightTheme,
+  isPaddingDisplayed,
+  isScrollingHidden,
+  isToolbarDisplayed,
+  notUndefined,
+  setCookie,
+} from "src/lib/utils"
+import {
+  createFormsData,
+  FormsData,
+  WidgetStateManager,
+} from "src/lib/WidgetStateManager"
 
 import {
-  CUSTOM_THEME_NAME,
   createAutoTheme,
   createPresetThemes,
   createTheme,
+  CUSTOM_THEME_NAME,
   getCachedTheme,
   isPresetTheme,
   ThemeConfig,
   toExportedTheme,
 } from "src/theme"
-
-import { StyledApp } from "./styled-components"
 
 import withHostCommunication, {
   HostCommunicationHOC,
@@ -116,10 +116,10 @@ import withHostCommunication, {
 import withScreencast, {
   ScreenCastHOC,
 } from "./hocs/withScreencast/withScreencast"
-
-// Used to import fonts + responsive reboot items
-import "src/assets/css/theme.scss"
 import { ensureError } from "./lib/ErrorHandling"
+import { SegmentMetricsManager } from "./lib/SegmentMetricsManager"
+
+import { StyledApp } from "./styled-components"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -173,7 +173,7 @@ export class App extends PureComponent<Props, State> {
 
   private connectionManager: ConnectionManager | null
 
-  private readonly metricsMgr: MetricsManager
+  private readonly metricsMgr: SegmentMetricsManager
 
   private readonly widgetMgr: WidgetStateManager
 
@@ -202,7 +202,7 @@ export class App extends PureComponent<Props, State> {
     // Initialize immerjs
     enableImmerPlugins()
 
-    this.metricsMgr = new MetricsManager()
+    this.metricsMgr = new SegmentMetricsManager()
 
     this.state = {
       connectionState: ConnectionState.INITIAL,

@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { waitFor } from "@testing-library/dom"
 import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-
-import { mount, render } from "src/lib/test_util"
-import { IMenuItem } from "src/hocs/withHostCommunication/types"
+import React from "react"
 
 import { GitInfo, IGitInfo } from "src/autogen/proto"
-import { IDeployErrorDialog } from "src/components/core/StreamlitDialog/DeployErrorDialogs/types"
 import {
   DetachedHead,
   ModuleIsNotAdded,
@@ -31,10 +28,13 @@ import {
   UncommittedChanges,
   UntrackedFiles,
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs"
-import { MetricsManager } from "src/lib/MetricsManager"
+import { IDeployErrorDialog } from "src/components/core/StreamlitDialog/DeployErrorDialogs/types"
+import { IMenuItem } from "src/hocs/withHostCommunication/types"
+import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
+
+import { mount, render } from "src/lib/test_util"
 
 import MainMenu, { Props } from "./MainMenu"
-import { waitFor } from "@testing-library/dom"
 
 const { GitStates } = GitInfo
 
@@ -57,7 +57,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   menuItems: {},
   hostIsOwner: false,
   gitInfo: null,
-  metricsMgr: new MetricsManager(),
+  metricsMgr: getMetricsManagerForTest(),
   ...extend,
 })
 

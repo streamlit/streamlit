@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { vectorFromArray } from "apache-arrow"
+import { Writer } from "protobufjs"
 import {
   ArrowNamedDataSet,
   Block as BlockProto,
@@ -23,14 +25,12 @@ import {
   IArrowVegaLiteChart,
   NamedDataSet,
 } from "src/autogen/proto"
-import { IndexTypeName } from "src/lib/Quiver"
 import { mockDataFrame as mockDataFrameData } from "src/components/elements/DataFrame/mock"
-import { Writer } from "protobufjs"
-import { vectorFromArray } from "apache-arrow"
+import { IndexTypeName } from "src/lib/Quiver"
+import { AppNode, AppRoot, BlockNode, ElementNode } from "./AppNode"
 import { addRows } from "./dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
-import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
-import { MetricsManager } from "./MetricsManager"
+import { getMetricsManagerForTest } from "./MetricsManagerTestUtils"
 import { UNICODE } from "./mocks/arrow"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
@@ -44,7 +44,7 @@ const BLOCK = block([
 ])
 
 const ROOT = new AppRoot(
-  new MetricsManager(),
+  getMetricsManagerForTest(),
   new BlockNode([BLOCK, new BlockNode()])
 )
 
@@ -814,13 +814,16 @@ describe("ElementNode.arrowAddRows", () => {
 
 describe("AppRoot.empty", () => {
   it("creates an empty tree", () => {
-    const empty = AppRoot.empty(new MetricsManager())
+    const empty = AppRoot.empty(getMetricsManagerForTest())
     expect(empty.main.isEmpty).toBe(true)
     expect(empty.sidebar.isEmpty).toBe(true)
   })
 
   it("creates placeholder alert", () => {
-    const empty = AppRoot.empty(new MetricsManager(), "placeholder text!")
+    const empty = AppRoot.empty(
+      getMetricsManagerForTest(),
+      "placeholder text!"
+    )
 
     expect(empty.main.children.length).toBe(1)
     const child = empty.main.getIn([0]) as ElementNode
@@ -876,7 +879,7 @@ describe("AppRoot.applyDelta", () => {
   const addRowsTypes = ["dataFrame", "table", "vegaLiteChart"]
   it.each(addRowsTypes)("handles 'addRows' for %s", elementType => {
     // Create an app with a dataframe node
-    const root = AppRoot.empty(new MetricsManager()).applyDelta(
+    const root = AppRoot.empty(getMetricsManagerForTest()).applyDelta(
       "preAddRows",
       makeProto(DeltaProto, {
         newElement: { [elementType]: mockDataFrameData },
@@ -930,7 +933,7 @@ describe("AppRoot.clearStaleNodes", () => {
   it("handles `allowEmpty` blocks correctly", () => {
     // Create a tree with two blocks, one with allowEmpty: true, and the other
     // with allowEmpty: false
-    const newRoot = AppRoot.empty(new MetricsManager())
+    const newRoot = AppRoot.empty(getMetricsManagerForTest())
       .applyDelta(
         "new_session_id",
         makeProto(DeltaProto, { addBlock: { allowEmpty: true } }),

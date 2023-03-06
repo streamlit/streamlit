@@ -20,7 +20,7 @@ import { createPresetThemes, lightTheme, darkTheme } from "src/theme"
 import { shallow } from "src/lib/test_util"
 import { Props as ContextProps } from "src/components/core/AppContext"
 import UISelectbox from "src/components/shared/Dropdown"
-import { MetricsManager } from "src/lib/MetricsManager"
+import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 
 import { SettingsDialog, Props } from "./SettingsDialog"
 
@@ -56,7 +56,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   developerMode: true,
   animateModal: true,
   openThemeCreator: jest.fn(),
-  metricsMgr: new MetricsManager(),
+  metricsMgr: getMetricsManagerForTest(),
   ...extend,
 })
 

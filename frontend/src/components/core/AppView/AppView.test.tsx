@@ -26,14 +26,14 @@ import {
 } from "src/lib/WidgetStateManager"
 import { makeElementWithInfoText } from "src/lib/utils"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import { MetricsManager } from "src/lib/MetricsManager"
+import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 import AppView, { AppViewProps } from "./AppView"
 
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
   const formsData = createFormsData()
 
   return {
-    elements: AppRoot.empty(new MetricsManager()),
+    elements: AppRoot.empty(getMetricsManagerForTest()),
     scriptRunId: "script run 123",
     scriptRunState: ScriptRunState.NOT_RUNNING,
     widgetMgr: new WidgetStateManager({
@@ -88,7 +88,7 @@ describe("AppView element", () => {
 
     const props = getProps({
       elements: new AppRoot(
-        new MetricsManager(),
+        getMetricsManagerForTest(),
         new BlockNode([main, sidebar])
       ),
     })
@@ -134,7 +134,7 @@ describe("AppView element", () => {
     ]
     const props = getProps({
       elements: new AppRoot(
-        new MetricsManager(),
+        getMetricsManagerForTest(),
         new BlockNode([main, sidebar])
       ),
       appPages,
