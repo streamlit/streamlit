@@ -44,6 +44,10 @@ function renderSideBar(props: Partial<SidebarProps> = {}): ReactWrapper {
 }
 
 describe("Sidebar Component", () => {
+  afterEach(() => {
+    window.localStorage.clear()
+  })
+
   it("should render without crashing", () => {
     const wrapper = renderSideBar({})
 
@@ -167,6 +171,94 @@ describe("Sidebar Component", () => {
     })
 
     expect(wrapper.find(SidebarNav).exists()).toBe(true)
+  })
+
+  it("expands nav by default if <7 appPages", () => {
+    const wrapper = renderSideBar({
+      appPages: [
+        { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+        { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
+        { pageName: "streamlit_app3", pageScriptHash: "page_hash3" },
+        { pageName: "streamlit_app4", pageScriptHash: "page_hash4" },
+        { pageName: "streamlit_app5", pageScriptHash: "page_hash5" },
+        { pageName: "streamlit_app6", pageScriptHash: "page_hash6" },
+      ],
+    })
+
+    expect(wrapper.find(SidebarNav).prop("collapseNav")).toBe(false)
+  })
+
+  it("expands nav by default if no sidebar elements", () => {
+    const wrapper = renderSideBar({
+      hasElements: false,
+      appPages: [
+        { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+        { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
+        { pageName: "streamlit_app3", pageScriptHash: "page_hash3" },
+        { pageName: "streamlit_app4", pageScriptHash: "page_hash4" },
+        { pageName: "streamlit_app5", pageScriptHash: "page_hash5" },
+        { pageName: "streamlit_app6", pageScriptHash: "page_hash6" },
+        { pageName: "streamlit_app7", pageScriptHash: "page_hash7" },
+        { pageName: "streamlit_app8", pageScriptHash: "page_hash8" },
+      ],
+    })
+
+    expect(wrapper.find(SidebarNav).prop("collapseNav")).toBe(false)
+  })
+
+  it("collapses the nav if >7 pages and sidebar elements present", () => {
+    const wrapper = renderSideBar({
+      hasElements: true,
+      appPages: [
+        { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+        { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
+        { pageName: "streamlit_app3", pageScriptHash: "page_hash3" },
+        { pageName: "streamlit_app4", pageScriptHash: "page_hash4" },
+        { pageName: "streamlit_app5", pageScriptHash: "page_hash5" },
+        { pageName: "streamlit_app6", pageScriptHash: "page_hash6" },
+        { pageName: "streamlit_app7", pageScriptHash: "page_hash7" },
+        { pageName: "streamlit_app8", pageScriptHash: "page_hash8" },
+      ],
+    })
+
+    expect(wrapper.find(SidebarNav).prop("collapseNav")).toBe(true)
+  })
+
+  it("expands nav if localStorage is set up", () => {
+    // Mock for localStorage preference
+    JSON.stringify(window.localStorage.setItem("navExpanded", "true"))
+
+    const wrapper = renderSideBar({
+      hasElements: false,
+      appPages: [
+        { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+        { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
+        { pageName: "streamlit_app3", pageScriptHash: "page_hash3" },
+        { pageName: "streamlit_app4", pageScriptHash: "page_hash4" },
+        { pageName: "streamlit_app5", pageScriptHash: "page_hash5" },
+        { pageName: "streamlit_app6", pageScriptHash: "page_hash6" },
+      ],
+    })
+
+    expect(wrapper.find(SidebarNav).prop("collapseNav")).toBe(false)
+  })
+
+  it("expands nav by default if no sidebar elements", () => {
+    const wrapper = renderSideBar({
+      hasElements: false,
+      appPages: [
+        { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+        { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
+        { pageName: "streamlit_app3", pageScriptHash: "page_hash3" },
+        { pageName: "streamlit_app4", pageScriptHash: "page_hash4" },
+        { pageName: "streamlit_app5", pageScriptHash: "page_hash5" },
+        { pageName: "streamlit_app6", pageScriptHash: "page_hash6" },
+        { pageName: "streamlit_app7", pageScriptHash: "page_hash7" },
+        { pageName: "streamlit_app8", pageScriptHash: "page_hash8" },
+      ],
+    })
+
+    expect(wrapper.find(SidebarNav).prop("collapseNav")).toBe(false)
   })
 
   it("renders SidebarNav component", () => {
