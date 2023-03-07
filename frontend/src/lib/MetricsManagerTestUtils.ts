@@ -18,10 +18,10 @@
 // @ts-nocheck
 // This file is only used in tests, so these imports can be in devDependencies
 /* eslint-disable import/no-extraneous-dependencies */
-import { MetricsManager } from "./MetricsManager"
+import { SegmentMetricsManager } from "./SegmentMetricsManager"
 
-export function getMetricsManagerForTest(): MetricsManager {
-  const mm = new MetricsManager()
+export function getMetricsManagerForTest(): SegmentMetricsManager {
+  const mm = new SegmentMetricsManager()
   mm.track = jest.fn()
   mm.identify = jest.fn()
   return mm
