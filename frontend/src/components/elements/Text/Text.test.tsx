@@ -15,9 +15,11 @@
  */
 
 import React from "react"
-import { shallow } from "src/lib/test_util"
+import { shallow, mount } from "src/lib/test_util"
 import { Text as TextProto } from "src/autogen/proto"
 import Text, { TextProps } from "./Text"
+
+import { InlineTooltipIcon } from "src/components/shared/TooltipIcon"
 
 const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({
   element: TextProto.create({
@@ -33,5 +35,15 @@ describe("Text element", () => {
     const wrap = shallow(<Text {...props} />)
     expect(wrap).toBeDefined()
     expect(wrap.text()).toBe("some plain text")
+  })
+
+  it("renders text with help tooltip", () => {
+    const props = getProps({ help: "help text" })
+    const wrap = mount(<Text {...props} />)
+    expect(wrap).toBeDefined()
+    expect(wrap.text()).toBe("some plain text")
+    const inlineTooltipIcon = wrap.find(InlineTooltipIcon)
+    expect(inlineTooltipIcon.exists()).toBeTruthy()
+    expect(inlineTooltipIcon.props().content).toBe("help text")
   })
 })

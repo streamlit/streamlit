@@ -20,4 +20,6 @@ syntax = "proto3";
 message Text {
   // Content to display.
   string body = 1;
+
+  string help = 2;
 }

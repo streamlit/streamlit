@@ -16,17 +16,33 @@
 
 import styled from "@emotion/styled"
 
-export const StyledTooltipIconWrapper = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
+interface StyledTooltipIconWrapperProps {
+  isLatex?: boolean
+}
 
-  svg: {
-    stroke: theme.colors.fadedText40,
-    strokeWidth: 2.25,
-  },
-  ":hover": {
+export const StyledTooltipIconWrapper =
+  styled.div<StyledTooltipIconWrapperProps>(({ isLatex, theme }) => ({
+    display: "flex",
+    alignItems: "center",
+    marginTop: isLatex ? theme.spacing.mdPx : "0",
+
     svg: {
       stroke: theme.colors.fadedText60,
+      strokeWidth: 2.25,
     },
-  },
+  }))
+
+export const StyledLabelHelpWrapper = styled.div(({ theme }) => ({
+  display: "flex",
+  visibility: "visible",
+  verticalAlign: "middle",
+  flexDirection: "row",
+  alignItems: "center",
+}))
+
+export const StyledLabelHelpInline = styled.label(({ theme }) => ({
+  marginLeft: theme.spacing.xs,
+  position: "relative",
+  display: "flex",
+  flexDirection: "row",
 }))

@@ -19,7 +19,7 @@ from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
 from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
 
-from streamlit.elements.heading import HEADER_TAG, SUBHEADER_TAG, TITLE_TAG
+from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.select_slider import SelectSliderSerde
 from streamlit.elements.slider import SliderScalar, SliderScalarT, SliderSerde, Step
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -894,11 +894,11 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                         f"Unknown markdown type {elt.markdown.element_type}"
                     )
             elif elt.WhichOneof("type") == "heading":
-                if elt.heading.tag == TITLE_TAG:
+                if elt.heading.tag == HeadingProtoTag.TITLE_TAG.value:
                     new_node = Title(elt.heading, root=root)
-                elif elt.heading.tag == HEADER_TAG:
+                elif elt.heading.tag == HeadingProtoTag.HEADER_TAG.value:
                     new_node = Header(elt.heading, root=root)
-                elif elt.heading.tag == SUBHEADER_TAG:
+                elif elt.heading.tag == HeadingProtoTag.SUBHEADER_TAG.value:
                     new_node = Subheader(elt.heading, root=root)
                 else:
                     raise ValueError(f"Unknown heading type with tag {elt.heading.tag}")

@@ -16,6 +16,10 @@
 
 import React, { ReactElement } from "react"
 import { Text as TextProto } from "src/autogen/proto"
+import {
+  InlineTooltipIcon,
+  StyledLabelHelpWrapper,
+} from "src/components/shared/TooltipIcon"
 import { StyledText } from "./styled-components"
 
 export interface TextProps {
@@ -28,10 +32,10 @@ export interface TextProps {
  */
 export default function Text({ width, element }: TextProps): ReactElement {
   const styleProp = { width }
-
   return (
-    <StyledText data-testid="stText" style={styleProp}>
-      {element.body}
-    </StyledText>
+    <StyledLabelHelpWrapper style={styleProp} className="stTextLabelWrapper">
+      <StyledText data-testid="stText">{element.body}</StyledText>
+      {element.help && <InlineTooltipIcon content={element.help} />}
+    </StyledLabelHelpWrapper>
   )
 }

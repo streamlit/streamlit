@@ -15,9 +15,13 @@
  */
 
 import React from "react"
-import { shallow } from "src/lib/test_util"
+import { shallow, mount } from "src/lib/test_util"
 import { Markdown as MarkdownProto } from "src/autogen/proto"
 import Markdown, { MarkdownProps } from "./Markdown"
+import {
+  InlineTooltipIcon,
+  StyledLabelHelpWrapper,
+} from "src/components/shared/TooltipIcon"
 
 const getProps = (
   elementProps: Partial<MarkdownProps> = {}
@@ -45,4 +49,15 @@ describe("Markdown element", () => {
   a) unit tests with different Markdown formatted text
   b) allow_html property
   */
+})
+
+describe("Markdown element with help", () => {
+  it("renders markdown with help tooltip as expected", () => {
+    const props = getProps({ help: "help text" })
+    const wrapper = mount(<Markdown {...props} />)
+    const inlineTooltipIcon = wrapper.children().find(InlineTooltipIcon)
+    expect(inlineTooltipIcon.exists()).toBe(true)
+    expect(inlineTooltipIcon.props().content).toBe("help text")
+    expect(wrapper.children().find(StyledLabelHelpWrapper).exists()).toBe(true)
+  })
 })

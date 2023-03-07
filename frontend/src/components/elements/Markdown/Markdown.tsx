@@ -17,9 +17,14 @@
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import React, { ReactElement } from "react"
 import { Markdown as MarkdownProto } from "src/autogen/proto"
+import {
+  InlineTooltipIcon,
+  StyledLabelHelpWrapper,
+} from "src/components/shared/TooltipIcon"
 
 export interface MarkdownProps {
   width: number
+  help?: string
   element: MarkdownProto
 }
 
@@ -33,11 +38,25 @@ export default function Markdown({
   const styleProp = { width }
   return (
     <div className="stMarkdown" style={styleProp}>
-      <StreamlitMarkdown
-        isCaption={element.isCaption}
-        source={element.body}
-        allowHTML={element.allowHtml}
-      />
+      {element.help ? (
+        <StyledLabelHelpWrapper>
+          <StreamlitMarkdown
+            isCaption={element.isCaption}
+            source={element.body}
+            allowHTML={element.allowHtml}
+          />
+          <InlineTooltipIcon
+            content={element.help}
+            isLatex={element.elementType === MarkdownProto.Type.LATEX}
+          ></InlineTooltipIcon>
+        </StyledLabelHelpWrapper>
+      ) : (
+        <StreamlitMarkdown
+          isCaption={element.isCaption}
+          source={element.body}
+          allowHTML={element.allowHtml}
+        />
+      )}
     </div>
   )
 }

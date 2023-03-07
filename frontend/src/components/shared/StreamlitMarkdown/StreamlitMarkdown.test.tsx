@@ -30,6 +30,11 @@ import StreamlitMarkdown, {
   CustomCodeTagProps,
 } from "./StreamlitMarkdown"
 
+import {
+  InlineTooltipIcon,
+  StyledLabelHelpWrapper,
+} from "src/components/shared/TooltipIcon"
+
 import { StyledLinkIconContainer } from "./styled-components"
 
 // Fixture Generator
@@ -266,6 +271,17 @@ describe("Heading", () => {
     const wrapper = mount(<Heading {...props} />)
     expect(wrapper.find("h1").text()).toEqual("hello")
     expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(1)
+  })
+
+  it("renders properly with help text", () => {
+    const props = getHeadingProps({ body: "hello", help: "help text" })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("h1").text()).toEqual("hello")
+    expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(1)
+    expect(wrapper.find(StyledLabelHelpWrapper).exists()).toBe(true)
+    const inlineTooltipIcon = wrapper.find(InlineTooltipIcon)
+    expect(inlineTooltipIcon.exists()).toBe(true)
+    expect(inlineTooltipIcon.props().content).toBe("help text")
   })
 
   it("does not render ol block", () => {

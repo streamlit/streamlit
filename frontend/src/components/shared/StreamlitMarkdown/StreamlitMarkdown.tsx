@@ -53,6 +53,11 @@ import {
 } from "src/theme/index"
 
 import {
+  InlineTooltipIcon,
+  StyledLabelHelpWrapper,
+} from "src/components/shared/TooltipIcon"
+
+import {
   StyledHeaderContainer,
   StyledHeaderContent,
   StyledLinkIcon,
@@ -484,8 +489,8 @@ function makeMarkdownHeading(tag: string, markdown: string): string {
 }
 
 export function Heading(props: HeadingProtoProps): ReactElement {
-  const { width } = props
-  const { tag, anchor, body } = props.element
+  const { width, element } = props
+  const { tag, anchor, body, help } = element
   const isSidebar = React.useContext(IsSidebarContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
@@ -501,20 +506,40 @@ export function Heading(props: HeadingProtoProps): ReactElement {
       >
         <StyledHeaderContainer>
           <HeadingWithAnchor tag={tag} anchor={anchor}>
-            <RenderedMarkdown
-              source={makeMarkdownHeading(tag, heading)}
-              allowHTML={false}
-              // this is purely an inline string
-              overrideComponents={{
-                p: Fragment,
-                h1: Fragment,
-                h2: Fragment,
-                h3: Fragment,
-                h4: Fragment,
-                h5: Fragment,
-                h6: Fragment,
-              }}
-            />
+            {help ? (
+              <StyledLabelHelpWrapper>
+                <RenderedMarkdown
+                  source={makeMarkdownHeading(tag, heading)}
+                  allowHTML={false}
+                  // this is purely an inline string
+                  overrideComponents={{
+                    p: Fragment,
+                    h1: Fragment,
+                    h2: Fragment,
+                    h3: Fragment,
+                    h4: Fragment,
+                    h5: Fragment,
+                    h6: Fragment,
+                  }}
+                />
+                <InlineTooltipIcon content={help} />
+              </StyledLabelHelpWrapper>
+            ) : (
+              <RenderedMarkdown
+                source={makeMarkdownHeading(tag, heading)}
+                allowHTML={false}
+                // this is purely an inline string
+                overrideComponents={{
+                  p: Fragment,
+                  h1: Fragment,
+                  h2: Fragment,
+                  h3: Fragment,
+                  h4: Fragment,
+                  h5: Fragment,
+                  h6: Fragment,
+                }}
+              />
+            )}
           </HeadingWithAnchor>
         </StyledHeaderContainer>
         {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
