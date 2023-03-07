@@ -18,5 +18,5 @@
     "strict": true,
     "target": "es5"
   },
-  "include": ["src"]
+  "include": ["src", "index.d.ts"]
 }

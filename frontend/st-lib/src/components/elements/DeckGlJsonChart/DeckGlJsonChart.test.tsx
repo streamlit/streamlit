@@ -15,13 +15,14 @@
  */
 
 import React from "react"
-import { DeckGL } from "deck.gl"
+import { DeckGL, PickingInfo } from "deck.gl/typed"
 import { shallow } from "src/lib/test_util"
 import { lightTheme } from "src/theme"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
 import { NavigationControl } from "react-map-gl"
 import { DeckGlJsonChart, PropsWithHeight } from "./DeckGlJsonChart"
+import { ViewStateChangeParameters } from "@deck.gl/core/typed/controllers/controller"
 
 const getProps = (
   elementProps: Partial<DeckGlJsonChartProto> = {},
@@ -92,11 +93,10 @@ describe("DeckGlJsonChart element", () => {
     // @ts-ignore
     deckGL.prop("onViewStateChange")({
       viewState: { pitch: 5, zoom: 5 },
-    })
+    } as ViewStateChangeParameters)
 
     wrapper.setProps(getProps({}, { pitch: 40.5, zoom: 10 }))
 
-    // @ts-ignore
     expect(wrapper.state("viewState")).toStrictEqual({
       pitch: 5,
       zoom: 10,
@@ -118,8 +118,9 @@ describe("DeckGlJsonChart element", () => {
       object: {
         elevationValue: 10,
       },
-    })
+    } as PickingInfo)
 
+    // @ts-ignore
     expect(createdTooltip.html).toBe("<b>Elevation Value:</b> 10")
   })
 
@@ -138,7 +139,7 @@ describe("DeckGlJsonChart element", () => {
       object: {
         elevationValue: 10,
       },
-    })
+    } as PickingInfo)
 
     expect(createdTooltip).toBe(false)
   })

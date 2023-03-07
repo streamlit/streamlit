@@ -15,19 +15,16 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { DeckGL } from "deck.gl"
+import { DeckGL, LayersList, PickingInfo } from "deck.gl/typed"
 import isEqual from "lodash/isEqual"
 import { MapContext, StaticMap, NavigationControl } from "react-map-gl"
 import { withTheme } from "@emotion/react"
 import { hasLightBackgroundColor, Theme } from "src/theme"
-// We don't have Typescript defs for these imports, which makes ESLint unhappy
-/* eslint-disable import/no-extraneous-dependencies */
-import * as layers from "@deck.gl/layers"
-import { JSONConverter } from "@deck.gl/json"
-import * as geoLayers from "@deck.gl/geo-layers"
-import * as aggregationLayers from "@deck.gl/aggregation-layers"
-import * as meshLayers from "@deck.gl/mesh-layers"
-/* eslint-enable */
+import * as layers from "@deck.gl/layers/typed"
+import { JSONConverter } from "@deck.gl/json/typed"
+import * as geoLayers from "@deck.gl/geo-layers/typed"
+import * as aggregationLayers from "@deck.gl/aggregation-layers/typed"
+import * as meshLayers from "@deck.gl/mesh-layers/typed"
 
 import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
@@ -45,19 +42,15 @@ import {
 } from "./styled-components"
 
 import "mapbox-gl/dist/mapbox-gl.css"
-
-interface PickingInfo {
-  object: {
-    [key: string]: string
-  }
-}
+import { ViewStateChangeParameters } from "@deck.gl/core/typed/controllers/controller"
+import { TooltipContent } from "@deck.gl/core/typed/lib/tooltip"
 
 interface DeckObject {
   initialViewState: {
     height: number
     width: number
   }
-  layers: Record<string, unknown>[]
+  layers: LayersList | undefined
   mapStyle?: string | Array<string>
 }
 
@@ -172,11 +165,11 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     return jsonConverter.convert(json)
   }
 
-  createTooltip = (info: PickingInfo): Record<string, unknown> | boolean => {
+  createTooltip = (info: PickingInfo): TooltipContent => {
     const { element } = this.props
 
     if (!info || !info.object || !element.tooltip) {
-      return false
+      return null
     }
 
     const tooltip = JSON.parse(element.tooltip)
@@ -205,7 +198,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     return body
   }
 
-  onViewStateChange = ({ viewState }: State): void => {
+  onViewStateChange = ({ viewState }: ViewStateChangeParameters): void => {
     this.setState({ viewState })
   }
 
@@ -226,6 +219,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
           width={deck.initialViewState.width}
           layers={this.state.initialized ? deck.layers : []}
           getTooltip={this.createTooltip}
+          // @ts-ignore
           ContextProvider={MapContext.Provider}
           controller
         >

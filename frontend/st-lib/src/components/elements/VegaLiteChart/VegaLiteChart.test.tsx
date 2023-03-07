@@ -146,17 +146,21 @@ describe("VegaLiteChart Element", () => {
   cases.forEach(([prevData, data, expected, testDescription]) => {
     it(`tests for appended data properly - ${testDescription}`, () => {
       const [prevNumRows, prevNumCols] = tableGetRowsAndCols(
+        // @ts-ignore
         (prevData as ImmutableMap<string, number>).get("data")
       )
       const [numRows, numCols] = tableGetRowsAndCols(
+        // @ts-ignore
         (data as ImmutableMap<string, number>).get("data")
       )
 
       expect(
-        dataIsAnAppendOfPrev(
+        dataIsAnAppendOfPrev( 
+          // @ts-ignore
           prevData as ImmutableMap<string, number>,
           prevNumRows,
           prevNumCols,
+          // @ts-ignore
           data as ImmutableMap<string, number>,
           numRows,
           numCols

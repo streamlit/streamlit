@@ -72,11 +72,6 @@ const imageInlineSizeLimit = parseInt(
 // Check if TypeScript is setup
 const useTypeScript = fs.existsSync(paths.appTsConfig)
 
-// Check if Tailwind config exists
-const useTailwind = fs.existsSync(
-  path.join(paths.appPath, "tailwind.config.js")
-)
-
 // Get the path to the uncompiled service worker (if it exists).
 const swSrc = paths.swSrc
 
@@ -198,8 +193,6 @@ module.exports = function (webpackEnv) {
         ? "source-map"
         : false
       : isEnvDevelopment && "cheap-module-source-map",
-    // These are the "entry points" to our application.
-    // This means they will be the "root" imports that are included in JS bundle.
     entry: paths.appIndexJs,
     // needed to output as a module
     experiments: {
@@ -222,7 +215,19 @@ module.exports = function (webpackEnv) {
     },
     externals: {
       'react': 'react', // Case matters here 
-      'react-dom' : 'reactDOM' // Case matters here 
+      'react-dom' : 'reactDOM', // Case matters here 
+      'highlight.js': 'hljs',
+      'h3-js': 'h3',
+      'deck.gl': 'deck',
+      '@deck.gl/aggregation-layers': 'deck',
+      '@deck.gl/core': 'deck',
+      '@deck.gl/extensions': 'deck',
+      '@deck.gl/geo-layers': 'deck',
+      '@deck.gl/layers': 'deck',
+      '@deck.gl/mesh-layers': 'deck',
+      '@loaders.gl/core': 'loaders',
+      '@luma.gl/core': 'luma',
+      'mapbox-gl': 'mapboxgl'
      },
     externalsType: "import",
     cache: {
@@ -294,6 +299,13 @@ module.exports = function (webpackEnv) {
           exclude: /@babel(?:\/|\\{1,2})runtime/,
           test: /\.(js|mjs|jsx|ts|tsx|css)$/,
           loader: require.resolve("source-map-loader"),
+        },
+        {
+          test: /\.(png|jpe?g|gif|jp2|webp)$/,
+          loader: 'file-loader',
+          options: {
+            name: 'images/[name].[ext]'
+          }
         },
         {
           // "oneOf" will traverse all following loaders until one will
@@ -545,13 +557,6 @@ module.exports = function (webpackEnv) {
       // a plugin that prints an error when you attempt to do this.
       // See https://github.com/facebook/create-react-app/issues/240
       isEnvDevelopment && new CaseSensitivePathsPlugin(),
-      isEnvProduction &&
-        new MiniCssExtractPlugin({
-          // Options similar to the same options in webpackOptions.output
-          // both options are optional
-          filename: "static/css/[name].[contenthash:8].css",
-          chunkFilename: "static/css/[name].[contenthash:8].chunk.css",
-        }),
       // Generate an asset manifest file with the following content:
       // - "files" key: Mapping of all asset filenames to their corresponding
       //   output file so that tools can pick it up without having to parse
