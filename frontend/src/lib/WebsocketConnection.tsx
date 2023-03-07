@@ -61,7 +61,6 @@ const PING_TIMEOUT_MS = 15 * 1000
 
 /**
  * Timeout when attempting to connect to a websocket, in millis.
- * This should be <= bootstrap.py#BROWSER_WAIT_TIMEOUT_SEC.
  */
 const WEBSOCKET_TIMEOUT_MS = 15 * 1000
 
