@@ -16,3 +16,4 @@
 
 export * from "./TooltipIcon"
 export { default } from "./TooltipIcon"
+export { StyledLabelHelpWrapper } from "./styled-components"
