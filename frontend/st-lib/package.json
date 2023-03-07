@@ -15,7 +15,7 @@
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src",
-    "webpack_test": "NODE_ENV='production' webpack build --config ../config/webpack.config.js --stats verbose",
+    "webpack_test": "NODE_ENV='production' DISABLE_ESLINT_PLUGIN=true webpack build --config ../config/webpack.config.js --stats verbose",
     "build:lib": "yarn build:lib-src && yarn build:lib-type",
     "build:lib-src": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false NODE_ENV=production BABEL_ENV=production npx babel src --out-dir lib --extensions \".js,.mjs,.jsx,.ts,.tsx\" && cp -R ./src/autogen ./lib/autogen && cp -R ./src/assets ./lib/assets",
     "build:lib-type": "tsc -P tsconfig.lib.json && tsc-alias -p tsconfig.lib.json"

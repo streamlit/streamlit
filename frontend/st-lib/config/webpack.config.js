@@ -99,6 +99,10 @@ const hasJsxRuntime = (() => {
   }
 })()
 
+// https://stackoverflow.com/questions/29421409/how-to-load-all-files-in-a-directory-using-webpack-without-require-statements
+function requireAll(r) { r.keys().forEach(r); }
+requireAll(require.context('../src/', true, /\.tsx$/));
+
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
 module.exports = function (webpackEnv) {
