@@ -28,6 +28,8 @@ import {
 import { DatePickerCell } from "src/components/widgets/DataFrame/customCells/DatePickerCell"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
+// TODO: Investigate time: https://github.com/streamlit/streamlit/blob/0880740f482abd6a8f755192e3a94843a000f14c/frontend/src/lib/Quiver.ts#L779
+// https://github.com/streamlit/streamlit/blob/0880740f482abd6a8f755192e3a94843a000f14c/frontend/src/lib/Quiver.ts#L825
 function applyTimezone(momentDate: Moment, timezone: string): Moment {
   if (timezone.startsWith("+") || timezone.startsWith("-")) {
     // Timezone is a UTC offset (e.g. "+05:00" or "-08:00")
