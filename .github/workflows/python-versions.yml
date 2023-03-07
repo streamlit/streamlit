@@ -61,6 +61,7 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
+      - run: pip freeze
       - name: Run Linters
         run: |
           PRE_COMMIT_NO_CONCURRENCY=true pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
