@@ -116,7 +116,7 @@
     "typed-signals": "^2.5.0",
     "unist-util-visit": "^4.1.2",
     "vega": "^5.23.0",
-    "vega-embed": "^6.21.0",
+    "vega-embed": "^6.21.2",
     "vega-interpreter": "^1.0.4",
     "vega-lite": "^5.6.1",
     "xxhashjs": "^0.2.2"
