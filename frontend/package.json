@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@deck.gl/core": "^8.8.24",
-    "@deck.gl/json": "^8.8.23",
+    "@deck.gl/json": "^8.8.24",
     "@emotion-icons/emotion-icon": "^4.1.0",
     "@emotion-icons/material-outlined": "^3.14.0",
     "@emotion-icons/material-rounded": "^3.14.0",
@@ -118,7 +118,7 @@
     "vega": "^5.23.0",
     "vega-embed": "^6.21.0",
     "vega-interpreter": "^1.0.4",
-    "vega-lite": "^5.6.0",
+    "vega-lite": "^5.6.1",
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
