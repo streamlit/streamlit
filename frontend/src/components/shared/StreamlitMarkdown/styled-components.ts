@@ -21,6 +21,7 @@ export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInSidebar: boolean
   isLabel?: boolean
+  isButton?: boolean
   isCheckbox?: boolean
 }
 
@@ -38,15 +39,16 @@ function sharedMarkdownStyle(theme: Theme): any {
 
 export const StyledStreamlitMarkdown =
   styled.div<StyledStreamlitMarkdownProps>(
-    ({ theme, isCaption, isInSidebar, isLabel, isCheckbox }) => {
-      // Widget Labels have smaller font size with exception of Checkbox
-      const labelFontSize = isLabel && !isCheckbox
+    ({ theme, isCaption, isInSidebar, isLabel, isButton, isCheckbox }) => {
+      // Widget Labels have smaller font size with exception of Buttons/Checkboxes
+      const labelFontSize = isLabel && !isCheckbox && !isButton
       return {
         fontFamily: theme.genericFonts.bodyFont,
-        marginBottom: `-${theme.spacing.lg}`,
+        marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         ...sharedMarkdownStyle(theme),
         p: {
           wordBreak: "break-word",
+          marginBottom: isLabel ? 0 : "",
           ...(labelFontSize ? { fontSize: theme.fontSizes.sm } : {}),
         },
 
