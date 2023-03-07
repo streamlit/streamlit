@@ -40,11 +40,6 @@ from streamlit.web.server import Server, server_address_is_unix_socket, server_u
 
 LOGGER = get_logger(__name__)
 
-# Wait for 1 second before opening a browser. This gives old tabs a chance to
-# reconnect.
-# This must be >= 2 * WebSocketConnection.ts#RECONNECT_WAIT_TIME_MS.
-BROWSER_WAIT_TIMEOUT_SEC = 1
-
 NEW_VERSION_TEXT = """
   %(new_version)s
 
@@ -180,12 +175,6 @@ def _on_server_start(server: Server) -> None:
             # Don't open browser when in headless mode.
             return
 
-        if server.browser_is_connected:
-            # Don't auto-open browser if there's already a browser connected.
-            # This can happen if there's an old tab repeatedly trying to
-            # connect, and it happens to success before we launch the browser.
-            return
-
         if config.is_manually_set("browser.serverAddress"):
             addr = config.get_option("browser.serverAddress")
         elif config.is_manually_set("server.address"):
@@ -198,9 +187,8 @@ def _on_server_start(server: Server) -> None:
 
         util.open_browser(server_util.get_url(addr))
 
-    # Schedule the browser to open on the main thread, but only if no other
-    # browser connects within 1s.
-    asyncio.get_running_loop().call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
+    # Schedule the browser to open on the main thread.
+    asyncio.get_running_loop().call_soon(maybe_open_browser)
 
 
 def _fix_pydeck_mapbox_api_warning() -> None:
