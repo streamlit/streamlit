@@ -21,7 +21,12 @@ from unittest.mock import MagicMock, call, mock_open, patch
 import pytest
 
 from streamlit import file_util
-from streamlit.runtime.credentials import Credentials, _Activation, _verify_email
+from streamlit.runtime.credentials import (
+    Credentials,
+    _Activation,
+    _verify_email,
+    email_prompt,
+)
 
 PROMPT = "streamlit.runtime.credentials.click.prompt"
 
@@ -213,7 +218,6 @@ class CredentialsClassTest(unittest.TestCase):
         with patch(
             "streamlit.runtime.credentials.open", mock_open(), create=True
         ) as open, patch("streamlit.runtime.credentials.os.makedirs") as make_dirs:
-
             c.save()
 
             make_dirs.assert_called_once_with(streamlit_root_path, exist_ok=True)
@@ -258,7 +262,6 @@ class CredentialsClassTest(unittest.TestCase):
         with patch.object(
             c, "load", side_effect=RuntimeError("Some error")
         ), patch.object(c, "save") as patched_save, patch(PROMPT) as patched_prompt:
-
             patched_prompt.side_effect = ["user@domain.com"]
             c.activate()
             patched_save.assert_called_once()
@@ -287,7 +290,6 @@ class CredentialsClassTest(unittest.TestCase):
         with patch(
             "streamlit.runtime.credentials.os.remove", side_effect=OSError("some error")
         ), patch("streamlit.runtime.credentials.LOGGER") as p:
-
             Credentials.reset()
             p.error.assert_called_once_with(
                 "Error removing credentials file: some error"
@@ -302,3 +304,10 @@ class CredentialsModulesTest(unittest.TestCase):
         self.assertTrue(_verify_email("user@domain.com").is_valid)
         self.assertTrue(_verify_email("").is_valid)
         self.assertFalse(_verify_email("missing_at_sign").is_valid)
+
+    def test_show_emojis(self):
+        self.assertIn("👋", email_prompt())
+
+    @patch("streamlit.runtime.credentials.env_util.IS_WINDOWS", new=True)
+    def test_show_emojis_windows(self):
+        self.assertNotIn("👋", email_prompt())
