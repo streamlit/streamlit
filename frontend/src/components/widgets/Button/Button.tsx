@@ -50,6 +50,7 @@ function Button(props: Props): ReactElement {
           <StreamlitMarkdown
             source={element.label}
             allowHTML={false}
+            isLabel
             isButton
           />
         </UIButton>

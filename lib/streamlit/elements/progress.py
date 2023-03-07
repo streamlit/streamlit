@@ -94,9 +94,9 @@ class ProgressMixin:
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet.
 
-            Unsupported elements are not displayed. Display unsupported elements
-            as literal characters by backslash-escaping them. E.g.
-            ``1\. Not an ordered list``.
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
 
         Example
         -------
