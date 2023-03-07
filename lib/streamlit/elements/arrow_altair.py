@@ -33,7 +33,7 @@ from typing import (
 
 import altair as alt
 import pandas as pd
-from altair.vegalite.v4.api import Chart
+from altair.vegalite.v5.api import Chart
 from pandas.api.types import infer_dtype, is_integer_dtype
 from typing_extensions import Literal
 
