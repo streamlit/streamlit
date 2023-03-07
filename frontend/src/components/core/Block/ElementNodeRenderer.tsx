@@ -23,6 +23,7 @@ import {
   DownloadButton as DownloadButtonProto,
   CameraInput as CameraInputProto,
   Checkbox as CheckboxProto,
+  Code as CodeProto,
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
   DateInput as DateInputProto,
@@ -154,6 +155,9 @@ const TextInput = React.lazy(() => import("src/components/widgets/TextInput/"))
 const TimeInput = React.lazy(() => import("src/components/widgets/TimeInput/"))
 const NumberInput = React.lazy(
   () => import("src/components/widgets/NumberInput/")
+)
+const StreamlitSyntaxHighlighter = React.lazy(
+  () => import("src/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
 )
 
 export interface ElementNodeRendererProps extends BaseBlockProps {
@@ -614,6 +618,17 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "code": {
+      const codeProto = node.element.code as CodeProto
+      return (
+        <StreamlitSyntaxHighlighter
+          language={codeProto.language}
+          showLineNumbers={codeProto.showLineNumbers}
+        >
+          {codeProto.codeText}
+        </StreamlitSyntaxHighlighter>
+      )
+    }
     default:
       throw new Error(`Unrecognized Element type ${node.element.type}`)
   }
