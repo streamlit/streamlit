@@ -41,7 +41,7 @@ from typing import Callable, Dict, Optional, cast
 from blinker import ANY, Signal
 from watchdog import events
 from watchdog.observers import Observer
-from watchdog.observers.api import ObservedWatch
+from watchdog.observers.api import ObservedWatch  # type: ignore
 
 from streamlit.logger import get_logger
 from streamlit.util import repr_
