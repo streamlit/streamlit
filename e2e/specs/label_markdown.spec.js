@@ -21,46 +21,253 @@ describe("label markdown", () => {
         cy.prepForElementSnapshots();
     });
 
-    it("Handles markdown in buttons correctly", () => {
-        // Buttons should only allow italics, bold, strikethrough & emoji
-        // should not allow links/code
-        cy.get(".stButton").should("have.length", 2);
+    it("button labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "image"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["invalid", "link"],
+        ]
 
-        cy.get(".stButton")
-            .first()
-            .matchThemedSnapshots("valid_button_markdown");
+        cy.get(".stButton").should("have.length", 4);
 
-        cy.get(".stButton")
-            .last()
-            .matchThemedSnapshots("invalid_button_markdown");
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed(".stButton", index).matchThemedSnapshots(`button-${type}-${name}`);
+        })
     });
 
-    it("Handles markdown in widget labels correctly", () => {
-        // All widget labels should only allow italics, bold, strikethrough, emoji, link, code
-        cy.get(".stCheckbox")
-        .matchThemedSnapshots("checkbox_markdown");
+    it("checkbox labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "table"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
 
-        cy.get("[data-testid='metric-container']")
-        .matchThemedSnapshots("metric_markdown");
+        cy.get(".stCheckbox").should("have.length", 4);
 
-        cy.get(".stRadio")
-        .matchThemedSnapshots("radio_markdown");
-
-        cy.get(".stSelectbox")
-        .matchThemedSnapshots("selectbox_markdown");
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed(".stCheckbox", index).matchThemedSnapshots(`checkbox-${type}-${name}`);
+        })
     });
 
-    it("Handles markdown in expander correctly", () => {
-        // Expand widget
-        cy.get(".streamlit-expanderHeader").click()
+    it("radio labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "heading1"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
 
-        // Expander label same as widget label & doesn't render table markdown
-        cy.get("[data-testid='stExpander']").matchThemedSnapshots("expander_markdown");
+        cy.get(".stRadio").should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed(".stRadio", index).matchThemedSnapshots(`radio-${type}-${name}`);
+        })
     });
 
-    it("Handles markdown in tabs correctly", () => {
-        // Tab labels same as widget label
-        cy.get(".stTabs")
-            .matchThemedSnapshots("tabs_markdown");
+    it("selectbox labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "heading2"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
+
+        cy.get(".stSelectbox").should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed(".stSelectbox", index).matchThemedSnapshots(`selectbox-${type}-${name}`);
+        })
+    });
+
+    it("multiselect labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "ordered-list"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
+
+        cy.get(".stMultiSelect").should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed(".stMultiSelect", index).matchThemedSnapshots(`multiselect-${type}-${name}`);
+        })
+    });
+
+    it("slider & select_slider labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "unordered-list"],
+            ["invalid", "task_list"],
+            ["valid", "markdown"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "colored"],
+            ["valid", "link"],
+            ["valid", "link"],
+        ]
+
+        // Handles slider & select-slider
+        cy.get(".stSlider").should("have.length", 8);
+
+        cases.forEach(([type, name], index) => {
+            const even = index % 2 === 0;
+            if (even) {
+                cy.getIndexed(".stSlider", index).matchThemedSnapshots(`slider-${type}-${name}`);
+            } else {
+                cy.getIndexed(".stSlider", index).matchThemedSnapshots(`selectSlider-${type}-${name}`);
+            }
+        })
+    });
+
+    it("text_input labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "blockquote"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
+
+        cy.get(".stTextInput").should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed(".stTextInput", index).matchThemedSnapshots(`textInput-${type}-${name}`);
+        })
+    });
+
+    it("number_input labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "horizontal-rule"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
+
+        cy.get(".stNumberInput").should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed(".stNumberInput", index).matchThemedSnapshots(`numberInput-${type}-${name}`);
+        })
+    });
+
+    it("text_area labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "image"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
+
+        cy.get(".stTextArea").should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed(".stTextArea", index).matchThemedSnapshots(`textArea-${type}-${name}`);
+        })
+    });
+
+    it("date_input labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "table"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
+
+        cy.get(".stDateInput").should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed(".stDateInput", index).matchThemedSnapshots(`dateInput-${type}-${name}`);
+        })
+    });
+
+    it("time_input labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "heading1"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
+
+        cy.get(".stTimeInput").should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed(".stTimeInput", index).matchThemedSnapshots(`timeInput-${type}-${name}`);
+        })
+    });
+
+    it("file_uploader labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "heading2"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
+
+        cy.get('[data-testid="stFileUploader"]').should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed('[data-testid="stFileUploader"]', index).matchThemedSnapshots(`fileUploader-${type}-${name}`);
+        })
+    });
+
+    it("color_picker labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "ordered-list"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
+
+        cy.get('[data-testid="stColorPicker"]').should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed('[data-testid="stColorPicker"]', index).matchThemedSnapshots(`colorPicker-${type}-${name}`);
+        })
+    });
+
+    it("metric labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "unordered-list"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
+
+        cy.get('[data-testid="metric-container"]').should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed('[data-testid="metric-container"]', index).matchThemedSnapshots(`metric-${type}-${name}`);
+        })
+    });
+
+    it("expander labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "task-list"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
+
+        cy.get("[data-testid='stExpander']").should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed("[data-testid='stExpander']", index).matchThemedSnapshots(`expander-${type}-${name}`);
+        })
+    });
+
+    it("tab labels handle markdown as expected", () => {
+        const cases = [
+            ["invalid", "blockquote-and-hr"],
+            ["valid", "markdown"],
+            ["valid", "colored"],
+            ["valid", "link"],
+        ]
+
+        cy.get(".stTabs").should("have.length", 4);
+
+        cases.forEach(([type, name], index) => {
+            cy.getIndexed(".stTabs", index).matchThemedSnapshots(`tab-${type}-${name}`);
+        })
     });
 });

@@ -127,7 +127,6 @@ function Tabs(props: Props): ReactElement {
                   source={nodeLabel}
                   allowHTML={false}
                   isLabel
-                  isTabs
                 />
               }
               key={index}
