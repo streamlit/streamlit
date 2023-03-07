@@ -26,8 +26,8 @@ from typing_extensions import Final
 
 from streamlit import config
 from streamlit.logger import get_logger
-from streamlit.proto.BackMsg import BackMsg
-from streamlit.proto.ForwardMsg import ForwardMsg
+from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.caching import (
     get_data_cache_stats_provider,

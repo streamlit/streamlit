@@ -29,7 +29,7 @@ NAME = "streamlit"
 # And if you do add one, make the required version as general as possible.
 # But include relevant lower bounds for any features we use from our dependencies.
 INSTALL_REQUIRES = [
-    "altair==5.0.0rc1",
+    "altair>=3.2.0",
     "blinker>=1.0.0",
     "cachetools>=4.0",
     "click>=7.0",
