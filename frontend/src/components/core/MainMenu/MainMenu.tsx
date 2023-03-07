@@ -112,6 +112,8 @@ export interface Props {
   menuItems?: PageConfig.IMenuItems | null
 
   hostIsOwner?: boolean
+
+  metricsMgr: MetricsManager
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -155,6 +157,7 @@ export interface SubMenuProps {
   menuItems: any[]
   closeMenu: () => void
   isDevMenu: boolean
+  metricsMgr: MetricsManager
 }
 
 // BaseWeb provides a very basic list item (or option) for its dropdown
@@ -170,7 +173,8 @@ export interface SubMenuProps {
 //  * $isHighlighted field (BaseWeb does not use CSS :hover here)
 //  * creating a forward ref to add properties to the DOM element.
 function buildMenuItemComponent(
-  StyledMenuItemType: typeof StyledCoreItem | typeof StyledDevItem
+  StyledMenuItemType: typeof StyledCoreItem | typeof StyledDevItem,
+  metricsMgr: MetricsManager
 ): any {
   const MenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
     (
@@ -206,7 +210,7 @@ function buildMenuItemComponent(
           ? {}
           : {
               onClick: (e: MouseEvent<HTMLLIElement>) => {
-                MetricsManager.current.enqueue("menuClick", {
+                metricsMgr.enqueue("menuClick", {
                   label,
                 })
                 onClick(e)
@@ -242,22 +246,18 @@ function buildMenuItemComponent(
   return MenuItem
 }
 
-const SubMenu = ({
-  menuItems,
-  closeMenu,
-  isDevMenu,
-}: SubMenuProps): ReactElement => {
+const SubMenu = (props: SubMenuProps): ReactElement => {
   const { colors }: Theme = useTheme()
-  const StyledMenuItemType = isDevMenu ? StyledDevItem : StyledCoreItem
+  const StyledMenuItemType = props.isDevMenu ? StyledDevItem : StyledCoreItem
   return (
     <StatefulMenu
-      items={menuItems}
+      items={props.menuItems}
       onItemSelect={({ item }) => {
         item.onClick()
-        closeMenu()
+        props.closeMenu()
       }}
       overrides={{
-        Option: buildMenuItemComponent(StyledMenuItemType),
+        Option: buildMenuItemComponent(StyledMenuItemType, props.metricsMgr),
         List: {
           props: {
             "data-testid": "main-menu-list",
@@ -528,13 +528,19 @@ function MainMenu(props: Props): ReactElement {
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <>
-          <SubMenu menuItems={menuItems} closeMenu={close} isDevMenu={false} />
+          <SubMenu
+            menuItems={menuItems}
+            closeMenu={close}
+            isDevMenu={false}
+            metricsMgr={props.metricsMgr}
+          />
           {(hostIsOwner || isLocalhost()) && (
             <StyledUl>
               <SubMenu
                 menuItems={devMenuItems}
                 closeMenu={close}
                 isDevMenu={true}
+                metricsMgr={props.metricsMgr}
               />
             </StyledUl>
           )}

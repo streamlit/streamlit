@@ -443,10 +443,15 @@ export class BlockNode implements AppNode {
 export class AppRoot {
   private readonly root: BlockNode
 
+  private readonly metricsMgr: MetricsManager
+
   /**
    * Create an empty AppRoot with an optional placeholder element.
    */
-  public static empty(placeholderText?: string): AppRoot {
+  public static empty(
+    metricsMgr: MetricsManager,
+    placeholderText?: string
+  ): AppRoot {
     let mainNodes: AppNode[]
     if (placeholderText != null) {
       const waitNode = new ElementNode(
@@ -471,11 +476,12 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
-    return new AppRoot(new BlockNode([main, sidebar]))
+    return new AppRoot(metricsMgr, new BlockNode([main, sidebar]))
   }
 
-  public constructor(root: BlockNode) {
+  public constructor(metricsMgr: MetricsManager, root: BlockNode) {
     this.root = root
+    this.metricsMgr = metricsMgr
 
     // Verify that our root node has exactly 2 children: a 'main' block and
     // a 'sidebar' block.
@@ -506,24 +512,20 @@ export class AppRoot {
     const { deltaPath } = metadata
 
     // Update Metrics
-    MetricsManager.current.incrementDeltaCounter(
-      getRootContainerName(deltaPath)
-    )
+    this.metricsMgr.incrementDeltaCounter(getRootContainerName(deltaPath))
 
     switch (delta.type) {
       case "newElement": {
         const element = delta.newElement as Element
         if (element.type != null) {
-          MetricsManager.current.incrementDeltaCounter(element.type)
+          this.metricsMgr.incrementDeltaCounter(element.type)
         }
 
         // Track component instance name.
         if (element.type === "componentInstance") {
           const componentName = element.componentInstance?.componentName
           if (componentName != null) {
-            MetricsManager.current.incrementCustomComponentCounter(
-              componentName
-            )
+            this.metricsMgr.incrementCustomComponentCounter(componentName)
           }
         }
 
@@ -531,7 +533,7 @@ export class AppRoot {
       }
 
       case "addBlock": {
-        MetricsManager.current.incrementDeltaCounter("new block")
+        this.metricsMgr.incrementDeltaCounter("new block")
         return this.addBlock(
           deltaPath,
           delta.addBlock as BlockProto,
@@ -540,7 +542,7 @@ export class AppRoot {
       }
 
       case "addRows": {
-        MetricsManager.current.incrementDeltaCounter("add rows")
+        this.metricsMgr.incrementDeltaCounter("add rows")
         return this.addRows(
           deltaPath,
           delta.addRows as NamedDataSet,
@@ -549,7 +551,7 @@ export class AppRoot {
       }
 
       case "arrowAddRows": {
-        MetricsManager.current.incrementDeltaCounter("arrow add rows")
+        this.metricsMgr.incrementDeltaCounter("arrow add rows")
         try {
           return this.arrowAddRows(
             deltaPath,
@@ -582,6 +584,7 @@ export class AppRoot {
       this.sidebar.clearStaleNodes(currentScriptRunId) || new BlockNode()
 
     return new AppRoot(
+      this.metricsMgr,
       new BlockNode(
         [main, sidebar],
         new BlockProto({ allowEmpty: true }),
@@ -605,7 +608,10 @@ export class AppRoot {
     metadata: ForwardMsgMetadata
   ): AppRoot {
     const elementNode = new ElementNode(element, metadata, scriptRunId)
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
+    return new AppRoot(
+      this.metricsMgr,
+      this.root.setIn(deltaPath, elementNode, scriptRunId)
+    )
   }
 
   private addBlock(
@@ -622,7 +628,10 @@ export class AppRoot {
       existingNode instanceof BlockNode ? existingNode.children : []
 
     const blockNode = new BlockNode(children, block, scriptRunId)
-    return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
+    return new AppRoot(
+      this.metricsMgr,
+      this.root.setIn(deltaPath, blockNode, scriptRunId)
+    )
   }
 
   private addRows(
@@ -636,7 +645,10 @@ export class AppRoot {
     }
 
     const elementNode = existingNode.addRows(namedDataSet, scriptRunId)
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
+    return new AppRoot(
+      this.metricsMgr,
+      this.root.setIn(deltaPath, elementNode, scriptRunId)
+    )
   }
 
   private arrowAddRows(
@@ -650,7 +662,10 @@ export class AppRoot {
     }
 
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
+    return new AppRoot(
+      this.metricsMgr,
+      this.root.setIn(deltaPath, elementNode, scriptRunId)
+    )
   }
 }
 
