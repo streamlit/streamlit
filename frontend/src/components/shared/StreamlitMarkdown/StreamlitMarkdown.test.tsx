@@ -158,86 +158,94 @@ describe("StreamlitMarkdown", () => {
     )
   })
 
-  it("renders valid markdown when isLabel is true", () => {
-    // Valid Markdown - italics, bold, strikethrough, code, links, emojis, shortcodes
-    const cases = [
-      ["*Italicized Text*", "em", "Italicized Text"],
-      ["**Bold Text**", "strong", "Bold Text"],
-      ["~Strikethough Text~", "del", "Strikethough Text"],
-      ["`Code Block`", "code", "Code Block"],
-      ["[Link Text](www.example.com)", "a", "Link Text"],
-      ["🐶", "p", "🐶"],
-      [":joy:", "p", "😂"],
-    ]
+  // Valid Markdown - italics, bold, strikethrough, code, links, emojis, shortcodes
+  const validCases = [
+    { input: "*Italicized Text*", tag: "em", expected: "Italicized Text" },
+    { input: "**Bold Text**", tag: "strong", expected: "Bold Text" },
+    {
+      input: "~Strikethough Text~",
+      tag: "del",
+      expected: "Strikethough Text",
+    },
+    { input: "`Code Block`", tag: "code", expected: "Code Block" },
+    { input: "[Link Text](www.example.com)", tag: "a", expected: "Link Text" },
+    { input: "🐶", tag: "p", expected: "🐶" },
+    { input: ":joy:", tag: "p", expected: "😂" },
+  ]
 
-    cases.forEach(([source, tagType, text]) => {
+  test.each(validCases)(
+    "renders valid markdown when isLabel is true - $tag",
+    ({ input, tag, expected }) => {
       const wrapper = render(
-        <StreamlitMarkdown source={source} allowHTML={false} isLabel />
+        <StreamlitMarkdown source={input} allowHTML={false} isLabel />
       )
       const container = wrapper.getByTestId("stMarkdownContainer")
-      const expectedTag = container.querySelector(tagType)
+      const expectedTag = container.querySelector(tag)
       expect(expectedTag).not.toBeNull()
-      expect(expectedTag).toHaveTextContent(text)
+      expect(expectedTag).toHaveTextContent(expected)
 
       // Removes rendered StreamlitMarkdown component before next case run
       cleanup()
-    })
-  })
+    }
+  )
 
-  it("doesn't render invalid markdown when isLabel is true", () => {
-    // Invalid Markdown - images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
-    const table = `| Syntax | Description |
-    | ----------- | ----------- |
-    | Header      | Title       |
-    | Paragraph   | Text        |`
+  // Invalid Markdown - images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
+  const table = `| Syntax | Description |
+  | ----------- | ----------- |
+  | Header      | Title       |
+  | Paragraph   | Text        |`
+  const tableText = "Syntax Description Header Title Paragraph Text"
+  const horizontalRule = `
 
-    const tableText =
-      "| Syntax | Description | | ----------- | ----------- | | Header | Title | | Paragraph | Text |"
+  ---
 
-    const horizontalRule = `
+  Horizontal rule
+  `
 
-    ---
-
-    Horizontal rule
-    `
-
-    const cases = [
-      [
+  const invalidCases = [
+    {
+      input:
         "![Image Text](https://dictionary.cambridge.org/us/images/thumb/corgi_noun_002_08554.jpg?version=5.0.297)",
-        "img",
-        "",
-      ],
-      [table, "table", tableText],
-      [table, "thead", tableText],
-      [table, "tbody", tableText],
-      [table, "tr", tableText],
-      [table, "th", tableText],
-      [table, "td", tableText],
-      ["# Heading 1", "h1", "Heading 1"],
-      ["## Heading 2", "h2", "Heading 2"],
-      ["### Heading 3", "h3", "Heading 3"],
-      ["- List Item 1", "ul", "List Item 1"],
-      ["- List Item 1", "li", "List Item 1"],
-      ["1. List Item 1", "ol", "List Item 1"],
-      ["1. List Item 1", "li", "List Item 1"],
-      ["- [ ] Task List Item 1", "input", "Task List Item 1"],
-      [horizontalRule, "hr", "Horizontal rule"],
-      ["> Blockquote", "blockquote", "Blockquote"],
-    ]
+      tag: "img",
+      expected: "",
+    },
+    { input: table, tag: "table", expected: tableText },
+    { input: table, tag: "thead", expected: tableText },
+    { input: table, tag: "tbody", expected: tableText },
+    { input: table, tag: "tr", expected: tableText },
+    { input: table, tag: "th", expected: tableText },
+    { input: table, tag: "td", expected: tableText },
+    { input: "# Heading 1", tag: "h1", expected: "Heading 1" },
+    { input: "## Heading 2", tag: "h2", expected: "Heading 2" },
+    { input: "### Heading 3", tag: "h3", expected: "Heading 3" },
+    { input: "- List Item 1", tag: "ul", expected: "List Item 1" },
+    { input: "- List Item 1", tag: "li", expected: "List Item 1" },
+    { input: "1. List Item 1", tag: "ol", expected: "List Item 1" },
+    { input: "1. List Item 1", tag: "li", expected: "List Item 1" },
+    {
+      input: "- [ ] Task List Item 1",
+      tag: "input",
+      expected: "Task List Item 1",
+    },
+    { input: horizontalRule, tag: "hr", expected: "Horizontal rule" },
+    { input: "> Blockquote", tag: "blockquote", expected: "Blockquote" },
+  ]
 
-    cases.forEach(([source, disallowedTag, text]) => {
+  test.each(invalidCases)(
+    "does NOT render invalid markdown when isLabel is true - $tag",
+    ({ input, tag, expected }) => {
       const wrapper = render(
-        <StreamlitMarkdown source={source} allowHTML={false} isLabel />
+        <StreamlitMarkdown source={input} allowHTML={false} isLabel />
       )
       const container = wrapper.getByTestId("stMarkdownContainer")
-      const invalidTag = container.querySelector(disallowedTag)
+      const invalidTag = container.querySelector(tag)
       expect(invalidTag).toBeNull()
-      expect(container).toHaveTextContent(text)
+      expect(container).toHaveTextContent(expected)
 
       // Removes rendered StreamlitMarkdown component before next case run
       cleanup()
-    })
-  })
+    }
+  )
 
   it("doesn't render links when isButton is true", () => {
     // Valid markdown further restricted with buttons to eliminate links
