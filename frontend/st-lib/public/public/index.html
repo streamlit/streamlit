@@ -1,0 +1,50 @@
+<!--
+ Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.png" />
+
+    <title>Streamlit</title>
+
+    <!-- initialize window.prerenderReady to false and then set to true in React app when app is ready for indexing -->
+    <script> window.prerenderReady = false; </script>
+
+    <!-- load via script to enable web workers -->
+    <script
+      src="%PUBLIC_URL%/vendor/viz/viz-1.8.0.min.js"
+      type="javascript/worker"
+    ></script>
+
+    <!-- Bokeh charts -->
+    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-2.4.3.min.js"></script>
+    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-widgets-2.4.3.min.js"></script>
+    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-tables-2.4.3.min.js"></script>
+    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-api-2.4.3.min.js"></script>
+    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-gl-2.4.3.min.js"></script>
+    <script src="%PUBLIC_URL%/vendor/bokeh/bokeh-mathjax-2.4.3.min.js"></script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

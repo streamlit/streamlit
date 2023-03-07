@@ -1,0 +1,30 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DeployErrorDialog - NoRepositoryDetected should render without crashing 1`] = `
+Object {
+  "body": <React.Fragment>
+    <p>
+      Could not find a remote repository hosted on GitHub. Are you sure you are on a branch that is tracking a remote GitHub branch?
+    </p>
+    <p>
+      How Streamlit Cloud works:
+    </p>
+    <ul>
+      <li>
+        To deploy a public app, you must first put it in a public GitHub repo. See
+         
+        <a
+          href="https://docs.streamlit.io"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          our documentation
+        </a>
+         
+        for more details.
+      </li>
+    </ul>
+  </React.Fragment>,
+  "title": "Unable to deploy app",
+}
+`;
