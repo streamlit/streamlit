@@ -1367,10 +1367,18 @@
   resolved "https://registry.yarnpkg.com/@deck.gl/google-maps/-/google-maps-8.8.23.tgz#c8733ef5751643aa21f46f99e80dbac931a6e358"
   integrity sha512-COekvt/NGYe88NXVHK4bhz5xK8fCHjeBrJADMb86LX1SOPQQOzB0CWQPY2Cu5CirVYPCt5Dheb6bhLgitc8fNg==
 
-"@deck.gl/json@8.8.23", "@deck.gl/json@^8.8.23":
+"@deck.gl/json@8.8.23":
   version "8.8.23"
   resolved "https://registry.yarnpkg.com/@deck.gl/json/-/json-8.8.23.tgz#c79ab7227f3fe9d388bb1430341c3550c4d85f6c"
   integrity sha512-EQ8kv7pETP4h+5aOucyEQN2RRXwXH/QEH6aw/k6kmqYSK16+mhjDpQlLvj4BjJme/H+cDCZRE/XuEZzIB3G2Ug==
+  dependencies:
+    d3-dsv "^1.0.8"
+    expression-eval "^2.0.0"
+
+"@deck.gl/json@^8.8.24":
+  version "8.8.27"
+  resolved "https://registry.yarnpkg.com/@deck.gl/json/-/json-8.8.27.tgz#8b559078ff7181378ac457bdabf9df6a51b598c6"
+  integrity sha512-h63e+he/uIzUKsMI0xDk51wtt2Bm56Xlhmsb+/y570izoL8z7leiNHXZ2DQWpqtYV9tu00QlyG+/cgLKDbgCTQ==
   dependencies:
     d3-dsv "^1.0.8"
     expression-eval "^2.0.0"
