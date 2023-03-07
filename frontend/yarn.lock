@@ -1315,10 +1315,29 @@
     pbf "^3.2.1"
     quadbin "^0.1.2"
 
-"@deck.gl/core@8.8.23", "@deck.gl/core@^8.8.23":
+"@deck.gl/core@8.8.23":
   version "8.8.23"
   resolved "https://registry.yarnpkg.com/@deck.gl/core/-/core-8.8.23.tgz#9c2a0d1ed66a9ff555df75d1321b91cc50246fcf"
   integrity sha512-ZzVTQ6eTRWTr+3BtRl/W+8pPzY/qT/+KzStE6dou8PKuZ3ZosDyqwNlRIq/aXgOP6S0kyE1QDoRe6NT8sSBi6g==
+  dependencies:
+    "@loaders.gl/core" "^3.2.10"
+    "@loaders.gl/images" "^3.2.10"
+    "@luma.gl/constants" "^8.5.16"
+    "@luma.gl/core" "^8.5.16"
+    "@math.gl/core" "^3.6.2"
+    "@math.gl/sun" "^3.6.2"
+    "@math.gl/web-mercator" "^3.6.2"
+    "@probe.gl/env" "^3.5.0"
+    "@probe.gl/log" "^3.5.0"
+    "@probe.gl/stats" "^3.5.0"
+    gl-matrix "^3.0.0"
+    math.gl "^3.6.2"
+    mjolnir.js "^2.7.0"
+
+"@deck.gl/core@^8.8.24":
+  version "8.8.27"
+  resolved "https://registry.yarnpkg.com/@deck.gl/core/-/core-8.8.27.tgz#da9f0d83a6259ec09988adc29537a8fe67847861"
+  integrity sha512-Gk9YrGGSoFL4TmP0v9GyOXReZMTBrUIU5+g6Ff4gnR6onBVLd+/XNd+IwdBPS85LlnT+/NOGNEG51qsVFrxReg==
   dependencies:
     "@loaders.gl/core" "^3.2.10"
     "@loaders.gl/images" "^3.2.10"
