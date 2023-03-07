@@ -208,8 +208,8 @@ export class WebsocketConnection {
   /**
    * WebSocket objects don't support retries, so we have to implement them
    * ourselves. We use setTimeout to wait for a connection and retry once the
-   * timeout fire. This is the timer ID from setTimeout, so we can cancel it if
-   * needed.
+   * timeout fires. This field stores the timer ID from setTimeout, so we can
+   * cancel it if needed.
    */
   private wsConnectionTimeoutId?: number
 
