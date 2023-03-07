@@ -69,7 +69,7 @@ repos:
         pass_filenames: false
         stages:
           - manual
-      # Eslint will be run on CI using --hook-stage manual flag,
+      # Eslint will be run on CI using Makefile,
       # check out .github/workflows/js-tests.yml "Run linters" step for details.
       - id: eslint
         name: Eslint
