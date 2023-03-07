@@ -43,7 +43,7 @@ MarkupSafe==2.1.2
 matplotlib==3.7.1
 mdurl==0.1.2
 more-itertools==9.1.0
-mypy==1.1.1
+mypy==1.0.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.3.0
 mysqlclient==2.1.1
