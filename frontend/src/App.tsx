@@ -741,18 +741,20 @@ export class App extends PureComponent<Props, State> {
     )?.pageName as string
     const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
-    const baseUriParts = this.getBaseUriParts()
-    if (baseUriParts) {
-      const { basePath } = baseUriParts
-      const queryString = this.getQueryString()
+    if (this.state.currentPageScriptHash !== newPageScriptHash) {
+      const baseUriParts = this.getBaseUriParts()
+      if (baseUriParts) {
+        const { basePath } = baseUriParts
+        const queryString = this.getQueryString()
 
-      const qs = queryString ? `?${queryString}` : ""
-      const basePathPrefix = basePath ? `/${basePath}` : ""
+        const qs = queryString ? `?${queryString}` : ""
+        const basePathPrefix = basePath ? `/${basePath}` : ""
 
-      const pagePath = viewingMainPage ? "" : newPageName
-      const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+        const pagePath = viewingMainPage ? "" : newPageName
+        const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
 
-      window.history.pushState({}, "", pageUrl)
+        window.history.pushState({}, "", pageUrl)
+      }
     }
 
     this.processThemeInput(themeInput)

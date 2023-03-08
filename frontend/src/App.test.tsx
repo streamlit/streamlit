@@ -929,6 +929,44 @@ describe("App.handleNewSession", () => {
         "/foo/page2"
       )
     })
+
+    it("doesn't push a duplicated history when rerunning", () => {
+      const instance = wrapper.instance() as App
+      const newSessionJson = cloneDeep(NEW_SESSION_JSON)
+      newSessionJson.appPages = [
+        { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
+        { pageScriptHash: "subpage_hash", pageName: "page2" },
+      ]
+
+      // When running the top page first, a new history for the page is pushed.
+      instance.handleNewSession(
+        new NewSession({ ...newSessionJson, pageScriptHash: "toppage_hash" })
+      )
+      expect(window.history.pushState).toHaveBeenLastCalledWith({}, "", "/")
+      // @ts-ignore
+      window.history.pushState.mockClear()
+
+      // When running the same, e.g. clicking the "rerun" button,
+      // the history is not pushed again.
+      instance.handleNewSession(
+        new NewSession({ ...newSessionJson, pageScriptHash: "toppage_hash" })
+      )
+      expect(window.history.pushState).not.toHaveBeenCalled()
+      // @ts-ignore
+      window.history.pushState.mockClear()
+
+      // When accessing a different page, a new history for that page is pushed.
+      instance.handleNewSession(
+        new NewSession({ ...newSessionJson, pageScriptHash: "subpage_hash" })
+      )
+      expect(window.history.pushState).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/page2"
+      )
+      // @ts-ignore
+      window.history.pushState.mockClear()
+    })
   })
 })
 
