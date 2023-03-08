@@ -492,7 +492,7 @@ class ScriptRunner:
             if config.get_option("runner.magicEnabled"):
                 filebody = magic.add_magic(filebody, script_path)
 
-            code = compile(
+            code = compile(  # type: ignore
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
                 script_path,
