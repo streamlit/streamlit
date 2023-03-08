@@ -975,6 +975,79 @@ describe("App.handleNewSession", () => {
   })
 })
 
+describe("App.onHistoryChange", () => {
+  let wrapper: ShallowWrapper
+  let instance: App
+
+  const NEW_SESSION_JSON = {
+    config: {
+      gatherUsageStats: false,
+      maxCachedMessageAge: 0,
+      mapboxToken: "mapboxToken",
+      allowRunOnSave: false,
+      hideSidebarNav: false,
+    },
+    customTheme: {
+      primaryColor: "red",
+    },
+    initialize: {
+      userInfo: {
+        installationId: "installationId",
+        installationIdV3: "installationIdV3",
+        email: "email",
+      },
+      environmentInfo: {
+        streamlitVersion: "streamlitVersion",
+        pythonVersion: "pythonVersion",
+      },
+      sessionStatus: {
+        runOnSave: false,
+        scriptIsRunning: false,
+      },
+      sessionId: "sessionId",
+      commandLine: "commandLine",
+    },
+    appPages: [
+      { pageScriptHash: "top_hash", pageName: "streamlit_app" },
+      { pageScriptHash: "sub_hash", pageName: "page2" },
+    ],
+    pageScriptHash: "top_hash",
+  }
+
+  beforeEach(() => {
+    wrapper = shallow(<App {...getProps()} />)
+    instance = wrapper.instance() as App
+    // @ts-ignore
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+
+    window.history.pushState({}, "", "/")
+  })
+
+  it("handles popState events, e.g. clicking browser's back button", async () => {
+    const instance = wrapper.instance() as App
+
+    jest.spyOn(instance, "onPageChange")
+
+    instance.handleNewSession(
+      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
+    )
+    instance.handleNewSession(
+      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "top_hash" })
+    )
+    instance.handleNewSession(
+      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
+    )
+    expect(instance.state.currentPageScriptHash).toEqual("sub_hash")
+
+    window.history.back()
+    await new Promise(resolve => setTimeout(resolve, 10))
+    expect(instance.onPageChange).toHaveBeenLastCalledWith("top_hash")
+    window.history.back()
+    await new Promise(resolve => setTimeout(resolve, 10))
+    expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
+  })
+})
+
 describe("App.handlePageConfigChanged", () => {
   let documentTitle: string
 

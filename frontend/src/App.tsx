@@ -341,6 +341,8 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.metricsMgr.enqueue("viewReport")
+
+    window.addEventListener("popstate", this.onHistoryChange, false)
   }
 
   componentDidUpdate(
@@ -385,6 +387,8 @@ export class App extends PureComponent<Props, State> {
     // happy since connectionManager's type is `ConnectionManager | null`,
     // but at this point it should always be set.
     this.connectionManager?.disconnect()
+
+    window.removeEventListener("popstate", this.onHistoryChange, false)
   }
 
   showError(title: string, errorNode: ReactNode): void {
@@ -839,6 +843,22 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.handleSessionStatusChanged(initialize.sessionStatus)
+  }
+
+  /**
+   * Handler called when the history state changes, e.g. `popstate` event.
+   */
+  onHistoryChange = (): void => {
+    const targetAppPage =
+      this.state.appPages.find(appPage =>
+        // The page name is embedded at the end of the URL path, and if not, we are in the main page.
+        // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
+        document.location.pathname.endsWith("/" + appPage.pageName)
+      ) ?? this.state.appPages[0]
+    if (targetAppPage == null) {
+      return
+    }
+    this.onPageChange(targetAppPage.pageScriptHash as string)
   }
 
   /**
