@@ -20,9 +20,12 @@ import { MapboxToken } from "src/hocs/withMapboxToken/MapboxToken"
 import { ensureError } from "src/lib/ErrorHandling"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"
+import { SessionInfo } from "src/lib/SessionInfo"
 import MapboxTokenError from "./MapboxTokenError"
 
 interface Props {
+  /** The application's SessionInfo instance. */
+  sessionInfo: SessionInfo
   width: number
 }
 
@@ -65,7 +68,7 @@ const withMapboxToken =
        */
       private initMapboxToken = async (): Promise<void> => {
         try {
-          const mapboxToken = await MapboxToken.get()
+          const mapboxToken = await MapboxToken.get(this.props.sessionInfo)
 
           this.setState({
             mapboxToken,

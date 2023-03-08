@@ -16,7 +16,6 @@
 
 import React from "react"
 import { shallow } from "src/lib/test_util"
-import { SessionInfo } from "src/lib/SessionInfo"
 import { MapboxToken } from "./MapboxToken"
 
 import withMapboxToken from "./withMapboxToken"
@@ -41,21 +40,6 @@ describe("withMapboxToken", () => {
   function getProps(): Record<string, unknown> {
     return { label: "label" }
   }
-
-  beforeAll(() => {
-    SessionInfo.current = new SessionInfo({
-      appId: "aid",
-      sessionId: "mockSessionId",
-      streamlitVersion: "sv",
-      pythonVersion: "pv",
-      installationId: "iid",
-      installationIdV3: "iid3",
-      authorEmail: "ae",
-      maxCachedMessageAge: 2,
-      commandLine,
-      userMapboxToken: token,
-    })
-  })
 
   // Install a mock token in our token fetcher so that we don't hit
   // the network.
