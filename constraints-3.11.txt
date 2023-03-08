@@ -55,7 +55,6 @@ pandas==1.5.3
 parameterized==0.8.1
 pathspec==0.11.0
 Pillow==9.4.0
-pipenv==2023.2.18
 pkginfo==1.9.6
 platformdirs==3.1.0
 plotly==5.13.1
@@ -116,7 +115,6 @@ tzlocal==4.2
 urllib3==1.26.14
 validators==0.20.0
 virtualenv==20.20.0
-virtualenv-clone==0.5.7
 watchdog==2.3.1
 webencodings==0.5.1
 zipp==3.15.0
