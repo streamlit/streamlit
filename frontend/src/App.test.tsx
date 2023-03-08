@@ -37,7 +37,7 @@ import {
 } from "src/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
-import { SessionInfo, Props as SessionInfoArgs } from "src/lib/SessionInfo"
+import { SessionInfo } from "src/lib/SessionInfo"
 import {
   CUSTOM_THEME_NAME,
   createAutoTheme,
@@ -50,6 +50,7 @@ import { DialogType, StreamlitDialog } from "./components/core/StreamlitDialog"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
 import ToolbarActions from "./components/core/ToolbarActions"
+import { mockSessionInfo } from "./lib/mocks/mocks"
 
 jest.mock("src/lib/ConnectionManager")
 
@@ -118,25 +119,8 @@ jest.mock("moment", () =>
 
 describe("App", () => {
   beforeEach(() => {
-    SessionInfo.current = new SessionInfo({
-      appId: "aid",
-      sessionId: "sessionId",
-      streamlitVersion: "sv",
-      pythonVersion: "pv",
-      installationId: "iid",
-      installationIdV3: "iid3",
-      authorEmail: "ae",
-      maxCachedMessageAge: 2,
-      commandLine: "command line",
-      userMapboxToken: "mpt",
-    } as SessionInfoArgs)
     // @ts-ignore
     window.prerenderReady = false
-  })
-
-  afterEach(() => {
-    const UnsafeSessionInfo = SessionInfo as any
-    UnsafeSessionInfo.singleton = undefined
   })
 
   it("renders without crashing", () => {
@@ -271,6 +255,7 @@ describe("App", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const dialog = StreamlitDialog({
       type: DialogType.ABOUT,
+      sessionInfo: mockSessionInfo(),
       onClose: () => {},
     })
     wrapper.setState({ dialog })
@@ -324,6 +309,7 @@ describe("App", () => {
     )
     const dialog = StreamlitDialog({
       type: DialogType.ABOUT,
+      sessionInfo: mockSessionInfo(),
       onClose: () => {},
     })
     wrapper.setState({ dialog })
@@ -649,32 +635,38 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
 
+    // @ts-ignore
+    const sessionInfo = app.sessionInfo
+
     const oneTimeInitialization = jest.spyOn(
       app,
       // @ts-ignore
       "handleOneTimeInitialization"
     )
 
-    expect(SessionInfo.isSet()).toBe(false)
+    expect(sessionInfo.isSet).toBe(false)
 
     // @ts-ignore
     app.handleNewSession(NEW_SESSION)
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
-    expect(SessionInfo.isSet()).toBe(true)
+    expect(sessionInfo.isSet).toBe(true)
   })
 
   it("performs one-time initialization only once", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
 
+    // @ts-ignore
+    const sessionInfo = app.sessionInfo
+
     const oneTimeInitialization = jest.spyOn(
       app,
       // @ts-ignore
       "handleOneTimeInitialization"
     )
 
-    expect(SessionInfo.isSet()).toBe(false)
+    expect(sessionInfo.isSet).toBe(false)
 
     // @ts-ignore
     app.handleNewSession(NEW_SESSION)
@@ -686,12 +678,15 @@ describe("App.handleNewSession", () => {
     // Multiple NEW_SESSION messages should not result in one-time
     // initialization being performed more than once.
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
-    expect(SessionInfo.isSet()).toBe(true)
+    expect(sessionInfo.isSet).toBe(true)
   })
 
   it("performs one-time initialization after a new session is received", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
+
+    // @ts-ignore
+    const sessionInfo = app.sessionInfo
 
     const oneTimeInitialization = jest.spyOn(
       app,
@@ -699,7 +694,7 @@ describe("App.handleNewSession", () => {
       "handleOneTimeInitialization"
     )
 
-    expect(SessionInfo.isSet()).toBe(false)
+    expect(sessionInfo.isSet).toBe(false)
 
     // @ts-ignore
     app.handleNewSession(NEW_SESSION)
@@ -707,7 +702,7 @@ describe("App.handleNewSession", () => {
 
     // @ts-ignore
     app.handleConnectionStateChanged(ConnectionState.PINGING_SERVER)
-    expect(SessionInfo.isSet()).toBe(false)
+    expect(sessionInfo.isSet).toBe(false)
 
     // @ts-ignore
     app.handleConnectionStateChanged(ConnectionState.CONNECTED)
@@ -715,7 +710,7 @@ describe("App.handleNewSession", () => {
     app.handleNewSession(NEW_SESSION)
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
-    expect(SessionInfo.isSet()).toBe(true)
+    expect(sessionInfo.isSet).toBe(true)
   })
 
   it("should set window.prerenderReady to true after app script is run successfully first time", () => {
