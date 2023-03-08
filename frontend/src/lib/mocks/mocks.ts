@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-import { Props, SessionInfo } from "src/lib/SessionInfo"
+import { Props as SessionInfoProps, SessionInfo } from "src/lib/SessionInfo"
 
 /** Create mock SessionInfo.props */
-export function mockSessionInfoProps(overrides: Partial<Props> = {}): Props {
+export function mockSessionInfoProps(
+  overrides: Partial<SessionInfoProps> = {}
+): SessionInfoProps {
   return {
     appId: "mockAppId",
     sessionId: "mockSessionId",
@@ -34,7 +36,9 @@ export function mockSessionInfoProps(overrides: Partial<Props> = {}): Props {
 }
 
 /** Create a SessionInfo instance, with a mocked set of current props. */
-export function mockSessionInfo(overrides: Partial<Props> = {}): SessionInfo {
+export function mockSessionInfo(
+  overrides: Partial<SessionInfoProps> = {}
+): SessionInfo {
   const sessionInfo = new SessionInfo()
   sessionInfo.setCurrent(mockSessionInfoProps(overrides))
   return sessionInfo
