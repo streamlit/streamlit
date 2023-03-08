@@ -329,7 +329,7 @@ class CacheDataAPI:
 
         # Parameterize the decorator metric name.
         # (Ignore spurious mypy complaints - https://github.com/python/mypy/issues/2427)
-        self._decorator = gather_metrics(  # type: ignore[assignment]
+        self._decorator = gather_metrics(  # type: ignore
             decorator_metric_name, self._decorator
         )
         self._deprecation_warning = deprecation_warning
