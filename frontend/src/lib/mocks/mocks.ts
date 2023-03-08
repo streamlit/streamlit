@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Props } from "src/lib/SessionInfo"
+import { Props, SessionInfo } from "src/lib/SessionInfo"
 
 /** Create mock SessionInfo.props */
 export function mockSessionInfoProps(overrides: Partial<Props> = {}): Props {
@@ -31,4 +31,11 @@ export function mockSessionInfoProps(overrides: Partial<Props> = {}): Props {
     userMapboxToken: "mockUserMapboxToken",
     ...overrides,
   }
+}
+
+/** Create a SessionInfo instance, with a mocked set of current props. */
+export function mockSessionInfo(overrides: Partial<Props> = {}): SessionInfo {
+  const sessionInfo = new SessionInfo()
+  sessionInfo.setCurrent(mockSessionInfoProps(overrides))
+  return sessionInfo
 }
