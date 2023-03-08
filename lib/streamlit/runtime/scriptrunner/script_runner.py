@@ -504,7 +504,7 @@ class ScriptRunner:
                 dont_inherit=1,
                 # Use the default optimization options.
                 optimize=-1,
-            )
+            )  # type: ignore
 
         except Exception as ex:
             # We got a compile error. Send an error event and bail immediately.
