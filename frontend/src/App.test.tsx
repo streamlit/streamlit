@@ -37,7 +37,7 @@ import {
 } from "src/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
-import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
+import { SessionInfo, Props as SessionInfoArgs } from "src/lib/SessionInfo"
 import {
   CUSTOM_THEME_NAME,
   createAutoTheme,

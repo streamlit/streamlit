@@ -14,42 +14,64 @@
  * limitations under the License.
  */
 
-import { SessionInfo } from "src/lib/SessionInfo"
+import { Props, SessionInfo } from "src/lib/SessionInfo"
 import { NewSession } from "src/autogen/proto"
 
+function createProps(overrides: Partial<Props> = {}): Props {
+  return {
+    appId: "appId",
+    sessionId: "sessionId",
+    streamlitVersion: "streamlitVersion",
+    pythonVersion: "pythonVersion",
+    installationId: "installationId",
+    installationIdV3: "installationIdV3",
+    authorEmail: "authorEmail",
+    maxCachedMessageAge: 2,
+    commandLine: "commandLine",
+    userMapboxToken: "userMapboxToken",
+    ...overrides,
+  }
+}
+
 test("Throws an error when used before initialization", () => {
-  expect(() => SessionInfo.current).toThrow()
+  const sessionInfo = new SessionInfo()
+  expect(() => sessionInfo.current).toThrow()
 })
 
-test("Saves SessionInfo.current to lastSessionInfo on clear", () => {
-  const sessionInfo = new SessionInfo({
-    appId: "aid",
-    sessionId: "sessionId",
-    streamlitVersion: "sv",
-    pythonVersion: "pv",
-    installationId: "iid",
-    installationIdV3: "iid3",
-    authorEmail: "ae",
-    maxCachedMessageAge: 2,
-    commandLine: "command line",
-    userMapboxToken: "mpt",
+describe("SessionInfo.setCurrent", () => {
+  test("copies props to `current`", () => {
+    const sessionInfo = new SessionInfo()
+    sessionInfo.setCurrent(createProps())
+
+    expect(sessionInfo.isSet).toBe(true)
+    expect(sessionInfo.current).toEqual(createProps())
   })
 
-  // @ts-ignore
-  SessionInfo.lastSessionInfo = "some older value"
+  test("copies previous props to `last`", () => {
+    const sessionInfo = new SessionInfo()
+    sessionInfo.setCurrent(createProps())
+    expect(sessionInfo.last).toBeUndefined()
 
-  SessionInfo.current = sessionInfo
-  expect(SessionInfo.isSet()).toBe(true)
-  // Also verify that lastSessionInfo is cleared when SessionInfo.current is
-  // set.
-  expect(SessionInfo.lastSessionInfo).toBe(undefined)
-
-  SessionInfo.clearSession()
-  expect(SessionInfo.isSet()).toBe(false)
-  expect(SessionInfo.lastSessionInfo).toBe(sessionInfo)
+    sessionInfo.setCurrent(createProps({ appId: "newValue" }))
+    expect(sessionInfo.current).toEqual(createProps({ appId: "newValue" }))
+    expect(sessionInfo.last).toEqual(createProps())
+  })
 })
 
-test("Can be initialized from a protobuf", () => {
+describe("SessionInfo.isHello", () => {
+  test("is true only when initialized with `streamlit hello` commandline", () => {
+    const sessionInfo = new SessionInfo()
+    expect(sessionInfo.isHello).toBe(false)
+
+    sessionInfo.setCurrent(createProps({ commandLine: "random command line" }))
+    expect(sessionInfo.isHello).toBe(false)
+
+    sessionInfo.setCurrent(createProps({ commandLine: "streamlit hello" }))
+    expect(sessionInfo.isHello).toBe(true)
+  })
+})
+
+test("Props can be initialized from a protobuf", () => {
   const MESSAGE = new NewSession({
     config: {
       gatherUsageStats: false,
@@ -76,13 +98,13 @@ test("Can be initialized from a protobuf", () => {
     },
   })
 
-  const si = SessionInfo.fromNewSessionMessage(MESSAGE)
-  expect(si.sessionId).toEqual("sessionId")
-  expect(si.streamlitVersion).toEqual("streamlitVersion")
-  expect(si.pythonVersion).toEqual("pythonVersion")
-  expect(si.installationId).toEqual("installationId")
-  expect(si.installationIdV3).toEqual("installationIdV3")
-  expect(si.authorEmail).toEqual("email")
-  expect(si.maxCachedMessageAge).toEqual(31)
-  expect(si.commandLine).toEqual("commandLine")
+  const props = SessionInfo.propsFromNewSessionMessage(MESSAGE)
+  expect(props.sessionId).toEqual("sessionId")
+  expect(props.streamlitVersion).toEqual("streamlitVersion")
+  expect(props.pythonVersion).toEqual("pythonVersion")
+  expect(props.installationId).toEqual("installationId")
+  expect(props.installationIdV3).toEqual("installationIdV3")
+  expect(props.authorEmail).toEqual("email")
+  expect(props.maxCachedMessageAge).toEqual(31)
+  expect(props.commandLine).toEqual("commandLine")
 })

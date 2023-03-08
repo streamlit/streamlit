@@ -823,7 +823,8 @@ export class App extends PureComponent<Props, State> {
     const initialize = newSessionProto.initialize as Initialize
     const config = newSessionProto.config as Config
 
-    SessionInfo.current = SessionInfo.fromNewSessionMessage(newSessionProto)
+    SessionInfo.current =
+      SessionInfo.propsFromNewSessionMessage(newSessionProto)
 
     this.metricsMgr.initialize({
       gatherUsageStats: config.gatherUsageStats,
