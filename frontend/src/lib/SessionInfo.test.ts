@@ -14,24 +14,9 @@
  * limitations under the License.
  */
 
-import { Props, SessionInfo } from "src/lib/SessionInfo"
+import { SessionInfo } from "src/lib/SessionInfo"
 import { NewSession } from "src/autogen/proto"
-
-function createProps(overrides: Partial<Props> = {}): Props {
-  return {
-    appId: "appId",
-    sessionId: "sessionId",
-    streamlitVersion: "streamlitVersion",
-    pythonVersion: "pythonVersion",
-    installationId: "installationId",
-    installationIdV3: "installationIdV3",
-    authorEmail: "authorEmail",
-    maxCachedMessageAge: 2,
-    commandLine: "commandLine",
-    userMapboxToken: "userMapboxToken",
-    ...overrides,
-  }
-}
+import { mockSessionInfoProps } from "./mocks/mocks"
 
 test("Throws an error when used before initialization", () => {
   const sessionInfo = new SessionInfo()
@@ -41,20 +26,22 @@ test("Throws an error when used before initialization", () => {
 describe("SessionInfo.setCurrent", () => {
   test("copies props to `current`", () => {
     const sessionInfo = new SessionInfo()
-    sessionInfo.setCurrent(createProps())
+    sessionInfo.setCurrent(mockSessionInfoProps())
 
     expect(sessionInfo.isSet).toBe(true)
-    expect(sessionInfo.current).toEqual(createProps())
+    expect(sessionInfo.current).toEqual(mockSessionInfoProps())
   })
 
   test("copies previous props to `last`", () => {
     const sessionInfo = new SessionInfo()
-    sessionInfo.setCurrent(createProps())
+    sessionInfo.setCurrent(mockSessionInfoProps())
     expect(sessionInfo.last).toBeUndefined()
 
-    sessionInfo.setCurrent(createProps({ appId: "newValue" }))
-    expect(sessionInfo.current).toEqual(createProps({ appId: "newValue" }))
-    expect(sessionInfo.last).toEqual(createProps())
+    sessionInfo.setCurrent(mockSessionInfoProps({ appId: "newValue" }))
+    expect(sessionInfo.current).toEqual(
+      mockSessionInfoProps({ appId: "newValue" })
+    )
+    expect(sessionInfo.last).toEqual(mockSessionInfoProps())
   })
 })
 
@@ -63,10 +50,14 @@ describe("SessionInfo.isHello", () => {
     const sessionInfo = new SessionInfo()
     expect(sessionInfo.isHello).toBe(false)
 
-    sessionInfo.setCurrent(createProps({ commandLine: "random command line" }))
+    sessionInfo.setCurrent(
+      mockSessionInfoProps({ commandLine: "random command line" })
+    )
     expect(sessionInfo.isHello).toBe(false)
 
-    sessionInfo.setCurrent(createProps({ commandLine: "streamlit hello" }))
+    sessionInfo.setCurrent(
+      mockSessionInfoProps({ commandLine: "streamlit hello" })
+    )
     expect(sessionInfo.isHello).toBe(true)
   })
 })

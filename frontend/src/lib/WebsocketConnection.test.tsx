@@ -29,6 +29,7 @@ import {
   doInitPings,
   Args,
 } from "src/lib/WebsocketConnection"
+import { mockSessionInfoProps } from "./mocks/mocks"
 
 const MOCK_ALLOWED_ORIGINS_RESPONSE = {
   data: {
@@ -673,15 +674,20 @@ describe("WebsocketConnection auth token handling", () => {
   })
 
   it("sets second Sec-WebSocket-Protocol option to lastSessionId", async () => {
+    // Create a mock SessionInfo with sessionInfo.last.sessionId == "lastSessionId"
     const sessionInfo = new SessionInfo()
-    // @ts-expect-error
-    sessionInfo._last = { sessionId: "lastSessionId" }
+    sessionInfo.setCurrent(
+      mockSessionInfoProps({ sessionId: "lastSessionId" })
+    )
+    sessionInfo.setCurrent(mockSessionInfoProps())
+    expect(sessionInfo.last?.sessionId).toBe("lastSessionId")
 
     const ws = new WebsocketConnection(createMockArgs({ sessionInfo }))
 
     // @ts-expect-error
     await ws.connectToWebSocket()
 
+    // "lastSessionId" should be the WebSocket's session token
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
       ["streamlit", "lastSessionId"]
@@ -689,9 +695,13 @@ describe("WebsocketConnection auth token handling", () => {
   })
 
   it("prioritizes host provided auth token over lastSessionId if both set", async () => {
+    // Create a mock SessionInfo with sessionInfo.last.sessionId == "lastSessionId"
     const sessionInfo = new SessionInfo()
-    // @ts-expect-error
-    sessionInfo._last = { sessionId: "lastSessionId" }
+    sessionInfo.setCurrent(
+      mockSessionInfoProps({ sessionId: "lastSessionId" })
+    )
+    sessionInfo.setCurrent(mockSessionInfoProps())
+    expect(sessionInfo.last?.sessionId).toBe("lastSessionId")
 
     const resetHostAuthToken = jest.fn()
     const ws = new WebsocketConnection(
