@@ -425,7 +425,7 @@ export class App extends PureComponent<Props, State> {
         environmentInfo != null &&
         environmentInfo.streamlitVersion != null
       ) {
-        return currentStreamlitVersion < environmentInfo.streamlitVersion
+        return currentStreamlitVersion != environmentInfo.streamlitVersion
       }
     }
 
