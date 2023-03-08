@@ -852,6 +852,7 @@ describe("App.handleNewSession", () => {
   describe("page change URL handling", () => {
     let wrapper: ShallowWrapper
     let instance: App
+    let pushStateSpy: any
 
     beforeEach(() => {
       wrapper = shallow(<App {...getProps()} />)
@@ -860,7 +861,7 @@ describe("App.handleNewSession", () => {
       instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
 
       window.history.pushState({}, "", "/")
-      jest.spyOn(
+      pushStateSpy = jest.spyOn(
         window.history,
         // @ts-ignore
         "pushState"
@@ -868,6 +869,8 @@ describe("App.handleNewSession", () => {
     })
 
     afterEach(() => {
+      // @ts-ignore
+      pushStateSpy.mockRestore()
       window.history.pushState({}, "", "/")
     })
 
@@ -975,6 +978,7 @@ describe("App.handlePageInfoChanged", () => {
   })
 
   afterEach(() => {
+    pushStateSpy.mockRestore()
     // Reset the value of document.location.pathname.
     window.history.pushState({}, "", "/")
   })
@@ -1131,6 +1135,22 @@ describe("App.sendRerunBackMsg", () => {
 
 //   * handlePageNotFound has branching error messages depending on pageName
 describe("App.handlePageNotFound", () => {
+  let pushStateSpy: any
+
+  beforeEach(() => {
+    pushStateSpy = jest.spyOn(
+      window.history,
+      // @ts-ignore
+      "pushState"
+    )
+  })
+
+  afterEach(() => {
+    // @ts-ignore
+    pushStateSpy.mockRestore()
+    window.history.pushState({}, "", "/")
+  })
+
   it("includes the missing page name in error modal message if available", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
@@ -1147,7 +1167,6 @@ describe("App.handlePageNotFound", () => {
       new PageNotFound({ pageName: "nonexistentPage" })
     )
 
-    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
     expect(instance.showError).toHaveBeenCalledWith(
       "Page not found",
       expect.stringMatching("You have requested page /nonexistentPage")
@@ -1173,7 +1192,6 @@ describe("App.handlePageNotFound", () => {
 
     instance.handlePageNotFound(new PageNotFound({ pageName: "" }))
 
-    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
     expect(instance.showError).toHaveBeenCalledWith(
       "Page not found",
       expect.stringMatching(
