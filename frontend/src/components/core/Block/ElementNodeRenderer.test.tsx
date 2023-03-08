@@ -30,6 +30,7 @@ import {
 } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
+import { SessionInfo } from "src/lib/SessionInfo"
 import ElementNodeRenderer, {
   ElementNodeRendererProps,
 } from "./ElementNodeRenderer"
@@ -70,6 +71,7 @@ function getProps(
     }),
     widgetsDisabled: false,
     uploadClient: new FileUploadClient({
+      sessionInfo: new SessionInfo(),
       getServerUri: () => undefined,
       csrfEnabled: true,
       formsWithPendingRequestsChanged: () => {},
