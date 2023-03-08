@@ -4,7 +4,7 @@
     "noEmit": false,
     "emitDeclarationOnly": true,
     "declaration": true,
-    "outDir": "lib",
+    "outDir": "dist",
     "paths": { "src/*": ["src/*"] }
   },
   "exclude": ["**/*.test.ts", "**/*.test.tsx", "src/autogen"]

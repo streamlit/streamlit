@@ -20,7 +20,7 @@ export enum Kind {
   DANGER = "danger",
 }
 
-interface TextProps {
+export interface TextProps {
   kind?: Kind
 }
 

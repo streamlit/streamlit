@@ -193,11 +193,7 @@ module.exports = function (webpackEnv) {
     mode: isEnvProduction ? "production" : isEnvDevelopment && "development",
     // Stop compilation early in production
     bail: isEnvProduction,
-    devtool: isEnvProduction
-      ? shouldUseSourceMap
-        ? "source-map"
-        : false
-      : isEnvDevelopment && "cheap-module-source-map",
+    devtool: "source-map",
     // These are the "entry points" to our application.
     // This means they will be the "root" imports that are included in JS bundle.
     entry: paths.appIndexJs,
@@ -205,7 +201,6 @@ module.exports = function (webpackEnv) {
     experiments: {
       outputModule: true,
     },
-    devtool: false,
     output: {
       library: {
         type: "module",
@@ -223,18 +218,6 @@ module.exports = function (webpackEnv) {
     externals: {
       'react': 'react', // Case matters here 
       'react-dom' : 'reactDOM', // Case matters here 
-      'highlight.js': 'hljs', 
-      'h3-js': 'h3', 
-      'deck.gl': 'deck', 
-      '@deck.gl/aggregation-layers': 'deck', 
-      '@deck.gl/core': 'deck', 
-      '@deck.gl/extensions': 'deck', 
-      '@deck.gl/geo-layers': 'deck', 
-      '@deck.gl/layers': 'deck', 
-      '@deck.gl/mesh-layers': 'deck', 
-      '@loaders.gl/core': 'loaders', 
-      '@luma.gl/core': 'luma', 
-      'mapbox-gl': 'mapboxgl' 
      },
     externalsType: "import",
     cache: {
@@ -361,6 +344,19 @@ module.exports = function (webpackEnv) {
               issuer: {
                 and: [/\.(ts|tsx|js|jsx|md|mdx)$/],
               },
+            },
+            {
+              loader: 'babel-loader',
+              options: {
+                presets: [
+                  [
+                    '@babel/preset-env', {
+                      modules: false
+                    }
+                  ]
+            
+                ]
+              }
             },
             // Process application JS with Babel.
             // The preset includes JSX, Flow, TypeScript, and some ESnext features.
