@@ -147,6 +147,7 @@ describe("App", () => {
     it("triggers page reload", () => {
       const props = getProps()
       const wrapper = shallow(<App {...props} />)
+      const app = wrapper.instance() as App
 
       // A HACK to mock `window.location.reload`.
       // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
@@ -157,7 +158,7 @@ describe("App", () => {
 
       // Ensure SessionInfo is initialized
       // @ts-expect-error
-      const sessionInfo: SessionInfo = wrapper.instance().sessionInfo
+      const sessionInfo: SessionInfo = app.sessionInfo
       sessionInfo.setCurrent(
         mockSessionInfoProps({ streamlitVersion: "oldStreamlitVersion" })
       )
@@ -176,8 +177,7 @@ describe("App", () => {
         },
       }
 
-      // @ts-expect-error
-      wrapper.instance().handleMessage(fwMessage)
+      app.handleMessage(fwMessage)
 
       expect(window.location.reload).toHaveBeenCalled()
     })
