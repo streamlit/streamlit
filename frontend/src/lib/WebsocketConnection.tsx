@@ -82,7 +82,10 @@ type OnRetry = (
   retryTimeout: number
 ) => void
 
-interface Args {
+export interface Args {
+  /** The application's SessionInfo instance */
+  sessionInfo: SessionInfo
+
   /**
    * List of URLs to connect to. We'll try the first, then the second, etc. If
    * all fail, we'll retry from the top. The number of retries depends on
@@ -243,7 +246,9 @@ export class WebsocketConnection {
     switch (this.state) {
       case ConnectionState.PINGING_SERVER:
         this.pingServer(
-          SessionInfo.isSet() ? SessionInfo.current.commandLine : undefined
+          this.args.sessionInfo.isSet
+            ? this.args.sessionInfo.current.commandLine
+            : undefined
         )
         break
 
@@ -383,7 +388,7 @@ export class WebsocketConnection {
   private async getSessionToken(): Promise<string | undefined> {
     const hostAuthToken = await this.args.claimHostAuthToken()
     this.args.resetHostAuthToken()
-    return hostAuthToken || SessionInfo.lastSessionInfo?.sessionId
+    return hostAuthToken || this.args.sessionInfo.last?.sessionId
   }
 
   private async connectToWebSocket(): Promise<void> {

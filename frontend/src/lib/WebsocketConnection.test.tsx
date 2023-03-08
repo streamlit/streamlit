@@ -27,6 +27,7 @@ import {
   StyledBashCode,
   WebsocketConnection,
   doInitPings,
+  Args,
 } from "src/lib/WebsocketConnection"
 
 const MOCK_ALLOWED_ORIGINS_RESPONSE = {
@@ -37,6 +38,27 @@ const MOCK_ALLOWED_ORIGINS_RESPONSE = {
 }
 
 const MOCK_HEALTH_RESPONSE = { status: "ok" }
+
+/** Create mock WebsocketConnection arguments */
+function createMockArgs(overrides?: Partial<Args>): Args {
+  return {
+    sessionInfo: new SessionInfo(),
+    baseUriPartsList: [
+      {
+        host: "localhost",
+        port: 1234,
+        basePath: "/",
+      },
+    ],
+    onMessage: jest.fn(),
+    onConnectionStateChange: jest.fn(),
+    onRetry: jest.fn(),
+    claimHostAuthToken: () => Promise.resolve(undefined),
+    resetHostAuthToken: jest.fn(),
+    setAllowedOriginsResp: jest.fn(),
+    ...overrides,
+  }
+}
 
 describe("doInitPings", () => {
   const MOCK_PING_DATA = {
@@ -67,7 +89,7 @@ describe("doInitPings", () => {
     Promise.all = originalPromiseAll
   })
 
-  it("does call the /_stcore/health endpoint when pinging server", async () => {
+  it("calls the /_stcore/health endpoint when pinging server", async () => {
     axios.get = jest.fn().mockImplementation(url => {
       if (url.endsWith("_stcore/health")) {
         return MOCK_HEALTH_RESPONSE
@@ -420,7 +442,7 @@ describe("doInitPings", () => {
     // timeouts should be monotonically increasing until they hit the cap
     expect(
       zip(timeouts.slice(0, -1), timeouts.slice(1)).every(
-        // @ts-ignore
+        // @ts-expect-error
         timePair => timePair[0] < timePair[1] || timePair[0] === 100
       )
     )
@@ -521,22 +543,6 @@ describe("doInitPings", () => {
 })
 
 describe("WebsocketConnection", () => {
-  const MOCK_SOCKET_DATA = {
-    baseUriPartsList: [
-      {
-        host: "localhost",
-        port: 1234,
-        basePath: "/",
-      },
-    ],
-    onMessage: jest.fn(),
-    onConnectionStateChange: jest.fn(),
-    onRetry: jest.fn(),
-    claimHostAuthToken: () => Promise.resolve(undefined),
-    resetHostAuthToken: jest.fn(),
-    setAllowedOriginsResp: jest.fn(),
-  }
-
   let client: WebsocketConnection
   let server: WS
 
@@ -554,16 +560,16 @@ describe("WebsocketConnection", () => {
       .fn()
       .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
 
-    client = new WebsocketConnection(MOCK_SOCKET_DATA)
+    client = new WebsocketConnection(createMockArgs())
   })
 
   afterEach(() => {
     axios.get = originalAxiosGet
     Promise.all = originalPromiseAll
 
-    // @ts-ignore
+    // @ts-expect-error
     if (client.websocket) {
-      // @ts-ignore
+      // @ts-expect-error
       client.websocket.close()
     }
     server.close()
@@ -572,15 +578,15 @@ describe("WebsocketConnection", () => {
   it("disconnect closes connection and sets state to DISCONNECTED_FOREVER", () => {
     client.disconnect()
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(client.state).toBe(ConnectionState.DISCONNECTED_FOREVER)
-    // @ts-ignore
+    // @ts-expect-error
     expect(client.websocket).toBe(undefined)
   })
 
   it("increments message cache run count", () => {
     const incrementRunCountSpy = jest.spyOn(
-      // @ts-ignore
+      // @ts-expect-error
       client.cache,
       "incrementRunCount"
     )
@@ -592,7 +598,7 @@ describe("WebsocketConnection", () => {
   })
 
   it("sends message with correct arguments", () => {
-    // @ts-ignore
+    // @ts-expect-error
     const sendSpy = jest.spyOn(client.websocket, "send")
 
     const TEST_BACK_MSG = {}
@@ -606,11 +612,11 @@ describe("WebsocketConnection", () => {
 
   describe("getBaseUriParts", () => {
     it("returns correct base uri parts when ConnectionState == Connected", () => {
-      // @ts-ignore
+      // @ts-expect-error
       client.state = ConnectionState.CONNECTED
 
       expect(client.getBaseUriParts()).toEqual(
-        MOCK_SOCKET_DATA.baseUriPartsList[0]
+        createMockArgs().baseUriPartsList[0]
       )
     })
 
@@ -621,22 +627,6 @@ describe("WebsocketConnection", () => {
 })
 
 describe("WebsocketConnection auth token handling", () => {
-  const MOCK_SOCKET_DATA = {
-    baseUriPartsList: [
-      {
-        host: "localhost",
-        port: 1234,
-        basePath: "/",
-      },
-    ],
-    onMessage: jest.fn(),
-    onConnectionStateChange: jest.fn(),
-    onRetry: jest.fn(),
-    claimHostAuthToken: () => Promise.resolve(undefined),
-    resetHostAuthToken: jest.fn(),
-    setAllowedOriginsResp: jest.fn(),
-  }
-
   let originalAxiosGet: any
   let websocketSpy: any
 
@@ -649,17 +639,12 @@ describe("WebsocketConnection auth token handling", () => {
 
   afterEach(() => {
     axios.get = originalAxiosGet
-
-    SessionInfo.lastSessionInfo = undefined
   })
 
   it("always sets first Sec-WebSocket-Protocol option to 'streamlit'", async () => {
     const resetHostAuthToken = jest.fn()
-    const ws = new WebsocketConnection({
-      ...MOCK_SOCKET_DATA,
-      resetHostAuthToken,
-    })
-    // @ts-ignore
+    const ws = new WebsocketConnection(createMockArgs({ resetHostAuthToken }))
+    // @ts-expect-error
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
@@ -671,13 +656,14 @@ describe("WebsocketConnection auth token handling", () => {
 
   it("sets second Sec-WebSocket-Protocol option to value from claimHostAuthToken", async () => {
     const resetHostAuthToken = jest.fn()
-    const ws = new WebsocketConnection({
-      ...MOCK_SOCKET_DATA,
-      claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
-      resetHostAuthToken,
-    })
+    const ws = new WebsocketConnection(
+      createMockArgs({
+        claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
+        resetHostAuthToken,
+      })
+    )
 
-    // @ts-ignore
+    // @ts-expect-error
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
@@ -687,32 +673,36 @@ describe("WebsocketConnection auth token handling", () => {
   })
 
   it("sets second Sec-WebSocket-Protocol option to lastSessionId", async () => {
-    // @ts-ignore
-    SessionInfo.lastSessionInfo = { sessionId: "sessionId" }
+    const sessionInfo = new SessionInfo()
+    // @ts-expect-error
+    sessionInfo._last = { sessionId: "lastSessionId" }
 
-    const ws = new WebsocketConnection(MOCK_SOCKET_DATA)
+    const ws = new WebsocketConnection(createMockArgs({ sessionInfo }))
 
-    // @ts-ignore
+    // @ts-expect-error
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
-      ["streamlit", "sessionId"]
+      ["streamlit", "lastSessionId"]
     )
   })
 
   it("prioritizes host provided auth token over lastSessionId if both set", async () => {
-    // @ts-ignore
-    SessionInfo.lastSessionInfo = { sessionId: "sessionId" }
+    const sessionInfo = new SessionInfo()
+    // @ts-expect-error
+    sessionInfo._last = { sessionId: "lastSessionId" }
 
     const resetHostAuthToken = jest.fn()
-    const ws = new WebsocketConnection({
-      ...MOCK_SOCKET_DATA,
-      claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
-      resetHostAuthToken,
-    })
+    const ws = new WebsocketConnection(
+      createMockArgs({
+        sessionInfo,
+        claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
+        resetHostAuthToken,
+      })
+    )
 
-    // @ts-ignore
+    // @ts-expect-error
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
