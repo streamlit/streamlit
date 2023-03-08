@@ -60,7 +60,7 @@ const withMapboxToken =
           mapboxTokenError: undefined,
         }
 
-        this.initMapboxToken().finally()
+        this.initMapboxToken()
       }
 
       /**

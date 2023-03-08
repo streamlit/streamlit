@@ -39,7 +39,10 @@ describe("withMapboxToken", () => {
   const commandLine = "streamlit run test.py"
 
   function getProps(): Record<string, unknown> {
-    return { label: "label", sessionInfo: mockSessionInfo({ commandLine }) }
+    return {
+      label: "label",
+      sessionInfo: mockSessionInfo({ commandLine, userMapboxToken: token }),
+    }
   }
 
   // Install a mock token in our token fetcher so that we don't hit
