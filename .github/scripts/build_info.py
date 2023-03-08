@@ -79,6 +79,7 @@ ALL_PYTHON_VERSIONS[0] = "min"
 ALL_PYTHON_VERSIONS[-1] = "max"
 
 LABEL_FULL_MATRIX = "dev:full-matrix"
+LABEL_UPGRADE_DEPENDENCIES = "dev:upgrade-dependencies"
 
 GITHUB_CONTEXT = json.loads(os.environ[GITHUB_CONTEXT_ENV_VAR])
 GITHUB_EVENT = GITHUB_CONTEXT["event"]
@@ -126,6 +127,7 @@ def get_changed_files() -> List[str]:
 def get_current_pr_labels() -> List[str]:
     """
     Returns a list of all tags associated with the current PR.
+
     Note that this function works only when the current event is pull_request.
     """
     if GITHUB_EVENT_NAME != GithubEvent.PULL_REQUEST.value:
@@ -151,7 +153,7 @@ def get_changed_python_dependencies_files() -> List[str]:
     return changed_dependencies_files
 
 
-def should_test_all_python_versions() -> bool:
+def should_test_all_python_versions(*, canary_build) -> bool:
     """
     Checks whether tests should be run for all supported Python versions, or whether
     it is enough to check the oldest and latest versions.
@@ -174,16 +176,39 @@ def should_test_all_python_versions() -> bool:
         if LABEL_FULL_MATRIX in pr_labels:
             print(f"PR has the following labels: {pr_labels}")
             print(
-                f"All Python versions will be tested, "
+                "All Python versions will be tested, "
                 f"because PR has {LABEL_FULL_MATRIX!r} label."
             )
             return True
         changed_dependencies_files = get_changed_python_dependencies_files()
+    if canary_build:
+        print("All Python versions will be tested, because current build is canary")
+    return True
+
+
+def should_use_latest_dependencies(*, canary_build) -> bool:
+    if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
+        pr_labels = get_current_pr_labels()
+        if LABEL_UPGRADE_DEPENDENCIES in pr_labels:
+            print(f"PR has the following labels: {pr_labels}")
+            print(
+                "Latest dependencies will be used, "
+                f"because PR has {LABEL_UPGRADE_DEPENDENCIES!r} label."
+            )
+            return True
+    if canary_build:
+        print("Latest dependencies will be used, because current build is canary")
+    return True
+
+
+def is_canary_build() -> bool:
+    if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
+        changed_dependencies_files = get_changed_python_dependencies_files()
         if changed_dependencies_files:
             print(f"{len(changed_dependencies_files)} files changed in this build.")
             print(
-                "All Python versions will be tested, because "
-                "the following files have been modified:"
+                "Current build is canary, "
+                "because the following files have been modified:"
             )
             print("- " + "- ".join(changed_dependencies_files))
             return True
@@ -196,13 +221,13 @@ def should_test_all_python_versions() -> bool:
         )
         if is_default_branch:
             print(
-                f"All Python versions will be tested, because "
-                f"the default branch ({default_branch!r}) is checked."
+                "Current build is canary, "
+                f"because the default branch ({default_branch!r}) is checked."
             )
             return True
         return False
     print(
-        f"All Python versions will be tested, "
+        "Current build is canary, "
         f"because current github event name is {GITHUB_EVENT_NAME!r}"
     )
     return True
@@ -212,14 +237,18 @@ def get_output_variables() -> Dict[str, str]:
     """
     Compute build variables.
     """
+    canary_build = is_canary_build()
     return {
         "PYTHON_MIN_VERSION": PYTHON_MIN_VERSION,
         "PYTHON_MAX_VERSION": PYTHON_MAX_VERSION,
         "PYTHON_VERSIONS": json.dumps(
             ALL_PYTHON_VERSIONS
-            if should_test_all_python_versions()
+            if should_test_all_python_versions(canary_build=canary_build)
             else [ALL_PYTHON_VERSIONS[0], ALL_PYTHON_VERSIONS[-1]]
         ),
+        "USE_CONSTRAINT_FILE": str(
+            should_use_latest_dependencies(canary_build=canary_build)
+        ).lower(),
     }
 
 
@@ -240,6 +269,7 @@ def save_output_variables(variables: Dict[str, str]) -> None:
 
 
 def main() -> None:
+    print(f"Current github event name: {GITHUB_EVENT_NAME!r}")
     output_variables = get_output_variables()
     save_output_variables(output_variables)
 
