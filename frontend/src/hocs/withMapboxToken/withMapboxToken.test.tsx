@@ -16,6 +16,7 @@
 
 import React from "react"
 import { shallow } from "src/lib/test_util"
+import { mockSessionInfo } from "src/lib/mocks/mocks"
 import { MapboxToken } from "./MapboxToken"
 
 import withMapboxToken from "./withMapboxToken"
@@ -38,7 +39,7 @@ describe("withMapboxToken", () => {
   const commandLine = "streamlit run test.py"
 
   function getProps(): Record<string, unknown> {
-    return { label: "label" }
+    return { label: "label", sessionInfo: mockSessionInfo({ commandLine }) }
   }
 
   // Install a mock token in our token fetcher so that we don't hit

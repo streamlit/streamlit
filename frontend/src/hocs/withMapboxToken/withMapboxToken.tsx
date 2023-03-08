@@ -60,7 +60,7 @@ const withMapboxToken =
           mapboxTokenError: undefined,
         }
 
-        this.initMapboxToken()
+        this.initMapboxToken().finally()
       }
 
       /**
@@ -84,7 +84,7 @@ const withMapboxToken =
         }
       }
 
-      public render(): ReactNode {
+      public render = (): ReactNode => {
         const { mapboxToken, mapboxTokenError, isFetching } = this.state
         const { width } = this.props
 
