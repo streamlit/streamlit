@@ -79,6 +79,11 @@ export class SessionInfo {
     this._current = props != null ? { ...props } : undefined
   }
 
+  /** Clear `SessionInfo.current`, and copy its previous props to `SessionInfo.last`. */
+  public clearCurrent(): void {
+    this.setCurrent(undefined)
+  }
+
   /** True if `SessionInfo.current` exists. */
   public get isSet(): boolean {
     return this._current != null
