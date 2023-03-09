@@ -878,7 +878,7 @@ describe("App.handleNewSession", () => {
       const instance = wrapper.instance() as App
       instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
 
-      expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
+      expect(window.history.pushState).toHaveBeenLastCalledWith({}, "", "/")
     })
 
     it("can switch to a non-main page", () => {
