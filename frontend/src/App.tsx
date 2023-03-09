@@ -198,7 +198,7 @@ export class App extends PureComponent<Props, State> {
 
   private readonly embeddingId: string = generateUID()
 
-  constructor(props: Props) {
+  public constructor(props: Props) {
     super(props)
 
     // Initialize immerjs
