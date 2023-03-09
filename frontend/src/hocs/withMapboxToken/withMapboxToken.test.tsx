@@ -19,10 +19,11 @@ import { shallow } from "src/lib/test_util"
 import { mockSessionInfo } from "src/lib/mocks/mocks"
 import { MapboxToken } from "./MapboxToken"
 
-import withMapboxToken from "./withMapboxToken"
+import withMapboxToken, { WrappedProps } from "./withMapboxToken"
 
 interface TestProps {
   label: string
+  width: number
   mapboxToken: string
 }
 
@@ -38,9 +39,10 @@ describe("withMapboxToken", () => {
   const token = "mockToken"
   const commandLine = "streamlit run test.py"
 
-  function getProps(): Record<string, unknown> {
+  function getProps(): WrappedProps<TestProps> {
     return {
-      label: "label",
+      label: "mockLabel",
+      width: 123,
       sessionInfo: mockSessionInfo({ commandLine, userMapboxToken: token }),
     }
   }
@@ -73,7 +75,14 @@ describe("withMapboxToken", () => {
     // Wait one tick for our MapboxToken promise to resolve
     await waitOneTick()
 
-    expect(wrapper.props().label).toBe("label")
+    expect(wrapper.props().label).toBe("mockLabel")
     expect(wrapper.props().mapboxToken).toBe("mockToken")
+  })
+
+  it("defines `displayName`", () => {
+    const WrappedComponent = withMapboxToken("st.test")(TestComponent)
+    expect(WrappedComponent.displayName).toEqual(
+      "withMapboxToken(TestComponent)"
+    )
   })
 })

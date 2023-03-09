@@ -23,16 +23,22 @@ import React, { ComponentType, PureComponent, ReactNode } from "react"
 import { SessionInfo } from "src/lib/SessionInfo"
 import MapboxTokenError from "./MapboxTokenError"
 
-interface Props {
-  /** The application's SessionInfo instance. */
-  sessionInfo: SessionInfo
-  width: number
+interface InjectedProps {
+  mapboxToken: string
 }
 
 interface State {
   mapboxToken?: string
   mapboxTokenError?: Error
   isFetching: boolean
+}
+
+// We consume a Component that takes a "mapboxToken" prop, and create
+// a wrapped Component that takes a "sessionInfo" prop, and omits
+// the "mapboxToken" prop
+export type WrappedProps<P extends InjectedProps> = Omit<P, "mapboxToken"> & {
+  sessionInfo: SessionInfo
+  width: number
 }
 
 /**
@@ -45,13 +51,16 @@ interface State {
 
 const withMapboxToken =
   (deltaType: string) =>
-  (WrappedComponent: ComponentType<any>): ComponentType<any> => {
-    class WithMapboxToken extends PureComponent<Props, State> {
+  <P extends InjectedProps>(WrappedComponent: ComponentType<P>) => {
+    // Return a wrapper that accepts the wrapped component's props, minus
+    // "mapboxToken". The wrapper will fetch the mapboxToken and inject it into
+    // the wrapped component automatically.
+    class WithMapboxToken extends PureComponent<WrappedProps<P>, State> {
       public static readonly displayName = `withMapboxToken(${
         WrappedComponent.displayName || WrappedComponent.name
       })`
 
-      public constructor(props: Props) {
+      public constructor(props: WrappedProps<P>) {
         super(props)
 
         this.state = {
@@ -105,7 +114,13 @@ const withMapboxToken =
         }
 
         // We have the mapbox token. Pass it through to our component.
-        return <WrappedComponent mapboxToken={mapboxToken} {...this.props} />
+        return (
+          <WrappedComponent
+            {...(this.props as any)}
+            mapboxToken={mapboxToken}
+            width={width}
+          />
+        )
       }
     }
 

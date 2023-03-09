@@ -54,4 +54,15 @@ describe("st.pyplot", () => {
       .prev()
       .should("not.contain", "PyplotGlobalUseWarning");
   });
+
+  it("use_container_width=False should display a smaller image", () => {
+    // use_container_width=True, so we have a canvas width
+    cy.getIndexed("[data-testid='stImage'] > img", 2)
+      .invoke('outerWidth').should('be.eq', 1200);
+
+    // use_container_width=False, so we have a smaller image
+    cy.getIndexed("[data-testid='stImage'] > img", 3)
+      .invoke('outerWidth').should('be.eq', 342);
+  });
+
 });
