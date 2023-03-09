@@ -97,7 +97,7 @@ export interface WrappedNamedDataset {
 }
 
 export interface PropsWithHeight extends Props {
-  height: number | undefined
+  height?: number
 }
 
 interface State {
