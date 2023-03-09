@@ -22,7 +22,6 @@ import FullScreenWrapper from "src/components/shared/FullScreenWrapper"
 interface Props {
   width: number
   height?: number
-  isFullScreen: boolean
 }
 
 function withFullScreenWrapper<P>(
