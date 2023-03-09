@@ -14,11 +14,13 @@
 
 """Logging module."""
 
+from datetime import datetime
 import logging
 import sys
 from typing import Dict, Union
 
 from typing_extensions import Final
+from pythonjsonlogger import jsonlogger
 
 DEFAULT_LOG_MESSAGE: Final = "%(asctime)s %(levelname) -7s " "%(name)s: %(message)s"
 
@@ -57,6 +59,25 @@ def set_log_level(level: Union[str, int]) -> None:
     _global_log_level = log_level
 
 
+class CustomJsonFormatter(jsonlogger.JsonFormatter):
+    def add_fields(self, log_record, record, message_dict):
+        from streamlit.runtime.scriptrunner import maybe_get_script_run_ctx
+        ctx, thread_name = maybe_get_script_run_ctx()
+        log_record["session_id"] = ctx.session_id if ctx else None
+        log_record["thread_name"] = thread_name
+        log_record["page_script_hash"] = ctx.page_script_hash if ctx else None
+        log_record["query_string"] = ctx.query_string if ctx else None
+        super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
+        if not log_record.get('timestamp'):
+            # this doesn't use record.created, so it is slightly off
+            now = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+            log_record['timestamp'] = now
+        if log_record.get('level'):
+            log_record['level'] = log_record['level'].upper()
+        else:
+            log_record['level'] = record.levelname
+
+
 def setup_formatter(logger: logging.Logger) -> None:
     """Set up the console formatter for a given logger."""
     # Deregister any previous console loggers.
@@ -64,6 +85,7 @@ def setup_formatter(logger: logging.Logger) -> None:
         logger.removeHandler(logger.streamlit_console_handler)
 
     logger.streamlit_console_handler = logging.StreamHandler()  # type: ignore[attr-defined]
+    file_handler = logging.FileHandler("streamlit.log")
 
     # Import here to avoid circular imports
     from streamlit import config
@@ -77,10 +99,13 @@ def setup_formatter(logger: logging.Logger) -> None:
         message_format = DEFAULT_LOG_MESSAGE
     formatter = logging.Formatter(fmt=message_format)
     formatter.default_msec_format = "%s.%03d"
+    json_formatter = CustomJsonFormatter(DEFAULT_LOG_MESSAGE)
     logger.streamlit_console_handler.setFormatter(formatter)  # type: ignore[attr-defined]
+    file_handler.setFormatter(json_formatter)
 
     # Register the new console logger.
     logger.addHandler(logger.streamlit_console_handler)  # type: ignore[attr-defined]
+    logger.addHandler(file_handler)
 
 
 def update_formatter() -> None:

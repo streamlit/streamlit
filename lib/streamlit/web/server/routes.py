@@ -177,6 +177,9 @@ class HealthHandler(_SpecialRequestHandler):
 # messages from.
 ALLOWED_MESSAGE_ORIGINS = [
     "https://devel.streamlit.test",
+    "https://*.streamlit.apptest",
+    "https://*.streamlitapp.test",
+    "https://*.streamlitapp.com",
     "https://share.streamlit.io",
     "https://share-demo.streamlit.io",
     "https://share-head.streamlit.io",
@@ -184,8 +187,6 @@ ALLOWED_MESSAGE_ORIGINS = [
     "https://*.demo.streamlit.run",
     "https://*.head.streamlit.run",
     "https://*.staging.streamlit.run",
-    "https://*.streamlitapp.test",
-    "https://*.streamlitapp.com",
     "https://*.streamlit.run",
     "https://*.demo.streamlit.app",
     "https://*.head.streamlit.app",

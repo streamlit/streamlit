@@ -22,6 +22,7 @@ from streamlit.runtime.scriptrunner.script_run_context import (
 )
 from streamlit.runtime.scriptrunner.script_run_context import (
     get_script_run_ctx as get_script_run_ctx,
+    maybe_get_script_run_ctx as maybe_get_script_run_ctx,
 )
 from streamlit.runtime.scriptrunner.script_runner import (
     RerunException as RerunException,

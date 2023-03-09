@@ -14,6 +14,7 @@
 
 import collections
 import threading
+import typing
 from dataclasses import dataclass, field
 from typing import Callable, Counter, Dict, List, Optional, Set
 
@@ -141,6 +142,11 @@ def add_script_run_ctx(
     return thread
 
 
+def maybe_get_script_run_ctx() -> typing.Tuple[Optional[ScriptRunContext], str]:
+    thread = threading.current_thread()
+    return getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None), thread.name
+
+
 def get_script_run_ctx() -> Optional[ScriptRunContext]:
     """
     Returns
@@ -149,16 +155,13 @@ def get_script_run_ctx() -> Optional[ScriptRunContext]:
         The current thread's ScriptRunContext, or None if it doesn't have one.
 
     """
-    thread = threading.current_thread()
-    ctx: Optional[ScriptRunContext] = getattr(
-        thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None
-    )
+    ctx, thread_name = maybe_get_script_run_ctx()
     if ctx is None and runtime.exists():
         # Only warn about a missing ScriptRunContext if we were started
         # via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit
         # bits that are irrelevant when not connected to a session.
-        LOGGER.warning("Thread '%s': missing ScriptRunContext", thread.name)
+        LOGGER.warning("Thread '%s': missing ScriptRunContext", thread_name)
 
     return ctx
 
