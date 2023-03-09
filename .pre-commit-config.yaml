@@ -54,7 +54,7 @@ repos:
       - id: prettier
         name: Prettier
         entry: ./scripts/run_in_subdirectory.py frontend/ yarn prettier --write
-        files: ^frontend/.*(\.js|\.jsx|\.ts|\.tsx)$
+        files: ^frontend/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
         language: node
         pass_filenames: true
@@ -64,7 +64,7 @@ repos:
         name: Typecheck
         always_run: true
         entry: yarn --cwd frontend tsc --noEmit
-        files: \.js$|\.jsx$|\.ts$|\.tsx$
+        files: \.(js$|jsx$|ts$|tsx)$
         language: node
         pass_filenames: false
         stages:
@@ -75,7 +75,7 @@ repos:
         name: Eslint
         always_run: true
         entry: ./scripts/run_in_subdirectory.py frontend/ yarn lint -- --fix
-        files: ^frontend/src/.*(\.js|\.jsx|\.ts|\.tsx)$
+        files: ^frontend/src/.*\.(js|jsx|ts|tsx)$
         language: node
         pass_filenames: true
         stages:
