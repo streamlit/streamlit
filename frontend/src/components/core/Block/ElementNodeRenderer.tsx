@@ -233,7 +233,9 @@ const RawElementNodeRenderer = (
       )
 
     case "arrowTable":
-      return <ArrowTable element={node.quiverElement as Quiver} />
+      return (
+        <ArrowTable element={node.quiverElement as Quiver} width={width} />
+      )
 
     case "arrowVegaLiteChart":
       return (
