@@ -94,4 +94,10 @@ describe("withFullScreenWrapper HOC", () => {
     const wrapper = mount(<WrappedNoFullScreenPropComponent {...props} />)
     expect(wrapper.find(NoFullScreenPropComponent).props().label).toBe("label")
   })
+
+  it("defines `displayName`", () => {
+    expect(WrappedTestComponent.displayName).toEqual(
+      "withFullScreenWrapper(TestComponent)"
+    )
+  })
 })
