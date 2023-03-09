@@ -88,7 +88,7 @@ const withMapboxToken =
         }
       }
 
-      public render(): ReactNode {
+      public render = (): ReactNode => {
         const { mapboxToken, mapboxTokenError, isFetching } = this.state
         const { width } = this.props
 
