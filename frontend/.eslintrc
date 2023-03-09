@@ -114,7 +114,8 @@
     "no-relative-import-paths/no-relative-import-paths": [
       "error",
       { "allowSameFolder": true, "rootDir": "src", "prefix": "src" }
-    ]
+    ],
+    "no-else-return": ["error", {"allowElseIf": false}]
   },
   "settings": {
     "react": {
