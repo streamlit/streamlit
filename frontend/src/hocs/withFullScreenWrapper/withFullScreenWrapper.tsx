@@ -16,15 +16,12 @@
 
 import React, { PureComponent, ComponentType, ReactNode } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
-import { Map as ImmutableMap } from "immutable"
 
 import FullScreenWrapper from "src/components/shared/FullScreenWrapper"
 
 export interface AppElementProps {
   width: number
-  element: ImmutableMap<string, any>
   height?: number
-  index?: number
 }
 
 function withFullScreenWrapper(
