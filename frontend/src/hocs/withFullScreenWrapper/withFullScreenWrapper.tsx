@@ -24,14 +24,15 @@ interface Props {
   height?: number
 }
 
+// Our wrapper takes the wrapped component's props, plus "width", "height?".
+// It will pass "isFullScreen" to the wrapped component automatically
+// (but the wrapped component is free to ignore that prop).
+type WrapperProps<P> = Omit<P & Props, "isFullScreen">
+
 function withFullScreenWrapper<P>(
   WrappedComponent: ComponentType<P>
-): ComponentType<Omit<P, "isFullScreen">> {
-  // Our wrapper takes the wrapped component's props, plus "width", "height?".
-  // It will pass "isFullScreen" to the wrapped component (but the wrapped
-  // component is free to ignore that prop).
-  type WrapperProps = Omit<P & Props, "isFullScreen">
-  class ComponentWithFullScreenWrapper extends PureComponent<WrapperProps> {
+): ComponentType<WrapperProps<P>> {
+  class ComponentWithFullScreenWrapper extends PureComponent<WrapperProps<P>> {
     public static readonly displayName = `withFullScreenWrapper(${
       WrappedComponent.displayName || WrappedComponent.name
     })`
@@ -58,7 +59,6 @@ function withFullScreenWrapper<P>(
 
   // Static methods must be copied over
   // https://en.reactjs.org/docs/higher-order-components.html#static-methods-must-be-copied-over
-  // @ts-expect-error
   return hoistNonReactStatics(ComponentWithFullScreenWrapper, WrappedComponent)
 }
 

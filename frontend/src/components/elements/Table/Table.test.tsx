@@ -23,7 +23,6 @@ import { Table, TableProps } from "./Table"
 
 const getProps = (elementProps: Record<string, unknown> = {}): TableProps => ({
   element: fromJS(elementProps) as ImmutableMap<string, any>,
-  width: 100,
 })
 
 describe("Table Element", () => {
