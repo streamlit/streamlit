@@ -23,6 +23,7 @@ import withMapboxToken from "./withMapboxToken"
 
 interface TestProps {
   label: string
+  width: number
   mapboxToken: string
 }
 
@@ -37,10 +38,6 @@ function waitOneTick(): Promise<void> {
 describe("withMapboxToken", () => {
   const token = "mockToken"
   const commandLine = "streamlit run test.py"
-
-  function getProps(): Record<string, unknown> {
-    return { label: "label" }
-  }
 
   beforeAll(() => {
     SessionInfo.current = new SessionInfo({
@@ -70,22 +67,31 @@ describe("withMapboxToken", () => {
   })
 
   it("renders without crashing", async () => {
-    const props = getProps()
     const WrappedComponent = withMapboxToken("st.test")(TestComponent)
-    const wrapper = shallow(<WrappedComponent {...props} />)
+    const wrapper = shallow(
+      <WrappedComponent label={"mockLabel"} width={100} />
+    )
 
     expect(wrapper.find("Alert").exists()).toBe(true)
   })
 
   it("passes mapboxToken to wrapped component", async () => {
-    const props = getProps()
     const WrappedComponent = withMapboxToken("st.test")(TestComponent)
-    const wrapper = shallow(<WrappedComponent {...props} />)
+    const wrapper = shallow(
+      <WrappedComponent label={"mockLabel"} width={100} />
+    )
 
     // Wait one tick for our MapboxToken promise to resolve
     await waitOneTick()
 
-    expect(wrapper.props().label).toBe("label")
+    expect(wrapper.props().label).toBe("mockLabel")
     expect(wrapper.props().mapboxToken).toBe("mockToken")
+  })
+
+  it("defines `displayName`", () => {
+    const WrappedComponent = withMapboxToken("st.test")(TestComponent)
+    expect(WrappedComponent.displayName).toEqual(
+      "withMapboxToken(TestComponent)"
+    )
   })
 })
