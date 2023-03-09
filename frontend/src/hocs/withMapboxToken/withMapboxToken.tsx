@@ -44,6 +44,9 @@ interface State {
 const withMapboxToken =
   (deltaType: string) =>
   <P extends InjectedProps>(WrappedComponent: ComponentType<P>) => {
+    // Return a wrapper that accepts the wrapped component's props, minus
+    // "mapboxToken". The wrapper will fetch the mapboxToken and inject it into
+    // the wrapped component automatically.
     class WithMapboxToken extends PureComponent<
       Omit<P, "mapboxToken">,
       State
@@ -52,7 +55,7 @@ const withMapboxToken =
         WrappedComponent.displayName || WrappedComponent.name
       })`
 
-      public constructor(props: P) {
+      public constructor(props: Omit<P, "mapboxToken">) {
         super(props)
 
         this.state = {

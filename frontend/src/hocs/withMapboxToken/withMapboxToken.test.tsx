@@ -87,4 +87,11 @@ describe("withMapboxToken", () => {
     expect(wrapper.props().label).toBe("mockLabel")
     expect(wrapper.props().mapboxToken).toBe("mockToken")
   })
+
+  it("defines `displayName`", () => {
+    const WrappedComponent = withMapboxToken("st.test")(TestComponent)
+    expect(WrappedComponent.displayName).toEqual(
+      "withMapboxToken(TestComponent)"
+    )
+  })
 })
