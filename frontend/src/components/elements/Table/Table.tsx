@@ -35,6 +35,7 @@ type DataFrame = ImmutableMap<string, any>
  */
 export interface TableProps {
   element: DataFrame
+  width: number
 }
 
 function generateTableCell(

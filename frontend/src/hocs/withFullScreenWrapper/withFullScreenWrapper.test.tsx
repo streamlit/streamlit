@@ -14,52 +14,84 @@
  * limitations under the License.
  */
 
-import React, { ComponentType } from "react"
+import React, { PureComponent, ReactNode } from "react"
 import { mount } from "src/lib/test_util"
 
 import FullScreenWrapper from "src/components/shared/FullScreenWrapper"
-import withFullScreenWrapper, {
-  AppElementProps,
-} from "./withFullScreenWrapper"
+import withFullScreenWrapper from "./withFullScreenWrapper"
 
-const testComponent: ComponentType = () => <div>test</div>
+interface TestProps {
+  width: number
+  isFullScreen: boolean
+  label: string
+}
 
-const getProps = (props: Partial<AppElementProps> = {}): AppElementProps => ({
-  width: 100,
-  ...props,
-})
+class TestComponent extends PureComponent<TestProps> {
+  public render = (): ReactNode => this.props.label
+}
+
+const WrappedTestComponent = withFullScreenWrapper(TestComponent)
 
 describe("withFullScreenWrapper HOC", () => {
   it("renders without crashing", () => {
-    const props = getProps()
-    const WithHoc = withFullScreenWrapper(testComponent)
-    // @ts-ignore
-    const wrapper = mount(<WithHoc {...props} />)
+    const props = { width: 100, label: "label" }
+    const wrapper = mount(<WrappedTestComponent {...props} />)
 
-    expect(wrapper.find("FullScreenWrapper").exists()).toBe(true)
+    expect(wrapper.find(FullScreenWrapper).exists()).toBe(true)
   })
 
-  it("should render a component wrapped with FullScreenWrapper", () => {
-    const props = getProps()
-    const WithHoc = withFullScreenWrapper(testComponent)
-    // @ts-ignore
-    const wrapper = mount(<WithHoc {...props} />)
+  it("renders a component wrapped with FullScreenWrapper", () => {
+    const props = { width: 100, label: "label" }
+    const wrapper = mount(<WrappedTestComponent {...props} />)
     const fullScreenWrapper = wrapper.find(FullScreenWrapper)
 
     expect(fullScreenWrapper.props().width).toBe(props.width)
     expect(fullScreenWrapper.props().height).toBeUndefined()
   })
 
-  it("should render FullScreenWrapper with an specific height", () => {
-    const props = getProps({
-      height: 100,
-    })
-    const WithHoc = withFullScreenWrapper(testComponent)
-    // @ts-ignore
-    const wrapper = mount(<WithHoc {...props} />)
+  it("renders FullScreenWrapper with specified height", () => {
+    const props = { width: 123, label: "label", height: 455 }
+    const wrapper = mount(<WrappedTestComponent {...props} />)
     const fullScreenWrapper = wrapper.find(FullScreenWrapper)
 
     expect(fullScreenWrapper.props().width).toBe(props.width)
     expect(fullScreenWrapper.props().height).toBe(props.height)
+  })
+
+  it("passes unrelated props to wrapped component", () => {
+    const props = { width: 100, label: "label" }
+    const wrapper = mount(<WrappedTestComponent {...props} />)
+    const componentInstance = wrapper.find(TestComponent)
+    expect(componentInstance.props().label).toBe("label")
+  })
+
+  it("passes `isFullScreen` to wrapped component", () => {
+    const props = { width: 100, label: "label" }
+    const wrapper = mount(<WrappedTestComponent {...props} />)
+
+    expect(wrapper.find(TestComponent).props().isFullScreen).toBe(false)
+
+    // @ts-ignore
+    wrapper.find("FullScreenWrapper").setState({ expanded: true })
+    expect(wrapper.find(TestComponent).props().isFullScreen).toBe(true)
+  })
+
+  it("works if wrapped component does not have `isFullScreen` prop", () => {
+    // This test exists just to show that a component that does not take
+    // an "isFullScreen" property can still be wrapped with the FullScreenWrapper,
+    // and the typechecker won't complain. (The component instance will still
+    // receive "isFullScreen" in its props - but it won't "know" about it.)
+    class NoFullScreenPropComponent extends PureComponent<
+      Omit<TestProps, "isFullScreen">
+    > {
+      public render = (): ReactNode => this.props.label
+    }
+    const WrappedNoFullScreenPropComponent = withFullScreenWrapper(
+      NoFullScreenPropComponent
+    )
+
+    const props = { width: 100, label: "label" }
+    const wrapper = mount(<WrappedNoFullScreenPropComponent {...props} />)
+    expect(wrapper.find(NoFullScreenPropComponent).props().label).toBe("label")
   })
 })

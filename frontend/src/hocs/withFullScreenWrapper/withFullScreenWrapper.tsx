@@ -19,30 +19,37 @@ import hoistNonReactStatics from "hoist-non-react-statics"
 
 import FullScreenWrapper from "src/components/shared/FullScreenWrapper"
 
-export interface AppElementProps {
+interface Props {
   width: number
   height?: number
+  isFullScreen: boolean
 }
 
-function withFullScreenWrapper(
-  WrappedComponent: ComponentType<any>
-): ComponentType<any> {
-  class ComponentWithFullScreenWrapper extends PureComponent<AppElementProps> {
-    static readonly displayName = `withFullScreenWrapper(${
+function withFullScreenWrapper<P>(
+  WrappedComponent: ComponentType<P>
+): ComponentType<Omit<P, "isFullScreen">> {
+  // Our wrapper takes the wrapped component's props, plus "width" + "height".
+  // It will pass "isFullScreen" to the wrapped component (but the wrapped
+  // component is free to ignore that prop).
+  type WrapperProps = Omit<P & Props, "isFullScreen">
+  class ComponentWithFullScreenWrapper extends PureComponent<WrapperProps> {
+    public static readonly displayName = `withFullScreenWrapper(${
       WrappedComponent.displayName || WrappedComponent.name
     })`
 
-    render(): ReactNode {
-      const { width, height, ...passThroughProps } = this.props
+    public render = (): ReactNode => {
+      const { width, height } = this.props
 
       return (
         <FullScreenWrapper width={width} height={height}>
           {({ width, height, expanded }) => (
+            // `(this.props as P)` is required due to a TS bug:
+            // https://github.com/microsoft/TypeScript/issues/28938#issuecomment-450636046
             <WrappedComponent
+              {...(this.props as P)}
               width={width}
               height={height}
               isFullScreen={expanded}
-              {...passThroughProps}
             />
           )}
         </FullScreenWrapper>
@@ -52,6 +59,7 @@ function withFullScreenWrapper(
 
   // Static methods must be copied over
   // https://en.reactjs.org/docs/higher-order-components.html#static-methods-must-be-copied-over
+  // @ts-ignore
   return hoistNonReactStatics(ComponentWithFullScreenWrapper, WrappedComponent)
 }
 

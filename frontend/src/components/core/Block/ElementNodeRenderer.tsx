@@ -240,6 +240,7 @@ const RawElementNodeRenderer = (
         <ArrowVegaLiteChart
           element={node.vegaLiteChartElement as VegaLiteChartElement}
           width={width}
+          height={undefined}
         />
       )
 
@@ -292,6 +293,7 @@ const RawElementNodeRenderer = (
         <GraphVizChart
           element={node.element.graphvizChart as GraphVizChartProto}
           width={width}
+          height={undefined}
         />
       )
 
@@ -368,6 +370,7 @@ const RawElementNodeRenderer = (
         <VegaLiteChart
           element={node.immutableElement.get("vegaLiteChart")}
           width={width}
+          height={undefined}
         />
       )
 
