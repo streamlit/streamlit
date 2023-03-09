@@ -115,8 +115,9 @@ const withMapboxToken =
 
         // We have the mapbox token. Pass it through to our component.
         return (
+          // (this.props as unknown as P) is required to work around a TS issue
           <WrappedComponent
-            {...(this.props as any)}
+            {...(this.props as unknown as P)}
             mapboxToken={mapboxToken}
             width={width}
           />
