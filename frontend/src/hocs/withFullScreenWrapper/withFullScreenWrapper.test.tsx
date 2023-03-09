@@ -69,9 +69,10 @@ describe("withFullScreenWrapper HOC", () => {
     const props = { width: 100, label: "label" }
     const wrapper = mount(<WrappedTestComponent {...props} />)
 
+    // by default, isFullScreen == false
     expect(wrapper.find(TestComponent).props().isFullScreen).toBe(false)
 
-    // @ts-ignore
+    // when FullScreenWrapper.expanded == true, then isFullScreen == true
     wrapper.find("FullScreenWrapper").setState({ expanded: true })
     expect(wrapper.find(TestComponent).props().isFullScreen).toBe(true)
   })
