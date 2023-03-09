@@ -74,7 +74,7 @@ repos:
       - id: eslint
         name: Eslint
         always_run: true
-        entry: ./scripts/run_in_subdirectory.py frontend/ yarn lint -- --fix
+        entry: ./scripts/run_in_subdirectory.py frontend/ yarn lint --fix
         files: ^frontend/src/.*\.(js|jsx|ts|tsx)$
         language: node
         pass_filenames: true
