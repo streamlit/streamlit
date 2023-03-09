@@ -22,8 +22,9 @@ import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"
 import MapboxTokenError from "./MapboxTokenError"
 
-interface Props {
+interface InjectedProps {
   width: number
+  mapboxToken: string
 }
 
 interface State {
@@ -42,13 +43,16 @@ interface State {
 
 const withMapboxToken =
   (deltaType: string) =>
-  (WrappedComponent: ComponentType<any>): ComponentType<any> => {
-    class WithMapboxToken extends PureComponent<Props, State> {
+  <P extends InjectedProps>(WrappedComponent: ComponentType<P>) => {
+    class WithMapboxToken extends PureComponent<
+      Omit<P, "mapboxToken">,
+      State
+    > {
       public static readonly displayName = `withMapboxToken(${
         WrappedComponent.displayName || WrappedComponent.name
       })`
 
-      public constructor(props: Props) {
+      public constructor(props: P) {
         super(props)
 
         this.state = {
@@ -102,7 +106,9 @@ const withMapboxToken =
         }
 
         // We have the mapbox token. Pass it through to our component.
-        return <WrappedComponent mapboxToken={mapboxToken} {...this.props} />
+        return (
+          <WrappedComponent {...(this.props as P)} mapboxToken={mapboxToken} />
+        )
       }
     }
 
