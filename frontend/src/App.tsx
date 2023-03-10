@@ -726,7 +726,7 @@ export class App extends PureComponent<Props, State> {
 
     const config = newSessionProto.config as Config
     const themeInput = newSessionProto.customTheme as CustomThemeConfig
-    const { currentPageScriptHash } = this.state
+    const { currentPageScriptHash: prevPageScriptHash } = this.state
     const newPageScriptHash = newSessionProto.pageScriptHash
 
     // mainPage must be a string as we're guaranteed at this point that
@@ -741,7 +741,7 @@ export class App extends PureComponent<Props, State> {
     )?.pageName as string
     const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
-    if (currentPageScriptHash !== newPageScriptHash) {
+    if (prevPageScriptHash !== newPageScriptHash) {
       const baseUriParts = this.getBaseUriParts()
       if (baseUriParts) {
         const { basePath } = baseUriParts
@@ -808,7 +808,7 @@ export class App extends PureComponent<Props, State> {
 
     if (
       appHash === newSessionHash &&
-      currentPageScriptHash === newPageScriptHash
+      prevPageScriptHash === newPageScriptHash
     ) {
       this.setState({
         scriptRunId,
