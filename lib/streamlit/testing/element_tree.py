@@ -28,6 +28,7 @@ from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
+from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
@@ -252,6 +253,30 @@ class Code(Element):
 
     def __repr__(self):
         return clean_repr(self)
+
+
+@dataclass
+class Exception(Element):
+    type: str
+    message: str
+    is_markdown: bool
+    stack_trace: list[str]
+    is_warning: bool
+
+    def __init__(self, proto: ExceptionProto, root: ElementTree):
+        self.key = None
+        self.root = root
+        self.proto = proto
+        self.type = "exception"
+
+        self.message = proto.message
+        self.is_markdown = proto.message_is_markdown
+        self.stack_trace = list(proto.stack_trace)
+        self.is_warning = proto.is_warning
+
+    @property
+    def value(self) -> str:
+        return self.message
 
 
 @runtime_checkable
@@ -819,6 +844,10 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["exception"]) -> Sequence[Exception]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["radio"]) -> Sequence[Radio[Any]]:
         ...
 
@@ -976,6 +1005,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     new_node = Subheader(elt.heading, root=root)
                 else:
                     raise ValueError(f"Unknown heading type with tag {elt.heading.tag}")
+            elif elt.WhichOneof("type") == "exception":
+                new_node = Exception(elt.exception, root=root)
             elif elt.WhichOneof("type") == "radio":
                 new_node = Radio(elt.radio, root=root)
             elif elt.WhichOneof("type") == "checkbox":
