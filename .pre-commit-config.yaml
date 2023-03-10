@@ -64,7 +64,7 @@ repos:
         name: Typecheck
         always_run: true
         entry: yarn --cwd frontend tsc --noEmit
-        files: \.(js$|jsx$|ts$|tsx)$
+        files: \.(js|jsx|ts|tsx)$
         language: node
         pass_filenames: false
         stages:
