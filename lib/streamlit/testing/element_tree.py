@@ -274,6 +274,9 @@ class Exception(Element):
         self.stack_trace = list(proto.stack_trace)
         self.is_warning = proto.is_warning
 
+    def __repr__(self):
+        return clean_repr(self)
+
     @property
     def value(self) -> str:
         return self.message
