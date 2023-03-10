@@ -1135,22 +1135,6 @@ describe("App.sendRerunBackMsg", () => {
 
 //   * handlePageNotFound has branching error messages depending on pageName
 describe("App.handlePageNotFound", () => {
-  let pushStateSpy: any
-
-  beforeEach(() => {
-    pushStateSpy = jest.spyOn(
-      window.history,
-      // @ts-ignore
-      "pushState"
-    )
-  })
-
-  afterEach(() => {
-    // @ts-ignore
-    pushStateSpy.mockRestore()
-    window.history.pushState({}, "", "/")
-  })
-
   it("includes the missing page name in error modal message if available", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
