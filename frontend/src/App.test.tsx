@@ -16,6 +16,7 @@
 
 import React from "react"
 import { ShallowWrapper, ReactWrapper } from "enzyme"
+import { waitFor } from "@testing-library/dom"
 import cloneDeep from "lodash/cloneDeep"
 import { LocalStore } from "src/lib/storageUtils"
 import { hashString } from "src/lib/utils"
@@ -1040,11 +1041,14 @@ describe("App.onHistoryChange", () => {
     expect(instance.state.currentPageScriptHash).toEqual("sub_hash")
 
     window.history.back()
-    await new Promise(resolve => setTimeout(resolve, 10))
-    expect(instance.onPageChange).toHaveBeenLastCalledWith("top_hash")
+    await waitFor(() =>
+      expect(instance.onPageChange).toHaveBeenLastCalledWith("top_hash")
+    )
+
     window.history.back()
-    await new Promise(resolve => setTimeout(resolve, 10))
-    expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
+    await waitFor(() =>
+      expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
+    )
   })
 })
 
