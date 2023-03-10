@@ -32,6 +32,7 @@ class HeadingProtoTag(Enum):
     HEADER_TAG = "h2"
     SUBHEADER_TAG = "h3"
 
+
 Anchor = Optional[Union[str, Literal[False]]]
 
 
@@ -226,7 +227,8 @@ class HeadingMixin:
             else:
                 raise StreamlitAPIException(
                     "Anchor parameter has invalid type: %s. "
-                    "Supported values: None, any string or False" % type(anchor).__name__
+                    "Supported values: None, any string or False"
+                    % type(anchor).__name__
                 )
 
         if help:
