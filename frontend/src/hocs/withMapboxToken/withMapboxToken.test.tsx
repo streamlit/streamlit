@@ -19,7 +19,7 @@ import { shallow } from "src/lib/test_util"
 import { mockSessionInfo } from "src/lib/mocks/mocks"
 import { MapboxToken } from "./MapboxToken"
 
-import withMapboxToken, { WrappedProps } from "./withMapboxToken"
+import withMapboxToken, { WrappedMapboxProps } from "./withMapboxToken"
 
 interface TestProps {
   label: string
@@ -39,7 +39,7 @@ describe("withMapboxToken", () => {
   const token = "mockToken"
   const commandLine = "streamlit run test.py"
 
-  function getProps(): WrappedProps<TestProps> {
+  function getProps(): WrappedMapboxProps<TestProps> {
     return {
       label: "mockLabel",
       width: 123,

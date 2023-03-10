@@ -36,7 +36,10 @@ interface State {
 // We consume a Component that takes a "mapboxToken" prop, and create
 // a wrapped Component that takes a "sessionInfo" prop, and omits
 // the "mapboxToken" prop
-export type WrappedProps<P extends InjectedProps> = Omit<P, "mapboxToken"> & {
+export type WrappedMapboxProps<P extends InjectedProps> = Omit<
+  P,
+  "mapboxToken"
+> & {
   sessionInfo: SessionInfo
   width: number
 }
@@ -55,12 +58,12 @@ const withMapboxToken =
     // Return a wrapper that accepts the wrapped component's props, minus
     // "mapboxToken". The wrapper will fetch the mapboxToken and inject it into
     // the wrapped component automatically.
-    class WithMapboxToken extends PureComponent<WrappedProps<P>, State> {
+    class WithMapboxToken extends PureComponent<WrappedMapboxProps<P>, State> {
       public static readonly displayName = `withMapboxToken(${
         WrappedComponent.displayName || WrappedComponent.name
       })`
 
-      public constructor(props: WrappedProps<P>) {
+      public constructor(props: WrappedMapboxProps<P>) {
         super(props)
 
         this.state = {
