@@ -741,7 +741,7 @@ export class App extends PureComponent<Props, State> {
     )?.pageName as string
     const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
-    if (this.state.currentPageScriptHash !== newPageScriptHash) {
+    if (currentPageScriptHash !== newPageScriptHash) {
       const baseUriParts = this.getBaseUriParts()
       if (baseUriParts) {
         const { basePath } = baseUriParts
