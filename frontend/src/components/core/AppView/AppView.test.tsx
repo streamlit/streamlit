@@ -33,8 +33,11 @@ import AppView, { AppViewProps } from "./AppView"
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
   const formsData = createFormsData()
 
+  const sessionInfo = mockSessionInfo()
+
   return {
-    elements: AppRoot.empty(getMetricsManagerForTest()),
+    elements: AppRoot.empty(getMetricsManagerForTest(sessionInfo)),
+    sessionInfo: sessionInfo,
     scriptRunId: "script run 123",
     scriptRunState: ScriptRunState.NOT_RUNNING,
     widgetMgr: new WidgetStateManager({

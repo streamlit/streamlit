@@ -1531,6 +1531,7 @@ export class App extends PureComponent<Props, State> {
             </Header>
 
             <AppView
+              sessionInfo={this.sessionInfo}
               elements={elements}
               scriptRunId={scriptRunId}
               scriptRunState={scriptRunState}
