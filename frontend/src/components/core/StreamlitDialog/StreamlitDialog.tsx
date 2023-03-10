@@ -111,6 +111,8 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
 interface AboutProps {
   type: DialogType.ABOUT
 
+  sessionInfo: SessionInfo
+
   /** Callback to close the dialog */
   onClose: PlainEventHandler
 
@@ -129,7 +131,7 @@ function aboutDialog(props: AboutProps): ReactElement {
     // Markdown New line is 2 spaces + \n
     const newLineMarkdown = "  \n"
     const StreamlitInfo = [
-      `Made with Streamlit v${SessionInfo.current.streamlitVersion}`,
+      `Made with Streamlit v${props.sessionInfo.current.streamlitVersion}`,
       STREAMLIT_HOME_URL,
       `Copyright ${new Date().getFullYear()} Snowflake Inc. All rights reserved.`,
     ].join(newLineMarkdown)
@@ -163,9 +165,9 @@ function aboutDialog(props: AboutProps): ReactElement {
         <div>
           {/* Show our version string only if SessionInfo has been created. If Streamlit
           hasn't yet connected to the server, the SessionInfo singleton will be null. */}
-          {SessionInfo.isSet() && (
+          {props.sessionInfo.isSet && (
             <>
-              Streamlit v{SessionInfo.current.streamlitVersion}
+              Streamlit v{props.sessionInfo.current.streamlitVersion}
               <br />
             </>
           )}

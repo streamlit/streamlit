@@ -37,7 +37,6 @@ import {
 } from "src/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
-import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
 import {
   CUSTOM_THEME_NAME,
   createAutoTheme,
@@ -50,6 +49,8 @@ import { DialogType, StreamlitDialog } from "./components/core/StreamlitDialog"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
 import ToolbarActions from "./components/core/ToolbarActions"
+import { mockSessionInfo, mockSessionInfoProps } from "./lib/mocks/mocks"
+import { SessionInfo } from "./lib/SessionInfo"
 
 jest.mock("src/lib/ConnectionManager")
 
@@ -118,25 +119,8 @@ jest.mock("moment", () =>
 
 describe("App", () => {
   beforeEach(() => {
-    SessionInfo.current = new SessionInfo({
-      appId: "aid",
-      sessionId: "sessionId",
-      streamlitVersion: "sv",
-      pythonVersion: "pv",
-      installationId: "iid",
-      installationIdV3: "iid3",
-      authorEmail: "ae",
-      maxCachedMessageAge: 2,
-      commandLine: "command line",
-      userMapboxToken: "mpt",
-    } as SessionInfoArgs)
-    // @ts-ignore
+    // @ts-expect-error
     window.prerenderReady = false
-  })
-
-  afterEach(() => {
-    const UnsafeSessionInfo = SessionInfo as any
-    UnsafeSessionInfo.singleton = undefined
   })
 
   it("renders without crashing", () => {
@@ -155,39 +139,48 @@ describe("App", () => {
     expect(instance.connectionManager.disconnect).toHaveBeenCalled()
   })
 
-  it("reloads when streamlit server version changes", () => {
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
+  describe("streamlit server version changes", () => {
+    let prevWindowLocation: Location
+    beforeEach(() => (prevWindowLocation = window.location))
+    afterEach(() => (window.location = prevWindowLocation))
 
-    // A HACK to mock `window.location.reload`.
-    // NOTE: The mocking must be done after mounting,
-    // but before `handleMessage` is called.
-    const { location } = window
-    // @ts-ignore
-    delete window.location
-    // @ts-ignore
-    window.location = { reload: jest.fn() }
+    it("triggers page reload", () => {
+      const props = getProps()
+      const wrapper = shallow(<App {...props} />)
+      const app = wrapper.instance() as App
 
-    const fwMessage = new ForwardMsg()
-    fwMessage.newSession = {
-      config: {},
-      initialize: {
-        environmentInfo: {
-          streamlitVersion: "svv",
+      // A HACK to mock `window.location.reload`.
+      // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
+      // @ts-expect-error
+      delete window.location
+      // @ts-expect-error
+      window.location = { reload: jest.fn() }
+
+      // Ensure SessionInfo is initialized
+      // @ts-expect-error
+      const sessionInfo: SessionInfo = app.sessionInfo
+      sessionInfo.setCurrent(
+        mockSessionInfoProps({ streamlitVersion: "oldStreamlitVersion" })
+      )
+      expect(sessionInfo.isSet).toBe(true)
+
+      const fwMessage = new ForwardMsg()
+      fwMessage.newSession = {
+        config: {},
+        initialize: {
+          environmentInfo: {
+            streamlitVersion: "newStreamlitVersion",
+          },
+          sessionId: "sessionId",
+          userInfo: {},
+          sessionStatus: {},
         },
-        sessionId: "sessionId",
-        userInfo: {},
-        sessionStatus: {},
-      },
-    }
+      }
 
-    // @ts-ignore
-    wrapper.instance().handleMessage(fwMessage)
+      app.handleMessage(fwMessage)
 
-    expect(window.location.reload).toHaveBeenCalled()
-
-    // Restore `window.location`.
-    window.location = location
+      expect(window.location.reload).toHaveBeenCalled()
+    })
   })
 
   it("starts screencast recording when the MainMenu is clicked", () => {
@@ -271,6 +264,7 @@ describe("App", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const dialog = StreamlitDialog({
       type: DialogType.ABOUT,
+      sessionInfo: mockSessionInfo(),
       onClose: () => {},
     })
     wrapper.setState({ dialog })
@@ -324,6 +318,7 @@ describe("App", () => {
     )
     const dialog = StreamlitDialog({
       type: DialogType.ABOUT,
+      sessionInfo: mockSessionInfo(),
       onClose: () => {},
     })
     wrapper.setState({ dialog })
@@ -462,12 +457,10 @@ describe("App.handleNewSession", () => {
   const NEW_SESSION = new NewSession(NEW_SESSION_JSON)
 
   afterEach(() => {
-    const UnsafeSessionInfo = SessionInfo as any
-    UnsafeSessionInfo.singleton = undefined
     window.localStorage.clear()
   })
 
-  it("respects the user's theme preferencece if set, but adds custom theme as an option", () => {
+  it("respects the user's theme preference if set, but adds custom theme as an option", () => {
     const props = getProps()
     window.localStorage.setItem(
       LocalStore.ACTIVE_THEME,
@@ -649,32 +642,38 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
 
+    // @ts-expect-error
+    const sessionInfo = app.sessionInfo
+
     const oneTimeInitialization = jest.spyOn(
       app,
       // @ts-ignore
       "handleOneTimeInitialization"
     )
 
-    expect(SessionInfo.isSet()).toBe(false)
+    expect(sessionInfo.isSet).toBe(false)
 
     // @ts-ignore
     app.handleNewSession(NEW_SESSION)
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
-    expect(SessionInfo.isSet()).toBe(true)
+    expect(sessionInfo.isSet).toBe(true)
   })
 
   it("performs one-time initialization only once", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
 
+    // @ts-expect-error
+    const sessionInfo = app.sessionInfo
+
     const oneTimeInitialization = jest.spyOn(
       app,
       // @ts-ignore
       "handleOneTimeInitialization"
     )
 
-    expect(SessionInfo.isSet()).toBe(false)
+    expect(sessionInfo.isSet).toBe(false)
 
     // @ts-ignore
     app.handleNewSession(NEW_SESSION)
@@ -686,12 +685,15 @@ describe("App.handleNewSession", () => {
     // Multiple NEW_SESSION messages should not result in one-time
     // initialization being performed more than once.
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
-    expect(SessionInfo.isSet()).toBe(true)
+    expect(sessionInfo.isSet).toBe(true)
   })
 
   it("performs one-time initialization after a new session is received", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
+
+    // @ts-expect-error
+    const sessionInfo = app.sessionInfo
 
     const oneTimeInitialization = jest.spyOn(
       app,
@@ -699,7 +701,7 @@ describe("App.handleNewSession", () => {
       "handleOneTimeInitialization"
     )
 
-    expect(SessionInfo.isSet()).toBe(false)
+    expect(sessionInfo.isSet).toBe(false)
 
     // @ts-ignore
     app.handleNewSession(NEW_SESSION)
@@ -707,7 +709,7 @@ describe("App.handleNewSession", () => {
 
     // @ts-ignore
     app.handleConnectionStateChanged(ConnectionState.PINGING_SERVER)
-    expect(SessionInfo.isSet()).toBe(false)
+    expect(sessionInfo.isSet).toBe(false)
 
     // @ts-ignore
     app.handleConnectionStateChanged(ConnectionState.CONNECTED)
@@ -715,7 +717,7 @@ describe("App.handleNewSession", () => {
     app.handleNewSession(NEW_SESSION)
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
-    expect(SessionInfo.isSet()).toBe(true)
+    expect(sessionInfo.isSet).toBe(true)
   })
 
   it("should set window.prerenderReady to true after app script is run successfully first time", () => {
@@ -1189,15 +1191,21 @@ describe("App.handlePageNotFound", () => {
 })
 
 describe("Test Main Menu shortcut functionality", () => {
+  let prevWindowLocation: Location
   beforeEach(() => {
-    // @ts-ignore
+    prevWindowLocation = window.location
+    // @ts-expect-error
     delete window.location
-    // @ts-ignore
+    // @ts-expect-error
     window.location = {
       assign: jest.fn(),
       host: "testing.com",
       href: "testing.com",
     }
+  })
+
+  afterEach(() => {
+    window.location = prevWindowLocation
   })
 
   it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
