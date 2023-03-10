@@ -48,7 +48,7 @@ def clean_repr(self):
     """
     # This is similar to the notion of Falsey values, except for ints and floats,
     # which usually have semantic meaning for 0 values.
-    defaults = [None, "", False, [], set(), dict()]
+    defaults: list[Any] = [None, "", False, [], set(), dict()]
     fields_vals = (
         (f.name, getattr(self, f.name))
         for f in dataclasses.fields(self)
