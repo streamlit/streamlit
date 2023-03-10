@@ -27,6 +27,7 @@ import { sendMessageToHost } from "src/hocs/withHostCommunication"
 
 import AppContext from "src/components/core/AppContext"
 import { BlockNode, AppRoot } from "src/lib/AppNode"
+import { SessionInfo } from "src/lib/SessionInfo"
 
 import {
   StyledAppViewBlockContainer,
@@ -40,6 +41,8 @@ import {
 
 export interface AppViewProps {
   elements: AppRoot
+
+  sessionInfo: SessionInfo
 
   // The unique ID for the most recent script run.
   scriptRunId: string
@@ -74,6 +77,7 @@ export interface AppViewProps {
 function AppView(props: AppViewProps): ReactElement {
   const {
     elements,
+    sessionInfo,
     scriptRunId,
     scriptRunState,
     widgetMgr,
@@ -118,6 +122,7 @@ function AppView(props: AppViewProps): ReactElement {
     >
       <VerticalBlock
         node={node}
+        sessionInfo={sessionInfo}
         scriptRunId={scriptRunId}
         scriptRunState={scriptRunState}
         widgetMgr={widgetMgr}

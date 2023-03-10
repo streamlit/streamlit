@@ -16,7 +16,6 @@
 
 import axios from "axios"
 import HttpClient from "src/lib/HttpClient"
-import { SessionInfo } from "src/lib/SessionInfo"
 import { buildHttpUri } from "src/lib/UriUtil"
 
 const MOCK_SERVER_URI = {
@@ -27,21 +26,6 @@ const MOCK_SERVER_URI = {
 
 describe("HttpClient", () => {
   const spyRequest = jest.spyOn(axios, "request")
-
-  beforeEach(() => {
-    SessionInfo.current = new SessionInfo({
-      appId: "aid",
-      sessionId: "sessionId",
-      streamlitVersion: "sv",
-      pythonVersion: "pv",
-      installationId: "iid",
-      installationIdV3: "iid3",
-      authorEmail: "ae",
-      maxCachedMessageAge: 2,
-      commandLine: "command line",
-      userMapboxToken: "mockUserMapboxToken",
-    })
-  })
 
   afterEach(() => {
     document.cookie.split(";").forEach(cookie => {

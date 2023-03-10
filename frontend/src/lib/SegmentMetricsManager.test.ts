@@ -16,29 +16,10 @@
 
 // Disable Typescript checking, since mm.track and identify have private scope
 // @ts-nocheck
-import { SessionInfo } from "src/lib/SessionInfo"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
-
-const createSessionInfo = (): SessionInfo =>
-  new SessionInfo({
-    appId: "aid",
-    sessionId: "sessionId",
-    streamlitVersion: "sv",
-    pythonVersion: "pv",
-    installationId: "iid",
-    installationIdV3: "iid3",
-    authorEmail: "ae",
-    maxCachedMessageAge: 2,
-    commandLine: "command line",
-    userMapboxToken: "mbx",
-  })
-
-beforeEach(() => {
-  SessionInfo.current = createSessionInfo()
-})
+import { mockSessionInfo, mockSessionInfoProps } from "./mocks/mocks"
 
 afterEach(() => {
-  SessionInfo.singleton = undefined
   window.analytics = undefined
 })
 
@@ -83,7 +64,8 @@ test("initializes Segment analytics when gatherUsageStats=true", () => {
 })
 
 test("enqueues events before initialization", () => {
-  const mm = getMetricsManagerForTest()
+  const sessionInfo = mockSessionInfo()
+  const mm = getMetricsManagerForTest(sessionInfo)
 
   mm.enqueue("ev1", { data1: 11 })
   mm.enqueue("ev2", { data2: 12 })
@@ -95,16 +77,20 @@ test("enqueues events before initialization", () => {
 
   expect(mm.track.mock.calls.length).toBe(3)
   expect(mm.identify.mock.calls.length).toBe(1)
-  expect(mm.identify.mock.calls[0][0]).toBe(SessionInfo.current.installationId)
+  expect(mm.identify.mock.calls[0][0]).toBe(sessionInfo.current.installationId)
   expect(mm.identify.mock.calls[0][1]).toMatchObject({
-    authoremail: SessionInfo.current.authorEmail,
+    authoremail: sessionInfo.current.authorEmail,
   })
 })
 
 test("enqueues events when disconnected, then sends them when connected again", () => {
-  const mm = getMetricsManagerForTest()
+  const sessionInfo = mockSessionInfo()
+  const mm = getMetricsManagerForTest(sessionInfo)
   mm.initialize({ gatherUsageStats: true })
-  SessionInfo.current = null
+
+  // "Disconnect" our SessionInfo. Enqueued events should not be tracked.
+  sessionInfo.setCurrent(undefined)
+  expect(sessionInfo.isSet).toBe(false)
 
   mm.enqueue("ev1", { data1: 11 })
   mm.enqueue("ev2", { data2: 12 })
@@ -112,7 +98,9 @@ test("enqueues events when disconnected, then sends them when connected again", 
 
   expect(mm.track.mock.calls.length).toBe(0)
 
-  SessionInfo.current = createSessionInfo()
+  // Initialize the SessionInfo. The next call to enqueue should cause
+  // all of our enqueued messages to get tracked.
+  sessionInfo.setCurrent(mockSessionInfoProps())
   mm.enqueue("ev4", { data4: 14 })
   expect(mm.track.mock.calls.length).toBe(4)
 })
@@ -152,15 +140,16 @@ test("tracks host data when in an iFrame", () => {
 })
 
 test("tracks installation data", () => {
-  const mm = getMetricsManagerForTest()
+  const sessionInfo = mockSessionInfo()
+  const mm = getMetricsManagerForTest(sessionInfo)
   mm.initialize({ gatherUsageStats: true })
   mm.enqueue("ev1", { data1: 11 })
 
   expect(mm.identify.mock.calls[0][1]).toMatchObject({
-    machineIdV3: SessionInfo.current.installationIdV3,
+    machineIdV3: sessionInfo.current.installationIdV3,
   })
   expect(mm.track.mock.calls[0][1]).toMatchObject({
-    machineIdV3: SessionInfo.current.installationIdV3,
+    machineIdV3: sessionInfo.current.installationIdV3,
   })
 })
 

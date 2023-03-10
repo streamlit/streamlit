@@ -21,6 +21,7 @@ import { BaseUriParts, getPossibleBaseUris } from "src/lib/UriUtil"
 
 import { ConnectionState } from "./ConnectionState"
 import { logError } from "./log"
+import { SessionInfo } from "./SessionInfo"
 import { WebsocketConnection } from "./WebsocketConnection"
 import { ensureError } from "./ErrorHandling"
 
@@ -34,6 +35,9 @@ import { ensureError } from "./ErrorHandling"
 const RETRY_COUNT_FOR_WARNING = 6
 
 interface Props {
+  /** The app's SessionInfo instance */
+  sessionInfo: SessionInfo
+
   /**
    * Function to be called when we receive a message from the server.
    */
@@ -172,6 +176,7 @@ export class ConnectionManager {
     const baseUriPartsList = getPossibleBaseUris()
 
     return new WebsocketConnection({
+      sessionInfo: this.props.sessionInfo,
       baseUriPartsList,
       onMessage: this.props.onMessage,
       onConnectionStateChange: this.setConnectionState,

@@ -16,10 +16,10 @@
 
 import React from "react"
 import { shallow } from "src/lib/test_util"
-import { SessionInfo } from "src/lib/SessionInfo"
+import { mockSessionInfo } from "src/lib/mocks/mocks"
 import { MapboxToken } from "./MapboxToken"
 
-import withMapboxToken from "./withMapboxToken"
+import withMapboxToken, { WrappedMapboxProps } from "./withMapboxToken"
 
 interface TestProps {
   label: string
@@ -39,20 +39,13 @@ describe("withMapboxToken", () => {
   const token = "mockToken"
   const commandLine = "streamlit run test.py"
 
-  beforeAll(() => {
-    SessionInfo.current = new SessionInfo({
-      appId: "aid",
-      sessionId: "mockSessionId",
-      streamlitVersion: "sv",
-      pythonVersion: "pv",
-      installationId: "iid",
-      installationIdV3: "iid3",
-      authorEmail: "ae",
-      maxCachedMessageAge: 2,
-      commandLine,
-      userMapboxToken: token,
-    })
-  })
+  function getProps(): WrappedMapboxProps<TestProps> {
+    return {
+      label: "mockLabel",
+      width: 123,
+      sessionInfo: mockSessionInfo({ commandLine, userMapboxToken: token }),
+    }
+  }
 
   // Install a mock token in our token fetcher so that we don't hit
   // the network.
@@ -67,19 +60,17 @@ describe("withMapboxToken", () => {
   })
 
   it("renders without crashing", async () => {
+    const props = getProps()
     const WrappedComponent = withMapboxToken("st.test")(TestComponent)
-    const wrapper = shallow(
-      <WrappedComponent label={"mockLabel"} width={100} />
-    )
+    const wrapper = shallow(<WrappedComponent {...props} />)
 
     expect(wrapper.find("Alert").exists()).toBe(true)
   })
 
   it("passes mapboxToken to wrapped component", async () => {
+    const props = getProps()
     const WrappedComponent = withMapboxToken("st.test")(TestComponent)
-    const wrapper = shallow(
-      <WrappedComponent label={"mockLabel"} width={100} />
-    )
+    const wrapper = shallow(<WrappedComponent {...props} />)
 
     // Wait one tick for our MapboxToken promise to resolve
     await waitOneTick()

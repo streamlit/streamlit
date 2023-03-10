@@ -45,8 +45,8 @@ export class MapboxToken {
    * (The returned value is cached in memory, so the remote resource will
    * only be fetched once per session.)
    */
-  public static async get(): Promise<string> {
-    const { commandLine, userMapboxToken } = SessionInfo.current
+  public static async get(sessionInfo: SessionInfo): Promise<string> {
+    const { commandLine, userMapboxToken } = sessionInfo.current
 
     if (
       !MapboxToken.token ||

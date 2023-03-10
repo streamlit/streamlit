@@ -24,38 +24,19 @@ import {
 
 import { hashString } from "src/lib/utils"
 
-export interface Args {
-  appId: string
-  sessionId: string
-  streamlitVersion: string
-  pythonVersion: string
-  installationId: string
-  installationIdV3: string
-  authorEmail: string
-  maxCachedMessageAge: number
-  commandLine: string
-  userMapboxToken: string
-}
-
-export class SessionInfo {
-  // Fields that don't change during the lifetime of a session (i.e. a browser tab).
-  public readonly appId: string
-
-  public readonly sessionId: string
-
-  public readonly streamlitVersion: string
-
-  public readonly pythonVersion: string
-
-  public readonly installationId: string
-
-  public readonly installationIdV3: string
-
-  public readonly authorEmail: string
-
-  public readonly maxCachedMessageAge: number
-
-  public readonly commandLine: string
+/**
+ * SessionInfo properties. These don't change during the lifetime of a session.
+ */
+export interface Props {
+  readonly appId: string
+  readonly sessionId: string
+  readonly streamlitVersion: string
+  readonly pythonVersion: string
+  readonly installationId: string
+  readonly installationIdV3: string
+  readonly authorEmail: string
+  readonly maxCachedMessageAge: number
+  readonly commandLine: string
 
   /**
    * The user-supplied mapbox token. By default, this will be the empty string,
@@ -63,56 +44,66 @@ export class SessionInfo {
    * that instead. Do not use this value directly; use `MapboxToken.get()`
    * instead.
    */
-  public readonly userMapboxToken: string
+  readonly userMapboxToken: string
+}
+
+export class SessionInfo {
+  /** Our current SessionInfo properties.*/
+  private _current?: Props
 
   /**
-   * Singleton SessionInfo object. The reasons we're using a singleton here
-   * instead of just exporting a module-level instance are:
-   * - So we can easily override it in tests.
-   * - So we throw a loud error when some code tries to use it before it's
-   *   initialized.
-   */
-  private static singleton?: SessionInfo
-
-  /**
-   * Our last SessionInfo singleton if there is no currently active session, or
+   * Our last SessionInfo props if there is no currently active session, or
    * undefined if there is one.
    */
-  public static lastSessionInfo?: SessionInfo
+  private _last?: Props
 
-  public static get current(): SessionInfo {
-    if (!SessionInfo.singleton) {
+  /** Return the current SessionInfo props. Throw an error if the props are undefined. */
+  public get current(): Props {
+    if (!this._current) {
       throw new Error("Tried to use SessionInfo before it was initialized")
     }
-    return SessionInfo.singleton
+    return this._current
   }
 
-  public static set current(sm: SessionInfo) {
-    SessionInfo.lastSessionInfo = undefined
-    SessionInfo.singleton = sm
+  /** Return the previous SessionInfo props. They may be undefined! */
+  public get last(): Props | undefined {
+    return this._last
   }
 
-  public static isSet(): boolean {
-    return SessionInfo.singleton != null
+  /**
+   * Initialize `SessionInfo.current` with the given props and copy its
+   * previous props to `SessionInfo.last`.
+   */
+  public setCurrent(props?: Props): void {
+    this._last = this._current != null ? { ...this._current } : undefined
+    this._current = props != null ? { ...props } : undefined
   }
 
-  public static get isHello(): boolean {
-    return this.current.commandLine === "streamlit hello"
+  /** Clear `SessionInfo.current` and copy its previous props to `SessionInfo.last`. */
+  public clearCurrent(): void {
+    this.setCurrent(undefined)
   }
 
-  public static clearSession(): void {
-    SessionInfo.lastSessionInfo = SessionInfo.singleton
-    SessionInfo.singleton = undefined
+  /** True if `SessionInfo.current` exists. */
+  public get isSet(): boolean {
+    return this._current != null
   }
 
-  /** Create a SessionInfo from the relevant bits of an initialize message. */
-  public static fromNewSessionMessage(newSession: NewSession): SessionInfo {
+  /** True if `SessionInfo.current` refers to a "streamlit hello" session. */
+  public get isHello(): boolean {
+    return (
+      this._current != null && this._current.commandLine === "streamlit hello"
+    )
+  }
+
+  /** Create SessionInfo Props from the relevant bits of an initialize message. */
+  public static propsFromNewSessionMessage(newSession: NewSession): Props {
     const initialize = newSession.initialize as Initialize
     const config = newSession.config as Config
     const userInfo = initialize.userInfo as UserInfo
     const environmentInfo = initialize.environmentInfo as EnvironmentInfo
 
-    return new SessionInfo({
+    return {
       appId: hashString(userInfo.installationIdV3 + newSession.mainScriptPath),
       sessionId: initialize.sessionId,
       streamlitVersion: environmentInfo.streamlitVersion,
@@ -123,45 +114,6 @@ export class SessionInfo {
       maxCachedMessageAge: config.maxCachedMessageAge,
       commandLine: initialize.commandLine,
       userMapboxToken: config.mapboxToken,
-    })
-  }
-
-  public constructor({
-    appId,
-    sessionId,
-    streamlitVersion,
-    pythonVersion,
-    installationId,
-    installationIdV3,
-    authorEmail,
-    maxCachedMessageAge,
-    commandLine,
-    userMapboxToken,
-  }: Args) {
-    if (
-      appId == null ||
-      sessionId == null ||
-      streamlitVersion == null ||
-      pythonVersion == null ||
-      installationId == null ||
-      installationIdV3 == null ||
-      authorEmail == null ||
-      maxCachedMessageAge == null ||
-      commandLine == null ||
-      userMapboxToken == null
-    ) {
-      throw new Error("SessionInfo arguments must be non-null")
     }
-
-    this.appId = appId
-    this.sessionId = sessionId
-    this.streamlitVersion = streamlitVersion
-    this.pythonVersion = pythonVersion
-    this.installationId = installationId
-    this.installationIdV3 = installationIdV3
-    this.authorEmail = authorEmail
-    this.maxCachedMessageAge = maxCachedMessageAge
-    this.commandLine = commandLine
-    this.userMapboxToken = userMapboxToken
   }
 }
