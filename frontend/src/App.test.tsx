@@ -642,7 +642,7 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
 
-    // @ts-ignore
+    // @ts-expect-error
     const sessionInfo = app.sessionInfo
 
     const oneTimeInitialization = jest.spyOn(
@@ -664,7 +664,7 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
 
-    // @ts-ignore
+    // @ts-expect-error
     const sessionInfo = app.sessionInfo
 
     const oneTimeInitialization = jest.spyOn(
@@ -692,7 +692,7 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
 
-    // @ts-ignore
+    // @ts-expect-error
     const sessionInfo = app.sessionInfo
 
     const oneTimeInitialization = jest.spyOn(
