@@ -71,7 +71,7 @@ export class SessionInfo {
   }
 
   /**
-   * Initialize `SessionInfo.current` with the given props, and copy its
+   * Initialize `SessionInfo.current` with the given props and copy its
    * previous props to `SessionInfo.last`.
    */
   public setCurrent(props?: Props): void {
@@ -79,7 +79,7 @@ export class SessionInfo {
     this._current = props != null ? { ...props } : undefined
   }
 
-  /** Clear `SessionInfo.current`, and copy its previous props to `SessionInfo.last`. */
+  /** Clear `SessionInfo.current` and copy its previous props to `SessionInfo.last`. */
   public clearCurrent(): void {
     this.setCurrent(undefined)
   }
