@@ -727,7 +727,7 @@ export class App extends PureComponent<Props, State> {
 
     const config = newSessionProto.config as Config
     const themeInput = newSessionProto.customTheme as CustomThemeConfig
-    const { currentPageScriptHash } = this.state
+    const { currentPageScriptHash: prevPageScriptHash } = this.state
     const newPageScriptHash = newSessionProto.pageScriptHash
 
     // mainPage must be a string as we're guaranteed at this point that
@@ -742,18 +742,20 @@ export class App extends PureComponent<Props, State> {
     )?.pageName as string
     const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
-    const baseUriParts = this.getBaseUriParts()
-    if (baseUriParts) {
-      const { basePath } = baseUriParts
-      const queryString = this.getQueryString()
+    if (prevPageScriptHash !== newPageScriptHash) {
+      const baseUriParts = this.getBaseUriParts()
+      if (baseUriParts) {
+        const { basePath } = baseUriParts
+        const queryString = this.getQueryString()
 
-      const qs = queryString ? `?${queryString}` : ""
-      const basePathPrefix = basePath ? `/${basePath}` : ""
+        const qs = queryString ? `?${queryString}` : ""
+        const basePathPrefix = basePath ? `/${basePath}` : ""
 
-      const pagePath = viewingMainPage ? "" : newPageName
-      const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+        const pagePath = viewingMainPage ? "" : newPageName
+        const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
 
-      window.history.pushState({}, "", pageUrl)
+        window.history.pushState({}, "", pageUrl)
+      }
     }
 
     this.processThemeInput(themeInput)
@@ -807,7 +809,7 @@ export class App extends PureComponent<Props, State> {
 
     if (
       appHash === newSessionHash &&
-      currentPageScriptHash === newPageScriptHash
+      prevPageScriptHash === newPageScriptHash
     ) {
       this.setState({
         scriptRunId,
