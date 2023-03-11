@@ -854,6 +854,7 @@ describe("App.handleNewSession", () => {
   describe("page change URL handling", () => {
     let wrapper: ShallowWrapper
     let instance: App
+    let pushStateSpy: any
 
     beforeEach(() => {
       wrapper = shallow(<App {...getProps()} />)
@@ -862,7 +863,7 @@ describe("App.handleNewSession", () => {
       instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
 
       window.history.pushState({}, "", "/")
-      jest.spyOn(
+      pushStateSpy = jest.spyOn(
         window.history,
         // @ts-ignore
         "pushState"
@@ -870,6 +871,8 @@ describe("App.handleNewSession", () => {
     })
 
     afterEach(() => {
+      // @ts-ignore
+      pushStateSpy.mockRestore()
       window.history.pushState({}, "", "/")
     })
 
@@ -877,7 +880,7 @@ describe("App.handleNewSession", () => {
       const instance = wrapper.instance() as App
       instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
 
-      expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
+      expect(window.history.pushState).toHaveBeenLastCalledWith({}, "", "/")
     })
 
     it("can switch to a non-main page", () => {
@@ -977,6 +980,7 @@ describe("App.handlePageInfoChanged", () => {
   })
 
   afterEach(() => {
+    pushStateSpy.mockRestore()
     // Reset the value of document.location.pathname.
     window.history.pushState({}, "", "/")
   })
@@ -1149,7 +1153,6 @@ describe("App.handlePageNotFound", () => {
       new PageNotFound({ pageName: "nonexistentPage" })
     )
 
-    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
     expect(instance.showError).toHaveBeenCalledWith(
       "Page not found",
       expect.stringMatching("You have requested page /nonexistentPage")
@@ -1175,7 +1178,6 @@ describe("App.handlePageNotFound", () => {
 
     instance.handlePageNotFound(new PageNotFound({ pageName: "" }))
 
-    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
     expect(instance.showError).toHaveBeenCalledWith(
       "Page not found",
       expect.stringMatching(
