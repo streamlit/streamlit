@@ -72,11 +72,6 @@ const imageInlineSizeLimit = parseInt(
 // Check if TypeScript is setup
 const useTypeScript = fs.existsSync(paths.appTsConfig)
 
-// Check if Tailwind config exists
-const useTailwind = fs.existsSync(
-  path.join(paths.appPath, "tailwind.config.js")
-)
-
 // Get the path to the uncompiled service worker (if it exists).
 const swSrc = paths.swSrc
 
@@ -190,7 +185,7 @@ module.exports = function (webpackEnv) {
     target: ["browserslist"],
     // Webpack noise constrained to errors and warnings
     stats: "errors-warnings",
-    mode: isEnvProduction ? "production" : isEnvDevelopment && "development",
+    mode: "development",
     // Stop compilation early in production
     bail: isEnvProduction,
     devtool: "source-map",
@@ -616,9 +611,7 @@ module.exports = function (webpackEnv) {
             }),
             configOverwrite: {
               compilerOptions: {
-                sourceMap: isEnvProduction
-                  ? shouldUseSourceMap
-                  : isEnvDevelopment,
+                sourceMap: true,
                 skipLibCheck: true,
                 inlineSourceMap: false,
                 declarationMap: false,
