@@ -43,7 +43,7 @@ from streamlit.runtime.state.session_state import SessionState
 
 
 def clean_repr(self):
-    """A deataclass repr that excludes default values from protobuf fields that are
+    """A dataclass repr that excludes default values from protobuf fields that are
     likely to be meaningless, or are explicitly using defaults from the dataclass.
     """
     # This is similar to the notion of Falsey values, except for ints and floats,
