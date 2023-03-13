@@ -26,7 +26,12 @@ import withHostCommunication, {
 
 interface TestProps {
   hostCommunication: HostCommunicationHOC
-  label: string
+
+  /**
+   * A property that's not related to the withHostCommunication wrapper.
+   * We test that the wrapper passes unrelated props to its wrapped component.
+   */
+  unrelatedProp: string
 }
 
 class TestComponent extends PureComponent<TestProps> {
@@ -50,19 +55,25 @@ function mockEventListeners(): (type: string, event: any) => void {
 
 describe("withHostCommunication HOC", () => {
   it("renders without crashing", () => {
-    const wrapper = shallow(<WrappedTestComponent label={"mockLabel"} />)
+    const wrapper = shallow(
+      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+    )
 
     expect(wrapper.html()).not.toBeNull()
   })
 
   it("wrapped component should have hostCommunication prop", () => {
-    const wrapper = shallow(<WrappedTestComponent label={"mockLabel"} />)
+    const wrapper = shallow(
+      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+    )
     expect(wrapper.find(TestComponent).prop("hostCommunication")).toBeDefined()
   })
 
   it("passes other props to wrapped component", () => {
-    const wrapper = shallow(<WrappedTestComponent label={"mockLabel"} />)
-    expect(wrapper.find(TestComponent).props().label).toBe("mockLabel")
+    const wrapper = shallow(
+      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+    )
+    expect(wrapper.find(TestComponent).props().unrelatedProp).toBe("mockLabel")
   })
 
   it("defines displayName", () => {
@@ -84,7 +95,7 @@ describe("withHostCommunication HOC", () => {
 
     window.addEventListener("message", listener)
 
-    const wrapper = mount(<WrappedTestComponent label={"mockLabel"} />)
+    const wrapper = mount(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
     const hostCommunication: any = wrapper
       .find(TestComponent)
       .prop("hostCommunication")
@@ -109,7 +120,7 @@ describe("withHostCommunication HOC receiving messages", () => {
     // interfere with each other.
     originalHash = window.location.hash
     dispatchEvent = mockEventListeners()
-    wrapper = mount(<WrappedTestComponent label={"mockLabel"} />)
+    wrapper = mount(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
 
     const hostCommunication = wrapper
       .find(TestComponent)
@@ -359,7 +370,7 @@ describe("withHostCommunication HOC receiving messages", () => {
 
 describe("withHostCommunication HOC external auth token handling", () => {
   it("resolves promise to undefined immediately if useExternalAuthToken is false", async () => {
-    const wrapper = mount(<WrappedTestComponent label={"mockLabel"} />)
+    const wrapper = mount(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
 
     const hostCommunication = wrapper
       .find(TestComponent)
@@ -379,7 +390,7 @@ describe("withHostCommunication HOC external auth token handling", () => {
 
   it("waits to receive SET_AUTH_TOKEN message before resolving promise if useExternalAuthToken is true", async () => {
     const dispatchEvent = mockEventListeners()
-    const wrapper = mount(<WrappedTestComponent label={"mockLabel"} />)
+    const wrapper = mount(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
 
     let hostCommunication = wrapper
       .find(TestComponent)

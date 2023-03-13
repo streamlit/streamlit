@@ -30,7 +30,12 @@ jest.mock("src/lib/ScreenCastRecorder")
 
 interface TestProps {
   screenCast: ScreenCastHOC
-  label: string
+
+  /**
+   * A property that's not related to the withScreencast wrapper.
+   * We test that the wrapper passes unrelated props to its wrapped component.
+   */
+  unrelatedProp: string
 }
 
 class TestComponent extends PureComponent<TestProps> {
@@ -41,18 +46,24 @@ const WrappedTestComponent = withScreencast(TestComponent)
 
 describe("withScreencast HOC", () => {
   it("renders without crashing", () => {
-    const wrapper = shallow(<WrappedTestComponent label={"mockLabel"} />)
+    const wrapper = shallow(
+      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+    )
     expect(wrapper.html()).not.toBeNull()
   })
 
   it("wrapped component should have screenCast prop", () => {
-    const wrapper = shallow(<WrappedTestComponent label={"mockLabel"} />)
+    const wrapper = shallow(
+      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+    )
     expect(wrapper.find(TestComponent).props().screenCast).toBeDefined()
   })
 
   it("passes other props to wrapped component", () => {
-    const wrapper = shallow(<WrappedTestComponent label={"mockLabel"} />)
-    expect(wrapper.find(TestComponent).props().label).toBe("mockLabel")
+    const wrapper = shallow(
+      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+    )
+    expect(wrapper.find(TestComponent).props().unrelatedProp).toBe("mockLabel")
   })
 
   it("defines displayName", () => {
@@ -62,7 +73,9 @@ describe("withScreencast HOC", () => {
   })
 
   describe("Steps", () => {
-    const wrapper = shallow(<WrappedTestComponent label={"mockLabel"} />)
+    const wrapper = shallow(
+      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+    )
 
     ScreenCastRecorder.isSupportedBrowser = () => true
 
@@ -111,7 +124,9 @@ describe("withScreencast HOC", () => {
   })
 
   it("shows an unsupported dialog when it's an unsupported browser", () => {
-    const wrapper = shallow(<WrappedTestComponent label={"mockLabel"} />)
+    const wrapper = shallow(
+      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+    )
 
     ScreenCastRecorder.isSupportedBrowser = () => false
 
@@ -124,7 +139,9 @@ describe("withScreencast HOC", () => {
   })
 
   it("shows an unsupported dialog when it doesn't have a mediaDevices support", () => {
-    const wrapper = shallow(<WrappedTestComponent label={"mockLabel"} />)
+    const wrapper = shallow(
+      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+    )
 
     Object.defineProperty(window.navigator, "mediaDevices", {
       value: undefined,
