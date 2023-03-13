@@ -32,6 +32,7 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import React from "react"
 import { darkTheme, lightTheme, toExportedTheme } from "src/theme"
 import { fonts } from "src/theme/primitives/typography"
+import { mockComponentEndpoint } from "src/lib/mocks/mocks"
 import {
   COMPONENT_READY_WARNING_TIME_MS,
   ComponentInstance,
@@ -41,6 +42,7 @@ import {
 } from "./ComponentInstance"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
+import { StreamlitComponentEndpoint } from "./StreamlitComponentEndpoint"
 
 // Mock log functions.
 jest.mock("src/lib/log")
@@ -85,13 +87,7 @@ class MockComponent {
     document.body.appendChild(mountNode)
 
     // mock ComponentRegistry
-    this.registry = new ComponentRegistry(() => {
-      return {
-        host: "streamlit.mock",
-        port: 80,
-        basePath: "",
-      }
-    })
+    this.registry = new ComponentRegistry(mockComponentEndpoint())
 
     // Mock the registry's registerListener/deregisterListener - we assert
     // that these are called in our tests.
