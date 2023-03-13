@@ -70,13 +70,13 @@ describe("Multiselect widget", () => {
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
-    // @ts-ignore
+    // @ts-expect-error
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("row-widget")
     expect(splittedClassName).toContain("stMultiSelect")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(style.width).toBe(getProps().width)
   })
 
@@ -132,7 +132,7 @@ describe("Multiselect widget", () => {
   it("renders options", () => {
     const props = getProps()
     const wrapper = mount(<Multiselect {...props} />)
-    // @ts-ignore
+    // @ts-expect-error
     const options = (wrapper.find(UISelect).prop("options") as string[]) || []
 
     options.forEach(option => {
@@ -153,9 +153,9 @@ describe("Multiselect widget", () => {
     const filterOptionsFn =
       wrapper.find(UISelect).prop("filterOptions") || (() => [])
 
-    // @ts-ignore filterOptionsFn expects readonly options
+    // @ts-expect-error filterOptionsFn expects readonly options
     expect(filterOptionsFn(options, "1").length).toEqual(0)
-    // @ts-ignore filterOptionsFn expects readonly options
+    // @ts-expect-error filterOptionsFn expects readonly options
     expect(filterOptionsFn(options, "b").length).toEqual(1)
   })
 
@@ -181,7 +181,7 @@ describe("Multiselect widget", () => {
     const props = getProps()
     const wrapper = mount(<Multiselect {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UISelect).prop("onChange")({
       type: "select",
       option: {
@@ -200,7 +200,7 @@ describe("Multiselect widget", () => {
     const props = getProps()
     const wrapper = mount(<Multiselect {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UISelect).prop("onChange")({
       type: "remove",
       option: {
@@ -218,7 +218,7 @@ describe("Multiselect widget", () => {
     const props = getProps()
     const wrapper = mount(<Multiselect {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UISelect).prop("onChange")({ type: "clear" })
     wrapper.update()
 
@@ -231,7 +231,7 @@ describe("Multiselect widget", () => {
     const UNKNOWN_TRANSITION = "UNKNOWN_TRANSITION"
     const onChange = wrapper.find(UISelect).prop("onChange")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(() => onChange({ type: UNKNOWN_TRANSITION })).toThrow(
       `State transition is unknown: ${UNKNOWN_TRANSITION}`
     )
@@ -247,7 +247,7 @@ describe("Multiselect widget", () => {
     const wrapper = mount(<Multiselect {...props} />)
 
     // Change the widget value
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UISelect).prop("onChange")({
       type: "select",
       option: {
@@ -352,7 +352,7 @@ describe("Multiselect widget", () => {
       )
       const wrapper = mount(<Multiselect {...props} />)
 
-      // @ts-ignore
+      // @ts-expect-error
       wrapper.find(UISelect).prop("onChange")({
         type: "select",
         option: {
@@ -378,7 +378,7 @@ describe("Multiselect widget", () => {
       )
       const wrapper = mount(<Multiselect {...props} />)
 
-      // @ts-ignore
+      // @ts-expect-error
       wrapper.find(UISelect).prop("onChange")({
         type: "remove",
         option: {

@@ -65,7 +65,7 @@ describe("CopyButton Element", () => {
 
       wrapper.unmount()
 
-      // @ts-ignore
+      // @ts-expect-error
       const mockClipboard = Clipboard.mock.instances[0]
       const mockDestroy = mockClipboard.destroy
 

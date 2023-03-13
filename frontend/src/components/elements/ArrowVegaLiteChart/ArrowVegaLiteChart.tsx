@@ -405,7 +405,6 @@ function getDataArrays(
   const datasetArrays: { [dataset: string]: any[] } = {}
 
   for (const [name, dataset] of Object.entries(datasets)) {
-    // @ts-ignore
     datasetArrays[name] = getDataArray(dataset)
   }
 

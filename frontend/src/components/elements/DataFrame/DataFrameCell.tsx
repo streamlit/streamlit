@@ -101,7 +101,7 @@ export default function DataFrameCell({
     // eslint-disable-next-line
 
     <CellType
-      // @ts-ignore
+      // @ts-expect-error
       style={style}
       onClick={onClick}
       role={role}

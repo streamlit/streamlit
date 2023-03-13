@@ -54,7 +54,6 @@ import {
 } from "src/autogen/proto"
 
 import React, { ReactElement, Suspense } from "react"
-// @ts-ignore
 import debounceRender from "react-debounce-render"
 import { ElementNode } from "src/lib/AppNode"
 import { Quiver } from "src/lib/Quiver"

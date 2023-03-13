@@ -63,7 +63,7 @@ describe("Selectbox widget", () => {
 
     const wrapper = mount(<Selectbox {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UISelect).prop("onChange")({
       value: [{ label: "b", value: "1" }],
       option: { label: "b", value: "1" },
@@ -88,7 +88,7 @@ describe("Selectbox widget", () => {
     const wrapper = mount(<Selectbox {...props} />)
 
     // Change the widget value
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UISelect).prop("onChange")({
       value: [{ label: "b", value: "1" }],
       option: { label: "b", value: "1" },

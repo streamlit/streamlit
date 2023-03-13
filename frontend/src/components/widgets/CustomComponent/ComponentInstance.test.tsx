@@ -95,7 +95,6 @@ class MockComponent {
 
     // Create and mount our ComponentInstance. We need to mount it to an
     // existing DOM element - otherwise, iframe contentWindow is not available.
-    // @ts-ignore
     this.wrapper = mount(
       <ComponentInstance
         element={createElementProp(initialJSONArgs, initialSpecialArgs)}

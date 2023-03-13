@@ -50,7 +50,7 @@ describe("FileUploadClient Upload", () => {
 
   afterEach(() => {
     axiosMock.restore()
-    // @ts-ignore
+    // @ts-expect-error
     SessionInfo.singleton = undefined
   })
 
@@ -73,7 +73,7 @@ describe("FileUploadClient Upload", () => {
         }
 
         if (getCookie("_xsrf")) {
-          // @ts-ignore - TS errors that config.headers is possibly 'undefined`
+          // @ts-expect-error - TS errors that config.headers is possibly 'undefined`
           if (!("X-Xsrftoken" in config.headers)) {
             return [403]
           }

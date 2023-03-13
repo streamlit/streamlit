@@ -78,12 +78,12 @@ describe("FormSubmitButton", () => {
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
-    // @ts-ignore
+    // @ts-expect-error
     const classNameParts = className.split(" ")
 
     expect(classNameParts).toContain("stButton")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(style.width).toBe(getProps().width)
   })
 
