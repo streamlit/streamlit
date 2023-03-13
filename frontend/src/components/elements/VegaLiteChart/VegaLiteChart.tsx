@@ -380,7 +380,7 @@ function getDataSets(
 
   const datasets: { [dataset: string]: any } = {}
 
-  el.get("datasets").forEach((x: any, _: number) => {
+  el.get("datasets").forEach((x: any) => {
     if (!x) {
       return
     }

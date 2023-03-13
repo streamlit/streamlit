@@ -68,7 +68,7 @@ const getOriginalIndexMock = jest.fn().mockImplementation((index: number) => {
 })
 const getCellContentMock = jest
   .fn()
-  .mockImplementation(([col, _row]: readonly [number, number]) => {
+  .mockImplementation(([col]: readonly [number]) => {
     const column = MOCK_COLUMNS[col]
     if (column.kind === "number") {
       return column.getCell(123)
