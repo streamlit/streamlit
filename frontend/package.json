@@ -7,9 +7,9 @@
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true ",
-    "build": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=true webpack",
+    "build": "yarn workspace st-lib run build && yarn workspace st-app run build",
     "buildFast": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false BUILD_AS_FAST_AS_POSSIBLE=true webpack",
-    "test": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
+    "test": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 node ./scripts/test.js --env=./jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",

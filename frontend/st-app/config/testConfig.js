@@ -14,12 +14,24 @@
  * limitations under the License.
  */
 
-"use strict"
-const { createHash } = require("crypto")
+ "use strict"
 
-module.exports = env => {
-  const hash = createHash("md5")
-  hash.update(JSON.stringify(env))
+ const fs = require("fs")
+ const evalSourceMapMiddleware = require("react-dev-utils/evalSourceMapMiddleware")
+ const noopServiceWorkerMiddleware = require("react-dev-utils/noopServiceWorkerMiddleware")
+ const ignoredFiles = require("react-dev-utils/ignoredFiles")
+ const redirectServedPath = require("react-dev-utils/redirectServedPathMiddleware")
+ const paths = require("./paths")
+ const getHttpsConfig = require("./getHttpsConfig")
 
-  return hash.digest("hex")
-}
+module.exports = {
+  // ...
+  devServer: {
+    devMiddleware: {
+      index: true,
+      headers: {
+        "X-Custom-Header": "yes",
+      },
+    },
+  },
+};
