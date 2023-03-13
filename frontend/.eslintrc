@@ -63,7 +63,7 @@
         "vars": "all",
         "args": "after-used",
         "ignoreRestSiblings": false,
-        "argsIgnorePattern": "^[_$]"
+        "argsIgnorePattern": "^_"
       }
     ],
     // It's safe to use functions before they're defined
