@@ -13,8 +13,7 @@
     "build:lib-type": "tsc -P tsconfig.lib.json && tsc-alias -p tsconfig.lib.json",
     "build:asset": "cp -R ./src/assets ./dist",
     "build:autogen": "cp -R ./src/autogen ./dist",
-    "testBuild": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true node ./scripts/build.js",
-    "testWebpackBuild": "./bokeh/preload-bokeh.sh && INLINE_RUNTIME_CHUNK=false BUILD_PATH=dist webpack build --config ./config/webpack.config.js && yarn build:autogen && yarn build:asset && yarn build:lib-type"
+    "testBuild": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true node ./scripts/build.js"
   },
   "jest": {
     "roots": [

@@ -16,8 +16,7 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "es5",
-    "declaration": true,
+    "target": "es5"
   },
   "include": ["src", "index.d.ts"]
 }
