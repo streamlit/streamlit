@@ -142,7 +142,7 @@ class MarkdownTest(InteractiveScriptTests):
 
         assert sr.get("code")
         assert sr.get("code")[0].type == "code"
-        assert sr.get("code")[0].value == "```python\nimport streamlit as st\n```"
+        assert sr.get("code")[0].value == "import streamlit as st"
 
     def test_latex(self):
         script = self.script_from_string(
@@ -361,3 +361,31 @@ class SelectboxTest(InteractiveScriptTests):
 
         with pytest.raises(IndexError):
             sr6.get("selectbox")[0].select_index(42).run()
+
+
+class ExceptionTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "exception.py",
+            """
+            import streamlit as st
+
+            st.exception(RuntimeError("foo"))
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("exception")[0].value == "foo"
+
+    def test_markdown(self):
+        script = self.script_from_string(
+            "exception2.py",
+            """
+            import streamlit as st
+
+            st.exception(st.errors.MarkdownFormattedException("# Oh no"))
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("exception")[0].is_markdown

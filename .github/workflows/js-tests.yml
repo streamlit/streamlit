@@ -49,7 +49,9 @@ jobs:
       - name: Run linters
         run: |
           # Run eslint as a standalone command to generate the test report.
-          PRE_COMMIT_NO_CONCURRENCY=true SKIP=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
+          # We need to --hook-stage manual to trigger Typecheck too
+          PRE_COMMIT_NO_CONCURRENCY=true SKIP=eslint pipenv run pre-commit run --hook-stage manual --show-diff-on-failure --color=always --all-files
+          # Run eslint using Makefile omitting the pre-commit
           make jslint
       - name: Validate NOTICES
         run: |

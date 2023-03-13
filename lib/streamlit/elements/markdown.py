@@ -28,9 +28,13 @@ if TYPE_CHECKING:
 class MarkdownMixin:
     @gather_metrics("markdown")
     def markdown(
-        self, body: SupportsStr, unsafe_allow_html: bool = False
+        self,
+        body: SupportsStr,
+        unsafe_allow_html: bool = False,
+        *,  # keyword-only arguments:
+        help: Optional[str] = None,
     ) -> "DeltaGenerator":
-        """Display string formatted as Markdown.
+        r"""Display string formatted as Markdown.
 
         Parameters
         ----------
@@ -63,6 +67,9 @@ class MarkdownMixin:
 
             https://github.com/streamlit/streamlit/issues/152
 
+        help : str
+            An optional tooltip that gets displayed next to the Markdown.
+
         Examples
         --------
         >>> import streamlit as st
@@ -77,12 +84,16 @@ class MarkdownMixin:
         markdown_proto.body = clean_text(body)
         markdown_proto.allow_html = unsafe_allow_html
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
+        if help:
+            markdown_proto.help = help
 
         return self.dg._enqueue("markdown", markdown_proto)
 
     @gather_metrics("code")
     def code(
-        self, body: SupportsStr, language: Optional[str] = "python"
+        self,
+        body: SupportsStr,
+        language: Optional[str] = "python",
     ) -> "DeltaGenerator":
         """Display a code block with optional syntax highlighting.
 
@@ -118,7 +129,11 @@ class MarkdownMixin:
 
     @gather_metrics("caption")
     def caption(
-        self, body: SupportsStr, unsafe_allow_html: bool = False
+        self,
+        body: SupportsStr,
+        unsafe_allow_html: bool = False,
+        *,  # keyword-only arguments:
+        help: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display text in small font.
 
@@ -156,6 +171,9 @@ class MarkdownMixin:
 
             https://github.com/streamlit/streamlit/issues/152
 
+        help : str
+            An optional tooltip that gets displayed next to the caption.
+
         Examples
         --------
         >>> import streamlit as st
@@ -169,10 +187,17 @@ class MarkdownMixin:
         caption_proto.allow_html = unsafe_allow_html
         caption_proto.is_caption = True
         caption_proto.element_type = MarkdownProto.Type.CAPTION
+        if help:
+            caption_proto.help = help
         return self.dg._enqueue("markdown", caption_proto)
 
     @gather_metrics("latex")
-    def latex(self, body: Union[SupportsStr, "sympy.Expr"]) -> "DeltaGenerator":
+    def latex(
+        self,
+        body: Union[SupportsStr, "sympy.Expr"],
+        *,  # keyword-only arguments:
+        help: Optional[str] = None,
+    ) -> "DeltaGenerator":
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
         r"""Display mathematical expressions formatted as LaTeX.
@@ -186,6 +211,9 @@ class MarkdownMixin:
             The string or SymPy expression to display as LaTeX. If str, it's
             a good idea to use raw Python strings since LaTeX uses backslashes
             a lot.
+
+        help : str
+            An optional tooltip that gets displayed next to the LaTeX expression.
 
 
         Example
@@ -207,6 +235,8 @@ class MarkdownMixin:
         latex_proto = MarkdownProto()
         latex_proto.body = "$$\n%s\n$$" % clean_text(body)
         latex_proto.element_type = MarkdownProto.Type.LATEX
+        if help:
+            latex_proto.help = help
         return self.dg._enqueue("markdown", latex_proto)
 
     @property

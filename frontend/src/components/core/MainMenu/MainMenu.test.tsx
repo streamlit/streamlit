@@ -15,8 +15,10 @@
  */
 
 import React from "react"
+import { screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
-import { mount } from "src/lib/test_util"
+import { mount, render } from "src/lib/test_util"
 import { IMenuItem } from "src/hocs/withHostCommunication/types"
 
 import { GitInfo, IGitInfo } from "src/autogen/proto"
@@ -29,8 +31,10 @@ import {
   UncommittedChanges,
   UntrackedFiles,
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs"
+import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 
 import MainMenu, { Props } from "./MainMenu"
+import { waitFor } from "@testing-library/dom"
 
 const { GitStates } = GitInfo
 
@@ -53,6 +57,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   menuItems: {},
   hostIsOwner: false,
   gitInfo: null,
+  metricsMgr: getMetricsManagerForTest(),
   ...extend,
 })
 
@@ -64,7 +69,8 @@ describe("App", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("should render host menu items", () => {
+  it("should render host menu items", async () => {
+    const user = userEvent.setup()
     const items: IMenuItem[] = [
       {
         type: "separator",
@@ -86,130 +92,63 @@ describe("App", () => {
     const props = getProps({
       hostMenuItems: items,
     })
-    const wrapper = mount(<MainMenu {...props} />)
-    const popoverContent = wrapper.find("StatefulPopover").prop("content")
+    const wrapper = render(<MainMenu {...props} />)
+    await user.click(screen.getByRole("button"))
 
-    // @ts-ignore
-    const menuWrapper = mount(popoverContent(() => {}))
-
-    // @ts-ignore
-    const menuLabels = menuWrapper
-      .find("MenuStatefulContainer")
-      .at(0)
-      .prop("items")
-      // @ts-ignore
-      .map(item => item.label)
-    expect(menuLabels).toEqual([
-      "Rerun",
-      "Settings",
-      "Print",
-      "Record a screencast",
-      "Report a bug",
-      "Get help",
-      "View app source",
-      "Report bug with app",
-      "About",
-    ])
-
-    // @ts-ignore
-    const devMenuLabels = menuWrapper
-      .find("MenuStatefulContainer")
-      .at(1)
-      .prop("items")
-      // @ts-ignore
-      .map(item => item.label)
-    expect(devMenuLabels).toEqual([
-      "Developer options",
-      "Clear cache",
-      "Streamlit Cloud",
-      "Report a Streamlit bug",
-      "Visit Streamlit docs",
-      "Visit Streamlit forums",
-    ])
+    await waitFor(() =>
+      expect(
+        wrapper
+          .getAllByRole("option")
+          .map(item => item.querySelector("span:first-of-type")?.textContent)
+      ).toEqual([
+        "Rerun",
+        "Settings",
+        "Print",
+        "Record a screencast",
+        "View app source",
+        "Report bug with app",
+        "About",
+        "Developer options",
+        "Clear cache",
+      ])
+    )
   })
 
-  it("should render core set of menu elements", () => {
+  it("should render core set of menu elements", async () => {
+    const user = userEvent.setup()
     const props = getProps()
-    const wrapper = mount(<MainMenu {...props} />)
-    const popoverContent = wrapper.find("StatefulPopover").prop("content")
-    // @ts-ignore
-    const menuWrapper = mount(popoverContent(() => {}))
+    const wrapper = render(<MainMenu {...props} />)
+    await user.click(screen.getByRole("button"))
 
-    // @ts-ignore
-    const menuLabels = menuWrapper
-      .find("MenuStatefulContainer")
-      .at(0)
-      .prop("items")
-      // @ts-ignore
-      .map(item => item.label)
-    expect(menuLabels).toEqual([
-      "Rerun",
-      "Settings",
-      "Print",
-      "Record a screencast",
-      "Report a bug",
-      "Get help",
-      "About",
-    ])
-
-    // @ts-ignore
-    const devMenuLabels = menuWrapper
-      .find("MenuStatefulContainer")
-      .at(1)
-      .prop("items")
-      // @ts-ignore
-      .map(item => item.label)
-    expect(devMenuLabels).toEqual([
-      "Developer options",
-      "Clear cache",
-      "Deploy this app",
-      "Streamlit Cloud",
-      "Report a Streamlit bug",
-      "Visit Streamlit docs",
-      "Visit Streamlit forums",
-    ])
+    await waitFor(() =>
+      expect(
+        wrapper
+          .getAllByRole("option")
+          .map(item => item.querySelector("span:first-of-type")?.textContent)
+      ).toEqual([
+        "Rerun",
+        "Settings",
+        "Print",
+        "Record a screencast",
+        "About",
+        "Developer options",
+        "Clear cache",
+        "Deploy this app",
+      ])
+    )
   })
 
-  it("should render deploy app menu item", () => {
+  it("should render deploy app menu item", async () => {
+    const user = userEvent.setup()
     const props = getProps({ gitInfo: {} })
-    const wrapper = mount(<MainMenu {...props} />)
-    const popoverContent = wrapper.find("StatefulPopover").prop("content")
-    // @ts-ignore
-    const menuWrapper = mount(popoverContent(() => {}))
+    const wrapper = render(<MainMenu {...props} />)
+    await user.click(screen.getByRole("button"))
 
-    // @ts-ignore
-    const menuLabels = menuWrapper
-      .find("MenuStatefulContainer")
-      .at(0)
-      .prop("items")
-      // @ts-ignore
-      .map(item => item.label)
-    expect(menuLabels).toEqual([
-      "Rerun",
-      "Settings",
-      "Print",
-      "Record a screencast",
-      "Report a bug",
-      "Get help",
-      "About",
-    ])
-
-    // @ts-ignore
-    const devMenuLabels = menuWrapper
-      .find("MenuStatefulContainer")
-      .at(1)
-      .prop("items")
-      // @ts-ignore
-      .map(item => item.label)
-    expect(devMenuLabels).toEqual([
-      "Developer options",
-      "Clear cache",
-      "Deploy this app",
-      "Streamlit Cloud",
-      "Report a Streamlit bug",
-      "Visit Streamlit docs",
-      "Visit Streamlit forums",
-    ])
+    await waitFor(() =>
+      expect(
+        wrapper.getByRole("option", { name: "Deploy this app" })
+      ).toBeDefined()
+    )
   })
 
   describe("Onclick deploy button", () => {
@@ -358,7 +297,8 @@ describe("App", () => {
     ])
   })
 
-  it("should not render report a bug in core menu", () => {
+  it("should not render report a bug in core menu", async () => {
+    const user = userEvent.setup()
     const menuItems = {
       getHelpUrl: "testing",
       hideGetHelp: false,
@@ -366,26 +306,33 @@ describe("App", () => {
       aboutSectionMd: "",
     }
     const props = getProps({ menuItems })
-    const wrapper = mount(<MainMenu {...props} />)
-    const popoverContent = wrapper.find("StatefulPopover").prop("content")
-    // @ts-ignore
-    const menuWrapper = mount(popoverContent(() => {}))
+    const wrapper = render(<MainMenu {...props} />)
+    await user.click(screen.getByRole("button"))
 
-    // @ts-ignore
-    const menuLabels = menuWrapper
-      .find("MenuStatefulContainer")
-      .at(0)
-      .prop("items")
-      // @ts-ignore
-      .map(item => item.label)
-    expect(menuLabels).toEqual([
-      "Rerun",
-      "Settings",
-      "Print",
-      "Record a screencast",
-      "Get help",
-      "About",
-    ])
+    await waitFor(() =>
+      expect(
+        wrapper.queryByRole("option", { name: "Report a bug" })
+      ).toBeNull()
+    )
+  })
+
+  it("should render report a bug in core menu", async () => {
+    const user = userEvent.setup()
+    const menuItems = {
+      reportABugUrl: "testing",
+      hideGetHelp: false,
+      hideReportABug: false,
+      aboutSectionMd: "",
+    }
+    const props = getProps({ menuItems })
+    const wrapper = render(<MainMenu {...props} />)
+    await user.click(screen.getByRole("button"))
+
+    await waitFor(() =>
+      expect(
+        wrapper.getByRole("option", { name: "Report a bug" })
+      ).toBeDefined()
+    )
   })
 
   it("should not render dev menu when hostIsOwner is false and not on localhost", () => {
@@ -416,8 +363,6 @@ describe("App", () => {
       "Settings",
       "Print",
       "Record a screencast",
-      "Report a bug",
-      "Get help",
       "About",
     ])
   })

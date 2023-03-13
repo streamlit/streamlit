@@ -46,7 +46,14 @@ import {
   setCookie,
   getIFrameEnclosingApp,
   hashString,
-  isEmbeddedInIFrame,
+  isEmbed,
+  isPaddingDisplayed,
+  isToolbarDisplayed,
+  isColoredLineDisplayed,
+  isScrollingHidden,
+  isFooterDisplayed,
+  isLightTheme,
+  isDarkTheme,
   isInChildFrame,
   notUndefined,
   getElementWidgetID,
@@ -76,11 +83,10 @@ import {
   IAppPage,
   AppPage,
 } from "src/autogen/proto"
-import { without, concat } from "lodash"
+import { without, concat, noop } from "lodash"
 
 import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
 import { SessionInfo } from "src/lib/SessionInfo"
-import { MetricsManager } from "src/lib/MetricsManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { logError, logMessage } from "src/lib/log"
 import { AppRoot } from "src/lib/AppNode"
@@ -99,6 +105,7 @@ import {
   ThemeConfig,
   toExportedTheme,
 } from "src/theme"
+import { SegmentMetricsManager } from "./lib/SegmentMetricsManager"
 
 import { StyledApp } from "./styled-components"
 
@@ -166,6 +173,8 @@ export class App extends PureComponent<Props, State> {
 
   private connectionManager: ConnectionManager | null
 
+  private readonly metricsMgr: SegmentMetricsManager
+
   private readonly widgetMgr: WidgetStateManager
 
   private readonly uploadClient: FileUploadClient
@@ -193,9 +202,11 @@ export class App extends PureComponent<Props, State> {
     // Initialize immerjs
     enableImmerPlugins()
 
+    this.metricsMgr = new SegmentMetricsManager()
+
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty("Please wait..."),
+      elements: AppRoot.empty(this.metricsMgr, "Please wait..."),
       isFullScreen: false,
       scriptName: "",
       scriptRunId: "<null>",
@@ -254,6 +265,7 @@ export class App extends PureComponent<Props, State> {
     this.pendingElementsBuffer = this.state.elements
 
     window.streamlitDebug = {
+      clearForwardMsgCache: this.debugClearForwardMsgCache,
       disconnectWebsocket: this.debugDisconnectWebsocket,
       shutdownRuntime: this.debugShutdownRuntime,
     }
@@ -296,7 +308,7 @@ export class App extends PureComponent<Props, State> {
         this.props.hostCommunication.setAllowedOriginsResp,
     })
 
-    if (isEmbeddedInIFrame()) {
+    if (isScrollingHidden()) {
       document.body.classList.add("embedded")
     }
 
@@ -327,7 +339,7 @@ export class App extends PureComponent<Props, State> {
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
     })
 
-    MetricsManager.current.enqueue("viewReport")
+    this.metricsMgr.enqueue("viewReport")
   }
 
   componentDidUpdate(
@@ -501,7 +513,7 @@ export class App extends PureComponent<Props, State> {
     const { title, favicon, layout, initialSidebarState, menuItems } =
       pageConfig
 
-    MetricsManager.current.enqueue("pageConfigChanged", {
+    this.metricsMgr.enqueue("pageConfigChanged", {
       favicon,
       layout,
       initialSidebarState,
@@ -580,7 +592,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
-    MetricsManager.current.enqueue("pageProfile", {
+    this.metricsMgr.enqueue("pageProfile", {
       ...PageProfile.toObject(pageProfile),
       appId: SessionInfo.current.appId,
       numPages: this.state.appPages?.length,
@@ -630,23 +642,23 @@ export class App extends PureComponent<Props, State> {
         // a script compilation failure
         scriptRunState = ScriptRunState.NOT_RUNNING
 
-        MetricsManager.current.enqueue(
+        this.metricsMgr.enqueue(
           "deltaStats",
-          MetricsManager.current.getAndResetDeltaCounter()
+          this.metricsMgr.getAndResetDeltaCounter()
         )
 
         const { availableThemes, activeTheme } = this.props.theme
         const customThemeDefined =
           availableThemes.length > createPresetThemes().length
-        MetricsManager.current.enqueue("themeStats", {
+        this.metricsMgr.enqueue("themeStats", {
           activeThemeName: activeTheme.name,
           customThemeDefined,
         })
 
         const customComponentCounter =
-          MetricsManager.current.getAndResetCustomComponentCounter()
+          this.metricsMgr.getAndResetCustomComponentCounter()
         Object.entries(customComponentCounter).forEach(([name, count]) => {
-          MetricsManager.current.enqueue("customComponentStats", {
+          this.metricsMgr.enqueue("customComponentStats", {
             name,
             count,
           })
@@ -781,13 +793,13 @@ export class App extends PureComponent<Props, State> {
       this.getBaseUriParts()
     )
 
-    MetricsManager.current.setMetadata(
+    this.metricsMgr.setMetadata(
       this.props.hostCommunication.currentState.deployedAppMetadata
     )
-    MetricsManager.current.setAppHash(newSessionHash)
-    MetricsManager.current.clearDeltaCounter()
+    this.metricsMgr.setAppHash(newSessionHash)
+    this.metricsMgr.clearDeltaCounter()
 
-    MetricsManager.current.enqueue("updateReport", {
+    this.metricsMgr.enqueue("updateReport", {
       numPages: newSessionProto.appPages.length,
       isMainPage: viewingMainPage,
     })
@@ -813,11 +825,11 @@ export class App extends PureComponent<Props, State> {
 
     SessionInfo.current = SessionInfo.fromNewSessionMessage(newSessionProto)
 
-    MetricsManager.current.initialize({
+    this.metricsMgr.initialize({
       gatherUsageStats: config.gatherUsageStats,
     })
 
-    MetricsManager.current.enqueue("createReport", {
+    this.metricsMgr.enqueue("createReport", {
       pythonVersion: SessionInfo.current.pythonVersion,
     })
 
@@ -895,9 +907,17 @@ export class App extends PureComponent<Props, State> {
     ) {
       const successful =
         status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-      // Notify any subscribers of this event (and do it on the next cycle of
-      // the event loop)
       window.setTimeout(() => {
+        // Set the theme if url query param ?embed_options=[light,dark]_theme is set
+        const [light, dark] = this.props.theme.availableThemes.slice(1, 3)
+        if (isLightTheme()) {
+          this.setAndSendTheme(light)
+        } else if (isDarkTheme()) {
+          this.setAndSendTheme(dark)
+        } else noop() // Do nothing when ?embed_options=[light,dark]_theme is not set
+
+        // Notify any subscribers of this event (and do it on the next cycle of
+        // the event loop)
         this.state.scriptFinishedHandlers.map(handler => handler())
       }, 0)
 
@@ -950,7 +970,7 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(),
+        elements: AppRoot.empty(this.metricsMgr),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
@@ -1023,7 +1043,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Used by e2e tests to test disabling widgets.
+   * Test-only method used by e2e tests to test disabling widgets.
    */
   debugShutdownRuntime = (): void => {
     if (this.isServerConnected()) {
@@ -1034,7 +1054,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Used by e2e tests to test reconnect behavior.
+   * Test-only method used by e2e tests to test reconnect behavior.
    */
   debugDisconnectWebsocket = (): void => {
     if (this.isServerConnected()) {
@@ -1042,6 +1062,21 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "debugDisconnectWebsocket"
       this.sendBackMsg(backMsg)
     }
+  }
+
+  /**
+   * Test-only method used by e2e tests to test fetching cached ForwardMsgs
+   * from the server.
+   */
+  debugClearForwardMsgCache = (): void => {
+    if (!isLocalhost()) {
+      return
+    }
+
+    // It's not a problem that we're mucking around with private fields since
+    // this is a test-only method anyway.
+    // @ts-ignore
+    this.connectionManager?.connection?.cache.messages.clear()
   }
 
   /**
@@ -1067,7 +1102,7 @@ export class App extends PureComponent<Props, State> {
       return
     }
 
-    MetricsManager.current.enqueue("rerunScript")
+    this.metricsMgr.enqueue("rerunScript")
 
     this.setState({ scriptRunState: ScriptRunState.RERUN_REQUESTED })
 
@@ -1230,7 +1265,7 @@ export class App extends PureComponent<Props, State> {
   clearCache = (): void => {
     this.closeDialog()
     if (this.isServerConnected()) {
-      MetricsManager.current.enqueue("clearCache")
+      this.metricsMgr.enqueue("clearCache")
       const backMsg = new BackMsg({ clearCache: true })
       backMsg.type = "clearCache"
       this.sendBackMsg(backMsg)
@@ -1278,6 +1313,7 @@ export class App extends PureComponent<Props, State> {
       developerMode: this.state.developerMode,
       openThemeCreator: this.openThemeCreatorDialog,
       animateModal,
+      metricsMgr: this.metricsMgr,
     }
     this.openDialog(newDialog)
   }
@@ -1393,7 +1429,7 @@ export class App extends PureComponent<Props, State> {
       "stApp",
       getEmbeddingIdClassName(this.embeddingId),
       {
-        "streamlit-embedded": isEmbeddedInIFrame(),
+        "streamlit-embedded": isEmbed(),
         "streamlit-wide": userSettings.wideMode,
       }
     )
@@ -1415,7 +1451,6 @@ export class App extends PureComponent<Props, State> {
           initialSidebarState,
           layout,
           wideMode: userSettings.wideMode,
-          embedded: isEmbeddedInIFrame(),
           isFullScreen,
           setFullScreen: this.handleFullScreen,
           addScriptFinishedHandler: this.addScriptFinishedHandler,
@@ -1427,6 +1462,12 @@ export class App extends PureComponent<Props, State> {
           sidebarChevronDownshift:
             this.props.hostCommunication.currentState.sidebarChevronDownshift,
           getBaseUriParts: this.getBaseUriParts,
+          embedded: isEmbed(),
+          showPadding: !isEmbed() || isPaddingDisplayed(),
+          disableScrolling: isScrollingHidden(),
+          showFooter: !isEmbed() || isFooterDisplayed(),
+          showToolbar: !isEmbed() || isToolbarDisplayed(),
+          showColoredLine: !isEmbed() || isColoredLineDisplayed(),
         }}
       >
         <HotKeys
@@ -1481,6 +1522,7 @@ export class App extends PureComponent<Props, State> {
                 loadGitInfo={this.sendLoadGitInfoBackMsg}
                 canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
                 menuItems={menuItems}
+                metricsMgr={this.metricsMgr}
               />
             </Header>
 

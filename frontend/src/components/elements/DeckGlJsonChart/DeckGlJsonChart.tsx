@@ -77,7 +77,7 @@ interface Props {
 }
 
 export interface PropsWithHeight extends Props {
-  height: number | undefined
+  height?: number
 }
 
 interface State {

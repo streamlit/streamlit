@@ -37,8 +37,6 @@ import {
 } from "src/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
-import { MetricsManager } from "src/lib/MetricsManager"
-import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
 import {
   CUSTOM_THEME_NAME,
@@ -132,7 +130,6 @@ describe("App", () => {
       commandLine: "command line",
       userMapboxToken: "mpt",
     } as SessionInfoArgs)
-    MetricsManager.current = getMetricsManagerForTest()
     // @ts-ignore
     window.prerenderReady = false
   })

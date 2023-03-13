@@ -14,13 +14,13 @@
 
 """Streamlit Unit test."""
 
+import datetime
 import json
 import os
 import re
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
 from unittest.mock import patch
 
@@ -317,20 +317,6 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    def test_st_code(self):
-        """Test st.code."""
-        st.code("print('My string = %d' % my_value)", language="python")
-        expected = textwrap.dedent(
-            """
-            ```python
-            print('My string = %d' % my_value)
-            ```
-        """
-        )
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, expected.strip())
-
     def test_st_legacy_dataframe(self):
         """Test st._legacy_dataframe."""
         df = pd.DataFrame({"one": [1, 2], "two": [11, 22]})
@@ -414,6 +400,14 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
         self.assertEqual(el.heading.tag, "h2")
         self.assertEqual(el.heading.anchor, "some-anchor")
 
+    def test_st_header_with_help(self):
+        """Test st.header with help."""
+        st.header("some header", help="help text")
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.heading.body, "some header")
+        self.assertEqual(el.heading.tag, "h2")
+        self.assertEqual(el.heading.help, "help text")
+
     def test_st_help(self):
         """Test st.help."""
         st.help(st.header)
@@ -429,12 +423,12 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
             # Python < 3.9 represents the signature slightly differently
             self.assertEqual(
                 el.doc_string.signature,
-                "(body: object, anchor: Union[str, NoneType] = None) -> 'DeltaGenerator'",
+                "(body: object, anchor: Union[str, NoneType] = None, *, help: Union[str, NoneType] = None) -> 'DeltaGenerator'",
             )
         else:
             self.assertEqual(
                 el.doc_string.signature,
-                "(body: object, anchor: Optional[str] = None) -> 'DeltaGenerator'",
+                "(body: object, anchor: Optional[str] = None, *, help: Optional[str] = None) -> 'DeltaGenerator'",
             )
 
     def test_st_info(self):
@@ -529,6 +523,12 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
         self.assertEqual(el.markdown.body, "some markdown")
         self.assertTrue(el.markdown.allow_html)
 
+        # test the help keyword
+        st.markdown("    some markdown  ", help="help text")
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.markdown.body, "some markdown")
+        self.assertEqual(el.markdown.help, "help text")
+
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""
         import plotly.graph_objs as go
@@ -597,6 +597,14 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
         self.assertEqual(el.heading.tag, "h3")
         self.assertEqual(el.heading.anchor, "some-anchor")
 
+    def test_st_subheader_with_help(self):
+        """Test st.subheader with help."""
+        st.subheader("some subheader", help="help text")
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.heading.body, "some subheader")
+        self.assertEqual(el.heading.tag, "h3")
+        self.assertEqual(el.heading.help, "help text")
+
     def test_st_success(self):
         """Test st.success."""
         st.success("some success")
@@ -645,6 +653,32 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.text.body, "some text")
 
+    def test_st_text_with_help(self):
+        """Test st.text with help."""
+        st.text("some text", help="help text")
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.text.body, "some text")
+        self.assertEqual(el.text.help, "help text")
+
+    def test_st_caption_with_help(self):
+        """Test st.caption with help."""
+        st.caption("some caption", help="help text")
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.markdown.help, "help text")
+
+    def test_st_latex_with_help(self):
+        """Test st.latex with help."""
+        st.latex(
+            r"""
+            a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
+            \sum_{k=0}^{n-1} ar^k =
+            a \left(\frac{1-r^{n}}{1-r}\right)
+            """,
+            help="help text",
+        )
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.markdown.help, "help text")
+
     def test_st_title(self):
         """Test st.title."""
         st.title("some title")
@@ -661,6 +695,49 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
         self.assertEqual(el.heading.body, "some title")
         self.assertEqual(el.heading.tag, "h1")
         self.assertEqual(el.heading.anchor, "some-anchor")
+
+    def test_st_title_with_help(self):
+        """Test st.title with help."""
+        st.title("some title", help="help text")
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.heading.body, "some title")
+        self.assertEqual(el.heading.tag, "h1")
+        self.assertEqual(el.heading.help, "help text")
+
+    def test_st_time_input(self):
+        """Test st.time_input."""
+        value = datetime.time(8, 45)
+        st.time_input("Set an alarm for", value)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.time_input.default, "08:45")
+        self.assertEqual(el.time_input.step, datetime.timedelta(minutes=15).seconds)
+
+    def test_st_time_input_with_step(self):
+        """Test st.time_input with step."""
+        value = datetime.time(9, 00)
+        st.time_input("Set an alarm for", value, step=datetime.timedelta(minutes=5))
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.time_input.default, "09:00")
+        self.assertEqual(el.time_input.step, datetime.timedelta(minutes=5).seconds)
+
+    def test_st_time_input_exceptions(self):
+        """Test st.time_input exceptions."""
+        value = datetime.time(9, 00)
+        with self.assertRaises(StreamlitAPIException):
+            st.time_input("Set an alarm for", value, step=True)
+        with self.assertRaises(StreamlitAPIException):
+            st.time_input("Set an alarm for", value, step=(90, 0))
+        with self.assertRaises(StreamlitAPIException):
+            st.time_input("Set an alarm for", value, step=1)
+        with self.assertRaises(StreamlitAPIException):
+            st.time_input("Set an alarm for", value, step=59)
+        with self.assertRaises(StreamlitAPIException):
+            st.time_input("Set an alarm for", value, step=datetime.timedelta(hours=24))
+        with self.assertRaises(StreamlitAPIException):
+            st.time_input("Set an alarm for", value, step=datetime.timedelta(days=1))
 
     def test_st_legacy_vega_lite_chart(self):
         """Test st._legacy_vega_lite_chart."""
@@ -682,6 +759,19 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
         self.assertEqual(el.alert.body, "some warning")
         self.assertEqual(el.alert.icon, "⚠️")
         self.assertEqual(el.alert.format, Alert.WARNING)
+
+    def test_set_query_params_sends_protobuf_message(self):
+        """Test valid st.set_query_params sends protobuf message."""
+        st.experimental_set_query_params(x="a")
+        message = self.get_message_from_queue(0)
+        self.assertEqual(message.page_info_changed.query_string, "x=a")
+
+    def test_set_query_params_exceptions(self):
+        """Test invalid st.set_query_params raises exceptions."""
+        with self.assertRaises(StreamlitAPIException):
+            st.experimental_set_query_params(embed="True")
+        with self.assertRaises(StreamlitAPIException):
+            st.experimental_set_query_params(embed_options="show_colored_line")
 
     @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
     def test_st_alert_exceptions(self, alert_func):

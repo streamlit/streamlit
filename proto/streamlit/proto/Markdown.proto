@@ -32,4 +32,6 @@ message Markdown {
     LATEX = 4;
   }
   Type element_type = 4;
+
+  string help = 5;
 }

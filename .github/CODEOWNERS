@@ -1,6 +1,5 @@
 # These owners will be the default owners for everything in
 # the repo. Unless a later match takes precedence, that is.
-frontend/package.json @vdonato @anoctopus @tconkling @kmcgrady
 lib/Pipfile @vdonato @anoctopus @tconkling @kmcgrady
 lib/setup.py @vdonato @anoctopus @tconkling @kmcgrady
 proto/ @vdonato @tconkling @LukasMasuch @sfc-gh-mnowotka

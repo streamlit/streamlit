@@ -15,13 +15,13 @@
  */
 
 import React, {
+  CSSProperties,
+  Fragment,
+  FunctionComponent,
+  HTMLProps,
+  PureComponent,
   ReactElement,
   ReactNode,
-  PureComponent,
-  CSSProperties,
-  HTMLProps,
-  FunctionComponent,
-  Fragment,
 } from "react"
 import { visit } from "unist-util-visit"
 import { useTheme } from "@emotion/react"
@@ -40,7 +40,7 @@ import { Link as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import AppContext from "src/components/core/AppContext"
-import CodeBlock, { CodeTag } from "src/components/elements/CodeBlock/"
+import CodeBlock from "src/components/elements/CodeBlock/"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
 import ErrorBoundary from "src/components/shared/ErrorBoundary/"
@@ -53,14 +53,22 @@ import {
 } from "src/theme/index"
 
 import {
-  StyledStreamlitMarkdown,
-  StyledLinkIconContainer,
-  StyledLinkIcon,
-  StyledHeaderContent,
+  InlineTooltipIcon,
+  StyledLabelHelpWrapper,
+} from "src/components/shared/TooltipIcon"
+
+import {
   StyledHeaderContainer,
+  StyledHeaderContent,
+  StyledLinkIcon,
+  StyledLinkIconContainer,
+  StyledStreamlitMarkdown,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
+import { StyledCopyButtonContainer } from "src/components/elements/CodeBlock/styled-components"
+import CopyButton from "src/components/elements/CodeBlock/CopyButton"
+import StreamlitSyntaxHighlighter from "src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 
 enum Tags {
   H1 = "h1",
@@ -83,27 +91,19 @@ export interface Props {
   isCaption?: boolean
 
   /**
-   * Only allows italics, bold, strikethrough, and emojis in button/download button labels,
-   * does not allow colored text
-   */
-  isButton?: boolean
-
-  /**
-   * Only allows italics, bold, strikethrough, emojis, links, and code in widget/expander/tab labels
+   * Indicates widget labels & restricts allowed elements
    */
   isLabel?: boolean
 
   /**
-   * Checkbox has larger label font sizing - same allowed elements as other widgets ^,
-   * does not allow colored text
+   * Does not allow links
    */
-  isCheckbox?: boolean
+  isButton?: boolean
 
   /**
-   * Does not allow colored text
+   * Checkbox has larger label font sizing
    */
-  isExpander?: boolean
-  isTabs?: boolean
+  isCheckbox?: boolean
 }
 
 /**
@@ -237,22 +237,49 @@ export interface RenderedMarkdownProps {
   overrideComponents?: Components
 
   /**
-   * Only allows italics, bold, strikethrough, and emojis in button/download button labels,
-   * does not allow colored text
-   */
-  isButton?: boolean
-
-  /**
-   * Only allows italics, bold, strikethrough, emojis, links, and code in widget/expander/tab labels
+   * Indicates widget labels & restricts allowed elements
    */
   isLabel?: boolean
 
   /**
-   * Does not allow colored text
+   * Does not allow links
    */
-  isCheckbox?: boolean
-  isExpander?: boolean
-  isTabs?: boolean
+  isButton?: boolean
+}
+
+export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
+  ReactMarkdownProps & { inline?: boolean }
+
+/**
+ * Renders code tag with highlighting based on requested language.
+ */
+export const CustomCodeTag: FunctionComponent<CustomCodeTagProps> = ({
+  node,
+  inline,
+  className,
+  children,
+  ...props
+}) => {
+  const match = /language-(\w+)/.exec(className || "")
+  const codeText = String(children).trim().replace(/\n$/, "")
+
+  const language = (match && match[1]) || ""
+  return !inline ? (
+    <>
+      {codeText && (
+        <StyledCopyButtonContainer>
+          <CopyButton text={codeText} />
+        </StyledCopyButtonContainer>
+      )}
+      <StreamlitSyntaxHighlighter language={language} showLineNumbers={false}>
+        {codeText}
+      </StreamlitSyntaxHighlighter>
+    </>
+  ) : (
+    <code className={className} {...props}>
+      {children}
+    </code>
+  )
 }
 
 export function RenderedMarkdown({
@@ -261,13 +288,10 @@ export function RenderedMarkdown({
   overrideComponents,
   isLabel,
   isButton,
-  isCheckbox,
-  isExpander,
-  isTabs,
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
-    code: CodeTag,
+    code: CustomCodeTag,
     a: LinkWithTargetBlank,
     h1: CustomHeading,
     h2: CustomHeading,
@@ -317,13 +341,33 @@ export function RenderedMarkdown({
     rehypePlugins.push(rehypeRaw)
   }
 
-  // limits allowed markdown, default is allow all
-  let allowed
+  // Sets disallowed markdown for widget labels
+  let disallowed
   if (isLabel) {
-    allowed = ["p", "em", "strong", "del", "code", "a", "span"]
-  }
-  if (isButton || isCheckbox || isExpander || isTabs) {
-    allowed = ["p", "em", "strong", "del"]
+    // Restricts images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
+    disallowed = [
+      "img",
+      "table",
+      "thead",
+      "tbody",
+      "tr",
+      "th",
+      "td",
+      "h1",
+      "h2",
+      "h3",
+      "ul",
+      "ol",
+      "li",
+      "input",
+      "hr",
+      "blockquote",
+    ]
+
+    if (isButton) {
+      // Button labels additionally restrict links
+      disallowed.push("a")
+    }
   }
 
   return (
@@ -333,7 +377,9 @@ export function RenderedMarkdown({
         rehypePlugins={rehypePlugins}
         components={renderers}
         transformLinkUri={transformLinkUri}
-        allowedElements={allowed}
+        disallowedElements={disallowed}
+        // unwrap and render children from invalid markdown
+        unwrapDisallowed={true}
       >
         {source}
       </ReactMarkdown>
@@ -367,8 +413,6 @@ class StreamlitMarkdown extends PureComponent<Props> {
       isLabel,
       isButton,
       isCheckbox,
-      isExpander,
-      isTabs,
     } = this.props
     const isInSidebar = this.context
 
@@ -377,6 +421,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isCaption={Boolean(isCaption)}
         isInSidebar={isInSidebar}
         isLabel={isLabel}
+        isButton={isButton}
         isCheckbox={isCheckbox}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
@@ -385,10 +430,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
           source={source}
           allowHTML={allowHTML}
           isLabel={isLabel}
-          isCheckbox={isCheckbox}
           isButton={isButton}
-          isExpander={isExpander}
-          isTabs={isTabs}
         />
       </StyledStreamlitMarkdown>
     )
@@ -446,8 +488,8 @@ function makeMarkdownHeading(tag: string, markdown: string): string {
 }
 
 export function Heading(props: HeadingProtoProps): ReactElement {
-  const { width } = props
-  const { tag, anchor, body } = props.element
+  const { width, element } = props
+  const { tag, anchor, body, help } = element
   const isSidebar = React.useContext(IsSidebarContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
@@ -463,20 +505,40 @@ export function Heading(props: HeadingProtoProps): ReactElement {
       >
         <StyledHeaderContainer>
           <HeadingWithAnchor tag={tag} anchor={anchor}>
-            <RenderedMarkdown
-              source={makeMarkdownHeading(tag, heading)}
-              allowHTML={false}
-              // this is purely an inline string
-              overrideComponents={{
-                p: Fragment,
-                h1: Fragment,
-                h2: Fragment,
-                h3: Fragment,
-                h4: Fragment,
-                h5: Fragment,
-                h6: Fragment,
-              }}
-            />
+            {help ? (
+              <StyledLabelHelpWrapper>
+                <RenderedMarkdown
+                  source={makeMarkdownHeading(tag, heading)}
+                  allowHTML={false}
+                  // this is purely an inline string
+                  overrideComponents={{
+                    p: Fragment,
+                    h1: Fragment,
+                    h2: Fragment,
+                    h3: Fragment,
+                    h4: Fragment,
+                    h5: Fragment,
+                    h6: Fragment,
+                  }}
+                />
+                <InlineTooltipIcon content={help} />
+              </StyledLabelHelpWrapper>
+            ) : (
+              <RenderedMarkdown
+                source={makeMarkdownHeading(tag, heading)}
+                allowHTML={false}
+                // this is purely an inline string
+                overrideComponents={{
+                  p: Fragment,
+                  h1: Fragment,
+                  h2: Fragment,
+                  h3: Fragment,
+                  h4: Fragment,
+                  h5: Fragment,
+                  h6: Fragment,
+                }}
+              />
+            )}
           </HeadingWithAnchor>
         </StyledHeaderContainer>
         {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}

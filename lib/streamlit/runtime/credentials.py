@@ -28,9 +28,7 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-# WT_SESSION is a Windows Terminal specific environment variable. If it exists,
-# we are on the latest Windows Terminal that supports emojis
-_SHOW_EMOJIS = not env_util.IS_WINDOWS or os.environ.get("WT_SESSION")
+
 if env_util.IS_WINDOWS:
     _CONFIG_FILE_PATH = r"%userprofile%/.streamlit/config.toml"
 else:
@@ -44,20 +42,31 @@ _Activation = namedtuple(
     ],
 )
 
-# IMPORTANT: Break the text below at 80 chars.
-_EMAIL_PROMPT = """
-  {0}%(welcome)s
 
-  If you’d like to receive helpful onboarding emails, news, offers, promotions,
-  and the occasional swag, please enter your email address below. Otherwise,
-  leave this field blank.
+def email_prompt() -> str:
+    # Emoji can cause encoding errors on non-UTF-8 terminals
+    # (See https://github.com/streamlit/streamlit/issues/2284.)
+    # WT_SESSION is a Windows Terminal specific environment variable. If it exists,
+    # we are on the latest Windows Terminal that supports emojis
+    show_emoji = sys.stdout.encoding == "utf-8" and (
+        not env_util.IS_WINDOWS or os.environ.get("WT_SESSION")
+    )
 
-  %(email)s""".format(
-    "👋 " if _SHOW_EMOJIS else ""
-) % {
-    "welcome": click.style("Welcome to Streamlit!", bold=True),
-    "email": click.style("Email: ", fg="blue"),
-}
+    # IMPORTANT: Break the text below at 80 chars.
+    return """
+      {0}%(welcome)s
+
+      If you’d like to receive helpful onboarding emails, news, offers, promotions,
+      and the occasional swag, please enter your email address below. Otherwise,
+      leave this field blank.
+
+      %(email)s""".format(
+        "👋 " if show_emoji else ""
+    ) % {
+        "welcome": click.style("Welcome to Streamlit!", bold=True),
+        "email": click.style("Email: ", fg="blue"),
+    }
+
 
 # IMPORTANT: Break the text below at 80 chars.
 _TELEMETRY_TEXT = """
@@ -221,7 +230,10 @@ class Credentials(object):
 
             while not activated:
                 email = click.prompt(
-                    text=_EMAIL_PROMPT, prompt_suffix="", default="", show_default=False
+                    text=email_prompt(),
+                    prompt_suffix="",
+                    default="",
+                    show_default=False,
                 )
 
                 self.activation = _verify_email(email)

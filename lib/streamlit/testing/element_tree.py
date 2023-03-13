@@ -19,13 +19,15 @@ from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
 from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
 
-from streamlit.elements.heading import HEADER_TAG, SUBHEADER_TAG, TITLE_TAG
+from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.select_slider import SelectSliderSerde
 from streamlit.elements.slider import SliderScalar, SliderScalarT, SliderSerde, Step
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
+from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
+from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
@@ -181,10 +183,50 @@ class Latex(Markdown):
 
 
 @dataclass(init=False)
-class Code(Markdown):
-    def __init__(self, proto: MarkdownProto, root: ElementTree):
-        super().__init__(proto, root)
+class Code(Element):
+    proto: CodeProto
+
+    type: str
+    language: str
+    show_line_numbers: bool
+    root: ElementTree = field(repr=False)
+    key: None
+
+    def __init__(self, proto: CodeProto, root: ElementTree):
+        self.proto = proto
+        self.key = None
+        self.language = proto.language
+        self.show_line_numbers = proto.show_line_numbers
+        self.root = root
         self.type = "code"
+
+    @property
+    def value(self) -> str:
+        return self.proto.code_text
+
+
+@dataclass
+class Exception(Element):
+    type: str
+    message: str
+    is_markdown: bool
+    stack_trace: list[str]
+    is_warning: bool
+
+    def __init__(self, proto: ExceptionProto, root: ElementTree):
+        self.key = None
+        self.root = root
+        self.proto = proto
+        self.type = "exception"
+
+        self.message = proto.message
+        self.is_markdown = proto.message_is_markdown
+        self.stack_trace = list(proto.stack_trace)
+        self.is_warning = proto.is_warning
+
+    @property
+    def value(self) -> str:
+        return self.message
 
 
 @runtime_checkable
@@ -731,6 +773,10 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["exception"]) -> Sequence[Exception]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["radio"]) -> Sequence[Radio[Any]]:
         ...
 
@@ -872,21 +918,21 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     new_node = Caption(elt.markdown, root=root)
                 elif elt.markdown.element_type == MarkdownProto.Type.LATEX:
                     new_node = Latex(elt.markdown, root=root)
-                elif elt.markdown.element_type == MarkdownProto.Type.CODE:
-                    new_node = Code(elt.markdown, root=root)
                 else:
                     raise ValueError(
                         f"Unknown markdown type {elt.markdown.element_type}"
                     )
             elif elt.WhichOneof("type") == "heading":
-                if elt.heading.tag == TITLE_TAG:
+                if elt.heading.tag == HeadingProtoTag.TITLE_TAG.value:
                     new_node = Title(elt.heading, root=root)
-                elif elt.heading.tag == HEADER_TAG:
+                elif elt.heading.tag == HeadingProtoTag.HEADER_TAG.value:
                     new_node = Header(elt.heading, root=root)
-                elif elt.heading.tag == SUBHEADER_TAG:
+                elif elt.heading.tag == HeadingProtoTag.SUBHEADER_TAG.value:
                     new_node = Subheader(elt.heading, root=root)
                 else:
                     raise ValueError(f"Unknown heading type with tag {elt.heading.tag}")
+            elif elt.WhichOneof("type") == "exception":
+                new_node = Exception(elt.exception, root=root)
             elif elt.WhichOneof("type") == "radio":
                 new_node = Radio(elt.radio, root=root)
             elif elt.WhichOneof("type") == "checkbox":
@@ -904,6 +950,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     raise ValueError(f"Slider with unknown type {elt.slider}")
             elif elt.WhichOneof("type") == "button":
                 new_node = Button(elt.button, root=root)
+            elif elt.WhichOneof("type") == "code":
+                new_node = Code(elt.code, root=root)
             else:
                 new_node = Element(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":

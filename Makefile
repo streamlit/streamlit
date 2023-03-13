@@ -115,8 +115,8 @@ pylint:
 .PHONY: pyformat
 # Fix Python files that are not properly formatted.
 pyformat:
-	pre-commit run black --all-files
-	pre-commit run isort --all-files
+	pre-commit run black --all-files --hook-stage manual
+	pre-commit run isort --all-files --hook-stage manual
 
 .PHONY: pytest
 # Run Python unit tests.
@@ -278,6 +278,13 @@ react-build:
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
 
+.PHONY: frontend-fast
+# Build frontend into static files faster by setting BUILD_AS_FAST_AS_POSSIBLE=true flag, which disables eslint and typechecking.
+frontend-fast:
+	cd frontend/ ; yarn run buildFast
+	rsync -av --delete --delete-excluded --exclude=reports \
+		frontend/build/ lib/streamlit/static/
+
 .PHONY: jslint
 # Lint the JS code
 jslint:
@@ -296,18 +303,18 @@ endif #CIRCLECI
 .PHONY: tstypecheck
 # Type check the JS/TS code
 tstypecheck:
-	pre-commit run typecheck --all-files
+	pre-commit run typecheck --all-files --hook-stage manual
 
 .PHONY: jsformat
 # Fix formatting issues in our JavaScript & TypeScript files.
 jsformat:
-	pre-commit run prettier --all-files
+	pre-commit run prettier --all-files --hook-stage manual
 
 .PHONY: jstest
 # Run JS unit tests.
 jstest:
 ifndef CIRCLECI
-	cd frontend; yarn run test
+	cd frontend; TESTPATH=$(TESTPATH) yarn run test
 else
 	# Previously we used --runInBand here, which just completely turns off parallelization.
 	# But since our CircleCI instance has 2 CPUs, use maxWorkers instead:
@@ -360,8 +367,8 @@ notices:
 .PHONY: headers
 # Update the license header on all source files.
 headers:
-	pre-commit run insert-license --all-files
-	pre-commit run license-headers --all-files
+	pre-commit run insert-license --all-files --hook-stage manual
+	pre-commit run license-headers --all-files --hook-stage manual
 
 .PHONY: build-test-env
 # Build docker image that mirrors circleci

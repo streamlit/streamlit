@@ -25,7 +25,7 @@ import { StyledGraphVizChart } from "./styled-components"
 export interface GraphVizChartProps {
   width: number
   element: GraphVizChartProto
-  height: number | undefined
+  height?: number
 }
 
 interface Dimensions {

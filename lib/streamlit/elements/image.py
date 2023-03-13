@@ -23,6 +23,7 @@ import imghdr
 import io
 import mimetypes
 import re
+from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 from urllib.parse import urlparse
 
@@ -61,6 +62,26 @@ UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bo
 Channels: TypeAlias = Literal["RGB", "BGR"]
 ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
+
+
+class WidthBehaviour(IntEnum):
+    """
+    Special values that are recognized by the frontend and allow us to change the
+    behavior of the displayed image.
+    """
+
+    ORIGINAL = -1
+    COLUMN = -2
+    AUTO = -3
+
+
+WidthBehaviour.ORIGINAL.__doc__ = """Display the image at its original width"""
+WidthBehaviour.COLUMN.__doc__ = (
+    """Display the image at the width of the column it's in."""
+)
+WidthBehaviour.AUTO.__doc__ = """Display the image at its original width, unless it
+would exceed the width of its column in which case clamp it to
+its column width"""
 
 
 class ImageMixin:
@@ -136,11 +157,11 @@ class ImageMixin:
         """
 
         if use_column_width == "auto" or (use_column_width is None and width is None):
-            width = -3
+            width = WidthBehaviour.AUTO
         elif use_column_width == "always" or use_column_width == True:
-            width = -2
+            width = WidthBehaviour.COLUMN
         elif width is None:
-            width = -1
+            width = WidthBehaviour.ORIGINAL
         elif width <= 0:
             raise StreamlitAPIException("Image width must be positive.")
 
@@ -409,7 +430,7 @@ def marshall_images(
     coordinates: str,
     image: ImageOrImageList,
     caption: Optional[Union[str, "npt.NDArray[Any]", List[str]]],
-    width: int,
+    width: Union[int, WidthBehaviour],
     proto_imgs: ImageListProto,
     clamp: bool,
     channels: Channels = "RGB",
@@ -430,12 +451,9 @@ def marshall_images(
         list of captions (one for each image).
     width
         The desired width of the image or images. This parameter will be
-        passed to the frontend, where it has some special meanings:
-        -1: "OriginalWidth" (display the image at its original width)
-        -2: "ColumnWidth" (display the image at the width of the column it's in)
-        -3: "AutoWidth" (display the image at its original width, unless it
-            would exceed the width of its column in which case clamp it to
-            its column width).
+        passed to the frontend.
+        Positive values set the image width explicitly.
+        Negative values has some special. For details, see: `WidthBehaviour`
     proto_imgs
         The ImageListProto to fill in.
     clamp
@@ -488,7 +506,7 @@ def marshall_images(
         len(images),
     )
 
-    proto_imgs.width = width
+    proto_imgs.width = int(width)
     # Each image in an image list needs to be kept track of at its own coordinates.
     for coord_suffix, (image, caption) in enumerate(zip(images, captions)):
         proto_img = proto_imgs.imgs.add()
