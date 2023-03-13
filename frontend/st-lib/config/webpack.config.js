@@ -43,7 +43,8 @@ const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin"
 const createEnvironmentHash = require("./webpack/persistentCache/createEnvironmentHash")
 
 // Source maps are resource heavy and can cause out of memory issue for large source files.
-const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== "false"
+const shouldUseSourceMap = true
+console.log("shouldUseSourceMap: ", shouldUseSourceMap)
 
 const reactRefreshRuntimeEntry = require.resolve("react-refresh/runtime")
 const reactRefreshWebpackPluginRuntimeEntry = require.resolve(
@@ -100,6 +101,9 @@ module.exports = function (webpackEnv) {
   const isEnvDevelopment = webpackEnv === "development"
   const isEnvProduction = webpackEnv === "production"
 
+  console.log("isEnvProduction: ", isEnvProduction)
+  console.log("isEnvProduction: ", isEnvDevelopment)
+  console.log(webpackEnv)
   // Variable used for enabling profiling in Production
   // passed into alias object. Uses a flag if passed into the build command
   const isEnvProductionProfile =
@@ -117,14 +121,6 @@ module.exports = function (webpackEnv) {
   const getStyleLoaders = (cssOptions, preProcessor) => {
     const loaders = [
       isEnvDevelopment && require.resolve("style-loader"),
-      isEnvProduction && {
-        loader: MiniCssExtractPlugin.loader,
-        // css is located in `static/css`, use '../../' to locate index.html folder
-        // in production `paths.publicUrlOrPath` can be a relative path
-        options: paths.publicUrlOrPath.startsWith(".")
-          ? { publicPath: "../../" }
-          : {},
-      },
       {
         loader: require.resolve("css-loader"),
         options: cssOptions,
@@ -157,7 +153,7 @@ module.exports = function (webpackEnv) {
                   "postcss-normalize",
                 ]
           },
-          sourceMap: isEnvProduction ? shouldUseSourceMap : isEnvDevelopment,
+          sourceMap: true,
         },
       },
     ].filter(Boolean)
@@ -166,7 +162,7 @@ module.exports = function (webpackEnv) {
         {
           loader: require.resolve("resolve-url-loader"),
           options: {
-            sourceMap: isEnvProduction ? shouldUseSourceMap : isEnvDevelopment,
+            sourceMap: true,
             root: paths.appSrc,
           },
         },
@@ -230,6 +226,9 @@ module.exports = function (webpackEnv) {
     },
     infrastructureLogging: {
       level: "none",
+    },
+    optimization: {
+      usedExports: true,
     },
     resolve: {
       // This allows you to set a fallback for where webpack should look for modules.
@@ -399,8 +398,8 @@ module.exports = function (webpackEnv) {
                 // Babel sourcemaps are needed for debugging into node_modules
                 // code.  Without the options below, debuggers like VSCode
                 // show incorrect code and set breakpoints on the wrong lines.
-                sourceMaps: shouldUseSourceMap,
-                inputSourceMap: shouldUseSourceMap,
+                sourceMaps: true,
+                inputSourceMap: true,
               },
             },
             // "postcss" loader applies autoprefixer to our CSS.
@@ -415,9 +414,7 @@ module.exports = function (webpackEnv) {
               exclude: cssModuleRegex,
               use: getStyleLoaders({
                 importLoaders: 1,
-                sourceMap: isEnvProduction
-                  ? shouldUseSourceMap
-                  : isEnvDevelopment,
+                sourceMap: true,
                 modules: {
                   mode: "icss",
                 },
@@ -434,9 +431,7 @@ module.exports = function (webpackEnv) {
               test: cssModuleRegex,
               use: getStyleLoaders({
                 importLoaders: 1,
-                sourceMap: isEnvProduction
-                  ? shouldUseSourceMap
-                  : isEnvDevelopment,
+                sourceMap: true,
                 modules: {
                   mode: "local",
                   getLocalIdent: getCSSModuleLocalIdent,
@@ -452,9 +447,7 @@ module.exports = function (webpackEnv) {
               use: getStyleLoaders(
                 {
                   importLoaders: 3,
-                  sourceMap: isEnvProduction
-                    ? shouldUseSourceMap
-                    : isEnvDevelopment,
+                  sourceMap: true,
                   modules: {
                     mode: "icss",
                   },
@@ -474,9 +467,7 @@ module.exports = function (webpackEnv) {
               use: getStyleLoaders(
                 {
                   importLoaders: 3,
-                  sourceMap: isEnvProduction
-                    ? shouldUseSourceMap
-                    : isEnvDevelopment,
+                  sourceMap: true,
                   modules: {
                     mode: "local",
                     getLocalIdent: getCSSModuleLocalIdent,
@@ -548,13 +539,6 @@ module.exports = function (webpackEnv) {
       // a plugin that prints an error when you attempt to do this.
       // See https://github.com/facebook/create-react-app/issues/240
       isEnvDevelopment && new CaseSensitivePathsPlugin(),
-      isEnvProduction &&
-        new MiniCssExtractPlugin({
-          // Options similar to the same options in webpackOptions.output
-          // both options are optional
-          filename: "static/css/[name].[contenthash:8].css",
-          chunkFilename: "static/css/[name].[contenthash:8].chunk.css",
-        }),
       // Generate an asset manifest file with the following content:
       // - "files" key: Mapping of all asset filenames to their corresponding
       //   output file so that tools can pick it up without having to parse
