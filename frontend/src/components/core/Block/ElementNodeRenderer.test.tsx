@@ -30,6 +30,7 @@ import {
 } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
+import { mockSessionInfo } from "src/lib/mocks/mocks"
 import ElementNodeRenderer, {
   ElementNodeRendererProps,
 } from "./ElementNodeRenderer"
@@ -62,14 +63,17 @@ function getProps(
   props: Partial<ElementNodeRendererProps> &
     Pick<ElementNodeRendererProps, "node" | "scriptRunId">
 ): ElementNodeRendererProps {
+  const sessionInfo = mockSessionInfo()
   return {
     scriptRunState: ScriptRunState.RUNNING,
+    sessionInfo: sessionInfo,
     widgetMgr: new WidgetStateManager({
       sendRerunBackMsg: jest.fn(),
       formsDataChanged: jest.fn(),
     }),
     widgetsDisabled: false,
     uploadClient: new FileUploadClient({
+      sessionInfo: sessionInfo,
       getServerUri: () => undefined,
       csrfEnabled: true,
       formsWithPendingRequestsChanged: () => {},
