@@ -61,16 +61,14 @@ function getSizeStyle(size: Size, theme: Theme): CSSObject {
 
 type RequiredCameraInputButtonProps = Required<CameraInputButtonProps>
 
-export const StyledCameraInput = styled.div<StyledCameraInputProps>(
-  ({ theme, width }) => ({
-    // This is used to position the "Switch facing mode" button
-    // with respect to the webcam block.
-    position: "relative",
-    overflow: "hidden",
-    width: "100%",
-    objectFit: "contain",
-  })
-)
+export const StyledCameraInput = styled.div<StyledCameraInputProps>(() => ({
+  // This is used to position the "Switch facing mode" button
+  // with respect to the webcam block.
+  position: "relative",
+  overflow: "hidden",
+  width: "100%",
+  objectFit: "contain",
+}))
 
 export interface StyledBoxProps {
   width: number
@@ -108,7 +106,7 @@ export const StyledLink = styled.a(({ theme }) => ({
   textDecoration: "none",
 }))
 
-export const StyledSpan = styled.span(({ theme }) => ({
+export const StyledSpan = styled.span(() => ({
   display: "flex",
   alignItems: "center",
 }))
@@ -123,11 +121,11 @@ export const StyledSwitchFacingModeButton = styled.div(({ theme }) => ({
   opacity: 0.6,
 }))
 
-export const StyledWebcamWrapper = styled.div(({ theme }) => ({
+export const StyledWebcamWrapper = styled.div(() => ({
   display: "flex",
 }))
 
-export const StyledProgressBar = styled.div(({ theme }) => ({
+export const StyledProgressBar = styled.div(() => ({
   height: "fit-content",
   width: "100%",
   position: "absolute",

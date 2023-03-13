@@ -132,7 +132,7 @@ export const StyledAppRunningIcon = styled.img<StyledAppRunningIconProps>(
   }
 )
 
-export const StyledStatusWidget = styled.div(({ theme }) => ({
+export const StyledStatusWidget = styled.div(() => ({
   "&.StatusWidget-appear": {
     opacity: 0,
   },
@@ -161,7 +161,7 @@ export const StyledStatusWidget = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledShortcutLabel = styled.div(({ theme }) => ({
+export const StyledShortcutLabel = styled.div(() => ({
   "&::first-letter": {
     textDecoration: "underline",
   },
