@@ -102,7 +102,7 @@ module.exports = function (webpackEnv) {
   const isEnvProduction = webpackEnv === "production"
 
   console.log("isEnvProduction: ", isEnvProduction)
-  console.log("isEnvProduction: ", isEnvDevelopment)
+  console.log("isEnvDevelopment: ", isEnvDevelopment)
   console.log(webpackEnv)
   // Variable used for enabling profiling in Production
   // passed into alias object. Uses a flag if passed into the build command
@@ -114,6 +114,7 @@ module.exports = function (webpackEnv) {
   // Omit trailing slash as %PUBLIC_URL%/xyz looks better than %PUBLIC_URL%xyz.
   // Get environment variables to inject into our app.
   const env = getClientEnvironment(paths.publicUrlOrPath.slice(0, -1))
+  console.log(env.stringified)
 
   const shouldUseReactRefresh = env.raw.FAST_REFRESH
 
@@ -339,19 +340,6 @@ module.exports = function (webpackEnv) {
                 and: [/\.(ts|tsx|js|jsx|md|mdx)$/],
               },
             },
-            {
-              loader: 'babel-loader',
-              options: {
-                presets: [
-                  [
-                    '@babel/preset-env', {
-                      modules: false
-                    }
-                  ]
-            
-                ]
-              }
-            },
             // Process application JS with Babel.
             // The preset includes JSX, Flow, TypeScript, and some ESnext features.
             {
@@ -496,17 +484,6 @@ module.exports = function (webpackEnv) {
       ].filter(Boolean),
     },
     plugins: [
-      // Generates an `index.html` file with the <script> injected.
-      new HtmlWebpackPlugin(
-        Object.assign(
-          {},
-          {
-            inject: true,
-            template: paths.appHtml,
-          },
-          undefined
-        )
-      ),
       // Inlines the webpack runtime script. This script is too small to warrant
       // a network request.
       // https://github.com/facebook/create-react-app/issues/5358

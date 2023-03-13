@@ -124,7 +124,9 @@
     },
     // Check for import violation in all JS-like files
     "import/resolver": {
-      "typescript": true
+      "node": {
+        "extensions": [".js", ".jsx", ".ts", ".tsx", ".json"]
+      }
     }
   }
 }
