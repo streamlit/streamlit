@@ -42,7 +42,6 @@ import {
 } from "./ComponentInstance"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
-import { StreamlitComponentEndpoint } from "./StreamlitComponentEndpoint"
 
 // Mock log functions.
 jest.mock("src/lib/log")
