@@ -171,7 +171,7 @@ export const StyledMenuItemLabel = styled.span(({ theme }) => ({
   fontFamily: theme.fonts.sansSerif,
 }))
 
-export const StyledUl = styled.ul(({ theme }) => ({
+export const StyledUl = styled.ul(() => ({
   borderBottom: "$1px solid rgba(38, 39, 48, 0.2)",
   borderTop: "$1px solid rgba(38, 39, 48, 0.2)",
   margin: "-.20rem 0 -.5rem 0",

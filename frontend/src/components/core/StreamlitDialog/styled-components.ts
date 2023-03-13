@@ -29,7 +29,7 @@ export const StyledCommandLine = styled.textarea(({ theme }) => ({
   height: "6rem",
 }))
 
-export const StyledShortcutLabel = styled.span(({ theme }) => ({
+export const StyledShortcutLabel = styled.span(() => ({
   "&::first-letter": {
     textDecoration: "underline",
   },
@@ -75,7 +75,7 @@ export const StyledHeader = styled.h2(({ theme }) => ({
   },
 }))
 
-export const StyledLabel = styled.label(({ theme }) => ({
+export const StyledLabel = styled.label(() => ({
   paddingBottom: 0,
   paddingTop: 0,
   marginBottom: 0,
@@ -83,7 +83,7 @@ export const StyledLabel = styled.label(({ theme }) => ({
   lineHeight: 1.25,
 }))
 
-export const StyledSmall = styled(Small)(({ theme }) => ({
+export const StyledSmall = styled(Small)(() => ({
   display: "block",
   paddingBottom: 0,
   paddingTop: 0,
@@ -135,7 +135,7 @@ export const StyledCheckbox = styled.input(({ theme }) => ({
   },
 }))
 
-export const StyledDeployErrorContent = styled.div(({ theme }) => ({
+export const StyledDeployErrorContent = styled.div(() => ({
   "& > ul": {
     paddingLeft: "1.4rem",
   },

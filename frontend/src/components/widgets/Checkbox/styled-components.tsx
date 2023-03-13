@@ -23,7 +23,7 @@ export interface StyledContentProps {
 }
 
 export const StyledContent = styled.div<StyledContentProps>(
-  ({ theme, visibility }) => ({
+  ({ visibility }) => ({
     display: visibility === LabelVisibilityOptions.Collapsed ? "none" : "flex",
     visibility:
       visibility === LabelVisibilityOptions.Hidden ? "hidden" : "visible",

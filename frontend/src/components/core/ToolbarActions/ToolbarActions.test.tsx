@@ -29,7 +29,6 @@ describe("ActionButton", () => {
   const getProps = (
     extended?: Partial<ActionButtonProps>
   ): ActionButtonProps => ({
-    borderless: false,
     label: "the label",
     icon: "star.svg",
     onClick: jest.fn(),
@@ -56,7 +55,7 @@ describe("ActionButton", () => {
 
   it("does not render label if not provided", () => {
     const wrapper = shallow(
-      <ActionButton {...getProps({ label: undefined, borderless: true })} />
+      <ActionButton {...getProps({ label: undefined })} />
     )
 
     expect(wrapper).toMatchSnapshot()

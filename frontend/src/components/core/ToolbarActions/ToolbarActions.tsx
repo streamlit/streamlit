@@ -27,14 +27,12 @@ import {
 } from "./styled-components"
 
 export interface ActionButtonProps {
-  borderless?: boolean
   label?: string
   icon?: string
   onClick: () => void
 }
 
 export function ActionButton({
-  borderless,
   label,
   icon,
   onClick,
@@ -62,12 +60,11 @@ function ToolbarActions({
 }: ToolbarActionsProps): ReactElement {
   return (
     <>
-      {hostToolbarItems.map(({ borderless, key, label, icon }) => (
+      {hostToolbarItems.map(({ key, label, icon }) => (
         <ActionButton
           key={key}
           label={label}
           icon={icon}
-          borderless={borderless}
           onClick={() =>
             sendMessageToHost({
               type: "TOOLBAR_ITEM_CALLBACK",

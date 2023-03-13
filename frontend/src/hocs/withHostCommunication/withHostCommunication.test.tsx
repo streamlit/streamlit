@@ -17,11 +17,11 @@
 import React, { PureComponent, ReactElement } from "react"
 import { act } from "react-dom/test-utils"
 
-import { shallow, mount } from "src/lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 
 import withHostCommunication, {
-  HostCommunicationHOC,
   HOST_COMM_VERSION,
+  HostCommunicationHOC,
 } from "./withHostCommunication"
 
 interface TestProps {
@@ -48,9 +48,8 @@ function mockEventListeners(): (type: string, event: any) => void {
     listeners[event].push(cb)
   })
 
-  const dispatchEvent = (type: string, event: Event): void =>
+  return (type: string, event: Event): void =>
     listeners[type].forEach(cb => cb(event))
-  return dispatchEvent
 }
 
 describe("withHostCommunication HOC", () => {

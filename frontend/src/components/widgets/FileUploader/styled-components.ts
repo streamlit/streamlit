@@ -36,7 +36,7 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
   })
 )
 
-export const StyledFileDropzoneInstructions = styled.div(({ theme }) => ({
+export const StyledFileDropzoneInstructions = styled.div(() => ({
   marginRight: "auto",
   alignItems: "center",
   display: "flex",
@@ -69,7 +69,7 @@ export const StyledUploadedFiles = styled.div(({ theme }) => ({
   paddingRight: theme.spacing.lg,
 }))
 
-export const StyledUploadedFilesList = styled.ul(({ theme }) => ({
+export const StyledUploadedFilesList = styled.ul(() => ({
   listStyleType: "none",
   marginBottom: 0,
 }))

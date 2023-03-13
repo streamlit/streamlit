@@ -59,7 +59,7 @@ export const StyledColorBlock = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledColorValue = styled.div(({ theme }) => ({
+export const StyledColorValue = styled.div(() => ({
   display: "flex",
   alignItems: "center",
   padding: "0 0.8rem",

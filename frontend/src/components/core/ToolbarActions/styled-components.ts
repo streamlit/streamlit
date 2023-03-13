@@ -29,7 +29,7 @@ export interface StyledActionButtonIconProps {
 }
 
 export const StyledActionButtonIcon = styled.div<StyledActionButtonIconProps>(
-  ({ theme, icon }) => ({
+  ({ icon }) => ({
     background: `url("${icon}") no-repeat center / contain`,
 
     // NOTE: We intentionally don't use any of the preset theme iconSizes here

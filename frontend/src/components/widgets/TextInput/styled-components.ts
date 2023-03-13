@@ -21,7 +21,7 @@ export interface StyledTextInputProps {
 }
 
 export const StyledTextInput = styled.div<StyledTextInputProps>(
-  ({ theme, width }) => ({
+  ({ width }) => ({
     position: "relative",
     width,
   })

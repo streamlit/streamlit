@@ -81,7 +81,7 @@ function ProgressBar({
       }),
     },
     BarProgress: {
-      style: ({ $theme }: { $theme: any }) => ({
+      style: () => ({
         backgroundColor: usingCustomTheme
           ? theme.colors.primary
           : theme.colors.blue70,

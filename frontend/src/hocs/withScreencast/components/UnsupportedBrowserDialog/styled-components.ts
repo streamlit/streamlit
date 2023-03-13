@@ -16,11 +16,11 @@
 
 import styled from "@emotion/styled"
 
-export const StyledScreenCastWarningDialog = styled.div(({ theme }) => ({
+export const StyledScreenCastWarningDialog = styled.div(() => ({
   display: "flex",
 }))
 
-export const StyledUnsupportedScreenCastIcon = styled.div(({ theme }) => ({
+export const StyledUnsupportedScreenCastIcon = styled.div(() => ({
   display: "flex",
   alignItems: "center",
   justifyItems: "center",
