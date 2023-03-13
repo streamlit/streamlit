@@ -169,11 +169,13 @@ declare global {
 }
 
 export class App extends PureComponent<Props, State> {
-  private readonly sessionEventDispatcher: SessionEventDispatcher
+  private readonly sessionInfo = new SessionInfo()
+
+  private readonly metricsMgr = new SegmentMetricsManager(this.sessionInfo)
+
+  private readonly sessionEventDispatcher = new SessionEventDispatcher()
 
   private connectionManager: ConnectionManager | null
-
-  private readonly metricsMgr: SegmentMetricsManager
 
   private readonly widgetMgr: WidgetStateManager
 
@@ -196,13 +198,11 @@ export class App extends PureComponent<Props, State> {
 
   private readonly embeddingId: string = generateUID()
 
-  constructor(props: Props) {
+  public constructor(props: Props) {
     super(props)
 
     // Initialize immerjs
     enableImmerPlugins()
-
-    this.metricsMgr = new SegmentMetricsManager()
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
@@ -240,7 +240,6 @@ export class App extends PureComponent<Props, State> {
       latestRunTime: performance.now(),
     }
 
-    this.sessionEventDispatcher = new SessionEventDispatcher()
     this.connectionManager = null
 
     this.widgetMgr = new WidgetStateManager({
@@ -249,6 +248,7 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.uploadClient = new FileUploadClient({
+      sessionInfo: this.sessionInfo,
       getServerUri: this.getBaseUriParts,
       // A form cannot be submitted if it contains a FileUploader widget
       // that's currently uploading. We write that state here, in response
@@ -298,6 +298,7 @@ export class App extends PureComponent<Props, State> {
     // Initialize connection manager here, to avoid
     // "Can't call setState on a component that is not yet mounted." error.
     this.connectionManager = new ConnectionManager({
+      sessionInfo: this.sessionInfo,
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
@@ -415,16 +416,16 @@ export class App extends PureComponent<Props, State> {
   /**
    * Checks if the code version from the backend is different than the frontend
    */
-  static hasStreamlitVersionChanged(initializeMsg: Initialize): boolean {
-    if (SessionInfo.isSet()) {
-      const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
+  private hasStreamlitVersionChanged(initializeMsg: Initialize): boolean {
+    if (this.sessionInfo.isSet) {
+      const currentStreamlitVersion = this.sessionInfo.current.streamlitVersion
       const { environmentInfo } = initializeMsg
 
       if (
         environmentInfo != null &&
         environmentInfo.streamlitVersion != null
       ) {
-        return currentStreamlitVersion < environmentInfo.streamlitVersion
+        return currentStreamlitVersion != environmentInfo.streamlitVersion
       }
     }
 
@@ -448,8 +449,8 @@ export class App extends PureComponent<Props, State> {
     } else {
       setCookie("_xsrf", "")
 
-      if (SessionInfo.isSet()) {
-        SessionInfo.clearSession()
+      if (this.sessionInfo.isSet) {
+        this.sessionInfo.clearCurrent()
       }
     }
   }
@@ -594,10 +595,10 @@ export class App extends PureComponent<Props, State> {
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
     this.metricsMgr.enqueue("pageProfile", {
       ...PageProfile.toObject(pageProfile),
-      appId: SessionInfo.current.appId,
+      appId: this.sessionInfo.current.appId,
       numPages: this.state.appPages?.length,
-      sessionId: SessionInfo.current.sessionId,
-      pythonVersion: SessionInfo.current.pythonVersion,
+      sessionId: this.sessionInfo.current.sessionId,
+      pythonVersion: this.sessionInfo.current.pythonVersion,
       pageScriptHash: this.state.currentPageScriptHash,
       activeTheme: this.props.theme?.activeTheme?.name,
       totalLoadTime: Math.round(
@@ -711,7 +712,7 @@ export class App extends PureComponent<Props, State> {
   handleNewSession = (newSessionProto: NewSession): void => {
     const initialize = newSessionProto.initialize as Initialize
 
-    if (App.hasStreamlitVersionChanged(initialize)) {
+    if (this.hasStreamlitVersionChanged(initialize)) {
       window.location.reload()
       return
     }
@@ -719,14 +720,14 @@ export class App extends PureComponent<Props, State> {
     // First, handle initialization logic. Each NewSession message has
     // initialization data. If this is the _first_ time we're receiving
     // the NewSession message, we perform some one-time initialization.
-    if (!SessionInfo.isSet()) {
+    if (!this.sessionInfo.isSet) {
       // We're not initialized. Perform one-time initialization.
       this.handleOneTimeInitialization(newSessionProto)
     }
 
     const config = newSessionProto.config as Config
     const themeInput = newSessionProto.customTheme as CustomThemeConfig
-    const { currentPageScriptHash } = this.state
+    const { currentPageScriptHash: prevPageScriptHash } = this.state
     const newPageScriptHash = newSessionProto.pageScriptHash
 
     // mainPage must be a string as we're guaranteed at this point that
@@ -741,18 +742,20 @@ export class App extends PureComponent<Props, State> {
     )?.pageName as string
     const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
-    const baseUriParts = this.getBaseUriParts()
-    if (baseUriParts) {
-      const { basePath } = baseUriParts
-      const queryString = this.getQueryString()
+    if (prevPageScriptHash !== newPageScriptHash) {
+      const baseUriParts = this.getBaseUriParts()
+      if (baseUriParts) {
+        const { basePath } = baseUriParts
+        const queryString = this.getQueryString()
 
-      const qs = queryString ? `?${queryString}` : ""
-      const basePathPrefix = basePath ? `/${basePath}` : ""
+        const qs = queryString ? `?${queryString}` : ""
+        const basePathPrefix = basePath ? `/${basePath}` : ""
 
-      const pagePath = viewingMainPage ? "" : newPageName
-      const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+        const pagePath = viewingMainPage ? "" : newPageName
+        const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
 
-      window.history.pushState({}, "", pageUrl)
+        window.history.pushState({}, "", pageUrl)
+      }
     }
 
     this.processThemeInput(themeInput)
@@ -783,7 +786,7 @@ export class App extends PureComponent<Props, State> {
     const { scriptRunId, name: scriptName, mainScriptPath } = newSessionProto
 
     const newSessionHash = hashString(
-      SessionInfo.current.installationId + mainScriptPath
+      this.sessionInfo.current.installationId + mainScriptPath
     )
 
     // Set the title and favicon to their default values
@@ -806,7 +809,7 @@ export class App extends PureComponent<Props, State> {
 
     if (
       appHash === newSessionHash &&
-      currentPageScriptHash === newPageScriptHash
+      prevPageScriptHash === newPageScriptHash
     ) {
       this.setState({
         scriptRunId,
@@ -823,14 +826,16 @@ export class App extends PureComponent<Props, State> {
     const initialize = newSessionProto.initialize as Initialize
     const config = newSessionProto.config as Config
 
-    SessionInfo.current = SessionInfo.fromNewSessionMessage(newSessionProto)
+    this.sessionInfo.setCurrent(
+      SessionInfo.propsFromNewSessionMessage(newSessionProto)
+    )
 
     this.metricsMgr.initialize({
       gatherUsageStats: config.gatherUsageStats,
     })
 
     this.metricsMgr.enqueue("createReport", {
-      pythonVersion: SessionInfo.current.pythonVersion,
+      pythonVersion: this.sessionInfo.current.pythonVersion,
     })
 
     this.handleSessionStatusChanged(initialize.sessionStatus)
@@ -951,7 +956,7 @@ export class App extends PureComponent<Props, State> {
       // the cache.
       if (this.connectionManager !== null) {
         this.connectionManager.incrementMessageCacheRunCount(
-          SessionInfo.current.maxCachedMessageAge
+          this.sessionInfo.current.maxCachedMessageAge
         )
       }
     }
@@ -1322,6 +1327,7 @@ export class App extends PureComponent<Props, State> {
     const { menuItems } = this.state
     const newDialog: DialogProps = {
       type: DialogType.ABOUT,
+      sessionInfo: this.sessionInfo,
       onClose: this.closeDialog,
       aboutSectionMd: menuItems?.aboutSectionMd,
     }
@@ -1520,13 +1526,14 @@ export class App extends PureComponent<Props, State> {
                   this.state.dialog?.type === DialogType.DEPLOY_ERROR
                 }
                 loadGitInfo={this.sendLoadGitInfoBackMsg}
-                canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
+                canDeploy={this.sessionInfo.isSet && !this.sessionInfo.isHello}
                 menuItems={menuItems}
                 metricsMgr={this.metricsMgr}
               />
             </Header>
 
             <AppView
+              sessionInfo={this.sessionInfo}
               elements={elements}
               scriptRunId={scriptRunId}
               scriptRunState={scriptRunState}

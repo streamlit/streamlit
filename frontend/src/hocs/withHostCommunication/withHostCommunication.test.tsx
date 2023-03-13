@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { PureComponent, ReactElement } from "react"
 import { act } from "react-dom/test-utils"
 
 import { shallow, mount } from "src/lib/test_util"
@@ -24,13 +24,21 @@ import withHostCommunication, {
   HOST_COMM_VERSION,
 } from "./withHostCommunication"
 
-const TestComponentNaked = (_props: {
+interface TestProps {
   hostCommunication: HostCommunicationHOC
-}): ReactElement => {
-  return <div>test</div>
+
+  /**
+   * A property that's not related to the withHostCommunication wrapper.
+   * We test that the wrapper passes unrelated props to its wrapped component.
+   */
+  unrelatedProp: string
 }
 
-const TestComponent = withHostCommunication(TestComponentNaked)
+class TestComponent extends PureComponent<TestProps> {
+  public render = (): ReactElement => <div>test</div>
+}
+
+const WrappedTestComponent = withHostCommunication(TestComponent)
 
 function mockEventListeners(): (type: string, event: any) => void {
   const listeners: { [name: string]: ((event: Event) => void)[] } = {}
@@ -47,16 +55,31 @@ function mockEventListeners(): (type: string, event: any) => void {
 
 describe("withHostCommunication HOC", () => {
   it("renders without crashing", () => {
-    const wrapper = shallow(<TestComponent />)
+    const wrapper = shallow(
+      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+    )
 
     expect(wrapper.html()).not.toBeNull()
   })
 
   it("wrapped component should have hostCommunication prop", () => {
-    const wrapper = shallow(<TestComponent />)
-    expect(
-      wrapper.find(TestComponentNaked).prop("hostCommunication")
-    ).toBeDefined()
+    const wrapper = shallow(
+      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+    )
+    expect(wrapper.find(TestComponent).prop("hostCommunication")).toBeDefined()
+  })
+
+  it("passes other props to wrapped component", () => {
+    const wrapper = shallow(
+      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+    )
+    expect(wrapper.find(TestComponent).props().unrelatedProp).toBe("mockLabel")
+  })
+
+  it("defines displayName", () => {
+    expect(WrappedTestComponent.displayName).toBe(
+      "withHostCommunication(TestComponent)"
+    )
   })
 
   it("host should receive a GUEST_READY message", done => {
@@ -72,9 +95,9 @@ describe("withHostCommunication HOC", () => {
 
     window.addEventListener("message", listener)
 
-    const wrapper = mount(<TestComponent />)
+    const wrapper = mount(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
     const hostCommunication: any = wrapper
-      .find(TestComponentNaked)
+      .find(TestComponent)
       .prop("hostCommunication")
 
     act(() => {
@@ -97,10 +120,10 @@ describe("withHostCommunication HOC receiving messages", () => {
     // interfere with each other.
     originalHash = window.location.hash
     dispatchEvent = mockEventListeners()
-    wrapper = mount(<TestComponent />)
+    wrapper = mount(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
 
     const hostCommunication = wrapper
-      .find(TestComponentNaked)
+      .find(TestComponent)
       .prop("hostCommunication")
 
     act(() => {
@@ -155,7 +178,7 @@ describe("withHostCommunication HOC receiving messages", () => {
 
     wrapper.update()
 
-    const props = wrapper.find(TestComponentNaked).prop("hostCommunication")
+    const props = wrapper.find(TestComponent).prop("hostCommunication")
     expect(props.currentState.toolbarItems).toEqual([
       {
         borderless: true,
@@ -183,7 +206,7 @@ describe("withHostCommunication HOC receiving messages", () => {
 
     wrapper.update()
 
-    const props = wrapper.find(TestComponentNaked).prop("hostCommunication")
+    const props = wrapper.find(TestComponent).prop("hostCommunication")
     expect(props.currentState.sidebarChevronDownshift).toBe(50)
   })
 
@@ -204,7 +227,7 @@ describe("withHostCommunication HOC receiving messages", () => {
 
     wrapper.update()
 
-    const props = wrapper.find(TestComponentNaked).prop("hostCommunication")
+    const props = wrapper.find(TestComponent).prop("hostCommunication")
     expect(props.currentState.hideSidebarNav).toBe(true)
   })
 
@@ -224,7 +247,7 @@ describe("withHostCommunication HOC receiving messages", () => {
     })
     wrapper.update()
 
-    const innerComponent = wrapper.find(TestComponentNaked)
+    const innerComponent = wrapper.find(TestComponent)
     const props = innerComponent.prop("hostCommunication")
     expect(props.currentState.requestedPageScriptHash).toBe("hash1")
 
@@ -233,7 +256,7 @@ describe("withHostCommunication HOC receiving messages", () => {
     })
     wrapper.update()
 
-    const innerComponent2 = wrapper.find(TestComponentNaked)
+    const innerComponent2 = wrapper.find(TestComponent)
     const props2 = innerComponent2.prop("hostCommunication")
     expect(props2.currentState.requestedPageScriptHash).toBe(null)
   })
@@ -255,7 +278,7 @@ describe("withHostCommunication HOC receiving messages", () => {
 
     wrapper.update()
 
-    const props = wrapper.find(TestComponentNaked).prop("hostCommunication")
+    const props = wrapper.find(TestComponent).prop("hostCommunication")
     expect(props.currentState.pageLinkBaseUrl).toBe(
       "https://share.streamlit.io/vdonato/foo/bar"
     )
@@ -264,7 +287,7 @@ describe("withHostCommunication HOC receiving messages", () => {
   describe("Test different origins", () => {
     it("exact pattern", () => {
       const hostCommunication = wrapper
-        .find(TestComponentNaked)
+        .find(TestComponent)
         .prop("hostCommunication")
 
       act(() => {
@@ -291,7 +314,7 @@ describe("withHostCommunication HOC receiving messages", () => {
 
     it("wildcard pattern", () => {
       const hostCommunication = wrapper
-        .find(TestComponentNaked)
+        .find(TestComponent)
         .prop("hostCommunication")
 
       act(() => {
@@ -318,7 +341,7 @@ describe("withHostCommunication HOC receiving messages", () => {
 
     it("ignores non-matching origins", () => {
       const hostCommunication = wrapper
-        .find(TestComponentNaked)
+        .find(TestComponent)
         .prop("hostCommunication")
 
       act(() => {
@@ -347,10 +370,10 @@ describe("withHostCommunication HOC receiving messages", () => {
 
 describe("withHostCommunication HOC external auth token handling", () => {
   it("resolves promise to undefined immediately if useExternalAuthToken is false", async () => {
-    const wrapper = mount(<TestComponent />)
+    const wrapper = mount(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
 
     const hostCommunication = wrapper
-      .find(TestComponentNaked)
+      .find(TestComponent)
       .prop("hostCommunication")
 
     act(() => {
@@ -367,10 +390,10 @@ describe("withHostCommunication HOC external auth token handling", () => {
 
   it("waits to receive SET_AUTH_TOKEN message before resolving promise if useExternalAuthToken is true", async () => {
     const dispatchEvent = mockEventListeners()
-    const wrapper = mount(<TestComponent />)
+    const wrapper = mount(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
 
     let hostCommunication = wrapper
-      .find(TestComponentNaked)
+      .find(TestComponent)
       .prop("hostCommunication")
 
     // Simulate receiving a response from the Streamlit server's
@@ -416,9 +439,7 @@ describe("withHostCommunication HOC external auth token handling", () => {
     })
     wrapper.update()
 
-    hostCommunication = wrapper
-      .find(TestComponentNaked)
-      .prop("hostCommunication")
+    hostCommunication = wrapper.find(TestComponent).prop("hostCommunication")
 
     // Simulate the browser tab disconnecting and reconnecting, which from the
     // withHostCommunication hoc's perspective is only seen as a new call to
