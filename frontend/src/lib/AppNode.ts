@@ -215,12 +215,16 @@ export class ElementNode implements AppNode {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  public getIn(path: number[]): AppNode | undefined {
+  public getIn(_path: number[]): AppNode | undefined {
     return undefined
   }
 
   // eslint-disable-next-line class-methods-use-this
-  public setIn(path: number[], node: AppNode, scriptRunId: string): AppNode {
+  public setIn(
+    _path: number[],
+    _node: AppNode,
+    _scriptRunId: string
+  ): AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
 

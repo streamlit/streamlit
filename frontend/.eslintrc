@@ -58,8 +58,13 @@
     "@typescript-eslint/explicit-module-boundary-types": "off",
     // Don't warn about unused function params
     "@typescript-eslint/no-unused-vars": [
-      "warn",
-      { "args": "none", "ignoreRestSiblings": true }
+      "error",
+      {
+        "vars": "all",
+        "args": "after-used",
+        "ignoreRestSiblings": false,
+        "argsIgnorePattern": "^[_$]"
+      }
     ],
     // It's safe to use functions before they're defined
     "@typescript-eslint/no-use-before-define": [

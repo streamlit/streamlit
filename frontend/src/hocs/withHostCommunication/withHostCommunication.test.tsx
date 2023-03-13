@@ -24,7 +24,7 @@ import withHostCommunication, {
   HOST_COMM_VERSION,
 } from "./withHostCommunication"
 
-const TestComponentNaked = (props: {
+const TestComponentNaked = (_props: {
   hostCommunication: HostCommunicationHOC
 }): ReactElement => {
   return <div>test</div>

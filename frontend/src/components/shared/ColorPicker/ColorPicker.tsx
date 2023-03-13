@@ -80,7 +80,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  public componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+  public componentDidCatch(error: Error, _errorInfo: React.ErrorInfo): void {
     if (error?.name === "SecurityError") {
       // 2021.06.30 - on Streamlit Sharing, ColorPicker throws a cross-origin
       // error when its popover window is closed. There's an issue open in the
