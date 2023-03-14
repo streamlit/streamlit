@@ -90,6 +90,7 @@ class StreamlitTest(unittest.TestCase):
                 "container",
                 "dataframe",
                 "date_input",
+                "divider",
                 "download_button",
                 "expander",
                 "pydeck_chart",
