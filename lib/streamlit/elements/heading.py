@@ -208,7 +208,7 @@ class HeadingMixin:
     def _create_heading_proto(
         tag: HeadingProtoTag,
         body: SupportsStr,
-        anchor: Optional[str] = None,
+        anchor: Anchor = None,
         help: Optional[str] = None,
     ) -> HeadingProto:
         proto = HeadingProto()
