@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+import axios, { AxiosRequestConfig, AxiosResponse, CancelToken } from "axios"
 import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
+import { getCookie } from "./utils"
 
 interface Props {
   getServerUri: () => BaseUriParts | undefined
@@ -42,6 +44,36 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     )
   }
 
+  public async uploadFileUploaderFile(
+    file: File,
+    widgetId: string,
+    sessionId: string,
+    onUploadProgress?: (progressEvent: any) => void,
+    cancelToken?: CancelToken
+  ): Promise<number> {
+    const form = new FormData()
+    form.append("sessionId", sessionId)
+    form.append("widgetId", widgetId)
+    form.append(file.name, file)
+
+    return this.csrfRequest<number>("_stcore/upload_file", {
+      cancelToken,
+      method: "POST",
+      data: form,
+      responseType: "text",
+      onUploadProgress,
+    }).then(response => {
+      // Sanity check. Axios should be returning a number here.
+      if (typeof response.data === "number") {
+        return response.data
+      }
+
+      throw new Error(
+        `Bad uploadFile response: expected a number but got '${response.data}'`
+      )
+    })
+  }
+
   private requireServerUri(): BaseUriParts {
     // Fetch the server URI. If our server is disconnected, this will return
     // undefined, in which case we default to the most recent cached value
@@ -57,5 +89,30 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     }
 
     throw new Error("not connected to a server!")
+  }
+
+  /**
+   * Wrapper around axios.request to update the request config with
+   * CSRF headers if client has CSRF protection enabled.
+   */
+  private csrfRequest<T = any, R = AxiosResponse<T>>(
+    url: string,
+    params: AxiosRequestConfig
+  ): Promise<R> {
+    const serverURI = this.requireServerUri()
+    params.url = buildHttpUri(serverURI, url)
+
+    if (this.csrfEnabled) {
+      const xsrfCookie = getCookie("_xsrf")
+      if (xsrfCookie != null) {
+        params.headers = {
+          "X-Xsrftoken": xsrfCookie,
+          ...(params.headers || {}),
+        }
+        params.withCredentials = true
+      }
+    }
+
+    return axios.request<T, R>(params)
   }
 }

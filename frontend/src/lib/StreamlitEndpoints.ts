@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { CancelToken } from "axios"
+
 /** Exposes non-websocket endpoints used by the frontend. */
 export interface StreamlitEndpoints {
   /**
@@ -22,4 +24,23 @@ export interface StreamlitEndpoints {
    * @param path The path of the component resource to fetch, e.g. "index.html".
    */
   buildComponentURL(componentName: string, path: string): string
+
+  /**
+   * Upload a file to the FileUploader endpoint.
+   *
+   * @param file The file to upload
+   * @param widgetId the widget ID of the FileUploader associated with the file.
+   * @param sessionId the current sessionID. The file will be associated with this ID.
+   * @param onUploadProgress optional function that will be called repeatedly with progress events during the upload
+   * @param cancelToken optional axios CancelToken that can be used to cancel the in-progress upload.
+   *
+   * @return a Promise<number> that resolves with the file's unique ID, as assigned by the server.
+   */
+  uploadFileUploaderFile(
+    file: File,
+    widgetId: string,
+    sessionId: string,
+    onUploadProgress?: (progressEvent: any) => void,
+    cancelToken?: CancelToken
+  ): Promise<number>
 }
