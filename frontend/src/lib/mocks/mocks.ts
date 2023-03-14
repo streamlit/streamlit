@@ -45,7 +45,7 @@ export function mockSessionInfo(
   return sessionInfo
 }
 
-const MOCK_COMPONENT_ENDPOINT = {
+const MOCK_COMPONENT_ENDPOINT: ComponentEndpointInfo = {
   buildComponentURL: (componentName: string, path: string): string => {
     return `http://streamlit.mock:80/component/${componentName}/${path}`
   },
