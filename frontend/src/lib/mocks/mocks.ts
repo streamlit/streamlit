@@ -15,7 +15,7 @@
  */
 
 import { Props as SessionInfoProps, SessionInfo } from "src/lib/SessionInfo"
-import { Endpoints } from "src/lib/Endpoints"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 /** Create mock SessionInfo.props */
 export function mockSessionInfoProps(
@@ -45,13 +45,13 @@ export function mockSessionInfo(
   return sessionInfo
 }
 
-const MOCK_ENDPOINTS: Endpoints = {
+const MOCK_ENDPOINTS: StreamlitEndpoints = {
   buildComponentURL: (componentName: string, path: string): string => {
     return `http://streamlit.mock:80/component/${componentName}/${path}`
   },
 }
 
 /** Return a mock Endpoints implementation. */
-export function mockEndpoints(): Endpoints {
+export function mockEndpoints(): StreamlitEndpoints {
   return MOCK_ENDPOINTS
 }

@@ -105,7 +105,7 @@ import {
   ThemeConfig,
   toExportedTheme,
 } from "src/theme"
-import { StreamlitEndpoints } from "./lib/StreamlitEndpoints"
+import { DefaultStreamlitEndpoints } from "./lib/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "./lib/SegmentMetricsManager"
 
 import { StyledApp } from "./styled-components"
@@ -261,7 +261,7 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.componentRegistry = new ComponentRegistry(
-      new StreamlitEndpoints(this.getBaseUriParts)
+      new DefaultStreamlitEndpoints(this.getBaseUriParts)
     )
 
     this.pendingElementsTimerRunning = false

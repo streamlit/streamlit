@@ -15,7 +15,7 @@
  */
 
 import { BaseUriParts } from "src/lib/UriUtil"
-import { StreamlitEndpoints } from "./StreamlitEndpoints"
+import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
 const MOCK_SERVER_URI = {
   host: "streamlit.mock",
@@ -23,11 +23,11 @@ const MOCK_SERVER_URI = {
   basePath: "",
 }
 
-describe("StreamlitEndpoints", () => {
+describe("DefaultStreamlitEndpoints", () => {
   test("Caches server URI", () => {
     // If we never connect to a server, getComponentURL will fail:
     let serverURI: BaseUriParts | undefined
-    const endpoint = new StreamlitEndpoints(() => serverURI)
+    const endpoint = new DefaultStreamlitEndpoints(() => serverURI, true)
     expect(() => endpoint.buildComponentURL("foo", "index.html")).toThrow()
 
     // But if we connect once, and then disconnect, our original URI should

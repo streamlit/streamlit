@@ -14,32 +14,12 @@
  * limitations under the License.
  */
 
-import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
-import { Endpoints } from "src/lib/Endpoints"
-
-/** "Vanilla" Streamlit server implementation of ComponentEndpointInfo. */
-export class StreamlitEndpoints implements Endpoints {
-  private readonly getServerUri: () => BaseUriParts | undefined
-
-  private cachedServerUri?: BaseUriParts
-
-  public constructor(getServerUri: () => BaseUriParts | undefined) {
-    this.getServerUri = getServerUri
-  }
-
-  public buildComponentURL(componentName: string, path: string): string {
-    // Fetch the server URI. If our server is disconnected, this will return
-    // undefined, in which case we default to the most recent cached value
-    // of the URI.
-    let serverUri = this.getServerUri()
-    if (serverUri === undefined) {
-      if (this.cachedServerUri === undefined) {
-        throw new Error("Can't fetch component: not connected to a server")
-      }
-      serverUri = this.cachedServerUri
-    }
-
-    this.cachedServerUri = serverUri
-    return buildHttpUri(serverUri, `component/${componentName}/${path}`)
-  }
+/** Exposes non-websocket endpoints used by the frontend. */
+export interface StreamlitEndpoints {
+  /**
+   * Return a URL to fetch data for the given custom component.
+   * @param componentName The registered name of the component.
+   * @param path The path of the component resource to fetch, e.g. "index.html".
+   */
+  buildComponentURL(componentName: string, path: string): string
 }

@@ -15,7 +15,7 @@
  */
 
 import { logWarning } from "src/lib/log"
-import { Endpoints } from "src/lib/Endpoints"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 import { ComponentMessageType } from "./enums"
 
 export type ComponentMessageListener = (
@@ -27,14 +27,14 @@ export type ComponentMessageListener = (
  * Dispatches iframe messages to ComponentInstances.
  */
 export class ComponentRegistry {
-  private readonly endpoints: Endpoints
+  private readonly endpoints: StreamlitEndpoints
 
   private readonly msgListeners = new Map<
     MessageEventSource,
     ComponentMessageListener
   >()
 
-  public constructor(endpoints: Endpoints) {
+  public constructor(endpoints: StreamlitEndpoints) {
     this.endpoints = endpoints
     window.addEventListener("message", this.onMessageEvent)
   }
