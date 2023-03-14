@@ -17,6 +17,11 @@
 import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
+interface Props {
+  getServerUri: () => BaseUriParts | undefined
+  csrfEnabled: boolean
+}
+
 /** Default Streamlit server implementation of the StreamlitEndpoints interface. */
 export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   private readonly getServerUri: () => BaseUriParts | undefined
@@ -25,12 +30,9 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
   private cachedServerUri?: BaseUriParts
 
-  public constructor(
-    getServerUri: () => BaseUriParts | undefined,
-    csrfEnabled: boolean
-  ) {
-    this.getServerUri = getServerUri
-    this.csrfEnabled = csrfEnabled
+  public constructor(props: Props) {
+    this.getServerUri = props.getServerUri
+    this.csrfEnabled = props.csrfEnabled
   }
 
   public buildComponentURL(componentName: string, path: string): string {

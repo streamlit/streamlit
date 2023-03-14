@@ -248,6 +248,11 @@ export class App extends PureComponent<Props, State> {
       formsDataChanged: formsData => this.setState({ formsData }),
     })
 
+    const endpoints = new DefaultStreamlitEndpoints({
+      getServerUri: this.getBaseUriParts,
+      csrfEnabled: true,
+    })
+
     this.uploadClient = new FileUploadClient({
       sessionInfo: this.sessionInfo,
       getServerUri: this.getBaseUriParts,
@@ -260,9 +265,7 @@ export class App extends PureComponent<Props, State> {
       csrfEnabled: true,
     })
 
-    this.componentRegistry = new ComponentRegistry(
-      new DefaultStreamlitEndpoints(this.getBaseUriParts)
-    )
+    this.componentRegistry = new ComponentRegistry(endpoints)
 
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements

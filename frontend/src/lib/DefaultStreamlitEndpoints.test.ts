@@ -27,7 +27,10 @@ describe("DefaultStreamlitEndpoints", () => {
   test("Caches server URI", () => {
     // If we never connect to a server, getComponentURL will fail:
     let serverURI: BaseUriParts | undefined
-    const endpoint = new DefaultStreamlitEndpoints(() => serverURI, true)
+    const endpoint = new DefaultStreamlitEndpoints({
+      getServerUri: () => serverURI,
+      csrfEnabled: true,
+    })
     expect(() => endpoint.buildComponentURL("foo", "index.html")).toThrow()
 
     // But if we connect once, and then disconnect, our original URI should
