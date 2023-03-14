@@ -78,7 +78,7 @@ describe("NumberInput widget", () => {
 
     expect(wrapper).toBeDefined()
 
-    // @ts-ignore
+    // @ts-expect-error
     input.props().onFocus()
 
     expect(wrapper.state("isFocused")).toBe(true)
@@ -92,7 +92,7 @@ describe("NumberInput widget", () => {
 
     expect(wrapper).toBeDefined()
 
-    // @ts-ignore
+    // @ts-expect-error
     input.props().onBlur()
 
     expect(wrapper.state("isFocused")).toBe(false)
@@ -148,9 +148,9 @@ describe("NumberInput widget", () => {
     const props = getIntProps()
     const wrapper = shallow(<NumberInput {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(wrapper.instance().getMin()).toBe(-Infinity)
-    // @ts-ignore
+    // @ts-expect-error
     expect(wrapper.instance().getMax()).toBe(+Infinity)
   })
 
@@ -164,9 +164,9 @@ describe("NumberInput widget", () => {
     })
     const wrapper = shallow(<NumberInput {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(wrapper.instance().getMin()).toBe(0)
-    // @ts-ignore
+    // @ts-expect-error
     expect(wrapper.instance().getMax()).toBe(10)
   })
 
@@ -182,7 +182,7 @@ describe("NumberInput widget", () => {
     // Change the widget value
     wrapper.setState({ dirty: true, value: 15 })
     const inputWrapper = wrapper.find(UIInput)
-    // @ts-ignore
+    // @ts-expect-error
     inputWrapper.props().onKeyPress({ key: "Enter" })
 
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
@@ -218,7 +218,7 @@ describe("NumberInput widget", () => {
 
       const preventDefault = jest.fn()
 
-      // @ts-ignore
+      // @ts-expect-error
       InputWrapper.props().onKeyDown({
         key: "ArrowDown",
         preventDefault,
@@ -254,7 +254,7 @@ describe("NumberInput widget", () => {
 
       const InputWrapper = wrapper.find(UIInput)
 
-      // @ts-ignore
+      // @ts-expect-error
       InputWrapper.props().onKeyPress({
         key: "Enter",
       })
@@ -303,10 +303,10 @@ describe("NumberInput widget", () => {
 
       const InputWrapper = wrapper.find(UIInput)
 
-      // @ts-ignore
+      // @ts-expect-error
       InputWrapper.props().onChange({
         target: {
-          // @ts-ignore
+          // @ts-expect-error
           value: 1,
         },
       })
@@ -325,7 +325,7 @@ describe("NumberInput widget", () => {
 
       const InputWrapper = wrapper.find(UIInput)
 
-      // @ts-ignore
+      // @ts-expect-error
       InputWrapper.props().onKeyPress({
         key: "Enter",
       })
@@ -362,7 +362,7 @@ describe("NumberInput widget", () => {
       const props = getIntProps({ default: 10, step: 1 })
       const wrapper = shallow(<NumberInput {...props} />)
 
-      // @ts-ignore
+      // @ts-expect-error
       expect(wrapper.find(UIInput).props().overrides.Input.props.step).toBe(1)
     })
 
@@ -377,7 +377,7 @@ describe("NumberInput widget", () => {
 
       const preventDefault = jest.fn()
 
-      // @ts-ignore
+      // @ts-expect-error
       InputWrapper.props().onKeyDown({
         key: "ArrowUp",
         preventDefault,
@@ -399,7 +399,7 @@ describe("NumberInput widget", () => {
 
       const preventDefault = jest.fn()
 
-      // @ts-ignore
+      // @ts-expect-error
       InputWrapper.props().onKeyDown({
         key: "ArrowDown",
         preventDefault,

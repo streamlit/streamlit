@@ -103,7 +103,7 @@ describe("BokehChart element", () => {
       })
 
       expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
-        // @ts-ignore
+        // @ts-expect-error
         expect.toMatchBokehDimensions(400, 400),
         "bokeh-chart-1"
       )
@@ -122,7 +122,7 @@ describe("BokehChart element", () => {
       })
 
       expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
-        // @ts-ignore
+        // @ts-expect-error
         expect.toMatchBokehDimensions(400),
         "bokeh-chart-1"
       )

@@ -65,7 +65,7 @@ describe("Test Webcam Component", () => {
       wrapper
         .find("Webcam")
         .props()
-        // @ts-ignore
+        // @ts-expect-error
         .onUserMediaError(null)
     })
     wrapper.update()
@@ -87,7 +87,7 @@ describe("Test Webcam Component", () => {
       wrapper
         .find("Webcam")
         .props()
-        // @ts-ignore
+        // @ts-expect-error
         .onUserMedia(null)
     })
     wrapper.update()

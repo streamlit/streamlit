@@ -46,9 +46,9 @@ describe("ThemedSidebar Component", () => {
 
     const updatedTheme = wrapper.find("Sidebar").prop("theme")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(updatedTheme.colors.bgColor).toBe(lightTheme.colors.secondaryBg)
-    // @ts-ignore
+    // @ts-expect-error
     expect(updatedTheme.inSidebar).toBe(true)
   })
 

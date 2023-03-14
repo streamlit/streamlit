@@ -61,7 +61,7 @@ describe("Tooltip element", () => {
     const wrapper = mount(<Tooltip {...getProps({ content })} />)
 
     expect(
-      // @ts-ignore
+      // @ts-expect-error
       wrapper.find("StatefulTooltip").props().content.props.children
     ).toEqual(content)
   })

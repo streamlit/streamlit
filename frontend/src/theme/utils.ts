@@ -58,7 +58,7 @@ export const fontToEnum = (font: string): CustomThemeConfig.FontFamily => {
   if (fontStyle) {
     const parsedFontStyle = decamelize(fontStyle).toUpperCase()
     return parsedFontStyle in CustomThemeConfig.FontFamily
-      ? // @ts-ignore
+      ? // @ts-expect-error
         CustomThemeConfig.FontFamily[parsedFontStyle]
       : defaultFont
   }
@@ -375,9 +375,9 @@ export const createEmotionTheme = (
 
   const parsedColors = Object.entries(customColors).reduce(
     (colors: Record<string, string>, [key, color]) => {
-      // @ts-ignore
+      // @ts-expect-error
       if (isColor(color)) {
-        // @ts-ignore
+        // @ts-expect-error
         colors[key] = color
       } else if (isColor(`#${color}`)) {
         colors[key] = `#${color}`

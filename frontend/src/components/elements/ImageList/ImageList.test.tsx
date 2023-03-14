@@ -66,7 +66,6 @@ describe("ImageList Element", () => {
       .find("StyledImageContainer")
       .find("img")
       .forEach((imgWrapper, id) => {
-        // @ts-ignore
         expect(imgWrapper.prop("src")).toBe(
           `http://localhost:80${imgs[id].url}`
         )
@@ -80,7 +79,6 @@ describe("ImageList Element", () => {
     const { imgs } = props.element
     expect(wrapper.find("StyledCaption").length).toEqual(2)
     wrapper.find("StyledCaption").forEach((captionWrapper, id) => {
-      // @ts-ignore
       expect(captionWrapper.text()).toBe(` ${imgs[id].caption} `)
     })
   })
@@ -112,7 +110,6 @@ describe("ImageList Element", () => {
       .find("StyledImageContainer")
       .find("img")
       .forEach((imgWrapper, id) => {
-        // @ts-ignore
         expect(imgWrapper.prop("src")).toBe(imgs[id].url)
       })
   })

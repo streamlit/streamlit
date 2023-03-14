@@ -39,7 +39,6 @@ class ScreenCastRecorder {
     return (
       navigator.mediaDevices != null &&
       navigator.mediaDevices.getUserMedia != null &&
-      // @ts-ignore reason: https://github.com/microsoft/TypeScript/issues/33232
       navigator.mediaDevices.getDisplayMedia != null &&
       MediaRecorder.isTypeSupported(BLOB_TYPE)
     )
@@ -60,7 +59,6 @@ class ScreenCastRecorder {
    * for permissions to the user which are needed to start recording.
    */
   public async initialize(): Promise<void> {
-    // @ts-ignore reason: https://github.com/microsoft/TypeScript/issues/33232
     const desktopStream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
     })

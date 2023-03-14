@@ -37,7 +37,7 @@ function createCache(): MockCache {
   const cache = new ForwardMsgCache(() => MOCK_SERVER_URI)
 
   const getCachedMessage = (hash: string): ForwardMsg | undefined =>
-    // @ts-ignore accessing into internals for testing
+    // @ts-expect-error accessing into internals for testing
     cache.getCachedMessage(hash, false)
 
   return { cache, getCachedMessage }
@@ -212,7 +212,7 @@ test("removes expired messages", () => {
   const encodedMsg = ForwardMsg.encode(msg).finish()
 
   // Add the message to the cache
-  // @ts-ignore accessing into internals for testing
+  // @ts-expect-error accessing into internals for testing
   cache.maybeCacheMessage(msg, encodedMsg)
   expect(getCachedMessage(msg.hash)).toEqual(msg)
 

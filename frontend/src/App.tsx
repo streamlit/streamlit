@@ -334,7 +334,7 @@ export class App extends PureComponent<Props, State> {
         },
       }
 
-      // @ts-ignore
+      // @ts-expect-error
       import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
@@ -366,9 +366,9 @@ export class App extends PureComponent<Props, State> {
       this.onPageChange(requestedPageScriptHash)
       this.props.hostCommunication.onPageChanged()
     }
-    // @ts-ignore
+    // @ts-expect-error
     if (window.prerenderReady === false && this.isAppInReadyState(prevState)) {
-      // @ts-ignore
+      // @ts-expect-error
       window.prerenderReady = true
     }
   }
@@ -1083,7 +1083,7 @@ export class App extends PureComponent<Props, State> {
 
     // It's not a problem that we're mucking around with private fields since
     // this is a test-only method anyway.
-    // @ts-ignore
+    // @ts-expect-error
     this.connectionManager?.connection?.cache.messages.clear()
   }
 

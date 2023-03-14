@@ -25,7 +25,7 @@ describe("st.number_input", () => {
     cy.get(".stNumberInput").should("have.length", 9);
 
     cy.get(".stNumberInput").each((el, idx) => {
-      // @ts-ignore
+      // @ts-expect-error
       return cy.wrap(el).matchThemedSnapshots("number_input" + idx);
     });
   });

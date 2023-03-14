@@ -72,7 +72,7 @@ describe("VegaLiteChart Element", () => {
     const props = getProps({ theme: darkTheme.emotion })
 
     const wrapper = mount(<ArrowVegaLiteChart {...props} />)
-    // @ts-ignore
+    // @ts-expect-error
     const generatedSpec = wrapper.instance().generateSpec()
 
     expect(generatedSpec.config.background).toBe(
@@ -101,7 +101,7 @@ describe("VegaLiteChart Element", () => {
     })
 
     const wrapper = mount(<ArrowVegaLiteChart {...props} />)
-    // @ts-ignore
+    // @ts-expect-error
     const generatedSpec = wrapper.instance().generateSpec()
     // Should have 10 colors defined in range.diverging
     expect(generatedSpec.config.range?.diverging?.length).toBe(10)
@@ -119,7 +119,7 @@ describe("VegaLiteChart Element", () => {
     }
 
     const wrapper = mount(<ArrowVegaLiteChart {...props} />)
-    // @ts-ignore
+    // @ts-expect-error
     const generatedSpec = wrapper.instance().generateSpec()
 
     expect(generatedSpec.config.background).toBe("purple")

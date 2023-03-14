@@ -70,13 +70,13 @@ describe("Checkbox widget", () => {
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
-    // @ts-ignore
+    // @ts-expect-error
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("row-widget")
     expect(splittedClassName).toContain("stCheckbox")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(style.width).toBe(getProps().width)
   })
 
@@ -135,7 +135,7 @@ describe("Checkbox widget", () => {
 
     const wrapper = mount(<Checkbox {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UICheckbox).prop("onChange")({
       target: { checked: true },
     } as EventTarget)
@@ -159,7 +159,7 @@ describe("Checkbox widget", () => {
     const wrapper = mount(<Checkbox {...props} />)
 
     // Change the widget value
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UICheckbox).prop("onChange")({
       target: { checked: true },
     } as EventTarget)

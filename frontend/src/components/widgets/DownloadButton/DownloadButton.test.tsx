@@ -36,7 +36,7 @@ const getProps = (elementProps: Partial<DownloadButtonProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  // @ts-ignore
+  // @ts-expect-error
   widgetMgr: new WidgetStateManager(sendBackMsg),
 })
 
@@ -54,12 +54,12 @@ describe("DownloadButton widget", () => {
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
-    // @ts-ignore
+    // @ts-expect-error
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("stDownloadButton")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(style.width).toBe(getProps().width)
   })
 

@@ -39,7 +39,7 @@ describe("st.date_input", () => {
     cy.get(".stDateInput").should("have.length", 9);
 
     cy.get(".stDateInput").each((el, idx) => {
-      // @ts-ignore
+      // @ts-expect-error
       return cy.wrap(el).matchThemedSnapshots("date_input" + idx);
     });
   });

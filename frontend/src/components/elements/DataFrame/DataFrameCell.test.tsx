@@ -92,7 +92,7 @@ describe("DataFrameCell Element", () => {
     })
     const wrapper = shallow(<DataFrameCell {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     const result = wrapper.find(StyledDataFrameCornerCell).prop("onClick")()
 
     expect(props.headerClickedCallback).toHaveBeenCalledWith(0)

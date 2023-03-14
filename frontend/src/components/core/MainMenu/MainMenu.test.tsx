@@ -162,24 +162,24 @@ describe("App", () => {
       const wrapper = mount(<MainMenu {...props} />)
       const popoverContent = wrapper.find("StatefulPopover").prop("content")
 
-      // @ts-ignore
+      // @ts-expect-error
       const menuWrapper = mount(popoverContent(() => {}))
       const items: any = menuWrapper.find("StatefulMenu").at(1).prop("items")
 
       const deployOption = items.find(
-        // @ts-ignore
+        // @ts-expect-error
         ({ label }) => label === "Deploy this app"
       )
 
       deployOption.onClick()
 
-      // @ts-ignore
+      // @ts-expect-error
       const dialog = dialogComponent(props.gitInfo.module)
-      // @ts-ignore
+      // @ts-expect-error
       expect(props.showDeployError.mock.calls[0][0]).toStrictEqual(
         dialog.title
       )
-      // @ts-ignore
+      // @ts-expect-error
       expect(props.showDeployError.mock.calls[0][1]).toStrictEqual(dialog.body)
     }
 
@@ -278,15 +278,15 @@ describe("App", () => {
     const props = getProps({ menuItems })
     const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
-    // @ts-ignore
+    // @ts-expect-error
     const menuWrapper = mount(popoverContent(() => {}))
 
-    // @ts-ignore
+    // @ts-expect-error
     const menuLabels = menuWrapper
       .find("MenuStatefulContainer")
       .at(0)
       .prop("items")
-      // @ts-ignore
+      // @ts-expect-error
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",
@@ -338,25 +338,25 @@ describe("App", () => {
   it("should not render dev menu when hostIsOwner is false and not on localhost", () => {
     // set isLocalhost to false by deleting window.location.
     // Source: https://www.benmvp.com/blog/mocking-window-location-methods-jest-jsdom/
-    // @ts-ignore
+    // @ts-expect-error
     delete window.location
 
-    // @ts-ignore
+    // @ts-expect-error
     window.location = {
       assign: jest.fn(),
     }
     const props = getProps()
     const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
-    // @ts-ignore
+    // @ts-expect-error
     const menuWrapper = mount(popoverContent(() => {}))
 
-    // @ts-ignore
+    // @ts-expect-error
     const menuLabels = menuWrapper
       .find("MenuStatefulContainer")
       // make sure that we only have one menu otherwise prop will fail
       .prop("items")
-      // @ts-ignore
+      // @ts-expect-error
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",

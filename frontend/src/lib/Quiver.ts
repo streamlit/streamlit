@@ -605,7 +605,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
     // Concatenate each index with its counterpart in the other table
     const zipped = zip(this._index, otherIndex)
-    // @ts-ignore We know the two indexes are of the same size
+    // @ts-expect-error We know the two indexes are of the same size
     return zipped.map(a => a[0].concat(a[1]))
   }
 

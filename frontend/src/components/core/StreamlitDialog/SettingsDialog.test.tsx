@@ -39,7 +39,7 @@ const getContext = (
 
 // This is a workaround since enzyme does not support context yet
 // https://github.com/enzymejs/enzyme/issues/2189
-// @ts-ignore
+// @ts-expect-error
 SettingsDialog.contextTypes = {
   availableThemes: PropTypes.array,
   activeTheme: PropTypes.shape,
@@ -89,7 +89,7 @@ describe("SettingsDialog", () => {
 
     expect(wrapper.state("runOnSave")).toBe(true)
     expect(props.onSave).toHaveBeenCalled()
-    // @ts-ignore
+    // @ts-expect-error
     expect(props.onSave.mock.calls[0][0].runOnSave).toBe(true)
   })
 
@@ -109,7 +109,7 @@ describe("SettingsDialog", () => {
 
     expect(wrapper.state("wideMode")).toBe(true)
     expect(props.onSave).toHaveBeenCalled()
-    // @ts-ignore
+    // @ts-expect-error
     expect(props.onSave.mock.calls[0][0].wideMode).toBe(true)
   })
 
@@ -127,7 +127,6 @@ describe("SettingsDialog", () => {
     selectbox.prop("onChange")(1)
     wrapper.update()
     expect(mockSetTheme).toHaveBeenCalled()
-    // @ts-ignore
     expect(mockSetTheme.mock.calls[0][0]).toBe(darkTheme)
   })
 

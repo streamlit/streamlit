@@ -50,7 +50,7 @@ describe("AlertContainer element", () => {
 
     const overrides = wrapper.find("Notification").prop("overrides")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(overrides.Body.style.width).toEqual("100")
   })
 })

@@ -311,7 +311,6 @@ export function RenderedMarkdown({
   )
   function remarkColoring() {
     return (tree: any) => {
-      // @ts-ignore
       visit(tree, node => {
         if (node.type === "textDirective") {
           const nodeName = String(node.name)
@@ -370,7 +369,7 @@ export function RenderedMarkdown({
 
   return (
     <ErrorBoundary>
-      <ReactMarkdown // @ts-ignore
+      <ReactMarkdown
         remarkPlugins={plugins}
         rehypePlugins={rehypePlugins}
         components={renderers}

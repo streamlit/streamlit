@@ -51,13 +51,13 @@ describe("Vertical Block Component", () => {
         scriptRunId={""}
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
-        // @ts-ignore
+        // @ts-expect-error
         widgetMgr={undefined}
-        // @ts-ignore
+        // @ts-expect-error
         uploadClient={undefined}
-        // @ts-ignore
+        // @ts-expect-error
         componentRegistry={undefined}
-        // @ts-ignore
+        // @ts-expect-error
         formsData={undefined}
       />
     )

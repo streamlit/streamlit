@@ -51,13 +51,13 @@ describe("Selectbox widget", () => {
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
-    // @ts-ignore
+    // @ts-expect-error
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("row-widget")
     expect(splittedClassName).toContain("stSelectbox")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(style.width).toBe(getProps().width)
   })
 
@@ -103,7 +103,7 @@ describe("Selectbox widget", () => {
   it("renders options", () => {
     const options = wrapper.find(UISelect).prop("options") || []
 
-    // @ts-ignore
+    // @ts-expect-error
     options.forEach(option => {
       expect(option).toHaveProperty("label")
       expect(option).toHaveProperty("value")
@@ -119,7 +119,7 @@ describe("Selectbox widget", () => {
   })
 
   it("is able to select an option", () => {
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UISelect).prop("onChange")({
       value: [{ label: "b", value: "1" }],
       option: { label: "b", value: "1" },
@@ -152,7 +152,7 @@ describe("Selectbox widget", () => {
     if (filterOptionsFn === undefined || options === undefined) {
       fail("Unexpected undefined value")
     }
-    // @ts-ignore
+    // @ts-expect-error
     const filteredOptions = filterOptionsFn(options, "1")
     expect(filteredOptions).toEqual([])
   })
@@ -163,14 +163,14 @@ describe("Selectbox widget", () => {
     if (filterOptionsFn === undefined || options === undefined) {
       fail("Unexpected undefined value")
     }
-    // @ts-ignore
+    // @ts-expect-error
     expect(filterOptionsFn(options, "b")).toEqual([
       {
         label: "b",
         value: "1",
       },
     ])
-    // @ts-ignore
+    // @ts-expect-error
     expect(filterOptionsFn(options, "B")).toEqual([
       {
         label: "b",
@@ -214,7 +214,7 @@ describe("Selectbox widget", () => {
   })
 
   it("updates value if new value provided from parent", () => {
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UISelect).prop("onChange")({
       value: [{ label: "b", value: "1" }],
       option: { label: "b", value: "1" },

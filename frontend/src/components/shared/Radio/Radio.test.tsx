@@ -76,13 +76,13 @@ describe("Radio widget", () => {
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
-    // @ts-ignore
+    // @ts-expect-error
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("row-widget")
     expect(splittedClassName).toContain("stRadio")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(style.width).toBe(getProps().width)
   })
 
@@ -135,7 +135,7 @@ describe("Radio widget", () => {
     const props = getProps()
     const wrapper = mount(<Radio {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(RadioGroup).prop("onChange")({
       target: {
         value: "1",

@@ -101,12 +101,12 @@ describe("DateInput widget", () => {
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
-    // @ts-ignore
+    // @ts-expect-error
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("stDateInput")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(style.width).toBe(getProps().width)
   })
 
@@ -138,7 +138,7 @@ describe("DateInput widget", () => {
     const wrapper = mount(<DateInput {...props} />)
     const newDate = new Date("2020/02/06")
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIDatePicker).prop("onChange")({
       date: newDate,
     })
@@ -161,19 +161,18 @@ describe("DateInput widget", () => {
     const wrapper = mount(<DateInput {...props} />)
     const newDate = new Date("2020/02/06")
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIDatePicker).prop("onChange")({
       date: newDate,
     })
     wrapper.update()
 
     expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([newDate])
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIDatePicker).prop("onChange")({
-      // @ts-ignore
       date: null,
     })
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIDatePicker).prop("onClose")()
     wrapper.update()
     expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([
@@ -229,7 +228,7 @@ describe("DateInput widget", () => {
     // Change the widget value
     const newDate = new Date("2020/02/06")
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIDatePicker).prop("onChange")({
       date: newDate,
     })

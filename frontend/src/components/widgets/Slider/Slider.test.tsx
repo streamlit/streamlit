@@ -151,7 +151,7 @@ describe("Slider widget", () => {
       jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
       const wrapper = mount(<Slider {...props} />)
-      // @ts-ignore
+      // @ts-expect-error
       wrapper.find(UISlider).prop("onChange")({ value: [10] })
 
       // We need to do this as we are using a debounce when the widget value is set
@@ -177,7 +177,7 @@ describe("Slider widget", () => {
       const wrapper = mount(<Slider {...props} />)
 
       // Change the widget value
-      // @ts-ignore
+      // @ts-expect-error
       wrapper.find(UISlider).prop("onChange")({ value: [10] })
 
       jest.runAllTimers()
@@ -244,7 +244,7 @@ describe("Slider widget", () => {
       const wrapper = mount(<Slider {...props} />)
 
       it("start > end", () => {
-        // @ts-ignore
+        // @ts-expect-error
         wrapper.find(UISlider).prop("onChange")({
           value: [11, 10],
         })
@@ -254,7 +254,7 @@ describe("Slider widget", () => {
       })
 
       it("start < min", () => {
-        // @ts-ignore
+        // @ts-expect-error
         wrapper.find(UISlider).prop("onChange")({
           value: [-1, 10],
         })
@@ -264,7 +264,7 @@ describe("Slider widget", () => {
       })
 
       it("start > max", () => {
-        // @ts-ignore
+        // @ts-expect-error
         wrapper.find(UISlider).prop("onChange")({
           value: [11],
         })
@@ -274,7 +274,7 @@ describe("Slider widget", () => {
       })
 
       it("end < min", () => {
-        // @ts-ignore
+        // @ts-expect-error
         wrapper.find(UISlider).prop("onChange")({
           value: [1, -1],
         })
@@ -284,7 +284,7 @@ describe("Slider widget", () => {
       })
 
       it("end > max", () => {
-        // @ts-ignore
+        // @ts-expect-error
         wrapper.find(UISlider).prop("onChange")({
           value: [1, 11],
         })
@@ -300,7 +300,7 @@ describe("Slider widget", () => {
 
       const wrapper = mount(<Slider {...props} />)
 
-      // @ts-ignore
+      // @ts-expect-error
       wrapper.find(UISlider).prop("onChange")({
         value: [1, 10],
       })
@@ -420,7 +420,7 @@ describe("Slider widget", () => {
       const props = getProps(originalProps)
       const wrapper = mount(<Slider {...props} />)
 
-      // @ts-ignore
+      // @ts-expect-error
       wrapper.find(UISlider).prop("onChange")({
         value: [4],
       })

@@ -59,7 +59,7 @@ const valueToColor = (value: string, _config: ThemeOptionBuilder): string =>
 const displayFontOption = (
   font: CustomThemeConfig.FontFamily | string
 ): string =>
-  // @ts-ignore
+  // @ts-expect-error
   humanizeString(CustomThemeConfig.FontFamily[font])
 
 const themeBuilder: Record<string, ThemeOptionBuilder> = {

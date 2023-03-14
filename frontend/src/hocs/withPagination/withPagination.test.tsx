@@ -32,13 +32,12 @@ const getProps = (props: Partial<HocProps> = {}): HocProps => ({
 describe("withPagination HOC", () => {
   const setState = jest.fn()
   const useStateSpy = jest.spyOn(React, "useState")
-  // @ts-ignore
+  // @ts-expect-error
   useStateSpy.mockImplementation(init => [init, setState])
 
   it("renders without crashing", () => {
     const props = getProps()
     const WithHoc = withPagination(TestComponent)
-    // @ts-ignore
     const wrapper = shallow(<WithHoc {...props} />)
 
     expect(wrapper).toBeDefined()
@@ -54,7 +53,7 @@ describe("withPagination HOC", () => {
     const pagination = wrapper.find(Pagination)
     const paginatedComponent = wrapper.find(TestComponent)
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(paginatedComponent.props().items.length).toBe(props.pageSize)
     expect(pagination.length).toBe(1)
     expect(pagination.props().totalPages).toBe(2)
@@ -71,7 +70,7 @@ describe("withPagination HOC", () => {
     const paginatedComponent = wrapper.find(TestComponent)
 
     expect(pagination.length).toBe(0)
-    // @ts-ignore
+    // @ts-expect-error
     expect(paginatedComponent.props().items.length).toBe(props.items.length)
   })
 
