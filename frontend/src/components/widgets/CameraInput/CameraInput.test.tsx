@@ -57,7 +57,7 @@ const getProps = (elementProps: Partial<CameraInputProto> = {}): Props => {
       formsDataChanged: jest.fn(),
     }),
     mockServerFileIdCounter: 1,
-    // @ts-ignore
+    // @ts-expect-error
     uploadClient: {
       uploadFile: jest.fn().mockImplementation(() => {
         // Mock UploadClient to return an incremented ID for each upload.
@@ -136,7 +136,7 @@ describe("CameraInput widget", () => {
       wrapper
         .find("Webcam")
         .props()
-        // @ts-ignore
+        // @ts-expect-error
         .onUserMedia(null)
     })
 
@@ -155,7 +155,7 @@ describe("CameraInput widget", () => {
       wrapper
         .find("Webcam")
         .props()
-        // @ts-ignore
+        // @ts-expect-error
         .onUserMedia(null)
     })
 
@@ -174,7 +174,7 @@ describe("CameraInput widget", () => {
     const wrapper = shallow<CameraInput, Props, State>(
       <CameraInput {...props} />
     )
-    // @ts-ignore
+    // @ts-expect-error
     await wrapper.instance().handleCapture("test img")
 
     expect(wrapper.instance().state.files).toHaveLength(1)
@@ -191,10 +191,10 @@ describe("CameraInput widget", () => {
     const wrapper = shallow<CameraInput, Props, State>(
       <CameraInput {...props} />
     )
-    // @ts-ignore
+    // @ts-expect-error
     await wrapper.instance().handleCapture("test img")
 
-    // @ts-ignore
+    // @ts-expect-error
     await wrapper.instance().removeCapture()
     expect(wrapper.state()).toEqual({
       files: [],

@@ -232,9 +232,8 @@ class AppSession:
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
-            # after this is called.
-            if self._scriptrunner is not None:
-                self._scriptrunner.request_stop()
+            # *after* this is called.
+            self.request_script_stop()
 
             self._state = AppSessionState.SHUTDOWN_REQUESTED
 
@@ -364,6 +363,14 @@ class AppSession:
         # current ScriptRunner is shutting down and cannot handle a rerun
         # request - so we'll create and start a new ScriptRunner.
         self._create_scriptrunner(rerun_data)
+
+    def request_script_stop(self) -> None:
+        """Request that the scriptrunner stop execution.
+
+        Does nothing if no scriptrunner exists.
+        """
+        if self._scriptrunner is not None:
+            self._scriptrunner.request_stop()
 
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""
@@ -519,7 +526,6 @@ class AppSession:
             event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
             or event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
         ):
-
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_NOT_RUNNING
 
@@ -698,8 +704,7 @@ class AppSession:
 
     def _handle_stop_script_request(self) -> None:
         """Tell the ScriptRunner to stop running its script."""
-        if self._scriptrunner is not None:
-            self._scriptrunner.request_stop()
+        self.request_script_stop()
 
     def _handle_clear_cache_request(self) -> None:
         """Clear this app's cache.

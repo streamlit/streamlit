@@ -49,17 +49,20 @@ const ALLOWED_ORIGINS_PATH = "_stcore/allowed-message-origins"
 const WEBSOCKET_STREAM_PATH = "_stcore/stream"
 
 /**
- * Wait this long between pings, in millis.
+ * Min and max wait time between pings in millis.
  */
 const PING_MINIMUM_RETRY_PERIOD_MS = 500
-
 const PING_MAXIMUM_RETRY_PERIOD_MS = 1000 * 60
 
 /**
- * Timeout when attempting to connect to a websocket, in millis.
- * This should be <= bootstrap.py#BROWSER_WAIT_TIMEOUT_SEC.
+ * Ping timeout in millis.
  */
-const WEBSOCKET_TIMEOUT_MS = 1000
+const PING_TIMEOUT_MS = 15 * 1000
+
+/**
+ * Timeout when attempting to connect to a websocket, in millis.
+ */
+const WEBSOCKET_TIMEOUT_MS = 15 * 1000
 
 /**
  * If the ping retrieves a 403 status code a message will be displayed.
@@ -79,7 +82,10 @@ type OnRetry = (
   retryTimeout: number
 ) => void
 
-interface Args {
+export interface Args {
+  /** The application's SessionInfo instance */
+  sessionInfo: SessionInfo
+
   /**
    * List of URLs to connect to. We'll try the first, then the second, etc. If
    * all fail, we'll retry from the top. The number of retries depends on
@@ -205,8 +211,8 @@ export class WebsocketConnection {
   /**
    * WebSocket objects don't support retries, so we have to implement them
    * ourselves. We use setTimeout to wait for a connection and retry once the
-   * timeout fire. This is the timer ID from setTimeout, so we can cancel it if
-   * needed.
+   * timeout fires. This field stores the timer ID from setTimeout, so we can
+   * cancel it if needed.
    */
   private wsConnectionTimeoutId?: number
 
@@ -240,7 +246,9 @@ export class WebsocketConnection {
     switch (this.state) {
       case ConnectionState.PINGING_SERVER:
         this.pingServer(
-          SessionInfo.isSet() ? SessionInfo.current.commandLine : undefined
+          this.args.sessionInfo.isSet
+            ? this.args.sessionInfo.current.commandLine
+            : undefined
         )
         break
 
@@ -380,7 +388,7 @@ export class WebsocketConnection {
   private async getSessionToken(): Promise<string | undefined> {
     const hostAuthToken = await this.args.claimHostAuthToken()
     this.args.resetHostAuthToken()
-    return hostAuthToken || SessionInfo.lastSessionInfo?.sessionId
+    return hostAuthToken || this.args.sessionInfo.last?.sessionId
   }
 
   private async connectToWebSocket(): Promise<void> {
@@ -681,8 +689,8 @@ export function doInitPings(
     // not to do so as it's semantically cleaner to not give the healthcheck
     // endpoint additional responsibilities.
     Promise.all([
-      axios.get(healthzUri, { timeout: minimumTimeoutMs }),
-      axios.get(allowedOriginsUri, { timeout: minimumTimeoutMs }),
+      axios.get(healthzUri, { timeout: PING_TIMEOUT_MS }),
+      axios.get(allowedOriginsUri, { timeout: PING_TIMEOUT_MS }),
     ])
       .then(([_, originsResp]) => {
         setAllowedOriginsResp(originsResp.data)

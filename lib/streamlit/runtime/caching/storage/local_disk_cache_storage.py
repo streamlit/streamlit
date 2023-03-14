@@ -32,6 +32,28 @@ if the context is not valid.
 - LocalDiskCacheStorage : each instance of this is able to get, set, delete, and clear
 entries from disk for a single `@st.cache_data` decorated function if `persist="disk"`
 is used in CacheStorageContext.
+
+
+    ┌───────────────────────────────┐
+    │  LocalDiskCacheStorageManager │
+    │                               │
+    │     - clear_all               │
+    │     - check_context           │
+    │                               │
+    └──┬────────────────────────────┘
+       │
+       │                ┌──────────────────────────────┐
+       │                │                              │
+       │ create(context)│  InMemoryCacheStorageWrapper │
+       └────────────────►                              │
+                        │    ┌─────────────────────┐   │
+                        │    │                     │   │
+                        │    │   LocalDiskStorage  │   │
+                        │    │                     │   │
+                        │    └─────────────────────┘   │
+                        │                              │
+                        └──────────────────────────────┘
+
 """
 
 from __future__ import annotations

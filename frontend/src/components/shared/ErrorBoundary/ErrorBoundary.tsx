@@ -42,7 +42,7 @@ class ErrorBoundary extends React.PureComponent<Props, State> {
     }
   }
 
-  public componentDidCatch = (error: Error, info: React.ErrorInfo): void => {
+  public componentDidCatch = (error: Error): void => {
     logError(`${error.name}: ${error.message}\n${error.stack}`)
   }
 

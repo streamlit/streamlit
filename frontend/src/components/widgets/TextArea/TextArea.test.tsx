@@ -69,12 +69,12 @@ describe("TextArea widget", () => {
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
-    // @ts-ignore
+    // @ts-expect-error
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("stTextArea")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(style.width).toBe(getProps().width)
   })
 
@@ -137,12 +137,12 @@ describe("TextArea widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextArea {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UITextArea).prop("onChange")({
       target: { value: "testing" },
     } as React.ChangeEvent<HTMLTextAreaElement>)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UITextArea).prop("onBlur")()
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
@@ -159,12 +159,12 @@ describe("TextArea widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextArea {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UITextArea).prop("onChange")({
       target: { value: "testing" },
     } as React.ChangeEvent<HTMLTextAreaElement>)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UITextArea).prop("onKeyDown")({
       preventDefault: jest.fn(),
       ctrlKey: true,
@@ -187,7 +187,7 @@ describe("TextArea widget", () => {
     const wrapper = shallow(<TextArea {...props} />)
     const overrides = wrapper.find(UITextArea).prop("overrides")
 
-    // @ts-ignore
+    // @ts-expect-error
     const { height, resize } = overrides.Input.style
 
     expect(height).toBe("500px")
@@ -201,14 +201,14 @@ describe("TextArea widget", () => {
     })
     const wrapper = shallow(<TextArea {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UITextArea).prop("onChange")({
       target: { value: "0123456789" },
     } as EventTarget)
 
     expect(wrapper.find(UITextArea).prop("value")).toBe("0123456789")
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UITextArea).prop("onChange")({
       target: { value: "0123456789a" },
     } as EventTarget)
@@ -221,7 +221,7 @@ describe("TextArea widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextArea {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UITextArea).prop("onChange")({
       target: { value: "TEST" },
     } as React.ChangeEvent<HTMLTextAreaElement>)
@@ -243,7 +243,7 @@ describe("TextArea widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextArea {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UITextArea).prop("onChange")({
       target: { value: "TEST" },
     } as React.ChangeEvent<HTMLTextAreaElement>)
@@ -270,7 +270,7 @@ describe("TextArea widget", () => {
     const wrapper = shallow(<TextArea {...props} />)
 
     // Change the widget value
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UITextArea).prop("onChange")({
       target: { value: "TEST" },
     } as React.ChangeEvent<HTMLTextAreaElement>)
@@ -310,12 +310,12 @@ describe("TextArea widget", () => {
       jest.spyOn(props.widgetMgr, "setStringValue")
       const wrapper = shallow(<TextArea {...props} />)
 
-      // @ts-ignore
+      // @ts-expect-error
       wrapper.find(UITextArea).prop("onChange")({
         target: { value: "testing" },
       } as React.ChangeEvent<HTMLTextAreaElement>)
 
-      // @ts-ignore
+      // @ts-expect-error
       wrapper.find(UITextArea).prop("onKeyDown")({
         preventDefault: jest.fn(),
         metaKey: true,
