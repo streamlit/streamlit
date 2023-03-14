@@ -14,48 +14,20 @@
  * limitations under the License.
  */
 
-import { BaseUriParts } from "src/lib/UriUtil"
+import { mockComponentEndpoint } from "src/lib/mocks/mocks"
 import { ComponentRegistry } from "./ComponentRegistry"
-
-const MOCK_SERVER_URI = {
-  host: "streamlit.mock",
-  port: 80,
-  basePath: "",
-}
 
 describe("ComponentRegistry", () => {
   test("Constructs component URLs", () => {
-    const registry = new ComponentRegistry(() => MOCK_SERVER_URI)
+    const endpoint = mockComponentEndpoint()
+    const registry = new ComponentRegistry(endpoint)
     const url = registry.getComponentURL("foo", "index.html")
-    expect(url).toEqual("http://streamlit.mock:80/component/foo/index.html")
-  })
-
-  test("Caches server URI", () => {
-    // If we never connect to a server, getComponentURL will fail:
-    let serverURI: BaseUriParts | undefined
-    const registry = new ComponentRegistry(() => serverURI)
-    expect(() => registry.getComponentURL("foo", "index.html")).toThrow()
-
-    // But if we connect once, and then disconnect, our original URI should
-    // be cached.
-
-    // "Connect" to the server
-    serverURI = MOCK_SERVER_URI
-    expect(registry.getComponentURL("foo", "index.html")).toEqual(
-      "http://streamlit.mock:80/component/foo/index.html"
-    )
-
-    // "Disconnect" from the server, and call getComponentURL again;
-    // it should return a URL constructed from the cached server URI.
-    serverURI = undefined
-    expect(registry.getComponentURL("bar", "index.html")).toEqual(
-      "http://streamlit.mock:80/component/bar/index.html"
-    )
+    expect(url).toEqual(endpoint.buildComponentURL("foo", "index.html"))
   })
 
   test("Dispatches messages to listeners", () => {
-    const registry = new ComponentRegistry(() => MOCK_SERVER_URI)
-    // @ts-ignore
+    const registry = new ComponentRegistry(mockComponentEndpoint())
+    // @ts-expect-error
     const { onMessageEvent } = registry
 
     // Create some mocks

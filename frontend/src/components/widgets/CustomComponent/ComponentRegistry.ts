@@ -15,7 +15,6 @@
  */
 
 import { logWarning } from "src/lib/log"
-import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
 import { ComponentMessageType } from "./enums"
 
 export type ComponentMessageListener = (
@@ -24,20 +23,31 @@ export type ComponentMessageListener = (
 ) => void
 
 /**
+ * Interface used by ComponentRegistry to fetch component resources from
+ * a server.
+ */
+export interface ComponentEndpointInfo {
+  /**
+   * Return a URL to fetch data for the given component.
+   * @param componentName The registered name of the component.
+   * @param path The path of the component resource to fetch, e.g. "index.html".
+   */
+  buildComponentURL(componentName: string, path: string): string
+}
+
+/**
  * Dispatches iframe messages to ComponentInstances.
  */
 export class ComponentRegistry {
-  private readonly getServerUri: () => BaseUriParts | undefined
+  private readonly endpoint: ComponentEndpointInfo
 
   private readonly msgListeners = new Map<
     MessageEventSource,
     ComponentMessageListener
   >()
 
-  private cachedServerUri?: BaseUriParts
-
-  public constructor(getServerUri: () => BaseUriParts | undefined) {
-    this.getServerUri = getServerUri
+  public constructor(componentEndpoint: ComponentEndpointInfo) {
+    this.endpoint = componentEndpoint
     window.addEventListener("message", this.onMessageEvent)
   }
 
@@ -62,20 +72,9 @@ export class ComponentRegistry {
     }
   }
 
+  /** Return a URL for fetching a resource for the given component. */
   public getComponentURL = (componentName: string, path: string): string => {
-    // Fetch the server URI. If our server is disconnected, this will return
-    // undefined, in which case we default to the most recent cached value
-    // of the URI.
-    let serverUri = this.getServerUri()
-    if (serverUri === undefined) {
-      if (this.cachedServerUri === undefined) {
-        throw new Error("Can't fetch component: not connected to a server")
-      }
-      serverUri = this.cachedServerUri
-    }
-
-    this.cachedServerUri = serverUri
-    return buildHttpUri(serverUri, `component/${componentName}/${path}`)
+    return this.endpoint.buildComponentURL(componentName, path)
   }
 
   private onMessageEvent = (event: MessageEvent): void => {
