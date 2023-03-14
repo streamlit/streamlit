@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,25 +14,12 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+describe("st.divider", () => {
+  before(() => {
+    cy.loadApp("http://localhost:3000/");
+  });
 
-// Formatted text
-message Markdown {
-  // Content to display.
-  string body = 1;
-
-  bool allow_html = 2;
-  bool is_caption = 3; // TODO [Karen]: Remove this field if favor of element_type
-
-  enum Type {
-    UNSPECIFIED = 0;  // This is recommended to be reserved for proto files backwards compatibility reasons.
-    NATIVE = 1;
-    CAPTION = 2;
-    CODE = 3;
-    LATEX = 4;
-    DIVIDER = 5;
-  }
-  Type element_type = 4;
-
-  string help = 5;
-}
+  it("displays divider", () => {
+    cy.get(".element-container .stMarkdown hr").should("have.length", 1);
+  });
+});
