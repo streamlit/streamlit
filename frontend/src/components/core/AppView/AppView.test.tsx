@@ -34,6 +34,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
   const formsData = createFormsData()
 
   const sessionInfo = mockSessionInfo()
+  const endpoints = mockEndpoints()
 
   return {
     elements: AppRoot.empty(getMetricsManagerForTest(sessionInfo)),
@@ -45,13 +46,12 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
       formsDataChanged: jest.fn(),
     }),
     uploadClient: new FileUploadClient({
-      sessionInfo: mockSessionInfo(),
-      getServerUri: () => undefined,
-      csrfEnabled: true,
+      sessionInfo: sessionInfo,
+      endpoints: endpoints,
       formsWithPendingRequestsChanged: () => {},
     }),
     widgetsDisabled: true,
-    componentRegistry: new ComponentRegistry(mockEndpoints()),
+    componentRegistry: new ComponentRegistry(endpoints),
     formsData,
     appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
     onPageChange: jest.fn(),

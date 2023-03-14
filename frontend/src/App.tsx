@@ -255,14 +255,13 @@ export class App extends PureComponent<Props, State> {
 
     this.uploadClient = new FileUploadClient({
       sessionInfo: this.sessionInfo,
-      getServerUri: this.getBaseUriParts,
+      endpoints,
       // A form cannot be submitted if it contains a FileUploader widget
       // that's currently uploading. We write that state here, in response
       // to a FileUploadClient callback. The FormSubmitButton element
       // reads the state.
       formsWithPendingRequestsChanged: formIds =>
         this.widgetMgr.setFormsWithUploads(formIds),
-      csrfEnabled: true,
     })
 
     this.componentRegistry = new ComponentRegistry(endpoints)

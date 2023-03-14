@@ -74,10 +74,12 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     })
   }
 
+  /**
+   * Fetch the server URI. If our server is disconnected, default to the most
+   * recent cached value of the URI. If we're disconnected and have no cached
+   * value, throw an Error.
+   */
   private requireServerUri(): BaseUriParts {
-    // Fetch the server URI. If our server is disconnected, this will return
-    // undefined, in which case we default to the most recent cached value
-    // of the URI.
     const serverUri = this.getServerUri()
     if (serverUri != null) {
       this.cachedServerUri = serverUri

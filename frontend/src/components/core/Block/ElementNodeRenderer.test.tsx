@@ -64,6 +64,7 @@ function getProps(
     Pick<ElementNodeRendererProps, "node" | "scriptRunId">
 ): ElementNodeRendererProps {
   const sessionInfo = mockSessionInfo()
+  const endpoints = mockEndpoints()
   return {
     scriptRunState: ScriptRunState.RUNNING,
     sessionInfo: sessionInfo,
@@ -74,11 +75,10 @@ function getProps(
     widgetsDisabled: false,
     uploadClient: new FileUploadClient({
       sessionInfo: sessionInfo,
-      getServerUri: () => undefined,
-      csrfEnabled: true,
+      endpoints,
       formsWithPendingRequestsChanged: () => {},
     }),
-    componentRegistry: new ComponentRegistry(mockEndpoints()),
+    componentRegistry: new ComponentRegistry(endpoints),
     formsData: createFormsData(),
     width: 1000,
     ...props,
