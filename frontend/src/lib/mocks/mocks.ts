@@ -15,7 +15,7 @@
  */
 
 import { Props as SessionInfoProps, SessionInfo } from "src/lib/SessionInfo"
-import { ComponentEndpointInfo } from "src/components/widgets/CustomComponent/ComponentRegistry"
+import { Endpoints } from "src/lib/Endpoints"
 
 /** Create mock SessionInfo.props */
 export function mockSessionInfoProps(
@@ -45,13 +45,13 @@ export function mockSessionInfo(
   return sessionInfo
 }
 
-const MOCK_COMPONENT_ENDPOINT: ComponentEndpointInfo = {
+const MOCK_ENDPOINTS: Endpoints = {
   buildComponentURL: (componentName: string, path: string): string => {
     return `http://streamlit.mock:80/component/${componentName}/${path}`
   },
 }
 
-/** Return a mock ComponentEndpointInfo implementation. */
-export function mockComponentEndpoint(): ComponentEndpointInfo {
-  return MOCK_COMPONENT_ENDPOINT
+/** Return a mock Endpoints implementation. */
+export function mockEndpoints(): Endpoints {
+  return MOCK_ENDPOINTS
 }

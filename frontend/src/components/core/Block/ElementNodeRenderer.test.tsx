@@ -30,7 +30,7 @@ import {
 } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import { mockComponentEndpoint, mockSessionInfo } from "src/lib/mocks/mocks"
+import { mockEndpoints, mockSessionInfo } from "src/lib/mocks/mocks"
 import ElementNodeRenderer, {
   ElementNodeRendererProps,
 } from "./ElementNodeRenderer"
@@ -78,7 +78,7 @@ function getProps(
       csrfEnabled: true,
       formsWithPendingRequestsChanged: () => {},
     }),
-    componentRegistry: new ComponentRegistry(mockComponentEndpoint()),
+    componentRegistry: new ComponentRegistry(mockEndpoints()),
     formsData: createFormsData(),
     width: 1000,
     ...props,

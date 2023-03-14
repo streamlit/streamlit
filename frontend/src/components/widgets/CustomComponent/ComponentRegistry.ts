@@ -15,6 +15,7 @@
  */
 
 import { logWarning } from "src/lib/log"
+import { Endpoints } from "src/lib/Endpoints"
 import { ComponentMessageType } from "./enums"
 
 export type ComponentMessageListener = (
@@ -23,31 +24,18 @@ export type ComponentMessageListener = (
 ) => void
 
 /**
- * Interface used by ComponentRegistry to fetch component resources from
- * a server.
- */
-export interface ComponentEndpointInfo {
-  /**
-   * Return a URL to fetch data for the given component.
-   * @param componentName The registered name of the component.
-   * @param path The path of the component resource to fetch, e.g. "index.html".
-   */
-  buildComponentURL(componentName: string, path: string): string
-}
-
-/**
  * Dispatches iframe messages to ComponentInstances.
  */
 export class ComponentRegistry {
-  private readonly endpoint: ComponentEndpointInfo
+  private readonly endpoints: Endpoints
 
   private readonly msgListeners = new Map<
     MessageEventSource,
     ComponentMessageListener
   >()
 
-  public constructor(componentEndpoint: ComponentEndpointInfo) {
-    this.endpoint = componentEndpoint
+  public constructor(endpoints: Endpoints) {
+    this.endpoints = endpoints
     window.addEventListener("message", this.onMessageEvent)
   }
 
@@ -74,7 +62,7 @@ export class ComponentRegistry {
 
   /** Return a URL for fetching a resource for the given component. */
   public getComponentURL = (componentName: string, path: string): string => {
-    return this.endpoint.buildComponentURL(componentName, path)
+    return this.endpoints.buildComponentURL(componentName, path)
   }
 
   private onMessageEvent = (event: MessageEvent): void => {

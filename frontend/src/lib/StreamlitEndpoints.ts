@@ -15,10 +15,10 @@
  */
 
 import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
-import { ComponentEndpointInfo } from "./ComponentRegistry"
+import { Endpoints } from "src/lib/Endpoints"
 
 /** "Vanilla" Streamlit server implementation of ComponentEndpointInfo. */
-export class StreamlitComponentEndpoint implements ComponentEndpointInfo {
+export class StreamlitEndpoints implements Endpoints {
   private readonly getServerUri: () => BaseUriParts | undefined
 
   private cachedServerUri?: BaseUriParts

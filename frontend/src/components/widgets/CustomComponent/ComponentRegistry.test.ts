@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import { mockComponentEndpoint } from "src/lib/mocks/mocks"
+import { mockEndpoints } from "src/lib/mocks/mocks"
 import { ComponentRegistry } from "./ComponentRegistry"
 
 describe("ComponentRegistry", () => {
   test("Constructs component URLs", () => {
-    const endpoint = mockComponentEndpoint()
+    const endpoint = mockEndpoints()
     const registry = new ComponentRegistry(endpoint)
     const url = registry.getComponentURL("foo", "index.html")
     expect(url).toEqual(endpoint.buildComponentURL("foo", "index.html"))
   })
 
   test("Dispatches messages to listeners", () => {
-    const registry = new ComponentRegistry(mockComponentEndpoint())
+    const registry = new ComponentRegistry(mockEndpoints())
     // @ts-expect-error
     const { onMessageEvent } = registry
 

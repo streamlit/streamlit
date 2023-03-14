@@ -27,7 +27,7 @@ import {
 import { makeElementWithInfoText } from "src/lib/utils"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
-import { mockComponentEndpoint, mockSessionInfo } from "src/lib/mocks/mocks"
+import { mockEndpoints, mockSessionInfo } from "src/lib/mocks/mocks"
 import AppView, { AppViewProps } from "./AppView"
 
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
@@ -51,7 +51,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
       formsWithPendingRequestsChanged: () => {},
     }),
     widgetsDisabled: true,
-    componentRegistry: new ComponentRegistry(mockComponentEndpoint()),
+    componentRegistry: new ComponentRegistry(mockEndpoints()),
     formsData,
     appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
     onPageChange: jest.fn(),
