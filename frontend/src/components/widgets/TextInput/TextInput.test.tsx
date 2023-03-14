@@ -128,12 +128,11 @@ describe("TextInput widget", () => {
     const wrappedDiv = wrapper.find("StyledTextInput").first()
 
     const { className, width } = wrappedDiv.props()
-    // @ts-ignore
+    // @ts-expect-error
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("stTextInput")
 
-    // @ts-ignore
     expect(width).toBe(getProps().width)
   })
 
@@ -148,12 +147,12 @@ describe("TextInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextInput {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIInput).prop("onChange")({
       target: { value: "testing" },
     } as React.ChangeEvent<HTMLInputElement>)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIInput).prop("onBlur")()
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
@@ -170,12 +169,12 @@ describe("TextInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextInput {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIInput).prop("onChange")({
       target: { value: "testing" },
     } as React.ChangeEvent<HTMLInputElement>)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIInput).prop("onKeyPress")({
       preventDefault: jest.fn(),
       key: "Enter",
@@ -195,7 +194,7 @@ describe("TextInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextInput {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIInput).prop("onKeyPress")({
       preventDefault: jest.fn(),
       key: "Enter",
@@ -203,7 +202,7 @@ describe("TextInput widget", () => {
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIInput).prop("onBlur")()
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
   })
@@ -212,14 +211,14 @@ describe("TextInput widget", () => {
     const props = getProps({ maxChars: 10 })
     const wrapper = shallow(<TextInput {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIInput).prop("onChange")({
       target: { value: "0123456789" },
     } as EventTarget)
 
     expect(wrapper.find(UIInput).prop("value")).toBe("0123456789")
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIInput).prop("onChange")({
       target: { value: "0123456789a" },
     } as EventTarget)
@@ -232,7 +231,7 @@ describe("TextInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextInput {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIInput).prop("onChange")({
       target: { value: "TEST" },
     } as React.ChangeEvent<HTMLInputElement>)
@@ -254,7 +253,7 @@ describe("TextInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     const wrapper = shallow(<TextInput {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIInput).prop("onChange")({
       target: { value: "TEST" },
     } as React.ChangeEvent<HTMLInputElement>)
@@ -281,7 +280,7 @@ describe("TextInput widget", () => {
     const wrapper = shallow(<TextInput {...props} />)
 
     // Change the widget value
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(UIInput).prop("onChange")({
       target: { value: "TEST" },
     } as React.ChangeEvent<HTMLInputElement>)
