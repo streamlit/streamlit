@@ -32,6 +32,26 @@ instances, and optionally to clear data of all cache storages.
 
 - CacheStorage : each instance of this is able to get, set, delete, and clear
 entries for a single @st.cache_data decorated function.
+
+  ┌───────────────────────────────┐
+  │                               │
+  │    CacheStorageManager        │
+  │                               │
+  │     - clear_all(optional)     │
+  │     - check_context           │
+  │                               │
+  └──┬────────────────────────────┘
+     │
+     │                ┌──────────────────────┐
+     │                │  CacheStorage        │
+     │ create(context)│                      │
+     └────────────────►    - get             │
+                      │    - set             │
+                      │    - delete          │
+                      │    - close (optional)│
+                      │    - clear           │
+                      └──────────────────────┘
+
 """
 
 from __future__ import annotations
