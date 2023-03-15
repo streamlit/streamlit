@@ -106,9 +106,9 @@ def setup_formatter(logger: logging.Logger) -> None:
         message_format = DEFAULT_LOG_MESSAGE
     formatter = logging.Formatter(fmt=message_format)
     formatter.default_msec_format = "%s.%03d"
-    logger.streamlit_console_handler.setFormatter(
+    logger.streamlit_console_handler.setFormatter(  # type: ignore[attr-defined]
         formatter
-    )  # type: ignore[attr-defined]
+    )
 
     # Register the new console logger.
     logger.addHandler(logger.streamlit_console_handler)  # type: ignore[attr-defined]

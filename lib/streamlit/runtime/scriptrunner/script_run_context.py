@@ -14,9 +14,8 @@
 
 import collections
 import threading
-import typing
 from dataclasses import dataclass, field
-from typing import Callable, Counter, Dict, List, Optional, Set
+from typing import Callable, Counter, Dict, List, Optional, Set, Tuple
 
 from typing_extensions import Final, TypeAlias
 
@@ -142,7 +141,7 @@ def add_script_run_ctx(
     return thread
 
 
-def maybe_get_script_run_ctx() -> typing.Tuple[Optional[ScriptRunContext], str]:
+def maybe_get_script_run_ctx() -> Tuple[Optional[ScriptRunContext], str]:
     thread = threading.current_thread()
     return getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None), thread.name
 
