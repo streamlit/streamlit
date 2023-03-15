@@ -44,6 +44,9 @@ const FileDropzone = ({
     accept={acceptedExtensions.length ? acceptedExtensions : undefined}
     maxSize={maxSizeBytes}
     disabled={disabled}
+    // react-dropzone v12+ uses the File System Access API by default,
+    // causing the bug described in https://github.com/streamlit/streamlit/issues/6176.
+    useFsAccessApi={false}
   >
     {({ getRootProps, getInputProps }) => (
       <StyledFileDropzoneSection
