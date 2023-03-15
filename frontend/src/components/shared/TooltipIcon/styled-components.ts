@@ -32,7 +32,7 @@ export const StyledTooltipIconWrapper =
     },
   }))
 
-export const StyledLabelHelpWrapper = styled.div(({ theme }) => ({
+export const StyledLabelHelpWrapper = styled.div(() => ({
   display: "flex",
   visibility: "visible",
   verticalAlign: "middle",

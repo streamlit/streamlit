@@ -31,7 +31,7 @@ import {
   Components,
   ReactMarkdownProps,
 } from "react-markdown/lib/ast-to-react"
-import { once } from "lodash"
+import { once, omit } from "lodash"
 import remarkDirective from "remark-directive"
 import remarkMathPlugin from "remark-math"
 import rehypeRaw from "rehype-raw"
@@ -210,7 +210,6 @@ type HeadingProps = JSX.IntrinsicElements["h1"] &
 export const CustomHeading: FunctionComponent<HeadingProps> = ({
   node,
   children,
-  level,
   ...rest
 }) => {
   const anchor = rest["data-anchor"]
@@ -254,7 +253,6 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
  * Renders code tag with highlighting based on requested language.
  */
 export const CustomCodeTag: FunctionComponent<CustomCodeTagProps> = ({
-  node,
   inline,
   className,
   children,
@@ -276,7 +274,7 @@ export const CustomCodeTag: FunctionComponent<CustomCodeTagProps> = ({
       </StreamlitSyntaxHighlighter>
     </>
   ) : (
-    <code className={className} {...props}>
+    <code className={className} {...omit(props, "node")}>
       {children}
     </code>
   )
@@ -313,7 +311,6 @@ export function RenderedMarkdown({
   )
   function remarkColoring() {
     return (tree: any) => {
-      // @ts-ignore
       visit(tree, node => {
         if (node.type === "textDirective") {
           const nodeName = String(node.name)
@@ -372,7 +369,7 @@ export function RenderedMarkdown({
 
   return (
     <ErrorBoundary>
-      <ReactMarkdown // @ts-ignore
+      <ReactMarkdown
         remarkPlugins={plugins}
         rehypePlugins={rehypePlugins}
         components={renderers}
@@ -452,18 +449,18 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   // if it's a #hash link, don't open in new tab
   const { href } = props
   if (href && href.startsWith("#")) {
-    const { children, node, ...rest } = props
-    return <a {...rest}>{children}</a>
+    const { children, ...rest } = props
+    return <a {...omit(rest, "node")}>{children}</a>
   }
 
-  const { title, children, node, target, rel, ...rest } = props
+  const { title, children, target, rel, ...rest } = props
   return (
     <a
       href={href}
       title={title}
       target={target || "_blank"}
       rel={rel || "noopener noreferrer"}
-      {...rest}
+      {...omit(rest, "node")}
     >
       {children}
     </a>

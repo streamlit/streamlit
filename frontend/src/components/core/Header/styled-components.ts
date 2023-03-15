@@ -23,7 +23,7 @@ export interface StyledHeaderProps {
 }
 
 export const StyledHeader = styled.header<StyledHeaderProps>(
-  ({ isWideMode, showHeader, theme }) => ({
+  ({ showHeader, theme }) => ({
     position: "fixed",
     top: theme.spacing.none,
     left: theme.spacing.none,

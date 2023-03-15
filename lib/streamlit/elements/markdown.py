@@ -19,6 +19,8 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
 from streamlit.type_util import SupportsStr, is_sympy_expession
 
+MARKDOWN_HORIZONTAL_RULE_EXPRESSION = "---"
+
 if TYPE_CHECKING:
     import sympy
 
@@ -238,6 +240,26 @@ class MarkdownMixin:
         if help:
             latex_proto.help = help
         return self.dg._enqueue("markdown", latex_proto)
+
+    @gather_metrics("divider")
+    def divider(self) -> "DeltaGenerator":
+        """Display a horizontal rule.
+
+        .. note::
+            You can achieve the same effect with st.write("---") or
+            even just "---" in your script (via magic).
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> st.divider()
+
+        """
+        divider_proto = MarkdownProto()
+        divider_proto.body = MARKDOWN_HORIZONTAL_RULE_EXPRESSION
+        divider_proto.element_type = MarkdownProto.Type.DIVIDER
+        return self.dg._enqueue("markdown", divider_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":

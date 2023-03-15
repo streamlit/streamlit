@@ -107,6 +107,7 @@ class RunWarningTest(unittest.TestCase):
                 "dataframe",
                 "date_input",
                 "dg",
+                "divider",
                 "download_button",
                 "empty",
                 "error",

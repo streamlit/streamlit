@@ -36,6 +36,9 @@ declare const analytics: any
 type Event = [string, Record<string, unknown>]
 
 export class SegmentMetricsManager implements MetricsManager {
+  /** The app's SessionInfo instance. */
+  private readonly sessionInfo: SessionInfo
+
   private initialized = false
 
   /**
@@ -71,6 +74,10 @@ export class SegmentMetricsManager implements MetricsManager {
 
   private metadata: DeployedAppMetadata = {}
 
+  public constructor(sessionInfo: SessionInfo) {
+    this.sessionInfo = sessionInfo
+  }
+
   public initialize({
     gatherUsageStats,
   }: {
@@ -84,16 +91,16 @@ export class SegmentMetricsManager implements MetricsManager {
       initializeSegment()
 
       const userTraits: any = {
-        ...SegmentMetricsManager.getInstallationData(),
+        ...this.getInstallationData(),
         ...this.getHostTrackingData(),
       }
 
       // Only record the user's email if they entered a non-empty one.
-      if (SessionInfo.current.authorEmail !== "") {
-        userTraits.authoremail = SessionInfo.current.authorEmail
+      if (this.sessionInfo.current.authorEmail !== "") {
+        userTraits.authoremail = this.sessionInfo.current.authorEmail
       }
 
-      this.identify(SessionInfo.current.installationId, userTraits)
+      this.identify(this.sessionInfo.current.installationId, userTraits)
       this.sendPendingEvents()
     }
 
@@ -101,7 +108,7 @@ export class SegmentMetricsManager implements MetricsManager {
   }
 
   public enqueue(evName: string, evData: Record<string, any> = {}): void {
-    if (!this.initialized || !SessionInfo.isSet()) {
+    if (!this.initialized || !this.sessionInfo.isSet) {
       this.pendingEvents.push([evName, evData])
       return
     }
@@ -167,12 +174,12 @@ export class SegmentMetricsManager implements MetricsManager {
     const data = {
       ...evData,
       ...this.getHostTrackingData(),
-      ...SegmentMetricsManager.getInstallationData(),
+      ...this.getInstallationData(),
       reportHash: this.appHash,
       dev: IS_DEV_ENV,
       source: "browser",
-      streamlitVersion: SessionInfo.current.streamlitVersion,
-      isHello: SessionInfo.isHello,
+      streamlitVersion: this.sessionInfo.current.streamlitVersion,
+      isHello: this.sessionInfo.isHello,
     }
 
     // Don't actually track events when in dev mode, just print them instead.
@@ -208,9 +215,9 @@ export class SegmentMetricsManager implements MetricsManager {
   }
 
   // Get the installation IDs from the session
-  private static getInstallationData(): Record<string, unknown> {
+  private getInstallationData(): Record<string, unknown> {
     return {
-      machineIdV3: SessionInfo.current.installationIdV3,
+      machineIdV3: this.sessionInfo.current.installationIdV3,
     }
   }
 

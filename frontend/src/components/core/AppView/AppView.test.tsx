@@ -27,13 +27,17 @@ import {
 import { makeElementWithInfoText } from "src/lib/utils"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
+import { mockComponentEndpoint, mockSessionInfo } from "src/lib/mocks/mocks"
 import AppView, { AppViewProps } from "./AppView"
 
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
   const formsData = createFormsData()
 
+  const sessionInfo = mockSessionInfo()
+
   return {
-    elements: AppRoot.empty(getMetricsManagerForTest()),
+    elements: AppRoot.empty(getMetricsManagerForTest(sessionInfo)),
+    sessionInfo: sessionInfo,
     scriptRunId: "script run 123",
     scriptRunState: ScriptRunState.NOT_RUNNING,
     widgetMgr: new WidgetStateManager({
@@ -41,12 +45,13 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
       formsDataChanged: jest.fn(),
     }),
     uploadClient: new FileUploadClient({
+      sessionInfo: mockSessionInfo(),
       getServerUri: () => undefined,
       csrfEnabled: true,
       formsWithPendingRequestsChanged: () => {},
     }),
     widgetsDisabled: true,
-    componentRegistry: new ComponentRegistry(() => undefined),
+    componentRegistry: new ComponentRegistry(mockComponentEndpoint()),
     formsData,
     appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
     onPageChange: jest.fn(),

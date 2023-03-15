@@ -37,7 +37,6 @@ import {
 } from "src/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/lib/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
-import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
 import {
   CUSTOM_THEME_NAME,
   createAutoTheme,
@@ -50,6 +49,8 @@ import { DialogType, StreamlitDialog } from "./components/core/StreamlitDialog"
 import { App, Props } from "./App"
 import MainMenu from "./components/core/MainMenu"
 import ToolbarActions from "./components/core/ToolbarActions"
+import { mockSessionInfo, mockSessionInfoProps } from "./lib/mocks/mocks"
+import { SessionInfo } from "./lib/SessionInfo"
 
 jest.mock("src/lib/ConnectionManager")
 
@@ -118,25 +119,8 @@ jest.mock("moment", () =>
 
 describe("App", () => {
   beforeEach(() => {
-    SessionInfo.current = new SessionInfo({
-      appId: "aid",
-      sessionId: "sessionId",
-      streamlitVersion: "sv",
-      pythonVersion: "pv",
-      installationId: "iid",
-      installationIdV3: "iid3",
-      authorEmail: "ae",
-      maxCachedMessageAge: 2,
-      commandLine: "command line",
-      userMapboxToken: "mpt",
-    } as SessionInfoArgs)
-    // @ts-ignore
+    // @ts-expect-error
     window.prerenderReady = false
-  })
-
-  afterEach(() => {
-    const UnsafeSessionInfo = SessionInfo as any
-    UnsafeSessionInfo.singleton = undefined
   })
 
   it("renders without crashing", () => {
@@ -151,43 +135,52 @@ describe("App", () => {
 
     wrapper.unmount()
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(instance.connectionManager.disconnect).toHaveBeenCalled()
   })
 
-  it("reloads when streamlit server version changes", () => {
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
+  describe("streamlit server version changes", () => {
+    let prevWindowLocation: Location
+    beforeEach(() => (prevWindowLocation = window.location))
+    afterEach(() => (window.location = prevWindowLocation))
 
-    // A HACK to mock `window.location.reload`.
-    // NOTE: The mocking must be done after mounting,
-    // but before `handleMessage` is called.
-    const { location } = window
-    // @ts-ignore
-    delete window.location
-    // @ts-ignore
-    window.location = { reload: jest.fn() }
+    it("triggers page reload", () => {
+      const props = getProps()
+      const wrapper = shallow(<App {...props} />)
+      const app = wrapper.instance() as App
 
-    const fwMessage = new ForwardMsg()
-    fwMessage.newSession = {
-      config: {},
-      initialize: {
-        environmentInfo: {
-          streamlitVersion: "svv",
+      // A HACK to mock `window.location.reload`.
+      // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
+      // @ts-expect-error
+      delete window.location
+      // @ts-expect-error
+      window.location = { reload: jest.fn() }
+
+      // Ensure SessionInfo is initialized
+      // @ts-expect-error
+      const sessionInfo: SessionInfo = app.sessionInfo
+      sessionInfo.setCurrent(
+        mockSessionInfoProps({ streamlitVersion: "oldStreamlitVersion" })
+      )
+      expect(sessionInfo.isSet).toBe(true)
+
+      const fwMessage = new ForwardMsg()
+      fwMessage.newSession = {
+        config: {},
+        initialize: {
+          environmentInfo: {
+            streamlitVersion: "newStreamlitVersion",
+          },
+          sessionId: "sessionId",
+          userInfo: {},
+          sessionStatus: {},
         },
-        sessionId: "sessionId",
-        userInfo: {},
-        sessionStatus: {},
-      },
-    }
+      }
 
-    // @ts-ignore
-    wrapper.instance().handleMessage(fwMessage)
+      app.handleMessage(fwMessage)
 
-    expect(window.location.reload).toHaveBeenCalled()
-
-    // Restore `window.location`.
-    window.location = location
+      expect(window.location.reload).toHaveBeenCalled()
+    })
   })
 
   it("starts screencast recording when the MainMenu is clicked", () => {
@@ -209,7 +202,7 @@ describe("App", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().keyHandlers.STOP_RECORDING()
 
     expect(props.screenCast.stopRecording).toBeCalled()
@@ -271,6 +264,7 @@ describe("App", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const dialog = StreamlitDialog({
       type: DialogType.ABOUT,
+      sessionInfo: mockSessionInfo(),
       onClose: () => {},
     })
     wrapper.setState({ dialog })
@@ -324,6 +318,7 @@ describe("App", () => {
     )
     const dialog = StreamlitDialog({
       type: DialogType.ABOUT,
+      sessionInfo: mockSessionInfo(),
       onClose: () => {},
     })
     wrapper.setState({ dialog })
@@ -345,13 +340,10 @@ describe("App", () => {
     const wrapper = shallow(<App {...props} />)
     const mockThemeConfig = { emotion: darkTheme.emotion }
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().setAndSendTheme(mockThemeConfig)
 
-    // @ts-ignore
     expect(props.theme.setTheme).toHaveBeenCalledWith(mockThemeConfig)
-
-    // @ts-ignore
     expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(darkTheme.emotion),
@@ -462,12 +454,10 @@ describe("App.handleNewSession", () => {
   const NEW_SESSION = new NewSession(NEW_SESSION_JSON)
 
   afterEach(() => {
-    const UnsafeSessionInfo = SessionInfo as any
-    UnsafeSessionInfo.singleton = undefined
     window.localStorage.clear()
   })
 
-  it("respects the user's theme preferencece if set, but adds custom theme as an option", () => {
+  it("respects the user's theme preference if set, but adds custom theme as an option", () => {
     const props = getProps()
     window.localStorage.setItem(
       LocalStore.ACTIVE_THEME,
@@ -475,13 +465,10 @@ describe("App.handleNewSession", () => {
     )
     const wrapper = shallow(<App {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleNewSession(NEW_SESSION)
 
-    // @ts-ignore
     expect(props.theme.addThemes).toHaveBeenCalled()
-
-    // @ts-ignore
     expect(props.theme.setTheme).not.toHaveBeenCalled()
   })
 
@@ -491,16 +478,13 @@ describe("App.handleNewSession", () => {
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
-    // @ts-ignore
     expect(props.theme.addThemes).toHaveBeenCalled()
-
-    // @ts-ignore
     expect(props.theme.setTheme).toHaveBeenCalled()
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(props.theme.setTheme.mock.calls[0][0].name).toBe(CUSTOM_THEME_NAME)
   })
 
@@ -518,16 +502,13 @@ describe("App.handleNewSession", () => {
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
-    // @ts-ignore
     expect(props.theme.addThemes).toHaveBeenCalled()
-
-    // @ts-ignore
     expect(props.theme.setTheme).toHaveBeenCalled()
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(props.theme.setTheme.mock.calls[0][0].name).toBe(CUSTOM_THEME_NAME)
   })
 
@@ -536,16 +517,14 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...props} />)
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
-    // @ts-ignore
+    // @ts-expect-error
     newSessionJson.customTheme = null
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
-
-    // @ts-ignore
     expect(props.theme.addThemes).toHaveBeenCalled()
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
   })
 
@@ -555,19 +534,17 @@ describe("App.handleNewSession", () => {
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
 
-    // @ts-ignore
+    // @ts-expect-error
     newSessionJson.customTheme = null
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
-    // @ts-ignore
     expect(props.theme.addThemes).toHaveBeenCalled()
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
 
-    // @ts-ignore
     expect(props.theme.setTheme).not.toHaveBeenCalled()
   })
 
@@ -580,18 +557,18 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...props} />)
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
-    // @ts-ignore
+    // @ts-expect-error
     newSessionJson.customTheme = null
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
     expect(props.theme.addThemes).toHaveBeenCalled()
-    // @ts-ignore
+    // @ts-expect-error
     expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
 
     expect(props.theme.setTheme).toHaveBeenCalled()
-    // @ts-ignore
+    // @ts-expect-error
     expect(props.theme.setTheme.mock.calls[0][0]).toEqual(createAutoTheme())
   })
 
@@ -600,11 +577,11 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...props} />)
 
     const customThemeConfig = new CustomThemeConfig({ primaryColor: "blue" })
-    // @ts-ignore
+    // @ts-expect-error
     const themeHash = wrapper.instance().createThemeHash(customThemeConfig)
     wrapper.setState({ themeHash })
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleNewSession(NEW_SESSION)
 
     expect(props.theme.addThemes).toHaveBeenCalled()
@@ -618,11 +595,11 @@ describe("App.handleNewSession", () => {
     const customThemeConfig = new CustomThemeConfig(
       NEW_SESSION_JSON.customTheme
     )
-    // @ts-ignore
+    // @ts-expect-error
     const themeHash = wrapper.instance().createThemeHash(customThemeConfig)
     wrapper.setState({ themeHash })
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleNewSession(NEW_SESSION)
 
     expect(props.theme.addThemes).not.toHaveBeenCalled()
@@ -635,10 +612,10 @@ describe("App.handleNewSession", () => {
     wrapper.setState({ themeHash: "hash_for_undefined_custom_theme" })
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
-    // @ts-ignore
+    // @ts-expect-error
     newSessionJson.customTheme = null
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
     expect(props.theme.addThemes).not.toHaveBeenCalled()
@@ -649,73 +626,82 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
 
+    // @ts-expect-error
+    const sessionInfo = app.sessionInfo
+
     const oneTimeInitialization = jest.spyOn(
       app,
-      // @ts-ignore
+      // @ts-expect-error
       "handleOneTimeInitialization"
     )
 
-    expect(SessionInfo.isSet()).toBe(false)
+    expect(sessionInfo.isSet).toBe(false)
 
-    // @ts-ignore
+    // @ts-expect-error
     app.handleNewSession(NEW_SESSION)
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
-    expect(SessionInfo.isSet()).toBe(true)
+    expect(sessionInfo.isSet).toBe(true)
   })
 
   it("performs one-time initialization only once", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
 
+    // @ts-expect-error
+    const sessionInfo = app.sessionInfo
+
     const oneTimeInitialization = jest.spyOn(
       app,
-      // @ts-ignore
+      // @ts-expect-error
       "handleOneTimeInitialization"
     )
 
-    expect(SessionInfo.isSet()).toBe(false)
+    expect(sessionInfo.isSet).toBe(false)
 
-    // @ts-ignore
+    // @ts-expect-error
     app.handleNewSession(NEW_SESSION)
-    // @ts-ignore
+    // @ts-expect-error
     app.handleNewSession(NEW_SESSION)
-    // @ts-ignore
+    // @ts-expect-error
     app.handleNewSession(NEW_SESSION)
 
     // Multiple NEW_SESSION messages should not result in one-time
     // initialization being performed more than once.
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
-    expect(SessionInfo.isSet()).toBe(true)
+    expect(sessionInfo.isSet).toBe(true)
   })
 
   it("performs one-time initialization after a new session is received", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()
 
+    // @ts-expect-error
+    const sessionInfo = app.sessionInfo
+
     const oneTimeInitialization = jest.spyOn(
       app,
-      // @ts-ignore
+      // @ts-expect-error
       "handleOneTimeInitialization"
     )
 
-    expect(SessionInfo.isSet()).toBe(false)
+    expect(sessionInfo.isSet).toBe(false)
 
-    // @ts-ignore
+    // @ts-expect-error
     app.handleNewSession(NEW_SESSION)
     expect(oneTimeInitialization).toHaveBeenCalledTimes(1)
 
-    // @ts-ignore
+    // @ts-expect-error
     app.handleConnectionStateChanged(ConnectionState.PINGING_SERVER)
-    expect(SessionInfo.isSet()).toBe(false)
+    expect(sessionInfo.isSet).toBe(false)
 
-    // @ts-ignore
+    // @ts-expect-error
     app.handleConnectionStateChanged(ConnectionState.CONNECTED)
-    // @ts-ignore
+    // @ts-expect-error
     app.handleNewSession(NEW_SESSION)
 
     expect(oneTimeInitialization).toHaveBeenCalledTimes(2)
-    expect(SessionInfo.isSet()).toBe(true)
+    expect(sessionInfo.isSet).toBe(true)
   })
 
   it("should set window.prerenderReady to true after app script is run successfully first time", () => {
@@ -727,7 +713,7 @@ describe("App.handleNewSession", () => {
       connectionState: ConnectionState.CONNECTING,
     })
     wrapper.update()
-    // @ts-ignore
+    // @ts-expect-error
     expect(window.prerenderReady).toBe(false)
 
     wrapper.setState({
@@ -735,7 +721,7 @@ describe("App.handleNewSession", () => {
       connectionState: ConnectionState.CONNECTED,
     })
     wrapper.update()
-    // @ts-ignore
+    // @ts-expect-error
     expect(window.prerenderReady).toBe(false)
 
     wrapper.setState({
@@ -743,7 +729,7 @@ describe("App.handleNewSession", () => {
       connectionState: ConnectionState.CONNECTED,
     })
     wrapper.update()
-    // @ts-ignore
+    // @ts-expect-error
     expect(window.prerenderReady).toBe(true)
 
     // window.prerenderReady is set to true after first
@@ -752,7 +738,7 @@ describe("App.handleNewSession", () => {
       connectionState: ConnectionState.CONNECTED,
     })
     wrapper.update()
-    // @ts-ignore
+    // @ts-expect-error
     expect(window.prerenderReady).toBe(true)
   })
 
@@ -768,13 +754,10 @@ describe("App.handleNewSession", () => {
     ]
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
-    // @ts-ignore
     newSessionJson.appPages = appPages
-
-    // @ts-ignore
     newSessionJson.pageScriptHash = "hash1"
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
     expect(wrapper.find("AppView").prop("currentPageScriptHash")).toEqual(
@@ -798,10 +781,9 @@ describe("App.handleNewSession", () => {
     instance.clearAppState = jest.fn()
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
-    // @ts-ignore
     newSessionJson.pageScriptHash = "different_hash"
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
     expect(instance.clearAppState).toHaveBeenCalled()
@@ -818,7 +800,7 @@ describe("App.handleNewSession", () => {
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
     expect(instance.clearAppState).not.toHaveBeenCalled()
@@ -852,22 +834,20 @@ describe("App.handleNewSession", () => {
   describe("page change URL handling", () => {
     let wrapper: ShallowWrapper
     let instance: App
+    let pushStateSpy: any
 
     beforeEach(() => {
       wrapper = shallow(<App {...getProps()} />)
       instance = wrapper.instance() as App
-      // @ts-ignore
+      // @ts-expect-error
       instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
 
       window.history.pushState({}, "", "/")
-      jest.spyOn(
-        window.history,
-        // @ts-ignore
-        "pushState"
-      )
+      pushStateSpy = jest.spyOn(window.history, "pushState")
     })
 
     afterEach(() => {
+      pushStateSpy.mockRestore()
       window.history.pushState({}, "", "/")
     })
 
@@ -875,7 +855,7 @@ describe("App.handleNewSession", () => {
       const instance = wrapper.instance() as App
       instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
 
-      expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
+      expect(window.history.pushState).toHaveBeenLastCalledWith({}, "", "/")
     })
 
     it("can switch to a non-main page", () => {
@@ -911,7 +891,7 @@ describe("App.handleNewSession", () => {
 
     it("works with baseUrlPaths", () => {
       const instance = wrapper.instance() as App
-      // @ts-ignore
+      // @ts-expect-error
       instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("foo")
 
       const newSessionJson = cloneDeep(NEW_SESSION_JSON)
@@ -928,6 +908,44 @@ describe("App.handleNewSession", () => {
         "",
         "/foo/page2"
       )
+    })
+
+    it("doesn't push a duplicated history when rerunning", () => {
+      const instance = wrapper.instance() as App
+      const newSessionJson = cloneDeep(NEW_SESSION_JSON)
+      newSessionJson.appPages = [
+        { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
+        { pageScriptHash: "subpage_hash", pageName: "page2" },
+      ]
+
+      // When running the top page first, a new history for the page is pushed.
+      instance.handleNewSession(
+        new NewSession({ ...newSessionJson, pageScriptHash: "toppage_hash" })
+      )
+      expect(window.history.pushState).toHaveBeenLastCalledWith({}, "", "/")
+      // @ts-expect-error
+      window.history.pushState.mockClear()
+
+      // When running the same, e.g. clicking the "rerun" button,
+      // the history is not pushed again.
+      instance.handleNewSession(
+        new NewSession({ ...newSessionJson, pageScriptHash: "toppage_hash" })
+      )
+      expect(window.history.pushState).not.toHaveBeenCalled()
+      // @ts-expect-error
+      window.history.pushState.mockClear()
+
+      // When accessing a different page, a new history for that page is pushed.
+      instance.handleNewSession(
+        new NewSession({ ...newSessionJson, pageScriptHash: "subpage_hash" })
+      )
+      expect(window.history.pushState).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/page2"
+      )
+      // @ts-expect-error
+      window.history.pushState.mockClear()
     })
   })
 })
@@ -967,14 +985,11 @@ describe("App.handlePageInfoChanged", () => {
     // Setup wrapper and app and spy on window.history.pushState.
     wrapper = shallow<App>(<App {...getProps()} />)
     app = wrapper.instance()
-    pushStateSpy = jest.spyOn(
-      window.history,
-      // @ts-ignore
-      "pushState"
-    )
+    pushStateSpy = jest.spyOn(window.history, "pushState")
   })
 
   afterEach(() => {
+    pushStateSpy.mockRestore()
     // Reset the value of document.location.pathname.
     window.history.pushState({}, "", "/")
   })
@@ -989,7 +1004,6 @@ describe("App.handlePageInfoChanged", () => {
     })
     const expectedUrl = `${pathname}?${pageInfo.queryString}`
 
-    // @ts-ignore
     app.handlePageInfoChanged(pageInfo)
 
     expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
@@ -1004,7 +1018,6 @@ describe("App.handlePageInfoChanged", () => {
       queryString: "",
     })
 
-    // @ts-ignore
     app.handlePageInfoChanged(pageInfo)
 
     expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", pathname)
@@ -1017,8 +1030,6 @@ describe("App.handlePageInfoChanged", () => {
     const pageInfo = new PageInfo({
       queryString: "",
     })
-
-    // @ts-ignore
     app.handlePageInfoChanged(pageInfo)
 
     expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/")
@@ -1032,7 +1043,6 @@ describe("App.handlePageInfoChanged", () => {
       queryString: "flying=spaghetti&monster=omg",
     })
 
-    // @ts-ignore
     app.handlePageInfoChanged(pageInfo)
 
     const expectedUrl = `/?${pageInfo.queryString}`
@@ -1047,9 +1057,9 @@ describe("App.sendRerunBackMsg", () => {
   beforeEach(() => {
     wrapper = shallow(<App {...getProps()} />)
     instance = wrapper.instance() as App
-    // @ts-ignore
+    // @ts-expect-error
     instance.sendBackMsg = jest.fn()
-    // @ts-ignore
+    // @ts-expect-error
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
   })
 
@@ -1060,7 +1070,7 @@ describe("App.sendRerunBackMsg", () => {
   it("sends the pageScriptHash if one is given", () => {
     instance.sendRerunBackMsg(undefined, "some_page_hash")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: {
         pageScriptHash: "some_page_hash",
@@ -1074,7 +1084,7 @@ describe("App.sendRerunBackMsg", () => {
     wrapper.setState({ currentPageScriptHash: "some_other_page_hash" })
     instance.sendRerunBackMsg()
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: {
         pageScriptHash: "some_other_page_hash",
@@ -1087,7 +1097,7 @@ describe("App.sendRerunBackMsg", () => {
   it("extracts the pageName as an empty string if we can't get a pageScriptHash (main page)", () => {
     instance.sendRerunBackMsg()
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: {
         pageScriptHash: "",
@@ -1101,7 +1111,7 @@ describe("App.sendRerunBackMsg", () => {
     window.history.pushState({}, "", "/foo/")
     instance.sendRerunBackMsg()
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: {
         pageScriptHash: "",
@@ -1112,13 +1122,13 @@ describe("App.sendRerunBackMsg", () => {
   })
 
   it("extracts the pageName as the last part of the URL if we can't get a pageScriptHash and we have a nonempty basePath", () => {
-    // @ts-ignore
+    // @ts-expect-error
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts("foo/bar")
 
     window.history.pushState({}, "", "/foo/bar/baz")
     instance.sendRerunBackMsg()
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(instance.sendBackMsg).toHaveBeenCalledWith({
       rerunScript: {
         pageScriptHash: "",
@@ -1139,7 +1149,7 @@ describe("App.handlePageNotFound", () => {
     })
     const instance = wrapper.instance() as App
 
-    // @ts-ignore
+    // @ts-expect-error
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
     instance.showError = jest.fn()
 
@@ -1147,7 +1157,6 @@ describe("App.handlePageNotFound", () => {
       new PageNotFound({ pageName: "nonexistentPage" })
     )
 
-    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
     expect(instance.showError).toHaveBeenCalledWith(
       "Page not found",
       expect.stringMatching("You have requested page /nonexistentPage")
@@ -1167,13 +1176,12 @@ describe("App.handlePageNotFound", () => {
     })
     const instance = wrapper.instance() as App
 
-    // @ts-ignore
+    // @ts-expect-error
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
     instance.showError = jest.fn()
 
     instance.handlePageNotFound(new PageNotFound({ pageName: "" }))
 
-    expect(window.history.pushState).toHaveBeenCalledWith({}, "", "/")
     expect(instance.showError).toHaveBeenCalledWith(
       "Page not found",
       expect.stringMatching(
@@ -1189,15 +1197,21 @@ describe("App.handlePageNotFound", () => {
 })
 
 describe("Test Main Menu shortcut functionality", () => {
+  let prevWindowLocation: Location
   beforeEach(() => {
-    // @ts-ignore
+    prevWindowLocation = window.location
+    // @ts-expect-error
     delete window.location
-    // @ts-ignore
+    // @ts-expect-error
     window.location = {
       assign: jest.fn(),
       host: "testing.com",
       href: "testing.com",
     }
+  })
+
+  afterEach(() => {
+    window.location = prevWindowLocation
   })
 
   it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
@@ -1210,9 +1224,8 @@ describe("Test Main Menu shortcut functionality", () => {
       }),
     })
     const wrapper = shallow<App>(<App {...props} />)
-    wrapper.instance().openClearCacheDialog = jest.fn()
 
-    // @ts-ignore
+    wrapper.instance().openClearCacheDialog = jest.fn()
     wrapper.instance().keyHandlers.CLEAR_CACHE()
 
     expect(wrapper.instance().openClearCacheDialog).not.toBeCalled()
@@ -1221,9 +1234,8 @@ describe("Test Main Menu shortcut functionality", () => {
   it("Tests dev menu shortcuts can be accessed as a developer", () => {
     const props = getProps()
     const wrapper = shallow<App>(<App {...props} />)
-    wrapper.instance().openClearCacheDialog = jest.fn()
 
-    // @ts-ignore
+    wrapper.instance().openClearCacheDialog = jest.fn()
     wrapper.instance().keyHandlers.CLEAR_CACHE()
 
     expect(wrapper.instance().openClearCacheDialog).toBeCalled()

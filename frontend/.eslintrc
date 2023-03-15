@@ -58,8 +58,13 @@
     "@typescript-eslint/explicit-module-boundary-types": "off",
     // Don't warn about unused function params
     "@typescript-eslint/no-unused-vars": [
-      "warn",
-      { "args": "none", "ignoreRestSiblings": true }
+      "error",
+      {
+        "vars": "all",
+        "args": "after-used",
+        "ignoreRestSiblings": false,
+        "argsIgnorePattern": "^_"
+      }
     ],
     // It's safe to use functions before they're defined
     "@typescript-eslint/no-use-before-define": [
@@ -72,10 +77,17 @@
       "warn",
       { "allowExpressions": true }
     ],
-    // It's OK to use ts-ignore when we're missing type definitions
-    // for a JS library.
-    "@typescript-eslint/ban-ts-ignore": "off",
-    "@typescript-eslint/ban-ts-comment": "off",
+    // Disallow the @ts-ignore directive in favor of the more
+    // strict @ts-expect-error.
+    "@typescript-eslint/ban-ts-comment": [
+      "error",
+      {
+        "ts-expect-error": false,
+        "ts-nocheck": false,
+        "ts-check": false,
+        "ts-ignore": true
+      }
+    ],
     // Permit for-of loops (https://stackoverflow.com/a/42237667)
     "no-restricted-syntax": [
       "error",
@@ -115,7 +127,7 @@
       "error",
       { "allowSameFolder": true, "rootDir": "src", "prefix": "src" }
     ],
-    "no-else-return": ["error", {"allowElseIf": false}]
+    "no-else-return": ["error", { "allowElseIf": false }]
   },
   "settings": {
     "react": {
