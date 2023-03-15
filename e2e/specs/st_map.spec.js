@@ -44,7 +44,12 @@ describe("st.map", () => {
 
   it("displays the correct snapshot", () => {
     cy.get(".mapboxgl-canvas")
-    cy.get(".element-container", { waitForAnimations: true }).last().matchThemedSnapshots("stDeckGlJsonChart")
+    cy.wait(10000)
+    cy.get(".element-container", { waitForAnimations: true }).last().matchImageSnapshot("stDeckGlJsonChart")
+
+    cy.changeTheme("Dark")
+    cy.wait(10000)
+    cy.get(".element-container", { waitForAnimations: true }).last().matchImageSnapshot("stDeckGlJsonChart-dark")
   })
 
 });
