@@ -19,6 +19,15 @@ describe("label markdown", () => {
         // Increasing timeout since we are loading a bunch of widgets
         Cypress.config("defaultCommandTimeout", 10000);
 
+        cy.on('uncaught:exception', (err) => {
+            // This error can be safely ignored
+            // https://stackoverflow.com/questions/49384120/resizeobserver-loop-limit-exceeded
+            expect(err.message).to.include('ResizeObserver loop limit exceeded')
+
+            // return false to prevent the error from failing this test
+            return false
+          })
+
         cy.loadApp("http://localhost:3000/");
 
         cy.prepForElementSnapshots();
