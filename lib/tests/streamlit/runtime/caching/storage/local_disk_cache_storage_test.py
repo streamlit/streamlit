@@ -250,7 +250,7 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
         self.assertEqual(os.listdir(self.tempdir.path), [])
 
     def test_storage_clear_missing_directory(self):
-        """Test that storage.clear() not crush if directory not exists."""
+        """Test that storage.clear() not crush if cache directory does not exist."""
         self.tempdir.cleanup()
         self.storage.clear()
 
