@@ -44,9 +44,11 @@ describe("st.map", () => {
 
   it("displays the correct snapshot", () => {
     cy.get(".mapboxgl-canvas")
+    // Adding a sufficient wait to ensure the map fully loads before taking the snapshot
     cy.wait(10000)
     cy.get(".element-container", { waitForAnimations: true }).last().matchImageSnapshot("stDeckGlJsonChart")
 
+    // Need to manually change theme vs. matchThemedSnapshot to be able to add wait in right sequence
     cy.changeTheme("Dark")
     cy.wait(10000)
     cy.get(".element-container", { waitForAnimations: true }).last().matchImageSnapshot("stDeckGlJsonChart-dark")
