@@ -20,6 +20,7 @@ import { FileUploadClient } from "src/lib/FileUploadClient"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { buildHttpUri } from "src/lib/UriUtil"
 import { getCookie } from "src/lib/utils"
+import { mockSessionInfo } from "./mocks/mocks"
 
 const MOCK_SERVER_URI = {
   host: "streamlit.mock",
@@ -37,21 +38,10 @@ describe("FileUploadClient Upload", () => {
 
   beforeEach(() => {
     axiosMock = new MockAdapter(axios)
-    SessionInfo.current = new SessionInfo({
-      appId: "aid",
-      sessionId: "sessionId",
-      streamlitVersion: "sv",
-      pythonVersion: "pv",
-      installationId: "iid",
-      installationIdV3: "iid3",
-      authorEmail: "ae",
-      maxCachedMessageAge: 2,
-      commandLine: "command line",
-      userMapboxToken: "mockUserMapboxToken",
-    })
 
     formsWithPendingRequestsChanged = jest.fn()
     uploader = new FileUploadClient({
+      sessionInfo: mockSessionInfo(),
       getServerUri: () => MOCK_SERVER_URI,
       formsWithPendingRequestsChanged,
       csrfEnabled: true,
@@ -60,7 +50,7 @@ describe("FileUploadClient Upload", () => {
 
   afterEach(() => {
     axiosMock.restore()
-    // @ts-ignore
+    // @ts-expect-error
     SessionInfo.singleton = undefined
   })
 
@@ -83,7 +73,7 @@ describe("FileUploadClient Upload", () => {
         }
 
         if (getCookie("_xsrf")) {
-          // @ts-ignore - TS errors that config.headers is possibly 'undefined`
+          // @ts-expect-error - TS errors that config.headers is possibly 'undefined`
           if (!("X-Xsrftoken" in config.headers)) {
             return [403]
           }

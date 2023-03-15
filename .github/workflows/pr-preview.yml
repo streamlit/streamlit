@@ -149,4 +149,4 @@ jobs:
         env:
           PREVIEW_BRANCH: ${{ needs.upload-whl.outputs.preview-branch }}
         run: |
-          echo -e "https://share.streamlit.io/deploy?repository=streamlit/core-previews&branch=${PREVIEW_BRANCH}&mainModule=streamlit_app.py"
+          echo -e "https://share.streamlit.io/deploy?repository=streamlit/core-previews&branch=${PREVIEW_BRANCH}&mainModule=E2E_Tester_🧪.py"

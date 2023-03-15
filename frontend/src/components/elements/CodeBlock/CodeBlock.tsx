@@ -14,61 +14,12 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, FunctionComponent } from "react"
-import { ReactMarkdownProps } from "react-markdown/lib/ast-to-react"
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
-
-import CopyButton from "./CopyButton"
-import {
-  StyledPre,
-  StyledCodeBlock,
-  StyledCopyButtonContainer,
-} from "./styled-components"
-
-export type CodeTagProps = JSX.IntrinsicElements["code"] &
-  ReactMarkdownProps & { inline?: boolean }
+import React, { ReactElement, ReactNode } from "react"
+import { StyledCodeBlock } from "./styled-components"
 
 export interface CodeBlockProps {
   node?: ReactNode
   children: ReactNode
-}
-
-/**
- * Renders code tag with highlighting based on requested language.
- */
-export const CodeTag: FunctionComponent<CodeTagProps> = ({
-  node,
-  inline,
-  className,
-  children,
-  ...props
-}) => {
-  const match = /language-(\w+)/.exec(className || "")
-  const codeText = String(children).trim().replace(/\n$/, "")
-
-  return !inline ? (
-    <>
-      {codeText && (
-        <StyledCopyButtonContainer>
-          <CopyButton text={codeText} />
-        </StyledCopyButtonContainer>
-      )}
-      <StyledPre>
-        <SyntaxHighlighter
-          language={(match && match[1]) || ""}
-          PreTag="div"
-          customStyle={{ backgroundColor: "transparent" }}
-          style={{}}
-        >
-          {codeText}
-        </SyntaxHighlighter>
-      </StyledPre>
-    </>
-  ) : (
-    <code className={className} {...props}>
-      {children}
-    </code>
-  )
 }
 
 /**

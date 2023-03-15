@@ -20,16 +20,28 @@ import { MapboxToken } from "src/hocs/withMapboxToken/MapboxToken"
 import { ensureError } from "src/lib/ErrorHandling"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"
+import { SessionInfo } from "src/lib/SessionInfo"
 import MapboxTokenError from "./MapboxTokenError"
 
-interface Props {
-  width: number
+interface InjectedProps {
+  mapboxToken: string
 }
 
 interface State {
   mapboxToken?: string
   mapboxTokenError?: Error
   isFetching: boolean
+}
+
+// We consume a Component that takes a "mapboxToken" prop, and create
+// a wrapped Component that takes a "sessionInfo" prop, and omits
+// the "mapboxToken" prop
+export type WrappedMapboxProps<P extends InjectedProps> = Omit<
+  P,
+  "mapboxToken"
+> & {
+  sessionInfo: SessionInfo
+  width: number
 }
 
 /**
@@ -42,13 +54,16 @@ interface State {
 
 const withMapboxToken =
   (deltaType: string) =>
-  (WrappedComponent: ComponentType<any>): ComponentType<any> => {
-    class WithMapboxToken extends PureComponent<Props, State> {
+  <P extends InjectedProps>(WrappedComponent: ComponentType<P>) => {
+    // Return a wrapper that accepts the wrapped component's props, minus
+    // "mapboxToken". The wrapper will fetch the mapboxToken and inject it into
+    // the wrapped component automatically.
+    class WithMapboxToken extends PureComponent<WrappedMapboxProps<P>, State> {
       public static readonly displayName = `withMapboxToken(${
         WrappedComponent.displayName || WrappedComponent.name
       })`
 
-      public constructor(props: Props) {
+      public constructor(props: WrappedMapboxProps<P>) {
         super(props)
 
         this.state = {
@@ -65,7 +80,7 @@ const withMapboxToken =
        */
       private initMapboxToken = async (): Promise<void> => {
         try {
-          const mapboxToken = await MapboxToken.get()
+          const mapboxToken = await MapboxToken.get(this.props.sessionInfo)
 
           this.setState({
             mapboxToken,
@@ -81,7 +96,7 @@ const withMapboxToken =
         }
       }
 
-      public render(): ReactNode {
+      public render = (): ReactNode => {
         const { mapboxToken, mapboxTokenError, isFetching } = this.state
         const { width } = this.props
 
@@ -102,7 +117,15 @@ const withMapboxToken =
         }
 
         // We have the mapbox token. Pass it through to our component.
-        return <WrappedComponent mapboxToken={mapboxToken} {...this.props} />
+        return (
+          // (this.props as unknown as P) is required to work around a TS issue:
+          // https://github.com/microsoft/TypeScript/issues/28938#issuecomment-450636046
+          <WrappedComponent
+            {...(this.props as unknown as P)}
+            mapboxToken={mapboxToken}
+            width={width}
+          />
+        )
       }
     }
 

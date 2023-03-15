@@ -1,6 +1,6 @@
 {
   "name": "streamlit-browser",
-  "version": "1.19.0",
+  "version": "1.20.0",
   "private": true,
   "homepage": "./",
   "scripts": {
@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@deck.gl/core": "^8.8.23",
-    "@deck.gl/json": "^8.8.23",
+    "@deck.gl/json": "^8.8.24",
     "@emotion-icons/emotion-icon": "^4.1.0",
     "@emotion-icons/material-outlined": "^3.14.0",
     "@emotion-icons/material-rounded": "^3.14.0",
@@ -61,7 +61,7 @@
     "d3-graphviz": "^2.6.1",
     "decamelize": "^4.0.0",
     "deck.gl": "^8.8.23",
-    "dompurify": "^2.4.3",
+    "dompurify": "^2.4.4",
     "fzy.js": "^0.4.1",
     "gl-matrix": "^3.2.1",
     "hoist-non-react-statics": "^3.3.2",
@@ -115,10 +115,10 @@
     "styletron-react": "^6.1.0",
     "typed-signals": "^2.5.0",
     "unist-util-visit": "^4.1.2",
-    "vega": "^5.22.1",
-    "vega-embed": "^6.21.0",
+    "vega": "^5.23.0",
+    "vega-embed": "^6.21.2",
     "vega-interpreter": "^1.0.4",
-    "vega-lite": "^5.6.0",
+    "vega-lite": "^5.6.1",
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
@@ -204,7 +204,7 @@
     "timezone-mock": "^1.3.6",
     "typescript": "^4.9.5",
     "util": "^0.12.5",
-    "webpack": "5.75.0"
+    "webpack": "5.76.0"
   },
   "resolutions": {
     "@types/html-minifier-terser": "^7.0.0",

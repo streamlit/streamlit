@@ -498,7 +498,7 @@ class ScriptRunner:
             ip = user.get("ip", "unknown ip")
             _LOGGER.info(f"{email} [{ip}] access script {script_path}")
 
-            code = compile(
+            code = compile(  # type: ignore
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
                 script_path,

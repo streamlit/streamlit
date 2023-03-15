@@ -58,7 +58,9 @@ function Tooltip({
     <StatefulTooltip
       content={
         content ? (
-          <StyledTooltipContentWrapper>{content}</StyledTooltipContentWrapper>
+          <StyledTooltipContentWrapper className="stTooltipContent">
+            {content}
+          </StyledTooltipContentWrapper>
         ) : null
       }
       placement={PLACEMENT[placement]}

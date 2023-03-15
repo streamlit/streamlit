@@ -87,7 +87,7 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
       formsDataChanged: jest.fn(),
     }),
     mockServerFileIdCounter: 1,
-    // @ts-ignore
+    // @ts-expect-error
     uploadClient: {
       uploadFile: jest.fn().mockImplementation(() => {
         // Mock UploadClient to return an incremented ID for each upload.
@@ -391,7 +391,6 @@ describe("FileUploader widget", () => {
     )
 
     // Delete the first file
-    // @ts-ignore
     instance.deleteFile(initialFiles[0].id)
 
     await process.nextTick
@@ -556,7 +555,7 @@ describe("FileUploader widget", () => {
   it("resets on disconnect", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
-    // @ts-ignore
+    // @ts-expect-error
     const resetSpy = jest.spyOn(wrapper.instance(), "reset")
     wrapper.setProps({ disabled: true })
     expect(resetSpy).toBeCalled()

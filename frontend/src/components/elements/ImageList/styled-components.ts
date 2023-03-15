@@ -24,7 +24,7 @@ export const StyledImageList = styled.div(({ theme }) => ({
   rowGap: theme.spacing.lg,
 }))
 
-export const StyledImageContainer = styled.div(({ theme }) => ({
+export const StyledImageContainer = styled.div(() => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",

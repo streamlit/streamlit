@@ -30,6 +30,9 @@ message Markdown {
     CAPTION = 2;
     CODE = 3;
     LATEX = 4;
+    DIVIDER = 5;
   }
   Type element_type = 4;
+
+  string help = 5;
 }
