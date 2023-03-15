@@ -13,13 +13,13 @@
 # limitations under the License.
 from __future__ import annotations
 
-import dataclasses
 from abc import ABC
 from dataclasses import dataclass, field
 from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
 from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
 
+from streamlit import util
 from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.select_slider import SelectSliderSerde
 from streamlit.elements.slider import SliderScalar, SliderScalarT, SliderSerde, Step
@@ -40,25 +40,6 @@ from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import user_key_from_widget_id
 from streamlit.runtime.state.session_state import SessionState
-
-
-def clean_repr(self):
-    """A dataclass repr that excludes default values from protobuf fields that are
-    likely to be meaningless, or are explicitly using defaults from the dataclass.
-    """
-    # This is similar to the notion of Falsey values, except for ints and floats,
-    # which usually have semantic meaning for 0 values.
-    defaults: list[Any] = [None, "", False, [], set(), dict()]
-    fields_vals = (
-        (f.name, getattr(self, f.name))
-        for f in dataclasses.fields(self)
-        if f.repr
-        and getattr(self, f.name) != f.default
-        and getattr(self, f.name) not in defaults
-    )
-
-    field_reprs = ", ".join(f"{name}={value!r}" for name, value in fields_vals)
-    return f"{self.__class__.__name__}({field_reprs})"
 
 
 # TODO This class serves as a fallback option for elements that have not
@@ -106,7 +87,7 @@ class Element:
         return self.root.run()
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -127,7 +108,7 @@ class Text(Element):
         return self.proto.body
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -153,7 +134,7 @@ class HeadingBase(Element, ABC):
         return self.proto.body
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -162,7 +143,7 @@ class Title(HeadingBase):
         super().__init__(proto, root, "title")
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -171,7 +152,7 @@ class Header(HeadingBase):
         super().__init__(proto, root, "header")
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -180,7 +161,7 @@ class Subheader(HeadingBase):
         super().__init__(proto, root, "subheader")
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -206,7 +187,7 @@ class Markdown(Element):
         return self.proto.body
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -216,7 +197,7 @@ class Caption(Markdown):
         self.type = "caption"
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -226,7 +207,7 @@ class Latex(Markdown):
         self.type = "latex"
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -252,7 +233,7 @@ class Code(Element):
         return self.proto.code_text
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass
@@ -275,7 +256,7 @@ class Exception(Element):
         self.is_warning = proto.is_warning
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
     @property
     def value(self) -> str:
@@ -355,7 +336,7 @@ class Radio(Element, Widget, Generic[T]):
         return ws
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -412,7 +393,7 @@ class Checkbox(Element, Widget):
         return self.set_value(False)
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -504,7 +485,7 @@ class Multiselect(Element, Widget, Generic[T]):
             return self
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -580,7 +561,7 @@ class Selectbox(Element, Widget, Generic[T]):
         return ws
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -634,7 +615,7 @@ class Button(Element, Widget):
         return self.set_value(True)
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -706,7 +687,7 @@ class Slider(Element, Widget, Generic[SliderScalarT]):
         return self.set_value([lower, upper])
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -769,7 +750,7 @@ class SelectSlider(Element, Widget, Generic[T]):
         return self.set_value([lower, upper])
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 @dataclass(init=False)
@@ -897,7 +878,7 @@ class Block:
         return self.root.run()
 
     def __repr__(self):
-        return clean_repr(self)
+        return util.repr_(self)
 
 
 Node: TypeAlias = Union[Element, Block]
