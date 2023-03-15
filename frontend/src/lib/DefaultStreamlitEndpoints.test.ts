@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { BaseUriParts } from "src/lib/UriUtil"
+import axios from "axios"
+import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
 const MOCK_SERVER_URI = {
@@ -48,5 +49,48 @@ describe("DefaultStreamlitEndpoints", () => {
     expect(endpoint.buildComponentURL("bar", "index.html")).toEqual(
       "http://streamlit.mock:80/component/bar/index.html"
     )
+  })
+
+  describe("csrfRequest() API", () => {
+    const spyRequest = jest.spyOn(axios, "request")
+    let prevDocumentCookie: string
+
+    beforeEach(() => {
+      prevDocumentCookie = document.cookie
+      document.cookie = "_xsrf=mockXsrfCookie;"
+    })
+
+    afterEach(() => {
+      document.cookie = prevDocumentCookie
+    })
+
+    test("sets token when csrfEnabled: true", () => {
+      const endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: true,
+      })
+
+      // @ts-expect-error
+      endpoints.csrfRequest("mockUrl", {})
+
+      expect(spyRequest).toHaveBeenCalledWith({
+        headers: { "X-Xsrftoken": "mockXsrfCookie" },
+        withCredentials: true,
+        url: buildHttpUri(MOCK_SERVER_URI, "mockUrl"),
+      })
+    })
+
+    test("omits token when csrfEnabled: false", () => {
+      const endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: false,
+      })
+
+      // @ts-expect-error
+      endpoints.csrfRequest("mockUrl", {})
+      expect(spyRequest).toHaveBeenCalledWith({
+        url: buildHttpUri(MOCK_SERVER_URI, "mockUrl"),
+      })
+    })
   })
 })
