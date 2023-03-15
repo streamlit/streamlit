@@ -14,6 +14,8 @@
 
 """A bunch of useful utilities."""
 
+from __future__ import annotations
+
 import dataclasses
 import functools
 import hashlib
@@ -104,7 +106,7 @@ def _maybe_tuple_to_list(item: Any) -> Any:
     return item
 
 
-def repr_(self):
+def repr_(self: Any) -> str:
     classname = self.__class__.__name__
     defaults: list[Any] = [None, "", False, [], set(), dict()]
     if dataclasses.is_dataclass(self):
