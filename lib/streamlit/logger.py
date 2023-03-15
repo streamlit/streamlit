@@ -14,7 +14,6 @@
 
 """Logging module."""
 
-from datetime import datetime
 import logging
 import sys
 from typing import Dict, Union
@@ -66,6 +65,7 @@ class StreamlitRemoteFormatter(fluent_sync.FluentRecordFormatter):
         data = super(StreamlitRemoteFormatter, self).format(record)
         streamlit_context = {}
         from streamlit.runtime.scriptrunner import maybe_get_script_run_ctx
+
         ctx, thread_name = maybe_get_script_run_ctx()
         streamlit_context["session_id"] = ctx.session_id if ctx else None
         streamlit_context["thread_name"] = thread_name
@@ -97,9 +97,8 @@ def setup_formatter(logger: logging.Logger) -> None:
         fluent_port = config.get_option("logger.remotePort")
         if fluent_tag and fluent_host and fluent_port:
             fluent_handler = fluent_async.FluentHandler(
-                fluent_tag,
-                host=fluent_host,
-                port=int(fluent_port))
+                fluent_tag, host=fluent_host, port=int(fluent_port)
+            )
             fluent_record_formatter = StreamlitRemoteFormatter()
             fluent_handler.setFormatter(fluent_record_formatter)
             logger.addHandler(fluent_handler)
@@ -107,7 +106,9 @@ def setup_formatter(logger: logging.Logger) -> None:
         message_format = DEFAULT_LOG_MESSAGE
     formatter = logging.Formatter(fmt=message_format)
     formatter.default_msec_format = "%s.%03d"
-    logger.streamlit_console_handler.setFormatter(formatter)  # type: ignore[attr-defined]
+    logger.streamlit_console_handler.setFormatter(
+        formatter
+    )  # type: ignore[attr-defined]
 
     # Register the new console logger.
     logger.addHandler(logger.streamlit_console_handler)  # type: ignore[attr-defined]
