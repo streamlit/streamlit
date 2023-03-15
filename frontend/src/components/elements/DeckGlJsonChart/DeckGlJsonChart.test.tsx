@@ -89,14 +89,14 @@ describe("DeckGlJsonChart element", () => {
     expect(deckGL.length).toBe(1)
     expect(deckGL.prop("onViewStateChange")).toBeDefined()
 
-    // @ts-ignore
+    // @ts-expect-error
     deckGL.prop("onViewStateChange")({
       viewState: { pitch: 5, zoom: 5 },
     })
 
+    // @ts-expect-error
     wrapper.setProps(getProps({}, { pitch: 40.5, zoom: 10 }))
 
-    // @ts-ignore
     expect(wrapper.state("viewState")).toStrictEqual({
       pitch: 5,
       zoom: 10,
@@ -113,7 +113,7 @@ describe("DeckGlJsonChart element", () => {
     expect(deckGL.length).toBe(1)
     expect(deckGL.prop("getTooltip")).toBeDefined()
 
-    // @ts-ignore
+    // @ts-expect-error
     const createdTooltip = deckGL.prop("getTooltip")({
       object: {
         elevationValue: 10,
@@ -133,7 +133,7 @@ describe("DeckGlJsonChart element", () => {
     expect(deckGL.length).toBe(1)
     expect(deckGL.prop("getTooltip")).toBeDefined()
 
-    // @ts-ignore
+    // @ts-expect-error
     const createdTooltip = deckGL.prop("getTooltip")({
       object: {
         elevationValue: 10,

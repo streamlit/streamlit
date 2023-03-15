@@ -34,7 +34,6 @@ describe("withExpandable HOC", () => {
   it("renders without crashing", () => {
     const props = getProps()
     const WithHoc = withExpandable(testComponent)
-    // @ts-ignore
     const wrapper = mount(<WithHoc {...props} />)
     expect(wrapper.find(StatelessAccordion).exists()).toBe(true)
   })
@@ -42,7 +41,6 @@ describe("withExpandable HOC", () => {
   it("renders expander label as expected", () => {
     const props = getProps()
     const WithHoc = withExpandable(testComponent)
-    // @ts-ignore
     const wrapper = mount(<WithHoc {...props} />)
     const wrappedExpandLabel = wrapper.find(StreamlitMarkdown)
 
@@ -53,7 +51,6 @@ describe("withExpandable HOC", () => {
   it("should render a expanded component", () => {
     const props = getProps()
     const WithHoc = withExpandable(testComponent)
-    // @ts-ignore
     const wrapper = mount(<WithHoc {...props} />)
     const accordion = wrapper.find(StatelessAccordion)
 
@@ -65,7 +62,6 @@ describe("withExpandable HOC", () => {
       expanded: false,
     })
     const WithHoc = withExpandable(testComponent)
-    // @ts-ignore
     const wrapper = mount(<WithHoc {...props} />)
     const accordion = wrapper.find(StatelessAccordion)
 
@@ -77,12 +73,11 @@ describe("withExpandable HOC", () => {
       isStale: true,
     })
     const WithHoc = withExpandable(testComponent)
-    // @ts-ignore
     const wrapper = mount(<WithHoc {...props} />)
     const accordion = wrapper.find(StatelessAccordion)
     const overrides = accordion.prop("overrides")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(overrides.Header.props.isStale).toBeTruthy()
   })
 })

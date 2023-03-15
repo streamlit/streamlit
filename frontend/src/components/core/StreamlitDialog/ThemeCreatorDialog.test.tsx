@@ -241,7 +241,7 @@ describe("Opened ThemeCreatorDialog", () => {
     // thrown off by us mocking `useContext` above :(
     const updateCopied = jest.fn()
     const useStateSpy = jest.spyOn(React, "useState")
-    // @ts-ignore
+    // @ts-expect-error
     useStateSpy.mockImplementation(init => [init, updateCopied])
 
     const props = getProps()

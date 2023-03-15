@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-// Disable Typescript checking, since mm.track and identify have private scope
-// @ts-nocheck
+import { mockSessionInfo } from "./mocks/mocks"
+import { SessionInfo } from "./SessionInfo"
+
 // This file is only used in tests, so these imports can be in devDependencies
 /* eslint-disable import/no-extraneous-dependencies */
-import { MetricsManager } from "./MetricsManager"
+import { SegmentMetricsManager } from "./SegmentMetricsManager"
 
-export function getMetricsManagerForTest(): MetricsManager {
-  const mm = new MetricsManager()
+export function getMetricsManagerForTest(
+  sessionInfo?: SessionInfo
+): SegmentMetricsManager {
+  const mm = new SegmentMetricsManager(sessionInfo || mockSessionInfo())
+  // @ts-expect-error
   mm.track = jest.fn()
+  // @ts-expect-error
   mm.identify = jest.fn()
   return mm
 }
