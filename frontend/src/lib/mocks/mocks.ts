@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { CancelToken } from "axios"
 import { Props as SessionInfoProps, SessionInfo } from "src/lib/SessionInfo"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
@@ -51,15 +50,7 @@ const MOCK_ENDPOINTS: StreamlitEndpoints = {
     return `http://streamlit.mock:80/component/${componentName}/${path}`
   },
 
-  uploadFileUploaderFile(
-    _file: File,
-    _widgetId: string,
-    _sessionId: string,
-    _onUploadProgress?: (progressEvent: any) => void,
-    _cancelToken?: CancelToken
-  ): Promise<number> {
-    return Promise.reject()
-  },
+  uploadFileUploaderFile: jest.fn().mockResolvedValue(1),
 }
 
 /** Return a mock Endpoints implementation. */

@@ -14,77 +14,32 @@
  * limitations under the License.
  */
 
-import axios, { AxiosRequestConfig } from "axios"
-import MockAdapter from "axios-mock-adapter"
 import { FileUploadClient } from "src/lib/FileUploadClient"
-import { buildHttpUri } from "src/lib/UriUtil"
-import { getCookie } from "src/lib/utils"
 import { mockSessionInfo } from "./mocks/mocks"
-
-const MOCK_SERVER_URI = {
-  host: "streamlit.mock",
-  port: 80,
-  basePath: "",
-}
 
 const MOCK_FILE_ID = -111
 const MOCK_FILE = new File(["file1"], "file1.txt")
 
 describe("FileUploadClient Upload", () => {
-  let axiosMock: MockAdapter
   let formsWithPendingRequestsChanged: jest.Mock
+  let uploadFileUploaderFile: jest.Mock
   let uploader: FileUploadClient
 
   beforeEach(() => {
-    axiosMock = new MockAdapter(axios)
-
     formsWithPendingRequestsChanged = jest.fn()
+    uploadFileUploaderFile = jest.fn()
     uploader = new FileUploadClient({
       sessionInfo: mockSessionInfo(),
-      getServerUri: () => MOCK_SERVER_URI,
+      endpoints: {
+        buildComponentURL: jest.fn(),
+        uploadFileUploaderFile: uploadFileUploaderFile,
+      },
       formsWithPendingRequestsChanged,
-      csrfEnabled: true,
     })
   })
 
-  afterEach(() => {
-    axiosMock.restore()
-  })
-
-  function mockUploadResponseStatus(status: number): void {
-    axiosMock
-      .onPost(buildHttpUri(MOCK_SERVER_URI, "_stcore/upload_file"))
-      .reply((config: AxiosRequestConfig): any[] => {
-        if (status !== 200) {
-          return [status]
-        }
-
-        // Validate that widgetId and sessionId are present on
-        // outgoing requests.
-        const data = config.data as FormData
-        if (data.get("widgetId") == null) {
-          return [400]
-        }
-        if (data.get("sessionId") == null) {
-          return [400]
-        }
-
-        if (getCookie("_xsrf")) {
-          // @ts-expect-error - TS errors that config.headers is possibly 'undefined`
-          if (!("X-Xsrftoken" in config.headers)) {
-            return [403]
-          }
-          if (!("withCredentials" in config)) {
-            return [403]
-          }
-        }
-
-        return [status, MOCK_FILE_ID]
-      })
-  }
-
   it("uploads files outside a form", async () => {
-    mockUploadResponseStatus(200)
+    uploadFileUploaderFile.mockResolvedValue(MOCK_FILE_ID)
 
     await expect(
       uploader.uploadFile({ id: "widgetId", formId: "" }, MOCK_FILE)
@@ -94,7 +49,7 @@ describe("FileUploadClient Upload", () => {
   })
 
   it("uploads files inside a form", async () => {
-    mockUploadResponseStatus(200)
+    uploadFileUploaderFile.mockResolvedValue(MOCK_FILE_ID)
 
     // Upload a file with an attached form ID.
     const uploadFilePromise = uploader.uploadFile(
@@ -119,17 +74,17 @@ describe("FileUploadClient Upload", () => {
   })
 
   it("handles errors outside a form", async () => {
-    mockUploadResponseStatus(400)
+    uploadFileUploaderFile.mockRejectedValue(new Error("oh no!"))
 
     await expect(
       uploader.uploadFile({ id: "widgetId", formId: "" }, MOCK_FILE)
-    ).rejects.toEqual(new Error("Request failed with status code 400"))
+    ).rejects.toEqual(new Error("oh no!"))
 
     expect(formsWithPendingRequestsChanged).not.toHaveBeenCalled()
   })
 
   it("handles errors inside a form", async () => {
-    mockUploadResponseStatus(400)
+    uploadFileUploaderFile.mockRejectedValue(new Error("oh no!"))
 
     // Upload a file with an attached form ID.
     const uploadFilePromise = uploader.uploadFile(
