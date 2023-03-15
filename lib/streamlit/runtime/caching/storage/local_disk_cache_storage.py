@@ -30,7 +30,7 @@ responsibility to check if the context is valid for the storage, and to log warn
 if the context is not valid.
 
 - LocalDiskCacheStorage : each instance of this is able to get, set, delete, and clear
-entries from disk for a single @st.cache_data decorated function if `persist="disk"`
+entries from disk for a single `@st.cache_data` decorated function if `persist="disk"`
 is used in CacheStorageContext.
 
 
@@ -116,7 +116,7 @@ class LocalDiskCacheStorageManager(CacheStorageManager):
 
 class LocalDiskCacheStorage(CacheStorage):
     """Cache storage that persists data to disk
-    This is the default cache persistence layer for @st.cache_data
+    This is the default cache persistence layer for `@st.cache_data`
     """
 
     def __init__(self, context: CacheStorageContext):
