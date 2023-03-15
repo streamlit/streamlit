@@ -40,7 +40,7 @@ import {
 } from "./styled-components"
 import { UserSettings } from "./UserSettings"
 
-export interface Props {
+export interface SettingsDialogProps {
   isServerConnected: boolean
   onClose: () => void
   onSave: (settings: UserSettings) => void
@@ -54,12 +54,15 @@ export interface Props {
 /**
  * Implements a dialog that is used to configure user settings.
  */
-export class SettingsDialog extends PureComponent<Props, UserSettings> {
+export class SettingsDialog extends PureComponent<
+  SettingsDialogProps,
+  UserSettings
+> {
   private activeSettings: UserSettings
 
   static contextType = AppContext
 
-  constructor(props: Props) {
+  constructor(props: SettingsDialogProps) {
     super(props)
     // Holds the settings that will be saved when the "save" button is clicked.
     this.state = { ...this.props.settings }

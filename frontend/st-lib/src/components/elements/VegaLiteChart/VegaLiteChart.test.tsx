@@ -155,7 +155,7 @@ describe("VegaLiteChart Element", () => {
       )
 
       expect(
-        dataIsAnAppendOfPrev( 
+        dataIsAnAppendOfPrev(
           // @ts-ignore
           prevData as ImmutableMap<string, number>,
           prevNumRows,

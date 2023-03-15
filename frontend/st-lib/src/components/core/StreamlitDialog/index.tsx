@@ -15,3 +15,7 @@
  */
 
 export * from "./StreamlitDialog"
+export * from "./ScriptChangedDialog"
+export * from "./SettingsDialog"
+export * from "./ThemeCreatorDialog"
+export * from "./UserSettings"

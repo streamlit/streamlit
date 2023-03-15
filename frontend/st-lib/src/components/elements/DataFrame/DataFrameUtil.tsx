@@ -15,7 +15,7 @@
  */
 
 import {
-  DataFrameCellType,
+  DataFrameProtoCellType,
   dataFrameGet,
   dataFrameGetDimensions,
 } from "src/lib/dataFrameProto"
@@ -164,7 +164,7 @@ export const getDimensions = (
   }
 }
 
-const typeToStyledComponent: Record<DataFrameCellType, ComponentType> = {
+const typeToStyledComponent: Record<DataFrameProtoCellType, ComponentType> = {
   corner: StyledDataFrameCornerCell,
   "col-header": StyledDataFrameColHeaderCell,
   "row-header": StyledDataFrameRowHeaderCell,

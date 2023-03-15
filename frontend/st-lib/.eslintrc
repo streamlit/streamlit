@@ -35,6 +35,8 @@
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
   "rules": {
+    // ignore @deck.gl/layers, @deck.gl/geo-layers, @deck.gl/aggregation-layers, @deck.gl/mesh-layers, react errors
+    "import/no-extraneous-dependencies": "off",
     // Use `const` or `let` instead of `var`
     "no-var": "error",
     // We don't use PropTypes

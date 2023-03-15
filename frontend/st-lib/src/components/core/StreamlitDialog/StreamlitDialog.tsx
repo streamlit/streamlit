@@ -26,13 +26,16 @@ import { HotKeys } from "react-hotkeys"
 
 import {
   ScriptChangedDialog,
-  Props as ScriptChangedDialogProps,
+  ScriptChangedDialogProps,
 } from "src/components/core/StreamlitDialog/ScriptChangedDialog"
 import { IException } from "src/autogen/proto"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { STREAMLIT_HOME_URL } from "src/urls"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
-import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
+import {
+  SettingsDialogProps as SettingsDialogProps,
+  SettingsDialog,
+} from "./SettingsDialog"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
 } from "./ThemeCreatorDialog"

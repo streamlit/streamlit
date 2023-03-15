@@ -15,4 +15,3 @@
  */
 export { Small, Kind } from "./Text"
 export type { TextProps } from "./Text"
-

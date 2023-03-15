@@ -184,11 +184,15 @@ export function dataFrameToArrayOfDicts(df: any): { [key: string]: any } {
   return dataArr
 }
 
-export type DataFrameCellType = "corner" | "col-header" | "row-header" | "data"
-export interface DataFrameCell {
+export type DataFrameProtoCellType =
+  | "corner"
+  | "col-header"
+  | "row-header"
+  | "data"
+interface DataFrameProtoCell {
   contents: any
   styles: any
-  type: DataFrameCellType
+  type: DataFrameProtoCellType
 }
 
 /**
@@ -200,7 +204,7 @@ export interface DataFrameCell {
  *  type: 'corner' | 'row-header' | 'col-header' | 'data'
  * }
  */
-export function dataFrameGet(df: any, col: any, row: any): DataFrameCell {
+export function dataFrameGet(df: any, col: any, row: any): DataFrameProtoCell {
   const { headerRows, headerCols, dataRows } = dataFrameGetDimensions(df)
 
   if (col < headerCols) {

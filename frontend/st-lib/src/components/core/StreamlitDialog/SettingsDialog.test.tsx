@@ -21,7 +21,7 @@ import { shallow } from "src/lib/test_util"
 import { Props as ContextProps } from "src/components/core/AppContext"
 import UISelectbox from "src/components/shared/Dropdown"
 
-import { SettingsDialog, Props } from "./SettingsDialog"
+import { SettingsDialog, SettingsDialogProps } from "./SettingsDialog"
 
 const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()
@@ -46,7 +46,9 @@ SettingsDialog.contextTypes = {
   addThemes: PropTypes.func,
 }
 
-const getProps = (extend?: Partial<Props>): Props => ({
+const getProps = (
+  extend?: Partial<SettingsDialogProps>
+): SettingsDialogProps => ({
   isServerConnected: true,
   onClose: jest.fn(),
   onSave: jest.fn(),

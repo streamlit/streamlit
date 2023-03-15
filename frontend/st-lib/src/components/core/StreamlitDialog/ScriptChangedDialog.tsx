@@ -25,7 +25,7 @@ import Modal, {
 import { Kind } from "src/components/shared/Button"
 import { StyledShortcutLabel } from "./styled-components"
 
-export interface Props {
+export interface ScriptChangedDialogProps {
   /** Called to close the dialog without rerunning the script. */
   onClose: () => void
 
@@ -39,12 +39,12 @@ export interface Props {
   allowRunOnSave: boolean
 }
 
-export class ScriptChangedDialog extends PureComponent<Props> {
+export class ScriptChangedDialog extends PureComponent<ScriptChangedDialogProps> {
   private readonly keyHandlers: {
     [key: string]: (keyEvent?: KeyboardEvent) => void
   }
 
-  constructor(props: Props) {
+  constructor(props: ScriptChangedDialogProps) {
     super(props)
 
     this.keyHandlers = {

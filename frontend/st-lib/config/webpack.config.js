@@ -39,6 +39,7 @@ const ForkTsCheckerWebpackPlugin =
     ? require("react-dev-utils/ForkTsCheckerWarningWebpackPlugin")
     : require("react-dev-utils/ForkTsCheckerWebpackPlugin")
 const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin")
+const CircularDependencyPlugin = require('circular-dependency-plugin')
 
 const createEnvironmentHash = require("./webpack/persistentCache/createEnvironmentHash")
 
@@ -210,6 +211,18 @@ module.exports = function (webpackEnv) {
     externals: {
       'react': 'react', // Case matters here 
       'react-dom' : 'reactDOM', // Case matters here 
+      'highlight.js': 'hljs',
+      'h3-js': 'h3',
+      'deck.gl': 'deck',
+      '@deck.gl/aggregation-layers': 'deck',
+      '@deck.gl/core': 'deck',
+      '@deck.gl/extensions': 'deck',
+      '@deck.gl/geo-layers': 'deck',
+      '@deck.gl/layers': 'deck',
+      '@deck.gl/mesh-layers': 'deck',
+      '@loaders.gl/core': 'loaders',
+      '@luma.gl/core': 'luma',
+      'mapbox-gl': 'mapboxgl'
      },
     externalsType: "import",
     cache: {
