@@ -53,7 +53,7 @@ const getProps = (
 
 describe("GraphVizChart Element", () => {
   beforeEach(() => {
-    // @ts-ignore
+    // @ts-expect-error
     logError.mockClear()
   })
 
@@ -72,7 +72,7 @@ describe("GraphVizChart Element", () => {
     })
     const wrapper = mount(<GraphVizChart {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     logError.mockClear()
 
     wrapper.setProps({

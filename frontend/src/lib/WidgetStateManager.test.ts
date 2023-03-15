@@ -147,7 +147,7 @@ describe("Widget State Manager", () => {
   it("sets trigger value correctly", () => {
     const widget = getWidget({ insideForm: false })
     widgetMgr.setTriggerValue(widget, { fromUi: true })
-    // @ts-ignore
+    // @ts-expect-error
     expect(widgetMgr.getWidgetState(widget)).toBe(undefined)
     assertCallbacks({ insideForm: false })
   })

@@ -126,7 +126,6 @@ export interface StyledVerticalBlockProps {
 }
 
 export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
-  // @ts-ignore
   ({ width, theme }) => ({
     width,
     position: "relative", // Required for the automatic width computation.

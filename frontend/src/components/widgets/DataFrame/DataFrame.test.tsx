@@ -51,7 +51,7 @@ describe("DataFrame widget", () => {
   beforeEach(() => {
     // Mocking ResizeObserver to prevent:
     // TypeError: window.ResizeObserver is not a constructor
-    // @ts-ignore
+    // @ts-expect-error
     delete window.ResizeObserver
     window.ResizeObserver = jest.fn().mockImplementation(() => ({
       observe: jest.fn(),
