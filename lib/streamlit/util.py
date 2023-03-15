@@ -107,7 +107,12 @@ def _maybe_tuple_to_list(item: Any) -> Any:
 
 
 def repr_(self: Any) -> str:
+    """A clean repr for a class, excluding both values that are likely defaults,
+    and those explicitly default for dataclasses.
+    """
     classname = self.__class__.__name__
+    # Most of the falsey value, but excluding 0 and 0.0, since those often have
+    # semantic meaning within streamlit.
     defaults: list[Any] = [None, "", False, [], set(), dict()]
     if dataclasses.is_dataclass(self):
         fields_vals = (
