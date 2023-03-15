@@ -30,6 +30,13 @@
 // ***********************************************************
 
 import "./commands"
+const dayjs = require("dayjs")
+const utc = require("dayjs/plugin/utc")
+const timezone = require("dayjs/plugin/timezone")
+dayjs.extend(utc)
+dayjs.extend(timezone)
+
+Cypress.dayjs = dayjs
 
 // Thiago has anti-aliasing setup on his machine so we match it in the tests
 const isStyleLoaded = head => head.find("#st-font-antialiased").length > 0
