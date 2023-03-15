@@ -877,7 +877,9 @@ describe("App.handleNewSession", () => {
       window.history.pushState({}, "", "/")
     })
 
-    it("can switch to the main page", () => {
+    it("can switch to the main page from a different page", () => {
+      window.history.replaceState({}, "", "/page2")
+
       const instance = wrapper.instance() as App
       instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
 
@@ -936,6 +938,37 @@ describe("App.handleNewSession", () => {
       )
     })
 
+    it("doesn't push a new history when the same page URL is already set", () => {
+      const instance = wrapper.instance() as App
+      const newSessionJson = cloneDeep(NEW_SESSION_JSON)
+      newSessionJson.appPages = [
+        { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
+        { pageScriptHash: "subpage_hash", pageName: "page2" },
+      ]
+
+      history.replaceState({}, "", "/") // The URL is set to the main page from the beginning.
+
+      // Because the page URL is already "/" pointing to the main page, no new history is pushed.
+      instance.handleNewSession(
+        new NewSession({ ...newSessionJson, pageScriptHash: "toppage_hash" })
+      )
+      expect(window.history.pushState).not.toHaveBeenCalled()
+      // @ts-ignore
+      window.history.pushState.mockClear()
+
+      // When accessing a different page, a new history for that page is pushed.
+      instance.handleNewSession(
+        new NewSession({ ...newSessionJson, pageScriptHash: "subpage_hash" })
+      )
+      expect(window.history.pushState).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/page2"
+      )
+      // @ts-ignore
+      window.history.pushState.mockClear()
+    })
+
     it("doesn't push a duplicated history when rerunning", () => {
       const instance = wrapper.instance() as App
       const newSessionJson = cloneDeep(NEW_SESSION_JSON)
@@ -943,6 +976,8 @@ describe("App.handleNewSession", () => {
         { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
         { pageScriptHash: "subpage_hash", pageName: "page2" },
       ]
+
+      history.replaceState({}, "", "/page2") // Starting from a not main page.
 
       // When running the top page first, a new history for the page is pushed.
       instance.handleNewSession(

@@ -746,7 +746,13 @@ export class App extends PureComponent<Props, State> {
     )?.pageName as string
     const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
-    if (prevPageScriptHash !== newPageScriptHash) {
+    const urlPath = window.location.pathname.replace(/^\//, "")
+    const prevPageName = urlPath === "" ? mainPage.pageName : urlPath
+    // It is important to compare `newPageName` with the previous one encoded in the URL
+    // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
+    // e.g. the case where the user clicks the back button.
+    // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
+    if (prevPageName !== newPageName) {
       const baseUriParts = this.getBaseUriParts()
       if (baseUriParts) {
         const { basePath } = baseUriParts
