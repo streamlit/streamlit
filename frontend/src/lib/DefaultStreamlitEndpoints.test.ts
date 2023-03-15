@@ -15,6 +15,7 @@
  */
 
 import axios from "axios"
+import MockAdapter from "axios-mock-adapter"
 import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
@@ -25,33 +26,114 @@ const MOCK_SERVER_URI = {
 }
 
 describe("DefaultStreamlitEndpoints", () => {
-  test("Caches server URI", () => {
-    // If we never connect to a server, getComponentURL will fail:
-    let serverURI: BaseUriParts | undefined
-    const endpoint = new DefaultStreamlitEndpoints({
-      getServerUri: () => serverURI,
-      csrfEnabled: true,
+  describe("buildComponentURL()", () => {
+    it("errors if no serverURI", () => {
+      // If we never connect to a server, getComponentURL will fail:
+      let serverURI: BaseUriParts | undefined
+      const endpoint = new DefaultStreamlitEndpoints({
+        getServerUri: () => serverURI,
+        csrfEnabled: true,
+      })
+      expect(() => endpoint.buildComponentURL("foo", "index.html")).toThrow()
     })
-    expect(() => endpoint.buildComponentURL("foo", "index.html")).toThrow()
 
-    // But if we connect once, and then disconnect, our original URI should
-    // be cached.
+    it("uses current or cached serverURI if present", () => {
+      let serverURI: BaseUriParts | undefined
+      const endpoint = new DefaultStreamlitEndpoints({
+        getServerUri: () => serverURI,
+        csrfEnabled: true,
+      })
 
-    // "Connect" to the server
-    serverURI = MOCK_SERVER_URI
-    expect(endpoint.buildComponentURL("foo", "index.html")).toEqual(
-      "http://streamlit.mock:80/component/foo/index.html"
-    )
+      // "Connect" to the server. `buildComponentURL` will succeed.
+      serverURI = MOCK_SERVER_URI
+      expect(endpoint.buildComponentURL("foo", "index.html")).toEqual(
+        "http://streamlit.mock:80/component/foo/index.html"
+      )
 
-    // "Disconnect" from the server, and call buildComponentURL again;
-    // it should return a URL constructed from the cached server URI.
-    serverURI = undefined
-    expect(endpoint.buildComponentURL("bar", "index.html")).toEqual(
-      "http://streamlit.mock:80/component/bar/index.html"
-    )
+      // "Disconnect" from the server, and call buildComponentURL again;
+      // it should return a URL constructed from the cached server URI.
+      serverURI = undefined
+      expect(endpoint.buildComponentURL("bar", "index.html")).toEqual(
+        "http://streamlit.mock:80/component/bar/index.html"
+      )
+    })
   })
 
-  describe("csrfRequest() API", () => {
+  describe("uploadFileUploaderFile()", () => {
+    const MOCK_FILE = new File(["file1"], "file1.txt")
+
+    let axiosMock: MockAdapter
+    const spyRequest = jest.spyOn(axios, "request")
+    let endpoints: DefaultStreamlitEndpoints
+
+    beforeEach(() => {
+      axiosMock = new MockAdapter(axios)
+      endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: false,
+      })
+    })
+
+    afterEach(() => {
+      axiosMock.restore()
+    })
+
+    it("calls the appropriate endpoint", async () => {
+      axiosMock
+        .onPost("http://streamlit.mock:80/_stcore/upload_file")
+        .reply(() => [200, 1])
+
+      const mockOnUploadProgress = (_: any): void => {}
+      const mockCancelToken = axios.CancelToken.source().token
+
+      await expect(
+        endpoints.uploadFileUploaderFile(
+          MOCK_FILE,
+          "mockWidgetId",
+          "mockSessionId",
+          mockOnUploadProgress,
+          mockCancelToken
+        )
+      ).resolves.toBeDefined()
+
+      const expectedData = new FormData()
+      expectedData.append("sessionId", "mockSessionId")
+      expectedData.append("widgetId", "mockWidgetId")
+      expectedData.append(MOCK_FILE.name, MOCK_FILE)
+
+      expect(spyRequest).toHaveBeenCalledWith({
+        url: "http://streamlit.mock:80/_stcore/upload_file",
+        method: "POST",
+        responseType: "text",
+        data: expectedData,
+        cancelToken: mockCancelToken,
+        onUploadProgress: mockOnUploadProgress,
+      })
+    })
+
+    it("errors on unexpected return value", async () => {
+      // If our endpoint returns a non-number, we'll return a failed promise.
+      axiosMock
+        .onPost("http://streamlit.mock:80/_stcore/upload_file")
+        .reply(() => [200, "invalidFileId"])
+
+      await expect(
+        endpoints.uploadFileUploaderFile(
+          MOCK_FILE,
+          "mockWidgetId",
+          "mockSessionId"
+        )
+      ).rejects.toEqual(
+        new Error(
+          "Bad uploadFile response: expected a number but got 'invalidFileId'"
+        )
+      )
+    })
+  })
+
+  // Test our private csrfRequest() API, which is responsible for setting
+  // the "X-Xsrftoken" header.
+  describe("csrfRequest()", () => {
     const spyRequest = jest.spyOn(axios, "request")
     let prevDocumentCookie: string
 
@@ -64,7 +146,7 @@ describe("DefaultStreamlitEndpoints", () => {
       document.cookie = prevDocumentCookie
     })
 
-    test("sets token when csrfEnabled: true", () => {
+    it("sets token when csrfEnabled: true", () => {
       const endpoints = new DefaultStreamlitEndpoints({
         getServerUri: () => MOCK_SERVER_URI,
         csrfEnabled: true,
@@ -80,7 +162,7 @@ describe("DefaultStreamlitEndpoints", () => {
       })
     })
 
-    test("omits token when csrfEnabled: false", () => {
+    it("omits token when csrfEnabled: false", () => {
       const endpoints = new DefaultStreamlitEndpoints({
         getServerUri: () => MOCK_SERVER_URI,
         csrfEnabled: false,
