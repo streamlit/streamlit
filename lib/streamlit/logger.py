@@ -18,9 +18,11 @@ from datetime import datetime
 import logging
 import sys
 from typing import Dict, Union
+from importlib import metadata
 
 from typing_extensions import Final
-from pythonjsonlogger import jsonlogger
+from fluent import asynchandler as fluent_async
+from fluent import handler as fluent_sync
 
 DEFAULT_LOG_MESSAGE: Final = "%(asctime)s %(levelname) -7s " "%(name)s: %(message)s"
 
@@ -59,23 +61,19 @@ def set_log_level(level: Union[str, int]) -> None:
     _global_log_level = log_level
 
 
-class CustomJsonFormatter(jsonlogger.JsonFormatter):
-    def add_fields(self, log_record, record, message_dict):
+class StreamlitRemoteFormatter(fluent_sync.FluentRecordFormatter):
+    def format(self, record):
+        data = super(StreamlitRemoteFormatter, self).format(record)
+        streamlit_context = {}
         from streamlit.runtime.scriptrunner import maybe_get_script_run_ctx
         ctx, thread_name = maybe_get_script_run_ctx()
-        log_record["session_id"] = ctx.session_id if ctx else None
-        log_record["thread_name"] = thread_name
-        log_record["page_script_hash"] = ctx.page_script_hash if ctx else None
-        log_record["query_string"] = ctx.query_string if ctx else None
-        super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
-        if not log_record.get('timestamp'):
-            # this doesn't use record.created, so it is slightly off
-            now = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-            log_record['timestamp'] = now
-        if log_record.get('level'):
-            log_record['level'] = log_record['level'].upper()
-        else:
-            log_record['level'] = record.levelname
+        streamlit_context["session_id"] = ctx.session_id if ctx else None
+        streamlit_context["thread_name"] = thread_name
+        streamlit_context["page_script_hash"] = ctx.page_script_hash if ctx else None
+        streamlit_context["query_string"] = ctx.query_string if ctx else None
+        streamlit_context["streamlit_version"] = metadata.version("streamlit")
+        self._add_dic(data, streamlit_context)
+        return data
 
 
 def setup_formatter(logger: logging.Logger) -> None:
@@ -85,7 +83,6 @@ def setup_formatter(logger: logging.Logger) -> None:
         logger.removeHandler(logger.streamlit_console_handler)
 
     logger.streamlit_console_handler = logging.StreamHandler()  # type: ignore[attr-defined]
-    file_handler = logging.FileHandler("streamlit.log")
 
     # Import here to avoid circular imports
     from streamlit import config
@@ -95,17 +92,25 @@ def setup_formatter(logger: logging.Logger) -> None:
         # Getting the config option before the config file has been parsed
         # can create an infinite loop
         message_format = config.get_option("logger.messageFormat")
+        fluent_tag = config.get_option("logger.remoteTag")
+        fluent_host = config.get_option("logger.remoteHost")
+        fluent_port = config.get_option("logger.remotePort")
+        if fluent_tag and fluent_host and fluent_port:
+            fluent_handler = fluent_async.FluentHandler(
+                fluent_tag,
+                host=fluent_host,
+                port=int(fluent_port))
+            fluent_record_formatter = StreamlitRemoteFormatter()
+            fluent_handler.setFormatter(fluent_record_formatter)
+            logger.addHandler(fluent_handler)
     else:
         message_format = DEFAULT_LOG_MESSAGE
     formatter = logging.Formatter(fmt=message_format)
     formatter.default_msec_format = "%s.%03d"
-    json_formatter = CustomJsonFormatter(DEFAULT_LOG_MESSAGE)
     logger.streamlit_console_handler.setFormatter(formatter)  # type: ignore[attr-defined]
-    file_handler.setFormatter(json_formatter)
 
     # Register the new console logger.
     logger.addHandler(logger.streamlit_console_handler)  # type: ignore[attr-defined]
-    logger.addHandler(file_handler)
 
 
 def update_formatter() -> None:

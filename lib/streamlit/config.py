@@ -402,6 +402,12 @@ def _logger_message_format() -> str:
         return "%(asctime)s %(message)s"
 
 
+_create_option("logger.sendLogs", description="Consent about sending logs.")
+_create_option("logger.remoteTag", description="Name of the tag for remote server.")
+_create_option("logger.remoteHost", description="Name of the remote host")
+_create_option("logger.remotePort", description="Number of the port port.")
+
+
 _create_option(
     "logger.enableRich",
     description="""
