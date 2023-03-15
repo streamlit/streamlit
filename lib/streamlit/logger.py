@@ -16,12 +16,12 @@
 
 import logging
 import sys
-from typing import Dict, Union
 from importlib import metadata
+from typing import Dict, Union
 
-from typing_extensions import Final
 from fluent import asynchandler as fluent_async
 from fluent import handler as fluent_sync
+from typing_extensions import Final
 
 DEFAULT_LOG_MESSAGE: Final = "%(asctime)s %(levelname) -7s " "%(name)s: %(message)s"
 
