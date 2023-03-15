@@ -127,6 +127,9 @@ def connection(connection_class, name="default", **kwargs):
         connection_class = _get_first_party_connection(connection_class)
 
     try:
+        # TODO(vdonato): Split this part out into an internal helper function decorated
+        # with @gather_metrics so that we can do the metrics collection at a point where
+        # we're guaranteed to have a concrete connection_class.
         return connection_class(
             connection_name=name,
             **kwargs,
