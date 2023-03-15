@@ -17,7 +17,6 @@
 import axios, { AxiosRequestConfig } from "axios"
 import MockAdapter from "axios-mock-adapter"
 import { FileUploadClient } from "src/lib/FileUploadClient"
-import { SessionInfo } from "src/lib/SessionInfo"
 import { buildHttpUri } from "src/lib/UriUtil"
 import { getCookie } from "src/lib/utils"
 import { mockSessionInfo } from "./mocks/mocks"
@@ -50,8 +49,6 @@ describe("FileUploadClient Upload", () => {
 
   afterEach(() => {
     axiosMock.restore()
-    // @ts-ignore
-    SessionInfo.singleton = undefined
   })
 
   function mockUploadResponseStatus(status: number): void {
@@ -73,7 +70,7 @@ describe("FileUploadClient Upload", () => {
         }
 
         if (getCookie("_xsrf")) {
-          // @ts-ignore - TS errors that config.headers is possibly 'undefined`
+          // @ts-expect-error - TS errors that config.headers is possibly 'undefined`
           if (!("X-Xsrftoken" in config.headers)) {
             return [403]
           }
