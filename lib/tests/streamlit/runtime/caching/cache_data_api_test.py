@@ -335,7 +335,9 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
         mock_os_remove.assert_not_called()
 
-        with patch("os.listdir", MagicMock(return_value=created_files_base_names)):
+        with patch(
+            "os.listdir", MagicMock(return_value=created_files_base_names)
+        ), patch("os.path.isdir", MagicMock(return_value=True)):
             # Clear foo's cache
             foo.clear()
 
