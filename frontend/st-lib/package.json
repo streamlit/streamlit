@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "homepage": "./",
+  "main": "src/index.ts",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "build": "./bokeh/preload-bokeh.sh && env NODE_ENV=\"development\" INLINE_RUNTIME_CHUNK=false BUILD_PATH=dist webpack build --config ./config/webpack.config.js && yarn build:autogen && yarn build:asset && yarn build:lib-type",
