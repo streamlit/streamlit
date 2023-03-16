@@ -32,7 +32,7 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import React from "react"
 import { darkTheme, lightTheme, toExportedTheme } from "src/theme"
 import { fonts } from "src/theme/primitives/typography"
-import { mockComponentEndpoint } from "src/lib/mocks/mocks"
+import { mockEndpoints } from "src/lib/mocks/mocks"
 import {
   COMPONENT_READY_WARNING_TIME_MS,
   ComponentInstance,
@@ -86,7 +86,7 @@ class MockComponent {
     document.body.appendChild(mountNode)
 
     // mock ComponentRegistry
-    this.registry = new ComponentRegistry(mockComponentEndpoint())
+    this.registry = new ComponentRegistry(mockEndpoints())
 
     // Mock the registry's registerListener/deregisterListener - we assert
     // that these are called in our tests.
