@@ -16,10 +16,7 @@
 
 import { ForwardMsg } from "src/autogen/proto"
 import fetchMock from "fetch-mock"
-import {
-  FETCH_MESSAGE_PATH,
-  ForwardMsgCache,
-} from "src/lib/ForwardMessageCache"
+import { ForwardMsgCache } from "src/lib/ForwardMessageCache"
 import { buildHttpUri } from "src/lib/UriUtil"
 
 const MOCK_SERVER_URI = {

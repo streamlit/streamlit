@@ -107,6 +107,7 @@ import {
 } from "src/theme"
 import { DefaultStreamlitEndpoints } from "./lib/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "./lib/SegmentMetricsManager"
+import { StreamlitEndpoints } from "./lib/StreamlitEndpoints"
 
 import { StyledApp } from "./styled-components"
 
@@ -170,6 +171,8 @@ declare global {
 }
 
 export class App extends PureComponent<Props, State> {
+  private readonly endpoints: StreamlitEndpoints
+
   private readonly sessionInfo = new SessionInfo()
 
   private readonly metricsMgr = new SegmentMetricsManager(this.sessionInfo)
@@ -248,14 +251,14 @@ export class App extends PureComponent<Props, State> {
       formsDataChanged: formsData => this.setState({ formsData }),
     })
 
-    const endpoints = new DefaultStreamlitEndpoints({
+    this.endpoints = new DefaultStreamlitEndpoints({
       getServerUri: this.getBaseUriParts,
       csrfEnabled: true,
     })
 
     this.uploadClient = new FileUploadClient({
       sessionInfo: this.sessionInfo,
-      endpoints,
+      endpoints: this.endpoints,
       // A form cannot be submitted if it contains a FileUploader widget
       // that's currently uploading. We write that state here, in response
       // to a FileUploadClient callback. The FormSubmitButton element
@@ -264,7 +267,7 @@ export class App extends PureComponent<Props, State> {
         this.widgetMgr.setFormsWithUploads(formIds),
     })
 
-    this.componentRegistry = new ComponentRegistry(endpoints)
+    this.componentRegistry = new ComponentRegistry(this.endpoints)
 
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
@@ -304,6 +307,7 @@ export class App extends PureComponent<Props, State> {
     // "Can't call setState on a component that is not yet mounted." error.
     this.connectionManager = new ConnectionManager({
       sessionInfo: this.sessionInfo,
+      endpoints: this.endpoints,
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
