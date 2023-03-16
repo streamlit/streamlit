@@ -30,7 +30,7 @@ import {
 } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import { mockComponentEndpoint, mockSessionInfo } from "src/lib/mocks/mocks"
+import { mockEndpoints, mockSessionInfo } from "src/lib/mocks/mocks"
 import ElementNodeRenderer, {
   ElementNodeRendererProps,
 } from "./ElementNodeRenderer"
@@ -64,6 +64,7 @@ function getProps(
     Pick<ElementNodeRendererProps, "node" | "scriptRunId">
 ): ElementNodeRendererProps {
   const sessionInfo = mockSessionInfo()
+  const endpoints = mockEndpoints()
   return {
     scriptRunState: ScriptRunState.RUNNING,
     sessionInfo: sessionInfo,
@@ -74,11 +75,10 @@ function getProps(
     widgetsDisabled: false,
     uploadClient: new FileUploadClient({
       sessionInfo: sessionInfo,
-      getServerUri: () => undefined,
-      csrfEnabled: true,
+      endpoints,
       formsWithPendingRequestsChanged: () => {},
     }),
-    componentRegistry: new ComponentRegistry(mockComponentEndpoint()),
+    componentRegistry: new ComponentRegistry(endpoints),
     formsData: createFormsData(),
     width: 1000,
     ...props,

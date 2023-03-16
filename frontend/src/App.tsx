@@ -105,7 +105,7 @@ import {
   ThemeConfig,
   toExportedTheme,
 } from "src/theme"
-import { StreamlitComponentEndpoint } from "./components/widgets/CustomComponent/StreamlitComponentEndpoint"
+import { DefaultStreamlitEndpoints } from "./lib/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "./lib/SegmentMetricsManager"
 
 import { StyledApp } from "./styled-components"
@@ -248,21 +248,23 @@ export class App extends PureComponent<Props, State> {
       formsDataChanged: formsData => this.setState({ formsData }),
     })
 
+    const endpoints = new DefaultStreamlitEndpoints({
+      getServerUri: this.getBaseUriParts,
+      csrfEnabled: true,
+    })
+
     this.uploadClient = new FileUploadClient({
       sessionInfo: this.sessionInfo,
-      getServerUri: this.getBaseUriParts,
+      endpoints,
       // A form cannot be submitted if it contains a FileUploader widget
       // that's currently uploading. We write that state here, in response
       // to a FileUploadClient callback. The FormSubmitButton element
       // reads the state.
       formsWithPendingRequestsChanged: formIds =>
         this.widgetMgr.setFormsWithUploads(formIds),
-      csrfEnabled: true,
     })
 
-    this.componentRegistry = new ComponentRegistry(
-      new StreamlitComponentEndpoint(this.getBaseUriParts)
-    )
+    this.componentRegistry = new ComponentRegistry(endpoints)
 
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
