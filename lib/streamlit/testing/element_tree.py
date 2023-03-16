@@ -90,7 +90,7 @@ class Element:
         return util.repr_(self)
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Text(Element):
     proto: TextProto
 
@@ -107,11 +107,8 @@ class Text(Element):
     def value(self) -> str:
         return self.proto.body
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class HeadingBase(Element, ABC):
     proto: HeadingProto
 
@@ -133,38 +130,26 @@ class HeadingBase(Element, ABC):
     def value(self) -> str:
         return self.proto.body
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Title(HeadingBase):
     def __init__(self, proto: HeadingProto, root: ElementTree):
         super().__init__(proto, root, "title")
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Header(HeadingBase):
     def __init__(self, proto: HeadingProto, root: ElementTree):
         super().__init__(proto, root, "header")
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Subheader(HeadingBase):
     def __init__(self, proto: HeadingProto, root: ElementTree):
         super().__init__(proto, root, "subheader")
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Markdown(Element):
     proto: MarkdownProto
 
@@ -186,31 +171,22 @@ class Markdown(Element):
     def value(self) -> str:
         return self.proto.body
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Caption(Markdown):
     def __init__(self, proto: MarkdownProto, root: ElementTree):
         super().__init__(proto, root)
         self.type = "caption"
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Latex(Markdown):
     def __init__(self, proto: MarkdownProto, root: ElementTree):
         super().__init__(proto, root)
         self.type = "latex"
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Code(Element):
     proto: CodeProto
 
@@ -232,11 +208,8 @@ class Code(Element):
     def value(self) -> str:
         return self.proto.code_text
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass
+@dataclass(repr=False)
 class Exception(Element):
     type: str
     message: str
@@ -255,15 +228,12 @@ class Exception(Element):
         self.stack_trace = list(proto.stack_trace)
         self.is_warning = proto.is_warning
 
-    def __repr__(self):
-        return util.repr_(self)
-
     @property
     def value(self) -> str:
         return self.message
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Divider(Markdown):
     def __init__(self, proto: MarkdownProto, root: ElementTree):
         super().__init__(proto, root)
@@ -282,7 +252,7 @@ class Widget(Protocol):
 T = TypeVar("T")
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Radio(Element, Widget, Generic[T]):
     _value: T | None
 
@@ -342,11 +312,8 @@ class Radio(Element, Widget, Generic[T]):
         ws.int_value = self.index
         return ws
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Checkbox(Element, Widget):
     _value: bool | None
 
@@ -399,11 +366,8 @@ class Checkbox(Element, Widget):
     def uncheck(self) -> Checkbox:
         return self.set_value(False)
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Multiselect(Element, Widget, Generic[T]):
     _value: list[T] | None
 
@@ -491,11 +455,8 @@ class Multiselect(Element, Widget, Generic[T]):
             self.set_value(new)
             return self
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Selectbox(Element, Widget, Generic[T]):
     _value: T | None
 
@@ -567,11 +528,8 @@ class Selectbox(Element, Widget, Generic[T]):
         ws.int_value = self.index
         return ws
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Button(Element, Widget):
     _value: bool
 
@@ -621,11 +579,8 @@ class Button(Element, Widget):
     def click(self) -> Button:
         return self.set_value(True)
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Slider(Element, Widget, Generic[SliderScalarT]):
     _value: SliderScalarT | Sequence[SliderScalarT] | None
 
@@ -693,11 +648,8 @@ class Slider(Element, Widget, Generic[SliderScalarT]):
     ) -> Slider[SliderScalarT]:
         return self.set_value([lower, upper])
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class SelectSlider(Element, Widget, Generic[T]):
     _value: T | Sequence[T] | None
 
@@ -756,11 +708,8 @@ class SelectSlider(Element, Widget, Generic[T]):
     def set_range(self, lower: T, upper: T) -> SelectSlider[T]:
         return self.set_value([lower, upper])
 
-    def __repr__(self):
-        return util.repr_(self)
 
-
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Block:
     type: str
     children: dict[int, Node]
@@ -895,7 +844,7 @@ class Block:
 Node: TypeAlias = Union[Element, Block]
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class ElementTree(Block):
     """A tree of the elements produced by running a streamlit script.
 
