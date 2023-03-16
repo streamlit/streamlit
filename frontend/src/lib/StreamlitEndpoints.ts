@@ -52,6 +52,9 @@ export interface StreamlitEndpoints {
    * in our local cache.
    *
    * @param hash the message's hash
+   *
+   * @return a Promise<Uint8Array> that resolves with the serialized ForwardMsg data returned
+   * from the server. Callers can use `ForwardMsg.decode` to deserialize the data.
    */
   fetchCachedForwardMsg(hash: string): Promise<Uint8Array>
 }
