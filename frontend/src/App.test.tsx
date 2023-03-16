@@ -953,7 +953,7 @@ describe("App.handleNewSession", () => {
         new NewSession({ ...newSessionJson, pageScriptHash: "toppage_hash" })
       )
       expect(window.history.pushState).not.toHaveBeenCalled()
-      // @ts-ignore
+      // @ts-expect-error
       window.history.pushState.mockClear()
 
       // When accessing a different page, a new history for that page is pushed.
@@ -965,7 +965,7 @@ describe("App.handleNewSession", () => {
         "",
         "/page2"
       )
-      // @ts-ignore
+      // @ts-expect-error
       window.history.pushState.mockClear()
     })
 
@@ -1053,7 +1053,7 @@ describe("App.onHistoryChange", () => {
   beforeEach(() => {
     wrapper = shallow(<App {...getProps()} />)
     instance = wrapper.instance() as App
-    // @ts-ignore
+    // @ts-expect-error
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
 
     window.history.pushState({}, "", "/")
