@@ -780,7 +780,7 @@ _create_option(
 )
 
 _create_option(
-    "server.IpHeader",
+    "server.ipHeader",
     description="""When streamlit is deployed behind an reverse proxy, you can get user ip by request
                 header, for example 'X-Real-IP' or 'X-Forwarded-For'.""",
     default_val="",

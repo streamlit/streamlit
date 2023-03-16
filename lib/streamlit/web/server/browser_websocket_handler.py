@@ -104,7 +104,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         else:
             user_info["email"] = email
 
-        ipheader = config.get_option("server.IpHeader")
+        ipheader = config.get_option("server.ipHeader")
         if ipheader:
             remote_ip = self.request.headers.get(ipheader)
         else:
