@@ -76,18 +76,13 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
   public async fetchCachedForwardMsg(hash: string): Promise<Uint8Array> {
     const serverURI = this.requireServerUri()
-    const url = buildHttpUri(serverURI, `_stcore/message?hash=${hash}`)
-    const rsp = await fetch(url)
-    if (!rsp.ok) {
-      // `fetch` doesn't reject for bad HTTP statuses, so
-      // we explicitly check for that.
-      throw new Error(
-        `Failed to retrieve ForwardMsg (hash=${hash}): ${rsp.statusText}`
-      )
-    }
+    const rsp = await axios.request({
+      url: buildHttpUri(serverURI, `_stcore/message?hash=${hash}`),
+      method: "GET",
+      responseType: "arraybuffer",
+    })
 
-    const data = await rsp.arrayBuffer()
-    return new Uint8Array(data)
+    return new Uint8Array(rsp.data)
   }
 
   /**

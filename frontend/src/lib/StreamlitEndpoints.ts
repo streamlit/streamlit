@@ -46,9 +46,11 @@ export interface StreamlitEndpoints {
 
   /**
    * Fetch a cached ForwardMsg from the server.
+   *
    * This is called when the ForwardMessageCache has a cache miss - that is, when
    * the server sends a ForwardMsg reference and we don't have the original message
    * in our local cache.
+   *
    * @param hash the message's hash
    */
   fetchCachedForwardMsg(hash: string): Promise<Uint8Array>
