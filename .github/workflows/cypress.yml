@@ -69,6 +69,7 @@ jobs:
       - name: Cypress Tests
         env:
           CURRENT_RUN: ${{matrix.specs}}
+          CYPRESS_VERIFY_TIMEOUT: 90000
           TOTAL_WORKERS: 22
         run: |
           js_specs=(e2e/specs/*)

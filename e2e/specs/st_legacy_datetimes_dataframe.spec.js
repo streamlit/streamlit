@@ -30,7 +30,7 @@ describe("st._legacy_dataframe", () => {
     //
     // We can't just assert "have.text" against a hardcoded string, because the
     // timezone we want displayed depends on whatever timezone the test is
-    // being run in.  So we use moment to dynamically generate the correct
+    // being run in.  So we use dayjs to dynamically generate the correct
     // string.
     //
     // This feels a little like "tautologically copying the code we're trying
@@ -38,15 +38,17 @@ describe("st._legacy_dataframe", () => {
     // actual important thing, the notz/yaytz logic.
 
     // notz column should show datetime in current timezone
+    const notzString = Cypress.dayjs(datetimeString).format();
     cy.getIndexed("@cells", 1).should(
       "have.text",
-      Cypress.moment(datetimeString).format()
+      notzString
     );
 
     // yaytz column should show datetime in provided timezone
+    const yaytzString = Cypress.dayjs.tz(datetimeString, "Europe/Moscow").format();
     cy.getIndexed("@cells", 2).should(
       "have.text",
-      Cypress.moment.parseZone(`${datetimeString}+03:00`).format()
+      yaytzString
     );
   });
 });
