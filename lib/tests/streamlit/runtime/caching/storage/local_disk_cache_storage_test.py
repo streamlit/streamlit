@@ -249,10 +249,25 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
         # test that cache folder is empty
         self.assertEqual(os.listdir(self.tempdir.path), [])
 
-    def test_storage_clear_missing_directory(self):
+    def test_storage_clear_not_existing_cache_directory(self):
         """Test that clear() is not crashing if the cache directory does not exist."""
         self.tempdir.cleanup()
         self.storage.clear()
+
+    def test_storage_clear_call_listdir_existing_cache_directory(self):
+        """Test that clear() call os.listdir if cache folder does not exist."""
+        with patch("os.listdir") as mock_listdir:
+            self.storage.clear()
+        mock_listdir.assert_called_once()
+
+    def test_storage_clear_not_call_listdir_not_existing_cache_directory(self):
+        """Test that clear() doesn't call os.listdir if cache folder does not exist."""
+        self.tempdir.cleanup()
+
+        with patch("os.listdir") as mock_listdir:
+            self.storage.clear()
+
+        mock_listdir.assert_not_called()
 
     def test_storage_close(self):
         """Test that storage.close() does not raise any exception."""
