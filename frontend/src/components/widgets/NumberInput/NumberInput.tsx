@@ -41,6 +41,12 @@ import {
   StyledInstructionsContainer,
 } from "./styled-components"
 
+interface FormatComponents {
+  prefix: string
+  suffix: string
+  specifier: string
+}
+
 export interface Props {
   disabled: boolean
   element: NumberInputProto
@@ -76,8 +82,11 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   private inputRef = React.createRef<HTMLInputElement | HTMLTextAreaElement>()
 
+  private readonly formatComponents: FormatComponents
+
   constructor(props: Props) {
     super(props)
+    this.formatComponents = this.getFormatComponents()
 
     this.state = {
       dirty: false,
@@ -129,8 +138,8 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private formatValue = (value: number): string => {
-    const format = getNonEmptyString(this.props.element.format)
-    if (format == null) {
+    const format = getNonEmptyString(this.formatComponents.specifier)
+    if (format == undefined) {
       return value.toString()
     }
 
@@ -223,10 +232,14 @@ class NumberInput extends React.PureComponent<Props, State> {
     this.setState({ isFocused: true })
   }
 
-  private getNumberFromFormattedString(value: string): number | undefined {
+  private getFormatComponents(): FormatComponents {
     const format = getNonEmptyString(this.props.element.format)
-    if (!format) {
-      throw new Error("No format object available on number input element.")
+    if (format == undefined) {
+      return {
+        prefix: "",
+        suffix: "",
+        specifier: "",
+      }
     }
 
     const specifier = /(%[-+ 0#]?\d*(\.\d+)?[adeEfFgGioxXu])/
@@ -237,67 +250,36 @@ class NumberInput extends React.PureComponent<Props, State> {
     }
 
     const formatPrefix = format.slice(0, match.index)
-    const unescapeFormatPrefix = formatPrefix.replaceAll("%%", "%")
-    const valuePrefix = value.slice(0, unescapeFormatPrefix.length)
+    const unescapedFormatPrefix = formatPrefix.replaceAll("%%", "%")
 
-    if (valuePrefix !== unescapeFormatPrefix) {
-      return undefined
-    }
-
-    const formatSuffix = format.slice(match[0].length)
+    const formatSuffix = format.slice(formatPrefix.length + match[0].length)
     const unescapedFormatSuffix = formatSuffix.replaceAll("%%", "%")
-    const valueSuffix =
-      unescapedFormatSuffix.length > 0
-        ? value.slice(-unescapedFormatSuffix.length)
-        : ""
 
-    const suffixIndex = value.length - unescapedFormatSuffix.length
-    if (valueSuffix !== unescapedFormatSuffix) {
-      return undefined
+    return {
+      prefix: unescapedFormatPrefix,
+      suffix: unescapedFormatSuffix,
+      specifier: match[0],
     }
-
-    if (suffixIndex < valuePrefix.length + 1) {
-      return undefined
-    }
-
-    const resultStr = value.slice(unescapeFormatPrefix.length, suffixIndex)
-    const resultNum = Number(resultStr)
-
-    if (Number.isNaN(resultNum)) {
-      return undefined
-    }
-
-    return resultNum
   }
 
   private onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    const targetValue = e.target.value
+    const { value } = e.target
 
-    let parsedValue
-    try {
-      parsedValue = this.getNumberFromFormattedString(targetValue.trim())
-    } catch (ex) {
-      // Ignore the caught exception.  We want customers to be able to
-      // make mistakes in their data input and have the opportunity to
-      // correct those mistakes.
-    }
-    if (parsedValue !== undefined) {
-      this.setState({
-        dirty: true,
-        value: parsedValue as number,
-        formattedValue: targetValue,
-      })
+    let numValue: number
+
+    if (this.isIntData()) {
+      numValue = parseInt(value, 10)
     } else {
-      // need to save the in-flight formatted value
-      const { value } = this.state
-      this.setState({
-        dirty: false,
-        value,
-        formattedValue: targetValue,
-      })
+      numValue = parseFloat(value)
     }
+
+    this.setState({
+      dirty: true,
+      value: numValue,
+      formattedValue: value,
+    })
   }
 
   private onKeyDown = (
@@ -411,7 +393,9 @@ class NumberInput extends React.PureComponent<Props, State> {
         </WidgetLabel>
         <StyledInputContainer className={isFocused ? "focused" : ""}>
           <UIInput
-            type="text"
+            type="number"
+            startEnhancer={this.formatComponents.prefix}
+            endEnhancer={this.formatComponents.suffix}
             inputRef={this.inputRef}
             value={formattedValue}
             onBlur={this.onBlur}
