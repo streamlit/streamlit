@@ -423,3 +423,27 @@ export function generateUID(): string {
 export function getEmbeddingIdClassName(embeddingId: string): string {
   return `stAppEmbeddingId-${embeddingId}`
 }
+
+export function extractPageNameFromPathName(
+  pathname: string,
+  basePath: string
+): string {
+  // We'd prefer to write something like
+  //
+  // ```
+  // replace(
+  //   new RegExp(`^/${basePath}/?`),
+  //   ""
+  // )
+  // ```
+  //
+  // below, but that doesn't work because basePath may contain unescaped
+  // regex special-characters. This is why we're stuck with the
+  // weird-looking triple `replace()`.
+  return decodeURIComponent(
+    document.location.pathname
+      .replace(`/${basePath}`, "")
+      .replace(new RegExp("^/?"), "")
+      .replace(new RegExp("/$"), "")
+  )
+}

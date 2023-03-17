@@ -59,6 +59,7 @@ import {
   getElementWidgetID,
   generateUID,
   getEmbeddingIdClassName,
+  extractPageNameFromPathName,
 } from "src/lib/utils"
 import { BaseUriParts } from "src/lib/UriUtil"
 import {
@@ -346,6 +347,8 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.metricsMgr.enqueue("viewReport")
+
+    window.addEventListener("popstate", this.onHistoryChange, false)
   }
 
   componentDidUpdate(
@@ -390,6 +393,8 @@ export class App extends PureComponent<Props, State> {
     // happy since connectionManager's type is `ConnectionManager | null`,
     // but at this point it should always be set.
     this.connectionManager?.disconnect()
+
+    window.removeEventListener("popstate", this.onHistoryChange, false)
   }
 
   showError(title: string, errorNode: ReactNode): void {
@@ -747,10 +752,21 @@ export class App extends PureComponent<Props, State> {
     )?.pageName as string
     const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
-    if (prevPageScriptHash !== newPageScriptHash) {
-      const baseUriParts = this.getBaseUriParts()
-      if (baseUriParts) {
-        const { basePath } = baseUriParts
+    const baseUriParts = this.getBaseUriParts()
+    if (baseUriParts) {
+      const { basePath } = baseUriParts
+
+      const prevPageNameInPath = extractPageNameFromPathName(
+        document.location.pathname,
+        basePath
+      )
+      const prevPageName =
+        prevPageNameInPath === "" ? mainPage.pageName : prevPageNameInPath
+      // It is important to compare `newPageName` with the previous one encoded in the URL
+      // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
+      // e.g. the case where the user clicks the back button.
+      // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
+      if (prevPageName !== newPageName) {
         const queryString = this.getQueryString()
 
         const qs = queryString ? `?${queryString}` : ""
@@ -844,6 +860,22 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.handleSessionStatusChanged(initialize.sessionStatus)
+  }
+
+  /**
+   * Handler called when the history state changes, e.g. `popstate` event.
+   */
+  onHistoryChange = (): void => {
+    const targetAppPage =
+      this.state.appPages.find(appPage =>
+        // The page name is embedded at the end of the URL path, and if not, we are in the main page.
+        // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
+        document.location.pathname.endsWith("/" + appPage.pageName)
+      ) ?? this.state.appPages[0]
+    if (targetAppPage == null) {
+      return
+    }
+    this.onPageChange(targetAppPage.pageScriptHash as string)
   }
 
   /**
@@ -1185,26 +1217,11 @@ export class App extends PureComponent<Props, State> {
       // We must be in the case where the user is navigating directly to a
       // non-main page of this app. Since we haven't received the list of the
       // app's pages from the server at this point, we fall back to requesting
-      // requesting the page to run via pageName, which we extract from
-      // document.location.pathname
-
-      // Note also that we'd prefer to write something like
-      //
-      // ```
-      // replace(
-      //   new RegExp(`^/${basePath}/?`),
-      //   ""
-      // )
-      // ```
-      //
-      // below, but that doesn't work because basePath may contain unescaped
-      // regex special-characters. This is why we're stuck with the
-      // weird-looking triple `replace()`.
-      pageName = decodeURIComponent(
-        document.location.pathname
-          .replace(`/${basePath}`, "")
-          .replace(new RegExp("^/?"), "")
-          .replace(new RegExp("/$"), "")
+      // the page to run via pageName, which we extract from
+      // document.location.pathname.
+      pageName = extractPageNameFromPathName(
+        document.location.pathname,
+        basePath
       )
       pageScriptHash = ""
     }
