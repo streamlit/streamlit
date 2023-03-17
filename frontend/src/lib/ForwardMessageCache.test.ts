@@ -15,32 +15,28 @@
  */
 
 import { ForwardMsg } from "src/autogen/proto"
-import fetchMock from "fetch-mock"
-import {
-  FETCH_MESSAGE_PATH,
-  ForwardMsgCache,
-} from "src/lib/ForwardMessageCache"
-import { buildHttpUri } from "src/lib/UriUtil"
-
-const MOCK_SERVER_URI = {
-  host: "streamlit.mock",
-  port: 80,
-  basePath: "",
-}
+import { ForwardMsgCache } from "src/lib/ForwardMessageCache"
 
 interface MockCache {
   cache: ForwardMsgCache
   getCachedMessage: (hash: string) => ForwardMsg | undefined
+  mockFetchCachedForwardMsg: jest.Mock
 }
 
 function createCache(): MockCache {
-  const cache = new ForwardMsgCache(() => MOCK_SERVER_URI)
+  const mockFetchCachedForwardMsg = jest.fn()
+
+  const cache = new ForwardMsgCache({
+    buildComponentURL: jest.fn(),
+    uploadFileUploaderFile: jest.fn(),
+    fetchCachedForwardMsg: mockFetchCachedForwardMsg,
+  })
 
   const getCachedMessage = (hash: string): ForwardMsg | undefined =>
-    // @ts-expect-error accessing into internals for testing
+    // @ts-expect-error (accessing internals for testing)
     cache.getCachedMessage(hash, false)
 
-  return { cache, getCachedMessage }
+  return { cache, getCachedMessage, mockFetchCachedForwardMsg }
 }
 
 /**
@@ -63,52 +59,6 @@ function createRefMsg(msg: ForwardMsg): ForwardMsg {
     refHash: msg.hash,
   })
 }
-
-/**
- * Configure fetch-mock to respond to /message requests for the given
- * ForwardMsg with a valid payload.
- */
-function mockGetMessageResponse(msg: ForwardMsg): void {
-  const response = {
-    status: 200,
-    headers: { "Content-Type": "application/octet-stream" },
-    body: ForwardMsg.encode(msg).finish(),
-  }
-
-  const options = {
-    query: { hash: msg.hash },
-    method: "get",
-  }
-
-  fetchMock.mock(
-    buildHttpUri(MOCK_SERVER_URI, FETCH_MESSAGE_PATH),
-    response,
-    options
-  )
-}
-
-/**
- * Configure fetch-mock to respond to /message requests for the given
- * ForwardMsg with a 404.
- */
-function mockMissingMessageResponse(msg: ForwardMsg): void {
-  const response = { status: 404 }
-  const options = {
-    query: { hash: msg.hash },
-    method: "get",
-  }
-
-  fetchMock.mock(
-    buildHttpUri(MOCK_SERVER_URI, FETCH_MESSAGE_PATH),
-    response,
-    options
-  )
-}
-
-beforeEach(() => {
-  fetchMock.config.sendAsJson = false
-})
-afterEach(() => fetchMock.restore())
 
 test("caches messages correctly", async () => {
   const { cache, getCachedMessage } = createCache()
@@ -176,10 +126,10 @@ test("fetches uncached messages from server", async () => {
   const refMsg = createRefMsg(msg)
   const encodedRefMsg = ForwardMsg.encode(refMsg).finish()
 
-  // Mock response: /message?hash=Cacheable -> msg
-  mockGetMessageResponse(msg)
-
-  const { cache, getCachedMessage } = createCache()
+  const { cache, getCachedMessage, mockFetchCachedForwardMsg } = createCache()
+  mockFetchCachedForwardMsg.mockResolvedValue(
+    new Uint8Array(ForwardMsg.encode(msg).finish())
+  )
 
   // processMessagePayload on a reference message whose
   // original version does *not* exist in our local cache. We
@@ -197,10 +147,9 @@ test("errors when uncached message is not on server", async () => {
   const refMsg = createRefMsg(msg)
   const encodedRefMsg = ForwardMsg.encode(refMsg).finish()
 
-  // Mock response: /message?hash=Cacheable -> 404
-  mockMissingMessageResponse(msg)
+  const { cache, mockFetchCachedForwardMsg } = createCache()
+  mockFetchCachedForwardMsg.mockRejectedValue(new Error("404"))
 
-  const { cache } = createCache()
   await expect(
     cache.processMessagePayload(refMsg, encodedRefMsg)
   ).rejects.toThrow()

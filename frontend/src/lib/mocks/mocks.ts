@@ -51,6 +51,9 @@ const MOCK_ENDPOINTS: StreamlitEndpoints = {
   },
 
   uploadFileUploaderFile: jest.fn().mockResolvedValue(1),
+  fetchCachedForwardMsg: jest
+    .fn()
+    .mockRejectedValue(new Error("unimplemented mock endpoint")),
 }
 
 /** Return a mock Endpoints implementation. */

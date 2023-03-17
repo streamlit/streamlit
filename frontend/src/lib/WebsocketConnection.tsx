@@ -27,6 +27,7 @@ import Resolver from "src/lib/Resolver"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { BaseUriParts, buildHttpUri, buildWsUri } from "src/lib/UriUtil"
 import React, { Fragment } from "react"
+import { StreamlitEndpoints } from "./StreamlitEndpoints"
 
 /**
  * Name of the logger.
@@ -85,6 +86,8 @@ type OnRetry = (
 export interface Args {
   /** The application's SessionInfo instance */
   sessionInfo: SessionInfo
+
+  endpoints: StreamlitEndpoints
 
   /**
    * List of URLs to connect to. We'll try the first, then the second, etc. If
@@ -218,7 +221,7 @@ export class WebsocketConnection {
 
   constructor(props: Args) {
     this.args = props
-    this.cache = new ForwardMsgCache(() => this.getBaseUriParts())
+    this.cache = new ForwardMsgCache(props.endpoints)
     this.stepFsm("INITIALIZED")
   }
 

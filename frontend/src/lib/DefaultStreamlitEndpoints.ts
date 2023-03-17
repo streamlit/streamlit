@@ -74,6 +74,17 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     })
   }
 
+  public async fetchCachedForwardMsg(hash: string): Promise<Uint8Array> {
+    const serverURI = this.requireServerUri()
+    const rsp = await axios.request({
+      url: buildHttpUri(serverURI, `_stcore/message?hash=${hash}`),
+      method: "GET",
+      responseType: "arraybuffer",
+    })
+
+    return new Uint8Array(rsp.data)
+  }
+
   /**
    * Fetch the server URI. If our server is disconnected, default to the most
    * recent cached value of the URI. If we're disconnected and have no cached
