@@ -504,13 +504,13 @@ _create_option(
 _create_option(
     "runner.fastReruns",
     description="""
-        Handle script rerun requests immediately, rather than waiting for
-        script execution to reach a yield point. Enabling this will
-        make Streamlit much more responsive to user interaction, but it can
-        lead to race conditions in apps that mutate session_state data outside
-        of explicit session_state assignment statements.
+        Handle script rerun requests immediately, rather than waiting for script
+        execution to reach a yield point. This makes Streamlit much more
+        responsive to user interaction, but it can lead to race conditions in
+        apps that mutate session_state data outside of explicit session_state
+        assignment statements.
     """,
-    default_val=False,
+    default_val=True,
     type_=bool,
 )
 
