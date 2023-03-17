@@ -17,12 +17,20 @@
 import axios from "axios"
 import MockAdapter from "axios-mock-adapter"
 import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
+import { ForwardMsg } from "src/autogen/proto"
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
 const MOCK_SERVER_URI = {
   host: "streamlit.mock",
   port: 80,
   basePath: "",
+}
+
+function createMockForwardMsg(hash: string, cacheable = true): ForwardMsg {
+  return ForwardMsg.fromObject({
+    hash,
+    metadata: { cacheable, deltaId: 0 },
+  })
 }
 
 describe("DefaultStreamlitEndpoints", () => {
@@ -128,6 +136,63 @@ describe("DefaultStreamlitEndpoints", () => {
           "Bad uploadFile response: expected a number but got 'invalidFileId'"
         )
       )
+    })
+
+    it("errors on bad status", async () => {
+      axiosMock
+        .onPost("http://streamlit.mock:80/_stcore/upload_file")
+        .reply(() => [400])
+
+      await expect(
+        endpoints.uploadFileUploaderFile(
+          MOCK_FILE,
+          "mockWidgetId",
+          "mockSessionId"
+        )
+      ).rejects.toEqual(new Error("Request failed with status code 400"))
+    })
+  })
+
+  describe("fetchCachedForwardMsg()", () => {
+    let axiosMock: MockAdapter
+    let endpoints: DefaultStreamlitEndpoints
+
+    beforeEach(() => {
+      axiosMock = new MockAdapter(axios)
+      endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: false,
+      })
+    })
+
+    afterEach(() => {
+      axiosMock.restore()
+    })
+
+    it("calls the appropriate endpoint", async () => {
+      const mockForwardMsgBytes = ForwardMsg.encode(
+        createMockForwardMsg("mockHash")
+      ).finish()
+
+      axiosMock
+        .onGet("http://streamlit.mock:80/_stcore/message?hash=mockHash")
+        .reply(() => {
+          return [200, mockForwardMsgBytes]
+        })
+
+      await expect(
+        endpoints.fetchCachedForwardMsg("mockHash")
+      ).resolves.toEqual(new Uint8Array(mockForwardMsgBytes))
+    })
+
+    it("errors on bad status", async () => {
+      axiosMock
+        .onGet("http://streamlit.mock:80/_stcore/message?hash=mockHash")
+        .reply(() => [400])
+
+      await expect(
+        endpoints.fetchCachedForwardMsg("mockHash")
+      ).rejects.toEqual(new Error("Request failed with status code 400"))
     })
   })
 
