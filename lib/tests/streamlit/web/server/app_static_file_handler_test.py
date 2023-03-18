@@ -20,7 +20,6 @@ import tornado.httpserver
 import tornado.testing
 import tornado.web
 import tornado.websocket
-from parameterized import parameterized
 
 from streamlit.web.server.app_static_file_handler import (
     MAX_APP_STATIC_FILE_SIZE,
