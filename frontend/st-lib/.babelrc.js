@@ -1,4 +1,3 @@
-// only for one part of the project
 console.log("In custom babel file!")
 module.exports = {
   presets: [
@@ -7,4 +6,4 @@ module.exports = {
   ],
   plugins: ['@emotion', 'tsconfig-paths-module-resolver'],
   ignore: ['./src/autogen/**', '**/*.test.ts', '**/*.test.tsx', '**/*.d.ts'],
-};
+}

@@ -18,7 +18,7 @@ import React from "react"
 import { BaseProvider } from "baseui"
 import { Global } from "@emotion/react"
 
-import ThemeProvider from "../../st-lib/src/components/core/ThemeProvider"
+import ThemeProvider from "st-lib/src/components/core/ThemeProvider"
 import {
   AUTO_THEME_NAME,
   createAutoTheme,
@@ -29,9 +29,9 @@ import {
   removeCachedTheme,
   setCachedTheme,
   ThemeConfig,
-} from "../../st-lib/src/theme"
+} from "st-lib"
 
-import AppWithScreencast from "./App"
+// import AppWithScreencast from "./App"
 import { StyledDataFrameOverlay } from "./styled-components"
 
 const ThemedApp = (): JSX.Element => {
@@ -85,14 +85,14 @@ const ThemedApp = (): JSX.Element => {
     >
       <ThemeProvider theme={theme.emotion} baseuiTheme={theme.basewebTheme}>
         <Global styles={globalStyles} />
-        <AppWithScreencast
+        {/* <AppWithScreencast
           theme={{
             setTheme: updateTheme,
             activeTheme: theme,
             addThemes,
             availableThemes,
           }}
-        />
+        /> */}
         {/* The data grid requires one root level portal element for rendering cell overlays */}
         <StyledDataFrameOverlay id="portal" />
       </ThemeProvider>

@@ -2,11 +2,13 @@
   "name": "st-lib",
   "version": "1.0.0",
   "private": true,
+  "license": "Apache-2.0",
   "homepage": "./",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
-    "build": "./bokeh/preload-bokeh.sh && env NODE_ENV=\"development\" INLINE_RUNTIME_CHUNK=false BUILD_PATH=dist webpack build --config ./config/webpack.config.js && yarn build:autogen && yarn build:asset && yarn build:lib-type",
+    "build": "./bokeh/preload-bokeh.sh && yarn build:src && yarn build:autogen && yarn build:asset && yarn build:lib-type",
     "test": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 node ./scripts/test.js --env=./jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
     "typecheck": "tsc --noEmit",
@@ -14,7 +16,8 @@
     "build:lib-type": "tsc -P tsconfig.lib.json && tsc-alias -p tsconfig.lib.json",
     "build:asset": "cp -R ./src/assets ./dist",
     "build:autogen": "cp -R ./src/autogen ./dist",
-    "testBuild": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true node ./scripts/build.js",
+    "build_test": "npx babel src --out-dir dist",
+    "build:src": "env NODE_ENV=\"development\" npx babel src --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\"",
     "barrelsBy": "barrelsby --delete -E  -flat --local --noSemicolon -e .*test.* -d ./src/hocs"
   },
   "jest": {
@@ -213,7 +216,8 @@
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.21.0",
+    "@babel/cli": "^7.21.0",
+    "@babel/core": "^7.21.3",
     "@babel/preset-env": "^7.20.2",
     "@babel/preset-flow": "^7.18.6",
     "@babel/preset-typescript": "^7.21.0",
@@ -262,10 +266,10 @@
     "@wojtekmaj/enzyme-adapter-react-17": "^0.8.0",
     "add": "^2.0.6",
     "axios-mock-adapter": "^1.21.2",
-    "babel-cli": "^6.26.0",
     "babel-loader": "^9.1.2",
     "babel-plugin-emotion": "^11.0.0",
     "babel-plugin-tsconfig-paths-module-resolver": "^1.0.4",
+    "babel-runtime": "^6.26.0",
     "barrelsby": "^2.5.1",
     "buffer": "^6.0.3",
     "circular-dependency-plugin": "^5.2.2",

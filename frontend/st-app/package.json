@@ -1,12 +1,12 @@
 {
   "name": "st-app",
-  "version": "1.19.0",
+  "version": "1.0.0",
   "private": true,
   "homepage": "./",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true node ./scripts/start.js",
-    "build": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=true node ./scripts/build.js",
+    "build": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false node ./scripts/build.js",
     "buildFast": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false BUILD_AS_FAST_AS_POSSIBLE=true node ./scripts/build.js",
     "test": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 node ./scripts/test.js --env=./jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 node ./scripts/test.js --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
@@ -163,11 +163,13 @@
     "protobufjs-cli": "^1.1.0",
     "query-string": "^8.1.0",
     "re-resizable": "^6.9.9",
+    "react": "^17.0.2",
     "react-app-polyfill": "^3.0.0",
     "react-color": "^2.18.1",
     "react-debounce-render": "^8.0.2",
     "react-dev-utils": "^12.0.1",
     "react-device-detect": "^2.2.2",
+    "react-dom": "^17.0.2",
     "react-dropzone": "^12.1.0",
     "react-feather": "^2.0.10",
     "react-google-login": "^5.1.21",
@@ -293,8 +295,6 @@
     "path": "^0.12.7",
     "prettier": "^2.8.3",
     "prop-types": "^15.7.2",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
     "react-responsive-carousel": "^3.2.23",
     "source-map-explorer": "^2.5.3",
     "start-server-and-test": "^1.15.3",
@@ -303,10 +303,6 @@
     "util": "^0.12.5",
     "webpack": "5.75.0",
     "webpack-cli": "^5.0.1"
-  },
-  "peerDependencies": {
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
   },
   "resolutions": {
     "@types/html-minifier-terser": "^7.0.0",

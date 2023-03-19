@@ -5,6 +5,7 @@
     "emitDeclarationOnly": true,
     "declaration": true,
     "outDir": "dist",
+    "rootDir": "src",
     "paths": { "src/*": ["src/*"] }
   },
   "exclude": ["**/*.test.ts", "**/*.test.tsx", "./src/autogen/**"]
