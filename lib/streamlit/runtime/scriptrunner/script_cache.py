@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import ast
 import os.path
 import threading
 from typing import Any
@@ -79,7 +80,7 @@ class ScriptCache:
                 # mode (as opposed to "eval" or "single").
                 mode="exec",
                 # Don't inherit any flags or "future" statements.
-                flags=0,
+                flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT,
                 dont_inherit=1,
                 # Use the default optimization options.
                 optimize=-1,
