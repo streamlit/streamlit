@@ -1,4 +1,4 @@
-console.log("In custom babel file!")
+console.log("Using custom babel file!")
 module.exports = {
   presets: [
     ['react-app', { flow: false, typescript: true, runtime: 'automatic', absoluteRuntime: false }],
