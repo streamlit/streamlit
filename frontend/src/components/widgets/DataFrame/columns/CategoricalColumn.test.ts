@@ -55,7 +55,7 @@ function getCategoricalColumn(
 }
 
 describe("CategoricalColumn", () => {
-  it("creates a valid column instance", () => {
+  it("creates a valid column instance with string values", () => {
     const mockColumn = getCategoricalColumn(MOCK_CATEGORICAL_TYPE, {
       options: ["foo", "bar"],
     })
@@ -69,6 +69,20 @@ describe("CategoricalColumn", () => {
     expect(mockColumn.getCellValue(mockCell)).toEqual("foo")
   })
 
+  it("creates a valid column instance number values", () => {
+    const mockColumn = getCategoricalColumn(MOCK_CATEGORICAL_TYPE, {
+      options: [1, 2, 3],
+    })
+    expect(mockColumn.kind).toEqual("categorical")
+    expect(mockColumn.title).toEqual(CATEGORICAL_COLUMN_TEMPLATE.title)
+    expect(mockColumn.id).toEqual(CATEGORICAL_COLUMN_TEMPLATE.id)
+    expect(mockColumn.sortMode).toEqual("default")
+
+    const mockCell = mockColumn.getCell(1)
+    expect(mockCell.kind).toEqual(GridCellKind.Custom)
+    expect(mockColumn.getCellValue(mockCell)).toEqual(1)
+  })
+
   it("creates a valid column instance from boolean type", () => {
     const mockColumn = getCategoricalColumn(MOCK_BOOLEAN_ARROW_TYPE)
     expect(mockColumn.kind).toEqual("categorical")
@@ -76,7 +90,7 @@ describe("CategoricalColumn", () => {
 
     const mockCell = mockColumn.getCell(true)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect(mockColumn.getCellValue(mockCell)).toEqual("true")
+    expect(mockColumn.getCellValue(mockCell)).toEqual(true)
   })
 
   it("creates error cell if value is not in options", () => {

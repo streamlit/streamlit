@@ -20,19 +20,14 @@ import {
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
-import { notNullOrUndefined } from "src/lib/utils"
-
 import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
   ColumnCreator,
   toSafeString,
+  toSafeBoolean,
 } from "./utils"
-
-// See pydantic for inspiration: https://pydantic-docs.helpmanual.io/usage/types/#booleans
-const BOOLEAN_TRUE_VALUES = ["true", "t", "yes", "y", "on", "1"]
-const BOOLEAN_FALSE_VALUES = ["false", "f", "no", "n", "off", "0"]
 
 /**
  * A column type that supports optimized rendering and editing for boolean values
@@ -55,24 +50,12 @@ function BooleanColumn(props: BaseColumnProps): BaseColumn {
     getCell(data?: any): GridCell {
       let cellData = null
 
-      if (notNullOrUndefined(data)) {
-        if (typeof data === "boolean") {
-          cellData = data
-        } else {
-          const cleanedValue = String(data).toLowerCase().trim()
-          if (cleanedValue === "") {
-            cellData = null
-          } else if (BOOLEAN_TRUE_VALUES.includes(cleanedValue)) {
-            cellData = true
-          } else if (BOOLEAN_FALSE_VALUES.includes(cleanedValue)) {
-            cellData = false
-          } else {
-            return getErrorCell(
-              toSafeString(data),
-              `The value cannot be interpreted as boolean.`
-            )
-          }
-        }
+      cellData = toSafeBoolean(data)
+      if (cellData === undefined) {
+        return getErrorCell(
+          toSafeString(data),
+          `The value cannot be interpreted as boolean.`
+        )
       }
 
       // We are not setting isMissingValue here because the checkbox column

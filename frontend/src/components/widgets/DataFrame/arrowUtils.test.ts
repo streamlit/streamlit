@@ -335,7 +335,7 @@ describe("getColumnFromArrow", () => {
       isIndex: false,
       isHidden: false,
       columnTypeMetadata: {
-        options: ["", "bar", "foo"],
+        options: ["bar", "foo"],
       },
     })
   })
