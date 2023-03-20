@@ -16,6 +16,7 @@
 
 import { IAppPage } from "src/autogen/proto"
 import { ExportedTheme } from "src/theme"
+import { ScriptRunState } from "src/lib/ScriptRunState"
 
 export type DeployedAppMetadata = {
   hostedAt?: string
@@ -31,6 +32,9 @@ export interface HostCommunicationState {
   authTokenPromise: Promise<string | undefined>
   deployedAppMetadata: DeployedAppMetadata
   forcedModalClose: boolean
+  scriptRerunRequested: boolean
+  scriptStopRequested: boolean
+  cacheClearRequested: boolean
   hideSidebarNav: boolean
   isOwner: boolean
   menuItems: IMenuItem[]
@@ -108,6 +112,15 @@ export type IHostToGuestMessage = {
       type: "UPDATE_HASH"
       hash: string
     }
+  | {
+      type: "STOP_SCRIPT"
+    }
+  | {
+      type: "RERUN_SCRIPT"
+    }
+  | {
+      type: "CLEAR_CACHE"
+    }
 )
 
 export type IGuestToHostMessage =
@@ -150,6 +163,10 @@ export type IGuestToHostMessage =
   | {
       type: "UPDATE_HASH"
       hash: string
+    }
+  | {
+      type: "SCRIPT_RUN_STATE_CHANGED"
+      scriptRunState: ScriptRunState
     }
 
 export type VersionedMessage<Message> = {

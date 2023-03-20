@@ -60,6 +60,9 @@ const getHostCommunicationState = (
 ): HostCommunicationState => ({
   authTokenPromise: Promise.resolve(undefined),
   forcedModalClose: false,
+  scriptRerunRequested: false,
+  scriptStopRequested: false,
+  cacheClearRequested: false,
   hideSidebarNav: false,
   isOwner: true,
   menuItems: [],
@@ -80,6 +83,9 @@ const getHostCommunicationProp = (
   onPageChanged: jest.fn(),
   resetAuthToken: jest.fn(),
   sendMessage: jest.fn(),
+  onScriptRerun: jest.fn(),
+  onScriptStop: jest.fn(),
+  onCacheClear: jest.fn(),
   setAllowedOriginsResp: jest.fn(),
   ...extend,
 })
