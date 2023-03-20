@@ -16,15 +16,17 @@ import streamlit as st
 
 st.header("This header is awesome!")
 st.header("This header is awesome too!", anchor="awesome-header")
+st.header("This header with hidden anchor is awesome tooooo!", anchor=False)
 
 st.title("`Code` - Title without Anchor")
 st.title("`Code` - Title with Anchor", anchor="title")
-
+st.title("`Code` - Title with hidden Anchor", anchor=False)
 
 st.subheader("`Code` - Subheader without Anchor")
 st.subheader(
     """`Code` - Subheader with Anchor [test_link](href)""",
     anchor="subheader",
 )
+st.subheader("`Code` - Subheader with hidden Anchor", anchor=False)
 
 st.title("a [link]()")

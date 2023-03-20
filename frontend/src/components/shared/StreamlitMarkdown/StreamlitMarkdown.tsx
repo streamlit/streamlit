@@ -134,6 +134,7 @@ const scrollNodeIntoView = once((node: HTMLElement): void => {
 interface HeadingWithAnchorProps {
   tag: string
   anchor?: string
+  hideAnchor?: boolean
   children: ReactNode[] | ReactNode
   tagProps?: HTMLProps<HTMLHeadingElement>
 }
@@ -146,6 +147,7 @@ export interface HeadingProtoProps {
 export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
   tag,
   anchor: propsAnchor,
+  hideAnchor,
   children,
   tagProps,
 }) => {
@@ -194,7 +196,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
     tag,
     { ...tagProps, ref, id: elementId },
     <StyledLinkIconContainer>
-      {elementId && (
+      {elementId && !hideAnchor && (
         <StyledLinkIcon href={`#${elementId}`}>
           <LinkIcon size="18" />
         </StyledLinkIcon>
@@ -486,7 +488,7 @@ function makeMarkdownHeading(tag: string, markdown: string): string {
 
 export function Heading(props: HeadingProtoProps): ReactElement {
   const { width, element } = props
-  const { tag, anchor, body, help } = element
+  const { tag, anchor, body, help, hideAnchor } = element
   const isSidebar = React.useContext(IsSidebarContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
@@ -501,7 +503,7 @@ export function Heading(props: HeadingProtoProps): ReactElement {
         data-testid="stMarkdownContainer"
       >
         <StyledHeaderContainer>
-          <HeadingWithAnchor tag={tag} anchor={anchor}>
+          <HeadingWithAnchor tag={tag} anchor={anchor} hideAnchor={hideAnchor}>
             {help ? (
               <StyledLabelHelpWrapper>
                 <RenderedMarkdown
