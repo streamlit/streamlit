@@ -93,7 +93,7 @@ class AppSessionTest(unittest.TestCase):
         Runtime._instance = None
 
     @patch(
-        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.disconnect"
+        "streamlit.runtime.app_session.secrets_singleton.file_change_listener.disconnect"
     )
     def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
@@ -175,7 +175,7 @@ class AppSessionTest(unittest.TestCase):
         clear_legacy_cache.assert_called_once()
 
     @patch(
-        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.connect"
+        "streamlit.runtime.app_session.secrets_singleton.file_change_listener.connect"
     )
     def test_request_rerun_on_secrets_file_change(self, patched_connect):
         """AppSession should add a secrets listener on creation."""
@@ -399,7 +399,7 @@ class AppSessionTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.config.on_config_parsed")
     @patch("streamlit.runtime.app_session.source_util.register_pages_changed_callback")
     @patch(
-        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.connect"
+        "streamlit.runtime.app_session.secrets_singleton.file_change_listener.connect"
     )
     def test_registers_file_watchers(
         self,
@@ -430,7 +430,7 @@ class AppSessionTest(unittest.TestCase):
         self.assertIsNotNone(session._local_sources_watcher)
 
     @patch(
-        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.disconnect"
+        "streamlit.runtime.app_session.secrets_singleton.file_change_listener.disconnect"
     )
     def test_disconnect_file_watchers(self, patched_secrets_disconnect):
         session = _create_test_session()

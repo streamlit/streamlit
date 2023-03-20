@@ -27,6 +27,7 @@ import {
   mergeColumnParameters,
   isMissingValueCell,
   BaseColumnProps,
+  toSafeBoolean,
   toGlideColumn,
 } from "./utils"
 import { TextColumn } from "."
@@ -144,6 +145,37 @@ describe("toSafeString", () => {
     ],
   ])("converts %p to a valid string: %p", (input, expected) => {
     expect(toSafeString(input)).toEqual(expected)
+  })
+})
+
+describe("toSafeBoolean", () => {
+  it.each([
+    [true, true],
+    [false, false],
+    ["true", true],
+    ["false", false],
+    ["yes", true],
+    ["no", false],
+    ["t", true],
+    ["f", false],
+    ["y", true],
+    ["n", false],
+    ["on", true],
+    ["off", false],
+    ["1", true],
+    ["0", false],
+    [1, true],
+    [0, false],
+    [[], null],
+    [null, null],
+    [undefined, null],
+    ["", null],
+    ["foo", undefined],
+    [12345, undefined],
+    [[1, 2], undefined],
+    [0.1, undefined],
+  ])("converts %p to a boolean: %p", (input, expected) => {
+    expect(toSafeBoolean(input)).toEqual(expected)
   })
 })
 

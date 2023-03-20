@@ -27,13 +27,15 @@ import {
   getErrorCell,
   toSafeString,
   mergeColumnParameters,
+  toSafeNumber,
+  toSafeBoolean,
 } from "./utils"
 
 export interface CategoricalColumnParams {
   /** A list of options available in the dropdown.
    * Every value in the column needs to match one of the options.
    */
-  readonly options: string[]
+  readonly options: (string | number | boolean)[]
 }
 
 /**
@@ -42,28 +44,41 @@ export interface CategoricalColumnParams {
  *
  */
 function CategoricalColumn(props: BaseColumnProps): BaseColumn {
+  // Categorical column can be either string, number or boolean type based on the options
+  let dataType: "number" | "boolean" | "string" = "string"
+
   const parameters = mergeColumnParameters(
     // Default parameters:
     {
       options:
-        Quiver.getTypeName(props.arrowType) === "bool"
-          ? ["true", "false"]
-          : [],
+        Quiver.getTypeName(props.arrowType) === "bool" ? [true, false] : [],
     },
     // User parameters:
     props.columnTypeMetadata
   ) as CategoricalColumnParams
+
+  const uniqueTypes = new Set(parameters.options.map(x => typeof x))
+  if (uniqueTypes.size === 1) {
+    if (uniqueTypes.has("number") || uniqueTypes.has("bigint")) {
+      dataType = "number"
+    } else if (uniqueTypes.has("boolean")) {
+      dataType = "boolean"
+    }
+  }
 
   const cellTemplate = {
     kind: GridCellKind.Custom,
     allowOverlay: props.isEditable,
     copyData: "",
     contentAlign: props.contentAlignment,
+    readonly: !props.isEditable,
     data: {
       kind: "dropdown-cell",
       allowedValues: [
         "", // Enforce the empty option
-        ...parameters.options.filter(opt => opt !== ""), // ignore empty option if it exists
+        ...parameters.options
+          .filter(opt => opt !== "") // ignore empty option if it exists
+          .map(opt => toSafeString(opt)), // convert everything to string
       ],
       value: "",
       readonly: !props.isEditable,
@@ -97,9 +112,14 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
         },
       } as DropdownCellType
     },
-    getCellValue(cell: DropdownCellType): string | null {
+    getCellValue(cell: DropdownCellType): string | number | boolean | null {
       if (cell.data?.value === undefined || cell.data?.value === "") {
         return null
+      }
+      if (dataType === "number") {
+        return toSafeNumber(cell.data?.value) ?? null
+      } else if (dataType === "boolean") {
+        return toSafeBoolean(cell.data?.value) ?? null
       }
       return cell.data?.value
     },
