@@ -151,6 +151,7 @@ describe("Quiver", () => {
           cssClass: "row_heading level0 row0",
           cssId: undefined,
           content: "i1",
+          field: new Field("__index_level_0__", new Utf8(), true, new Map([])),
           contentType: {
             pandas_type: IndexTypeName.UnicodeIndex,
             numpy_type: "object",
@@ -203,9 +204,9 @@ describe("Quiver", () => {
         test("period", () => {
           const mockElement = { data: PERIOD }
           const q = new Quiver(mockElement)
-          const indexType = q.types.index[0]
+          const dataType = q.types.data[0]
 
-          expect(Quiver.getTypeName(indexType)).toEqual("period[Q-DEC]")
+          expect(Quiver.getTypeName(dataType)).toEqual("period[L]")
         })
 
         test("decimal", () => {
@@ -509,6 +510,54 @@ describe("Quiver", () => {
         expect(Quiver.format(content, contentType, field)).toEqual(
           "(23.535, 256.5]"
         )
+      })
+
+      test("period", () => {
+        const mockElement = { data: PERIOD }
+        const q = new Quiver(mockElement)
+        const { rows, columns } = q.dimensions
+        const table: Record<string, string[]> = {}
+        for (let columnIndex = 1; columnIndex < columns; columnIndex++) {
+          const column = []
+          for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+            const { content, contentType, field } = q.getCell(
+              rowIndex,
+              columnIndex
+            )
+            const cellValue = Quiver.format(content, contentType, field)
+            column.push(cellValue)
+          }
+          table[column[0]] = [column[1], column[2]]
+        }
+
+        expect(table).toEqual({
+          L: ["2012-01-01 00:00:00.000", "1970-01-01 00:00:00.000"],
+          S: ["2012-01-01 00:00:00", "1970-01-01 00:00:00"],
+          T: ["2012-01-01 00:00", "1970-01-01 00:00"],
+          H: ["2012-01-01 00:00", "1970-01-01 00:00"],
+          D: ["2012-01-01", "1970-01-01"],
+          W: ["2011-12-26/2012-01-01", "1969-12-29/1970-01-04"],
+          "W-SUN": ["2011-12-26/2012-01-01", "1969-12-29/1970-01-04"],
+          "W-MON": ["2011-12-27/2012-01-02", "1969-12-30/1970-01-05"],
+          "W-TUE": ["2011-12-28/2012-01-03", "1969-12-31/1970-01-06"],
+          "W-WED": ["2011-12-29/2012-01-04", "1970-01-01/1970-01-07"],
+          "W-THU": ["2011-12-30/2012-01-05", "1969-12-26/1970-01-01"],
+          "W-FRI": ["2011-12-31/2012-01-06", "1969-12-27/1970-01-02"],
+          "W-SAT": ["2012-01-01/2012-01-07", "1969-12-28/1970-01-03"],
+          Q: ["2012Q1", "1970Q1"],
+          "Q-JAN": ["2012Q4", "1970Q4"],
+          "Q-FEB": ["2012Q4", "1970Q4"],
+          "Q-MAR": ["2012Q4", "1970Q4"],
+          "Q-APR": ["2012Q3", "1970Q3"],
+          "Q-MAY": ["2012Q3", "1970Q3"],
+          "Q-JUN": ["2012Q3", "1970Q3"],
+          "Q-JUL": ["2012Q2", "1970Q2"],
+          "Q-AUG": ["2012Q2", "1970Q2"],
+          "Q-SEP": ["2012Q2", "1970Q2"],
+          "Q-OCT": ["2012Q1", "1970Q1"],
+          "Q-NOV": ["2012Q1", "1970Q1"],
+          "Q-DEC": ["2012Q1", "1970Q1"],
+        })
       })
 
       test("invalid interval type", () => {

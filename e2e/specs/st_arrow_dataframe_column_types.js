@@ -23,7 +23,7 @@ describe("st.dataframe supports a variety of column types", () => {
   });
 
   it("renders element correctly", () => {
-    cy.get(".stDataFrame").should("have.length", 8);
+    cy.get(".stDataFrame").should("have.length", 9);
 
     /** Since glide-data-grid uses HTML canvas for rendering the table we
     cannot run any tests based on the HTML DOM. Therefore, we only use snapshot
