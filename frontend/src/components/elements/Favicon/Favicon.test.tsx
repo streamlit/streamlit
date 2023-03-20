@@ -73,7 +73,7 @@ describe("Favicon element", () => {
     expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
   })
 
-  it("calls `sendMessageToHost` with the proper args", () => {
+  it("sends SET_PAGE_FAVICON message to host", () => {
     const sendMessageToHost = jest.fn()
     handleFavicon(
       "https://streamlit.io/path/to/favicon.png",
