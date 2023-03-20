@@ -15,7 +15,6 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
 import { Block as BlockProto, ForwardMsgMetadata } from "src/autogen/proto"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { BlockNode, ElementNode, AppRoot } from "src/lib/AppNode"
@@ -28,6 +27,7 @@ import { makeElementWithInfoText } from "src/lib/utils"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 import { mockEndpoints, mockSessionInfo } from "src/lib/mocks/mocks"
+import { shallow, mount } from "src/lib/test_util"
 import AppView, { AppViewProps } from "./AppView"
 
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
@@ -220,5 +220,23 @@ describe("AppView element", () => {
 
     expect(wrapper.find("StyledAppViewBlockSpacer").exists()).toBe(false)
     expect(wrapper.find("StyledAppViewFooter").exists()).toBe(false)
+  })
+
+  describe("when window.location.hash changes", () => {
+    let originalLocation: Location
+    beforeEach(() => (originalLocation = window.location))
+    afterEach(() => (window.location = originalLocation))
+
+    it("sends UPDATE_HASH message to host", () => {
+      const sendMessageToHost = jest.fn()
+      mount(<AppView {...getProps({ sendMessageToHost })} />)
+
+      window.location.hash = "mock_hash"
+      window.dispatchEvent(new HashChangeEvent("hashchange"))
+      expect(sendMessageToHost).toHaveBeenCalledWith({
+        hash: "#mock_hash",
+        type: "UPDATE_HASH",
+      })
+    })
   })
 })
