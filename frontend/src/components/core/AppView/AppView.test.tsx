@@ -38,6 +38,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 
   return {
     elements: AppRoot.empty(getMetricsManagerForTest(sessionInfo)),
+    sendMessageToHost: jest.fn(),
     sessionInfo: sessionInfo,
     scriptRunId: "script run 123",
     scriptRunState: ScriptRunState.NOT_RUNNING,
