@@ -127,7 +127,7 @@
       "error",
       { "allowSameFolder": true, "rootDir": "src", "prefix": "src" }
     ],
-    "no-else-return": ["error", { "allowElseIf": false }]
+    "no-else-return": ["error", { "allowElseIf": true }]
   },
   "settings": {
     "react": {

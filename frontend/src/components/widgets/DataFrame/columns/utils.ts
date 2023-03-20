@@ -323,10 +323,9 @@ export function toSafeBoolean(value: any): boolean | null | undefined {
     return true
   } else if (BOOLEAN_FALSE_VALUES.includes(cleanedValue)) {
     return false
-  } else {
-    // The value cannot be interpreted as boolean
-    return undefined
   }
+  // The value cannot be interpreted as boolean
+  return undefined
 }
 
 /**
