@@ -72,7 +72,7 @@ export interface HostCommunicationHOC {
 
 export const HOST_COMM_VERSION = 1
 
-export function sendMessageToHost(message: IGuestToHostMessage): void {
+function sendMessageToHost(message: IGuestToHostMessage): void {
   window.parent.postMessage(
     {
       stCommVersion: HOST_COMM_VERSION,
