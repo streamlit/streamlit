@@ -21,110 +21,94 @@ import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
 // Other local imports.
-// import AppContext from "st-lib/components/core/AppContext"
-// import AppView from "st-lib"
-// import StatusWidget from "st-lib"
-// import MainMenu, { isLocalhost } from "st-lib"
-// import ToolbarActions from "st-lib"
-// import Header from "st-lib"
-// import {
-//   DialogProps,
-//   DialogType,
-//   StreamlitDialog,
-// } from "st-lib"
-// import { ConnectionManager } from "st-lib"
-// import { PerformanceEvents } from "st-lib"
-// import {
-//   createFormsData,
-//   FormsData,
-//   WidgetStateManager,
-// } from "st-lib"
-// import { ConnectionState } from "st-lib"
-// import { ScriptRunState } from "st-lib"
-// import { SessionEventDispatcher } from "st-lib"
-// import {
-//   setCookie,
-//   getIFrameEnclosingApp,
-//   hashString,
-//   isEmbed,
-//   isPaddingDisplayed,
-//   isToolbarDisplayed,
-//   isColoredLineDisplayed,
-//   isScrollingHidden,
-//   isFooterDisplayed,
-//   isLightTheme,
-//   isDarkTheme,
-//   isInChildFrame,
-//   notUndefined,
-//   getElementWidgetID,
-//   generateUID,
-//   getEmbeddingIdClassName,
-// } from "st-lib"
-// import { BaseUriParts } from "st-lib"
-// import {
-//   BackMsg,
-//   CustomThemeConfig,
-//   Delta,
-//   ForwardMsg,
-//   ForwardMsgMetadata,
-//   Initialize,
-//   NewSession,
-//   PageConfig,
-//   PageInfo,
-//   PageNotFound,
-//   PagesChanged,
-//   PageProfile,
-//   SessionEvent,
-//   WidgetStates,
-//   SessionStatus,
-//   Config,
-//   IGitInfo,
-//   GitInfo,
-//   IAppPage,
-//   AppPage,
-// } from "src/autogen/proto"
+import {
+  AppContext,
+  AppView,
+  setCookie,
+  ConnectionManager,
+  DialogProps,
+  DialogType,
+  getIFrameEnclosingApp,
+  hashString,
+  isEmbed,
+  isPaddingDisplayed,
+  isToolbarDisplayed,
+  isColoredLineDisplayed,
+  isScrollingHidden,
+  isFooterDisplayed,
+  isLightTheme,
+  isLocalhost,
+  isDarkTheme,
+  isInChildFrame,
+  notUndefined,
+  getElementWidgetID,
+  generateUID,
+  getEmbeddingIdClassName,
+  Header,
+  MainMenu,
+  StatusWidget,
+  StreamlitDialog,
+  ToolbarActions,
+  PerformanceEvents,
+  createFormsData,
+  FormsData,
+  WidgetStateManager,
+  ConnectionState,
+  ScriptRunState,
+  SessionEventDispatcher,
+  RERUN_PROMPT_MODAL_DIALOG,
+  SessionInfo,
+  MetricsManager,
+  FileUploadClient,
+  logError,
+  logMessage,
+  AppRoot,
+  UserSettings,
+  ComponentRegistry,
+  handleFavicon,
+  CUSTOM_THEME_NAME,
+  createAutoTheme,
+  createPresetThemes,
+  createTheme,
+  getCachedTheme,
+  isPresetTheme,
+  ThemeConfig,
+  toExportedTheme,
+  withHostCommunication,
+  HostCommunicationHOC,
+  withScreencast,
+  ScreenCastHOC,
+  ensureError,
+  BaseUriParts,
+} from "st-lib"
+import {
+  BackMsg,
+  CustomThemeConfig,
+  Delta,
+  ForwardMsg,
+  ForwardMsgMetadata,
+  Initialize,
+  NewSession,
+  PageConfig,
+  PageInfo,
+  PageNotFound,
+  PagesChanged,
+  PageProfile,
+  SessionEvent,
+  WidgetStates,
+  SessionStatus,
+  Config,
+  IGitInfo,
+  GitInfo,
+  IAppPage,
+  AppPage,
+} from "src/autogen/proto"
 import { without, concat, noop } from "lodash"
 
-// import { RERUN_PROMPT_MODAL_DIALOG } from "st-lib"
-// import { SessionInfo } from "st-lib"
-// import { MetricsManager } from "st-lib"
-// import { FileUploadClient } from "st-lib"
-// import { logError, logMessage } from "st-lib"
-// import { AppRoot } from "st-lib"
-
-// import { UserSettings } from "st-lib"
-// import { ComponentRegistry } from "st-lib"
-// import { handleFavicon } from "st-lib"
-
-// import {
-//   CUSTOM_THEME_NAME,
-//   createAutoTheme,
-//   createPresetThemes,
-//   createTheme,
-//   getCachedTheme,
-//   isPresetTheme,
-//   ThemeConfig,
-//   toExportedTheme,
-// } from "st-lib"
-
 import { StyledApp } from "./styled-components"
-import { ThemeConfig } from "st-lib/src/theme"
-import { HostCommunicationHOC } from "st-lib/hocs/withHostCommunication"
-import { ScreenCastHOC } from "st-lib/hocs/withScreencast/withScreencast"
-import AppContext from "st-lib/src/core/AppContext"
-import { ConnectionState } from "st-lib/lib/ConnectionState"
-
-// import withHostCommunication, {
-//   HostCommunicationHOC,
-// } from "st-lib"
-
-// import withScreencast, {
-//   ScreenCastHOC,
-// } from "st-lib"
 
 // Used to import fonts + responsive reboot items
-// import "st-lib/dist/assets/css/theme.scss"
-// import { ensureError } from "st-lib"
+import "src/assets/css/theme.scss"
 
 export interface Props {
   screenCast: ScreenCastHOC

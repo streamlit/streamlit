@@ -18,3 +18,4 @@ import { HostCommunicationHOC as _HostCommunicationHOC } from "./withHostCommuni
 
 export { default, sendMessageToHost } from "./withHostCommunication"
 export type HostCommunicationHOC = _HostCommunicationHOC
+export * from './types'

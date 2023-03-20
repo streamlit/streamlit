@@ -17,9 +17,34 @@
 import React from "react"
 import { ShallowWrapper, ReactWrapper } from "enzyme"
 import cloneDeep from "lodash/cloneDeep"
-import { LocalStore } from "src/lib/storageUtils"
-import { hashString } from "src/lib/utils"
-import { shallow, mount } from "src/lib/test_util"
+import {
+  LocalStore,
+  HostCommunicationHOC,
+  hashString,
+  shallow,
+  mount,
+  IMenuItem,
+  IToolbarItem,
+  HostCommunicationState,
+  ConnectionState,
+  ScriptRunState,
+  MetricsManager,
+  getMetricsManagerForTest,
+  SessionInfo,
+  Args as SessionInfoArgs,
+  CUSTOM_THEME_NAME,
+  createAutoTheme,
+  darkTheme,
+  lightTheme,
+  toExportedTheme,
+  Modal,
+  DialogType,
+  StreamlitDialog,
+  App,
+  Props,
+  MainMenu,
+  ToolbarActions,
+} from "st-lib"
 import {
   CustomThemeConfig,
   ForwardMsg,
@@ -29,29 +54,6 @@ import {
   PageNotFound,
   PagesChanged,
 } from "src/autogen/proto"
-import { HostCommunicationHOC } from "src/hocs/withHostCommunication"
-import {
-  IMenuItem,
-  IToolbarItem,
-  HostCommunicationState,
-} from "src/hocs/withHostCommunication/types"
-import { ConnectionState } from "src/lib/ConnectionState"
-import { ScriptRunState } from "src/lib/ScriptRunState"
-import { MetricsManager } from "src/lib/MetricsManager"
-import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
-import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
-import {
-  CUSTOM_THEME_NAME,
-  createAutoTheme,
-  darkTheme,
-  lightTheme,
-  toExportedTheme,
-} from "src/theme"
-import Modal from "./components/shared/Modal"
-import { DialogType, StreamlitDialog } from "./components/core/StreamlitDialog"
-import { App, Props } from "./App"
-import MainMenu from "./components/core/MainMenu"
-import ToolbarActions from "./components/core/ToolbarActions"
 
 jest.mock("src/lib/ConnectionManager")
 

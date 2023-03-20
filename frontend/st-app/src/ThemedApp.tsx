@@ -18,8 +18,8 @@ import React from "react"
 import { BaseProvider } from "baseui"
 import { Global } from "@emotion/react"
 
-import ThemeProvider from "st-lib/src/components/core/ThemeProvider"
 import {
+  ThemeProvider,
   AUTO_THEME_NAME,
   createAutoTheme,
   createPresetThemes,
@@ -31,7 +31,7 @@ import {
   ThemeConfig,
 } from "st-lib"
 
-// import AppWithScreencast from "./App"
+import AppWithScreencast from "./App"
 import { StyledDataFrameOverlay } from "./styled-components"
 
 const ThemedApp = (): JSX.Element => {

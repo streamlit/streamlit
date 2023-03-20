@@ -16,16 +16,17 @@
 
 import React from "react"
 
-import { LocalStore } from "src/lib/storageUtils"
-import { shallow, mount } from "src/lib/test_util"
 import {
+  LocalStore,
+  shallow,
+  mount,
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
   createPresetThemes,
   darkTheme,
   setCachedTheme,
   ThemeConfig,
-} from "src/theme"
+} from "st-lib"
 
 import AppWithScreencast from "./App"
 import ThemedApp from "./ThemedApp"
