@@ -21,8 +21,11 @@ import { baseTheme, ThemeConfig } from "src/theme"
 import { BaseUriParts, getWindowBaseUriParts } from "src/lib/UriUtil"
 
 export interface Props {
+  /**
+   * If true, render the app with a wider column size.
+   * Set from the UserSettings object.
+   */
   wideMode: boolean
-  layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   embedded: boolean
   showPadding: boolean
@@ -44,7 +47,6 @@ export interface Props {
 
 export const AppContext = React.createContext<Props>({
   wideMode: false,
-  layout: PageConfig.Layout.CENTERED,
   initialSidebarState: PageConfig.SidebarState.AUTO,
   embedded: false,
   showPadding: false,

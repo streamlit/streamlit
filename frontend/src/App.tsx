@@ -1449,7 +1449,6 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState,
       menuItems,
       isFullScreen,
-      layout,
       scriptRunId,
       scriptRunState,
       userSettings,
@@ -1486,7 +1485,6 @@ export class App extends PureComponent<Props, State> {
       <AppContext.Provider
         value={{
           initialSidebarState,
-          layout,
           wideMode: userSettings.wideMode,
           isFullScreen,
           setFullScreen: this.handleFullScreen,
