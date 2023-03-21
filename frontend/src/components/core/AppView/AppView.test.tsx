@@ -64,6 +64,10 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 }
 
 describe("AppView element", () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     const wrapper = shallow(<AppView {...props} />)
