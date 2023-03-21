@@ -54,8 +54,7 @@ class LocalDiskCacheStorageManagerTest(unittest.TestCase):
         self.tempdir.cleanup()
 
     def test_create_persist_context(self):
-        """
-        Tests that LocalDiskCacheStorageManager.create()
+        """Tests that LocalDiskCacheStorageManager.create()
         returns a LocalDiskCacheStorage with correct parameters from context, if
         persist="disk"
         """
@@ -73,8 +72,7 @@ class LocalDiskCacheStorageManagerTest(unittest.TestCase):
         self.assertEqual(storage.max_entries, 100)
 
     def test_create_not_persist_context(self):
-        """
-        Tests that LocalDiskCacheStorageManager.create()
+        """Tests that LocalDiskCacheStorageManager.create()
         returns a LocalDiskCacheStorage with correct parameters from context, if
         persist is None
         """
@@ -92,8 +90,7 @@ class LocalDiskCacheStorageManagerTest(unittest.TestCase):
         self.assertEqual(storage.max_entries, math.inf)
 
     def test_check_context_with_persist_and_ttl(self):
-        """
-        Tests that LocalDiskCacheStorageManager.check_context() writes a warning
+        """Tests that LocalDiskCacheStorageManager.check_context() writes a warning
         in logs when persist="disk" and ttl_seconds is not None
         """
         context = CacheStorageContext(
@@ -119,9 +116,8 @@ class LocalDiskCacheStorageManagerTest(unittest.TestCase):
             )
 
     def test_check_context_without_persist(self):
-        """
-        Tests that LocalDiskCacheStorageManager.check_context() does not write a warning
-        in logs when persist is None and ttl_seconds is NOT None
+        """Tests that LocalDiskCacheStorageManager.check_context() does not
+        write a warning in logs when persist is None and ttl_seconds is NOT None.
         """
         context = CacheStorageContext(
             function_key="func-key",
@@ -153,8 +149,7 @@ class LocalDiskCacheStorageManagerTest(unittest.TestCase):
 
     @patch("shutil.rmtree", wraps=shutil.rmtree)
     def test_clear_all(self, mock_rmtree):
-        """
-        Tests that LocalDiskCacheStorageManager.clear_all() calls shutil.rmtree
+        """Tests that LocalDiskCacheStorageManager.clear_all() calls shutil.rmtree
         to remove the cache folder
         """
         manager = LocalDiskCacheStorageManager()
@@ -208,25 +203,19 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
         MagicMock(side_effect=util.Error("mock exception")),
     )
     def test_storage_set_error(self):
-        """
-        Test that storage.set() raises an exception when it fails to write to disk.
-        """
+        """Test that storage.set() raises an exception when it fails to write to disk."""
         with self.assertRaises(CacheStorageError) as e:
             self.storage.set("uniqueKey", b"new-value")
         self.assertEqual(str(e.exception), "Unable to write to cache")
 
     def test_storage_set_override(self):
-        """
-        Test that storage.set() overrides the value of an existing key.
-        """
+        """Test that storage.set() overrides the value of an existing key."""
         self.storage.set("another_key", b"another_value")
         self.storage.set("another_key", b"new_value")
         self.assertEqual(self.storage.get("another_key"), b"new_value")
 
     def test_storage_delete(self):
-        """
-        Test that storage.delete() removes the correct file from disk.
-        """
+        """Test that storage.delete() removes the correct file from disk."""
         self.storage.set("new-key", b"new-value")
         self.assertTrue(os.path.exists(self.tempdir.path + "/func-key-new-key.memo"))
         self.storage.delete("new-key")
@@ -236,9 +225,7 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
             self.storage.get("new-key")
 
     def test_storage_clear(self):
-        """
-        Test that storage.clear() removes all storage files from disk.
-        """
+        """Test that storage.clear() removes all storage files from disk."""
         self.storage.set("some-key", b"some-value")
         self.storage.set("another-key", b"another-value")
         self.assertTrue(os.path.exists(self.tempdir.path + "/func-key-some-key.memo"))
@@ -261,6 +248,26 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
 
         # test that cache folder is empty
         self.assertEqual(os.listdir(self.tempdir.path), [])
+
+    def test_storage_clear_not_existing_cache_directory(self):
+        """Test that clear() is not crashing if the cache directory does not exist."""
+        self.tempdir.cleanup()
+        self.storage.clear()
+
+    def test_storage_clear_call_listdir_existing_cache_directory(self):
+        """Test that clear() call os.listdir if cache folder does not exist."""
+        with patch("os.listdir") as mock_listdir:
+            self.storage.clear()
+        mock_listdir.assert_called_once()
+
+    def test_storage_clear_not_call_listdir_not_existing_cache_directory(self):
+        """Test that clear() doesn't call os.listdir if cache folder does not exist."""
+        self.tempdir.cleanup()
+
+        with patch("os.listdir") as mock_listdir:
+            self.storage.clear()
+
+        mock_listdir.assert_not_called()
 
     def test_storage_close(self):
         """Test that storage.close() does not raise any exception."""

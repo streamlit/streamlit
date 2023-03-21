@@ -193,9 +193,13 @@ class LocalDiskCacheStorage(CacheStorage):
         """Delete all keys for the current storage"""
         cache_dir = get_cache_folder_path()
 
-        for file_name in os.listdir(cache_dir):
-            if self._is_cache_file(file_name):
-                os.remove(os.path.join(cache_dir, file_name))
+        if os.path.isdir(cache_dir):
+            # We try to remove all files in the cache directory that start with
+            # the function key, whether `clear` called for `self.persist`
+            # storage or not, to avoid leaving orphaned files in the cache directory.
+            for file_name in os.listdir(cache_dir):
+                if self._is_cache_file(file_name):
+                    os.remove(os.path.join(cache_dir, file_name))
 
     def close(self) -> None:
         """Dummy implementation of close, we don't need to actually "close" anything"""

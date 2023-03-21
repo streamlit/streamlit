@@ -16,6 +16,7 @@
 
 import React from "react"
 import { ShallowWrapper, ReactWrapper } from "enzyme"
+import { waitFor } from "@testing-library/dom"
 import cloneDeep from "lodash/cloneDeep"
 import { LocalStore } from "src/lib/storageUtils"
 import { hashString } from "src/lib/utils"
@@ -851,7 +852,9 @@ describe("App.handleNewSession", () => {
       window.history.pushState({}, "", "/")
     })
 
-    it("can switch to the main page", () => {
+    it("can switch to the main page from a different page", () => {
+      window.history.replaceState({}, "", "/page2")
+
       const instance = wrapper.instance() as App
       instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
 
@@ -910,6 +913,37 @@ describe("App.handleNewSession", () => {
       )
     })
 
+    it("doesn't push a new history when the same page URL is already set", () => {
+      const instance = wrapper.instance() as App
+      const newSessionJson = cloneDeep(NEW_SESSION_JSON)
+      newSessionJson.appPages = [
+        { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
+        { pageScriptHash: "subpage_hash", pageName: "page2" },
+      ]
+
+      history.replaceState({}, "", "/") // The URL is set to the main page from the beginning.
+
+      // Because the page URL is already "/" pointing to the main page, no new history is pushed.
+      instance.handleNewSession(
+        new NewSession({ ...newSessionJson, pageScriptHash: "toppage_hash" })
+      )
+      expect(window.history.pushState).not.toHaveBeenCalled()
+      // @ts-expect-error
+      window.history.pushState.mockClear()
+
+      // When accessing a different page, a new history for that page is pushed.
+      instance.handleNewSession(
+        new NewSession({ ...newSessionJson, pageScriptHash: "subpage_hash" })
+      )
+      expect(window.history.pushState).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/page2"
+      )
+      // @ts-expect-error
+      window.history.pushState.mockClear()
+    })
+
     it("doesn't push a duplicated history when rerunning", () => {
       const instance = wrapper.instance() as App
       const newSessionJson = cloneDeep(NEW_SESSION_JSON)
@@ -917,6 +951,8 @@ describe("App.handleNewSession", () => {
         { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
         { pageScriptHash: "subpage_hash", pageName: "page2" },
       ]
+
+      history.replaceState({}, "", "/page2") // Starting from a not main page.
 
       // When running the top page first, a new history for the page is pushed.
       instance.handleNewSession(
@@ -947,6 +983,82 @@ describe("App.handleNewSession", () => {
       // @ts-expect-error
       window.history.pushState.mockClear()
     })
+  })
+})
+
+describe("App.onHistoryChange", () => {
+  let wrapper: ShallowWrapper
+  let instance: App
+
+  const NEW_SESSION_JSON = {
+    config: {
+      gatherUsageStats: false,
+      maxCachedMessageAge: 0,
+      mapboxToken: "mapboxToken",
+      allowRunOnSave: false,
+      hideSidebarNav: false,
+    },
+    customTheme: {
+      primaryColor: "red",
+    },
+    initialize: {
+      userInfo: {
+        installationId: "installationId",
+        installationIdV3: "installationIdV3",
+        email: "email",
+      },
+      environmentInfo: {
+        streamlitVersion: "streamlitVersion",
+        pythonVersion: "pythonVersion",
+      },
+      sessionStatus: {
+        runOnSave: false,
+        scriptIsRunning: false,
+      },
+      sessionId: "sessionId",
+      commandLine: "commandLine",
+    },
+    appPages: [
+      { pageScriptHash: "top_hash", pageName: "streamlit_app" },
+      { pageScriptHash: "sub_hash", pageName: "page2" },
+    ],
+    pageScriptHash: "top_hash",
+  }
+
+  beforeEach(() => {
+    wrapper = shallow(<App {...getProps()} />)
+    instance = wrapper.instance() as App
+    // @ts-expect-error
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+
+    window.history.pushState({}, "", "/")
+  })
+
+  it("handles popState events, e.g. clicking browser's back button", async () => {
+    const instance = wrapper.instance() as App
+
+    jest.spyOn(instance, "onPageChange")
+
+    instance.handleNewSession(
+      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
+    )
+    instance.handleNewSession(
+      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "top_hash" })
+    )
+    instance.handleNewSession(
+      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
+    )
+    expect(instance.state.currentPageScriptHash).toEqual("sub_hash")
+
+    window.history.back()
+    await waitFor(() =>
+      expect(instance.onPageChange).toHaveBeenLastCalledWith("top_hash")
+    )
+
+    window.history.back()
+    await waitFor(() =>
+      expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
+    )
   })
 })
 

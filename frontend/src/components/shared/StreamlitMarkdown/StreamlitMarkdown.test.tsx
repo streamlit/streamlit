@@ -320,6 +320,18 @@ describe("Heading", () => {
     expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(1)
   })
 
+  it("renders anchor link", () => {
+    const props = getHeadingProps({ body: "hello" })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("StyledLinkIcon")).toHaveLength(1)
+  })
+
+  it("does not renders anchor link when it is hidden", () => {
+    const props = getHeadingProps({ body: "hello", hideAnchor: true })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("StyledLinkIcon")).toHaveLength(0)
+  })
+
   it("renders properly with help text", () => {
     const props = getHeadingProps({ body: "hello", help: "help text" })
     const wrapper = mount(<Heading {...props} />)

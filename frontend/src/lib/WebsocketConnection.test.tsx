@@ -29,7 +29,7 @@ import {
   doInitPings,
   Args,
 } from "src/lib/WebsocketConnection"
-import { mockSessionInfoProps } from "./mocks/mocks"
+import { mockEndpoints, mockSessionInfoProps } from "./mocks/mocks"
 
 const MOCK_ALLOWED_ORIGINS_RESPONSE = {
   data: {
@@ -44,6 +44,7 @@ const MOCK_HEALTH_RESPONSE = { status: "ok" }
 function createMockArgs(overrides?: Partial<Args>): Args {
   return {
     sessionInfo: new SessionInfo(),
+    endpoints: mockEndpoints(),
     baseUriPartsList: [
       {
         host: "localhost",

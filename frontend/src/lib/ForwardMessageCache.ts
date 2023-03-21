@@ -16,10 +16,8 @@
 
 import { ForwardMsg } from "src/autogen/proto"
 import { logMessage } from "src/lib/log"
-import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
 import { ensureError } from "./ErrorHandling"
-
-export const FETCH_MESSAGE_PATH = "_stcore/message"
+import { StreamlitEndpoints } from "./StreamlitEndpoints"
 
 class CacheEntry {
   public readonly encodedMsg: Uint8Array
@@ -42,11 +40,7 @@ class CacheEntry {
 export class ForwardMsgCache {
   private readonly messages = new Map<string, CacheEntry>()
 
-  /**
-   * A function that returns our server's base URI, or undefined
-   * if we're not connected.
-   */
-  private readonly getServerUri: () => BaseUriParts | undefined
+  private readonly endpoints: StreamlitEndpoints
 
   /**
    * A counter that tracks the number of times the underlying script
@@ -54,8 +48,8 @@ export class ForwardMsgCache {
    */
   private scriptRunCount = 0
 
-  constructor(getServerUri: () => BaseUriParts | undefined) {
-    this.getServerUri = getServerUri
+  constructor(endpoints: StreamlitEndpoints) {
+    this.endpoints = endpoints
   }
 
   /**
@@ -108,7 +102,7 @@ export class ForwardMsgCache {
     } else {
       // Cache miss: fetch from the server
       logMessage(`Cached ForwardMsg MISS [hash=${msg.refHash}]`)
-      const encodedNewMsg = await this.fetchMessagePayload(
+      const encodedNewMsg = await this.endpoints.fetchCachedForwardMsg(
         msg.refHash as string
       )
       try {
@@ -130,35 +124,6 @@ export class ForwardMsgCache {
     }
     newMsg.metadata = ForwardMsg.decode(encodedMsg).metadata
     return newMsg
-  }
-
-  /**
-   * Fetches a message from the server by its hash. This happens when
-   * we have a ForwardMsg cache miss - that is, when the server sends
-   * us a ForwardMsg reference, and we don't have it in our local
-   * cache. This should happen rarely, as the client and server's
-   * caches should generally be in sync.
-   */
-  private async fetchMessagePayload(hash: string): Promise<Uint8Array> {
-    const serverURI = this.getServerUri()
-    if (serverURI === undefined) {
-      throw new Error(
-        "Cannot retrieve uncached message: not connected to a server"
-      )
-    }
-
-    const url = buildHttpUri(serverURI, `${FETCH_MESSAGE_PATH}?hash=${hash}`)
-    const rsp = await fetch(url)
-    if (!rsp.ok) {
-      // `fetch` doesn't reject for bad HTTP statuses, so
-      // we explicitly check for that.
-      throw new Error(
-        `Failed to retrieve ForwardMsg (hash=${hash}): ${rsp.statusText}`
-      )
-    }
-
-    const data = await rsp.arrayBuffer()
-    return new Uint8Array(data)
   }
 
   /**
