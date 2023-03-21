@@ -323,7 +323,7 @@ def _get_variable_name_from_code_str(code):
     ):
         start_offset -= 1
 
-    return first_line[arg_node.col_offset : end_offset]
+    return first_line[start_offset:end_offset]
 
 
 _NEWLINES = re.compile(r"[\n\r]+")
