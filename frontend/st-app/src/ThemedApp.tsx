@@ -84,15 +84,18 @@ const ThemedApp = (): JSX.Element => {
       zIndex={theme.emotion.zIndices.popupMenu}
     >
       <ThemeProvider theme={theme.emotion} baseuiTheme={theme.basewebTheme}>
-        <Global styles={globalStyles} />
-        {/* <AppWithScreencast
+        <Global
+          // @ts-expect-error
+          styles={globalStyles}
+        />
+        <AppWithScreencast
           theme={{
             setTheme: updateTheme,
             activeTheme: theme,
             addThemes,
             availableThemes,
           }}
-        /> */}
+        />
         {/* The data grid requires one root level portal element for rendering cell overlays */}
         <StyledDataFrameOverlay id="portal" />
       </ThemeProvider>

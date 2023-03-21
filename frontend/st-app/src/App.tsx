@@ -79,7 +79,7 @@ import {
   HostCommunicationHOC,
   DialogProps,
   DialogType,
-  ScreenCastHOC
+  ScreenCastHOC,
 } from "st-lib"
 
 import {
@@ -1445,7 +1445,7 @@ export class App extends PureComponent<Props, State> {
           attach={window}
           focused={true}
         >
-          <StyledApp className={outerDivClass}>
+          <StyledApp className={outerDivClass} {...this.props.theme}>
             {/* The tabindex below is required for testing. */}
             <Header>
               {!hideTopBar && (

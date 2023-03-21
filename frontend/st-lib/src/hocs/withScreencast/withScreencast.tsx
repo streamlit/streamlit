@@ -50,7 +50,7 @@ export interface ScreenCastHOC {
   stopRecording: () => void
 }
 
-function withScreencast(
+export function withScreencast(
   WrappedComponent: ComponentType<any>
 ): ComponentType<any> {
   class ComponentWithScreencast extends PureComponent<

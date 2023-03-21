@@ -15,19 +15,25 @@
  */
 
 import styled from "@emotion/styled"
-import Theme from "st-lib"
-
-export const StyledApp = styled.div((theme: typeof Theme) => ({
+// adding ts-expect errors for now because typing is confusing me as I have tried labeling it as Theme but then it breaks more things.
+export const StyledApp = styled.div(({ theme }) => ({
   position: "absolute",
+  // @ts-expect-error
   background: theme.colors.bgColor,
+  // @ts-expect-error
   color: theme.colors.bodyText,
+  // @ts-expect-error
   top: theme.spacing.none,
+  // @ts-expect-error
   left: theme.spacing.none,
+  // @ts-expect-error
   right: theme.spacing.none,
+  // @ts-expect-error
   bottom: theme.spacing.none,
   overflow: "hidden",
   "@media print": {
     float: "none",
+    // @ts-expect-error
     height: theme.sizes.full,
     position: "static",
     overflow: "visible",
@@ -43,6 +49,7 @@ export const StyledDataFrameOverlay = styled.div(({ theme }) => ({
   position: "fixed",
   top: 0,
   left: 0,
+  // @ts-expect-error
   zIndex: theme.zIndices.tablePortal,
   lineHeight: "100%",
 }))
