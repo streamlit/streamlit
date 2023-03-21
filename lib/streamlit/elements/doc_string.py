@@ -317,8 +317,6 @@ def _get_variable_name_from_code_str(code):
     # See https://github.com/python/cpython/commit/b619b097923155a7034c05c4018bf06af9f994d0
     if sys.version_info < (3, 8) and type(arg_node) in (
         ast.ListComp,
-        ast.DictComp,
-        ast.SetComp,
         ast.GeneratorExp,
     ):
         start_offset -= 1
