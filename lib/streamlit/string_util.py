@@ -15,7 +15,7 @@
 import re
 import textwrap
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Tuple, cast
+from typing import TYPE_CHECKING, Any, Optional, Tuple, cast
 
 from streamlit.emojis import ALL_EMOJIS
 from streamlit.errors import StreamlitAPIException
@@ -44,6 +44,18 @@ def clean_text(text: "SupportsStr") -> str:
 def is_emoji(text: str) -> bool:
     """Check if input string is a valid emoji."""
     return text.replace("\U0000FE0F", "") in ALL_EMOJIS
+
+
+def validate_emoji(maybe_emoji: Optional[str]) -> str:
+    """Check input string & raise error if invalid icon input."""
+    if maybe_emoji is None:
+        return ""
+    elif is_emoji(maybe_emoji):
+        return maybe_emoji
+    else:
+        raise StreamlitAPIException(
+            f'The value "{maybe_emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
+        )
 
 
 def extract_leading_emoji(text: str) -> Tuple[str, str]:

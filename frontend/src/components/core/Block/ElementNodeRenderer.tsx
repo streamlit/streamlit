@@ -37,6 +37,7 @@ import {
   TextArea as TextAreaProto,
   TextInput as TextInputProto,
   TimeInput as TimeInputProto,
+  Toast as ToastProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DocString as DocStringProto,
   Exception as ExceptionProto,
@@ -69,6 +70,8 @@ import Markdown from "src/components/elements/Markdown/"
 import Metric from "src/components/elements/Metric/"
 import Table from "src/components/elements/Table/"
 import Text from "src/components/elements/Text/"
+import Toast from "src/components/elements/Toast/"
+
 import { ComponentInstance } from "src/components/widgets/CustomComponent/"
 import { Kind } from "src/components/shared/AlertContainer"
 import { VegaLiteChartElement } from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
@@ -361,6 +364,16 @@ const RawElementNodeRenderer = (
 
     case "text":
       return <Text width={width} element={node.element.text as TextProto} />
+
+    case "toast":
+      const toastProto = node.element.toast as ToastProto
+      return (
+        <Toast
+          text={toastProto.text}
+          icon={toastProto.icon}
+          type={toastProto.type}
+        />
+      )
 
     case "metric":
       return <Metric element={node.element.metric as MetricProto} />
