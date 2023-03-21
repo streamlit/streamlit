@@ -20,9 +20,11 @@ import BooleanColumn from "./BooleanColumn"
 import CategoricalColumn from "./CategoricalColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
+import { DateTimeColumn, TimeColumn, DateColumn } from "./DateTimeColumn"
+
+import DatePickerCell from "./cells/DatePickerCell"
 
 import { ColumnCreator } from "./utils"
-import { DateTimeColumn, TimeColumn, DateColumn } from "./DateTimeColumn"
 
 export * from "./utils"
 
@@ -42,6 +44,8 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     number: NumberColumn,
   })
 )
+
+export const CustomCells = [DatePickerCell]
 
 export {
   ObjectColumn,

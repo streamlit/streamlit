@@ -25,8 +25,9 @@ import {
   getErrorCell,
   toSafeString,
 } from "src/components/widgets/DataFrame/columns/utils"
-import { DatePickerCell } from "src/components/widgets/DataFrame/customCells/DatePickerCell"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
+
+import { DatePickerCell } from "./cells/DatePickerCell"
 
 // TODO: Investigate time: https://github.com/streamlit/streamlit/blob/0880740f482abd6a8f755192e3a94843a000f14c/frontend/src/lib/Quiver.ts#L779
 // https://github.com/streamlit/streamlit/blob/0880740f482abd6a8f755192e3a94843a000f14c/frontend/src/lib/Quiver.ts#L825
@@ -88,7 +89,7 @@ function BaseDateTimeColumn(
     contentAlign: props.contentAlignment,
     style: props.isIndex ? "faded" : "normal",
     data: {
-      kind: "datetime-picker-cell",
+      kind: "date-time-cell",
       date: undefined,
       displayDate: "",
       step: parameters.step,

@@ -39,13 +39,24 @@ export const StyledInputBox = styled.input`
 `
 
 export interface DatePickerCellProps {
-  readonly kind: "datetime-picker-cell"
+  readonly kind: "date-time-cell"
+  /* The current value of the datetime cell. */
   readonly date: Date | undefined | null
+  /* The current display value of the datetime cell. */
   readonly displayDate: string
+  /* Defines the type of the HTML input element. */
   readonly format: DateKind
+  /* Timezone offset in minutes.
+  This can be used to adjust the date by a given timezone offset. */
   readonly timezoneOffset?: number
+  /* Minimum value that can be entered by the user.
+  This is passed to the min attribute of the HTML input element. */
   readonly min?: string
+  /* Maximum value that can be entered by the user.
+  This is passed to the max attribute of the HTML input element. */
   readonly max?: string
+  /* Granularity that the date must adhere.
+  This is passed to the step attribute of the HTML input element. */
   readonly step?: string
 }
 
@@ -75,12 +86,14 @@ export type DatePickerCell = CustomCell<DatePickerCellProps>
 const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
   const cellData = cell.value.data
   const { min, max, step, format, displayDate } = cellData
-  const timezoneOffsetMillis = cellData.timezoneOffset
+  let date = cellData.date
+  // Convert timezone offset to milliseconds
+  const timezoneOffsetMs = cellData.timezoneOffset
     ? cellData.timezoneOffset * 60 * 1000
     : 0
-  let date = cellData.date
-  if (timezoneOffsetMillis && date) {
-    date = new Date(date.getTime() + timezoneOffsetMillis)
+  if (timezoneOffsetMs && date) {
+    // Adjust based on the timezone offset
+    date = new Date(date.getTime() + timezoneOffsetMs)
   }
   const value = formatValueForHTMLInput(format, date)
   if (cell.value.readonly) {
@@ -101,16 +114,12 @@ const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
       required
       type={format}
       defaultValue={value}
-      // TODO: use default value instead? value={value}
       min={min}
       max={max}
       step={step}
       autoFocus={true}
       onChange={event => {
         console.log(event)
-        // if (!event.target.validity.valid && event.target.validity.badInput) {
-        //   // do nothing
-        // } else if (
         if (isNaN(event.target.valueAsNumber)) {
           // The user has cleared the date, contribute as undefined
           cell.onChange({
@@ -127,9 +136,7 @@ const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
               ...cell.value.data,
               // use valueAsNumber because valueAsDate is null for "datetime-local"
               // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/datetime-local#technical_summary
-              date: new Date(
-                event.target.valueAsNumber - timezoneOffsetMillis
-              ),
+              date: new Date(event.target.valueAsNumber - timezoneOffsetMs),
             },
           })
         }
@@ -141,7 +148,7 @@ const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
 const renderer: CustomRenderer<DatePickerCell> = {
   kind: GridCellKind.Custom,
   isMatch: (cell: CustomCell): cell is DatePickerCell =>
-    (cell.data as any).kind === "datetime-picker-cell",
+    (cell.data as any).kind === "date-time-cell",
   draw: (args, cell) => {
     const { displayDate } = cell.data
     drawTextCell(args, displayDate, cell.contentAlign)
@@ -159,7 +166,7 @@ const renderer: CustomRenderer<DatePickerCell> = {
     // We only try to parse the value if it is not empty/undefined/null:
     if (v) {
       // Support for unix timestamps (milliseconds since 1970-01-01):
-      parseDateTimestamp = new Number(v).valueOf()
+      parseDateTimestamp = Number(v).valueOf()
 
       if (Number.isNaN(parseDateTimestamp)) {
         // Support for parsing ISO 8601 date strings:

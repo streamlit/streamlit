@@ -50,11 +50,11 @@ import {
   toGlideColumn,
   isMissingValueCell,
   getTextCell,
+  CustomCells,
 } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
-import DatePickerCell from "./customCells/DatePickerCell"
 
 // Min column width used for manual and automatic resizing
 const MIN_COLUMN_WIDTH = 50
@@ -455,7 +455,7 @@ function DataFrame({
             scrollbarWidthOverride: 1,
           }}
           // Add support for additional cells:
-          customRenderers={[...extraCellArgs.customRenderers, DatePickerCell]}
+          customRenderers={[...extraCellArgs.customRenderers, ...CustomCells]}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
           // If element is editable, enable editing features:
