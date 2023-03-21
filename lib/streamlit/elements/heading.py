@@ -13,8 +13,11 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Optional, Union, cast
 
+from typing_extensions import Literal
+
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
@@ -30,12 +33,15 @@ class HeadingProtoTag(Enum):
     SUBHEADER_TAG = "h3"
 
 
+Anchor = Optional[Union[str, Literal[False]]]
+
+
 class HeadingMixin:
     @gather_metrics("header")
     def header(
         self,
         body: SupportsStr,
-        anchor: Optional[str] = None,
+        anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: Optional[str] = None,
     ) -> "DeltaGenerator":
@@ -61,9 +67,10 @@ class HeadingMixin:
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet.
 
-        anchor : str
+        anchor : str or False
             The anchor name of the header that can be accessed with #anchor
             in the URL. If omitted, it generates an anchor using the body.
+            If False, the anchor is not shown in the UI.
 
         help : str
             An optional tooltip that gets displayed next to the header.
@@ -87,7 +94,7 @@ class HeadingMixin:
     def subheader(
         self,
         body: SupportsStr,
-        anchor: Optional[str] = None,
+        anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: Optional[str] = None,
     ) -> "DeltaGenerator":
@@ -113,9 +120,10 @@ class HeadingMixin:
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet.
 
-        anchor : str
+        anchor : str or False
             The anchor name of the header that can be accessed with #anchor
             in the URL. If omitted, it generates an anchor using the body.
+            If False, the anchor is not shown in the UI.
 
         help : str
             An optional tooltip that gets displayed next to the subheader.
@@ -139,7 +147,7 @@ class HeadingMixin:
     def title(
         self,
         body: SupportsStr,
-        anchor: Optional[str] = None,
+        anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: Optional[str] = None,
     ) -> "DeltaGenerator":
@@ -168,9 +176,10 @@ class HeadingMixin:
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet.
 
-        anchor : str
+        anchor : str or False
             The anchor name of the header that can be accessed with #anchor
             in the URL. If omitted, it generates an anchor using the body.
+            If False, the anchor is not shown in the UI.
 
         help : str
             An optional tooltip that gets displayed next to the title.
@@ -199,14 +208,29 @@ class HeadingMixin:
     def _create_heading_proto(
         tag: HeadingProtoTag,
         body: SupportsStr,
-        anchor: Optional[str] = None,
+        anchor: Anchor = None,
         help: Optional[str] = None,
     ) -> HeadingProto:
         proto = HeadingProto()
         proto.tag = tag.value
         proto.body = clean_text(body)
-        if anchor:
-            proto.anchor = anchor
+        if anchor is not None:
+            if anchor is False:
+                proto.hide_anchor = True
+            elif isinstance(anchor, str):
+                proto.anchor = anchor
+            elif anchor is True:  # type: ignore
+                raise StreamlitAPIException(
+                    "Anchor parameter has invalid value: %s. "
+                    "Supported values: None, any string or False" % anchor
+                )
+            else:
+                raise StreamlitAPIException(
+                    "Anchor parameter has invalid type: %s. "
+                    "Supported values: None, any string or False"
+                    % type(anchor).__name__
+                )
+
         if help:
             proto.help = help
         return proto

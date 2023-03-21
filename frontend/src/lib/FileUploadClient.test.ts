@@ -33,6 +33,7 @@ describe("FileUploadClient Upload", () => {
       endpoints: {
         buildComponentURL: jest.fn(),
         uploadFileUploaderFile: uploadFileUploaderFile,
+        fetchCachedForwardMsg: jest.fn(),
       },
       formsWithPendingRequestsChanged,
     })

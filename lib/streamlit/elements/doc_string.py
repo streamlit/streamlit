@@ -18,6 +18,7 @@ import ast
 import contextlib
 import inspect
 import re
+import sys
 import types
 from typing import TYPE_CHECKING, Any, cast
 
