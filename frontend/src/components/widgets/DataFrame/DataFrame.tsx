@@ -97,7 +97,7 @@ const drawMissingCells: DrawCustomCellCallback = args => {
           textMedium: theme.textLight,
         },
         // The following props are just added for technical reasons:
-        // @ts-ignore
+        // @ts-expect-error
         spriteManager: {},
         hyperWrapping: false,
       },

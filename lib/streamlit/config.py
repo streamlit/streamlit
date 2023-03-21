@@ -504,13 +504,13 @@ _create_option(
 _create_option(
     "runner.fastReruns",
     description="""
-        Handle script rerun requests immediately, rather than waiting for
-        script execution to reach a yield point. Enabling this will
-        make Streamlit much more responsive to user interaction, but it can
-        lead to race conditions in apps that mutate session_state data outside
-        of explicit session_state assignment statements.
+        Handle script rerun requests immediately, rather than waiting for script
+        execution to reach a yield point. This makes Streamlit much more
+        responsive to user interaction, but it can lead to race conditions in
+        apps that mutate session_state data outside of explicit session_state
+        assignment statements.
     """,
-    default_val=False,
+    default_val=True,
     type_=bool,
 )
 
@@ -748,6 +748,36 @@ def _browser_server_port() -> int:
     """
     return int(get_option("server.port"))
 
+
+_SSL_PRODUCTION_WARNING = [
+    "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
+    "security audits or performance tests. For the production environment, "
+    "we recommend performing SSL termination by the load balancer or the reverse proxy."
+]
+
+_create_option(
+    "server.sslCertFile",
+    description=(
+        f"""
+        Server certificate file for connecting via HTTPS.
+        Must be set at the same time as "server.sslKeyFile".
+
+        {_SSL_PRODUCTION_WARNING}
+        """
+    ),
+)
+
+_create_option(
+    "server.sslKeyFile",
+    description=(
+        f"""
+        Cryptographic key file for connecting via HTTPS.
+        Must be set at the same time as "server.sslCertFile".
+
+        {_SSL_PRODUCTION_WARNING}
+        """
+    ),
+)
 
 # Config Section: UI #
 

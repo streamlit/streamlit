@@ -14,11 +14,14 @@
 
 """A bunch of useful utilities."""
 
+from __future__ import annotations
+
+import dataclasses
 import functools
 import hashlib
 import os
 import subprocess
-from typing import Any, Dict, Iterable, List, Mapping, TypeVar
+from typing import Any, Dict, Iterable, List, Mapping, Set, TypeVar
 
 from typing_extensions import Final
 
@@ -103,10 +106,27 @@ def _maybe_tuple_to_list(item: Any) -> Any:
     return item
 
 
-def repr_(cls) -> str:
-    classname = cls.__class__.__name__
-    args = ", ".join([f"{k}={repr(v)}" for (k, v) in cls.__dict__.items()])
-    return f"{classname}({args})"
+def repr_(self: Any) -> str:
+    """A clean repr for a class, excluding both values that are likely defaults,
+    and those explicitly default for dataclasses.
+    """
+    classname = self.__class__.__name__
+    # Most of the falsey value, but excluding 0 and 0.0, since those often have
+    # semantic meaning within streamlit.
+    defaults: list[Any] = [None, "", False, [], set(), dict()]
+    if dataclasses.is_dataclass(self):
+        fields_vals = (
+            (f.name, getattr(self, f.name))
+            for f in dataclasses.fields(self)
+            if f.repr
+            and getattr(self, f.name) != f.default
+            and getattr(self, f.name) not in defaults
+        )
+    else:
+        fields_vals = ((f, v) for (f, v) in self.__dict__.items() if v not in defaults)
+
+    field_reprs = ", ".join(f"{field}={value!r}" for field, value in fields_vals)
+    return f"{classname}({field_reprs})"
 
 
 _Value = TypeVar("_Value")
@@ -154,3 +174,31 @@ def calc_md5(s: str) -> str:
     h = hashlib.new("md5")
     h.update(s.encode("utf-8"))
     return h.hexdigest()
+
+
+def exclude_key_query_params(
+    query_params: Dict[str, List[str]], keys_to_exclude: List[str]
+) -> Dict[str, List[str]]:
+    """Returns new object query_params : Dict[str, List[str]], but without keys defined with keys_to_drop : List[str]."""
+    return {
+        key: value
+        for key, value in query_params.items()
+        if key.lower() not in keys_to_exclude
+    }
+
+
+def extract_key_query_params(
+    query_params: Dict[str, List[str]], param_key: str
+) -> Set[str]:
+    """Extracts key (case-insensitive) query params from Dict, and returns them as Set of str."""
+    return set(
+        [
+            item.lower()
+            for sublist in [
+                [value.lower() for value in query_params[key]]
+                for key in query_params.keys()
+                if key.lower() == param_key and query_params.get(key)
+            ]
+            for item in sublist
+        ]
+    )

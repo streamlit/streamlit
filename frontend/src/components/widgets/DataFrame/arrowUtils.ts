@@ -249,7 +249,7 @@ export function getColumnFromArrow(
     const options = data.getCategoricalOptions(columnPosition)
     if (notNullOrUndefined(options)) {
       columnTypeMetadata = {
-        options: ["", ...options.filter(opt => opt !== "")],
+        options,
       }
     }
   }

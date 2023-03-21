@@ -142,7 +142,7 @@ describe("PlotlyChart Element", () => {
 
       expect(wrapper.find("iframe").length).toBe(1)
       expect(wrapper.find("iframe").props()).toMatchSnapshot()
-      // @ts-ignore
+      // @ts-expect-error
       expect(wrapper.find("iframe").prop("style").height).toBe(DEFAULT_HEIGHT)
     })
 
@@ -154,7 +154,7 @@ describe("PlotlyChart Element", () => {
       }
       const wrapper = mount(<PlotlyChart {...propsWithHeight} />)
 
-      // @ts-ignore
+      // @ts-expect-error
       expect(wrapper.find("iframe").prop("style").height).toBe(400)
     })
   })

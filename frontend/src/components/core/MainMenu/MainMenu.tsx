@@ -45,14 +45,7 @@ import {
 } from "src/hocs/withHostCommunication/types"
 import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
 import { MetricsManager } from "src/lib/MetricsManager"
-import {
-  BUG_URL,
-  COMMUNITY_URL,
-  DEPLOY_URL,
-  ONLINE_DOCS_URL,
-  STREAMLIT_CLOUD_URL,
-  TEAMS_URL,
-} from "src/urls"
+import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/urls"
 import {
   StyledMenuDivider,
   StyledMenuItem,
@@ -119,6 +112,8 @@ export interface Props {
   menuItems?: PageConfig.IMenuItems | null
 
   hostIsOwner?: boolean
+
+  metricsMgr: MetricsManager
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -162,6 +157,7 @@ export interface SubMenuProps {
   menuItems: any[]
   closeMenu: () => void
   isDevMenu: boolean
+  metricsMgr: MetricsManager
 }
 
 // BaseWeb provides a very basic list item (or option) for its dropdown
@@ -177,7 +173,8 @@ export interface SubMenuProps {
 //  * $isHighlighted field (BaseWeb does not use CSS :hover here)
 //  * creating a forward ref to add properties to the DOM element.
 function buildMenuItemComponent(
-  StyledMenuItemType: typeof StyledCoreItem | typeof StyledDevItem
+  StyledMenuItemType: typeof StyledCoreItem | typeof StyledDevItem,
+  metricsMgr: MetricsManager
 ): any {
   const MenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
     (
@@ -213,7 +210,7 @@ function buildMenuItemComponent(
           ? {}
           : {
               onClick: (e: MouseEvent<HTMLLIElement>) => {
-                MetricsManager.current.enqueue("menuClick", {
+                metricsMgr.enqueue("menuClick", {
                   label,
                 })
                 onClick(e)
@@ -249,22 +246,18 @@ function buildMenuItemComponent(
   return MenuItem
 }
 
-const SubMenu = ({
-  menuItems,
-  closeMenu,
-  isDevMenu,
-}: SubMenuProps): ReactElement => {
+const SubMenu = (props: SubMenuProps): ReactElement => {
   const { colors }: Theme = useTheme()
-  const StyledMenuItemType = isDevMenu ? StyledDevItem : StyledCoreItem
+  const StyledMenuItemType = props.isDevMenu ? StyledDevItem : StyledCoreItem
   return (
     <StatefulMenu
-      items={menuItems}
+      items={props.menuItems}
       onItemSelect={({ item }) => {
         item.onClick()
-        closeMenu()
+        props.closeMenu()
       }}
       overrides={{
-        Option: buildMenuItemComponent(StyledMenuItemType),
+        Option: buildMenuItemComponent(StyledMenuItemType, props.metricsMgr),
         List: {
           props: {
             "data-testid": "main-menu-list",
@@ -389,22 +382,20 @@ function MainMenu(props: Props): ReactElement {
       disabled: isServerDisconnected,
       label: "Save a snapshot",
     },
-    ...(!props.menuItems?.hideGetHelp && {
-      community: {
-        onClick: getOpenInWindowCallback(
-          props.menuItems?.getHelpUrl || COMMUNITY_URL
-        ),
-        label: "Get help",
-      },
-    }),
-    ...(!props.menuItems?.hideReportABug && {
-      report: {
-        onClick: getOpenInWindowCallback(
-          props.menuItems?.reportABugUrl || BUG_URL
-        ),
-        label: "Report a bug",
-      },
-    }),
+    ...(!props.menuItems?.hideGetHelp &&
+      props.menuItems?.getHelpUrl && {
+        community: {
+          onClick: getOpenInWindowCallback(props.menuItems?.getHelpUrl),
+          label: "Get help",
+        },
+      }),
+    ...(!props.menuItems?.hideReportABug &&
+      props.menuItems?.reportABugUrl && {
+        report: {
+          onClick: getOpenInWindowCallback(props.menuItems?.reportABugUrl),
+          label: "Report a bug",
+        },
+      }),
     settings: { onClick: props.settingsCallback, label: "Settings" },
     about: { onClick: props.aboutCallback, label: "About" },
   }
@@ -432,26 +423,11 @@ function MainMenu(props: Props): ReactElement {
       label: "Clear cache",
       shortcut: "c",
     },
-    s4t: {
-      onClick: getOpenInWindowCallback(TEAMS_URL),
-      label: "Streamlit Cloud",
-    },
-    reportSt: {
-      onClick: getOpenInWindowCallback(BUG_URL),
-      label: "Report a Streamlit bug",
-    },
-    documentation: {
-      onClick: getOpenInWindowCallback(ONLINE_DOCS_URL),
-      label: "Visit Streamlit docs",
-    },
-    visitStForum: {
-      onClick: getOpenInWindowCallback(COMMUNITY_URL),
-      label: "Visit Streamlit forums",
-      styleProps: {
-        margin: "0 0 -.5rem 0",
-        padding: ".25rem 0 .25rem 1.5rem",
-      },
-    },
+  }
+
+  const lastDevMenuItemStyleProps = {
+    margin: "0 0 -.5rem 0",
+    padding: ".25rem 0 .25rem 1.5rem",
   }
 
   const hostMenuItems = props.hostMenuItems.map(item => {
@@ -500,10 +476,6 @@ function MainMenu(props: Props): ReactElement {
     coreDevMenuItems.developerOptions,
     coreDevMenuItems.clearCache,
     showDeploy && coreDevMenuItems.deployApp,
-    isLocalhost() && coreDevMenuItems.s4t,
-    coreDevMenuItems.reportSt,
-    coreDevMenuItems.documentation,
-    coreDevMenuItems.visitStForum,
   ]
 
   // Remove empty entries, and add dividers into menu options as needed.
@@ -539,6 +511,10 @@ function MainMenu(props: Props): ReactElement {
     }
   }
 
+  if (devLastMenuItem != null) {
+    devLastMenuItem.styleProps = lastDevMenuItemStyleProps
+  }
+
   const { hostIsOwner } = props
 
   return (
@@ -552,13 +528,19 @@ function MainMenu(props: Props): ReactElement {
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <>
-          <SubMenu menuItems={menuItems} closeMenu={close} isDevMenu={false} />
+          <SubMenu
+            menuItems={menuItems}
+            closeMenu={close}
+            isDevMenu={false}
+            metricsMgr={props.metricsMgr}
+          />
           {(hostIsOwner || isLocalhost()) && (
             <StyledUl>
               <SubMenu
                 menuItems={devMenuItems}
                 closeMenu={close}
                 isDevMenu={true}
+                metricsMgr={props.metricsMgr}
               />
             </StyledUl>
           )}

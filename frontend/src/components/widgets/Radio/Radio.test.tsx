@@ -65,13 +65,13 @@ describe("Radio widget", () => {
     const wrappedDiv = wrapper.find("div").first()
 
     const { className, style } = wrappedDiv.props()
-    // @ts-ignore
+    // @ts-expect-error
     const splittedClassName = className.split(" ")
 
     expect(splittedClassName).toContain("row-widget")
     expect(splittedClassName).toContain("stRadio")
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(style.width).toBe(getProps().width)
   })
 
@@ -121,7 +121,7 @@ describe("Radio widget", () => {
     jest.spyOn(props.widgetMgr, "setIntValue")
     const wrapper = mount(<Radio {...props} />)
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(RadioGroup).prop("onChange")({
       target: { value: "1" },
     } as React.ChangeEvent<HTMLInputElement>)
@@ -145,7 +145,7 @@ describe("Radio widget", () => {
     const wrapper = mount(<Radio {...props} />)
 
     // Change the widget value
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.find(RadioGroup).prop("onChange")({
       target: { value: "1" },
     } as React.ChangeEvent<HTMLInputElement>)

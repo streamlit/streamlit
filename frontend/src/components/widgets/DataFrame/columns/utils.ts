@@ -88,6 +88,10 @@ export type ColumnCreator = {
   readonly dateType?: string
 }
 
+// See pydantic for inspiration: https://pydantic-docs.helpmanual.io/usage/types/#booleans
+const BOOLEAN_TRUE_VALUES = ["true", "t", "yes", "y", "on", "1"]
+const BOOLEAN_FALSE_VALUES = ["false", "f", "no", "n", "off", "0"]
+
 /**
  * Interface used for indicating if a cell contains an error.
  */
@@ -297,12 +301,43 @@ export function toSafeString(data: any): string {
 }
 
 /**
+ * Converts the given value of unknown type to a boolean without
+ * the risks of any exceptions.
+ *
+ * @param value - The value to convert to a boolean.
+ *
+ * @return The converted boolean, null if the value is empty or undefined if the
+ *         value cannot be interpreted as a boolean.
+ */
+export function toSafeBoolean(value: any): boolean | null | undefined {
+  if (isNullOrUndefined(value)) {
+    return null
+  }
+
+  if (typeof value === "boolean") {
+    return value
+  }
+
+  const cleanedValue = toSafeString(value).toLowerCase().trim()
+  if (cleanedValue === "") {
+    return null
+  } else if (BOOLEAN_TRUE_VALUES.includes(cleanedValue)) {
+    return true
+  } else if (BOOLEAN_FALSE_VALUES.includes(cleanedValue)) {
+    return false
+  }
+  // The value cannot be interpreted as boolean
+  return undefined
+}
+
+/**
  * Converts the given value of unknown type to a number without
  * the risks of any exceptions.
  *
  * @param value - The value to convert to a number.
  *
- * @returns The converted number or null if the value cannot be interpreted as a number.
+ * @returns The converted number or null if the value is empty or undefined or NaN if the
+ *          value cannot be interpreted as a number.
  */
 export function toSafeNumber(value: any): number | null {
   // TODO(lukasmasuch): Should this return null as replacement for NaN?

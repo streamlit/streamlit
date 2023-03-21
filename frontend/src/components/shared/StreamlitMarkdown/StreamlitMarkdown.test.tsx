@@ -15,8 +15,10 @@
  */
 
 import React, { ReactElement } from "react"
+import "@testing-library/jest-dom"
 import ReactMarkdown from "react-markdown"
-import { mount } from "src/lib/test_util"
+import { mount, render } from "src/lib/test_util"
+import { cleanup } from "@testing-library/react"
 import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
 import { colors } from "src/theme/primitives/colors"
@@ -26,7 +28,14 @@ import StreamlitMarkdown, {
   HeadingWithAnchor,
   Heading,
   HeadingProtoProps,
+  CustomCodeTag,
+  CustomCodeTagProps,
 } from "./StreamlitMarkdown"
+
+import {
+  InlineTooltipIcon,
+  StyledLabelHelpWrapper,
+} from "src/components/shared/TooltipIcon"
 
 import { StyledLinkIconContainer } from "./styled-components"
 
@@ -154,85 +163,130 @@ describe("StreamlitMarkdown", () => {
     )
   })
 
-  it("doesn't render invalid markdown (tables, images, etc.) when isLabel is true", () => {
-    // Invalid Markdown in widget/expander/tab labels
-    const table =
-      "<table><tr><th>Month</th><th>Savings</th></tr><tr><td>January</td><td>$100</td></tr></table>"
-    const image =
-      "![Corgi](https://dictionary.cambridge.org/us/dictionary/english/corgi)"
-    // Valid Markdown in widget/expander/tab labels
-    const valid =
-      "*Italics* ~Strikethrough~ **Bold** :traffic_light: `code` [Yikes](http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx)"
+  // Valid Markdown - italics, bold, strikethrough, code, links, emojis, shortcodes
+  const validCases = [
+    { input: "*Italicized Text*", tag: "em", expected: "Italicized Text" },
+    { input: "**Bold Text**", tag: "strong", expected: "Bold Text" },
+    {
+      input: "~Strikethough Text~",
+      tag: "del",
+      expected: "Strikethough Text",
+    },
+    { input: "`Code Block`", tag: "code", expected: "Code Block" },
+    { input: "[Link Text](www.example.com)", tag: "a", expected: "Link Text" },
+    { input: "🐶", tag: "p", expected: "🐶" },
+    { input: ":joy:", tag: "p", expected: "😂" },
+  ]
 
-    const wrapper1 = mount(
-      <StreamlitMarkdown source={table} allowHTML={true} isLabel />
-    )
-    expect(wrapper1.find("StyledStreamlitMarkdown").text()).toEqual("")
-    expect(wrapper1.props().isLabel).toEqual(true)
+  test.each(validCases)(
+    "renders valid markdown when isLabel is true - $tag",
+    ({ input, tag, expected }) => {
+      const wrapper = render(
+        <StreamlitMarkdown source={input} allowHTML={false} isLabel />
+      )
+      const container = wrapper.getByTestId("stMarkdownContainer")
+      const expectedTag = container.querySelector(tag)
+      expect(expectedTag).not.toBeNull()
+      expect(expectedTag).toHaveTextContent(expected)
 
-    const wrapper2 = mount(
-      <StreamlitMarkdown source={image} allowHTML={false} isLabel />
-    )
-    expect(wrapper2.find("StyledStreamlitMarkdown").text()).toEqual("")
-    expect(wrapper2.props().isLabel).toEqual(true)
+      // Removes rendered StreamlitMarkdown component before next case run
+      cleanup()
+    }
+  )
 
-    const wrapper3 = mount(
-      <StreamlitMarkdown source={valid} allowHTML={false} isLabel />
-    )
-    expect(wrapper3.find("StyledStreamlitMarkdown").text()).toEqual(
-      "Italics Strikethrough Bold 🚥 code Yikes"
-    )
-    expect(wrapper3.props().isLabel).toEqual(true)
-  })
+  // Invalid Markdown - images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
+  const table = `| Syntax | Description |
+  | ----------- | ----------- |
+  | Header      | Title       |
+  | Paragraph   | Text        |`
+  const tableText = "Syntax Description Header Title Paragraph Text"
+  const horizontalRule = `
 
-  it("doesn't render invalid markdown (tables/images/links/code etc.) when isButton is true", () => {
-    // Invalid Markdown in button/download button labels
-    const link =
-      "[Yikes](http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx)"
-    const code = "`code`"
-    // Valid Markdown in button/download button labels
-    const text = "*Italics* ~Strikethrough~ **Bold** :traffic_light:"
+  ---
 
-    const wrapper1 = mount(
-      <StreamlitMarkdown source={link} allowHTML={false} isButton />
-    )
-    expect(wrapper1.find("StyledStreamlitMarkdown").text()).toEqual("")
-    expect(wrapper1.props().isButton).toEqual(true)
+  Horizontal rule
+  `
 
-    const wrapper2 = mount(
-      <StreamlitMarkdown source={code} allowHTML={false} isButton />
-    )
-    expect(wrapper2.find("StyledStreamlitMarkdown").text()).toEqual("")
-    expect(wrapper2.props().isButton).toEqual(true)
+  const invalidCases = [
+    {
+      input:
+        "![Image Text](https://dictionary.cambridge.org/us/images/thumb/corgi_noun_002_08554.jpg?version=5.0.297)",
+      tag: "img",
+      expected: "",
+    },
+    { input: table, tag: "table", expected: tableText },
+    { input: table, tag: "thead", expected: tableText },
+    { input: table, tag: "tbody", expected: tableText },
+    { input: table, tag: "tr", expected: tableText },
+    { input: table, tag: "th", expected: tableText },
+    { input: table, tag: "td", expected: tableText },
+    { input: "# Heading 1", tag: "h1", expected: "Heading 1" },
+    { input: "## Heading 2", tag: "h2", expected: "Heading 2" },
+    { input: "### Heading 3", tag: "h3", expected: "Heading 3" },
+    { input: "- List Item 1", tag: "ul", expected: "List Item 1" },
+    { input: "- List Item 1", tag: "li", expected: "List Item 1" },
+    { input: "1. List Item 1", tag: "ol", expected: "List Item 1" },
+    { input: "1. List Item 1", tag: "li", expected: "List Item 1" },
+    {
+      input: "- [ ] Task List Item 1",
+      tag: "input",
+      expected: "Task List Item 1",
+    },
+    { input: horizontalRule, tag: "hr", expected: "Horizontal rule" },
+    { input: "> Blockquote", tag: "blockquote", expected: "Blockquote" },
+  ]
 
-    const wrapper3 = mount(
-      <StreamlitMarkdown source={text} allowHTML={false} isButton />
+  test.each(invalidCases)(
+    "does NOT render invalid markdown when isLabel is true - $tag",
+    ({ input, tag, expected }) => {
+      const wrapper = render(
+        <StreamlitMarkdown source={input} allowHTML={false} isLabel />
+      )
+      const container = wrapper.getByTestId("stMarkdownContainer")
+      const invalidTag = container.querySelector(tag)
+      expect(invalidTag).toBeNull()
+      expect(container).toHaveTextContent(expected)
+
+      // Removes rendered StreamlitMarkdown component before next case run
+      cleanup()
+    }
+  )
+
+  it("doesn't render links when isButton is true", () => {
+    // Valid markdown further restricted with buttons to eliminate links
+    const source = "Link: [text](www.example.com)"
+    const wrapper = render(
+      <StreamlitMarkdown source={source} allowHTML={false} isLabel isButton />
     )
-    expect(wrapper3.find("StyledStreamlitMarkdown").text()).toEqual(
-      "Italics Strikethrough Bold 🚥"
-    )
-    expect(wrapper3.props().isButton).toEqual(true)
+    const container = wrapper.getByTestId("stMarkdownContainer")
+    const invalidTag = container.querySelector("a")
+    expect(invalidTag).toBeNull()
+    expect(container).toHaveTextContent("Link: ")
   })
 
   it("colours text properly", () => {
-    const colorMapping = new Map(
-      Object.entries({
-        red: colors.red90,
-        blue: colors.blue80,
-        green: colors.green90,
-        violet: colors.purple80,
-        orange: colors.orange100,
-      })
-    )
-    for (const color of Object.keys(colorMapping)) {
+    const colorMapping = new Map([
+      ["red", colors.red80],
+      ["blue", colors.blue80],
+      ["green", colors.green90],
+      ["violet", colors.purple80],
+      ["orange", colors.orange100],
+    ])
+
+    colorMapping.forEach(function (style, color) {
       const source = `:${color}[text]`
-      const wrapper = mount(
+      const wrapper = render(
         <StreamlitMarkdown source={source} allowHTML={false} />
       )
-      expect(wrapper.find("span").prop("style")?.color).toEqual(
-        colorMapping.get(color)
-      )
-    }
+
+      const container = wrapper.getByTestId("stMarkdownContainer")
+      const span = container.querySelector("span")
+
+      expect(span).toHaveStyle(`color: ${style}`)
+
+      // Removes rendered StreamlitMarkdown component before next case run
+      cleanup()
+    })
   })
 })
 
@@ -264,6 +318,29 @@ describe("Heading", () => {
     const wrapper = mount(<Heading {...props} />)
     expect(wrapper.find("h1").text()).toEqual("hello")
     expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(1)
+  })
+
+  it("renders anchor link", () => {
+    const props = getHeadingProps({ body: "hello" })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("StyledLinkIcon")).toHaveLength(1)
+  })
+
+  it("does not renders anchor link when it is hidden", () => {
+    const props = getHeadingProps({ body: "hello", hideAnchor: true })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("StyledLinkIcon")).toHaveLength(0)
+  })
+
+  it("renders properly with help text", () => {
+    const props = getHeadingProps({ body: "hello", help: "help text" })
+    const wrapper = mount(<Heading {...props} />)
+    expect(wrapper.find("h1").text()).toEqual("hello")
+    expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(1)
+    expect(wrapper.find(StyledLabelHelpWrapper).exists()).toBe(true)
+    const inlineTooltipIcon = wrapper.find(InlineTooltipIcon)
+    expect(inlineTooltipIcon.exists()).toBe(true)
+    expect(inlineTooltipIcon.props().content).toBe("help text")
   })
 
   it("does not render ol block", () => {
@@ -302,5 +379,69 @@ describe("Heading", () => {
     | Paragraph   | Text        |`
     )
     expect(wrapper.find("table")).toHaveLength(0)
+  })
+})
+
+const getCustomCodeTagProps = (
+  props: Partial<CustomCodeTagProps> = {}
+): CustomCodeTagProps => ({
+  children: [
+    `import streamlit as st
+
+st.write("Hello")
+`,
+  ],
+  node: { type: "element", tagName: "tagName", children: [] },
+  ...props,
+})
+
+describe("CustomCodeTag Element", () => {
+  it("should render without crashing", () => {
+    const props = getCustomCodeTagProps()
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+
+    expect(baseElement.querySelectorAll("pre code")).toHaveLength(1)
+  })
+
+  it("should render as plaintext", () => {
+    const props = getCustomCodeTagProps({ className: "language-plaintext" })
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+
+    expect(baseElement.querySelector("pre code")?.outerHTML).toBe(
+      '<code class="language-plaintext" style="white-space: pre;"><span>import streamlit as st\n' +
+        "</span>\n" +
+        'st.write("Hello")</code>'
+    )
+  })
+
+  it("should render copy button when code block has content", () => {
+    const props = getCustomCodeTagProps({
+      children: ["i am not empty"],
+    })
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+    expect(
+      baseElement.querySelectorAll('[title="Copy to clipboard"]')
+    ).toHaveLength(1)
+  })
+
+  it("should not render copy button when code block is empty", () => {
+    const props = getCustomCodeTagProps({
+      children: [""],
+    })
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+    expect(
+      baseElement.querySelectorAll('[title="Copy to clipboard"]')
+    ).toHaveLength(0)
+  })
+
+  it("should render inline", () => {
+    const props = getCustomCodeTagProps({ inline: true })
+    const { baseElement } = render(<CustomCodeTag {...props} />)
+    expect(baseElement.innerHTML).toBe(
+      "<div><code>" +
+        "import streamlit as st\n\n" +
+        'st.write("Hello")\n' +
+        "</code></div>"
+    )
   })
 })

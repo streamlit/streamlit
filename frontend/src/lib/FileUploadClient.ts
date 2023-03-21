@@ -15,10 +15,9 @@
  */
 
 import { CancelToken } from "axios"
-import HttpClient from "src/lib/HttpClient"
 import { SessionInfo } from "src/lib/SessionInfo"
 import _ from "lodash"
-import { BaseUriParts } from "./UriUtil"
+import { StreamlitEndpoints } from "./StreamlitEndpoints"
 import { isValidFormId } from "./utils"
 
 /** Common widget protobuf fields that are used by the FileUploadClient. */
@@ -28,15 +27,20 @@ interface WidgetInfo {
 }
 
 interface Props {
-  getServerUri: () => BaseUriParts | undefined
-  csrfEnabled: boolean
+  /** The app's SessionInfo instance. */
+  sessionInfo: SessionInfo
+  endpoints: StreamlitEndpoints
   formsWithPendingRequestsChanged: (formIds: Set<string>) => void
 }
 
 /**
  * Handles uploading files to the server.
  */
-export class FileUploadClient extends HttpClient {
+export class FileUploadClient {
+  private readonly sessionInfo: SessionInfo
+
+  private readonly endpoints: StreamlitEndpoints
+
   /**
    * Map of <formId: number of outstanding requests>. Updated whenever
    * a widget in a form creates are completes a request.
@@ -49,7 +53,8 @@ export class FileUploadClient extends HttpClient {
   private readonly pendingFormUploadsChanged: (formIds: Set<string>) => void
 
   public constructor(props: Props) {
-    super(props.getServerUri, props.csrfEnabled)
+    this.sessionInfo = props.sessionInfo
+    this.endpoints = props.endpoints
     this.pendingFormUploadsChanged = props.formsWithPendingRequestsChanged
   }
 
@@ -69,29 +74,15 @@ export class FileUploadClient extends HttpClient {
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
   ): Promise<number> {
-    const form = new FormData()
-    form.append("sessionId", SessionInfo.current.sessionId)
-    form.append("widgetId", widget.id)
-    form.append(file.name, file)
-
     this.offsetPendingRequestCount(widget.formId, 1)
-    return this.request<number>("_stcore/upload_file", {
-      cancelToken,
-      method: "POST",
-      data: form,
-      responseType: "text",
-      onUploadProgress,
-    })
-      .then(response => {
-        // Sanity check. Axios should be returning a number here.
-        if (typeof response.data === "number") {
-          return response.data
-        }
-
-        throw new Error(
-          `Bad uploadFile response: expected a number but got '${response.data}'`
-        )
-      })
+    return this.endpoints
+      .uploadFileUploaderFile(
+        file,
+        widget.id,
+        this.sessionInfo.current.sessionId,
+        onUploadProgress,
+        cancelToken
+      )
       .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
   }
 

@@ -26,6 +26,7 @@ import {
   Field,
   Dictionary,
   Struct,
+  Schema as ArrowSchema,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
 import { range, unzip, zip } from "lodash"
@@ -49,6 +50,7 @@ export type DataType =
   | StructRow // interval
   | Dictionary // categorical
   | Struct // dict
+  | bigint // period
 
 /**
  * A row-major grid of DataFrame index header values.
@@ -112,13 +114,74 @@ export interface Type {
   meta?: Record<string, any> | null
 }
 
-// type IntervalData = "int64" | "uint64" | "float64" | "datetime64[ns]"
+type IntervalData = "int64" | "uint64" | "float64" | "datetime64[ns]"
 type IntervalClosed = "left" | "right" | "both" | "neither"
-// type IntervalIndex = `interval[${IntervalData}, ${IntervalClosed}]`
+type IntervalType = `interval[${IntervalData}, ${IntervalClosed}]`
 
-// Our current Typescript version (3.9.5) doesn't support template literal types,
-// so we have to use string literals for now.
-type IntervalIndex = string
+// The frequency strings defined in pandas.
+// See: https://pandas.pydata.org/docs/user_guide/timeseries.html#dateoffset-objects
+type SupportedPandasOffsetType = "W" | "Q" | "D" | "H" | "T" | "S" | "L"
+type PeriodFrequency =
+  | SupportedPandasOffsetType
+  | `${SupportedPandasOffsetType}-${string}`
+type PeriodType = `period[${PeriodFrequency}]`
+
+const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+
+// TODO: For now, we only support the most commonly used offset types.
+//  In the future, it is worth adding support for other types as needed.
+const PERIOD_TYPE_FORMATTERS: Record<
+  SupportedPandasOffsetType,
+  (duration: number, freqParam?: string) => string
+> = {
+  L: duration =>
+    moment("19700101", "YYYYMMDD")
+      .add(duration, "ms")
+      .format("YYYY-MM-DD HH:mm:ss.SSS"),
+  S: duration =>
+    moment("19700101", "YYYYMMDD")
+      .add(duration, "s")
+      .format("YYYY-MM-DD HH:mm:ss"),
+  T: duration =>
+    moment("19700101", "YYYYMMDD")
+      .add(duration, "m")
+      .format("YYYY-MM-DD HH:mm"),
+  H: duration =>
+    moment("19700101", "YYYYMMDD")
+      .add(duration, "h")
+      .format("YYYY-MM-DD HH:mm"),
+  D: duration =>
+    moment("19700101", "YYYYMMDD").add(duration, "d").format("YYYY-MM-DD"),
+  W: (duration, freqParam) => {
+    if (!freqParam) {
+      throw new Error('Frequency "W" requires parameter')
+    }
+    const dayIndex = WEEKDAY_SHORT.indexOf(freqParam)
+    if (dayIndex < 0) {
+      throw new Error(
+        `Invalid value: ${freqParam}. Supported values: ${JSON.stringify(
+          WEEKDAY_SHORT
+        )}`
+      )
+    }
+    const startDate = moment("19700101", "YYYYMMDD")
+      .add(duration, "w")
+      .day(dayIndex - 6)
+      .format("YYYY-MM-DD")
+    const endDate = moment("19700101", "YYYYMMDD")
+      .add(duration, "w")
+      .day(dayIndex)
+      .format("YYYY-MM-DD")
+
+    return `${startDate}/${endDate}`
+  },
+  Q: duration => {
+    return moment("19700101", "YYYYMMDD")
+      .add(duration, "Q")
+      .endOf("quarter")
+      .format("YYYY[Q]Q")
+  },
+}
 
 /** Interval data type. */
 interface Interval {
@@ -134,9 +197,6 @@ export enum IndexTypeName {
   RangeIndex = "range",
   UInt64Index = "uint64",
   UnicodeIndex = "unicode",
-
-  // Not fully supported.
-  PeriodIndex = "period[Q-DEC]",
 
   // Throws an error.
   TimedeltaIndex = "time",
@@ -315,7 +375,7 @@ export class Quiver {
   private _data: Data
 
   /** Definition for DataFrame's fields. */
-  private _fields: Field[]
+  private _fields: Record<string, Field<any>>
 
   /** Types for DataFrame's index and data. */
   private _types: Types
@@ -327,7 +387,7 @@ export class Quiver {
     const table = tableFromIPC(element.data)
     const schema = Quiver.parseSchema(table)
     const rawColumns = Quiver.getRawColumns(schema)
-    const fields = table.schema.fields || []
+    const fields = Quiver.parseFields(table.schema)
 
     const index = Quiver.parseIndex(table, schema)
     const columns = Quiver.parseColumns(schema)
@@ -611,7 +671,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
     // Concatenate each index with its counterpart in the other table
     const zipped = zip(this._index, otherIndex)
-    // @ts-ignore We know the two indexes are of the same size
+    // @ts-expect-error We know the two indexes are of the same size
     return zipped.map(a => a[0].concat(a[1]))
   }
 
@@ -751,7 +811,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   /** Formats an interval index. */
   private static formatIntervalType(
     data: StructRow,
-    typeName: IntervalIndex
+    typeName: IntervalType
   ): string {
     const match = typeName.match(/interval\[(.+), (both|left|right|neither)\]/)
     if (match === null) {
@@ -807,9 +867,67 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       .format(timeInSeconds % 1 === 0 ? "HH:mm:ss" : "HH:mm:ss.SSS")
   }
 
+  private static formatPeriodType(
+    duration: bigint,
+    typeName: PeriodType
+  ): string {
+    const match = typeName.match(/period\[(.*)]/)
+    if (match === null) {
+      console.error(`Invalid period type: ${typeName}`)
+      return String(duration)
+    }
+    const [, freq] = match
+    return this.formatPeriod(duration, freq as PeriodFrequency)
+  }
+
+  private static formatPeriod(
+    duration: bigint,
+    freq: PeriodFrequency
+  ): string {
+    const [freqName, freqParam] = freq.split("-", 2)
+    const momentConverter =
+      PERIOD_TYPE_FORMATTERS[freqName as SupportedPandasOffsetType]
+    if (!momentConverter) {
+      console.error(`Unsupported period frequency: ${freq}`)
+      return String(duration)
+    }
+    const durationNumber = Number(duration)
+    if (!Number.isSafeInteger(durationNumber)) {
+      console.error(
+        `Unsupported value: ${duration}. Supported values: [${Number.MIN_SAFE_INTEGER}-${Number.MAX_SAFE_INTEGER}]`
+      )
+      return String(duration)
+    }
+    return momentConverter(durationNumber, freqParam)
+  }
+
+  private static formatCategoricalType(
+    x: number | bigint | StructRow,
+    field: Field
+  ): string {
+    // Serialization for pandas.Interval and pandas.Period is provided by Arrow extensions
+    // https://github.com/pandas-dev/pandas/blob/235d9009b571c21b353ab215e1e675b1924ae55c/
+    // pandas/core/arrays/arrow/extension_types.py#L17
+    const extensionName = field.metadata.get("ARROW:extension:name")
+    if (extensionName) {
+      const extensionMetadata = JSON.parse(
+        field.metadata.get("ARROW:extension:metadata") as string
+      )
+      if (extensionName === "pandas.interval") {
+        const { subtype, closed } = extensionMetadata
+        return Quiver.formatInterval(x as StructRow, subtype, closed)
+      }
+      if (extensionName === "pandas.Period") {
+        const { freq } = extensionMetadata
+        return Quiver.formatPeriod(x as bigint, freq)
+      }
+    }
+    return String(x)
+  }
+
   /** Returns type for a single-index column or data column. */
   public static getTypeName(type: Type): IndexTypeName | string {
-    // For `PeriodIndex` and `IntervalIndex` types are kept in `numpy_type`,
+    // For `PeriodType` and `IntervalType` types are kept in `numpy_type`,
     // for the rest of the indexes in `pandas_type`.
     return type.pandas_type === "object" ? type.numpy_type : type.pandas_type
   }
@@ -857,20 +975,19 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     if (typeName?.startsWith("interval")) {
       return Quiver.formatIntervalType(
         x as StructRow,
-        typeName as IntervalIndex
+        typeName as IntervalType
       )
     }
 
+    if (typeName?.startsWith("period")) {
+      return Quiver.formatPeriodType(x as bigint, typeName as PeriodType)
+    }
+
     if (typeName === "categorical") {
-      if (field?.metadata.get("ARROW:extension:name") === "pandas.interval") {
-        const { subtype, closed } = JSON.parse(
-          field?.metadata.get("ARROW:extension:metadata") as string
-        )
-        return Quiver.formatInterval(x as StructRow, subtype, closed)
-        // TODO: We should add support for pandas.Period here.
-        //  See: https://github.com/streamlit/streamlit/issues/5392
-      }
-      return String(x)
+      return this.formatCategoricalType(
+        x as number | bigint | StructRow,
+        field as Field
+      )
     }
 
     if (typeName === "decimal") {
@@ -1082,6 +1199,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
       const contentType = this._types.index[columnIndex]
       const content = this.getIndexValue(dataRowIndex, columnIndex)
+      const field = this._fields[`__index_level_${String(columnIndex)}__`]
 
       return {
         type: DataFrameCellType.INDEX,
@@ -1089,6 +1207,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
         cssClass,
         content,
         contentType,
+        field,
       }
     }
 
@@ -1133,7 +1252,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     ].join(" ")
 
     const contentType = this._types.data[dataColumnIndex]
-    const field = this._fields[dataColumnIndex]
+    const field = this._fields[String(dataColumnIndex)]
     const content = this.getDataValue(dataRowIndex, dataColumnIndex)
     const displayContent = this._styler?.displayValues
       ? (this._styler.displayValues.getCell(rowIndex, columnIndex)
@@ -1205,5 +1324,14 @@ st.add_rows(my_styler.data)
       draft._data = data
       draft._types = types
     })
+  }
+
+  private static parseFields(schema: ArrowSchema): Record<string, Field> {
+    return Object.fromEntries(
+      (schema.fields || []).map((field, index) => [
+        field.name.startsWith("__index_level_") ? field.name : String(index),
+        field,
+      ])
+    )
   }
 }

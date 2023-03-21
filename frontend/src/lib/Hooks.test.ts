@@ -20,7 +20,6 @@ const stateSetters: Array<any> = []
 
 jest.mock("react", () => ({
   __esModule: true,
-  // @ts-ignore
   ...jest.requireActual("react"),
   useEffect: jest.fn().mockImplementation(cb => cb()),
   useState: jest.fn().mockImplementation(() => {
@@ -37,7 +36,7 @@ jest.mock("react", () => ({
 describe("useIsOverflowing", () => {
   it("sets state to true if the element is overflowing", () => {
     const ref = { current: { scrollHeight: 1, clientHeight: 0 } }
-    // @ts-ignore
+    // @ts-expect-error
     useIsOverflowing(ref)
 
     const setIsOverflowing = stateSetters.pop()
@@ -46,7 +45,7 @@ describe("useIsOverflowing", () => {
 
   it("sets state to false if the element is not overflowing", () => {
     const ref = { current: { scrollHeight: 1, clientHeight: 1 } }
-    // @ts-ignore
+    // @ts-expect-error
     useIsOverflowing(ref)
 
     const setIsOverflowing = stateSetters.pop()

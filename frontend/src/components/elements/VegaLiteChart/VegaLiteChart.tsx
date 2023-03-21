@@ -66,7 +66,7 @@ interface Props {
 }
 
 export interface PropsWithHeight extends Props {
-  height: number | undefined
+  height?: number
 }
 
 interface State {
@@ -380,7 +380,7 @@ function getDataSets(
 
   const datasets: { [dataset: string]: any } = {}
 
-  el.get("datasets").forEach((x: any, i: number) => {
+  el.get("datasets").forEach((x: any) => {
     if (!x) {
       return
     }

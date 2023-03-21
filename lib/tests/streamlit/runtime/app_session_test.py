@@ -29,6 +29,9 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
 from streamlit.runtime.app_session import AppSession, AppSessionState
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    MemoryCacheStorageManager,
+)
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
@@ -82,6 +85,7 @@ class AppSessionTest(unittest.TestCase):
         mock_runtime.media_file_mgr = MediaFileManager(
             MemoryMediaFileStorage("/mock/media")
         )
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         Runtime._instance = mock_runtime
 
     def tearDown(self) -> None:
@@ -89,7 +93,7 @@ class AppSessionTest(unittest.TestCase):
         Runtime._instance = None
 
     @patch(
-        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.disconnect"
+        "streamlit.runtime.app_session.secrets_singleton.file_change_listener.disconnect"
     )
     def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
@@ -119,9 +123,28 @@ class AppSessionTest(unittest.TestCase):
 
         mock_scriptrunner.reset_mock()
 
-        # A 2nd shutdown call should have no affect.
+        # A 2nd shutdown call should have no effect.
         session.shutdown()
         mock_scriptrunner.request_stop.assert_not_called()
+
+    def test_request_script_stop(self):
+        """Verify that request_script_stop forwards the request to the scriptrunner."""
+        session = _create_test_session()
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
+        session.request_script_stop()
+        mock_scriptrunner.request_stop.assert_called()
+
+    def test_request_script_stop_no_scriptrunner(self):
+        """Test that calling request_script_stop when there is no scriptrunner doesn't
+        result in an error.
+        """
+        session = _create_test_session()
+        session._scriptrunner = None
+
+        # Nothing else to do here aside from ensuring that no exception is thrown.
+        session.request_script_stop()
 
     def test_unique_id(self):
         """Each AppSession should have a unique ID"""
@@ -152,7 +175,7 @@ class AppSessionTest(unittest.TestCase):
         clear_legacy_cache.assert_called_once()
 
     @patch(
-        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.connect"
+        "streamlit.runtime.app_session.secrets_singleton.file_change_listener.connect"
     )
     def test_request_rerun_on_secrets_file_change(self, patched_connect):
         """AppSession should add a secrets listener on creation."""
@@ -376,7 +399,7 @@ class AppSessionTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.config.on_config_parsed")
     @patch("streamlit.runtime.app_session.source_util.register_pages_changed_callback")
     @patch(
-        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.connect"
+        "streamlit.runtime.app_session.secrets_singleton.file_change_listener.connect"
     )
     def test_registers_file_watchers(
         self,
@@ -407,7 +430,7 @@ class AppSessionTest(unittest.TestCase):
         self.assertIsNotNone(session._local_sources_watcher)
 
     @patch(
-        "streamlit.runtime.app_session.secrets_singleton._file_change_listener.disconnect"
+        "streamlit.runtime.app_session.secrets_singleton.file_change_listener.disconnect"
     )
     def test_disconnect_file_watchers(self, patched_secrets_disconnect):
         session = _create_test_session()
@@ -681,7 +704,6 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         ) as handle_backmsg_exception, patch.object(
             session, "_handle_clear_cache_request"
         ) as handle_clear_cache_request:
-
             error = Exception("explode!")
             handle_clear_cache_request.side_effect = error
 

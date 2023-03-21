@@ -27,6 +27,7 @@ import { sendMessageToHost } from "src/hocs/withHostCommunication"
 
 import AppContext from "src/components/core/AppContext"
 import { BlockNode, AppRoot } from "src/lib/AppNode"
+import { SessionInfo } from "src/lib/SessionInfo"
 
 import {
   StyledAppViewBlockContainer,
@@ -40,6 +41,8 @@ import {
 
 export interface AppViewProps {
   elements: AppRoot
+
+  sessionInfo: SessionInfo
 
   // The unique ID for the most recent script run.
   scriptRunId: string
@@ -74,6 +77,7 @@ export interface AppViewProps {
 function AppView(props: AppViewProps): ReactElement {
   const {
     elements,
+    sessionInfo,
     scriptRunId,
     scriptRunState,
     widgetMgr,
@@ -99,16 +103,26 @@ function AppView(props: AppViewProps): ReactElement {
     return () => window.removeEventListener("hashchange", listener, false)
   }, [])
 
-  const { wideMode, initialSidebarState, embedded } =
-    React.useContext(AppContext)
+  const {
+    wideMode,
+    initialSidebarState,
+    embedded,
+    showPadding,
+    disableScrolling,
+    showFooter,
+    showToolbar,
+    showColoredLine,
+  } = React.useContext(AppContext)
   const renderBlock = (node: BlockNode): ReactElement => (
     <StyledAppViewBlockContainer
       className="block-container"
       isWideMode={wideMode}
-      isEmbedded={embedded}
+      showPadding={showPadding}
+      addPaddingForHeader={showToolbar || showColoredLine}
     >
       <VerticalBlock
         node={node}
+        sessionInfo={sessionInfo}
         scriptRunId={scriptRunId}
         scriptRunState={scriptRunState}
         widgetMgr={widgetMgr}
@@ -145,15 +159,23 @@ function AppView(props: AppViewProps): ReactElement {
           {renderBlock(elements.sidebar)}
         </ThemedSidebar>
       )}
-      <StyledAppViewMain tabIndex={0} isEmbedded={embedded} className="main">
+      <StyledAppViewMain
+        tabIndex={0}
+        isEmbedded={embedded}
+        disableScrolling={disableScrolling}
+        className="main"
+      >
         {renderBlock(elements.main)}
         {/* Anchor indicates to the iframe resizer that this is the lowest
         possible point to determine height */}
-        <StyledIFrameResizerAnchor isEmbedded={embedded} data-iframe-height />
+        <StyledIFrameResizerAnchor
+          hasFooter={!embedded || showFooter}
+          data-iframe-height
+        />
         {/* Spacer fills up dead space to ensure the footer remains at the
         bottom of the page in larger views */}
-        {!embedded && <StyledAppViewBlockSpacer />}
-        {!embedded && (
+        {(!embedded || showFooter) && <StyledAppViewBlockSpacer />}
+        {(!embedded || showFooter) && (
           <StyledAppViewFooter isWideMode={wideMode}>
             Made with{" "}
             <StyledAppViewFooterLink href="//streamlit.io" target="_blank">

@@ -47,6 +47,7 @@ from tests.streamlit.data_mocks import (
     INTERVAL_TYPES_DF,
     LIST_TYPES_DF,
     NUMBER_TYPES_DF,
+    PERIOD_TYPES_DF,
     SHARED_TEST_CASES,
     SPECIAL_TYPES_DF,
     UNSUPPORTED_TYPES_DF,
@@ -185,7 +186,8 @@ class TypeUtilTest(unittest.TestCase):
     @parameterized.expand(
         [
             # Complex numbers:
-            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
+            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j], dtype=np.complex64), True),
+            (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j], dtype=np.complex128), True),
             # Timedelta:
             (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
             # Mixed-integer types:
@@ -353,6 +355,7 @@ dtype: object""",
             (DATETIME_TYPES_DF,),
             (INTERVAL_TYPES_DF,),
             (LIST_TYPES_DF,),
+            (PERIOD_TYPES_DF,),
             (NUMBER_TYPES_DF,),
             (SPECIAL_TYPES_DF,),
             (UNSUPPORTED_TYPES_DF,),
