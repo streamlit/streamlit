@@ -301,6 +301,8 @@ def _get_variable_name_from_code_str(code):
     code_lines = code.split("\n")
     is_multiline = len(code_lines) > 1
 
+    start_offset = arg_node.col_offset
+
     if is_multiline:
         first_lineno = arg_node.lineno - 1  # Lines are 1-indexed!
         first_line = code_lines[first_lineno]
@@ -309,6 +311,16 @@ def _get_variable_name_from_code_str(code):
     else:
         first_line = code_lines[0]
         end_offset = getattr(arg_node, "end_col_offset", -1)
+
+    # Python 3.7 and below have a bug where col_offset in some cases is off by one.
+    # See https://github.com/python/cpython/commit/b619b097923155a7034c05c4018bf06af9f994d0
+    if sys.version_info < (3, 8) and type(arg_node) in (
+        ast.ListComp,
+        ast.DictComp,
+        ast.SetComp,
+        ast.GeneratorExp,
+    ):
+        start_offset -= 1
 
     return first_line[arg_node.col_offset : end_offset]
 
