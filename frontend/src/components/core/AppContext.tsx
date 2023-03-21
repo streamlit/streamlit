@@ -85,11 +85,37 @@ export interface Props {
   /** Remove a previously-added scriptFinishedHandler callback. */
   removeScriptFinishedHandler: (func: () => void) => void
 
+  /** The currently active app theme. */
   activeTheme: ThemeConfig
+
+  /**
+   * Set the app's active theme locall, and send it the app's host (if any).
+   * @see App.setAndSendTheme
+   */
   setTheme: (theme: ThemeConfig) => void
+
+  /** List of all available themes. */
   availableThemes: ThemeConfig[]
+
+  /**
+   * Call to add additional themes to the app.
+   * @see ThemeCreatorDialog
+   */
   addThemes: (themes: ThemeConfig[]) => void
+
+  /**
+   * If non-zero, this is the number of pixels that the sidebar's
+   * "chevron" icon is shifted. (If sidebarChevronDownshift is 0, then
+   * the current theme's spacing is used.)
+   * @see StyledSidebarCollapsedControl
+   */
   sidebarChevronDownshift: number
+
+  /**
+   * Function that returns the BaseUriParts object for the server we're
+   * connected to, if we're connected.
+   * @see WebsocketConnection.getBaseUriParts
+   */
   getBaseUriParts: () => BaseUriParts | undefined
 }
 
