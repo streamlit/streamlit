@@ -42,7 +42,7 @@ export interface Props {
   getBaseUriParts: () => BaseUriParts | undefined
 }
 
-export default React.createContext<Props>({
+export const AppContext = React.createContext<Props>({
   wideMode: false,
   layout: PageConfig.Layout.CENTERED,
   initialSidebarState: PageConfig.SidebarState.AUTO,

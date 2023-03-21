@@ -21,7 +21,7 @@ import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
 // Other local imports.
-import AppContext from "src/components/core/AppContext"
+import { AppContext } from "src/components/core/AppContext"
 import AppView from "src/components/core/AppView"
 import StatusWidget from "src/components/core/StatusWidget"
 import MainMenu, { isLocalhost } from "src/components/core/MainMenu"
