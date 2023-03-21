@@ -311,7 +311,7 @@ def _get_variable_name_from_code_str(code):
 
     else:
         first_line = code_lines[0]
-        end_offset = getattr(arg_node, "end_col_offset", -1)
+        end_offset = getattr(arg_node, "end_col_offset", None)
 
     # Python 3.7 and below have a bug where col_offset in some cases is off by one.
     # See https://github.com/python/cpython/commit/b619b097923155a7034c05c4018bf06af9f994d0
