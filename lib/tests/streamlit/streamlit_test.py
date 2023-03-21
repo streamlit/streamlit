@@ -695,7 +695,7 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
 
     def test_get_query_params_after_set_query_params(self):
         """Test valid st.set_query_params sends protobuf message."""
-        p_set = dict(x="a")
+        p_set = dict(x=["a"])
         st.experimental_set_query_params(**p_set)
         p_get = st.experimental_get_query_params()
         self.assertEqual(p_get, p_set)
