@@ -544,7 +544,11 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (favicon) {
-      handleFavicon(favicon, this.getBaseUriParts())
+      handleFavicon(
+        favicon,
+        this.props.hostCommunication.sendMessage,
+        this.getBaseUriParts()
+      )
     }
 
     // Only change layout/sidebar when the page config has changed.
@@ -818,6 +822,7 @@ export class App extends PureComponent<Props, State> {
     document.title = `${newPageName} · Streamlit`
     handleFavicon(
       `${process.env.PUBLIC_URL}/favicon.png`,
+      this.props.hostCommunication.sendMessage,
       this.getBaseUriParts()
     )
 
@@ -1560,6 +1565,7 @@ export class App extends PureComponent<Props, State> {
 
             <AppView
               sessionInfo={this.sessionInfo}
+              sendMessageToHost={this.props.hostCommunication.sendMessage}
               elements={elements}
               scriptRunId={scriptRunId}
               scriptRunState={scriptRunState}
