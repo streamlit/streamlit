@@ -117,7 +117,7 @@ def get_logger(name: str) -> logging.Logger:
         return _loggers[name]
 
     if name == "root":
-        logger = logging.getLogger()
+        logger = logging.getLogger("streamlit")
     else:
         logger = logging.getLogger(name)
 
