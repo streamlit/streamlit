@@ -27,7 +27,7 @@ import { makeElementWithInfoText } from "src/lib/utils"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 import { mockEndpoints, mockSessionInfo } from "src/lib/mocks/mocks"
-import { shallow, mount } from "src/lib/test_util"
+import { render, shallow } from "src/lib/test_util"
 import AppView, { AppViewProps } from "./AppView"
 
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
@@ -229,7 +229,7 @@ describe("AppView element", () => {
 
     it("sends UPDATE_HASH message to host", () => {
       const sendMessageToHost = jest.fn()
-      mount(<AppView {...getProps({ sendMessageToHost })} />)
+      render(<AppView {...getProps({ sendMessageToHost })} />)
 
       window.location.hash = "mock_hash"
       window.dispatchEvent(new HashChangeEvent("hashchange"))
