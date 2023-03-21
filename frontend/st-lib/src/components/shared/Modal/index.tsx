@@ -15,7 +15,7 @@
  */
 
 export {
-  default,
+  default as Modal,
   ModalHeader,
   ModalBody,
   ModalFooter,

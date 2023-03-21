@@ -16,7 +16,8 @@
 
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
-import Modal, {
+import {
+  Modal,
   ModalHeader,
   ModalBody,
   ModalFooter,

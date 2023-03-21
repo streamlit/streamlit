@@ -64,7 +64,7 @@ const SCREENCAST_LABEL: { [s: string]: string } = {
   RECORDING: "Stop recording",
 }
 
-export interface Props {
+export interface MainMenuProps {
   /** True if we're connected to the Streamlit server. */
   isServerConnected: boolean
 
@@ -276,7 +276,7 @@ const SubMenu = ({
   )
 }
 
-function MainMenu(props: Props): ReactElement {
+const MainMenu = memo(function MainMenu(props: MainMenuProps): ReactElement {
   const isServerDisconnected = !props.isServerConnected
   const onClickDeployApp = useCallback((): void => {
     const { showDeployError, closeDialog, isDeployErrorModalOpen, gitInfo } =
@@ -557,5 +557,6 @@ function MainMenu(props: Props): ReactElement {
     </StatefulPopover>
   )
 }
+)
 
-export default memo(MainMenu)
+export { MainMenu }

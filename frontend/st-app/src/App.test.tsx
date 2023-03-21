@@ -19,7 +19,6 @@ import { ShallowWrapper, ReactWrapper } from "enzyme"
 import cloneDeep from "lodash/cloneDeep"
 import {
   LocalStore,
-  HostCommunicationHOC,
   hashString,
   shallow,
   mount,
@@ -40,11 +39,13 @@ import {
   Modal,
   DialogType,
   StreamlitDialog,
-  App,
-  Props,
   MainMenu,
   ToolbarActions,
+  HostCommunicationHOC,
 } from "st-lib"
+
+import { App, Props } from "./App"
+
 import {
   CustomThemeConfig,
   ForwardMsg,

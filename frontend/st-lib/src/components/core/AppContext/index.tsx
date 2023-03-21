@@ -20,7 +20,7 @@ import { PageConfig } from "src/autogen/proto"
 import { baseTheme, ThemeConfig } from "src/theme"
 import { BaseUriParts, getWindowBaseUriParts } from "src/lib/UriUtil"
 
-export interface Props {
+export interface AppContextProps {
   wideMode: boolean
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
@@ -42,7 +42,7 @@ export interface Props {
   getBaseUriParts: () => BaseUriParts | undefined
 }
 
-export default React.createContext<Props>({
+export default React.createContext<AppContextProps>({
   wideMode: false,
   layout: PageConfig.Layout.CENTERED,
   initialSidebarState: PageConfig.SidebarState.AUTO,

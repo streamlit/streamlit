@@ -15,8 +15,9 @@
  */
 
 import styled from "@emotion/styled"
+import Theme from "st-lib"
 
-export const StyledApp = styled.div(({ theme }) => ({
+export const StyledApp = styled.div((theme: typeof Theme) => ({
   position: "absolute",
   background: theme.colors.bgColor,
   color: theme.colors.bodyText,

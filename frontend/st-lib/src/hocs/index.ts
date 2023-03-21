@@ -1,6 +1,6 @@
 export { default as withExpandable } from "./withExpandable"
 export { default as withFullScreenWrapper } from "./withFullScreenWrapper"
-export { default as withHostCommunication } from "./withHostCommunication"
+export * from "./withHostCommunication"
 export { default as withMapboxToken } from "./withMapboxToken"
 export { default as withPagination } from "./withPagination"
-export { default as withScreencast } from "./withScreencast"
+export * from "./withScreencast"

@@ -16,7 +16,8 @@
 
 import React, { ReactElement, ReactNode, CSSProperties } from "react"
 import { Kind } from "src/components/shared/Button"
-import Modal, {
+import {
+  Modal,
   ModalHeader,
   ModalBody,
   ModalFooter,
@@ -33,7 +34,7 @@ import { SessionInfo } from "src/lib/SessionInfo"
 import { STREAMLIT_HOME_URL } from "src/urls"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import {
-  SettingsDialogProps as SettingsDialogProps,
+  SettingsDialogProps,
   SettingsDialog,
 } from "./SettingsDialog"
 import ThemeCreatorDialog, {

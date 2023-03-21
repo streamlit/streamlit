@@ -16,7 +16,7 @@
 
 import React, { FunctionComponent } from "react"
 import Button, { Kind } from "src/components/shared/Button"
-import Modal, { ModalHeader, ModalBody } from "src/components/shared/Modal"
+import { Modal, ModalHeader, ModalBody } from "src/components/shared/Modal"
 import {
   StyledDialogContainer,
   StyledRow,

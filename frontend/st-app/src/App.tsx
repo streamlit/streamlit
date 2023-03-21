@@ -26,8 +26,6 @@ import {
   AppView,
   setCookie,
   ConnectionManager,
-  DialogProps,
-  DialogType,
   getIFrameEnclosingApp,
   hashString,
   isEmbed,
@@ -75,12 +73,15 @@ import {
   ThemeConfig,
   toExportedTheme,
   withHostCommunication,
-  HostCommunicationHOC,
   withScreencast,
-  ScreenCastHOC,
   ensureError,
   BaseUriParts,
+  HostCommunicationHOC,
+  DialogProps,
+  DialogType,
+  ScreenCastHOC
 } from "st-lib"
+
 import {
   BackMsg,
   CustomThemeConfig,
