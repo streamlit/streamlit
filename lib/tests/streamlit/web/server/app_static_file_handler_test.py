@@ -34,8 +34,11 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self._tmp_js_file = tempfile.NamedTemporaryFile(
             dir=self._tmpdir.name, suffix="script.js", delete=False
         )
-        self._tmp_image_file = tempfile.NamedTemporaryFile(
+        self._tmp_png_image_file = tempfile.NamedTemporaryFile(
             dir=self._tmpdir.name, suffix="image.png", delete=False
+        )
+        self._tmp_webp_image_file = tempfile.NamedTemporaryFile(
+            dir=self._tmpdir.name, suffix="image.webp", delete=False
         )
 
         self._symlink_outside_directory = "symlink_outside"
@@ -51,7 +54,8 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self._filename = os.path.basename(self._tmpfile.name)
         self._js_filename = os.path.basename(self._tmp_js_file.name)
-        self._image_filename = os.path.basename(self._tmp_image_file.name)
+        self._png_image_filename = os.path.basename(self._tmp_png_image_file.name)
+        self._webp_image_filename = os.path.basename(self._tmp_webp_image_file.name)
 
         super().setUp()
 
@@ -71,8 +75,7 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
 
     def test_static_files_200(self):
-        """
-        Files with extensions NOT listed in app_static_file_handler.py
+        """Files with extensions NOT listed in app_static_file_handler.py
         `SAFE_APP_STATIC_FILE_EXTENSIONS` should have the `Content-Type` header value
         equals to `text-plain`.
         """
@@ -90,22 +93,32 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             assert r.headers["X-Content-Type-Options"] == "nosniff"
             assert r.code == 200
 
-    def test_static_image_200(self):
+    def test_static_png_image_200(self):
+        """Files with extensions listed in app_static_file_handler.py
+        `SAFE_APP_STATIC_FILE_EXTENSIONS` (e.g. png) should have the
+        `Content-Type` header based on their extension.
         """
-        Files with extensions listed in app_static_file_handler.py
-        `SAFE_APP_STATIC_FILE_EXTENSIONS` should have the `Content-Type` header
-        based on their extension.
-        """
-        response = self.fetch(f"/app/static/{self._image_filename}")
+        response = self.fetch(f"/app/static/{self._png_image_filename}")
 
         assert response.code == 200
         assert response.headers["Content-Type"] == "image/png"
         assert response.headers["X-Content-Type-Options"] == "nosniff"
 
+    def test_static_webp_image_200(self):
+        """Files with extensions listed in app_static_file_handler.py
+        `SAFE_APP_STATIC_FILE_EXTENSIONS` (e.g. webp) should have the
+        `Content-Type` header based on their extension.
+        """
+        response = self.fetch(f"/app/static/{self._webp_image_filename}")
+
+        assert response.code == 200
+        assert response.headers["Content-Type"] == "image/webp"
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+
     @patch("os.path.getsize", MagicMock(return_value=MAX_APP_STATIC_FILE_SIZE + 1))
     def test_big_file_404(self):
         """Files with size greater than MAX_APP_STATIC_FILE_SIZE should return 404."""
-        response = self.fetch(f"/app/static/{self._image_filename}")
+        response = self.fetch(f"/app/static/{self._png_image_filename}")
         assert response.code == 404
         self.assertEqual(
             b"<html><title>404: File is too large</title>"
@@ -114,8 +127,7 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         )
 
     def test_staticfiles_404(self):
-        """
-        Non-existent files, files outside static directory and symlinks pointing to
+        """Non-existent files, files outside static directory and symlinks pointing to
         files outside static directory and directories should return 404.
         """
         responses = [
