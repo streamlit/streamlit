@@ -24,7 +24,7 @@ import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 
-import AppContext from "src/components/core/AppContext"
+import { AppContext } from "src/components/core/AppContext"
 import { BlockNode, AppRoot } from "src/lib/AppNode"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { IGuestToHostMessage } from "src/hocs/withHostCommunication/types"

@@ -22,7 +22,7 @@ import {
   Image as ImageProto,
   ImageList as ImageListProto,
 } from "src/autogen/proto"
-import AppContext from "src/components/core/AppContext"
+import { AppContext } from "src/components/core/AppContext"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { buildMediaUri, xssSanitizeSvg } from "src/lib/UriUtil"
 

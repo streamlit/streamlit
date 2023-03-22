@@ -16,7 +16,7 @@
 
 import React, { ReactElement, useContext } from "react"
 import { DownloadButton as DownloadButtonProto } from "src/autogen/proto"
-import AppContext from "src/components/core/AppContext"
+import { AppContext } from "src/components/core/AppContext"
 import UIButton, {
   ButtonTooltip,
   Kind,

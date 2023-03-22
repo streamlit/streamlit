@@ -16,7 +16,7 @@
 
 import React, { ReactElement, useContext, useEffect, useRef } from "react"
 import { Audio as AudioProto } from "src/autogen/proto"
-import AppContext from "src/components/core/AppContext"
+import { AppContext } from "src/components/core/AppContext"
 import { buildMediaUri } from "src/lib/UriUtil"
 
 export interface AudioProps {

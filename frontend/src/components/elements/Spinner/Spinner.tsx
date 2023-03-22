@@ -19,7 +19,7 @@ import { useTheme } from "@emotion/react"
 import { Theme, isPresetTheme } from "src/theme"
 import { Spinner as SpinnerProto } from "src/autogen/proto"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
-import AppContext from "src/components/core/AppContext"
+import { AppContext } from "src/components/core/AppContext"
 import {
   StyledSpinnerContainer,
   ThemedStyledSpinner,

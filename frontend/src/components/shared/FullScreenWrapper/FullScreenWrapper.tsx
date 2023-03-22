@@ -18,7 +18,7 @@ import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
 import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
 import Icon from "src/components/shared/Icon"
-import AppContext from "src/components/core/AppContext"
+import { AppContext } from "src/components/core/AppContext"
 import { Theme } from "src/theme"
 import {
   StyledFullScreenFrame,
