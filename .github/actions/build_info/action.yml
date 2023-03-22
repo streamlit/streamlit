@@ -5,6 +5,12 @@ outputs:
   PYTHON_VERSIONS:
     description: Python versions for which tests will be run
     value: ${{ steps.build_info.outputs.PYTHON_VERSIONS }}
+  PYTHON_MIN_VERSION:
+    description: Oldest version of Python supported by Streamlit
+    value: ${{ steps.build_info.outputs.PYTHON_MIN_VERSION }}
+  PYTHON_MAX_VERSION:
+    description: Latest version of Python supported by Streamlit
+    value: ${{ steps.build_info.outputs.PYTHON_MAX_VERSION }}
 
 runs:
   using: composite

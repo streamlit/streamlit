@@ -50,6 +50,8 @@ jobs:
 
     outputs:
       PYTHON_VERSIONS: ${{ steps.build_info.outputs.PYTHON_VERSIONS }}
+      PYTHON_MIN_VERSION: ${{ steps.build_info.outputs.PYTHON_MIN_VERSION }}
+      PYTHON_MAX_VERSION: ${{ steps.build_info.outputs.PYTHON_MAX_VERSION }}
 
   py_version:
     needs:
@@ -66,7 +68,13 @@ jobs:
       Python ${{ matrix.python_version }}: Python tests, Integration tests, CLI Smoke tests
 
     env:
-      PYTHON_VERSION: ${{ matrix.python_version }}
+      PYTHON_VERSION: >-
+        ${{
+          (
+            matrix.python_version == 'min' && needs.build_info.outputs.PYTHON_MIN_VERSION ||
+            (matrix.python_version == 'max' && needs.build_info.outputs.PYTHON_MAX_VERSION || matrix.python_version)
+          )
+        }}
 
     steps:
       - name: Checkout Streamlit code
@@ -125,6 +133,9 @@ jobs:
 
     runs-on: ubuntu-latest
     if: github.repository == 'streamlit/streamlit' && github.event_name == 'push' && github.ref_name == 'develop'
+
+    name: Upload constraints
+
     env:
       TARGET_BRANCH: constraints-${{ github.ref_name }}
 

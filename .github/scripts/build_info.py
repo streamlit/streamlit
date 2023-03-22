@@ -47,6 +47,14 @@ FILES_WITH_PYTHON_DEPENDENCIES = [
 ]
 # +1 to make range inclusive.
 ALL_PYTHON_VERSIONS = [f"3.{d}" for d in range(7, 11 + 1)]
+PYTHON_MIN_VERSION = ALL_PYTHON_VERSIONS[0]
+PYTHON_MAX_VERSION = ALL_PYTHON_VERSIONS[-1]
+
+# To avoid the need to update the protected branch, we replace the boundary
+# values with fixed text. We map it to real values in the Github workflow.
+ALL_PYTHON_VERSIONS[0] = "min"
+ALL_PYTHON_VERSIONS[-1] = "max"
+
 LABEL_FULL_MATRIX = "dev:full-matrix"
 
 GITHUB_CONTEXT = json.loads(os.environ[GITHUB_CONTEXT_ENV_VAR])
@@ -124,8 +132,8 @@ def should_test_all_python_versions() -> bool:
 
 def get_output_variables() -> Dict[str, str]:
     return {
-        "PYTHON_MIN_VERSION": ALL_PYTHON_VERSIONS[0],
-        "PYTHON_MAX_VERSION": ALL_PYTHON_VERSIONS[-1],
+        "PYTHON_MIN_VERSION": PYTHON_MIN_VERSION,
+        "PYTHON_MAX_VERSION": PYTHON_MAX_VERSION,
         "PYTHON_VERSIONS": json.dumps(
             ALL_PYTHON_VERSIONS
             if should_test_all_python_versions()
