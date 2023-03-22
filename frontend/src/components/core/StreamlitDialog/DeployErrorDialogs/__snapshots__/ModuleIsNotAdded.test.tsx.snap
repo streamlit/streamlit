@@ -2,18 +2,13 @@
 
 exports[`DeployErrorDialog - ModuleIsNotAdded should render without crashing 1`] = `
 Object {
-  "body": <React.Fragment>
-    <p>
-      The file 
-      <code>
-        module
-      </code>
-       has not been added to the repo.
-    </p>
-    <p>
-      Please add it and push to GitHub to continue.
-    </p>
-  </React.Fragment>,
-  "title": "Unable to deploy app",
+  "body": <StyledParagraph>
+    The app’s main file 
+    <code>
+      module
+    </code>
+     has not been pushed to GitHub. Please add it to continue.
+  </StyledParagraph>,
+  "title": "Unable to deploy",
 }
 `;

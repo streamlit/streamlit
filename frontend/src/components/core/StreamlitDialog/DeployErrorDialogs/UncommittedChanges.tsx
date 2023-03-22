@@ -16,19 +16,16 @@
 
 import React from "react"
 import { IDeployErrorDialog } from "./types"
+import { StyledParagraph } from "./styled-components"
 
-function UncommittedChanges(repository: string): IDeployErrorDialog {
-  const repoName = repository.split("/").slice(1).join("/")
-
+function UncommittedChanges(): IDeployErrorDialog {
   return {
-    title: "Unable to deploy app",
+    title: "Unsynced changes",
     body: (
-      <>
-        <p>
-          Your repository <code>{repoName}</code> has uncommitted changes.
-        </p>
-        <p>Please commit the latest changes and push to GitHub to continue.</p>
-      </>
+      <StyledParagraph>
+        The Git repo has uncommitted changes. You may want to commit them
+        before continuing.
+      </StyledParagraph>
     ),
   }
 }

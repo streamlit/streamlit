@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { IDeployErrorDialog } from "./types"
-import { StyledParagraph } from "./styled-components"
+import React, { ReactElement } from "react"
+import { StyledElement } from "./styled-components"
+import Checkmark from "src/assets/svg/checkmark.svg"
 
-function ModuleIsNotAdded(module: string): IDeployErrorDialog {
-  return {
-    title: "Unable to deploy",
-    body: (
-      <StyledParagraph>
-        The app’s main file <code>{module}</code> has not been pushed to
-        GitHub. Please add it to continue.
-      </StyledParagraph>
-    ),
-  }
+export interface IDeployListElementProps {
+  children?: React.ReactNode
+  extraSpacing?: boolean
 }
 
-export default ModuleIsNotAdded
+function DeployListElement(props: IDeployListElementProps): ReactElement {
+  const { children, extraSpacing } = props
+  return (
+    <StyledElement extraSpacing={extraSpacing}>
+      <img src={Checkmark} alt={"Checkmark"} />
+      <span>{children}</span>
+    </StyledElement>
+  )
+}
+
+export default DeployListElement
