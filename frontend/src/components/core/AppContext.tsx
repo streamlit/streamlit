@@ -89,7 +89,7 @@ export interface Props {
   activeTheme: ThemeConfig
 
   /**
-   * Set the app's active theme locall, and send it the app's host (if any).
+   * Set the app's active theme locally and send it the app's host (if any).
    * @see App.setAndSendTheme
    */
   setTheme: (theme: ThemeConfig) => void
