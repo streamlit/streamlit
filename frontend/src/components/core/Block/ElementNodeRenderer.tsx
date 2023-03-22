@@ -367,7 +367,8 @@ const RawElementNodeRenderer = (
 
     case "toast":
       const toastProto = node.element.toast as ToastProto
-      return (
+      return hideIfStale(
+        props.isStale,
         <Toast
           text={toastProto.text}
           icon={toastProto.icon}

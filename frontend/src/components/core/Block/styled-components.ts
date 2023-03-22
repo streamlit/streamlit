@@ -80,6 +80,12 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
           display: "none",
         }
       : {}),
+    ...(elementType === "toast"
+      ? {
+          // Use display: none for empty elements to avoid the flexbox gap.
+          display: "none",
+        }
+      : {}),
     ...(elementType === "balloons"
       ? {
           // Apply negative bottom margin to remove the flexbox gap.

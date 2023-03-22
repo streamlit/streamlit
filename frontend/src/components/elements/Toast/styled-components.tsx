@@ -16,39 +16,55 @@
 
 import { CSSProperties } from "@emotion/serialize"
 import styled from "@emotion/styled"
-import { Theme } from "src/theme"
+import { darken, lighten } from "color2k"
 
-// TODO: Handle light/dark theme cases
-export function toastColoration(kind: string, theme: Theme): CSSProperties {
+import { hasLightBackgroundColor, Theme } from "src/theme"
+
+export function toastColoration(
+  toastType: string,
+  theme: Theme
+): CSSProperties {
+  const lightTheme = hasLightBackgroundColor(theme)
+  const inSidebar = theme.inSidebar
+
   const defaultStyle = {
-    backgroundColor: theme.colors.gray10,
+    backgroundColor: inSidebar
+      ? theme.colors.bgColor
+      : theme.colors.secondaryBg,
     color: theme.colors.bodyText,
   }
   const successStyle = {
-    backgroundColor: "rgba(33, 195, 84, 0.1)",
-    color: "rgb(23, 114, 51)",
+    backgroundColor: lightTheme
+      ? lighten(theme.colors.green10, 0.03)
+      : darken(theme.colors.green100, 0.15),
+    color: lightTheme ? theme.colors.green100 : theme.colors.green10,
   }
   const warningStyle = {
-    backgroundColor: "rgba(255, 227, 18, 0.1)",
-    color: "rgb(146, 108, 5)",
+    backgroundColor: lightTheme
+      ? theme.colors.yellow10
+      : darken(theme.colors.yellow110, 0.16),
+    color: lightTheme ? theme.colors.yellow110 : theme.colors.yellow20,
   }
   const errorStyle = {
-    backgroundColor: "rgba(255, 43, 43, 0.09)",
-    color: "rgb(125, 53, 59)",
+    backgroundColor: lightTheme
+      ? theme.colors.red10
+      : darken(theme.colors.red100, 0.2),
+    color: lightTheme ? theme.colors.red100 : theme.colors.red20,
   }
 
-  if (kind === "success") {
-    return successStyle
-  } else if (kind === "warning") {
-    return warningStyle
-  } else if (kind === "error") {
-    return errorStyle
+  switch (toastType) {
+    case "success":
+      return successStyle
+    case "warning":
+      return warningStyle
+    case "error":
+      return errorStyle
+    default:
+      return defaultStyle
   }
-
-  return defaultStyle
 }
 
-export const StyledViewMoreButton = styled.button(({ theme }) => ({
+export const StyledViewButton = styled.button(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
   lineHeight: "1.4rem",
   color: theme.colors.gray60,
@@ -57,15 +73,25 @@ export const StyledViewMoreButton = styled.button(({ theme }) => ({
   boxShadow: "none",
   padding: "0px",
   "&:hover, &:active, &:focus": {
+    border: "none",
+    outline: "none",
+    boxShadow: "none",
+  },
+  "&:hover": {
     color: theme.colors.primary,
   },
 }))
 
-export const StyledToastMessage = styled.div(({ theme }) => ({
-  display: "flex",
-  maxHeight: "68px",
-  marginBottom: "8px",
-  overflow: "hidden",
-  fontSize: theme.fontSizes.sm,
-  lineHeight: "1.4rem",
-}))
+export interface StyledToastMessageProps {
+  expanded: boolean
+}
+
+export const StyledToastMessage = styled.div<StyledToastMessageProps>(
+  ({ theme, expanded }) => ({
+    display: "flex",
+    maxHeight: expanded ? "" : "68px",
+    overflow: "hidden",
+    fontSize: theme.fontSizes.sm,
+    lineHeight: "1.4rem",
+  })
+)

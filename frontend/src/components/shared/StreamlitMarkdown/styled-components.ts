@@ -23,6 +23,7 @@ export interface StyledStreamlitMarkdownProps {
   isLabel?: boolean
   isButton?: boolean
   isCheckbox?: boolean
+  isToast?: boolean
 }
 
 function convertRemToEm(s: string): string {
@@ -39,16 +40,29 @@ function sharedMarkdownStyle(theme: Theme): any {
 
 export const StyledStreamlitMarkdown =
   styled.div<StyledStreamlitMarkdownProps>(
-    ({ theme, isCaption, isInSidebar, isLabel, isButton, isCheckbox }) => {
+    ({
+      theme,
+      isCaption,
+      isInSidebar,
+      isLabel,
+      isButton,
+      isCheckbox,
+      isToast,
+    }) => {
       // Widget Labels have smaller font size with exception of Buttons/Checkboxes
-      const labelFontSize = isLabel && !isCheckbox && !isButton
+      // Toasts also have smaller font size
+      const labelFontSize = (isLabel && !isCheckbox && !isButton) || isToast
       return {
         fontFamily: theme.genericFonts.bodyFont,
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         ...sharedMarkdownStyle(theme),
+        div: {
+          display: isToast ? "inline-flex" : "",
+        },
         p: {
           wordBreak: "break-word",
           marginBottom: isLabel ? 0 : "",
+
           ...(labelFontSize ? { fontSize: theme.fontSizes.sm } : {}),
         },
 
