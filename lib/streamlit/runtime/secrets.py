@@ -124,18 +124,21 @@ class Secrets(Mapping[str, Any]):
             doc="Emitted when a `secrets.toml` file has been changed."
         )
 
-    def load_if_toml_exists(self) -> None:
+    def load_if_toml_exists(self) -> bool:
         """Load secrets.toml files from disk if they exists. If none exist,
         no exception will be raised. (If a file exists but is malformed,
         an exception *will* be raised.)
+
+        Returns True if a secrets.toml file was successfully parsed, False otherwise.
 
         Thread-safe.
         """
         try:
             self._parse(print_exceptions=False)
+            return True
         except FileNotFoundError:
             # No secrets.toml files exist. That's fine.
-            pass
+            return False
 
     def _reset(self) -> None:
         """Clear the secrets dictionary and remove any secrets that were
