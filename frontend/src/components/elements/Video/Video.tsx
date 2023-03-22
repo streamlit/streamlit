@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, useContext, useEffect, useRef } from "react"
-import AppContext from "src/components/core/AppContext"
+import { AppContext } from "src/components/core/AppContext"
 import { Video as VideoProto } from "src/autogen/proto"
 import { buildMediaUri } from "src/lib/UriUtil"
 
