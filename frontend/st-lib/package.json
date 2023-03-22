@@ -12,13 +12,11 @@
     "test": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 node ./scripts/test.js --env=./jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --fix src/lib/dataFrameProto.ts",
+    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --fix src",
     "build:lib-type": "tsc -P tsconfig.lib.json && tsc-alias -p tsconfig.lib.json",
     "build:asset": "cp -R ./src/assets ./dist",
     "build:autogen": "cp -R ./src/autogen ./dist",
-    "build_test": "npx babel src --out-dir dist",
-    "build:src": "env NODE_ENV=\"development\" npx babel src --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\"",
-    "barrelsBy": "barrelsby --delete -E  -flat --local --noSemicolon -e .*test.* -d ./src/hocs"
+    "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src",
   },
   "jest": {
     "roots": [
@@ -222,6 +220,7 @@
     "@babel/preset-flow": "^7.18.6",
     "@babel/preset-typescript": "^7.21.0",
     "@danmarshall/deckgl-typings": "^4.8.0",
+    "@emotion/babel-plugin": "^11.10.6",
     "@emotion/jest": "^11.10.5",
     "@loaders.gl/images": "^3.2.13",
     "@testing-library/dom": "^8.19.0",
@@ -270,7 +269,6 @@
     "babel-plugin-emotion": "^11.0.0",
     "babel-plugin-tsconfig-paths-module-resolver": "^1.0.4",
     "babel-runtime": "^6.26.0",
-    "barrelsby": "^2.5.1",
     "buffer": "^6.0.3",
     "circular-dependency-plugin": "^5.2.2",
     "cypress": "^6.3.0",
