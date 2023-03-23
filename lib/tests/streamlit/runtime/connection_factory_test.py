@@ -26,9 +26,10 @@ from tests.testutil import create_mock_script_run_ctx
 
 
 class MockConnection(BaseConnection[None]):
-    def __init__(self, connection_name: str, **kwargs):
-        self._connection_name = connection_name
-        self._kwargs = kwargs
+    _default_connection_name = "mock_connection"
+
+    def connect(self, **kwargs):
+        pass
 
 
 class ConnectionFactoryTest(unittest.TestCase):
