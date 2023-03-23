@@ -19,6 +19,8 @@ import sys
 from importlib import metadata
 from typing import Dict, Union
 
+import scrubadub
+
 from fluent import asynchandler as fluent_async
 from fluent import handler as fluent_sync
 from typing_extensions import Final
@@ -73,7 +75,10 @@ class StreamlitRemoteFormatter(fluent_sync.FluentRecordFormatter):
         streamlit_context["query_string"] = ctx.query_string if ctx else None
         streamlit_context["streamlit_version"] = metadata.version("streamlit")
         self._add_dic(data, streamlit_context)
-        return data
+        return {
+            key: scrubadub.clean(value) if isinstance(value, str) else value
+            for key, value in data.items()
+        }
 
 
 def setup_formatter(logger: logging.Logger) -> None:
