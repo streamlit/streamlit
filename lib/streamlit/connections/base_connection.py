@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pickle
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Mapping, Optional, TypeVar
 
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
+from streamlit.util import calc_md5
 
 T = TypeVar("T")
 
@@ -24,10 +26,18 @@ class BaseConnection(ABC, Generic[T]):
     """TODO(vdonato): docstrings for this class and all public methods."""
 
     def __init__(self, connection_name: str = "default", **kwargs) -> None:
+        if connection_name == "default":
+            connection_name = self.default_connection_name()
+
         self._connection_name = connection_name
         self._kwargs = kwargs
 
         self._raw_instance: Optional[T] = self.connect(**kwargs)
+        self._config_section_hash = calc_md5(pickle.dumps(self.get_secrets()))
+        secrets_singleton.file_change_listener.connect(self._on_secrets_changed)
+
+    def __del__(self) -> None:
+        secrets_singleton.file_change_listener.disconnect(self._on_secrets_changed)
 
     def _repr_html_(self) -> str:
         # TODO(vdonato): Change this to whatever we actually want the default to be.
@@ -35,11 +45,16 @@ class BaseConnection(ABC, Generic[T]):
 
     # Methods with default implementations that we don't expect subclasses to want or
     # need to overwrite.
-    def get_secrets(self) -> Mapping[str, Any]:
-        connection_name = self._connection_name
-        if connection_name == "default":
-            connection_name = self.default_connection_name()
+    def _on_secrets_changed(self, _) -> None:
+        new_hash = calc_md5(pickle.dumps(self.get_secrets()))
 
+        # Only reset the connection if the secrets file section specific to this
+        # connection has changed.
+        if new_hash != self._config_section_hash:
+            self._config_section_hash = new_hash
+            self.reset()
+
+    def get_secrets(self) -> Mapping[str, Any]:
         connections_section = None
         if secrets_singleton.load_if_toml_exists():
             connections_section = secrets_singleton.get("connections")
@@ -47,7 +62,7 @@ class BaseConnection(ABC, Generic[T]):
         if type(connections_section) is not AttrDict:
             return AttrDict({})
 
-        return connections_section.get(connection_name, {})
+        return connections_section.get(self._connection_name, {})
 
     @classmethod
     def default_connection_name(cls) -> str:
