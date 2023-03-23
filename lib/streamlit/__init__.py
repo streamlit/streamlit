@@ -60,6 +60,9 @@ from streamlit.runtime.caching import (
     experimental_singleton as _experimental_singleton,
     experimental_memo as _experimental_memo,
 )
+from streamlit.runtime.connection_factory import (
+    connection_factory as _connection_factory,
+)
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
@@ -212,3 +215,4 @@ experimental_set_query_params = _set_query_params
 experimental_show = _show
 experimental_rerun = _rerun
 experimental_data_editor = _main.experimental_data_editor
+experimental_connection = _connection_factory
