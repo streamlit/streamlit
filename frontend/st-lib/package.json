@@ -16,7 +16,7 @@
     "build:lib-type": "tsc -P tsconfig.lib.json && tsc-alias -p tsconfig.lib.json",
     "build:asset": "cp -R ./src/assets ./dist",
     "build:autogen": "cp -R ./src/autogen ./dist",
-    "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src",
+    "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src"
   },
   "jest": {
     "roots": [
