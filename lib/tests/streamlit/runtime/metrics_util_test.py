@@ -85,7 +85,6 @@ class MetricsUtilTest(unittest.TestCase):
         with patch(
             "streamlit.runtime.metrics_util.uuid.getnode", return_value=MAC
         ), patch("streamlit.runtime.metrics_util.os.path.isfile", return_value=False):
-
             machine_id = metrics_util._get_machine_id_v3()
         self.assertEqual(machine_id, MAC)
 
@@ -246,6 +245,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         """All commands of the public API should be tracked with the correct name."""
         # Some commands are currently not tracked for various reasons:
         ignored_commands = {
+            "experimental_connection",
             "experimental_rerun",
             "stop",
             "spinner",
