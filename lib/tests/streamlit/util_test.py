@@ -181,3 +181,9 @@ class UtilTest(unittest.TestCase):
         self.assertSetEqual(
             util.extract_key_query_params(query_params, param_key), result
         )
+
+    def test_calc_md5_can_handle_bytes_and_strings(self):
+        self.assertEqual(
+            util.calc_md5("eventually bytes"),
+            util.calc_md5("eventually bytes".encode("utf-8")),
+        )
