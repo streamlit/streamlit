@@ -47,7 +47,7 @@ def _create_connection(
     connection_class must be a concrete type. The public-facing connection API allows
     the user to specify the connection class to use as a string literal for convenience.
     """
-    return connection_class(  # type: ignore
+    return connection_class(
         connection_name=name,
         **kwargs,
     )
