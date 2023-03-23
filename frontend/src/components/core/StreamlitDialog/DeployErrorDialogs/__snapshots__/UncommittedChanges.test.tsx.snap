@@ -2,18 +2,9 @@
 
 exports[`DeployErrorDialog - RepoIsAhead should render without crashing 1`] = `
 Object {
-  "body": <React.Fragment>
-    <p>
-      Your repository 
-      <code>
-        reponame
-      </code>
-       has uncommitted changes.
-    </p>
-    <p>
-      Please commit the latest changes and push to GitHub to continue.
-    </p>
-  </React.Fragment>,
-  "title": "Unable to deploy app",
+  "body": <StyledParagraph>
+    The Git repo has uncommitted changes. You may want to commit them before continuing.
+  </StyledParagraph>,
+  "title": "Unsynced changes",
 }
 `;
