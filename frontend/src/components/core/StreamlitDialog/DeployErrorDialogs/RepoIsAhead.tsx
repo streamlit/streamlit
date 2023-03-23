@@ -19,7 +19,7 @@ import { IDeployErrorDialog } from "./types"
 
 function RepoIsAhead(): IDeployErrorDialog {
   return {
-    title: "Unable to deploy app",
+    title: "Unable to deploy",
     body: (
       <>
         <p>

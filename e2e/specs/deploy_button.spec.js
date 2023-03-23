@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { IDeployErrorDialog } from "./types"
-import { StyledParagraph } from "./styled-components"
+describe("displays deploy button correctly", () => {
+  before(() => {
+    cy.loadApp("http://localhost:3000/?testing=true");
+  });
 
-function ModuleIsNotAdded(module: string): IDeployErrorDialog {
-  return {
-    title: "Unable to deploy",
-    body: (
-      <StyledParagraph>
-        The app’s main file <code>{module}</code> has not been pushed to
-        GitHub. Please add it to continue.
-      </StyledParagraph>
-    ),
-  }
-}
+  it("deploy button matches the snapshot", () => {
+    cy.get("div[class='stDeployButton']").matchThemedSnapshots(
+      "deploy_button"
+    );
+  });
 
-export default ModuleIsNotAdded
+  it("deploy dialog matches the snapshot", () => {
+    cy.get("div[class='stDeployButton'] > button").click({force: true})
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "deploy_dialog_opened"
+    );
+  })
+});

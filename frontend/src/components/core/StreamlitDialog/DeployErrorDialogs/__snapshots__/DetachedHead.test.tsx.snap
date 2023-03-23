@@ -10,6 +10,6 @@ Object {
       Please commit the latest changes and push to GitHub to continue.
     </p>
   </React.Fragment>,
-  "title": "Unable to deploy app",
+  "title": "Unable to deploy",
 }
 `;

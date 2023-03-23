@@ -14,20 +14,11 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { IDeployErrorDialog } from "./types"
-import { StyledParagraph } from "./styled-components"
+import styled from "@emotion/styled"
 
-function ModuleIsNotAdded(module: string): IDeployErrorDialog {
-  return {
-    title: "Unable to deploy",
-    body: (
-      <StyledParagraph>
-        The app’s main file <code>{module}</code> has not been pushed to
-        GitHub. Please add it to continue.
-      </StyledParagraph>
-    ),
-  }
-}
-
-export default ModuleIsNotAdded
+export const DeployButtonContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: theme.spacing.sm,
+  alignItems: "center",
+  lineHeight: theme.iconSizes.md,
+}))

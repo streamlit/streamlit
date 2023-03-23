@@ -34,9 +34,6 @@ import {
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
-  RepoIsAhead,
-  UncommittedChanges,
-  UntrackedFiles,
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs"
 import Icon from "src/components/shared/Icon"
 import {
@@ -120,7 +117,7 @@ const getOpenInWindowCallback = (url: string) => (): void => {
   window.open(url, "_blank")
 }
 
-const getDeployAppUrl = (gitInfo: IGitInfo | null): (() => void) => {
+export const getDeployAppUrl = (gitInfo: IGitInfo | null): (() => void) => {
   // If the app was run inside a GitHub repo, autofill for a one-click deploy.
   // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
   if (gitInfo) {
@@ -278,8 +275,9 @@ const SubMenu = (props: SubMenuProps): ReactElement => {
 
 function MainMenu(props: Props): ReactElement {
   const isServerDisconnected = !props.isServerConnected
+
   const onClickDeployApp = useCallback((): void => {
-    const { showDeployError, closeDialog, isDeployErrorModalOpen, gitInfo } =
+    const { showDeployError, isDeployErrorModalOpen, gitInfo, closeDialog } =
       props
 
     if (!gitInfo) {
@@ -295,7 +293,6 @@ function MainMenu(props: Props): ReactElement {
       branch,
       module,
       untrackedFiles,
-      uncommittedFiles,
       state: gitState,
     } = gitInfo
     const hasMissingGitInfo = !repository || !branch || !module
@@ -320,30 +317,6 @@ function MainMenu(props: Props): ReactElement {
       const dialog = ModuleIsNotAdded(module)
 
       showDeployError(dialog.title, dialog.body)
-
-      return
-    }
-
-    if (repository && uncommittedFiles?.length) {
-      const dialog = UncommittedChanges(repository)
-
-      showDeployError(dialog.title, dialog.body)
-
-      return
-    }
-
-    if (gitState === GitStates.AHEAD_OF_REMOTE) {
-      const dialog = RepoIsAhead()
-
-      showDeployError(dialog.title, dialog.body, getDeployAppUrl(gitInfo))
-
-      return
-    }
-
-    if (untrackedFiles?.length) {
-      const dialog = UntrackedFiles()
-
-      showDeployError(dialog.title, dialog.body, getDeployAppUrl(gitInfo))
 
       return
     }

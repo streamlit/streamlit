@@ -15,34 +15,27 @@
  */
 
 import React from "react"
-import { ONLINE_DOCS_URL } from "src/urls"
+import { STREAMLIT_COMMUNITY_CLOUD_DOCS_URL } from "src/urls"
 import { IDeployErrorDialog } from "./types"
+import { StyledParagraph } from "./styled-components"
 
 function NoRepositoryDetected(): IDeployErrorDialog {
   return {
-    title: "Unable to deploy app",
+    title: "Unable to deploy",
     body: (
-      <>
-        <p>
-          Could not find a remote repository hosted on GitHub. Are you sure you
-          are on a branch that is tracking a remote GitHub branch?
-        </p>
-        <p>How Streamlit Cloud works:</p>
-        <ul>
-          <li>
-            To deploy a public app, you must first put it in a public GitHub
-            repo. See{" "}
-            <a
-              href={ONLINE_DOCS_URL}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              our documentation
-            </a>{" "}
-            for more details.
-          </li>
-        </ul>
-      </>
+      <StyledParagraph>
+        The app’s code is not connected to a remote GitHub repository. To
+        deploy on Streamlit Community Cloud, please put your code in a GitHub
+        repository and publish the current branch. Read more in{" "}
+        <a
+          href={STREAMLIT_COMMUNITY_CLOUD_DOCS_URL}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          our documentation
+        </a>
+        .
+      </StyledParagraph>
     ),
   }
 }
