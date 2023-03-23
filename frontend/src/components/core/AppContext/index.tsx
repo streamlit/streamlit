@@ -38,6 +38,7 @@ export interface Props {
   setTheme: (theme: ThemeConfig) => void
   availableThemes: ThemeConfig[]
   addThemes: (themes: ThemeConfig[]) => void
+  communityCloud: boolean
   sidebarChevronDownshift: number
   getBaseUriParts: () => BaseUriParts | undefined
 }
@@ -60,6 +61,7 @@ export default React.createContext<Props>({
   setTheme: () => {},
   availableThemes: [],
   addThemes: () => {},
+  communityCloud: false,
   sidebarChevronDownshift: 0,
   getBaseUriParts: getWindowBaseUriParts,
 })

@@ -1500,6 +1500,8 @@ export class App extends PureComponent<Props, State> {
           showFooter: !isEmbed() || isFooterDisplayed(),
           showToolbar: !isEmbed() || isToolbarDisplayed(),
           showColoredLine: !isEmbed() || isColoredLineDisplayed(),
+          communityCloud:
+            this.props.hostCommunication.currentState.toolbarItems.length > 0,
         }}
       >
         <HotKeys

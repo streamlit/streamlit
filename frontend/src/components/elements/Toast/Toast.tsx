@@ -19,9 +19,8 @@ import { withTheme } from "@emotion/react"
 import { toaster, ToasterContainer, PLACEMENT } from "baseui/toast"
 
 import { Theme } from "src/theme"
-import withHostCommunication, {
-  HostCommunicationHOC,
-} from "src/hocs/withHostCommunication"
+
+import AppContext from "src/components/core/AppContext"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
 import {
@@ -31,7 +30,6 @@ import {
 } from "./styled-components"
 
 export interface ToastProps {
-  hostCommunication: HostCommunicationHOC
   theme: Theme
   text: string
   icon?: string
@@ -62,16 +60,12 @@ function generateToastStyleOverrides(toastType: string, theme: Theme): object {
   }
 }
 
-export function Toast({
-  hostCommunication,
-  theme,
-  text,
-  icon,
-  type,
-}: ToastProps): ReactElement {
+export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
   const fullMessage = icon ? `${icon}&ensp;${text}` : text
   const displayMessage = shortenMessage(fullMessage)
   const shortened = fullMessage !== displayMessage
+
+  const { communityCloud } = React.useContext(AppContext)
 
   const [expanded, setExpanded] = useState(!shortened)
   const [toastKey, setToastKey] = useState<React.Key>(1000)
@@ -118,14 +112,16 @@ export function Toast({
 
   useEffect(() => {
     createToast()
+
+    return () => {
+      toaster.clear(toastKey)
+    }
   }, [])
 
   useEffect(() => {
     const content = toastContent()
     toaster.update(toastKey, { children: content })
-  }, [expanded, theme])
-
-  const streamlitCloud = hostCommunication.currentState.isOwner
+  }, [expanded, theme, communityCloud])
 
   return (
     <ToasterContainer
@@ -135,7 +131,7 @@ export function Toast({
         Root: {
           style: () => ({
             // If deployed in Community Cloud, move toasts up to avoid blocking Manage App button
-            bottom: streamlitCloud ? "45px" : "0px",
+            bottom: communityCloud ? "45px" : "0px",
           }),
         },
         ToastCloseIcon: {
@@ -151,4 +147,4 @@ export function Toast({
   )
 }
 
-export default withHostCommunication(withTheme(Toast))
+export default withTheme(Toast)

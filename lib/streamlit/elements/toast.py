@@ -32,7 +32,7 @@ class ToastProtoType(Enum):
     ERROR = "error"
 
 
-def validate_type(toast_type: str) -> ToastProtoType:
+def validate_type(toast_type: str) -> str:
     valid_types = [type.value for type in ToastProtoType]
 
     if toast_type is None:
@@ -59,7 +59,7 @@ class ToastMixin:
         text: SupportsStr,
         *,  # keyword-only args:
         icon: Optional[str] = None,
-        type: ToastProtoType = None,
+        type: Optional[ToastProtoType] = None,
     ) -> "DeltaGenerator":
         """Display a toast in the bottom right corner of the screen. Will disappear after four seconds.
 
