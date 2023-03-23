@@ -6,6 +6,7 @@
   "homepage": "./",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "sideEffects": ["*.css"],
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "build": "./bokeh/preload-bokeh.sh && yarn build:src && yarn build:autogen && yarn build:asset && yarn build:lib-type",
@@ -16,67 +17,8 @@
     "build:lib-type": "tsc -P tsconfig.lib.json && tsc-alias -p tsconfig.lib.json",
     "build:asset": "cp -R ./src/assets ./dist",
     "build:autogen": "cp -R ./src/autogen ./dist",
-    "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src"
-  },
-  "jest": {
-    "roots": [
-      "<rootDir>/src"
-    ],
-    "collectCoverageFrom": [
-      "src/**/*.{js,jsx,ts,tsx}",
-      "!src/**/*.d.ts"
-    ],
-    "setupFiles": [
-      "react-app-polyfill/jsdom"
-    ],
-    "setupFilesAfterEnv": [
-      "<rootDir>/src/setupTests.js"
-    ],
-    "testMatch": [
-      "<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}",
-      "<rootDir>/src/**/*.{spec,test}.{js,jsx,ts,tsx}"
-    ],
-    "testEnvironment": "jsdom",
-    "transform": {
-      "^.+\\.(js|jsx|mjs|cjs|ts|tsx)$": "<rootDir>/config/jest/babelTransform.js",
-      "^.+\\.css$": "<rootDir>/config/jest/cssTransform.js",
-      "^(?!.*\\.(js|jsx|mjs|cjs|ts|tsx|css|json)$)": "<rootDir>/config/jest/fileTransform.js"
-    },
-    "transformIgnorePatterns": [
-      "[/\\\\]node_modules[/\\\\].+\\.(js|jsx|mjs|cjs|ts|tsx)$",
-      "^.+\\.module\\.(css|sass|scss)$"
-    ],
-    "modulePaths": [],
-    "moduleNameMapper": {
-      "^react-native$": "react-native-web",
-      "^.+\\.module\\.(css|sass|scss)$": "identity-obj-proxy",
-      "^src/(.*)$": "<rootDir>/src/$1"
-    },
-    "sideEffects": false,
-    "moduleFileExtensions": [
-      "web.js",
-      "js",
-      "web.ts",
-      "ts",
-      "web.tsx",
-      "tsx",
-      "json",
-      "web.jsx",
-      "jsx",
-      "node"
-    ],
-    "watchPlugins": [
-      "jest-watch-typeahead/filename",
-      "jest-watch-typeahead/testname"
-    ],
-    "resetMocks": false,
-    "coverageReporters": [
-      "text",
-      "html"
-    ],
-    "snapshotSerializers": [
-      "enzyme-to-json/serializer"
-    ]
+    "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src",
+    "test_jest": "jest --env=./jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}"
   },
   "dependencies": {
     "@deck.gl/core": "^8.8.23",
