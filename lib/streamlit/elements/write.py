@@ -239,7 +239,7 @@ class WriteMixin:
                 self.dg.pydeck_chart(arg)
             elif inspect.isclass(arg):
                 flush_buffer()
-                self.dg.text(arg)
+                self.dg.text(cast(type, arg))
             elif hasattr(arg, "_repr_html_"):
                 self.dg.markdown(
                     arg._repr_html_(),
