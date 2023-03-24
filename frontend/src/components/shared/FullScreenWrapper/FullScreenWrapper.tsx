@@ -55,7 +55,7 @@ interface State {
  * to fixed and cover all screen, updating wrapped element height and width
  */
 class FullScreenWrapper extends PureComponent<Props, State> {
-  declare context: React.ContextType<typeof AppContext>
+  public context!: React.ContextType<typeof AppContext>
 
   public static contextType = AppContext
 
