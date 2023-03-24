@@ -30,10 +30,15 @@ from streamlit.runtime import (
     SessionClient,
     SessionClientDisconnectedError,
 )
+from streamlit.runtime.caching.storage.local_disk_cache_storage import (
+    LocalDiskCacheStorageManager,
+)
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.runtime import AsyncObjects, RuntimeStoppedError
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.watcher import event_based_path_watcher
 from tests.streamlit.message_mocks import (
     create_dataframe_msg,
@@ -51,6 +56,19 @@ class MockSessionClient(SessionClient):
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         self.forward_msgs.append(msg)
+
+
+class RuntimeConfigTests(unittest.TestCase):
+    def test_runtime_config_defaults(self):
+        config = RuntimeConfig(
+            "/my/script.py", None, MemoryMediaFileStorage("/mock/media")
+        )
+
+        self.assertIsInstance(
+            config.cache_storage_manager, LocalDiskCacheStorageManager
+        )
+        self.assertIs(config.session_manager_class, WebsocketSessionManager)
+        self.assertIsInstance(config.session_storage, MemorySessionStorage)
 
 
 class RuntimeSingletonTest(unittest.TestCase):
@@ -150,7 +168,6 @@ class RuntimeTest(RuntimeTestCase):
         with patch.object(
             self.runtime, "connect_session", new=MagicMock()
         ) as patched_connect_session:
-
             self.runtime.create_session(client=client, user_info=user_info)
 
             patched_connect_session.assert_called_with(
