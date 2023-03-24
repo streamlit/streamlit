@@ -54,6 +54,11 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     )
   }
 
+  /**
+   * Construct a URL for a media file. If the url is relative and starts with
+   * "/media", assume it's being served from Streamlit and construct it
+   * appropriately. Otherwise leave it alone.
+   */
   public buildMediaURL(url: string): string {
     if (url.startsWith(SVG_PREFIX)) {
       return `${SVG_PREFIX}${xssSanitizeSvg(url)}`
