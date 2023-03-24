@@ -16,35 +16,83 @@
 
 import styled from "@emotion/styled"
 
-export const StyledDocModule = styled.span(({ theme }) => ({
-  color: theme.colors.docStringModuleText,
+export const StyledDocSummary = styled.span(({ theme }) => ({
+  "& > *": {
+    marginRight: theme.spacing.sm,
+  },
 }))
 
 export const StyledDocName = styled.span(({ theme }) => ({
   fontWeight: theme.fontWeights.bold,
 }))
 
+export const StyledDocType = styled.span(({ theme }) => ({
+  color: theme.colors.green70,
+}))
+
+export const StyledDocValue = styled.span()
+
 export interface StyledDocContainerProps {
   width: number
 }
 
 export const StyledDocContainer = styled.span<StyledDocContainerProps>(
-  ({ theme, width }) => ({
-    backgroundColor: theme.colors.docStringContainerBackground,
-    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+  ({ theme }) => ({
+    display: "flex",
+    flexDirection: "column",
+    borderRadius: theme.radii.md,
+    border: `1px solid ${theme.colors.fadedText05}`,
     fontFamily: theme.fonts.monospace,
     fontSize: theme.fontSizes.sm,
-    overflowX: "auto",
-    width,
   })
 )
 
 export const StyledDocHeader = styled.div(({ theme }) => ({
-  paddingBottom: theme.spacing.sm,
-  marginBottom: theme.spacing.sm,
-  borderBottom: `1px solid ${theme.colors.fadedText10}`,
+  padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+  backgroundColor: theme.colors.docStringContainerBackground,
+  borderBottom: `1px solid ${theme.colors.fadedText05}`,
+  fontSize: theme.fontSizes.sm,
+  overflow: ["auto", "overlay"],
 }))
 
-export const StyledDocString = styled.div({
+export const StyledDocString = styled.div(({ theme }) => ({
   whiteSpace: "pre",
-})
+  overflow: ["auto", "overlay"],
+  maxHeight: "30.5rem", // The extra 0.5rem is to show a little of the overflowing line.
+  padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+  fontSize: theme.fontSizes.sm,
+
+  "&:not(:last-child)": {
+    borderBottom: `1px solid ${theme.colors.fadedText05}`,
+  },
+}))
+
+export const StyledMembersTable = styled.table(({ theme }) => ({
+  width: "100%",
+  fontSize: theme.fontSizes.twoSm,
+  backgroundColor: theme.colors.docStringContainerBackground,
+  tableLayout: "fixed", // Fix table to container's boundaries.
+  borderCollapse: "collapse",
+}))
+
+export const StyledMembersRow = styled.tr(({ theme }) => ({
+  "&:not(:last-child)": {
+    borderBottom: `1px dotted ${theme.colors.fadedText05}`,
+  },
+}))
+
+export const StyledMembersSummaryCell = styled.td(({ theme }) => ({
+  width: "30%",
+  overflow: ["auto", "overlay"],
+  padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+
+  "& > *": {
+    marginRight: theme.spacing.sm,
+  },
+}))
+
+export const StyledMembersDetailsCell = styled.td(({ theme }) => ({
+  width: "70%",
+  overflow: ["auto", "overlay"],
+  padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+}))

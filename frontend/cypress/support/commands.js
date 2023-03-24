@@ -123,6 +123,15 @@ Cypress.Commands.overwrite(
   "matchImageSnapshot",
   (originalFn, subject, name, options) => {
     cy.wrap(subject).trigger("blur", _.pick(options, ["force"]))
+
+    const headerHeight = 2.875 // In rem
+    const fontSizeMedium = 16 // In px
+    cy.get(subject).scrollIntoView({
+      offset: {
+        top: -1 * headerHeight * fontSizeMedium,
+      },
+    })
+
     return originalFn(subject, name, options)
   }
 )
