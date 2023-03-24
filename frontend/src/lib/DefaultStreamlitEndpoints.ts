@@ -15,7 +15,12 @@
  */
 
 import axios, { AxiosRequestConfig, AxiosResponse, CancelToken } from "axios"
-import { BaseUriParts, buildHttpUri } from "src/lib/UriUtil"
+import {
+  BaseUriParts,
+  buildHttpUri,
+  SVG_PREFIX,
+  xssSanitizeSvg,
+} from "src/lib/UriUtil"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 import { getCookie } from "./utils"
 
@@ -42,6 +47,15 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       this.requireServerUri(),
       `component/${componentName}/${path}`
     )
+  }
+
+  public buildMediaURL(url: string): string {
+    if (url.startsWith(SVG_PREFIX)) {
+      return `${SVG_PREFIX}${xssSanitizeSvg(url)}`
+    }
+    return url.startsWith("/media")
+      ? buildHttpUri(this.requireServerUri(), url)
+      : url
   }
 
   public async uploadFileUploaderFile(
