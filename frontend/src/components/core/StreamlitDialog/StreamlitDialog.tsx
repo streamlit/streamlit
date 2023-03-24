@@ -36,6 +36,7 @@ import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
 } from "./ThemeCreatorDialog"
+import { DeployDialog, DeployDialogProps } from "./DeployDialog"
 
 import {
   StyledRerunHeader,
@@ -44,7 +45,7 @@ import {
   StyledAboutInfo,
 } from "./styled-components"
 
-type PlainEventHandler = () => void
+export type PlainEventHandler = () => void
 
 interface SettingsProps extends SettingsDialogProps {
   type: DialogType.SETTINGS
@@ -68,6 +69,7 @@ export type DialogProps =
   | ThemeCreatorProps
   | WarningProps
   | DeployErrorProps
+  | DeployDialogProps
 
 export enum DialogType {
   ABOUT = "about",
@@ -79,6 +81,7 @@ export enum DialogType {
   THEME_CREATOR = "themeCreator",
   WARNING = "warning",
   DEPLOY_ERROR = "deployError",
+  DEPLOY_DIALOG = "deployDialog",
 }
 
 export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
@@ -99,6 +102,8 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return <ThemeCreatorDialog {...dialogProps} />
     case DialogType.WARNING:
       return warningDialog(dialogProps)
+    case DialogType.DEPLOY_DIALOG:
+      return <DeployDialog {...dialogProps} />
     case DialogType.DEPLOY_ERROR:
       return deployErrorDialog(dialogProps)
     case undefined:
