@@ -13,5 +13,70 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit.elements.doc_string import _get_scriptrunner_frame
 
-st.help(st.help)
+if _get_scriptrunner_frame() is None:
+    st.warning(
+        """
+        You're running this script in an `exec` context, so the `foo` part
+        of `st.help(foo)` will not appear inside the displayed `st.help` element.
+        """
+    )
+
+# Testing case where there are no docs.
+class FooWithNoDocs:
+    my_static_var_1 = 123
+
+
+st.help(FooWithNoDocs)
+
+# Testing case where there are no members.
+st.help(globals)
+
+# Test case where there the docs need to scroll,
+# and test case where some members doesn't have docs.
+class FooWithLongDocs:
+    """My docstring.
+
+    This is a very long one! You probably need to scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll.
+
+    Scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll.
+
+    Scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll.
+
+    Scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll.
+
+    Scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll,
+    scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll, scroll.
+    """
+
+    def __init__(self):
+        self.my_var_1 = 123
+
+    def my_func_1(self, a, b=False):
+        "Func with doc."
+
+    def my_func_2(self):
+        # Func without doc.
+        pass
+
+
+f = FooWithLongDocs()
+
+f

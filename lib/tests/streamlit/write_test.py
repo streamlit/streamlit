@@ -29,8 +29,6 @@ from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import SessionStateProxy
-from tests.streamlit import pyspark_mocks
-from tests.streamlit.snowpark_mocks import DataFrame, Row
 from tests.testutil import should_skip_pyspark_tests
 
 
@@ -181,6 +179,9 @@ class StreamlitWriteTest(unittest.TestCase):
 
     def test_snowpark_dataframe_write(self):
         """Test st.write with snowflake.snowpark.dataframe.DataFrame."""
+        # Import package inside the test so the test suite still runs even if you don't
+        # have this package.
+        from tests.streamlit.snowpark_mocks import DataFrame, Row
 
         # SnowparkDataFrame should call streamlit.delta_generator.DeltaGenerator.dataframe
         with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
@@ -201,6 +202,9 @@ class StreamlitWriteTest(unittest.TestCase):
     )
     def test_pyspark_dataframe_write(self):
         """Test st.write with pyspark.sql.DataFrame."""
+        # Import package inside the test so the test suite still runs even if you don't
+        # have this package.
+        from tests.streamlit import pyspark_mocks
 
         # PySpark DataFrame should call streamlit.delta_generator.DeltaGenerator.dataframe
         with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
@@ -244,19 +248,42 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_class(self):
         """Test st.write with a class."""
 
-        class SomeClass(object):
+        class SomeClass:
             pass
 
-        with patch("streamlit.delta_generator.DeltaGenerator.text") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
             st.write(SomeClass)
 
             p.assert_called_once_with(SomeClass)
 
-        with patch("streamlit.delta_generator.DeltaGenerator.text") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
             empty_df = pd.DataFrame()
             st.write(type(empty_df))
 
             p.assert_called_once_with(type(empty_df))
+
+    def test_obj_instance(self):
+        """Test st.write with an object instance that doesn't know how to str()."""
+
+        class SomeClass:
+            pass
+
+        my_instance = SomeClass()
+
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
+            st.write(my_instance)
+
+            p.assert_called_once_with(my_instance)
+
+    # We use "looks like a memory address" as a test inside st.write, so here we're
+    # checking that that logic isn't broken.
+    def test_str_looking_like_mem_address(self):
+        """Test calling st.write on a string that looks like a memory address."""
+
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:
+            st.write("<__main__.MyObj object at 0x13d2d0bb0>")
+
+            p.assert_called_once()
 
     def test_exception(self):
         """Test st.write that raises an exception."""

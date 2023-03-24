@@ -135,3 +135,25 @@ def docstrings():
 
 
 docstrings()
+
+
+def my_func():
+    """my_func: this help block should be printed."""
+    pass
+
+
+my_func
+
+
+class MyClass:
+    """MyClass: this help block should be printed."""
+
+    def __init__(self):
+        """This should not be printed."""
+
+
+MyClass
+
+
+my_instance = MyClass()
+my_instance
