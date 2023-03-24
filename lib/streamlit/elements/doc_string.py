@@ -311,14 +311,14 @@ def _get_variable_name_from_code_str(code):
 
     else:
         first_line = code_lines[0]
-        end_offset = getattr(arg_node, "end_col_offset", None)
+        end_offset = getattr(arg_node, "end_col_offset", -1)
 
-    # Python 3.7 and below have a bug where col_offset in some cases is off by one.
+    # Python 3.7 and below have a bug where offset in some cases is off by one.
     # See https://github.com/python/cpython/commit/b619b097923155a7034c05c4018bf06af9f994d0
-    if sys.version_info < (3, 8) and type(arg_node) in (
-        ast.ListComp,
-        ast.GeneratorExp,
-    ):
+    # By the way, Python 3.7 also displays this bug when arg_node is a generator
+    # expression, but in that case there are further complications, so we're leaving it out
+    # of here. See the unit test for this for more details.
+    if sys.version_info < (3, 8) and type(arg_node) is ast.ListComp:
         start_offset -= 1
 
     return first_line[start_offset:end_offset]
