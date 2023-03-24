@@ -7,6 +7,6 @@ Object {
       This Git repo has uncommitted changes. You may want to commit them before continuing.
     </p>
   </React.Fragment>,
-  "title": "Unable to deploy app",
+  "title": "Unable to deploy",
 }
 `;

@@ -384,53 +384,23 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
             # streamlit.elements.exception_element
             self.assertEqual(el.exception.stack_trace, [])
 
-    def test_st_header(self):
-        """Test st.header."""
-        st.header("some header")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some header")
-        self.assertEqual(el.heading.tag, "h2")
-
-    def test_st_header_with_anchor(self):
-        """Test st.header with anchor."""
-        st.header("some header", anchor="some-anchor")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some header")
-        self.assertEqual(el.heading.tag, "h2")
-        self.assertEqual(el.heading.anchor, "some-anchor")
-
-    def test_st_header_with_help(self):
-        """Test st.header with help."""
-        st.header("some header", help="help text")
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some header")
-        self.assertEqual(el.heading.tag, "h2")
-        self.assertEqual(el.heading.help, "help text")
-
     def test_st_help(self):
         """Test st.help."""
-        st.help(st.header)
+        st.help(st.help)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.doc_string.name, "header")
+        self.assertEqual(el.doc_string.name, "help")
         self.assertEqual(el.doc_string.module, "streamlit")
         self.assertTrue(
-            el.doc_string.doc_string.startswith("Display text in header formatting.")
+            el.doc_string.doc_string.startswith(
+                "Display object's doc string, nicely formatted."
+            )
         )
         self.assertEqual(el.doc_string.type, "<class 'method'>")
-        if sys.version_info < (3, 9):
-            # Python < 3.9 represents the signature slightly differently
-            self.assertEqual(
-                el.doc_string.signature,
-                "(body: object, anchor: Union[str, NoneType] = None, *, help: Union[str, NoneType] = None) -> 'DeltaGenerator'",
-            )
-        else:
-            self.assertEqual(
-                el.doc_string.signature,
-                "(body: object, anchor: Optional[str] = None, *, help: Optional[str] = None) -> 'DeltaGenerator'",
-            )
+        self.assertEqual(
+            el.doc_string.signature,
+            "(obj: Any) -> 'DeltaGenerator'",
+        )
 
     def test_st_info(self):
         """Test st.info."""
@@ -581,31 +551,6 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
         self.assertNotEqual(el.plotly_chart.url, "the_url")
         self.assertEqual(el.plotly_chart.use_container_width, False)
 
-    def test_st_subheader(self):
-        """Test st.subheader."""
-        st.subheader("some subheader")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some subheader")
-        self.assertEqual(el.heading.tag, "h3")
-
-    def test_st_subheader_with_anchor(self):
-        """Test st.subheader with anchor."""
-        st.subheader("some subheader", anchor="some-anchor")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some subheader")
-        self.assertEqual(el.heading.tag, "h3")
-        self.assertEqual(el.heading.anchor, "some-anchor")
-
-    def test_st_subheader_with_help(self):
-        """Test st.subheader with help."""
-        st.subheader("some subheader", help="help text")
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some subheader")
-        self.assertEqual(el.heading.tag, "h3")
-        self.assertEqual(el.heading.help, "help text")
-
     def test_st_success(self):
         """Test st.success."""
         st.success("some success")
@@ -680,32 +625,6 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.markdown.help, "help text")
 
-    def test_st_title(self):
-        """Test st.title."""
-        st.title("some title")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some title")
-        self.assertEqual(el.heading.tag, "h1")
-
-    def test_st_title_with_anchor(self):
-        """Test st.title with anchor."""
-        st.title("some title", anchor="some-anchor")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some title")
-        self.assertEqual(el.heading.tag, "h1")
-        self.assertEqual(el.heading.anchor, "some-anchor")
-
-    def test_st_title_with_help(self):
-        """Test st.title with help."""
-        st.title("some title", help="help text")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.heading.body, "some title")
-        self.assertEqual(el.heading.tag, "h1")
-        self.assertEqual(el.heading.help, "help text")
-
     def test_st_time_input(self):
         """Test st.time_input."""
         value = datetime.time(8, 45)
@@ -773,6 +692,13 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
             st.experimental_set_query_params(embed="True")
         with self.assertRaises(StreamlitAPIException):
             st.experimental_set_query_params(embed_options="show_colored_line")
+
+    def test_get_query_params_after_set_query_params(self):
+        """Test valid st.set_query_params sends protobuf message."""
+        p_set = dict(x=["a"])
+        st.experimental_set_query_params(**p_set)
+        p_get = st.experimental_get_query_params()
+        self.assertEqual(p_get, p_set)
 
     @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
     def test_st_alert_exceptions(self, alert_func):

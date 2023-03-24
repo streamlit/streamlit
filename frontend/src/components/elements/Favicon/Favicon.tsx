@@ -17,16 +17,18 @@
 import nodeEmoji from "node-emoji"
 import { BaseUriParts, buildMediaUri } from "src/lib/UriUtil"
 import { grabTheRightIcon } from "src/vendor/twemoji"
-import { sendMessageToHost } from "src/hocs/withHostCommunication"
+import { IGuestToHostMessage } from "src/hocs/withHostCommunication/types"
 
 /**
  * Set the provided url/emoji as the page favicon.
  *
- * @param {string} favicon may be an image url, or an emoji like 🍕 or :pizza:
- * @param {function} callback
+ * @param {string} favicon an image url, or an emoji like 🍕 or :pizza:
+ * @param sendMessageToHost a function that posts messages to the app's parent iframe
+ * @param baseUriParts
  */
 export function handleFavicon(
   favicon: string,
+  sendMessageToHost: (message: IGuestToHostMessage) => void,
   baseUriParts?: BaseUriParts
 ): void {
   const emoji = extractEmoji(favicon)

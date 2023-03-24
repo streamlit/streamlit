@@ -115,6 +115,7 @@ class HeadingBase(Element, ABC):
     type: str
     tag: str
     anchor: str | None
+    hide_anchor: bool
     root: ElementTree = field(repr=False)
     key: None
 
@@ -123,6 +124,7 @@ class HeadingBase(Element, ABC):
         self.key = None
         self.tag = proto.tag
         self.anchor = proto.anchor
+        self.hide_anchor = proto.hide_anchor
         self.root = root
         self.type = type_
 
