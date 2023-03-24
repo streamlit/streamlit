@@ -29,6 +29,11 @@ interface Props {
   csrfEnabled: boolean
 }
 
+const MEDIA_ENDPOINT = "/media"
+const UPLOAD_FILE_ENDPOINT = "/_stcore/upload_file"
+const COMPONENT_ENDPOINT_BASE = "/component"
+const FORWARD_MSG_CACHE_ENDPOINT = "/_stcore/message"
+
 /** Default Streamlit server implementation of the StreamlitEndpoints interface. */
 export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   private readonly getServerUri: () => BaseUriParts | undefined
@@ -45,7 +50,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   public buildComponentURL(componentName: string, path: string): string {
     return buildHttpUri(
       this.requireServerUri(),
-      `component/${componentName}/${path}`
+      `${COMPONENT_ENDPOINT_BASE}/${componentName}/${path}`
     )
   }
 
@@ -53,7 +58,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     if (url.startsWith(SVG_PREFIX)) {
       return `${SVG_PREFIX}${xssSanitizeSvg(url)}`
     }
-    return url.startsWith("/media")
+    return url.startsWith(MEDIA_ENDPOINT)
       ? buildHttpUri(this.requireServerUri(), url)
       : url
   }
@@ -70,7 +75,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     form.append("widgetId", widgetId)
     form.append(file.name, file)
 
-    return this.csrfRequest<number>("_stcore/upload_file", {
+    return this.csrfRequest<number>(UPLOAD_FILE_ENDPOINT, {
       cancelToken,
       method: "POST",
       data: form,
@@ -91,7 +96,10 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   public async fetchCachedForwardMsg(hash: string): Promise<Uint8Array> {
     const serverURI = this.requireServerUri()
     const rsp = await axios.request({
-      url: buildHttpUri(serverURI, `_stcore/message?hash=${hash}`),
+      url: buildHttpUri(
+        serverURI,
+        `${FORWARD_MSG_CACHE_ENDPOINT}?hash=${hash}`
+      ),
       method: "GET",
       responseType: "arraybuffer",
     })
