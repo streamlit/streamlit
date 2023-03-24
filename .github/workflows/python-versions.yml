@@ -64,8 +64,8 @@ jobs:
       matrix:
         python_version: "${{ fromJson(needs.build_info.outputs.PYTHON_VERSIONS) }}"
 
-    name: >
-      Python ${{ matrix.python_version }}: Python tests, Integration tests, CLI Smoke tests
+    # TODO: Should we add developer-friendly name for this jobs also?
+    #   This will unfortunately require a branch protection update.
 
     env:
       PYTHON_VERSION: >-
