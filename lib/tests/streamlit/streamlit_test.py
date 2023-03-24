@@ -693,6 +693,13 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException):
             st.experimental_set_query_params(embed_options="show_colored_line")
 
+    def test_get_query_params_after_set_query_params(self):
+        """Test valid st.set_query_params sends protobuf message."""
+        p_set = dict(x=["a"])
+        st.experimental_set_query_params(**p_set)
+        p_get = st.experimental_get_query_params()
+        self.assertEqual(p_get, p_set)
+
     @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
     def test_st_alert_exceptions(self, alert_func):
         """Test that alert functions throw an exception when a non-emoji is given as an icon."""

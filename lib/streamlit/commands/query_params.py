@@ -97,6 +97,7 @@ def set_query_params(**query_params: Any) -> None:
     msg.page_info_changed.query_string = _ensure_no_embed_params(
         query_params, ctx.query_string
     )
+    ctx.query_string = msg.page_info_changed.query_string
     ctx.enqueue(msg)
 
 
