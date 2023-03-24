@@ -33,6 +33,9 @@ from streamlit.runtime.caching import (
     get_data_cache_stats_provider,
     get_resource_cache_stats_provider,
 )
+from streamlit.runtime.caching.storage.local_disk_cache_storage import (
+    LocalDiskCacheStorageManager,
+)
 from streamlit.runtime.forward_msg_cache import (
     ForwardMsgCache,
     create_reference_msg,
@@ -88,7 +91,9 @@ class RuntimeConfig:
     media_file_storage: MediaFileStorage
 
     # The cache storage backend for Streamlit's st.cache_data.
-    cache_storage_manager: CacheStorageManager
+    cache_storage_manager: CacheStorageManager = field(
+        default_factory=LocalDiskCacheStorageManager
+    )
 
     # The SessionManager class to be used.
     session_manager_class: Type[SessionManager] = WebsocketSessionManager
