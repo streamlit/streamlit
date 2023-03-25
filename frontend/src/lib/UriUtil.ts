@@ -30,7 +30,7 @@ export interface BaseUriParts {
 
 const FINAL_SLASH_RE = /\/+$/
 const INITIAL_SLASH_RE = /^\/+/
-const SVG_PREFIX = "data:image/svg+xml,"
+export const SVG_PREFIX = "data:image/svg+xml,"
 
 /**
  * Return the BaseUriParts for the global window

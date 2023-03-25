@@ -66,6 +66,7 @@ function getProps(
   const sessionInfo = mockSessionInfo()
   const endpoints = mockEndpoints()
   return {
+    endpoints: endpoints,
     scriptRunState: ScriptRunState.RUNNING,
     sessionInfo: sessionInfo,
     widgetMgr: new WidgetStateManager({

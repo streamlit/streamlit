@@ -28,6 +28,7 @@ function createCache(): MockCache {
 
   const cache = new ForwardMsgCache({
     buildComponentURL: jest.fn(),
+    buildMediaURL: jest.fn(),
     uploadFileUploaderFile: jest.fn(),
     fetchCachedForwardMsg: mockFetchCachedForwardMsg,
   })

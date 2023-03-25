@@ -26,6 +26,14 @@ export interface StreamlitEndpoints {
   buildComponentURL(componentName: string, path: string): string
 
   /**
+   * Construct a URL for a media file.
+   * @param url a relative or absolute URL. If `url` is absolute, it will be
+   * returned unchanged. Otherwise, the return value will be a URL for fetching
+   * the media file from the connected Streamlit instance.
+   */
+  buildMediaURL(url: string): string
+
+  /**
    * Upload a file to the FileUploader endpoint.
    *
    * @param file The file to upload

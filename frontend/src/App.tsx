@@ -1610,6 +1610,7 @@ export class App extends PureComponent<Props, State> {
             </Header>
 
             <AppView
+              endpoints={this.endpoints}
               sessionInfo={this.sessionInfo}
               sendMessageToHost={this.props.hostCommunication.sendMessage}
               elements={elements}

@@ -37,6 +37,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
   const endpoints = mockEndpoints()
 
   return {
+    endpoints: endpoints,
     elements: AppRoot.empty(getMetricsManagerForTest(sessionInfo)),
     sendMessageToHost: jest.fn(),
     sessionInfo: sessionInfo,

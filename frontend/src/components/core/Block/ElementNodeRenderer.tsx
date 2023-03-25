@@ -223,7 +223,13 @@ const RawElementNodeRenderer = (
     }
 
     case "audio":
-      return <Audio width={width} element={node.element.audio as AudioProto} />
+      return (
+        <Audio
+          width={width}
+          element={node.element.audio as AudioProto}
+          endpoints={props.endpoints}
+        />
+      )
 
     case "balloons":
       return hideIfStale(

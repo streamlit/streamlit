@@ -23,7 +23,7 @@ import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 const MOCK_SERVER_URI = {
   host: "streamlit.mock",
   port: 80,
-  basePath: "",
+  basePath: "mock/base/path",
 }
 
 function createMockForwardMsg(hash: string, cacheable = true): ForwardMsg {
@@ -55,15 +55,41 @@ describe("DefaultStreamlitEndpoints", () => {
       // "Connect" to the server. `buildComponentURL` will succeed.
       serverURI = MOCK_SERVER_URI
       expect(endpoint.buildComponentURL("foo", "index.html")).toEqual(
-        "http://streamlit.mock:80/component/foo/index.html"
+        "http://streamlit.mock:80/mock/base/path/component/foo/index.html"
       )
 
       // "Disconnect" from the server, and call buildComponentURL again;
       // it should return a URL constructed from the cached server URI.
       serverURI = undefined
       expect(endpoint.buildComponentURL("bar", "index.html")).toEqual(
-        "http://streamlit.mock:80/component/bar/index.html"
+        "http://streamlit.mock:80/mock/base/path/component/bar/index.html"
       )
+    })
+  })
+
+  describe("buildMediaURL", () => {
+    const endpoints = new DefaultStreamlitEndpoints({
+      getServerUri: () => MOCK_SERVER_URI,
+      csrfEnabled: false,
+    })
+
+    it("builds URL correctly for streamlit-served media", () => {
+      const url = endpoints.buildMediaURL("/media/1234567890.png")
+      expect(url).toBe(
+        "http://streamlit.mock:80/mock/base/path/media/1234567890.png"
+      )
+    })
+
+    it("passes through other media uris", () => {
+      const uri = endpoints.buildMediaURL("http://example/blah.png")
+      expect(uri).toBe("http://example/blah.png")
+    })
+
+    it("sanitizes SVG uris", () => {
+      const url = endpoints.buildMediaURL(
+        `data:image/svg+xml,<svg><script>alert('evil')</script></svg>`
+      )
+      expect(url).toBe(`data:image/svg+xml,<svg></svg>`)
     })
   })
 
@@ -88,7 +114,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
     it("calls the appropriate endpoint", async () => {
       axiosMock
-        .onPost("http://streamlit.mock:80/_stcore/upload_file")
+        .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
         .reply(() => [200, 1])
 
       const mockOnUploadProgress = (_: any): void => {}
@@ -110,7 +136,7 @@ describe("DefaultStreamlitEndpoints", () => {
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
       expect(spyRequest).toHaveBeenCalledWith({
-        url: "http://streamlit.mock:80/_stcore/upload_file",
+        url: "http://streamlit.mock:80/mock/base/path/_stcore/upload_file",
         method: "POST",
         responseType: "text",
         data: expectedData,
@@ -122,7 +148,7 @@ describe("DefaultStreamlitEndpoints", () => {
     it("errors on unexpected return value", async () => {
       // If our endpoint returns a non-number, we'll return a failed promise.
       axiosMock
-        .onPost("http://streamlit.mock:80/_stcore/upload_file")
+        .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
         .reply(() => [200, "invalidFileId"])
 
       await expect(
@@ -140,7 +166,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
     it("errors on bad status", async () => {
       axiosMock
-        .onPost("http://streamlit.mock:80/_stcore/upload_file")
+        .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
         .reply(() => [400])
 
       await expect(
@@ -175,7 +201,9 @@ describe("DefaultStreamlitEndpoints", () => {
       ).finish()
 
       axiosMock
-        .onGet("http://streamlit.mock:80/_stcore/message?hash=mockHash")
+        .onGet(
+          "http://streamlit.mock:80/mock/base/path/_stcore/message?hash=mockHash"
+        )
         .reply(() => {
           return [200, mockForwardMsgBytes]
         })
@@ -187,7 +215,9 @@ describe("DefaultStreamlitEndpoints", () => {
 
     it("errors on bad status", async () => {
       axiosMock
-        .onGet("http://streamlit.mock:80/_stcore/message?hash=mockHash")
+        .onGet(
+          "http://streamlit.mock:80/mock/base/path/_stcore/message?hash=mockHash"
+        )
         .reply(() => [400])
 
       await expect(
