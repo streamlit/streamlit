@@ -16,11 +16,10 @@
 
 import React, { ReactElement, useState, useEffect } from "react"
 import { withTheme } from "@emotion/react"
-import { toaster, ToasterContainer, PLACEMENT } from "baseui/toast"
+import { toaster, ToastOverrides } from "baseui/toast"
 
 import { Theme } from "src/theme"
 
-import AppContext from "src/components/core/AppContext"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
 import {
@@ -36,25 +35,44 @@ export interface ToastProps {
   type: string
 }
 
-function shortenMessage(text: string): string {
-  const threeLineCharcterCount = 120
-  let checkedText = text
-  if (text.length > threeLineCharcterCount) {
-    checkedText = text.replace(/^(.{120}[^\s]*).*/, "$1")
+function shortenMessage(icon: string | undefined, text: string): string {
+  let characterLimit = 110
+  const adjustment = icon ? 0 : 6
+  characterLimit += adjustment
+  if (text.length > characterLimit) {
+    return text.replace(/^(.{120}[^\s]*).*/, "$1")
   }
-  return checkedText
+  return text
 }
 
-function generateToastStyleOverrides(toastType: string, theme: Theme): object {
+function generateToastOverrides(
+  expanded: boolean,
+  toastType: string,
+  theme: Theme
+): ToastOverrides {
   return {
-    overrides: {
-      Body: {
-        style: {
-          width: "288px",
-          marginTop: "8px",
-          borderRadius: "4px",
-          ...toastColoration(toastType, theme),
-        },
+    Body: {
+      style: {
+        width: "288px",
+        marginTop: "8px",
+        borderRadius: "4px",
+        ...toastColoration(toastType, theme),
+      },
+    },
+    InnerContainer: {
+      style: {
+        maxHeight: expanded ? "none" : "88px",
+        overflow: "hidden",
+        fontSize: theme.fontSizes.sm,
+        lineHeight: "1.4rem",
+      },
+    },
+    CloseIcon: {
+      style: {
+        color: theme.colors.bodyText,
+        marginLeft: "5px",
+        width: "1.2rem",
+        height: "1.2rem",
       },
     },
   }
@@ -62,10 +80,8 @@ function generateToastStyleOverrides(toastType: string, theme: Theme): object {
 
 export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
   const fullMessage = icon ? `${icon}&ensp;${text}` : text
-  const displayMessage = shortenMessage(fullMessage)
+  const displayMessage = shortenMessage(icon, fullMessage)
   const shortened = fullMessage !== displayMessage
-
-  const { communityCloud } = React.useContext(AppContext)
 
   const [expanded, setExpanded] = useState(!shortened)
   const [toastKey, setToastKey] = useState<React.Key>(1000)
@@ -78,11 +94,7 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
     return (
       <>
         <StyledToastMessage expanded={expanded}>
-          <StreamlitMarkdown
-            source={expanded ? fullMessage : displayMessage}
-            allowHTML={false}
-            isToast
-          />
+          <StreamlitMarkdown source={fullMessage} allowHTML={false} isToast />
         </StyledToastMessage>
         {shortened && (
           <StyledViewButton onClick={handleClick}>
@@ -93,58 +105,44 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
     )
   }
 
-  function createToast(): void {
+  function createToast(): React.Key {
     const content = toastContent()
-    const styleOverrides = generateToastStyleOverrides(type, theme)
+    const styleOverrides = generateToastOverrides(expanded, type, theme)
 
     let key
     if (type === "success") {
-      key = toaster.positive(content, styleOverrides)
+      key = toaster.positive(content, { overrides: { ...styleOverrides } })
     } else if (type === "warning") {
-      key = toaster.warning(content, styleOverrides)
+      key = toaster.warning(content, { overrides: { ...styleOverrides } })
     } else if (type === "error") {
-      key = toaster.negative(content, styleOverrides)
+      key = toaster.negative(content, { overrides: { ...styleOverrides } })
     } else {
-      key = toaster.info(content, styleOverrides)
+      key = toaster.info(content, { overrides: { ...styleOverrides } })
     }
     setToastKey(key)
+    return key
   }
 
   useEffect(() => {
     createToast()
 
-    return () => {
-      toaster.clear(toastKey)
-    }
+    // Remove the toast on unmount
+    // return () => {
+    //   toaster.clear(key)
+    // }
   }, [])
 
   useEffect(() => {
     const content = toastContent()
-    toaster.update(toastKey, { children: content })
-  }, [expanded, theme, communityCloud])
+    const styleOverrides = generateToastOverrides(expanded, type, theme)
 
-  return (
-    <ToasterContainer
-      placement={PLACEMENT.bottomRight}
-      autoHideDuration={4000}
-      overrides={{
-        Root: {
-          style: () => ({
-            // If deployed in Community Cloud, move toasts up to avoid blocking Manage App button
-            bottom: communityCloud ? "45px" : "0px",
-          }),
-        },
-        ToastCloseIcon: {
-          style: () => ({
-            color: theme.colors.bodyText,
-            marginLeft: "5px",
-            width: "1.2rem",
-            height: "1.2rem",
-          }),
-        },
-      }}
-    />
-  )
+    toaster.update(toastKey, {
+      children: content,
+      overrides: { ...styleOverrides },
+    })
+  }, [expanded, theme])
+
+  return <></>
 }
 
 export default withTheme(Toast)

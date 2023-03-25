@@ -26,6 +26,8 @@ import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { sendMessageToHost } from "src/hocs/withHostCommunication"
 
 import AppContext from "src/components/core/AppContext"
+import ToastRenderer from "src/components/core/ToastRenderer"
+
 import { BlockNode, AppRoot } from "src/lib/AppNode"
 import { SessionInfo } from "src/lib/SessionInfo"
 
@@ -166,6 +168,8 @@ function AppView(props: AppViewProps): ReactElement {
         className="main"
       >
         {renderBlock(elements.main)}
+        {/* Container for all app toasts */}
+        <ToastRenderer />
         {/* Anchor indicates to the iframe resizer that this is the lowest
         possible point to determine height */}
         <StyledIFrameResizerAnchor

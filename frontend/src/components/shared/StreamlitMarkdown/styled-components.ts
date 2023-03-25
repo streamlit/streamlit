@@ -62,6 +62,7 @@ export const StyledStreamlitMarkdown =
         p: {
           wordBreak: "break-word",
           marginBottom: isLabel ? 0 : "",
+          // overflow: isToast ? "hidden" : "",
 
           ...(labelFontSize ? { fontSize: theme.fontSizes.sm } : {}),
         },

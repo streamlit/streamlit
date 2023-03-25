@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 from typing import TYPE_CHECKING, Optional, cast
 
 from streamlit.errors import StreamlitAPIException
@@ -25,27 +24,15 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-class ToastProtoType(Enum):
-    DEFAULT = "default"
-    SUCCESS = "success"
-    WARNING = "warning"
-    ERROR = "error"
-
-
-def validate_type(toast_type: str) -> str:
-    valid_types = [type.value for type in ToastProtoType]
+def validate_type(toast_type: Optional[str]) -> str:
+    valid_types = ["success", "warning", "error"]
 
     if toast_type is None:
-        return ToastProtoType.DEFAULT.value
+        return ""
 
     toast_type = toast_type.lower()
     if toast_type in valid_types:
-        if toast_type == "success":
-            return ToastProtoType.SUCCESS.value
-        elif toast_type == "warning":
-            return ToastProtoType.WARNING.value
-        else:
-            return ToastProtoType.ERROR.value
+        return toast_type
     else:
         raise StreamlitAPIException(
             f"Invalid toast type: {toast_type}. Valid types are “success”, “warning”, “error”, or None"
@@ -59,7 +46,7 @@ class ToastMixin:
         text: SupportsStr,
         *,  # keyword-only args:
         icon: Optional[str] = None,
-        type: Optional[ToastProtoType] = None,
+        type: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display a toast in the bottom right corner of the screen. Will disappear after four seconds.
 

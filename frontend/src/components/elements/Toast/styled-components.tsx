@@ -82,16 +82,14 @@ export const StyledViewButton = styled.button(({ theme }) => ({
   },
 }))
 
-export interface StyledToastMessageProps {
+interface StyledToastMessageProps {
   expanded: boolean
 }
 
 export const StyledToastMessage = styled.div<StyledToastMessageProps>(
-  ({ theme, expanded }) => ({
-    display: "flex",
-    maxHeight: expanded ? "" : "68px",
+  ({ expanded }) => ({
+    maxHeight: expanded ? "none" : "68px",
     overflow: "hidden",
-    fontSize: theme.fontSizes.sm,
-    lineHeight: "1.4rem",
+    display: "flex",
   })
 )
