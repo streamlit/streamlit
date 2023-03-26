@@ -83,8 +83,8 @@ const getHostCommunicationProp = (
   onPageChanged: jest.fn(),
   resetAuthToken: jest.fn(),
   sendMessage: jest.fn(),
-  onScriptRerun: jest.fn(),
   onScriptStop: jest.fn(),
+  onScriptRerun: jest.fn(),
   onCacheClear: jest.fn(),
   setAllowedOriginsResp: jest.fn(),
   ...extend,
@@ -287,6 +287,31 @@ describe("App", () => {
     )
     expect(wrapper.find(Modal)).toHaveLength(0)
     expect(onModalReset).toBeCalled()
+  })
+
+  it("App scriptRunState changes and withHostCommunication callback fires on scriptStopRequested signal has been received", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+
+    instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+    //TODO [KAREN] Add explanatory comment here
+    wrapper.setState({
+      scriptRunState: ScriptRunState.RUNNING,
+    })
+
+    wrapper.setProps(
+      getProps({
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({
+            scriptStopRequested: true,
+          }),
+        }),
+      })
+    )
+
+    expect(wrapper.state("scriptRunState")).toBe(ScriptRunState.STOP_REQUESTED)
+    expect(instance.props.hostCommunication.onScriptStop).toHaveBeenCalled()
   })
 
   it("does not prevent a modal from opening when closure message is set", () => {
