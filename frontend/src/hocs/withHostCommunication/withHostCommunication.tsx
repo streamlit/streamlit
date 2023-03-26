@@ -103,8 +103,8 @@ function withHostCommunication<P extends InjectedProps>(
     // even if we're not using redux just because it's so useful for reducing
     // this type of boilerplate.
     const [forcedModalClose, setForcedModalClose] = useState(false)
-    const [scriptRerunRequested, setScriptRerunRequested] = useState(false)
     const [scriptStopRequested, setScriptStopRequested] = useState(false)
+    const [scriptRerunRequested, setScriptRerunRequested] = useState(false)
     const [cacheClearRequested, setCacheClearRequested] = useState(false)
     const [hideSidebarNav, setHideSidebarNav] = useState(false)
     const [isOwner, setIsOwner] = useState(false)
@@ -252,11 +252,11 @@ function withHostCommunication<P extends InjectedProps>(
             onModalReset: () => {
               setForcedModalClose(false)
             },
-            onScriptRerun: () => {
-              setScriptRerunRequested(false)
-            },
             onScriptStop: () => {
               setScriptStopRequested(false)
+            },
+            onScriptRerun: () => {
+              setScriptRerunRequested(false)
             },
             onCacheClear: () => {
               setCacheClearRequested(false)
