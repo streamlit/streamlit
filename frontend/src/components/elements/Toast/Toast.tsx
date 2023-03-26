@@ -35,16 +35,6 @@ export interface ToastProps {
   type: string
 }
 
-function shortenMessage(icon: string | undefined, text: string): string {
-  let characterLimit = 110
-  const adjustment = icon ? 0 : 6
-  characterLimit += adjustment
-  if (text.length > characterLimit) {
-    return text.replace(/^(.{120}[^\s]*).*/, "$1")
-  }
-  return text
-}
-
 function generateToastOverrides(
   expanded: boolean,
   toastType: string,
@@ -78,6 +68,19 @@ function generateToastOverrides(
   }
 }
 
+function shortenMessage(
+  icon: string | undefined,
+  fullMessage: string
+): string {
+  // const characterLimit = icon ? 116 : 118
+  const characterLimit = 116
+  if (fullMessage.length > characterLimit) {
+    // if (characterLimit === 118) return fullMessage.replace(/^(.{118}[^\s]*).*/, "$1")
+    return fullMessage.replace(/^(.{116}[^\s]*).*/, "$1")
+  }
+  return fullMessage
+}
+
 export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
   const fullMessage = icon ? `${icon}&ensp;${text}` : text
   const displayMessage = shortenMessage(icon, fullMessage)
@@ -87,6 +90,7 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
   const [toastKey, setToastKey] = useState<React.Key>(1000)
 
   function handleClick(): void {
+    console.log("CLICK:", toastKey)
     setExpanded(!expanded)
   }
 
@@ -94,7 +98,11 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
     return (
       <>
         <StyledToastMessage expanded={expanded}>
-          <StreamlitMarkdown source={fullMessage} allowHTML={false} isToast />
+          <StreamlitMarkdown
+            source={expanded ? fullMessage : displayMessage}
+            allowHTML={false}
+            isToast
+          />
         </StyledToastMessage>
         {shortened && (
           <StyledViewButton onClick={handleClick}>
@@ -124,12 +132,16 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
   }
 
   useEffect(() => {
-    createToast()
+    const key = createToast()
+    console.log("--- Toast MOUNTED ---", key)
 
     // Remove the toast on unmount
-    // return () => {
-    //   toaster.clear(key)
-    // }
+    return () => {
+      toaster.clear(key)
+      // toaster.getRef()?.clearAll
+
+      console.log("--- UNMOUNT Toast ---", key)
+    }
   }, [])
 
   useEffect(() => {

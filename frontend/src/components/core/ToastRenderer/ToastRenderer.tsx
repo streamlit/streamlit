@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useEffect } from "react"
 import { ToasterContainer, PLACEMENT } from "baseui/toast"
 
 import AppContext from "src/components/core/AppContext"
@@ -22,6 +22,15 @@ import AppContext from "src/components/core/AppContext"
 // Toasts should all be rendered under one ToasterContainer
 export function ToastRenderer(): ReactElement {
   const { communityCloud } = React.useContext(AppContext)
+
+  useEffect(() => {
+    let mounted = true
+    console.log("CONTAINER STATE: ", mounted)
+    return () => {
+      mounted = false
+      console.log("CONTAINER STATE: ", mounted)
+    }
+  })
 
   return (
     <ToasterContainer

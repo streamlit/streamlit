@@ -168,7 +168,7 @@ function AppView(props: AppViewProps): ReactElement {
         className="main"
       >
         {renderBlock(elements.main)}
-        {/* Container for all app toasts */}
+        {/* Container consolidating all toasts within an app */}
         <ToastRenderer />
         {/* Anchor indicates to the iframe resizer that this is the lowest
         possible point to determine height */}

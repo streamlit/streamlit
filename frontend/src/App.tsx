@@ -1230,6 +1230,7 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash = ""
     }
 
+    console.log("-------- RERUN SCRIPT REQUESTED ----------")
     this.sendBackMsg(
       new BackMsg({
         rerunScript: { queryString, widgetStates, pageScriptHash, pageName },
