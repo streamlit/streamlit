@@ -15,7 +15,7 @@
  */
 
 import React, { Fragment } from "react"
-import Modal from "src/components/shared/Modal"
+import { Modal } from "src/components/shared/Modal"
 import { mount } from "src/lib/test_util"
 import { SessionInfo, Args as SessionInfoArgs } from "src/lib/SessionInfo"
 import { StreamlitDialog, DialogType } from "./StreamlitDialog"

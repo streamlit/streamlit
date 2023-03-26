@@ -32,12 +32,12 @@ import {
   UntrackedFiles,
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs"
 
-import MainMenu, { Props } from "./MainMenu"
+import { MainMenu, MainMenuProps } from "./MainMenu"
 import { waitFor } from "@testing-library/dom"
 
 const { GitStates } = GitInfo
 
-const getProps = (extend?: Partial<Props>): Props => ({
+const getProps = (extend?: Partial<MainMenuProps>): MainMenuProps => ({
   aboutCallback: jest.fn(),
   printCallback: jest.fn(),
   clearCacheCallback: jest.fn(),

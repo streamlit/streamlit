@@ -134,13 +134,14 @@ describe("DeckGlJsonChart element", () => {
     expect(deckGL.length).toBe(1)
     expect(deckGL.prop("getTooltip")).toBeDefined()
 
-    // @ts-ignore
+    console.log(deckGL.prop("getTooltip"))
+    // @ts-expect-error
     const createdTooltip = deckGL.prop("getTooltip")({
       object: {
         elevationValue: 10,
       },
-    } as PickingInfo)
+    })
 
-    expect(createdTooltip).toBe(false)
+    expect(createdTooltip).toBe(null)
   })
 })

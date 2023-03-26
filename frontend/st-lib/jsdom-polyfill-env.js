@@ -21,6 +21,7 @@ const Environment = require("jest-environment-jsdom")
  * by arrow-js, for tests. These functions are provided by browser JS runtimes
  * when Streamlit is running there.
  */
+
 module.exports = class CustomTestEnvironment extends Environment {
   async setup() {
     await super.setup()
