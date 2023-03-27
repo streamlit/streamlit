@@ -37,7 +37,7 @@ st._arrow_table(df)
 "## Float64Index"
 df = pd.DataFrame(
     [["foo", 100], ["bar", 200]],
-    index=pd.Float64Index([1.23, 2.34]),
+    index=pd.Index([1.23, 2.34], dtype="float64"),
 )
 st._arrow_table(df)
 
