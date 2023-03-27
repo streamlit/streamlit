@@ -53,7 +53,7 @@ export const CUSTOM_COMPONENT_API_VERSION = 1
  */
 export const COMPONENT_READY_WARNING_TIME_MS = 3000
 
-export interface Props {
+export interface CustomComponentProps {
   registry: ComponentRegistry
   widgetMgr: WidgetStateManager
 
@@ -76,7 +76,7 @@ interface DataframeArg {
   value: any
 }
 
-export class ComponentInstance extends React.PureComponent<Props, State> {
+export class ComponentInstance extends React.PureComponent<CustomComponentProps, State> {
   private readonly iframeRef = createRef<HTMLIFrameElement>()
 
   // True when we've received the COMPONENT_READY message
@@ -97,7 +97,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
   private readonly componentReadyWarningTimer = new Timer()
 
-  public constructor(props: Props) {
+  public constructor(props: CustomComponentProps) {
     super(props)
     this.state = { componentError: undefined, readyTimeout: false }
   }

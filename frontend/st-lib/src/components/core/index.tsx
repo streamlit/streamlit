@@ -1,4 +1,4 @@
-export { default as AppContext } from "./AppContext"
+export { AppContext } from "./AppContext"
 export type { AppContextProps } from "./AppContext"
 export { default as AppView } from "./AppView"
 export * from "./Block"

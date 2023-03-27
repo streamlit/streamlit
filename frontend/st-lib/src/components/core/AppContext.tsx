@@ -20,7 +20,7 @@ import { PageConfig } from "src/autogen/proto"
 import { baseTheme, ThemeConfig } from "src/theme"
 import { BaseUriParts, getWindowBaseUriParts } from "src/lib/UriUtil"
 
-export interface Props {
+export interface AppContextProps {
   /**
    * If true, render the app with a wider column size.
    * Set from the UserSettings object.
@@ -119,7 +119,7 @@ export interface Props {
   getBaseUriParts: () => BaseUriParts | undefined
 }
 
-export const AppContext = React.createContext<Props>({
+export const AppContext = React.createContext<AppContextProps>({
   wideMode: false,
   initialSidebarState: PageConfig.SidebarState.AUTO,
   embedded: false,

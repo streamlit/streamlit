@@ -6139,20 +6139,20 @@ export class Delta implements IDelta {
 /** Properties of a DocString. */
 export interface IDocString {
 
-    /** DocString name */
-    name?: (string|null);
-
-    /** DocString module */
-    module?: (string|null);
-
     /** DocString docString */
     docString?: (string|null);
 
     /** DocString type */
     type?: (string|null);
 
-    /** DocString signature */
-    signature?: (string|null);
+    /** DocString name */
+    name?: (string|null);
+
+    /** DocString value */
+    value?: (string|null);
+
+    /** DocString members */
+    members?: (IMember[]|null);
 }
 
 /** Represents a DocString. */
@@ -6164,20 +6164,20 @@ export class DocString implements IDocString {
      */
     constructor(properties?: IDocString);
 
-    /** DocString name. */
-    public name: string;
-
-    /** DocString module. */
-    public module: string;
-
     /** DocString docString. */
     public docString: string;
 
     /** DocString type. */
     public type: string;
 
-    /** DocString signature. */
-    public signature: string;
+    /** DocString name. */
+    public name: string;
+
+    /** DocString value. */
+    public value: string;
+
+    /** DocString members. */
+    public members: IMember[];
 
     /**
      * Creates a new DocString instance using the specified properties.
@@ -6251,6 +6251,124 @@ export class DocString implements IDocString {
 
     /**
      * Gets the default type url for DocString
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
+
+/** Properties of a Member. */
+export interface IMember {
+
+    /** Member name */
+    name?: (string|null);
+
+    /** Member type */
+    type?: (string|null);
+
+    /** Member value */
+    value?: (string|null);
+
+    /** Member docString */
+    docString?: (string|null);
+}
+
+/** Represents a Member. */
+export class Member implements IMember {
+
+    /**
+     * Constructs a new Member.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: IMember);
+
+    /** Member name. */
+    public name: string;
+
+    /** Member type. */
+    public type: string;
+
+    /** Member value. */
+    public value?: (string|null);
+
+    /** Member docString. */
+    public docString?: (string|null);
+
+    /** Member contents. */
+    public contents?: ("value"|"docString");
+
+    /**
+     * Creates a new Member instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns Member instance
+     */
+    public static create(properties?: IMember): Member;
+
+    /**
+     * Encodes the specified Member message. Does not implicitly {@link Member.verify|verify} messages.
+     * @param message Member message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: IMember, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified Member message, length delimited. Does not implicitly {@link Member.verify|verify} messages.
+     * @param message Member message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: IMember, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes a Member message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns Member
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): Member;
+
+    /**
+     * Decodes a Member message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns Member
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): Member;
+
+    /**
+     * Verifies a Member message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates a Member message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns Member
+     */
+    public static fromObject(object: { [k: string]: any }): Member;
+
+    /**
+     * Creates a plain object from a Member message. Also converts values to other types if specified.
+     * @param message Member
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: Member, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this Member to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for Member
      * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
      * @returns The default type url
      */
@@ -7880,6 +7998,9 @@ export interface IHeading {
 
     /** Heading help */
     help?: (string|null);
+
+    /** Heading hideAnchor */
+    hideAnchor?: (boolean|null);
 }
 
 /** Represents a Heading. */
@@ -7902,6 +8023,9 @@ export class Heading implements IHeading {
 
     /** Heading help. */
     public help: string;
+
+    /** Heading hideAnchor. */
+    public hideAnchor: boolean;
 
     /**
      * Creates a new Heading instance using the specified properties.
@@ -8662,7 +8786,8 @@ export namespace Markdown {
         NATIVE = 1,
         CAPTION = 2,
         CODE = 3,
-        LATEX = 4
+        LATEX = 4,
+        DIVIDER = 5
     }
 }
 

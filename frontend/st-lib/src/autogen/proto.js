@@ -6274,6 +6274,256 @@ export const ClientState = $root.ClientState = (() => {
     return ClientState;
 })();
 
+export const Code = $root.Code = (() => {
+
+    /**
+     * Properties of a Code.
+     * @exports ICode
+     * @interface ICode
+     * @property {string|null} [codeText] Code codeText
+     * @property {string|null} [language] Code language
+     * @property {boolean|null} [showLineNumbers] Code showLineNumbers
+     */
+
+    /**
+     * Constructs a new Code.
+     * @exports Code
+     * @classdesc Represents a Code.
+     * @implements ICode
+     * @constructor
+     * @param {ICode=} [properties] Properties to set
+     */
+    function Code(properties) {
+        if (properties)
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                if (properties[keys[i]] != null)
+                    this[keys[i]] = properties[keys[i]];
+    }
+
+    /**
+     * Code codeText.
+     * @member {string} codeText
+     * @memberof Code
+     * @instance
+     */
+    Code.prototype.codeText = "";
+
+    /**
+     * Code language.
+     * @member {string} language
+     * @memberof Code
+     * @instance
+     */
+    Code.prototype.language = "";
+
+    /**
+     * Code showLineNumbers.
+     * @member {boolean} showLineNumbers
+     * @memberof Code
+     * @instance
+     */
+    Code.prototype.showLineNumbers = false;
+
+    /**
+     * Creates a new Code instance using the specified properties.
+     * @function create
+     * @memberof Code
+     * @static
+     * @param {ICode=} [properties] Properties to set
+     * @returns {Code} Code instance
+     */
+    Code.create = function create(properties) {
+        return new Code(properties);
+    };
+
+    /**
+     * Encodes the specified Code message. Does not implicitly {@link Code.verify|verify} messages.
+     * @function encode
+     * @memberof Code
+     * @static
+     * @param {ICode} message Code message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    Code.encode = function encode(message, writer) {
+        if (!writer)
+            writer = $Writer.create();
+        if (message.codeText != null && Object.hasOwnProperty.call(message, "codeText"))
+            writer.uint32(/* id 1, wireType 2 =*/10).string(message.codeText);
+        if (message.language != null && Object.hasOwnProperty.call(message, "language"))
+            writer.uint32(/* id 2, wireType 2 =*/18).string(message.language);
+        if (message.showLineNumbers != null && Object.hasOwnProperty.call(message, "showLineNumbers"))
+            writer.uint32(/* id 3, wireType 0 =*/24).bool(message.showLineNumbers);
+        return writer;
+    };
+
+    /**
+     * Encodes the specified Code message, length delimited. Does not implicitly {@link Code.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof Code
+     * @static
+     * @param {ICode} message Code message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    Code.encodeDelimited = function encodeDelimited(message, writer) {
+        return this.encode(message, writer).ldelim();
+    };
+
+    /**
+     * Decodes a Code message from the specified reader or buffer.
+     * @function decode
+     * @memberof Code
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @param {number} [length] Message length if known beforehand
+     * @returns {Code} Code
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    Code.decode = function decode(reader, length) {
+        if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+        let end = length === undefined ? reader.len : reader.pos + length, message = new $root.Code();
+        while (reader.pos < end) {
+            let tag = reader.uint32();
+            switch (tag >>> 3) {
+            case 1: {
+                    message.codeText = reader.string();
+                    break;
+                }
+            case 2: {
+                    message.language = reader.string();
+                    break;
+                }
+            case 3: {
+                    message.showLineNumbers = reader.bool();
+                    break;
+                }
+            default:
+                reader.skipType(tag & 7);
+                break;
+            }
+        }
+        return message;
+    };
+
+    /**
+     * Decodes a Code message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof Code
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @returns {Code} Code
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    Code.decodeDelimited = function decodeDelimited(reader) {
+        if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+        return this.decode(reader, reader.uint32());
+    };
+
+    /**
+     * Verifies a Code message.
+     * @function verify
+     * @memberof Code
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
+     */
+    Code.verify = function verify(message) {
+        if (typeof message !== "object" || message === null)
+            return "object expected";
+        if (message.codeText != null && message.hasOwnProperty("codeText"))
+            if (!$util.isString(message.codeText))
+                return "codeText: string expected";
+        if (message.language != null && message.hasOwnProperty("language"))
+            if (!$util.isString(message.language))
+                return "language: string expected";
+        if (message.showLineNumbers != null && message.hasOwnProperty("showLineNumbers"))
+            if (typeof message.showLineNumbers !== "boolean")
+                return "showLineNumbers: boolean expected";
+        return null;
+    };
+
+    /**
+     * Creates a Code message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof Code
+     * @static
+     * @param {Object.<string,*>} object Plain object
+     * @returns {Code} Code
+     */
+    Code.fromObject = function fromObject(object) {
+        if (object instanceof $root.Code)
+            return object;
+        let message = new $root.Code();
+        if (object.codeText != null)
+            message.codeText = String(object.codeText);
+        if (object.language != null)
+            message.language = String(object.language);
+        if (object.showLineNumbers != null)
+            message.showLineNumbers = Boolean(object.showLineNumbers);
+        return message;
+    };
+
+    /**
+     * Creates a plain object from a Code message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof Code
+     * @static
+     * @param {Code} message Code
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
+     * @returns {Object.<string,*>} Plain object
+     */
+    Code.toObject = function toObject(message, options) {
+        if (!options)
+            options = {};
+        let object = {};
+        if (options.defaults) {
+            object.codeText = "";
+            object.language = "";
+            object.showLineNumbers = false;
+        }
+        if (message.codeText != null && message.hasOwnProperty("codeText"))
+            object.codeText = message.codeText;
+        if (message.language != null && message.hasOwnProperty("language"))
+            object.language = message.language;
+        if (message.showLineNumbers != null && message.hasOwnProperty("showLineNumbers"))
+            object.showLineNumbers = message.showLineNumbers;
+        return object;
+    };
+
+    /**
+     * Converts this Code to JSON.
+     * @function toJSON
+     * @memberof Code
+     * @instance
+     * @returns {Object.<string,*>} JSON object
+     */
+    Code.prototype.toJSON = function toJSON() {
+        return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+    };
+
+    /**
+     * Gets the default type url for Code
+     * @function getTypeUrl
+     * @memberof Code
+     * @static
+     * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns {string} The default type url
+     */
+    Code.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+        if (typeUrlPrefix === undefined) {
+            typeUrlPrefix = "type.googleapis.com";
+        }
+        return typeUrlPrefix + "/Code";
+    };
+
+    return Code;
+})();
+
 export const ColorPicker = $root.ColorPicker = (() => {
 
     /**
@@ -14949,11 +15199,11 @@ export const DocString = $root.DocString = (() => {
      * Properties of a DocString.
      * @exports IDocString
      * @interface IDocString
-     * @property {string|null} [name] DocString name
-     * @property {string|null} [module] DocString module
      * @property {string|null} [docString] DocString docString
      * @property {string|null} [type] DocString type
-     * @property {string|null} [signature] DocString signature
+     * @property {string|null} [name] DocString name
+     * @property {string|null} [value] DocString value
+     * @property {Array.<IMember>|null} [members] DocString members
      */
 
     /**
@@ -14965,27 +15215,12 @@ export const DocString = $root.DocString = (() => {
      * @param {IDocString=} [properties] Properties to set
      */
     function DocString(properties) {
+        this.members = [];
         if (properties)
             for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
                     this[keys[i]] = properties[keys[i]];
     }
-
-    /**
-     * DocString name.
-     * @member {string} name
-     * @memberof DocString
-     * @instance
-     */
-    DocString.prototype.name = "";
-
-    /**
-     * DocString module.
-     * @member {string} module
-     * @memberof DocString
-     * @instance
-     */
-    DocString.prototype.module = "";
 
     /**
      * DocString docString.
@@ -15004,12 +15239,28 @@ export const DocString = $root.DocString = (() => {
     DocString.prototype.type = "";
 
     /**
-     * DocString signature.
-     * @member {string} signature
+     * DocString name.
+     * @member {string} name
      * @memberof DocString
      * @instance
      */
-    DocString.prototype.signature = "";
+    DocString.prototype.name = "";
+
+    /**
+     * DocString value.
+     * @member {string} value
+     * @memberof DocString
+     * @instance
+     */
+    DocString.prototype.value = "";
+
+    /**
+     * DocString members.
+     * @member {Array.<IMember>} members
+     * @memberof DocString
+     * @instance
+     */
+    DocString.prototype.members = $util.emptyArray;
 
     /**
      * Creates a new DocString instance using the specified properties.
@@ -15035,16 +15286,17 @@ export const DocString = $root.DocString = (() => {
     DocString.encode = function encode(message, writer) {
         if (!writer)
             writer = $Writer.create();
-        if (message.name != null && Object.hasOwnProperty.call(message, "name"))
-            writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
-        if (message.module != null && Object.hasOwnProperty.call(message, "module"))
-            writer.uint32(/* id 2, wireType 2 =*/18).string(message.module);
         if (message.docString != null && Object.hasOwnProperty.call(message, "docString"))
             writer.uint32(/* id 3, wireType 2 =*/26).string(message.docString);
         if (message.type != null && Object.hasOwnProperty.call(message, "type"))
             writer.uint32(/* id 4, wireType 2 =*/34).string(message.type);
-        if (message.signature != null && Object.hasOwnProperty.call(message, "signature"))
-            writer.uint32(/* id 5, wireType 2 =*/42).string(message.signature);
+        if (message.name != null && Object.hasOwnProperty.call(message, "name"))
+            writer.uint32(/* id 6, wireType 2 =*/50).string(message.name);
+        if (message.value != null && Object.hasOwnProperty.call(message, "value"))
+            writer.uint32(/* id 7, wireType 2 =*/58).string(message.value);
+        if (message.members != null && message.members.length)
+            for (let i = 0; i < message.members.length; ++i)
+                $root.Member.encode(message.members[i], writer.uint32(/* id 8, wireType 2 =*/66).fork()).ldelim();
         return writer;
     };
 
@@ -15079,14 +15331,6 @@ export const DocString = $root.DocString = (() => {
         while (reader.pos < end) {
             let tag = reader.uint32();
             switch (tag >>> 3) {
-            case 1: {
-                    message.name = reader.string();
-                    break;
-                }
-            case 2: {
-                    message.module = reader.string();
-                    break;
-                }
             case 3: {
                     message.docString = reader.string();
                     break;
@@ -15095,8 +15339,18 @@ export const DocString = $root.DocString = (() => {
                     message.type = reader.string();
                     break;
                 }
-            case 5: {
-                    message.signature = reader.string();
+            case 6: {
+                    message.name = reader.string();
+                    break;
+                }
+            case 7: {
+                    message.value = reader.string();
+                    break;
+                }
+            case 8: {
+                    if (!(message.members && message.members.length))
+                        message.members = [];
+                    message.members.push($root.Member.decode(reader, reader.uint32()));
                     break;
                 }
             default:
@@ -15134,21 +15388,27 @@ export const DocString = $root.DocString = (() => {
     DocString.verify = function verify(message) {
         if (typeof message !== "object" || message === null)
             return "object expected";
-        if (message.name != null && message.hasOwnProperty("name"))
-            if (!$util.isString(message.name))
-                return "name: string expected";
-        if (message.module != null && message.hasOwnProperty("module"))
-            if (!$util.isString(message.module))
-                return "module: string expected";
         if (message.docString != null && message.hasOwnProperty("docString"))
             if (!$util.isString(message.docString))
                 return "docString: string expected";
         if (message.type != null && message.hasOwnProperty("type"))
             if (!$util.isString(message.type))
                 return "type: string expected";
-        if (message.signature != null && message.hasOwnProperty("signature"))
-            if (!$util.isString(message.signature))
-                return "signature: string expected";
+        if (message.name != null && message.hasOwnProperty("name"))
+            if (!$util.isString(message.name))
+                return "name: string expected";
+        if (message.value != null && message.hasOwnProperty("value"))
+            if (!$util.isString(message.value))
+                return "value: string expected";
+        if (message.members != null && message.hasOwnProperty("members")) {
+            if (!Array.isArray(message.members))
+                return "members: array expected";
+            for (let i = 0; i < message.members.length; ++i) {
+                let error = $root.Member.verify(message.members[i]);
+                if (error)
+                    return "members." + error;
+            }
+        }
         return null;
     };
 
@@ -15164,16 +15424,24 @@ export const DocString = $root.DocString = (() => {
         if (object instanceof $root.DocString)
             return object;
         let message = new $root.DocString();
-        if (object.name != null)
-            message.name = String(object.name);
-        if (object.module != null)
-            message.module = String(object.module);
         if (object.docString != null)
             message.docString = String(object.docString);
         if (object.type != null)
             message.type = String(object.type);
-        if (object.signature != null)
-            message.signature = String(object.signature);
+        if (object.name != null)
+            message.name = String(object.name);
+        if (object.value != null)
+            message.value = String(object.value);
+        if (object.members) {
+            if (!Array.isArray(object.members))
+                throw TypeError(".DocString.members: array expected");
+            message.members = [];
+            for (let i = 0; i < object.members.length; ++i) {
+                if (typeof object.members[i] !== "object")
+                    throw TypeError(".DocString.members: object expected");
+                message.members[i] = $root.Member.fromObject(object.members[i]);
+            }
+        }
         return message;
     };
 
@@ -15190,23 +15458,27 @@ export const DocString = $root.DocString = (() => {
         if (!options)
             options = {};
         let object = {};
+        if (options.arrays || options.defaults)
+            object.members = [];
         if (options.defaults) {
-            object.name = "";
-            object.module = "";
             object.docString = "";
             object.type = "";
-            object.signature = "";
+            object.name = "";
+            object.value = "";
         }
-        if (message.name != null && message.hasOwnProperty("name"))
-            object.name = message.name;
-        if (message.module != null && message.hasOwnProperty("module"))
-            object.module = message.module;
         if (message.docString != null && message.hasOwnProperty("docString"))
             object.docString = message.docString;
         if (message.type != null && message.hasOwnProperty("type"))
             object.type = message.type;
-        if (message.signature != null && message.hasOwnProperty("signature"))
-            object.signature = message.signature;
+        if (message.name != null && message.hasOwnProperty("name"))
+            object.name = message.name;
+        if (message.value != null && message.hasOwnProperty("value"))
+            object.value = message.value;
+        if (message.members && message.members.length) {
+            object.members = [];
+            for (let j = 0; j < message.members.length; ++j)
+                object.members[j] = $root.Member.toObject(message.members[j], options);
+        }
         return object;
     };
 
@@ -15237,6 +15509,304 @@ export const DocString = $root.DocString = (() => {
     };
 
     return DocString;
+})();
+
+export const Member = $root.Member = (() => {
+
+    /**
+     * Properties of a Member.
+     * @exports IMember
+     * @interface IMember
+     * @property {string|null} [name] Member name
+     * @property {string|null} [type] Member type
+     * @property {string|null} [value] Member value
+     * @property {string|null} [docString] Member docString
+     */
+
+    /**
+     * Constructs a new Member.
+     * @exports Member
+     * @classdesc Represents a Member.
+     * @implements IMember
+     * @constructor
+     * @param {IMember=} [properties] Properties to set
+     */
+    function Member(properties) {
+        if (properties)
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                if (properties[keys[i]] != null)
+                    this[keys[i]] = properties[keys[i]];
+    }
+
+    /**
+     * Member name.
+     * @member {string} name
+     * @memberof Member
+     * @instance
+     */
+    Member.prototype.name = "";
+
+    /**
+     * Member type.
+     * @member {string} type
+     * @memberof Member
+     * @instance
+     */
+    Member.prototype.type = "";
+
+    /**
+     * Member value.
+     * @member {string|null|undefined} value
+     * @memberof Member
+     * @instance
+     */
+    Member.prototype.value = null;
+
+    /**
+     * Member docString.
+     * @member {string|null|undefined} docString
+     * @memberof Member
+     * @instance
+     */
+    Member.prototype.docString = null;
+
+    // OneOf field names bound to virtual getters and setters
+    let $oneOfFields;
+
+    /**
+     * Member contents.
+     * @member {"value"|"docString"|undefined} contents
+     * @memberof Member
+     * @instance
+     */
+    Object.defineProperty(Member.prototype, "contents", {
+        get: $util.oneOfGetter($oneOfFields = ["value", "docString"]),
+        set: $util.oneOfSetter($oneOfFields)
+    });
+
+    /**
+     * Creates a new Member instance using the specified properties.
+     * @function create
+     * @memberof Member
+     * @static
+     * @param {IMember=} [properties] Properties to set
+     * @returns {Member} Member instance
+     */
+    Member.create = function create(properties) {
+        return new Member(properties);
+    };
+
+    /**
+     * Encodes the specified Member message. Does not implicitly {@link Member.verify|verify} messages.
+     * @function encode
+     * @memberof Member
+     * @static
+     * @param {IMember} message Member message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    Member.encode = function encode(message, writer) {
+        if (!writer)
+            writer = $Writer.create();
+        if (message.name != null && Object.hasOwnProperty.call(message, "name"))
+            writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
+        if (message.type != null && Object.hasOwnProperty.call(message, "type"))
+            writer.uint32(/* id 2, wireType 2 =*/18).string(message.type);
+        if (message.value != null && Object.hasOwnProperty.call(message, "value"))
+            writer.uint32(/* id 3, wireType 2 =*/26).string(message.value);
+        if (message.docString != null && Object.hasOwnProperty.call(message, "docString"))
+            writer.uint32(/* id 4, wireType 2 =*/34).string(message.docString);
+        return writer;
+    };
+
+    /**
+     * Encodes the specified Member message, length delimited. Does not implicitly {@link Member.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof Member
+     * @static
+     * @param {IMember} message Member message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    Member.encodeDelimited = function encodeDelimited(message, writer) {
+        return this.encode(message, writer).ldelim();
+    };
+
+    /**
+     * Decodes a Member message from the specified reader or buffer.
+     * @function decode
+     * @memberof Member
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @param {number} [length] Message length if known beforehand
+     * @returns {Member} Member
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    Member.decode = function decode(reader, length) {
+        if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+        let end = length === undefined ? reader.len : reader.pos + length, message = new $root.Member();
+        while (reader.pos < end) {
+            let tag = reader.uint32();
+            switch (tag >>> 3) {
+            case 1: {
+                    message.name = reader.string();
+                    break;
+                }
+            case 2: {
+                    message.type = reader.string();
+                    break;
+                }
+            case 3: {
+                    message.value = reader.string();
+                    break;
+                }
+            case 4: {
+                    message.docString = reader.string();
+                    break;
+                }
+            default:
+                reader.skipType(tag & 7);
+                break;
+            }
+        }
+        return message;
+    };
+
+    /**
+     * Decodes a Member message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof Member
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @returns {Member} Member
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    Member.decodeDelimited = function decodeDelimited(reader) {
+        if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+        return this.decode(reader, reader.uint32());
+    };
+
+    /**
+     * Verifies a Member message.
+     * @function verify
+     * @memberof Member
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
+     */
+    Member.verify = function verify(message) {
+        if (typeof message !== "object" || message === null)
+            return "object expected";
+        let properties = {};
+        if (message.name != null && message.hasOwnProperty("name"))
+            if (!$util.isString(message.name))
+                return "name: string expected";
+        if (message.type != null && message.hasOwnProperty("type"))
+            if (!$util.isString(message.type))
+                return "type: string expected";
+        if (message.value != null && message.hasOwnProperty("value")) {
+            properties.contents = 1;
+            if (!$util.isString(message.value))
+                return "value: string expected";
+        }
+        if (message.docString != null && message.hasOwnProperty("docString")) {
+            if (properties.contents === 1)
+                return "contents: multiple values";
+            properties.contents = 1;
+            if (!$util.isString(message.docString))
+                return "docString: string expected";
+        }
+        return null;
+    };
+
+    /**
+     * Creates a Member message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof Member
+     * @static
+     * @param {Object.<string,*>} object Plain object
+     * @returns {Member} Member
+     */
+    Member.fromObject = function fromObject(object) {
+        if (object instanceof $root.Member)
+            return object;
+        let message = new $root.Member();
+        if (object.name != null)
+            message.name = String(object.name);
+        if (object.type != null)
+            message.type = String(object.type);
+        if (object.value != null)
+            message.value = String(object.value);
+        if (object.docString != null)
+            message.docString = String(object.docString);
+        return message;
+    };
+
+    /**
+     * Creates a plain object from a Member message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof Member
+     * @static
+     * @param {Member} message Member
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
+     * @returns {Object.<string,*>} Plain object
+     */
+    Member.toObject = function toObject(message, options) {
+        if (!options)
+            options = {};
+        let object = {};
+        if (options.defaults) {
+            object.name = "";
+            object.type = "";
+        }
+        if (message.name != null && message.hasOwnProperty("name"))
+            object.name = message.name;
+        if (message.type != null && message.hasOwnProperty("type"))
+            object.type = message.type;
+        if (message.value != null && message.hasOwnProperty("value")) {
+            object.value = message.value;
+            if (options.oneofs)
+                object.contents = "value";
+        }
+        if (message.docString != null && message.hasOwnProperty("docString")) {
+            object.docString = message.docString;
+            if (options.oneofs)
+                object.contents = "docString";
+        }
+        return object;
+    };
+
+    /**
+     * Converts this Member to JSON.
+     * @function toJSON
+     * @memberof Member
+     * @instance
+     * @returns {Object.<string,*>} JSON object
+     */
+    Member.prototype.toJSON = function toJSON() {
+        return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+    };
+
+    /**
+     * Gets the default type url for Member
+     * @function getTypeUrl
+     * @memberof Member
+     * @static
+     * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns {string} The default type url
+     */
+    Member.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+        if (typeUrlPrefix === undefined) {
+            typeUrlPrefix = "type.googleapis.com";
+        }
+        return typeUrlPrefix + "/Member";
+    };
+
+    return Member;
 })();
 
 export const DownloadButton = $root.DownloadButton = (() => {
@@ -15654,6 +16224,7 @@ export const Element = $root.Element = (() => {
      * @property {IVegaLiteChart|null} [vegaLiteChart] Element vegaLiteChart
      * @property {IVideo|null} [video] Element video
      * @property {IHeading|null} [heading] Element heading
+     * @property {ICode|null} [code] Element code
      */
 
     /**
@@ -16023,17 +16594,25 @@ export const Element = $root.Element = (() => {
      */
     Element.prototype.heading = null;
 
+    /**
+     * Element code.
+     * @member {ICode|null|undefined} code
+     * @memberof Element
+     * @instance
+     */
+    Element.prototype.code = null;
+
     // OneOf field names bound to virtual getters and setters
     let $oneOfFields;
 
     /**
      * Element type.
-     * @member {"alert"|"arrowDataFrame"|"arrowTable"|"arrowVegaLiteChart"|"audio"|"balloons"|"bokehChart"|"button"|"downloadButton"|"cameraInput"|"checkbox"|"colorPicker"|"componentInstance"|"dataFrame"|"table"|"dateInput"|"deckGlJsonChart"|"docString"|"empty"|"exception"|"favicon"|"fileUploader"|"graphvizChart"|"iframe"|"imgs"|"json"|"markdown"|"metric"|"multiselect"|"numberInput"|"plotlyChart"|"progress"|"radio"|"selectbox"|"slider"|"snow"|"spinner"|"text"|"textArea"|"textInput"|"timeInput"|"vegaLiteChart"|"video"|"heading"|undefined} type
+     * @member {"alert"|"arrowDataFrame"|"arrowTable"|"arrowVegaLiteChart"|"audio"|"balloons"|"bokehChart"|"button"|"downloadButton"|"cameraInput"|"checkbox"|"colorPicker"|"componentInstance"|"dataFrame"|"table"|"dateInput"|"deckGlJsonChart"|"docString"|"empty"|"exception"|"favicon"|"fileUploader"|"graphvizChart"|"iframe"|"imgs"|"json"|"markdown"|"metric"|"multiselect"|"numberInput"|"plotlyChart"|"progress"|"radio"|"selectbox"|"slider"|"snow"|"spinner"|"text"|"textArea"|"textInput"|"timeInput"|"vegaLiteChart"|"video"|"heading"|"code"|undefined} type
      * @memberof Element
      * @instance
      */
     Object.defineProperty(Element.prototype, "type", {
-        get: $util.oneOfGetter($oneOfFields = ["alert", "arrowDataFrame", "arrowTable", "arrowVegaLiteChart", "audio", "balloons", "bokehChart", "button", "downloadButton", "cameraInput", "checkbox", "colorPicker", "componentInstance", "dataFrame", "table", "dateInput", "deckGlJsonChart", "docString", "empty", "exception", "favicon", "fileUploader", "graphvizChart", "iframe", "imgs", "json", "markdown", "metric", "multiselect", "numberInput", "plotlyChart", "progress", "radio", "selectbox", "slider", "snow", "spinner", "text", "textArea", "textInput", "timeInput", "vegaLiteChart", "video", "heading"]),
+        get: $util.oneOfGetter($oneOfFields = ["alert", "arrowDataFrame", "arrowTable", "arrowVegaLiteChart", "audio", "balloons", "bokehChart", "button", "downloadButton", "cameraInput", "checkbox", "colorPicker", "componentInstance", "dataFrame", "table", "dateInput", "deckGlJsonChart", "docString", "empty", "exception", "favicon", "fileUploader", "graphvizChart", "iframe", "imgs", "json", "markdown", "metric", "multiselect", "numberInput", "plotlyChart", "progress", "radio", "selectbox", "slider", "snow", "spinner", "text", "textArea", "textInput", "timeInput", "vegaLiteChart", "video", "heading", "code"]),
         set: $util.oneOfSetter($oneOfFields)
     });
 
@@ -16149,6 +16728,8 @@ export const Element = $root.Element = (() => {
             $root.Snow.encode(message.snow, writer.uint32(/* id 46, wireType 2 =*/370).fork()).ldelim();
         if (message.heading != null && Object.hasOwnProperty.call(message, "heading"))
             $root.Heading.encode(message.heading, writer.uint32(/* id 47, wireType 2 =*/378).fork()).ldelim();
+        if (message.code != null && Object.hasOwnProperty.call(message, "code"))
+            $root.Code.encode(message.code, writer.uint32(/* id 48, wireType 2 =*/386).fork()).ldelim();
         return writer;
     };
 
@@ -16357,6 +16938,10 @@ export const Element = $root.Element = (() => {
                 }
             case 47: {
                     message.heading = $root.Heading.decode(reader, reader.uint32());
+                    break;
+                }
+            case 48: {
+                    message.code = $root.Code.decode(reader, reader.uint32());
                     break;
                 }
             default:
@@ -16833,6 +17418,16 @@ export const Element = $root.Element = (() => {
                     return "heading." + error;
             }
         }
+        if (message.code != null && message.hasOwnProperty("code")) {
+            if (properties.type === 1)
+                return "type: multiple values";
+            properties.type = 1;
+            {
+                let error = $root.Code.verify(message.code);
+                if (error)
+                    return "code." + error;
+            }
+        }
         return null;
     };
 
@@ -17067,6 +17662,11 @@ export const Element = $root.Element = (() => {
             if (typeof object.heading !== "object")
                 throw TypeError(".Element.heading: object expected");
             message.heading = $root.Heading.fromObject(object.heading);
+        }
+        if (object.code != null) {
+            if (typeof object.code !== "object")
+                throw TypeError(".Element.code: object expected");
+            message.code = $root.Code.fromObject(object.code);
         }
         return message;
     };
@@ -17303,6 +17903,11 @@ export const Element = $root.Element = (() => {
             object.heading = $root.Heading.toObject(message.heading, options);
             if (options.oneofs)
                 object.type = "heading";
+        }
+        if (message.code != null && message.hasOwnProperty("code")) {
+            object.code = $root.Code.toObject(message.code, options);
+            if (options.oneofs)
+                object.type = "code";
         }
         return object;
     };
@@ -20312,6 +20917,8 @@ export const Heading = $root.Heading = (() => {
      * @property {string|null} [tag] Heading tag
      * @property {string|null} [anchor] Heading anchor
      * @property {string|null} [body] Heading body
+     * @property {string|null} [help] Heading help
+     * @property {boolean|null} [hideAnchor] Heading hideAnchor
      */
 
     /**
@@ -20354,6 +20961,22 @@ export const Heading = $root.Heading = (() => {
     Heading.prototype.body = "";
 
     /**
+     * Heading help.
+     * @member {string} help
+     * @memberof Heading
+     * @instance
+     */
+    Heading.prototype.help = "";
+
+    /**
+     * Heading hideAnchor.
+     * @member {boolean} hideAnchor
+     * @memberof Heading
+     * @instance
+     */
+    Heading.prototype.hideAnchor = false;
+
+    /**
      * Creates a new Heading instance using the specified properties.
      * @function create
      * @memberof Heading
@@ -20383,6 +21006,10 @@ export const Heading = $root.Heading = (() => {
             writer.uint32(/* id 2, wireType 2 =*/18).string(message.anchor);
         if (message.body != null && Object.hasOwnProperty.call(message, "body"))
             writer.uint32(/* id 3, wireType 2 =*/26).string(message.body);
+        if (message.help != null && Object.hasOwnProperty.call(message, "help"))
+            writer.uint32(/* id 4, wireType 2 =*/34).string(message.help);
+        if (message.hideAnchor != null && Object.hasOwnProperty.call(message, "hideAnchor"))
+            writer.uint32(/* id 5, wireType 0 =*/40).bool(message.hideAnchor);
         return writer;
     };
 
@@ -20429,6 +21056,14 @@ export const Heading = $root.Heading = (() => {
                     message.body = reader.string();
                     break;
                 }
+            case 4: {
+                    message.help = reader.string();
+                    break;
+                }
+            case 5: {
+                    message.hideAnchor = reader.bool();
+                    break;
+                }
             default:
                 reader.skipType(tag & 7);
                 break;
@@ -20473,6 +21108,12 @@ export const Heading = $root.Heading = (() => {
         if (message.body != null && message.hasOwnProperty("body"))
             if (!$util.isString(message.body))
                 return "body: string expected";
+        if (message.help != null && message.hasOwnProperty("help"))
+            if (!$util.isString(message.help))
+                return "help: string expected";
+        if (message.hideAnchor != null && message.hasOwnProperty("hideAnchor"))
+            if (typeof message.hideAnchor !== "boolean")
+                return "hideAnchor: boolean expected";
         return null;
     };
 
@@ -20494,6 +21135,10 @@ export const Heading = $root.Heading = (() => {
             message.anchor = String(object.anchor);
         if (object.body != null)
             message.body = String(object.body);
+        if (object.help != null)
+            message.help = String(object.help);
+        if (object.hideAnchor != null)
+            message.hideAnchor = Boolean(object.hideAnchor);
         return message;
     };
 
@@ -20514,6 +21159,8 @@ export const Heading = $root.Heading = (() => {
             object.tag = "";
             object.anchor = "";
             object.body = "";
+            object.help = "";
+            object.hideAnchor = false;
         }
         if (message.tag != null && message.hasOwnProperty("tag"))
             object.tag = message.tag;
@@ -20521,6 +21168,10 @@ export const Heading = $root.Heading = (() => {
             object.anchor = message.anchor;
         if (message.body != null && message.hasOwnProperty("body"))
             object.body = message.body;
+        if (message.help != null && message.hasOwnProperty("help"))
+            object.help = message.help;
+        if (message.hideAnchor != null && message.hasOwnProperty("hideAnchor"))
+            object.hideAnchor = message.hideAnchor;
         return object;
     };
 
@@ -21875,6 +22526,7 @@ export const Markdown = $root.Markdown = (() => {
      * @property {boolean|null} [allowHtml] Markdown allowHtml
      * @property {boolean|null} [isCaption] Markdown isCaption
      * @property {Markdown.Type|null} [elementType] Markdown elementType
+     * @property {string|null} [help] Markdown help
      */
 
     /**
@@ -21925,6 +22577,14 @@ export const Markdown = $root.Markdown = (() => {
     Markdown.prototype.elementType = 0;
 
     /**
+     * Markdown help.
+     * @member {string} help
+     * @memberof Markdown
+     * @instance
+     */
+    Markdown.prototype.help = "";
+
+    /**
      * Creates a new Markdown instance using the specified properties.
      * @function create
      * @memberof Markdown
@@ -21956,6 +22616,8 @@ export const Markdown = $root.Markdown = (() => {
             writer.uint32(/* id 3, wireType 0 =*/24).bool(message.isCaption);
         if (message.elementType != null && Object.hasOwnProperty.call(message, "elementType"))
             writer.uint32(/* id 4, wireType 0 =*/32).int32(message.elementType);
+        if (message.help != null && Object.hasOwnProperty.call(message, "help"))
+            writer.uint32(/* id 5, wireType 2 =*/42).string(message.help);
         return writer;
     };
 
@@ -22004,6 +22666,10 @@ export const Markdown = $root.Markdown = (() => {
                 }
             case 4: {
                     message.elementType = reader.int32();
+                    break;
+                }
+            case 5: {
+                    message.help = reader.string();
                     break;
                 }
             default:
@@ -22059,8 +22725,12 @@ export const Markdown = $root.Markdown = (() => {
             case 2:
             case 3:
             case 4:
+            case 5:
                 break;
             }
+        if (message.help != null && message.hasOwnProperty("help"))
+            if (!$util.isString(message.help))
+                return "help: string expected";
         return null;
     };
 
@@ -22109,7 +22779,13 @@ export const Markdown = $root.Markdown = (() => {
         case 4:
             message.elementType = 4;
             break;
+        case "DIVIDER":
+        case 5:
+            message.elementType = 5;
+            break;
         }
+        if (object.help != null)
+            message.help = String(object.help);
         return message;
     };
 
@@ -22131,6 +22807,7 @@ export const Markdown = $root.Markdown = (() => {
             object.allowHtml = false;
             object.isCaption = false;
             object.elementType = options.enums === String ? "UNSPECIFIED" : 0;
+            object.help = "";
         }
         if (message.body != null && message.hasOwnProperty("body"))
             object.body = message.body;
@@ -22140,6 +22817,8 @@ export const Markdown = $root.Markdown = (() => {
             object.isCaption = message.isCaption;
         if (message.elementType != null && message.hasOwnProperty("elementType"))
             object.elementType = options.enums === String ? $root.Markdown.Type[message.elementType] === undefined ? message.elementType : $root.Markdown.Type[message.elementType] : message.elementType;
+        if (message.help != null && message.hasOwnProperty("help"))
+            object.help = message.help;
         return object;
     };
 
@@ -22178,6 +22857,7 @@ export const Markdown = $root.Markdown = (() => {
      * @property {number} CAPTION=2 CAPTION value
      * @property {number} CODE=3 CODE value
      * @property {number} LATEX=4 LATEX value
+     * @property {number} DIVIDER=5 DIVIDER value
      */
     Markdown.Type = (function() {
         const valuesById = {}, values = Object.create(valuesById);
@@ -22186,6 +22866,7 @@ export const Markdown = $root.Markdown = (() => {
         values[valuesById[2] = "CAPTION"] = 2;
         values[valuesById[3] = "CODE"] = 3;
         values[valuesById[4] = "LATEX"] = 4;
+        values[valuesById[5] = "DIVIDER"] = 5;
         return values;
     })();
 
@@ -31497,6 +32178,7 @@ export const Text = $root.Text = (() => {
      * @exports IText
      * @interface IText
      * @property {string|null} [body] Text body
+     * @property {string|null} [help] Text help
      */
 
     /**
@@ -31521,6 +32203,14 @@ export const Text = $root.Text = (() => {
      * @instance
      */
     Text.prototype.body = "";
+
+    /**
+     * Text help.
+     * @member {string} help
+     * @memberof Text
+     * @instance
+     */
+    Text.prototype.help = "";
 
     /**
      * Creates a new Text instance using the specified properties.
@@ -31548,6 +32238,8 @@ export const Text = $root.Text = (() => {
             writer = $Writer.create();
         if (message.body != null && Object.hasOwnProperty.call(message, "body"))
             writer.uint32(/* id 1, wireType 2 =*/10).string(message.body);
+        if (message.help != null && Object.hasOwnProperty.call(message, "help"))
+            writer.uint32(/* id 2, wireType 2 =*/18).string(message.help);
         return writer;
     };
 
@@ -31584,6 +32276,10 @@ export const Text = $root.Text = (() => {
             switch (tag >>> 3) {
             case 1: {
                     message.body = reader.string();
+                    break;
+                }
+            case 2: {
+                    message.help = reader.string();
                     break;
                 }
             default:
@@ -31624,6 +32320,9 @@ export const Text = $root.Text = (() => {
         if (message.body != null && message.hasOwnProperty("body"))
             if (!$util.isString(message.body))
                 return "body: string expected";
+        if (message.help != null && message.hasOwnProperty("help"))
+            if (!$util.isString(message.help))
+                return "help: string expected";
         return null;
     };
 
@@ -31641,6 +32340,8 @@ export const Text = $root.Text = (() => {
         let message = new $root.Text();
         if (object.body != null)
             message.body = String(object.body);
+        if (object.help != null)
+            message.help = String(object.help);
         return message;
     };
 
@@ -31657,10 +32358,14 @@ export const Text = $root.Text = (() => {
         if (!options)
             options = {};
         let object = {};
-        if (options.defaults)
+        if (options.defaults) {
             object.body = "";
+            object.help = "";
+        }
         if (message.body != null && message.hasOwnProperty("body"))
             object.body = message.body;
+        if (message.help != null && message.hasOwnProperty("help"))
+            object.help = message.help;
         return object;
     };
 
@@ -32688,6 +33393,7 @@ export const TimeInput = $root.TimeInput = (() => {
      * @property {boolean|null} [setValue] TimeInput setValue
      * @property {boolean|null} [disabled] TimeInput disabled
      * @property {ILabelVisibilityMessage|null} [labelVisibility] TimeInput labelVisibility
+     * @property {number|Long|null} [step] TimeInput step
      */
 
     /**
@@ -32778,6 +33484,14 @@ export const TimeInput = $root.TimeInput = (() => {
     TimeInput.prototype.labelVisibility = null;
 
     /**
+     * TimeInput step.
+     * @member {number|Long} step
+     * @memberof TimeInput
+     * @instance
+     */
+    TimeInput.prototype.step = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+    /**
      * Creates a new TimeInput instance using the specified properties.
      * @function create
      * @memberof TimeInput
@@ -32819,6 +33533,8 @@ export const TimeInput = $root.TimeInput = (() => {
             writer.uint32(/* id 8, wireType 0 =*/64).bool(message.disabled);
         if (message.labelVisibility != null && Object.hasOwnProperty.call(message, "labelVisibility"))
             $root.LabelVisibilityMessage.encode(message.labelVisibility, writer.uint32(/* id 9, wireType 2 =*/74).fork()).ldelim();
+        if (message.step != null && Object.hasOwnProperty.call(message, "step"))
+            writer.uint32(/* id 10, wireType 0 =*/80).int64(message.step);
         return writer;
     };
 
@@ -32889,6 +33605,10 @@ export const TimeInput = $root.TimeInput = (() => {
                     message.labelVisibility = $root.LabelVisibilityMessage.decode(reader, reader.uint32());
                     break;
                 }
+            case 10: {
+                    message.step = reader.int64();
+                    break;
+                }
             default:
                 reader.skipType(tag & 7);
                 break;
@@ -32953,6 +33673,9 @@ export const TimeInput = $root.TimeInput = (() => {
             if (error)
                 return "labelVisibility." + error;
         }
+        if (message.step != null && message.hasOwnProperty("step"))
+            if (!$util.isInteger(message.step) && !(message.step && $util.isInteger(message.step.low) && $util.isInteger(message.step.high)))
+                return "step: integer|Long expected";
         return null;
     };
 
@@ -32989,6 +33712,15 @@ export const TimeInput = $root.TimeInput = (() => {
                 throw TypeError(".TimeInput.labelVisibility: object expected");
             message.labelVisibility = $root.LabelVisibilityMessage.fromObject(object.labelVisibility);
         }
+        if (object.step != null)
+            if ($util.Long)
+                (message.step = $util.Long.fromValue(object.step)).unsigned = false;
+            else if (typeof object.step === "string")
+                message.step = parseInt(object.step, 10);
+            else if (typeof object.step === "number")
+                message.step = object.step;
+            else if (typeof object.step === "object")
+                message.step = new $util.LongBits(object.step.low >>> 0, object.step.high >>> 0).toNumber();
         return message;
     };
 
@@ -33015,6 +33747,11 @@ export const TimeInput = $root.TimeInput = (() => {
             object.setValue = false;
             object.disabled = false;
             object.labelVisibility = null;
+            if ($util.Long) {
+                let long = new $util.Long(0, 0, false);
+                object.step = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+            } else
+                object.step = options.longs === String ? "0" : 0;
         }
         if (message.id != null && message.hasOwnProperty("id"))
             object.id = message.id;
@@ -33034,6 +33771,11 @@ export const TimeInput = $root.TimeInput = (() => {
             object.disabled = message.disabled;
         if (message.labelVisibility != null && message.hasOwnProperty("labelVisibility"))
             object.labelVisibility = $root.LabelVisibilityMessage.toObject(message.labelVisibility, options);
+        if (message.step != null && message.hasOwnProperty("step"))
+            if (typeof message.step === "number")
+                object.step = options.longs === String ? String(message.step) : message.step;
+            else
+                object.step = options.longs === String ? $util.Long.prototype.toString.call(message.step) : options.longs === Number ? new $util.LongBits(message.step.low >>> 0, message.step.high >>> 0).toNumber() : message.step;
         return object;
     };
 

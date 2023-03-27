@@ -22,7 +22,7 @@ const Environment = require("jest-environment-jsdom")
  * when Streamlit is running there.
  */
 
-module.exports = class CustomTestEnvironment extends Environment {
+wqmodule.exports = class CustomTestEnvironment extends Environment {
   async setup() {
     await super.setup()
     if (typeof this.global.TextEncoder === "undefined") {

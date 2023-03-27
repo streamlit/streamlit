@@ -38,7 +38,7 @@ import {
   SettingsDialog,
 } from "./SettingsDialog"
 import ThemeCreatorDialog, {
-  Props as ThemeCreatorDialogProps,
+  ThemeCreatorDialogProps,
 } from "./ThemeCreatorDialog"
 import { DeployDialog, DeployDialogProps } from "./DeployDialog"
 

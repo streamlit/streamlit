@@ -181,12 +181,12 @@ export const toMinimalToml = (
   ].join("\n")
 }
 
-export interface Props {
+export interface ThemeCreatorDialogProps {
   backToSettings: (animateModal: boolean) => void
   onClose: () => void
 }
 
-const ThemeCreatorDialog = (props: Props): ReactElement => {
+const ThemeCreatorDialog = (props: ThemeCreatorDialogProps): ReactElement => {
   const [copied, updateCopied] = React.useState(false)
   const { activeTheme, addThemes, setTheme } = React.useContext(AppContext)
 

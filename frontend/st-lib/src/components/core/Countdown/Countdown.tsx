@@ -17,7 +17,7 @@
 import React, { PureComponent, ReactNode } from "react"
 import { StyledCountdown } from "./styled-components"
 
-interface Props {
+interface CountdownProps {
   countdown: number
   endCallback: () => void
 }
@@ -26,8 +26,8 @@ interface State {
   countdown: number
 }
 
-class Countdown extends PureComponent<Props, State> {
-  public static defaultProps: Partial<Props> = {
+class Countdown extends PureComponent<CountdownProps, State> {
+  public static defaultProps: Partial<CountdownProps> = {
     endCallback: () => {},
   }
 

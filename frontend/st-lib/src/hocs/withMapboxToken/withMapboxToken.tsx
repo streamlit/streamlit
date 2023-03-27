@@ -78,7 +78,7 @@ const withMapboxToken =
       /**
        * Fetch our MapboxToken.
        */
-      private initMapboxToken = async (): Promise<void> => {
+      public initMapboxToken = async (): Promise<void> => {
         try {
           const mapboxToken = await MapboxToken.get(this.props.sessionInfo)
 

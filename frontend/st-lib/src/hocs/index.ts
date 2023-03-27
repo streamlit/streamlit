@@ -2,7 +2,7 @@ import { HostCommunicationHOC as _HostCommunicationHOC } from "./withHostCommuni
 
 export { default as withExpandable } from "./withExpandable"
 export { default as withFullScreenWrapper } from "./withFullScreenWrapper"
-export { default as withHostCommunication, sendMessageToHost } from "./withHostCommunication"
+export { default as withHostCommunication } from "./withHostCommunication"
 export type HostCommunicationHOC = _HostCommunicationHOC
 export * from './withHostCommunication/types'
 export { default as withMapboxToken } from "./withMapboxToken"

@@ -15199,11 +15199,11 @@ export const DocString = $root.DocString = (() => {
      * Properties of a DocString.
      * @exports IDocString
      * @interface IDocString
-     * @property {string|null} [name] DocString name
-     * @property {string|null} [module] DocString module
      * @property {string|null} [docString] DocString docString
      * @property {string|null} [type] DocString type
-     * @property {string|null} [signature] DocString signature
+     * @property {string|null} [name] DocString name
+     * @property {string|null} [value] DocString value
+     * @property {Array.<IMember>|null} [members] DocString members
      */
 
     /**
@@ -15215,27 +15215,12 @@ export const DocString = $root.DocString = (() => {
      * @param {IDocString=} [properties] Properties to set
      */
     function DocString(properties) {
+        this.members = [];
         if (properties)
             for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
                     this[keys[i]] = properties[keys[i]];
     }
-
-    /**
-     * DocString name.
-     * @member {string} name
-     * @memberof DocString
-     * @instance
-     */
-    DocString.prototype.name = "";
-
-    /**
-     * DocString module.
-     * @member {string} module
-     * @memberof DocString
-     * @instance
-     */
-    DocString.prototype.module = "";
 
     /**
      * DocString docString.
@@ -15254,12 +15239,28 @@ export const DocString = $root.DocString = (() => {
     DocString.prototype.type = "";
 
     /**
-     * DocString signature.
-     * @member {string} signature
+     * DocString name.
+     * @member {string} name
      * @memberof DocString
      * @instance
      */
-    DocString.prototype.signature = "";
+    DocString.prototype.name = "";
+
+    /**
+     * DocString value.
+     * @member {string} value
+     * @memberof DocString
+     * @instance
+     */
+    DocString.prototype.value = "";
+
+    /**
+     * DocString members.
+     * @member {Array.<IMember>} members
+     * @memberof DocString
+     * @instance
+     */
+    DocString.prototype.members = $util.emptyArray;
 
     /**
      * Creates a new DocString instance using the specified properties.
@@ -15285,16 +15286,17 @@ export const DocString = $root.DocString = (() => {
     DocString.encode = function encode(message, writer) {
         if (!writer)
             writer = $Writer.create();
-        if (message.name != null && Object.hasOwnProperty.call(message, "name"))
-            writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
-        if (message.module != null && Object.hasOwnProperty.call(message, "module"))
-            writer.uint32(/* id 2, wireType 2 =*/18).string(message.module);
         if (message.docString != null && Object.hasOwnProperty.call(message, "docString"))
             writer.uint32(/* id 3, wireType 2 =*/26).string(message.docString);
         if (message.type != null && Object.hasOwnProperty.call(message, "type"))
             writer.uint32(/* id 4, wireType 2 =*/34).string(message.type);
-        if (message.signature != null && Object.hasOwnProperty.call(message, "signature"))
-            writer.uint32(/* id 5, wireType 2 =*/42).string(message.signature);
+        if (message.name != null && Object.hasOwnProperty.call(message, "name"))
+            writer.uint32(/* id 6, wireType 2 =*/50).string(message.name);
+        if (message.value != null && Object.hasOwnProperty.call(message, "value"))
+            writer.uint32(/* id 7, wireType 2 =*/58).string(message.value);
+        if (message.members != null && message.members.length)
+            for (let i = 0; i < message.members.length; ++i)
+                $root.Member.encode(message.members[i], writer.uint32(/* id 8, wireType 2 =*/66).fork()).ldelim();
         return writer;
     };
 
@@ -15329,14 +15331,6 @@ export const DocString = $root.DocString = (() => {
         while (reader.pos < end) {
             let tag = reader.uint32();
             switch (tag >>> 3) {
-            case 1: {
-                    message.name = reader.string();
-                    break;
-                }
-            case 2: {
-                    message.module = reader.string();
-                    break;
-                }
             case 3: {
                     message.docString = reader.string();
                     break;
@@ -15345,8 +15339,18 @@ export const DocString = $root.DocString = (() => {
                     message.type = reader.string();
                     break;
                 }
-            case 5: {
-                    message.signature = reader.string();
+            case 6: {
+                    message.name = reader.string();
+                    break;
+                }
+            case 7: {
+                    message.value = reader.string();
+                    break;
+                }
+            case 8: {
+                    if (!(message.members && message.members.length))
+                        message.members = [];
+                    message.members.push($root.Member.decode(reader, reader.uint32()));
                     break;
                 }
             default:
@@ -15384,21 +15388,27 @@ export const DocString = $root.DocString = (() => {
     DocString.verify = function verify(message) {
         if (typeof message !== "object" || message === null)
             return "object expected";
-        if (message.name != null && message.hasOwnProperty("name"))
-            if (!$util.isString(message.name))
-                return "name: string expected";
-        if (message.module != null && message.hasOwnProperty("module"))
-            if (!$util.isString(message.module))
-                return "module: string expected";
         if (message.docString != null && message.hasOwnProperty("docString"))
             if (!$util.isString(message.docString))
                 return "docString: string expected";
         if (message.type != null && message.hasOwnProperty("type"))
             if (!$util.isString(message.type))
                 return "type: string expected";
-        if (message.signature != null && message.hasOwnProperty("signature"))
-            if (!$util.isString(message.signature))
-                return "signature: string expected";
+        if (message.name != null && message.hasOwnProperty("name"))
+            if (!$util.isString(message.name))
+                return "name: string expected";
+        if (message.value != null && message.hasOwnProperty("value"))
+            if (!$util.isString(message.value))
+                return "value: string expected";
+        if (message.members != null && message.hasOwnProperty("members")) {
+            if (!Array.isArray(message.members))
+                return "members: array expected";
+            for (let i = 0; i < message.members.length; ++i) {
+                let error = $root.Member.verify(message.members[i]);
+                if (error)
+                    return "members." + error;
+            }
+        }
         return null;
     };
 
@@ -15414,16 +15424,24 @@ export const DocString = $root.DocString = (() => {
         if (object instanceof $root.DocString)
             return object;
         let message = new $root.DocString();
-        if (object.name != null)
-            message.name = String(object.name);
-        if (object.module != null)
-            message.module = String(object.module);
         if (object.docString != null)
             message.docString = String(object.docString);
         if (object.type != null)
             message.type = String(object.type);
-        if (object.signature != null)
-            message.signature = String(object.signature);
+        if (object.name != null)
+            message.name = String(object.name);
+        if (object.value != null)
+            message.value = String(object.value);
+        if (object.members) {
+            if (!Array.isArray(object.members))
+                throw TypeError(".DocString.members: array expected");
+            message.members = [];
+            for (let i = 0; i < object.members.length; ++i) {
+                if (typeof object.members[i] !== "object")
+                    throw TypeError(".DocString.members: object expected");
+                message.members[i] = $root.Member.fromObject(object.members[i]);
+            }
+        }
         return message;
     };
 
@@ -15440,23 +15458,27 @@ export const DocString = $root.DocString = (() => {
         if (!options)
             options = {};
         let object = {};
+        if (options.arrays || options.defaults)
+            object.members = [];
         if (options.defaults) {
-            object.name = "";
-            object.module = "";
             object.docString = "";
             object.type = "";
-            object.signature = "";
+            object.name = "";
+            object.value = "";
         }
-        if (message.name != null && message.hasOwnProperty("name"))
-            object.name = message.name;
-        if (message.module != null && message.hasOwnProperty("module"))
-            object.module = message.module;
         if (message.docString != null && message.hasOwnProperty("docString"))
             object.docString = message.docString;
         if (message.type != null && message.hasOwnProperty("type"))
             object.type = message.type;
-        if (message.signature != null && message.hasOwnProperty("signature"))
-            object.signature = message.signature;
+        if (message.name != null && message.hasOwnProperty("name"))
+            object.name = message.name;
+        if (message.value != null && message.hasOwnProperty("value"))
+            object.value = message.value;
+        if (message.members && message.members.length) {
+            object.members = [];
+            for (let j = 0; j < message.members.length; ++j)
+                object.members[j] = $root.Member.toObject(message.members[j], options);
+        }
         return object;
     };
 
@@ -15487,6 +15509,304 @@ export const DocString = $root.DocString = (() => {
     };
 
     return DocString;
+})();
+
+export const Member = $root.Member = (() => {
+
+    /**
+     * Properties of a Member.
+     * @exports IMember
+     * @interface IMember
+     * @property {string|null} [name] Member name
+     * @property {string|null} [type] Member type
+     * @property {string|null} [value] Member value
+     * @property {string|null} [docString] Member docString
+     */
+
+    /**
+     * Constructs a new Member.
+     * @exports Member
+     * @classdesc Represents a Member.
+     * @implements IMember
+     * @constructor
+     * @param {IMember=} [properties] Properties to set
+     */
+    function Member(properties) {
+        if (properties)
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                if (properties[keys[i]] != null)
+                    this[keys[i]] = properties[keys[i]];
+    }
+
+    /**
+     * Member name.
+     * @member {string} name
+     * @memberof Member
+     * @instance
+     */
+    Member.prototype.name = "";
+
+    /**
+     * Member type.
+     * @member {string} type
+     * @memberof Member
+     * @instance
+     */
+    Member.prototype.type = "";
+
+    /**
+     * Member value.
+     * @member {string|null|undefined} value
+     * @memberof Member
+     * @instance
+     */
+    Member.prototype.value = null;
+
+    /**
+     * Member docString.
+     * @member {string|null|undefined} docString
+     * @memberof Member
+     * @instance
+     */
+    Member.prototype.docString = null;
+
+    // OneOf field names bound to virtual getters and setters
+    let $oneOfFields;
+
+    /**
+     * Member contents.
+     * @member {"value"|"docString"|undefined} contents
+     * @memberof Member
+     * @instance
+     */
+    Object.defineProperty(Member.prototype, "contents", {
+        get: $util.oneOfGetter($oneOfFields = ["value", "docString"]),
+        set: $util.oneOfSetter($oneOfFields)
+    });
+
+    /**
+     * Creates a new Member instance using the specified properties.
+     * @function create
+     * @memberof Member
+     * @static
+     * @param {IMember=} [properties] Properties to set
+     * @returns {Member} Member instance
+     */
+    Member.create = function create(properties) {
+        return new Member(properties);
+    };
+
+    /**
+     * Encodes the specified Member message. Does not implicitly {@link Member.verify|verify} messages.
+     * @function encode
+     * @memberof Member
+     * @static
+     * @param {IMember} message Member message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    Member.encode = function encode(message, writer) {
+        if (!writer)
+            writer = $Writer.create();
+        if (message.name != null && Object.hasOwnProperty.call(message, "name"))
+            writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
+        if (message.type != null && Object.hasOwnProperty.call(message, "type"))
+            writer.uint32(/* id 2, wireType 2 =*/18).string(message.type);
+        if (message.value != null && Object.hasOwnProperty.call(message, "value"))
+            writer.uint32(/* id 3, wireType 2 =*/26).string(message.value);
+        if (message.docString != null && Object.hasOwnProperty.call(message, "docString"))
+            writer.uint32(/* id 4, wireType 2 =*/34).string(message.docString);
+        return writer;
+    };
+
+    /**
+     * Encodes the specified Member message, length delimited. Does not implicitly {@link Member.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof Member
+     * @static
+     * @param {IMember} message Member message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    Member.encodeDelimited = function encodeDelimited(message, writer) {
+        return this.encode(message, writer).ldelim();
+    };
+
+    /**
+     * Decodes a Member message from the specified reader or buffer.
+     * @function decode
+     * @memberof Member
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @param {number} [length] Message length if known beforehand
+     * @returns {Member} Member
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    Member.decode = function decode(reader, length) {
+        if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+        let end = length === undefined ? reader.len : reader.pos + length, message = new $root.Member();
+        while (reader.pos < end) {
+            let tag = reader.uint32();
+            switch (tag >>> 3) {
+            case 1: {
+                    message.name = reader.string();
+                    break;
+                }
+            case 2: {
+                    message.type = reader.string();
+                    break;
+                }
+            case 3: {
+                    message.value = reader.string();
+                    break;
+                }
+            case 4: {
+                    message.docString = reader.string();
+                    break;
+                }
+            default:
+                reader.skipType(tag & 7);
+                break;
+            }
+        }
+        return message;
+    };
+
+    /**
+     * Decodes a Member message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof Member
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @returns {Member} Member
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    Member.decodeDelimited = function decodeDelimited(reader) {
+        if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+        return this.decode(reader, reader.uint32());
+    };
+
+    /**
+     * Verifies a Member message.
+     * @function verify
+     * @memberof Member
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
+     */
+    Member.verify = function verify(message) {
+        if (typeof message !== "object" || message === null)
+            return "object expected";
+        let properties = {};
+        if (message.name != null && message.hasOwnProperty("name"))
+            if (!$util.isString(message.name))
+                return "name: string expected";
+        if (message.type != null && message.hasOwnProperty("type"))
+            if (!$util.isString(message.type))
+                return "type: string expected";
+        if (message.value != null && message.hasOwnProperty("value")) {
+            properties.contents = 1;
+            if (!$util.isString(message.value))
+                return "value: string expected";
+        }
+        if (message.docString != null && message.hasOwnProperty("docString")) {
+            if (properties.contents === 1)
+                return "contents: multiple values";
+            properties.contents = 1;
+            if (!$util.isString(message.docString))
+                return "docString: string expected";
+        }
+        return null;
+    };
+
+    /**
+     * Creates a Member message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof Member
+     * @static
+     * @param {Object.<string,*>} object Plain object
+     * @returns {Member} Member
+     */
+    Member.fromObject = function fromObject(object) {
+        if (object instanceof $root.Member)
+            return object;
+        let message = new $root.Member();
+        if (object.name != null)
+            message.name = String(object.name);
+        if (object.type != null)
+            message.type = String(object.type);
+        if (object.value != null)
+            message.value = String(object.value);
+        if (object.docString != null)
+            message.docString = String(object.docString);
+        return message;
+    };
+
+    /**
+     * Creates a plain object from a Member message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof Member
+     * @static
+     * @param {Member} message Member
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
+     * @returns {Object.<string,*>} Plain object
+     */
+    Member.toObject = function toObject(message, options) {
+        if (!options)
+            options = {};
+        let object = {};
+        if (options.defaults) {
+            object.name = "";
+            object.type = "";
+        }
+        if (message.name != null && message.hasOwnProperty("name"))
+            object.name = message.name;
+        if (message.type != null && message.hasOwnProperty("type"))
+            object.type = message.type;
+        if (message.value != null && message.hasOwnProperty("value")) {
+            object.value = message.value;
+            if (options.oneofs)
+                object.contents = "value";
+        }
+        if (message.docString != null && message.hasOwnProperty("docString")) {
+            object.docString = message.docString;
+            if (options.oneofs)
+                object.contents = "docString";
+        }
+        return object;
+    };
+
+    /**
+     * Converts this Member to JSON.
+     * @function toJSON
+     * @memberof Member
+     * @instance
+     * @returns {Object.<string,*>} JSON object
+     */
+    Member.prototype.toJSON = function toJSON() {
+        return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+    };
+
+    /**
+     * Gets the default type url for Member
+     * @function getTypeUrl
+     * @memberof Member
+     * @static
+     * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns {string} The default type url
+     */
+    Member.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+        if (typeUrlPrefix === undefined) {
+            typeUrlPrefix = "type.googleapis.com";
+        }
+        return typeUrlPrefix + "/Member";
+    };
+
+    return Member;
 })();
 
 export const DownloadButton = $root.DownloadButton = (() => {
@@ -20598,6 +20918,7 @@ export const Heading = $root.Heading = (() => {
      * @property {string|null} [anchor] Heading anchor
      * @property {string|null} [body] Heading body
      * @property {string|null} [help] Heading help
+     * @property {boolean|null} [hideAnchor] Heading hideAnchor
      */
 
     /**
@@ -20648,6 +20969,14 @@ export const Heading = $root.Heading = (() => {
     Heading.prototype.help = "";
 
     /**
+     * Heading hideAnchor.
+     * @member {boolean} hideAnchor
+     * @memberof Heading
+     * @instance
+     */
+    Heading.prototype.hideAnchor = false;
+
+    /**
      * Creates a new Heading instance using the specified properties.
      * @function create
      * @memberof Heading
@@ -20679,6 +21008,8 @@ export const Heading = $root.Heading = (() => {
             writer.uint32(/* id 3, wireType 2 =*/26).string(message.body);
         if (message.help != null && Object.hasOwnProperty.call(message, "help"))
             writer.uint32(/* id 4, wireType 2 =*/34).string(message.help);
+        if (message.hideAnchor != null && Object.hasOwnProperty.call(message, "hideAnchor"))
+            writer.uint32(/* id 5, wireType 0 =*/40).bool(message.hideAnchor);
         return writer;
     };
 
@@ -20729,6 +21060,10 @@ export const Heading = $root.Heading = (() => {
                     message.help = reader.string();
                     break;
                 }
+            case 5: {
+                    message.hideAnchor = reader.bool();
+                    break;
+                }
             default:
                 reader.skipType(tag & 7);
                 break;
@@ -20776,6 +21111,9 @@ export const Heading = $root.Heading = (() => {
         if (message.help != null && message.hasOwnProperty("help"))
             if (!$util.isString(message.help))
                 return "help: string expected";
+        if (message.hideAnchor != null && message.hasOwnProperty("hideAnchor"))
+            if (typeof message.hideAnchor !== "boolean")
+                return "hideAnchor: boolean expected";
         return null;
     };
 
@@ -20799,6 +21137,8 @@ export const Heading = $root.Heading = (() => {
             message.body = String(object.body);
         if (object.help != null)
             message.help = String(object.help);
+        if (object.hideAnchor != null)
+            message.hideAnchor = Boolean(object.hideAnchor);
         return message;
     };
 
@@ -20820,6 +21160,7 @@ export const Heading = $root.Heading = (() => {
             object.anchor = "";
             object.body = "";
             object.help = "";
+            object.hideAnchor = false;
         }
         if (message.tag != null && message.hasOwnProperty("tag"))
             object.tag = message.tag;
@@ -20829,6 +21170,8 @@ export const Heading = $root.Heading = (() => {
             object.body = message.body;
         if (message.help != null && message.hasOwnProperty("help"))
             object.help = message.help;
+        if (message.hideAnchor != null && message.hasOwnProperty("hideAnchor"))
+            object.hideAnchor = message.hideAnchor;
         return object;
     };
 
@@ -22382,6 +22725,7 @@ export const Markdown = $root.Markdown = (() => {
             case 2:
             case 3:
             case 4:
+            case 5:
                 break;
             }
         if (message.help != null && message.hasOwnProperty("help"))
@@ -22434,6 +22778,10 @@ export const Markdown = $root.Markdown = (() => {
         case "LATEX":
         case 4:
             message.elementType = 4;
+            break;
+        case "DIVIDER":
+        case 5:
+            message.elementType = 5;
             break;
         }
         if (object.help != null)
@@ -22509,6 +22857,7 @@ export const Markdown = $root.Markdown = (() => {
      * @property {number} CAPTION=2 CAPTION value
      * @property {number} CODE=3 CODE value
      * @property {number} LATEX=4 LATEX value
+     * @property {number} DIVIDER=5 DIVIDER value
      */
     Markdown.Type = (function() {
         const valuesById = {}, values = Object.create(valuesById);
@@ -22517,6 +22866,7 @@ export const Markdown = $root.Markdown = (() => {
         values[valuesById[2] = "CAPTION"] = 2;
         values[valuesById[3] = "CODE"] = 3;
         values[valuesById[4] = "LATEX"] = 4;
+        values[valuesById[5] = "DIVIDER"] = 5;
         return values;
     })();
 

@@ -21,7 +21,7 @@ import { ScriptRunState } from "src/lib/ScriptRunState"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { StyledErrorContainer, StyledForm } from "./styled-components"
 
-export interface Props {
+export interface FormProps {
   formId: string
   clearOnSubmit: boolean
   width: number
@@ -39,7 +39,7 @@ export const MISSING_SUBMIT_BUTTON_WARNING =
   "\n\nFor more information, refer to the " +
   "[documentation for forms](https://docs.streamlit.io/library/api-reference/control-flow/st.form)."
 
-export function Form(props: Props): ReactElement {
+export function Form(props: FormProps): ReactElement {
   const {
     formId,
     widgetMgr,

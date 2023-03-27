@@ -23,9 +23,7 @@ import React, {
 import { ThemeConfig } from "src/theme"
 import Button, { Kind } from "src/components/shared/Button"
 import { Modal, ModalHeader, ModalBody } from "src/components/shared/Modal"
-import AppContext, {
-  AppContextProps,
-} from "src/components/core/AppContext"
+import { AppContext, AppContextProps } from "src/components/core/AppContext"
 import UISelectbox from "src/components/shared/Dropdown"
 import { MetricsManager } from "src/lib/MetricsManager"
 
