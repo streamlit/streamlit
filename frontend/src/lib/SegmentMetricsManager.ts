@@ -20,6 +20,7 @@ import { initializeSegment } from "src/vendor/Segment"
 import { DeployedAppMetadata } from "src/hocs/withHostCommunication/types"
 import { IS_DEV_ENV } from "./baseconsts"
 import { logAlways } from "./log"
+import { UAParser } from "ua-parser-js"
 import {
   CustomComponentCounter,
   DeltaCounter,
@@ -211,7 +212,24 @@ export class SegmentMetricsManager implements MetricsManager {
 
   // eslint-disable-next-line class-methods-use-this
   private track(evName: string, data: Record<string, unknown>): void {
-    analytics.track(evName, data)
+    let parser = new UAParser("user-agent")
+    let parsed_ua = parser.getResult()
+
+    analytics.track(evName, data, {
+      context: {
+        ip: "0.0.0.0",
+        page: {
+          title: "",
+        },
+        browser: parsed_ua.browser.name,
+        browser_version: parsed_ua.browser.version,
+        os: parsed_ua.os.name,
+        device: parsed_ua.device.vendor,
+        device_model: parsed_ua.device.model,
+        device_type: parsed_ua.device.type,
+        userAgent: "",
+      },
+    })
   }
 
   // Get the installation IDs from the session
