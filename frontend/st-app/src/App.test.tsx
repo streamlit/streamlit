@@ -19,6 +19,8 @@ import { ShallowWrapper, ReactWrapper } from "enzyme"
 import { waitFor } from "@testing-library/dom"
 import cloneDeep from "lodash/cloneDeep"
 import {
+  mockSessionInfoProps,
+  mockSessionInfo,
   LocalStore,
   hashString,
   shallow,
