@@ -62,7 +62,6 @@ describe("ThemedApp", () => {
 
   it("updates theme", () => {
     const wrapper = shallow(<ThemedApp />)
-    // @ts-ignore
     wrapper.find(AppWithScreencast).props().theme.setTheme(darkTheme)
     const updatedTheme: ThemeConfig = wrapper.find(AppWithScreencast).props()
       .theme.activeTheme
@@ -75,7 +74,6 @@ describe("ThemedApp", () => {
 
   it("does not save Auto theme", () => {
     const wrapper = shallow(<ThemedApp />)
-    // @ts-ignore
     wrapper.find(AppWithScreencast).props().theme.setTheme(darkTheme)
 
     wrapper

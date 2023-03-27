@@ -28,16 +28,17 @@ import {
   ConnectionManager,
   getIFrameEnclosingApp,
   hashString,
-  isEmbed,
-  isPaddingDisplayed,
-  isToolbarDisplayed,
   isColoredLineDisplayed,
-  isScrollingHidden,
-  isFooterDisplayed,
-  isLightTheme,
   isLocalhost,
   isDarkTheme,
+  isEmbed,
+  isTesting,
+  isFooterDisplayed,
   isInChildFrame,
+  isLightTheme,
+  isPaddingDisplayed,
+  isScrollingHidden,
+  isToolbarDisplayed,
   notUndefined,
   getElementWidgetID,
   generateUID,
@@ -83,28 +84,28 @@ import {
 } from "st-lib"
 
 import {
+  AppPage,
   BackMsg,
+  Config,
   CustomThemeConfig,
   Delta,
   ForwardMsg,
   ForwardMsgMetadata,
+  GitInfo,
+  IAppPage,
+  IGitInfo,
   Initialize,
   NewSession,
   PageConfig,
   PageInfo,
   PageNotFound,
-  PagesChanged,
   PageProfile,
+  PagesChanged,
   SessionEvent,
-  WidgetStates,
   SessionStatus,
-  Config,
-  IGitInfo,
-  GitInfo,
-  IAppPage,
-  AppPage,
+  WidgetStates,
 } from "src/autogen/proto"
-import { without, concat, noop } from "lodash"
+import { concat, noop, without } from "lodash"
 
 import { StyledApp } from "./styled-components"
 
@@ -159,7 +160,13 @@ declare global {
 }
 
 export class App extends PureComponent<Props, State> {
-  private readonly sessionEventDispatcher: SessionEventDispatcher
+  private readonly endpoints: StreamlitEndpoints
+
+  private readonly sessionInfo = new SessionInfo()
+
+  private readonly metricsMgr = new SegmentMetricsManager(this.sessionInfo)
+
+  private readonly sessionEventDispatcher = new SessionEventDispatcher()
 
   private connectionManager: ConnectionManager | null
 
@@ -184,7 +191,7 @@ export class App extends PureComponent<Props, State> {
 
   private readonly embeddingId: string = generateUID()
 
-  constructor(props: Props) {
+  public constructor(props: Props) {
     super(props)
 
     // Initialize immerjs
@@ -192,7 +199,7 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty("Please wait..."),
+      elements: AppRoot.empty(this.metricsMgr, "Please wait..."),
       isFullScreen: false,
       scriptName: "",
       scriptRunId: "<null>",
@@ -226,7 +233,6 @@ export class App extends PureComponent<Props, State> {
       latestRunTime: performance.now(),
     }
 
-    this.sessionEventDispatcher = new SessionEventDispatcher()
     this.connectionManager = null
 
     this.widgetMgr = new WidgetStateManager({
@@ -234,23 +240,29 @@ export class App extends PureComponent<Props, State> {
       formsDataChanged: formsData => this.setState({ formsData }),
     })
 
-    this.uploadClient = new FileUploadClient({
+    this.endpoints = new DefaultStreamlitEndpoints({
       getServerUri: this.getBaseUriParts,
+      csrfEnabled: true,
+    })
+
+    this.uploadClient = new FileUploadClient({
+      sessionInfo: this.sessionInfo,
+      endpoints: this.endpoints,
       // A form cannot be submitted if it contains a FileUploader widget
       // that's currently uploading. We write that state here, in response
       // to a FileUploadClient callback. The FormSubmitButton element
       // reads the state.
       formsWithPendingRequestsChanged: formIds =>
         this.widgetMgr.setFormsWithUploads(formIds),
-      csrfEnabled: true,
     })
 
-    this.componentRegistry = new ComponentRegistry(this.getBaseUriParts)
+    this.componentRegistry = new ComponentRegistry(this.endpoints)
 
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
 
     window.streamlitDebug = {
+      clearForwardMsgCache: this.debugClearForwardMsgCache,
       disconnectWebsocket: this.debugDisconnectWebsocket,
       shutdownRuntime: this.debugShutdownRuntime,
     }
@@ -283,6 +295,8 @@ export class App extends PureComponent<Props, State> {
     // Initialize connection manager here, to avoid
     // "Can't call setState on a component that is not yet mounted." error.
     this.connectionManager = new ConnectionManager({
+      sessionInfo: this.sessionInfo,
+      endpoints: this.endpoints,
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
@@ -315,7 +329,7 @@ export class App extends PureComponent<Props, State> {
         },
       }
 
-      // @ts-ignore
+      // @ts-expect-error
       import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
@@ -324,7 +338,9 @@ export class App extends PureComponent<Props, State> {
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
     })
 
-    MetricsManager.current.enqueue("viewReport")
+    this.metricsMgr.enqueue("viewReport")
+
+    window.addEventListener("popstate", this.onHistoryChange, false)
   }
 
   componentDidUpdate(
@@ -347,9 +363,9 @@ export class App extends PureComponent<Props, State> {
       this.onPageChange(requestedPageScriptHash)
       this.props.hostCommunication.onPageChanged()
     }
-    // @ts-ignore
+    // @ts-expect-error
     if (window.prerenderReady === false && this.isAppInReadyState(prevState)) {
-      // @ts-ignore
+      // @ts-expect-error
       window.prerenderReady = true
     }
   }
@@ -369,6 +385,8 @@ export class App extends PureComponent<Props, State> {
     // happy since connectionManager's type is `ConnectionManager | null`,
     // but at this point it should always be set.
     this.connectionManager?.disconnect()
+
+    window.removeEventListener("popstate", this.onHistoryChange, false)
   }
 
   showError(title: string, errorNode: ReactNode): void {
@@ -400,16 +418,16 @@ export class App extends PureComponent<Props, State> {
   /**
    * Checks if the code version from the backend is different than the frontend
    */
-  static hasStreamlitVersionChanged(initializeMsg: Initialize): boolean {
-    if (SessionInfo.isSet()) {
-      const { streamlitVersion: currentStreamlitVersion } = SessionInfo.current
+  private hasStreamlitVersionChanged(initializeMsg: Initialize): boolean {
+    if (this.sessionInfo.isSet) {
+      const currentStreamlitVersion = this.sessionInfo.current.streamlitVersion
       const { environmentInfo } = initializeMsg
 
       if (
         environmentInfo != null &&
         environmentInfo.streamlitVersion != null
       ) {
-        return currentStreamlitVersion < environmentInfo.streamlitVersion
+        return currentStreamlitVersion != environmentInfo.streamlitVersion
       }
     }
 
@@ -433,8 +451,8 @@ export class App extends PureComponent<Props, State> {
     } else {
       setCookie("_xsrf", "")
 
-      if (SessionInfo.isSet()) {
-        SessionInfo.clearSession()
+      if (this.sessionInfo.isSet) {
+        this.sessionInfo.clearCurrent()
       }
     }
   }
@@ -498,7 +516,7 @@ export class App extends PureComponent<Props, State> {
     const { title, favicon, layout, initialSidebarState, menuItems } =
       pageConfig
 
-    MetricsManager.current.enqueue("pageConfigChanged", {
+    this.metricsMgr.enqueue("pageConfigChanged", {
       favicon,
       layout,
       initialSidebarState,
@@ -514,7 +532,11 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (favicon) {
-      handleFavicon(favicon, this.getBaseUriParts())
+      handleFavicon(
+        favicon,
+        this.props.hostCommunication.sendMessage,
+        this.getBaseUriParts()
+      )
     }
 
     // Only change layout/sidebar when the page config has changed.
@@ -577,12 +599,12 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
-    MetricsManager.current.enqueue("pageProfile", {
+    this.metricsMgr.enqueue("pageProfile", {
       ...PageProfile.toObject(pageProfile),
-      appId: SessionInfo.current.appId,
+      appId: this.sessionInfo.current.appId,
       numPages: this.state.appPages?.length,
-      sessionId: SessionInfo.current.sessionId,
-      pythonVersion: SessionInfo.current.pythonVersion,
+      sessionId: this.sessionInfo.current.sessionId,
+      pythonVersion: this.sessionInfo.current.pythonVersion,
       pageScriptHash: this.state.currentPageScriptHash,
       activeTheme: this.props.theme?.activeTheme?.name,
       totalLoadTime: Math.round(
@@ -627,23 +649,23 @@ export class App extends PureComponent<Props, State> {
         // a script compilation failure
         scriptRunState = ScriptRunState.NOT_RUNNING
 
-        MetricsManager.current.enqueue(
+        this.metricsMgr.enqueue(
           "deltaStats",
-          MetricsManager.current.getAndResetDeltaCounter()
+          this.metricsMgr.getAndResetDeltaCounter()
         )
 
         const { availableThemes, activeTheme } = this.props.theme
         const customThemeDefined =
           availableThemes.length > createPresetThemes().length
-        MetricsManager.current.enqueue("themeStats", {
+        this.metricsMgr.enqueue("themeStats", {
           activeThemeName: activeTheme.name,
           customThemeDefined,
         })
 
         const customComponentCounter =
-          MetricsManager.current.getAndResetCustomComponentCounter()
+          this.metricsMgr.getAndResetCustomComponentCounter()
         Object.entries(customComponentCounter).forEach(([name, count]) => {
-          MetricsManager.current.enqueue("customComponentStats", {
+          this.metricsMgr.enqueue("customComponentStats", {
             name,
             count,
           })
@@ -696,7 +718,7 @@ export class App extends PureComponent<Props, State> {
   handleNewSession = (newSessionProto: NewSession): void => {
     const initialize = newSessionProto.initialize as Initialize
 
-    if (App.hasStreamlitVersionChanged(initialize)) {
+    if (this.hasStreamlitVersionChanged(initialize)) {
       window.location.reload()
       return
     }
@@ -704,14 +726,14 @@ export class App extends PureComponent<Props, State> {
     // First, handle initialization logic. Each NewSession message has
     // initialization data. If this is the _first_ time we're receiving
     // the NewSession message, we perform some one-time initialization.
-    if (!SessionInfo.isSet()) {
+    if (!this.sessionInfo.isSet) {
       // We're not initialized. Perform one-time initialization.
       this.handleOneTimeInitialization(newSessionProto)
     }
 
     const config = newSessionProto.config as Config
     const themeInput = newSessionProto.customTheme as CustomThemeConfig
-    const { currentPageScriptHash } = this.state
+    const { currentPageScriptHash: prevPageScriptHash } = this.state
     const newPageScriptHash = newSessionProto.pageScriptHash
 
     // mainPage must be a string as we're guaranteed at this point that
@@ -729,15 +751,28 @@ export class App extends PureComponent<Props, State> {
     const baseUriParts = this.getBaseUriParts()
     if (baseUriParts) {
       const { basePath } = baseUriParts
-      const queryString = this.getQueryString()
 
-      const qs = queryString ? `?${queryString}` : ""
-      const basePathPrefix = basePath ? `/${basePath}` : ""
+      const prevPageNameInPath = extractPageNameFromPathName(
+        document.location.pathname,
+        basePath
+      )
+      const prevPageName =
+        prevPageNameInPath === "" ? mainPage.pageName : prevPageNameInPath
+      // It is important to compare `newPageName` with the previous one encoded in the URL
+      // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
+      // e.g. the case where the user clicks the back button.
+      // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
+      if (prevPageName !== newPageName) {
+        const queryString = this.getQueryString()
 
-      const pagePath = viewingMainPage ? "" : newPageName
-      const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+        const qs = queryString ? `?${queryString}` : ""
+        const basePathPrefix = basePath ? `/${basePath}` : ""
 
-      window.history.pushState({}, "", pageUrl)
+        const pagePath = viewingMainPage ? "" : newPageName
+        const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+
+        window.history.pushState({}, "", pageUrl)
+      }
     }
 
     this.processThemeInput(themeInput)
@@ -768,30 +803,31 @@ export class App extends PureComponent<Props, State> {
     const { scriptRunId, name: scriptName, mainScriptPath } = newSessionProto
 
     const newSessionHash = hashString(
-      SessionInfo.current.installationId + mainScriptPath
+      this.sessionInfo.current.installationId + mainScriptPath
     )
 
     // Set the title and favicon to their default values
     document.title = `${newPageName} · Streamlit`
     handleFavicon(
       `${process.env.PUBLIC_URL}/favicon.png`,
+      this.props.hostCommunication.sendMessage,
       this.getBaseUriParts()
     )
 
-    MetricsManager.current.setMetadata(
+    this.metricsMgr.setMetadata(
       this.props.hostCommunication.currentState.deployedAppMetadata
     )
-    MetricsManager.current.setAppHash(newSessionHash)
-    MetricsManager.current.clearDeltaCounter()
+    this.metricsMgr.setAppHash(newSessionHash)
+    this.metricsMgr.clearDeltaCounter()
 
-    MetricsManager.current.enqueue("updateReport", {
+    this.metricsMgr.enqueue("updateReport", {
       numPages: newSessionProto.appPages.length,
       isMainPage: viewingMainPage,
     })
 
     if (
       appHash === newSessionHash &&
-      currentPageScriptHash === newPageScriptHash
+      prevPageScriptHash === newPageScriptHash
     ) {
       this.setState({
         scriptRunId,
@@ -808,17 +844,35 @@ export class App extends PureComponent<Props, State> {
     const initialize = newSessionProto.initialize as Initialize
     const config = newSessionProto.config as Config
 
-    SessionInfo.current = SessionInfo.fromNewSessionMessage(newSessionProto)
+    this.sessionInfo.setCurrent(
+      SessionInfo.propsFromNewSessionMessage(newSessionProto)
+    )
 
-    MetricsManager.current.initialize({
+    this.metricsMgr.initialize({
       gatherUsageStats: config.gatherUsageStats,
     })
 
-    MetricsManager.current.enqueue("createReport", {
-      pythonVersion: SessionInfo.current.pythonVersion,
+    this.metricsMgr.enqueue("createReport", {
+      pythonVersion: this.sessionInfo.current.pythonVersion,
     })
 
     this.handleSessionStatusChanged(initialize.sessionStatus)
+  }
+
+  /**
+   * Handler called when the history state changes, e.g. `popstate` event.
+   */
+  onHistoryChange = (): void => {
+    const targetAppPage =
+      this.state.appPages.find(appPage =>
+        // The page name is embedded at the end of the URL path, and if not, we are in the main page.
+        // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
+        document.location.pathname.endsWith("/" + appPage.pageName)
+      ) ?? this.state.appPages[0]
+    if (targetAppPage == null) {
+      return
+    }
+    this.onPageChange(targetAppPage.pageScriptHash as string)
   }
 
   /**
@@ -936,7 +990,7 @@ export class App extends PureComponent<Props, State> {
       // the cache.
       if (this.connectionManager !== null) {
         this.connectionManager.incrementMessageCacheRunCount(
-          SessionInfo.current.maxCachedMessageAge
+          this.sessionInfo.current.maxCachedMessageAge
         )
       }
     }
@@ -955,7 +1009,7 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(),
+        elements: AppRoot.empty(this.metricsMgr),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
@@ -1028,7 +1082,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Used by e2e tests to test disabling widgets.
+   * Test-only method used by e2e tests to test disabling widgets.
    */
   debugShutdownRuntime = (): void => {
     if (this.isServerConnected()) {
@@ -1039,7 +1093,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Used by e2e tests to test reconnect behavior.
+   * Test-only method used by e2e tests to test reconnect behavior.
    */
   debugDisconnectWebsocket = (): void => {
     if (this.isServerConnected()) {
@@ -1047,6 +1101,21 @@ export class App extends PureComponent<Props, State> {
       backMsg.type = "debugDisconnectWebsocket"
       this.sendBackMsg(backMsg)
     }
+  }
+
+  /**
+   * Test-only method used by e2e tests to test fetching cached ForwardMsgs
+   * from the server.
+   */
+  debugClearForwardMsgCache = (): void => {
+    if (!isLocalhost()) {
+      return
+    }
+
+    // It's not a problem that we're mucking around with private fields since
+    // this is a test-only method anyway.
+    // @ts-expect-error
+    this.connectionManager?.connection?.cache.messages.clear()
   }
 
   /**
@@ -1072,7 +1141,7 @@ export class App extends PureComponent<Props, State> {
       return
     }
 
-    MetricsManager.current.enqueue("rerunScript")
+    this.metricsMgr.enqueue("rerunScript")
 
     this.setState({ scriptRunState: ScriptRunState.RERUN_REQUESTED })
 
@@ -1145,26 +1214,11 @@ export class App extends PureComponent<Props, State> {
       // We must be in the case where the user is navigating directly to a
       // non-main page of this app. Since we haven't received the list of the
       // app's pages from the server at this point, we fall back to requesting
-      // requesting the page to run via pageName, which we extract from
-      // document.location.pathname
-
-      // Note also that we'd prefer to write something like
-      //
-      // ```
-      // replace(
-      //   new RegExp(`^/${basePath}/?`),
-      //   ""
-      // )
-      // ```
-      //
-      // below, but that doesn't work because basePath may contain unescaped
-      // regex special-characters. This is why we're stuck with the
-      // weird-looking triple `replace()`.
-      pageName = decodeURIComponent(
-        document.location.pathname
-          .replace(`/${basePath}`, "")
-          .replace(new RegExp("^/?"), "")
-          .replace(new RegExp("/$"), "")
+      // the page to run via pageName, which we extract from
+      // document.location.pathname.
+      pageName = extractPageNameFromPathName(
+        document.location.pathname,
+        basePath
       )
       pageScriptHash = ""
     }
@@ -1220,6 +1274,22 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  /**
+   * Shows a dialog with Deployment instructions
+   */
+  openDeployDialog = (): void => {
+    const deployDialogProps: DialogProps = {
+      type: DialogType.DEPLOY_DIALOG,
+      onClose: this.closeDialog,
+      showDeployError: this.showDeployError,
+      gitInfo: this.state.gitInfo,
+      isDeployErrorModalOpen:
+        this.state.dialog?.type === DialogType.DEPLOY_ERROR,
+      metricsMgr: this.metricsMgr,
+    }
+    this.openDialog(deployDialogProps)
+  }
+
   openThemeCreatorDialog = (): void => {
     const newDialog: DialogProps = {
       type: DialogType.THEME_CREATOR,
@@ -1235,7 +1305,7 @@ export class App extends PureComponent<Props, State> {
   clearCache = (): void => {
     this.closeDialog()
     if (this.isServerConnected()) {
-      MetricsManager.current.enqueue("clearCache")
+      this.metricsMgr.enqueue("clearCache")
       const backMsg = new BackMsg({ clearCache: true })
       backMsg.type = "clearCache"
       this.sendBackMsg(backMsg)
@@ -1283,6 +1353,7 @@ export class App extends PureComponent<Props, State> {
       developerMode: this.state.developerMode,
       openThemeCreator: this.openThemeCreatorDialog,
       animateModal,
+      metricsMgr: this.metricsMgr,
     }
     this.openDialog(newDialog)
   }
@@ -1291,6 +1362,7 @@ export class App extends PureComponent<Props, State> {
     const { menuItems } = this.state
     const newDialog: DialogProps = {
       type: DialogType.ABOUT,
+      sessionInfo: this.sessionInfo,
       onClose: this.closeDialog,
       aboutSectionMd: menuItems?.aboutSectionMd,
     }
@@ -1372,6 +1444,33 @@ export class App extends PureComponent<Props, State> {
     return queryString.startsWith("?") ? queryString.substring(1) : queryString
   }
 
+  isInCloudEnvironment = (): boolean => {
+    const { menuItems } = this.props.hostCommunication.currentState
+    return menuItems && menuItems?.length > 0
+  }
+
+  showDeployButton = (): boolean => {
+    return isTesting()
+    //  for now we always hide deploy button,
+    // later on we should allow below logic
+    /*
+    return (
+      isLocalhost() &&
+      !this.isInCloudEnvironment() &&
+      this.sessionInfo.isSet &&
+      !this.sessionInfo.isHello
+    )
+     */
+  }
+
+  deployButtonClicked = (): void => {
+    if (!isTesting()) {
+      this.metricsMgr.enqueue("deployButtonInApp", { clicked: true })
+    }
+    this.sendLoadGitInfoBackMsg()
+    this.openDeployDialog()
+  }
+
   render(): JSX.Element {
     const {
       allowRunOnSave,
@@ -1381,7 +1480,6 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState,
       menuItems,
       isFullScreen,
-      layout,
       scriptRunId,
       scriptRunState,
       userSettings,
@@ -1418,7 +1516,6 @@ export class App extends PureComponent<Props, State> {
       <AppContext.Provider
         value={{
           initialSidebarState,
-          layout,
           wideMode: userSettings.wideMode,
           isFullScreen,
           setFullScreen: this.handleFullScreen,
@@ -1468,6 +1565,9 @@ export class App extends PureComponent<Props, State> {
                   />
                 </>
               )}
+              {this.showDeployButton() && (
+                <DeployButton onClick={this.deployButtonClicked.bind(this)} />
+              )}
               <MainMenu
                 isServerConnected={this.isServerConnected()}
                 quickRerunCallback={this.rerunScript}
@@ -1489,12 +1589,16 @@ export class App extends PureComponent<Props, State> {
                   this.state.dialog?.type === DialogType.DEPLOY_ERROR
                 }
                 loadGitInfo={this.sendLoadGitInfoBackMsg}
-                canDeploy={SessionInfo.isSet() && !SessionInfo.isHello}
+                canDeploy={this.sessionInfo.isSet && !this.sessionInfo.isHello}
                 menuItems={menuItems}
+                metricsMgr={this.metricsMgr}
               />
             </Header>
 
             <AppView
+              endpoints={this.endpoints}
+              sessionInfo={this.sessionInfo}
+              sendMessageToHost={this.props.hostCommunication.sendMessage}
               elements={elements}
               scriptRunId={scriptRunId}
               scriptRunState={scriptRunState}

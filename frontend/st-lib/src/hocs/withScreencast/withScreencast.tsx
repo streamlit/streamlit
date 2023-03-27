@@ -34,8 +34,6 @@ export type Steps =
   | "RECORDING"
   | "PREVIEW_FILE"
 
-interface WithScreenCastProps {}
-
 interface WithScreenCastState {
   fileName: string
   recordAudio: boolean
@@ -50,18 +48,24 @@ export interface ScreenCastHOC {
   stopRecording: () => void
 }
 
-export function withScreencast(
-  WrappedComponent: ComponentType<any>
-): ComponentType<any> {
+interface InjectedProps {
+  screenCast: ScreenCastHOC
+}
+
+type WrappedProps<P extends InjectedProps> = Omit<P, "screenCast">
+
+function withScreencast<P extends InjectedProps>(
+  WrappedComponent: ComponentType<P>
+): ComponentType<WrappedProps<P>> {
   class ComponentWithScreencast extends PureComponent<
-    WithScreenCastProps,
+    WrappedProps<P>,
     WithScreenCastState
   > {
-    static readonly displayName = `withScreencast(${
+    public static readonly displayName = `withScreencast(${
       WrappedComponent.displayName || WrappedComponent.name
     })`
 
-    recorder?: ScreenCastRecorder | null
+    private recorder?: ScreenCastRecorder | null
 
     state = {
       fileName: "streamlit-screencast",
@@ -71,10 +75,7 @@ export function withScreencast(
 
     private toggleRecordAudio = (): void => {
       const { recordAudio } = this.state
-
-      this.setState({
-        recordAudio: !recordAudio,
-      })
+      this.setState({ recordAudio: !recordAudio })
     }
 
     private showDialog = (fileName: string): void => {
@@ -175,7 +176,7 @@ export function withScreencast(
       })
     }
 
-    public render(): ReactNode {
+    public render = (): ReactNode => {
       const {
         outputBlob,
         fileName,
@@ -186,8 +187,8 @@ export function withScreencast(
       return (
         <div className="withScreencast">
           <WrappedComponent
+            {...(this.props as P)}
             screenCast={this.getScreenCastProps()}
-            {...this.props}
           />
 
           {currentState === "UNSUPPORTED" && (

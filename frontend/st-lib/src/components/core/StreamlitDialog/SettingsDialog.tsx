@@ -49,6 +49,7 @@ export interface SettingsDialogProps {
   developerMode: boolean
   openThemeCreator: () => void
   animateModal: boolean
+  metricsMgr: MetricsManager
 }
 
 /**
@@ -179,7 +180,7 @@ export class SettingsDialog extends PureComponent<
       this.context
     const newTheme = availableThemes[index]
 
-    MetricsManager.current.enqueue("themeChanged", {
+    this.props.metricsMgr.enqueue("themeChanged", {
       oldThemeName: oldTheme.name,
       newThemeName: newTheme.name,
     })

@@ -70,7 +70,7 @@ interface Props {
 }
 
 export interface PropsWithHeight extends Props {
-  height: number | undefined
+  height?: number
 }
 
 interface State {
@@ -111,14 +111,14 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     if (!isEqual(deck.initialViewState, state.initialViewState)) {
       const diff = Object.keys(deck.initialViewState).reduce(
         (diff, key): any => {
-          // @ts-ignore
+          // @ts-expect-error
           if (deck.initialViewState[key] === state.initialViewState[key]) {
             return diff
           }
 
           return {
             ...diff,
-            // @ts-ignore
+            // @ts-expect-error
             [key]: deck.initialViewState[key],
           }
         },

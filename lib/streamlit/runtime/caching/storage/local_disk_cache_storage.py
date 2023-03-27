@@ -30,8 +30,30 @@ responsibility to check if the context is valid for the storage, and to log warn
 if the context is not valid.
 
 - LocalDiskCacheStorage : each instance of this is able to get, set, delete, and clear
-entries from disk for a single @st.cache_data decorated function if `persist="disk"`
+entries from disk for a single `@st.cache_data` decorated function if `persist="disk"`
 is used in CacheStorageContext.
+
+
+    ┌───────────────────────────────┐
+    │  LocalDiskCacheStorageManager │
+    │                               │
+    │     - clear_all               │
+    │     - check_context           │
+    │                               │
+    └──┬────────────────────────────┘
+       │
+       │                ┌──────────────────────────────┐
+       │                │                              │
+       │ create(context)│  InMemoryCacheStorageWrapper │
+       └────────────────►                              │
+                        │    ┌─────────────────────┐   │
+                        │    │                     │   │
+                        │    │   LocalDiskStorage  │   │
+                        │    │                     │   │
+                        │    └─────────────────────┘   │
+                        │                              │
+                        └──────────────────────────────┘
+
 """
 
 from __future__ import annotations
@@ -94,7 +116,7 @@ class LocalDiskCacheStorageManager(CacheStorageManager):
 
 class LocalDiskCacheStorage(CacheStorage):
     """Cache storage that persists data to disk
-    This is the default cache persistence layer for @st.cache_data
+    This is the default cache persistence layer for `@st.cache_data`
     """
 
     def __init__(self, context: CacheStorageContext):
@@ -171,9 +193,13 @@ class LocalDiskCacheStorage(CacheStorage):
         """Delete all keys for the current storage"""
         cache_dir = get_cache_folder_path()
 
-        for file_name in os.listdir(cache_dir):
-            if self._is_cache_file(file_name):
-                os.remove(os.path.join(cache_dir, file_name))
+        if os.path.isdir(cache_dir):
+            # We try to remove all files in the cache directory that start with
+            # the function key, whether `clear` called for `self.persist`
+            # storage or not, to avoid leaving orphaned files in the cache directory.
+            for file_name in os.listdir(cache_dir):
+                if self._is_cache_file(file_name):
+                    os.remove(os.path.join(cache_dir, file_name))
 
     def close(self) -> None:
         """Dummy implementation of close, we don't need to actually "close" anything"""

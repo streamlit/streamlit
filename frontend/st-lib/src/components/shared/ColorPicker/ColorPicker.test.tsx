@@ -74,7 +74,7 @@ describe("ColorPicker widget", () => {
     const wrappedDiv = wrapper.find("StyledColorPicker")
     const { style } = wrappedDiv.props()
 
-    // @ts-ignore
+    // @ts-expect-error
     expect(style.width).toBe(getProps().width)
   })
 
@@ -96,7 +96,7 @@ describe("ColorPicker widget", () => {
   it("supports hex shorthand", () => {
     wrapper.find(UIPopover).simulate("click")
 
-    // @ts-ignore do not need change event added
+    // @ts-expect-error do not need change event added
     colorPickerWrapper.prop("onChange")({
       hex: "#333",
     })
@@ -114,7 +114,7 @@ describe("ColorPicker widget", () => {
     const newColor = "#E91E63"
     wrapper.find(UIPopover).simulate("click")
 
-    // @ts-ignore do not need change event added
+    // @ts-expect-error do not need change event added
     colorPickerWrapper.prop("onChange")({
       hex: newColor,
     })

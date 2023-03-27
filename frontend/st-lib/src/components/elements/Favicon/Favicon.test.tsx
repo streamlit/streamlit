@@ -37,39 +37,51 @@ test("is set up with the default favicon", () => {
 })
 
 describe("Favicon element", () => {
-  it("should set the favicon in the DOM", () => {
-    handleFavicon("https://streamlit.io/path/to/favicon.png")
+  it("sets the favicon in the DOM", () => {
+    handleFavicon("https://streamlit.io/path/to/favicon.png", jest.fn())
     expect(getFaviconHref()).toBe("https://streamlit.io/path/to/favicon.png")
   })
 
-  it("should accept /media urls from backend", () => {
-    handleFavicon("/media/1234567890.png")
+  it("accepts /media urls from backend", () => {
+    handleFavicon("/media/1234567890.png", jest.fn())
     expect(getFaviconHref()).toBe("http://localhost/media/1234567890.png")
   })
 
-  it("should accept emojis directly", () => {
-    handleFavicon("🍕")
+  it("accepts emojis directly", () => {
+    handleFavicon("🍕", jest.fn())
     expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
   })
 
-  it("should handle emoji variants correctly", () => {
-    handleFavicon("🛰")
+  it("handles emoji variants correctly", () => {
+    handleFavicon("🛰", jest.fn())
     expect(getFaviconHref()).toBe(SATELLITE_TWEMOJI_URL)
   })
 
-  it("should handle emoji shortcodes containing a dash correctly", () => {
-    handleFavicon(":crescent-moon:")
+  it("handles emoji shortcodes containing a dash correctly", () => {
+    handleFavicon(":crescent-moon:", jest.fn())
     expect(getFaviconHref()).toBe(CRESCENT_MOON_TWEMOJI_URL)
   })
 
-  it("should accept emoji shortcodes", () => {
-    handleFavicon(":pizza:")
+  it("accepts emoji shortcodes", () => {
+    handleFavicon(":pizza:", jest.fn())
     expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
   })
 
-  it("should update the favicon when it changes", () => {
-    handleFavicon("/media/1234567890.png")
-    handleFavicon(":pizza:")
+  it("updates the favicon when it changes", () => {
+    handleFavicon("/media/1234567890.png", jest.fn())
+    handleFavicon(":pizza:", jest.fn())
     expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
+  })
+
+  it("sends SET_PAGE_FAVICON message to host", () => {
+    const sendMessageToHost = jest.fn()
+    handleFavicon(
+      "https://streamlit.io/path/to/favicon.png",
+      sendMessageToHost
+    )
+    expect(sendMessageToHost).toHaveBeenCalledWith({
+      favicon: "https://streamlit.io/path/to/favicon.png",
+      type: "SET_PAGE_FAVICON",
+    })
   })
 })

@@ -39,7 +39,6 @@ expect.extend(matchers)
 
 jest.mock("src/lib/Hooks", () => ({
   __esModule: true,
-  // @ts-ignore
   ...jest.requireActual("src/lib/Hooks"),
   useIsOverflowing: jest.fn(),
 }))
@@ -68,7 +67,7 @@ describe("SidebarNav", () => {
   afterEach(() => {
     mockUseIsOverflowing.mockReset()
 
-    // @ts-ignore
+    // @ts-expect-error
     reactDeviceDetect.isMobile = false
   })
 
@@ -103,7 +102,7 @@ describe("SidebarNav", () => {
     beforeEach(() => {
       // Replace window.location with a mutable object that otherwise has
       // the same contents so that we can change port below.
-      // @ts-ignore
+      // @ts-expect-error
       delete window.location
       window.location = { ...originalLocation }
     })
@@ -354,7 +353,7 @@ describe("SidebarNav", () => {
   })
 
   it("collapses sidebar on page change when on mobile", () => {
-    // @ts-ignore
+    // @ts-expect-error
     reactDeviceDetect.isMobile = true
 
     const props = getProps()

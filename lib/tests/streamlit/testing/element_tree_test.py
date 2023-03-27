@@ -16,6 +16,7 @@ from datetime import datetime, time
 
 import pytest
 
+from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.script_interactions import InteractiveScriptTests
 
 
@@ -142,7 +143,7 @@ class MarkdownTest(InteractiveScriptTests):
 
         assert sr.get("code")
         assert sr.get("code")[0].type == "code"
-        assert sr.get("code")[0].value == "```python\nimport streamlit as st\n```"
+        assert sr.get("code")[0].value == "import streamlit as st"
 
     def test_latex(self):
         script = self.script_from_string(
@@ -158,6 +159,21 @@ class MarkdownTest(InteractiveScriptTests):
         assert sr.get("latex")
         assert sr.get("latex")[0].type == "latex"
         assert sr.get("latex")[0].value == "$$\nE=mc^2\n$$"
+
+    def test_divider(self):
+        script = self.script_from_string(
+            "divider_element.py",
+            """
+            import streamlit as st
+
+            st.divider()
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("divider")
+        assert sr.get("divider")[0].type == "divider"
+        assert sr.get("divider")[0].value == MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 
     def test_markdown_elements_by_type(self):
         script = self.script_from_string(
@@ -193,14 +209,16 @@ class HeadingTest(InteractiveScriptTests):
 
             st.title("This is a title")
             st.title("This is a title with anchor", anchor="anchor text")
+            st.title("This is a title with hidden anchor", anchor=False)
             """,
         )
         sr = script.run()
 
-        assert len(sr.get("title")) == 2
+        assert len(sr.get("title")) == 3
         assert sr.get("title")[1].tag == "h1"
         assert sr.get("title")[1].anchor == "anchor text"
         assert sr.get("title")[1].value == "This is a title with anchor"
+        assert sr.get("title")[2].hide_anchor
 
     def test_header(self):
         script = self.script_from_string(
@@ -210,14 +228,16 @@ class HeadingTest(InteractiveScriptTests):
 
             st.header("This is a header")
             st.header("This is a header with anchor", anchor="header anchor text")
+            st.header("This is a header with hidden anchor", anchor=False)
             """,
         )
         sr = script.run()
 
-        assert len(sr.get("header")) == 2
+        assert len(sr.get("header")) == 3
         assert sr.get("header")[1].tag == "h2"
         assert sr.get("header")[1].anchor == "header anchor text"
         assert sr.get("header")[1].value == "This is a header with anchor"
+        assert sr.get("header")[2].hide_anchor
 
     def test_subheader(self):
         script = self.script_from_string(
@@ -230,14 +250,16 @@ class HeadingTest(InteractiveScriptTests):
                 "This is a subheader with anchor",
                 anchor="subheader anchor text"
             )
+            st.subheader("This is a subheader with hidden anchor", anchor=False)
             """,
         )
         sr = script.run()
 
-        assert len(sr.get("subheader")) == 2
+        assert len(sr.get("subheader")) == 3
         assert sr.get("subheader")[1].tag == "h3"
         assert sr.get("subheader")[1].anchor == "subheader anchor text"
         assert sr.get("subheader")[1].value == "This is a subheader with anchor"
+        assert sr.get("subheader")[2].hide_anchor
 
     def test_heading_elements_by_type(self):
         script = self.script_from_string(
@@ -361,3 +383,31 @@ class SelectboxTest(InteractiveScriptTests):
 
         with pytest.raises(IndexError):
             sr6.get("selectbox")[0].select_index(42).run()
+
+
+class ExceptionTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "exception.py",
+            """
+            import streamlit as st
+
+            st.exception(RuntimeError("foo"))
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("exception")[0].value == "foo"
+
+    def test_markdown(self):
+        script = self.script_from_string(
+            "exception2.py",
+            """
+            import streamlit as st
+
+            st.exception(st.errors.MarkdownFormattedException("# Oh no"))
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("exception")[0].is_markdown

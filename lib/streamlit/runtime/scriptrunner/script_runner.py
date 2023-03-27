@@ -492,7 +492,7 @@ class ScriptRunner:
             if config.get_option("runner.magicEnabled"):
                 filebody = magic.add_magic(filebody, script_path)
 
-            code = compile(
+            code = compile(  # type: ignore
                 filebody,
                 # Pass in the file path so it can show up in exceptions.
                 script_path,
@@ -563,6 +563,7 @@ class ScriptRunner:
                 ctx.on_script_start()
                 prep_time = timer() - start_time
                 exec(code, module.__dict__)
+                self._session_state.maybe_check_serializable()
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
             rerun_exception_data = e.rerun_data

@@ -97,11 +97,15 @@ class WebsocketSessionManagerTests(unittest.TestCase):
                 self.connect_session()
 
     @patch(
-        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
         new=MagicMock(),
     )
     @patch(
-        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
         new=MagicMock(),
     )
     def test_disconnect_and_reconnect_session(self):
@@ -117,6 +121,7 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         assert session_id not in self.session_mgr._active_session_info_by_id
         assert session_id in self.session_mgr._session_storage._cache
         original_session_info.session.disconnect_file_watchers.assert_called_once()
+        original_session_info.session.request_script_stop.assert_called_once()
 
         # Call disconnect_session again to verify that disconnect_session is idempotent.
         self.session_mgr.disconnect_session(session_id)
@@ -124,6 +129,7 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         assert session_id not in self.session_mgr._active_session_info_by_id
         assert session_id in self.session_mgr._session_storage._cache
         original_session_info.session.disconnect_file_watchers.assert_called_once()
+        original_session_info.session.request_script_stop.assert_called_once()
 
         # Reconnect to the existing session.
         reconnected_session_id = self.connect_session(existing_session_id=session_id)

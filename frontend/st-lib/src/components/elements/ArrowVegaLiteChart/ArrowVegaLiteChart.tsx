@@ -97,7 +97,7 @@ export interface WrappedNamedDataset {
 }
 
 export interface PropsWithHeight extends Props {
-  height: number | undefined
+  height?: number
 }
 
 interface State {
@@ -405,7 +405,6 @@ function getDataArrays(
   const datasetArrays: { [dataset: string]: any[] } = {}
 
   for (const [name, dataset] of Object.entries(datasets)) {
-    // @ts-ignore
     datasetArrays[name] = getDataArray(dataset)
   }
 

@@ -74,7 +74,7 @@ describe("VideoRecordedDialog", () => {
 
   it("should render a Modal with overridden width", () => {
     const overrides = wrapper.find(Modal).prop("overrides")
-    // @ts-ignore
+    // @ts-expect-error
     expect(overrides.Dialog.style.width).toEqual("80vw")
   })
 })

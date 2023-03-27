@@ -19,6 +19,8 @@ import { AppNode } from "src/lib/AppNode"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent/"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 export function shouldComponentBeEnabled(
   elementType: string,
@@ -53,6 +55,8 @@ export function isComponentStale(
 }
 
 export interface BaseBlockProps {
+  endpoints: StreamlitEndpoints
+  sessionInfo: SessionInfo
   scriptRunId: string
   scriptRunState: ScriptRunState
   widgetMgr: WidgetStateManager

@@ -15,7 +15,6 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
 import { Block as BlockProto, ForwardMsgMetadata } from "src/autogen/proto"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { BlockNode, ElementNode, AppRoot } from "src/lib/AppNode"
@@ -26,13 +25,22 @@ import {
 } from "src/lib/WidgetStateManager"
 import { makeElementWithInfoText } from "src/lib/utils"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
+import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
+import { mockEndpoints, mockSessionInfo } from "src/lib/mocks/mocks"
+import { render, shallow } from "src/lib/test_util"
 import AppView, { AppViewProps } from "./AppView"
 
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
   const formsData = createFormsData()
 
+  const sessionInfo = mockSessionInfo()
+  const endpoints = mockEndpoints()
+
   return {
-    elements: AppRoot.empty(),
+    endpoints: endpoints,
+    elements: AppRoot.empty(getMetricsManagerForTest(sessionInfo)),
+    sendMessageToHost: jest.fn(),
+    sessionInfo: sessionInfo,
     scriptRunId: "script run 123",
     scriptRunState: ScriptRunState.NOT_RUNNING,
     widgetMgr: new WidgetStateManager({
@@ -40,12 +48,12 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
       formsDataChanged: jest.fn(),
     }),
     uploadClient: new FileUploadClient({
-      getServerUri: () => undefined,
-      csrfEnabled: true,
+      sessionInfo: sessionInfo,
+      endpoints: endpoints,
       formsWithPendingRequestsChanged: () => {},
     }),
     widgetsDisabled: true,
-    componentRegistry: new ComponentRegistry(() => undefined),
+    componentRegistry: new ComponentRegistry(endpoints),
     formsData,
     appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
     onPageChange: jest.fn(),
@@ -57,6 +65,10 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 }
 
 describe("AppView element", () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     const wrapper = shallow(<AppView {...props} />)
@@ -86,7 +98,10 @@ describe("AppView element", () => {
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar])),
+      elements: new AppRoot(
+        getMetricsManagerForTest(),
+        new BlockNode([main, sidebar])
+      ),
     })
     const wrapper = shallow(<AppView {...props} />)
 
@@ -129,7 +144,10 @@ describe("AppView element", () => {
       { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar])),
+      elements: new AppRoot(
+        getMetricsManagerForTest(),
+        new BlockNode([main, sidebar])
+      ),
       appPages,
     })
     const wrapper = shallow(<AppView {...props} />)
@@ -207,5 +225,23 @@ describe("AppView element", () => {
 
     expect(wrapper.find("StyledAppViewBlockSpacer").exists()).toBe(false)
     expect(wrapper.find("StyledAppViewFooter").exists()).toBe(false)
+  })
+
+  describe("when window.location.hash changes", () => {
+    let originalLocation: Location
+    beforeEach(() => (originalLocation = window.location))
+    afterEach(() => (window.location = originalLocation))
+
+    it("sends UPDATE_HASH message to host", () => {
+      const sendMessageToHost = jest.fn()
+      render(<AppView {...getProps({ sendMessageToHost })} />)
+
+      window.location.hash = "mock_hash"
+      window.dispatchEvent(new HashChangeEvent("hashchange"))
+      expect(sendMessageToHost).toHaveBeenCalledWith({
+        hash: "#mock_hash",
+        type: "UPDATE_HASH",
+      })
+    })
   })
 })

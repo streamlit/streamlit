@@ -24,6 +24,7 @@ from tests.streamlit.data_mocks import (
     INTERVAL_TYPES_DF,
     LIST_TYPES_DF,
     NUMBER_TYPES_DF,
+    PERIOD_TYPES_DF,
     SPECIAL_TYPES_DF,
     UNSUPPORTED_TYPES_DF,
 )
@@ -50,6 +51,9 @@ st._arrow_dataframe(INTERVAL_TYPES_DF, use_container_width=True)
 
 st.subheader("Special types")
 st._arrow_dataframe(SPECIAL_TYPES_DF, use_container_width=True)
+
+st.subheader("Period dtypes in pd.DataFrame")
+st._arrow_dataframe(PERIOD_TYPES_DF, use_container_width=True)
 
 st.subheader("Unsupported types")
 st._arrow_dataframe(UNSUPPORTED_TYPES_DF, use_container_width=True)

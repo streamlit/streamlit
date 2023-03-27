@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union, cast
 
@@ -46,6 +46,8 @@ TimeValue: TypeAlias = Union[time, datetime, None]
 SingleDateValue: TypeAlias = Union[date, datetime, None]
 DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
 DateWidgetReturn: TypeAlias = Union[date, Tuple[()], Tuple[date], Tuple[date, date]]
+
+DEFAULT_STEP_MINUTES = 15
 
 
 def _parse_date_value(value: DateValue) -> Tuple[List[date], bool]:
@@ -222,6 +224,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
     ) -> time:
         r"""Display a time input widget.
 
@@ -246,9 +249,9 @@ class TimeWidgetsMixin:
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet.
 
-            Unsupported elements are not displayed. Display unsupported elements
-            as literal characters by backslash-escaping them. E.g.
-            ``1\. Not an ordered list``.
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
@@ -277,6 +280,9 @@ class TimeWidgetsMixin:
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
+        step : int or timedelta
+            The stepping interval in seconds. Defaults to 900, i.e. 15 minutes.
+            You can also pass a datetime.timedelta object.
 
         Returns
         -------
@@ -307,6 +313,7 @@ class TimeWidgetsMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            step=step,
             ctx=ctx,
         )
 
@@ -322,6 +329,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
         ctx: Optional[ScriptRunContext] = None,
     ) -> time:
         key = to_key(key)
@@ -348,6 +356,17 @@ class TimeWidgetsMixin:
         time_input_proto.label = label
         time_input_proto.default = time.strftime(parsed_time, "%H:%M")
         time_input_proto.form_id = current_form_id(self.dg)
+        if not isinstance(step, (int, timedelta)):
+            raise StreamlitAPIException(
+                f"`step` can only be `int` or `timedelta` but {type(step)} is provided."
+            )
+        if isinstance(step, timedelta):
+            step = step.seconds
+        if step < 60 or step > timedelta(hours=23).seconds:
+            raise StreamlitAPIException(
+                f"`step` must be between 60 seconds and 23 hours but is currently set to {step} seconds."
+            )
+        time_input_proto.step = step
         if help is not None:
             time_input_proto.help = dedent(help)
 
@@ -416,9 +435,9 @@ class TimeWidgetsMixin:
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet.
 
-            Unsupported elements are not displayed. Display unsupported elements
-            as literal characters by backslash-escaping them. E.g.
-            ``1\. Not an ordered list``.
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
 
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow

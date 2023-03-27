@@ -72,7 +72,7 @@ export interface HostCommunicationHOC {
 
 export const HOST_COMM_VERSION = 1
 
-export function sendMessageToHost(message: IGuestToHostMessage): void {
+function sendMessageToHost(message: IGuestToHostMessage): void {
   window.parent.postMessage(
     {
       stCommVersion: HOST_COMM_VERSION,
@@ -82,10 +82,18 @@ export function sendMessageToHost(message: IGuestToHostMessage): void {
   )
 }
 
-function withHostCommunication(
-  WrappedComponent: ComponentType<any>
-): ComponentType<any> {
-  function ComponentWithHostCommunication(props: any): ReactElement {
+interface InjectedProps {
+  hostCommunication: HostCommunicationHOC
+}
+
+type WrappedProps<P extends InjectedProps> = Omit<P, "hostCommunication">
+
+function withHostCommunication<P extends InjectedProps>(
+  WrappedComponent: ComponentType<P>
+): ComponentType<WrappedProps<P>> {
+  function ComponentWithHostCommunication(
+    props: WrappedProps<P>
+  ): ReactElement {
     // TODO(vdonato): Refactor this to use useReducer to make this less
     // unwieldy. We may want to consider installing the redux-toolkit package
     // even if we're not using redux just because it's so useful for reducing
@@ -203,6 +211,7 @@ function withHostCommunication(
 
     return (
       <WrappedComponent
+        {...(props as P)}
         hostCommunication={
           {
             currentState: {
@@ -231,7 +240,6 @@ function withHostCommunication(
             setAllowedOriginsResp,
           } as HostCommunicationHOC
         }
-        {...props}
       />
     )
   }

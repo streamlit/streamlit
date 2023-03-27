@@ -18,7 +18,7 @@ import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
 import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
 import Icon from "src/components/shared/Icon"
-import AppContext from "src/components/core/AppContext"
+import { AppContext } from "src/components/core/AppContext"
 import { Theme } from "src/theme"
 import {
   StyledFullScreenFrame,
@@ -55,9 +55,9 @@ interface State {
  * to fixed and cover all screen, updating wrapped element height and width
  */
 class FullScreenWrapper extends PureComponent<Props, State> {
-  static contextType = AppContext
+  public context!: React.ContextType<typeof AppContext>
 
-  static isFullScreen = false
+  public static contextType = AppContext
 
   public constructor(props: Props) {
     super(props)
@@ -67,17 +67,17 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     }
   }
 
-  componentDidMount(): void {
+  public componentDidMount(): void {
     window.addEventListener("resize", this.updateWindowDimensions)
     document.addEventListener("keydown", this.controlKeys, false)
   }
 
-  componentWillUnmount(): void {
+  public componentWillUnmount(): void {
     window.removeEventListener("resize", this.updateWindowDimensions)
     document.removeEventListener("keydown", this.controlKeys, false)
   }
 
-  controlKeys = (event: any): void => {
+  private controlKeys = (event: any): void => {
     const { expanded } = this.state
 
     if (event.keyCode === 27 && expanded) {
@@ -86,19 +86,19 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     }
   }
 
-  zoomIn = (): void => {
+  private zoomIn = (): void => {
     document.body.style.overflow = "hidden"
     this.context.setFullScreen(true)
     this.setState({ expanded: true })
   }
 
-  zoomOut = (): void => {
+  private zoomOut = (): void => {
     document.body.style.overflow = "unset"
     this.context.setFullScreen(false)
     this.setState({ expanded: false })
   }
 
-  convertScssRemValueToPixels = (scssValue: string): number => {
+  private convertScssRemValueToPixels = (scssValue: string): number => {
     const remValue = parseFloat(scssValue)
     return (
       remValue *
@@ -106,7 +106,10 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     )
   }
 
-  getWindowDimensions = (): Pick<State, "fullWidth" | "fullHeight"> => {
+  private getWindowDimensions = (): Pick<
+    State,
+    "fullWidth" | "fullHeight"
+  > => {
     const padding = this.convertScssRemValueToPixels(
       this.props.theme.spacing.md
     )
@@ -120,7 +123,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
     }
   }
 
-  updateWindowDimensions = (): void => {
+  private updateWindowDimensions = (): void => {
     this.setState(this.getWindowDimensions())
   }
 

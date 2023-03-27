@@ -20,6 +20,7 @@ import { createPresetThemes, lightTheme, darkTheme } from "src/theme"
 import { shallow } from "src/lib/test_util"
 import { Props as ContextProps } from "src/components/core/AppContext"
 import UISelectbox from "src/components/shared/Dropdown"
+import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 
 import { SettingsDialog, SettingsDialogProps } from "./SettingsDialog"
 
@@ -38,7 +39,7 @@ const getContext = (
 
 // This is a workaround since enzyme does not support context yet
 // https://github.com/enzymejs/enzyme/issues/2189
-// @ts-ignore
+// @ts-expect-error
 SettingsDialog.contextTypes = {
   availableThemes: PropTypes.array,
   activeTheme: PropTypes.shape,
@@ -57,6 +58,7 @@ const getProps = (
   developerMode: true,
   animateModal: true,
   openThemeCreator: jest.fn(),
+  metricsMgr: getMetricsManagerForTest(),
   ...extend,
 })
 
@@ -89,7 +91,7 @@ describe("SettingsDialog", () => {
 
     expect(wrapper.state("runOnSave")).toBe(true)
     expect(props.onSave).toHaveBeenCalled()
-    // @ts-ignore
+    // @ts-expect-error
     expect(props.onSave.mock.calls[0][0].runOnSave).toBe(true)
   })
 
@@ -109,7 +111,7 @@ describe("SettingsDialog", () => {
 
     expect(wrapper.state("wideMode")).toBe(true)
     expect(props.onSave).toHaveBeenCalled()
-    // @ts-ignore
+    // @ts-expect-error
     expect(props.onSave.mock.calls[0][0].wideMode).toBe(true)
   })
 
@@ -127,7 +129,6 @@ describe("SettingsDialog", () => {
     selectbox.prop("onChange")(1)
     wrapper.update()
     expect(mockSetTheme).toHaveBeenCalled()
-    // @ts-ignore
     expect(mockSetTheme.mock.calls[0][0]).toBe(darkTheme)
   })
 

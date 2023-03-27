@@ -23,6 +23,7 @@ import {
   DownloadButton as DownloadButtonProto,
   CameraInput as CameraInputProto,
   Checkbox as CheckboxProto,
+  Code as CodeProto,
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
   DateInput as DateInputProto,
@@ -53,7 +54,6 @@ import {
 } from "src/autogen/proto"
 
 import React, { ReactElement, Suspense } from "react"
-// @ts-ignore
 import debounceRender from "react-debounce-render"
 import { ElementNode } from "src/lib/AppNode"
 import { Quiver } from "src/lib/Quiver"
@@ -77,7 +77,7 @@ import { getAlertKind } from "src/components/elements/Alert/Alert"
 import Maybe from "src/components/core/Maybe/"
 import { FormSubmitContent } from "src/components/widgets/Form"
 import { Heading } from "src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import AppContext from "src/components/core/AppContext"
+import { AppContext } from "src/components/core/AppContext"
 
 import {
   BaseBlockProps,
@@ -155,6 +155,9 @@ const TimeInput = React.lazy(() => import("src/components/widgets/TimeInput/"))
 const NumberInput = React.lazy(
   () => import("src/components/widgets/NumberInput/")
 )
+const StreamlitSyntaxHighlighter = React.lazy(
+  () => import("src/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+)
 
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
@@ -220,7 +223,13 @@ const RawElementNodeRenderer = (
     }
 
     case "audio":
-      return <Audio width={width} element={node.element.audio as AudioProto} />
+      return (
+        <Audio
+          width={width}
+          element={node.element.audio as AudioProto}
+          endpoints={props.endpoints}
+        />
+      )
 
     case "balloons":
       return hideIfStale(
@@ -229,7 +238,9 @@ const RawElementNodeRenderer = (
       )
 
     case "arrowTable":
-      return <ArrowTable element={node.quiverElement as Quiver} />
+      return (
+        <ArrowTable element={node.quiverElement as Quiver} width={width} />
+      )
 
     case "arrowVegaLiteChart":
       return (
@@ -259,6 +270,7 @@ const RawElementNodeRenderer = (
     case "deckGlJsonChart":
       return (
         <DeckGlJsonChart
+          sessionInfo={props.sessionInfo}
           width={width}
           element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
         />
@@ -614,6 +626,17 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "code": {
+      const codeProto = node.element.code as CodeProto
+      return (
+        <StreamlitSyntaxHighlighter
+          language={codeProto.language}
+          showLineNumbers={codeProto.showLineNumbers}
+        >
+          {codeProto.codeText}
+        </StreamlitSyntaxHighlighter>
+      )
+    }
     default:
       throw new Error(`Unrecognized Element type ${node.element.type}`)
   }
