@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-"use strict"
+
 
 // Do this as the first thing so that any code reading it knows the right env.
 process.env.BABEL_ENV = "development"
@@ -131,9 +131,6 @@ checkBrowsers(paths.appPath, isInteractive)
     const devServer = new WebpackDevServer(serverConfig, compiler)
     // Launch WebpackDevServer.
     devServer.startCallback(() => {
-      if (isInteractive) {
-        clearConsole()
-      }
 
       if (env.raw.FAST_REFRESH && semver.lt(react.version, "16.10.0")) {
         console.log(

@@ -56,7 +56,7 @@ import {
   PagesChanged,
 } from "src/autogen/proto"
 
-jest.mock("src/lib/ConnectionManager")
+jest.mock("st-lib/src/lib/ConnectionManager")
 
 const getHostCommunicationState = (
   extend?: Partial<HostCommunicationState>
@@ -138,6 +138,23 @@ describe("App", () => {
     MetricsManager.current = getMetricsManagerForTest()
     // @ts-ignore
     window.prerenderReady = false
+    location = global.window.location
+    // @ts-expect-error
+    global.window.location = {
+      ancestorOrigins: {} as DOMStringList,
+      hash: null,
+      host: 'dummy.com',
+      port: '80',
+      protocol: 'http:',
+      hostname: 'dummy.com',
+      href: 'http://dummy.com?page=1&name=testing',
+      origin: 'http://dummy.com',
+      pathname: "test",
+      search: location.search,
+      assign: location.assign,
+      replace: location.replace,
+      reload: location.reload
+    } as Location
   })
 
   afterEach(() => {
@@ -187,7 +204,7 @@ describe("App", () => {
       },
     }
 
-    // @ts-ignore
+    // @ts-expect-error
     wrapper.instance().handleMessage(fwMessage)
 
     expect(window.location.reload).toHaveBeenCalled()
