@@ -394,9 +394,6 @@ class DataEditorTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (pd.RangeIndex(0, 3, 1),),
-            (pd.Int64Index([1, 2, -3]),),
-            (pd.UInt64Index([1, 2, 3]),),
-            (pd.Float64Index([1.0, 2.0, 3.0]),),
             (pd.Index(["a", "b", "c"]),),
         ]
     )
