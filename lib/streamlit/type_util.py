@@ -44,9 +44,8 @@ from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
 import streamlit as st
-from streamlit import errors
+from streamlit import errors, string_util
 from streamlit import logger as _logger
-from streamlit import string_util
 
 if TYPE_CHECKING:
     import graphviz
@@ -725,7 +724,7 @@ def fix_arrow_incompatible_column_types(
         if is_colum_type_arrow_incompatible(df[col]):
             if df_copy is None:
                 df_copy = df.copy()
-            df_copy[col] = df[col].astype(str)
+            df_copy[col] = df[col].astype("string")
 
     # The index can also contain mixed types
     # causing Arrow issues during conversion.
@@ -740,7 +739,7 @@ def fix_arrow_incompatible_column_types(
     ):
         if df_copy is None:
             df_copy = df.copy()
-        df_copy.index = df.index.astype(str)
+        df_copy.index = df.index.astype("string")
     return df_copy if df_copy is not None else df
 
 
