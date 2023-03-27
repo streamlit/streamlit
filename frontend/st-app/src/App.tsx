@@ -57,7 +57,6 @@ import {
   SessionEventDispatcher,
   RERUN_PROMPT_MODAL_DIALOG,
   SessionInfo,
-  MetricsManager,
   FileUploadClient,
   logError,
   logMessage,
@@ -432,7 +431,7 @@ export class App extends PureComponent<Props, State> {
         environmentInfo != null &&
         environmentInfo.streamlitVersion != null
       ) {
-        return currentStreamlitVersion != environmentInfo.streamlitVersion
+        return currentStreamlitVersion !== environmentInfo.streamlitVersion
       }
     }
 
