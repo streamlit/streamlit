@@ -378,7 +378,7 @@ def _apply_data_specific_configs(
                 columns_config[column_name] = {}
             columns_config[column_name]["editable"] = False
             # Convert incompatible type to string
-            data_df[column_name] = column_data.astype(str)
+            data_df[column_name] = column_data.astype("string")
 
     # Pandas adds a range index as default to all datastructures
     # but for most of the non-pandas data objects it is unnecessary
