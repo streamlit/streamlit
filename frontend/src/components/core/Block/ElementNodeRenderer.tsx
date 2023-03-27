@@ -438,6 +438,7 @@ const RawElementNodeRenderer = (
         widgetProps.disabled || downloadButtonProto.disabled
       return (
         <DownloadButton
+          endpoints={props.endpoints}
           key={downloadButtonProto.id}
           element={downloadButtonProto}
           width={width}
