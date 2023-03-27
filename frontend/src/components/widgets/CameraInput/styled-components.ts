@@ -166,8 +166,10 @@ export const StyledCameraInputBaseButton =
     width: "100%",
     userSelect: "none",
     "&:focus": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
       outline: "none",
+    },
+    "&:focus-visible": {
+      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
     },
     ...getSizeStyle(Size.MEDIUM, theme),
   }))
