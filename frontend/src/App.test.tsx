@@ -397,6 +397,29 @@ describe("App", () => {
     expect(wrapper.find(Modal)).toHaveLength(1)
   })
 
+  it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when the app is first rendered", () => {
+    const props = getProps()
+    shallow(<App {...props} />)
+
+    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SCRIPT_RUN_STATE_CHANGED",
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+    })
+  })
+
+  it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    for (const scriptRunState in Object.values(ScriptRunState)) {
+      wrapper.setState({ scriptRunState })
+      expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+        type: "SCRIPT_RUN_STATE_CHANGED",
+        scriptRunState,
+      })
+    }
+  })
+
   it("sends theme info to the host when the app is first rendered", () => {
     const props = getProps()
     shallow(<App {...props} />)
