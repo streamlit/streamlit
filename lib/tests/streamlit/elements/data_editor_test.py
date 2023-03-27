@@ -36,7 +36,11 @@ from streamlit.elements.data_editor import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
-from streamlit.type_util import DataFormat, bytes_to_data_frame
+from streamlit.type_util import (
+    DataFormat,
+    bytes_to_data_frame,
+    is_pandas_version_less_than,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
 
@@ -413,3 +417,31 @@ class DataEditorTest(DeltaGeneratorTestCase):
         # This should run without an issue and return a valid dataframe
         return_df = st.experimental_data_editor(df)
         self.assertIsInstance(return_df, pd.DataFrame)
+
+    @unittest.skipIf(
+        is_pandas_version_less_than("2.0.0rc1") is False,
+        "This test only runs if pandas is < 2.0.0",
+    )
+    def test_with_old_supported_index(self):
+        """Test that supported old index types raise no exceptions.
+
+        Int64Index, UInt64Index, Float64Index were deprecated in pandas 2.x, but we
+        still support them for older versions of pandas.
+        """
+
+        for index in [
+            pd.Int64Index([1, 2, -3]),
+            pd.UInt64Index([1, 2, 3]),
+            pd.Float64Index([1.0, 2.0, 3.0]),
+        ]:
+            df = pd.DataFrame(
+                {
+                    "col1": [1, 2, 3],
+                    "col2": ["a", "b", "c"],
+                    "col3": [True, False, True],
+                }
+            )
+            df.set_index(index, inplace=True)
+            # This should run without an issue and return a valid dataframe
+            return_df = st.experimental_data_editor(df)
+            self.assertIsInstance(return_df, pd.DataFrame)
