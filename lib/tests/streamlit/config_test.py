@@ -92,6 +92,7 @@ class ConfigTest(unittest.TestCase):
 
     def test_complex_config_option(self):
         """Test setting a complex (functional) config option."""
+
         # Create the config option.
         @ConfigOption("_test.complexParam")
         def config_option():
@@ -334,6 +335,7 @@ class ConfigTest(unittest.TestCase):
                 "logger.enableRich",
                 "logger.level",
                 "logger.messageFormat",
+                "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
                 "runner.installTracer",
                 "runner.fixMatplotlib",

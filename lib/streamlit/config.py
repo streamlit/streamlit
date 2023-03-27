@@ -514,6 +514,18 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "runner.enforceSerializableSessionState",
+    description="""
+        Raise an exception after adding unserializable data to Session State.
+        Some execution environments may require serializing all data in Session
+        State, so it may be useful to detect incompatibility during development,
+        or when the execution environment will stop supporting it in the future.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
 # Config Section: Server #
 
 _create_section("server", "Settings for the Streamlit server")

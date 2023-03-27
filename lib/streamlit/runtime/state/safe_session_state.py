@@ -74,6 +74,13 @@ class SafeSessionState:
 
             self._state.on_script_finished(widget_ids_this_run)
 
+    def maybe_check_serializable(self) -> None:
+        with self._lock:
+            if self._disconnected:
+                return
+
+            self._state.maybe_check_serializable()
+
     def get_widget_states(self) -> List[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
         with self._lock:
