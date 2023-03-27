@@ -14,7 +14,7 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Optional, cast
+from typing import Literal, Optional, cast
 
 import streamlit
 from streamlit.elements.form import current_form_id
@@ -73,7 +73,7 @@ class TextWidgetsMixin:
         value: SupportsStr = "",
         max_chars: Optional[int] = None,
         key: Optional[Key] = None,
-        type: str = "default",
+        type: Literal["default", "password"] = "default",
         help: Optional[str] = None,
         autocomplete: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
