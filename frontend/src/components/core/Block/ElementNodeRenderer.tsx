@@ -380,7 +380,13 @@ const RawElementNodeRenderer = (
       )
 
     case "video":
-      return <Video width={width} element={node.element.video as VideoProto} />
+      return (
+        <Video
+          width={width}
+          element={node.element.video as VideoProto}
+          endpoints={props.endpoints}
+        />
+      )
 
     // Widgets
     case "arrowDataFrame": {

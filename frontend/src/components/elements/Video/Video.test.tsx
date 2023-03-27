@@ -15,22 +15,26 @@
  */
 
 import React from "react"
-import { mount } from "src/lib/test_util"
+import { mount, shallow } from "src/lib/test_util"
 import { Video as VideoProto } from "src/autogen/proto"
+import { mockEndpoints } from "src/lib/mocks/mocks"
 
 import Video, { VideoProps } from "./Video"
 
-const getProps = (elementProps: Partial<VideoProto> = {}): VideoProps => ({
-  element: VideoProto.create({
-    url: "https://www.w3schools.com/html/mov_bbb.mp4",
-    type: VideoProto.Type.UNUSED,
-    startTime: 0,
-    ...elementProps,
-  }),
-  width: 0,
-})
-
 describe("Video Element", () => {
+  const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
+
+  const getProps = (elementProps: Partial<VideoProto> = {}): VideoProps => ({
+    element: VideoProto.create({
+      url: "https://www.w3schools.com/html/mov_bbb.mp4",
+      type: VideoProto.Type.UNUSED,
+      startTime: 0,
+      ...elementProps,
+    }),
+    endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
+    width: 0,
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -42,7 +46,7 @@ describe("Video Element", () => {
     expect(wrapper.find("video").length).toBe(1)
   })
 
-  it("should have correct style", () => {
+  it("has correct style", () => {
     const props = getProps()
     const wrapper = mount(<Video {...props} />)
     const videoWrapper = wrapper.find("video")
@@ -54,26 +58,24 @@ describe("Video Element", () => {
     })
   })
 
-  it("should have controls", () => {
+  it("has controls", () => {
     const props = getProps()
     const wrapper = mount(<Video {...props} />)
 
     expect(wrapper.find("video").prop("controls")).toBeDefined()
   })
 
-  it("should build url correctly if it starts with /media", () => {
-    const props = getProps({
-      url: "/media/url.test.mp4",
-    })
-    const wrapper = mount(<Video {...props} />)
-
-    expect(wrapper.find("video").prop("src")).toBe(
-      "http://localhost:80/media/url.test.mp4"
+  it("creates its `src` attribute using buildMediaURL", () => {
+    const wrapper = shallow(
+      <Video {...getProps({ url: "/media/mockVideoFile.mp4" })} />
     )
+    const videoElement = wrapper.find("video")
+    expect(buildMediaURL).toHaveBeenCalledWith("/media/mockVideoFile.mp4")
+    expect(videoElement.prop("src")).toBe("https://mock.media.url")
   })
 
   describe("YouTube", () => {
-    it("should render a youtube iframe", () => {
+    it("renders a youtube iframe", () => {
       const props = getProps({
         type: VideoProto.Type.YOUTUBE_IFRAME,
       })
@@ -83,7 +85,7 @@ describe("Video Element", () => {
       expect(iframeWrapper.props()).toMatchSnapshot()
     })
 
-    it("should render a youtube iframe with an starting time", () => {
+    it("renders a youtube iframe with an starting time", () => {
       const props = getProps({
         type: VideoProto.Type.YOUTUBE_IFRAME,
         startTime: 10,
@@ -100,12 +102,12 @@ describe("Video Element", () => {
     const wrapper = mount(<Video {...props} />)
     const videoElement: HTMLVideoElement = wrapper.find("video").getDOMNode()
 
-    it("should set the current time to startTime on mount", () => {
+    it("sets the current time to startTime on mount", () => {
       videoElement.dispatchEvent(new Event("loadedmetadata"))
       expect(videoElement.currentTime).toBe(0)
     })
 
-    it("should update the current time when startTime is changed", () => {
+    it("updates the current time when startTime is changed", () => {
       wrapper.setProps(getProps({ startTime: 10 }))
       videoElement.dispatchEvent(new Event("loadedmetadata"))
       expect(videoElement.currentTime).toBe(10)
