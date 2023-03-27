@@ -115,6 +115,13 @@ class SecretsTest(unittest.TestCase):
         # Subsections do not get loaded into os.environ
         self.assertEqual(os.environ.get("subsection"), None)
 
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_load_if_toml_exists_returns_true_if_parse_succeeds(self, _):
+        self.assertTrue(self.secrets.load_if_toml_exists())
+
+    def test_load_if_toml_exists_returns_false_if_parse_fails(self):
+        self.assertFalse(self.secrets.load_if_toml_exists())
+
     @patch("streamlit.error")
     def test_missing_toml_error(self, mock_st_error):
         """Secrets access raises an error, and calls st.error, if

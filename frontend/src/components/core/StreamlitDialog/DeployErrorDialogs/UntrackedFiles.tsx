@@ -16,21 +16,16 @@
 
 import React from "react"
 import { IDeployErrorDialog } from "./types"
+import { StyledParagraph } from "./styled-components"
 
 function UntrackedFiles(): IDeployErrorDialog {
   return {
-    title: "Unable to deploy app",
+    title: "Unsynced changes",
     body: (
-      <>
-        <p>
-          This Git repo has untracked files. You may want to commit them before
-          continuing.
-        </p>
-        <p>
-          Alternatively, you can either delete the files (if they're not
-          needed) or add them to your <strong>.gitignore</strong>.
-        </p>
-      </>
+      <StyledParagraph>
+        Some code changes are not pushed to GitHub. You can continue but the
+        deployed app might look different than your local app.
+      </StyledParagraph>
     ),
   }
 }

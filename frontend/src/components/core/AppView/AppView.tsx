@@ -28,6 +28,7 @@ import { AppContext } from "src/components/core/AppContext"
 import { BlockNode, AppRoot } from "src/lib/AppNode"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { IGuestToHostMessage } from "src/hocs/withHostCommunication/types"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 import {
   StyledAppViewBlockContainer,
@@ -41,6 +42,8 @@ import {
 
 export interface AppViewProps {
   elements: AppRoot
+
+  endpoints: StreamlitEndpoints
 
   sessionInfo: SessionInfo
 
@@ -93,6 +96,7 @@ function AppView(props: AppViewProps): ReactElement {
     hideSidebarNav,
     pageLinkBaseUrl,
     sendMessageToHost,
+    endpoints,
   } = props
 
   React.useEffect(() => {
@@ -125,6 +129,7 @@ function AppView(props: AppViewProps): ReactElement {
     >
       <VerticalBlock
         node={node}
+        endpoints={endpoints}
         sessionInfo={sessionInfo}
         scriptRunId={scriptRunId}
         scriptRunState={scriptRunState}

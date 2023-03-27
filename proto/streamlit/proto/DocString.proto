@@ -19,11 +19,13 @@ syntax = "proto3";
 // Formatted text
 message DocString {
 
-  // The name of the object.
-  string name = 1;
+  // [DEPRECATED] The name of the object.
+  //string name = 1;
+  reserved 1;
 
-  // The module of the object
-  string module = 2;
+  // [DEPRECATED] The module of the object
+  //string module = 2;
+  reserved 2;
 
   // The doc string.
   string doc_string = 3;
@@ -31,6 +33,33 @@ message DocString {
   // The type of the object.
   string type = 4;
 
-  // The signature of the object, if it's a function. Else, unset.
-  string signature = 5;
+  // [DEPRECATED] The signature of the object, if it's a function. Else, unset.
+  //string signature = 5;
+  reserved 5;
+
+  // The name the user gave to the variable holding this object.
+  string name = 6;
+
+  // A string representation of this object's value.
+  string value = 7;
+
+  // List of this object's methods and member variables.
+  repeated Member members = 8;
+}
+
+
+message Member {
+  // The name of the object.
+  string name = 1;
+
+  // The type of the object.
+  string type = 2;
+
+  oneof contents {
+    // A string representation of this member's value.
+    string value = 3;
+
+    // The doc string.
+    string doc_string = 4;
+  }
 }

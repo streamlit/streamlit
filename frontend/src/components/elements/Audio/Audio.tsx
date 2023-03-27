@@ -14,19 +14,22 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext, useEffect, useRef } from "react"
+import React, { ReactElement, useEffect, useRef } from "react"
 import { Audio as AudioProto } from "src/autogen/proto"
-import { AppContext } from "src/components/core/AppContext"
-import { buildMediaUri } from "src/lib/UriUtil"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 export interface AudioProps {
+  endpoints: StreamlitEndpoints
   width: number
   element: AudioProto
 }
 
-export default function Audio({ element, width }: AudioProps): ReactElement {
+export default function Audio({
+  element,
+  width,
+  endpoints,
+}: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
-  const { getBaseUriParts } = useContext(AppContext)
 
   useEffect(() => {
     if (audioRef.current) {
@@ -34,7 +37,7 @@ export default function Audio({ element, width }: AudioProps): ReactElement {
     }
   }, [element.startTime])
 
-  const uri = buildMediaUri(element.url, getBaseUriParts())
+  const uri = endpoints.buildMediaURL(element.url)
   return (
     <audio
       id="audio"

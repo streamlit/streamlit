@@ -16,17 +16,16 @@
 
 import React from "react"
 import { IDeployErrorDialog } from "./types"
+import { StyledParagraph } from "./styled-components"
 
 function ModuleIsNotAdded(module: string): IDeployErrorDialog {
   return {
-    title: "Unable to deploy app",
+    title: "Unable to deploy",
     body: (
-      <>
-        <p>
-          The file <code>{module}</code> has not been added to the repo.
-        </p>
-        <p>Please add it and push to GitHub to continue.</p>
-      </>
+      <StyledParagraph>
+        The app’s main file <code>{module}</code> has not been pushed to
+        GitHub. Please add it to continue.
+      </StyledParagraph>
     ),
   }
 }
