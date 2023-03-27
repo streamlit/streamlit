@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pickle
+import json
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Mapping, Optional, TypeVar
+from typing import Generic, Optional, TypeVar
 
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
 from streamlit.util import calc_md5
@@ -33,7 +33,8 @@ class BaseConnection(ABC, Generic[T]):
         self._kwargs = kwargs
 
         self._raw_instance: Optional[T] = self.connect(**kwargs)
-        self._config_section_hash = calc_md5(pickle.dumps(self.get_secrets()))
+        secrets_dict = self.get_secrets().__nested_secrets__
+        self._config_section_hash = calc_md5(json.dumps(secrets_dict))
         secrets_singleton.file_change_listener.connect(self._on_secrets_changed)
 
     def __del__(self) -> None:
@@ -46,7 +47,8 @@ class BaseConnection(ABC, Generic[T]):
     # Methods with default implementations that we don't expect subclasses to want or
     # need to overwrite.
     def _on_secrets_changed(self, _) -> None:
-        new_hash = calc_md5(pickle.dumps(self.get_secrets()))
+        secrets_dict = self.get_secrets().__nested_secrets__
+        new_hash = calc_md5(json.dumps(secrets_dict))
 
         # Only reset the connection if the secrets file section specific to this
         # connection has changed.
@@ -54,7 +56,7 @@ class BaseConnection(ABC, Generic[T]):
             self._config_section_hash = new_hash
             self.reset()
 
-    def get_secrets(self) -> Mapping[str, Any]:
+    def get_secrets(self) -> AttrDict:
         connections_section = None
         if secrets_singleton.load_if_toml_exists():
             connections_section = secrets_singleton.get("connections")
@@ -62,7 +64,7 @@ class BaseConnection(ABC, Generic[T]):
         if type(connections_section) is not AttrDict:
             return AttrDict({})
 
-        return connections_section.get(self._connection_name, {})
+        return connections_section.get(self._connection_name, AttrDict({}))
 
     @classmethod
     def default_connection_name(cls) -> str:
