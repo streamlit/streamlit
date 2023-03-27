@@ -14,12 +14,13 @@
 
 import os
 import unittest
-from unittest.mock import mock_open, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
 import streamlit as st
 from streamlit.connections import BaseConnection
+from streamlit.runtime.secrets import AttrDict
 
 MOCK_TOML = """
 [connections.mock_connection]
@@ -62,7 +63,7 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
                 pass
 
         with pytest.raises(NotImplementedError):
-            ExplodingConnection().default_connection_name()
+            ExplodingConnection()
 
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_get_secrets(self, _):
@@ -94,3 +95,26 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
         conn._raw_instance = None
 
         assert conn._instance == "hooray, I'm connected!"
+
+    def test_on_secrets_changed_when_nothing_changed(self):
+        conn = MockConnection()
+
+        # conn.reset() shouldn't be called because secrets haven't changed since conn
+        # was constructed.
+        with patch(
+            "streamlit.connections.base_connection.BaseConnection.reset"
+        ) as patched_reset:
+            conn._on_secrets_changed("unused_arg")
+            patched_reset.assert_not_called()
+
+    def test_on_secrets_changed(self):
+        conn = MockConnection()
+
+        with patch(
+            "streamlit.connections.base_connection.BaseConnection.reset"
+        ) as patched_reset, patch(
+            "streamlit.connections.base_connection.BaseConnection.get_secrets",
+            MagicMock(return_value=AttrDict({"mock_connection": {"new": "secret"}})),
+        ):
+            conn._on_secrets_changed("unused_arg")
+            patched_reset.assert_called_once()
