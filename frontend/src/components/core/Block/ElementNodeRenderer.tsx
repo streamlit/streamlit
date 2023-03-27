@@ -313,6 +313,7 @@ const RawElementNodeRenderer = (
         <ImageList
           width={width}
           element={node.element.imgs as ImageListProto}
+          endpoints={props.endpoints}
         />
       )
 

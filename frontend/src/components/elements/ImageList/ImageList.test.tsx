@@ -18,30 +18,34 @@ import React from "react"
 import { shallow } from "src/lib/test_util"
 
 import { ImageList as ImageListProto } from "src/autogen/proto"
+import { mockEndpoints } from "src/lib/mocks/mocks"
 import { ImageList, ImageListProps } from "./ImageList"
 
-const getProps = (
-  elementProps: Partial<ImageListProto> = {}
-): ImageListProps => ({
-  element: ImageListProto.create({
-    imgs: [
-      {
-        caption: "a",
-        url: "/media/e275965f8926e17fa8c92c6530be58be11cf5a55474619c16f5442f9.jpeg",
-      },
-      {
-        caption: "b",
-        url: "/media/e275965f8926e17fa8c92c6530be58be11cf5a55474619c16f5442f9.jpeg",
-      },
-    ],
-    width: -1,
-    ...elementProps,
-  }),
-  width: 0,
-  isFullScreen: false,
-})
-
 describe("ImageList Element", () => {
+  const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
+
+  const getProps = (
+    elementProps: Partial<ImageListProto> = {}
+  ): ImageListProps => ({
+    element: ImageListProto.create({
+      imgs: [
+        {
+          caption: "a",
+          url: "/media/mockImage1.jpeg",
+        },
+        {
+          caption: "b",
+          url: "/media/mockImage2.jpeg",
+        },
+      ],
+      width: -1,
+      ...elementProps,
+    }),
+    endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
+    width: 0,
+    isFullScreen: false,
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     const wrapper = shallow(<ImageList {...props} />)
@@ -49,30 +53,29 @@ describe("ImageList Element", () => {
     expect(wrapper.find("StyledImageContainer").length).toBe(2)
   })
 
-  it("should render explicit width for each image", () => {
+  it("renders explicit width for each image", () => {
     const props = getProps({ width: 300 })
     const wrapper = shallow(<ImageList {...props} />)
 
     expect(wrapper.find("StyledImageContainer").length).toEqual(2)
   })
 
-  it("should have a src", () => {
+  it("creates its `src` attribute using buildMediaURL", () => {
     const props = getProps()
     const wrapper = shallow(<ImageList {...props} />)
 
-    const { imgs } = props.element
     expect(wrapper.find("StyledImageContainer").length).toEqual(2)
+    expect(buildMediaURL).toHaveBeenNthCalledWith(1, "/media/mockImage1.jpeg")
+    expect(buildMediaURL).toHaveBeenNthCalledWith(2, "/media/mockImage2.jpeg")
     wrapper
       .find("StyledImageContainer")
       .find("img")
-      .forEach((imgWrapper, id) => {
-        expect(imgWrapper.prop("src")).toBe(
-          `http://localhost:80${imgs[id].url}`
-        )
+      .forEach(imgWrapper => {
+        expect(imgWrapper.prop("src")).toBe("https://mock.media.url")
       })
   })
 
-  it("should have a caption", () => {
+  it("has a caption", () => {
     const props = getProps()
     const wrapper = shallow(<ImageList {...props} />)
 
@@ -83,7 +86,7 @@ describe("ImageList Element", () => {
     })
   })
 
-  it("should render explicit width for each caption", () => {
+  it("renders explicit width for each caption", () => {
     const props = getProps({ width: 300 })
     const captionWidth = { width: 300 }
     const wrapper = shallow(<ImageList {...props} />)
@@ -93,36 +96,15 @@ describe("ImageList Element", () => {
     })
   })
 
-  it("should render absolute src", () => {
-    const props = getProps({
-      imgs: [
-        {
-          caption: "a",
-          url: "https://streamlit.io/path/test.jpg",
-        },
-      ],
-    })
-    const wrapper = shallow(<ImageList {...props} />)
-
-    const { imgs } = props.element
-    expect(wrapper.find("StyledImageContainer").length).toEqual(1)
-    wrapper
-      .find("StyledImageContainer")
-      .find("img")
-      .forEach((imgWrapper, id) => {
-        expect(imgWrapper.prop("src")).toBe(imgs[id].url)
-      })
-  })
-
   describe("fullScreen", () => {
     const props = { ...getProps(), isFullScreen: true, height: 100 }
     const wrapper = shallow(<ImageList {...props} />)
 
-    it("should have a caption", () => {
+    it("has a caption", () => {
       expect(wrapper.find("StyledCaption").length).toBe(2)
     })
 
-    it("should have the proper style", () => {
+    it("has the proper style", () => {
       const fullScreenAppearance = { maxHeight: 100, "object-fit": "contain" }
 
       expect(wrapper.find("StyledImageContainer").length).toEqual(2)
