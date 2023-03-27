@@ -289,7 +289,7 @@ describe("App", () => {
     expect(onModalReset).toBeCalled()
   })
 
-  it("App scriptRunState changes and withHostCommunication callback fires on scriptStopRequested signal has been received", () => {
+  it("changes scriptRunState and fires withHostCommunication callback when scriptStopRequested signal has been received", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const instance = wrapper.instance() as App
 
@@ -312,6 +312,46 @@ describe("App", () => {
 
     expect(wrapper.state("scriptRunState")).toBe(ScriptRunState.STOP_REQUESTED)
     expect(instance.props.hostCommunication.onScriptStop).toHaveBeenCalled()
+  })
+
+  it("changes scriptRunState and fires withHostCommunication callback when scriptRerunRequested signal has been received", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+
+    instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+    wrapper.setProps(
+      getProps({
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({
+            scriptRerunRequested: true,
+          }),
+        }),
+      })
+    )
+
+    expect(wrapper.state("scriptRunState")).toBe(
+      ScriptRunState.RERUN_REQUESTED
+    )
+    expect(instance.props.hostCommunication.onScriptRerun).toHaveBeenCalled()
+  })
+
+  it("fires withHostCommunication callback when cacheClearRequested signal has been received", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+
+    instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+    wrapper.setProps(
+      getProps({
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({
+            cacheClearRequested: true,
+          }),
+        }),
+      })
+    )
+    expect(instance.props.hostCommunication.onCacheClear).toHaveBeenCalled()
   })
 
   it("does not prevent a modal from opening when closure message is set", () => {
