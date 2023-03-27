@@ -75,7 +75,7 @@ st._arrow_table(df)
 "## UInt64Index"
 df = pd.DataFrame(
     [["foo", 100], ["bar", 200]],
-    index=pd.UInt64Index([1, 2]),
+    index=pd.Index([1, 2], dtype="uint64"),
 )
 st._arrow_table(df)
 
