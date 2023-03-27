@@ -411,13 +411,13 @@ describe("App", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
 
-    for (const scriptRunState in Object.values(ScriptRunState)) {
+    Object.values(ScriptRunState).forEach(scriptRunState => {
       wrapper.setState({ scriptRunState })
       expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
         type: "SCRIPT_RUN_STATE_CHANGED",
         scriptRunState,
       })
-    }
+    })
   })
 
   it("sends theme info to the host when the app is first rendered", () => {
