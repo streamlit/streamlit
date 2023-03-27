@@ -29,14 +29,8 @@ describe("ImageList Element", () => {
   ): ImageListProps => ({
     element: ImageListProto.create({
       imgs: [
-        {
-          caption: "a",
-          url: "/media/mockImage1.jpeg",
-        },
-        {
-          caption: "b",
-          url: "/media/mockImage2.jpeg",
-        },
+        { caption: "a", url: "/media/mockImage1.jpeg" },
+        { caption: "b", url: "/media/mockImage2.jpeg" },
       ],
       width: -1,
       ...elementProps,
