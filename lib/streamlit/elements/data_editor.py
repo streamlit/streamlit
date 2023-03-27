@@ -205,12 +205,14 @@ class DataEditorSerde:
 
 def _parse_value(value: Union[str, int, float, bool, None], orig_col) -> Any:
     """Convert a value to the correct type.
+
     Parameters
     ----------
     value : str | int | float | bool | None
         The value to convert.
     orig_col
         The original column in order to use infer_dtype or check .dtype
+
     Returns
     -------
     The converted value.
@@ -439,7 +441,6 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        columns: Optional[ColumnConfigMapping] = None,
     ) -> EditableData:
         pass
 
@@ -457,7 +458,6 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        columns: Optional[ColumnConfigMapping] = None,
     ) -> pd.DataFrame:
         pass
 
@@ -475,7 +475,6 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        columns: Optional[ColumnConfigMapping] = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -575,7 +574,7 @@ class DataEditorMixin:
 
         """
 
-        columns_config: ColumnConfigMapping = columns or {}
+        columns_config: ColumnConfigMapping = {}
 
         data_format = type_util.determine_data_format(data)
         if data_format == DataFormat.UNKNOWN:
