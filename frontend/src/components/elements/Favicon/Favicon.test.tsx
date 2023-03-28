@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { mockEndpoints } from "src/lib/mocks/mocks"
 import { handleFavicon } from "./Favicon"
 
 function getFaviconHref(): string {
@@ -37,39 +38,40 @@ test("is set up with the default favicon", () => {
 })
 
 describe("Favicon element", () => {
-  it("sets the favicon in the DOM", () => {
-    handleFavicon("https://streamlit.io/path/to/favicon.png", jest.fn())
-    expect(getFaviconHref()).toBe("https://streamlit.io/path/to/favicon.png")
-  })
+  const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
+  const endpoints = mockEndpoints({ buildMediaURL: buildMediaURL })
 
-  it("accepts /media urls from backend", () => {
-    handleFavicon("/media/1234567890.png", jest.fn())
-    expect(getFaviconHref()).toBe("http://localhost/media/1234567890.png")
+  it("sets the favicon in the DOM", () => {
+    handleFavicon("https://some/random/favicon.png", jest.fn(), endpoints)
+    expect(buildMediaURL).toHaveBeenCalledWith(
+      "https://some/random/favicon.png"
+    )
+    expect(getFaviconHref()).toBe("https://mock.media.url/")
   })
 
   it("accepts emojis directly", () => {
-    handleFavicon("🍕", jest.fn())
+    handleFavicon("🍕", jest.fn(), endpoints)
     expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
   })
 
   it("handles emoji variants correctly", () => {
-    handleFavicon("🛰", jest.fn())
+    handleFavicon("🛰", jest.fn(), endpoints)
     expect(getFaviconHref()).toBe(SATELLITE_TWEMOJI_URL)
   })
 
   it("handles emoji shortcodes containing a dash correctly", () => {
-    handleFavicon(":crescent-moon:", jest.fn())
+    handleFavicon(":crescent-moon:", jest.fn(), endpoints)
     expect(getFaviconHref()).toBe(CRESCENT_MOON_TWEMOJI_URL)
   })
 
   it("accepts emoji shortcodes", () => {
-    handleFavicon(":pizza:", jest.fn())
+    handleFavicon(":pizza:", jest.fn(), endpoints)
     expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
   })
 
   it("updates the favicon when it changes", () => {
-    handleFavicon("/media/1234567890.png", jest.fn())
-    handleFavicon(":pizza:", jest.fn())
+    handleFavicon("/media/1234567890.png", jest.fn(), endpoints)
+    handleFavicon(":pizza:", jest.fn(), endpoints)
     expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
   })
 
@@ -77,10 +79,11 @@ describe("Favicon element", () => {
     const sendMessageToHost = jest.fn()
     handleFavicon(
       "https://streamlit.io/path/to/favicon.png",
-      sendMessageToHost
+      sendMessageToHost,
+      endpoints
     )
     expect(sendMessageToHost).toHaveBeenCalledWith({
-      favicon: "https://streamlit.io/path/to/favicon.png",
+      favicon: "https://mock.media.url",
       type: "SET_PAGE_FAVICON",
     })
   })

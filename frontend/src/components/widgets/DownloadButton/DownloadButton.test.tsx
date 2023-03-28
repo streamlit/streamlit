@@ -22,22 +22,26 @@ import UIButton from "src/components/shared/Button"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
 import { DownloadButton as DownloadButtonProto } from "src/autogen/proto"
+import { mockEndpoints } from "src/lib/mocks/mocks"
 import DownloadButton, { Props } from "./DownloadButton"
 
 jest.mock("src/lib/WidgetStateManager")
-
-const sendBackMsg = jest.fn()
+jest.mock("src/lib/StreamlitEndpoints")
 
 const getProps = (elementProps: Partial<DownloadButtonProto> = {}): Props => ({
   element: DownloadButtonProto.create({
     id: "1",
     label: "Label",
+    url: "/media/mockDownloadURL",
     ...elementProps,
   }),
   width: 0,
   disabled: false,
-  // @ts-expect-error
-  widgetMgr: new WidgetStateManager(sendBackMsg),
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }),
+  endpoints: mockEndpoints(),
 })
 
 describe("DownloadButton widget", () => {
@@ -48,7 +52,7 @@ describe("DownloadButton widget", () => {
     expect(wrapper).toBeDefined()
   })
 
-  it("should have correct className and style", () => {
+  it("has correct className and style", () => {
     const wrapper = shallow(<DownloadButton {...getProps()} />)
 
     const wrappedDiv = wrapper.find("div").first()
@@ -63,7 +67,7 @@ describe("DownloadButton widget", () => {
     expect(style.width).toBe(getProps().width)
   })
 
-  it("should render a label within the button", () => {
+  it("renders a label within the button", () => {
     const wrapper = shallow(<DownloadButton {...getProps()} />)
 
     const wrappedUIButton = wrapper.find(UIButton)
@@ -74,8 +78,8 @@ describe("DownloadButton widget", () => {
     expect(wrappedButtonLabel.props().isButton).toBe(true)
   })
 
-  describe("UIButton props should work", () => {
-    it("onClick prop", () => {
+  describe("wrapped UIButton", () => {
+    it("sets widget triggerValue and creates a download URL on click", () => {
       const props = getProps()
       const wrapper = shallow(<DownloadButton {...props} />)
 
@@ -87,9 +91,13 @@ describe("DownloadButton widget", () => {
         props.element,
         { fromUi: true }
       )
+
+      expect(props.endpoints.buildMediaURL).toHaveBeenCalledWith(
+        "/media/mockDownloadURL"
+      )
     })
 
-    it("disable prop", () => {
+    it("handles the disabled prop", () => {
       const props = getProps()
       const wrapper = shallow(<DownloadButton {...props} />)
 

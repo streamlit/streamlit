@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useContext, ReactElement } from "react"
+import React, { ReactElement } from "react"
 import ReactHtmlParser from "react-html-parser"
 
 import {
@@ -22,9 +22,9 @@ import {
   Image as ImageProto,
   ImageList as ImageListProto,
 } from "src/autogen/proto"
-import { AppContext } from "src/components/core/AppContext"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
-import { buildMediaUri, xssSanitizeSvg } from "src/lib/UriUtil"
+import { xssSanitizeSvg } from "src/lib/UriUtil"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 import {
   StyledCaption,
@@ -33,6 +33,7 @@ import {
 } from "./styled-components"
 
 export interface ImageListProps {
+  endpoints: StreamlitEndpoints
   width: number
   isFullScreen: boolean
   element: ImageListProto
@@ -53,9 +54,8 @@ export function ImageList({
   isFullScreen,
   element,
   height,
+  endpoints,
 }: ImageListProps): ReactElement {
-  const { getBaseUriParts } = useContext(AppContext)
-
   // The width field in the proto sets the image width, but has special
   // cases for -1, -2, and -3.
   let containerWidth: number | undefined
@@ -103,7 +103,7 @@ export function ImageList({
             ) : (
               <img
                 style={imgStyle}
-                src={buildMediaUri(image.url, getBaseUriParts())}
+                src={endpoints.buildMediaURL(image.url)}
                 alt={idx.toString()}
               />
             )}

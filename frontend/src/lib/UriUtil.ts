@@ -148,23 +148,6 @@ export function xssSanitizeSvg(uri: string): string {
 }
 
 /**
- * If this is a relative URI, assume it's being served from streamlit and
- * construct it appropriately.  Otherwise leave it alone.
- */
-export function buildMediaUri(
-  uri: string,
-  baseUriParts?: BaseUriParts
-): string {
-  if (uri.startsWith(SVG_PREFIX)) {
-    return `${SVG_PREFIX}${xssSanitizeSvg(uri)}`
-  }
-  if (!baseUriParts) {
-    baseUriParts = getWindowBaseUriParts()
-  }
-  return uri.startsWith("/media") ? buildHttpUri(baseUriParts, uri) : uri
-}
-
-/**
  * Check if the given origin follows the allowed origin pattern, which could
  * include wildcards.
  *
