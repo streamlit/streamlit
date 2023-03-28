@@ -27,7 +27,6 @@ const createEnvironmentHash = require('./webpack/persistentCache/createEnvironme
 
 // Source maps are resource heavy and can cause out of memory issue for large source files.
 const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== 'false';
-console.log("shouldUseSourceMap", shouldUseSourceMap)
 const reactRefreshRuntimeEntry = require.resolve('react-refresh/runtime');
 const reactRefreshWebpackPluginRuntimeEntry = require.resolve(
   '@pmmmwh/react-refresh-webpack-plugin'
@@ -87,8 +86,6 @@ const hasJsxRuntime = (() => {
 module.exports = function (webpackEnv) {
   const isEnvDevelopment = webpackEnv === 'development';
   const isEnvProduction = webpackEnv === 'production';
-  console.log("isEnvDevelopment", isEnvDevelopment)
-  console.log("isEnvProduction", isEnvProduction)
 
   // Variable used for enabling profiling in Production
   // passed into alias object. Uses a flag if passed into the build command

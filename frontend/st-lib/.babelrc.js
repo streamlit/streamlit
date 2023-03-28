@@ -1,4 +1,4 @@
-console.log("Using st-lib custom babel file to preserve modules and other things!")
+console.log("Using st-lib custom babel file to preserve modules")
 module.exports = {
   presets: [
     ['./scripts/babel-preset-dev-env.js'],

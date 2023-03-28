@@ -7,7 +7,10 @@
   "scripts": {
     "start": "yarn workspace @streamlit/st-app start",
     "build": "yarn workspace @streamlit/st-lib build && yarn workspace @streamlit/st-app build",
-    "buildFast": "yarn workspace @streamlit/st-lib buildFast",
+    "buildFast": "yarn workspace @streamlit/st-lib build && yarn workspace @streamlit/st-app buildFast",
+    "buildLib": "yarn workspace @streamlit/st-lib build",
+    "buildApp": "yarn workspace @streamlit/st-app build",
+    "buildAppFast": "yarn workspace @streamlit/st-app buildFast",
     "testLib": "yarn workspace @streamlit/st-lib test",
     "testApp": "yarn workspace @streamlit/st-app test",
     "testLib:coverage": "yarn workspace @streamlit/st-lib test:coverage",
