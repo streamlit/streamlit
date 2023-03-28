@@ -26,7 +26,6 @@ import {
   DeltaCounter,
   MetricsManager,
 } from "./MetricsManager"
-import { parse } from "path"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
