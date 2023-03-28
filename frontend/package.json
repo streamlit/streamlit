@@ -166,6 +166,7 @@
     "@types/styletron-react": "^5.0.3",
     "@types/styletron-standard": "^2.0.2",
     "@types/xxhashjs": "^0.2.2",
+    "@types/ua-parser-js": "^0.7.36",
     "@typescript-eslint/eslint-plugin": "^5.51.0",
     "@typescript-eslint/parser": "^5.51.0",
     "@wojtekmaj/enzyme-adapter-react-17": "^0.8.0",
