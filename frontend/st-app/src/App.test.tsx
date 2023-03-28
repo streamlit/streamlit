@@ -30,10 +30,7 @@ import {
   HostCommunicationState,
   ConnectionState,
   ScriptRunState,
-  MetricsManager,
-  getMetricsManagerForTest,
   SessionInfo,
-  Args as SessionInfoArgs,
   CUSTOM_THEME_NAME,
   createAutoTheme,
   darkTheme,
@@ -59,7 +56,7 @@ import {
   PagesChanged,
 } from "src/autogen/proto"
 
-jest.mock("st-lib/src/lib/ConnectionManager")
+jest.mock("st-lib/dist/lib/ConnectionManager")
 
 const getHostCommunicationState = (
   extend?: Partial<HostCommunicationState>
@@ -129,6 +126,7 @@ describe("App", () => {
     // @ts-expect-error
     window.prerenderReady = false
     location = global.window.location
+    // This was not necessary before as jsdom should solve this. However, this is undefined in jest for some reason.
     // @ts-expect-error
     global.window.location = {
       ancestorOrigins: {} as DOMStringList,
