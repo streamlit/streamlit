@@ -1,23 +1,22 @@
 {
-  "name": "streamlit-browser",
+  "name": "streamlit",
   "version": "1.20.0",
   "private": true,
   "workspaces": ["st-app", "st-lib"],
   "homepage": "./",
   "scripts": {
-    "analyze": "source-map-explorer 'build/static/js/*.js'",
-    "start": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true ",
-    "build": "yarn workspace st-lib run build && yarn workspace st-app run build",
-    "buildFast": "./bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false BUILD_AS_FAST_AS_POSSIBLE=true webpack",
-    "testLib": "yarn workspace st-lib test",
-    "testApp": "yarn workspace st-app test",
-    "test:coverage": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
+    "start": "yarn workspace @streamlit/st-app start",
+    "build": "yarn workspace @streamlit/st-lib build && yarn workspace @streamlit/st-app build",
+    "buildFast": "yarn workspace @streamlit/st-lib buildFast",
+    "testLib": "yarn workspace @streamlit/st-lib test",
+    "testApp": "yarn workspace @streamlit/st-app test",
+    "testLib:coverage": "yarn workspace @streamlit/st-lib test:coverage",
+    "testApp:coverage": "yarn workspace @streamlit/st-app test:coverage",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src",
-    "webpack_test": "NODE_ENV='production' webpack build --config ./config/webpack.config.js --stats verbose"
+    "lint": "yarn workspace @streamlit/st-lib lint && yarn workspace @streamlit/st-app lint"
   },
   "jest": {
     "roots": [
