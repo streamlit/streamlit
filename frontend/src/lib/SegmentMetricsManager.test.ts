@@ -16,7 +16,10 @@
 
 // Disable Typescript checking, since mm.track and identify have private scope
 // @ts-nocheck
-import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
+import {
+  getMetricsManagerForTest,
+  getMetricsManagerAnalyticsForTest,
+} from "src/lib/MetricsManagerTestUtils"
 import { mockSessionInfo, mockSessionInfoProps } from "./mocks/mocks"
 
 afterEach(() => {
@@ -198,4 +201,60 @@ test("clears deltas automatically on read", () => {
 
   expect(Object.keys(counter1).length).toBe(2)
   expect(Object.keys(counter2).length).toBe(0)
+})
+
+test("ip address is not tracked", () => {
+  const mm = getMetricsManagerAnalyticsForTest()
+  mm.initialize({ gatherUsageStats: true })
+
+  expect(mm.identify.mock.calls[0][2]).toMatchObject({
+    ip: "0.0.0.0",
+  })
+
+  expect(mm.track.mock.calls[0][2]).toMatchObject({
+    ip: "0.0.0.0",
+  })
+})
+
+test("page title is not tracked", () => {
+  const mm = getMetricsManagerAnalyticsForTest()
+  mm.initialize({ gatherUsageStats: true })
+
+  expect(mm.identify.mock.calls[0][2]).toMatchObject({
+    pageTitle: "",
+  })
+
+  expect(mm.track.mock.calls[0][2]).toMatchObject({
+    pageTitle: "",
+  })
+})
+
+test("data automatically includes device data", () => {
+  const mm = getMetricsManagerAnalyticsForTest()
+  mm.initialize({ gatherUsageStats: true })
+
+  expect(mm.identify.mock.calls[0][2]).toHaveProperty(["device", "browser"])
+  expect(mm.identify.mock.calls[0][2]).toHaveProperty([
+    "device",
+    "browserVersion",
+  ])
+  expect(mm.identify.mock.calls[0][2]).toHaveProperty(["device", "OS"])
+  expect(mm.identify.mock.calls[0][2]).toHaveProperty(["device", "OSVersion"])
+  expect(mm.identify.mock.calls[0][2]).toHaveProperty(["device", "deviceType"])
+  expect(mm.identify.mock.calls[0][2]).toHaveProperty(["device", "engine"])
+  expect(mm.identify.mock.calls[0][2]).toHaveProperty([
+    "device",
+    "engineVersion",
+  ])
+
+  expect(mm.track.mock.calls[0][2]).toHaveProperty(["device", "browser"])
+  expect(mm.track.mock.calls[0][2]).toHaveProperty([
+    "device",
+    "browserVersion",
+  ])
+  expect(mm.track.mock.calls[0][2]).toHaveProperty(["device", "OS"])
+  expect(mm.track.mock.calls[0][2]).toHaveProperty(["device", "OSVersion"])
+  expect(mm.track.mock.calls[0][2]).toHaveProperty(["device", "deviceType"])
+  expect(mm.track.mock.calls[0][2]).toHaveProperty(["device", "engine"])
+  expect(mm.track.mock.calls[0][2]).toHaveProperty(["device", "engineVersion"])
 })

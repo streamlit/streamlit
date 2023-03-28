@@ -26,6 +26,7 @@ import {
   DeltaCounter,
   MetricsManager,
 } from "./MetricsManager"
+import { parse } from "path"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -206,27 +207,63 @@ export class SegmentMetricsManager implements MetricsManager {
     if (IS_DEV_ENV) {
       logAlways("[Dev mode] Not sending id: ", id, data)
     } else {
-      analytics.identify(id, data)
+      let parser = new UAParser("user-agent")
+      let parsedUA = parser.getResult()
+
+      // Combine the data with the user agent info
+      data = {
+        ...data,
+        device: {
+          browser: parsedUA.browser.name,
+          browserVersion: parsedUA.browser.version,
+          OS: parsedUA.os.name,
+          OSVersion: parsedUA.os.version,
+          deviceType: parsedUA.device.type,
+          engine: parsedUA.engine.name,
+          engineVersion: parsedUA.engine.version,
+        },
+      }
+
+      // Zero-out IP and page title because we intentionally don't collect them
+      // raw userAgent is sent automatically, but will be dropped later
+      analytics.identify(id, data, {
+        context: {
+          ip: "0.0.0.0",
+          page: {
+            title: "",
+          },
+        },
+      })
     }
   }
 
   // eslint-disable-next-line class-methods-use-this
   private track(evName: string, data: Record<string, unknown>): void {
     let parser = new UAParser("user-agent")
-    let parsed_ua = parser.getResult()
+    let parsedUA = parser.getResult()
 
+    // Combine the data with the user agent info
+    data = {
+      ...data,
+      device: {
+        browser: parsedUA.browser.name,
+        browserVersion: parsedUA.browser.version,
+        OS: parsedUA.os.name,
+        OSVersion: parsedUA.os.version,
+        deviceType: parsedUA.device.type,
+        engine: parsedUA.engine.name,
+        engineVersion: parsedUA.engine.version,
+      },
+    }
+
+    // Zero-out IP and page title because we intentionally don't collect them
+    // raw userAgent is sent automatically, but will be dropped later
     analytics.track(evName, data, {
       context: {
         ip: "0.0.0.0",
         page: {
           title: "",
         },
-        browser: parsed_ua.browser.name,
-        browser_version: parsed_ua.browser.version,
-        os: parsed_ua.os.name,
-        os_version: parsed_ua.os.version,
-        device_type: parsed_ua.device.type,
-        userAgent: "",
       },
     })
   }

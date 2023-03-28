@@ -31,3 +31,15 @@ export function getMetricsManagerForTest(
   mm.identify = jest.fn()
   return mm
 }
+
+export function getMetricsManagerAnalyticsForTest(
+  sessionInfo?: SessionInfo
+): SegmentMetricsManager {
+  const mm = new SegmentMetricsManager(sessionInfo || mockSessionInfo())
+  // @ts-expect-error
+  mm.analytics = {
+    track: jest.fn(),
+    identify: jest.fn(),
+  }
+  return mm
+}
