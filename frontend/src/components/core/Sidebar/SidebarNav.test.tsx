@@ -26,6 +26,7 @@ import Icon from "src/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/Hooks"
 import { mount, shallow } from "src/lib/test_util"
 import { BaseUriParts } from "src/lib/UriUtil"
+import { mockEndpoints } from "src/lib/mocks/mocks"
 
 import SidebarNav, { Props } from "./SidebarNav"
 import {
@@ -58,6 +59,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   hideParentScrollbar: jest.fn(),
   onPageChange: jest.fn(),
   pageLinkBaseUrl: "",
+  endpoints: mockEndpoints(),
   ...props,
 })
 

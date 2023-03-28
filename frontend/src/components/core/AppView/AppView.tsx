@@ -156,6 +156,7 @@ function AppView(props: AppViewProps): ReactElement {
     >
       {showSidebar && (
         <ThemedSidebar
+          endpoints={endpoints}
           initialSidebarState={initialSidebarState}
           appPages={appPages}
           hasElements={hasSidebarElements}

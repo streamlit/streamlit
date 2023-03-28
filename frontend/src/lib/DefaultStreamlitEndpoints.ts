@@ -22,6 +22,7 @@ import {
   xssSanitizeSvg,
 } from "src/lib/UriUtil"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
+import { IAppPage } from "src/autogen/proto"
 import { getCookie } from "./utils"
 
 interface Props {
@@ -66,6 +67,31 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     return url.startsWith(MEDIA_ENDPOINT)
       ? buildHttpUri(this.requireServerUri(), url)
       : url
+  }
+
+  /** Construct a URL for an app page in a multi-page app. */
+  public buildAppPageURL(
+    pageLinkBaseURL: string | undefined,
+    page: IAppPage,
+    pageIndex: number
+  ): string {
+    const pageName = page.pageName as string
+    const navigateTo = pageIndex === 0 ? "" : pageName
+
+    if (pageLinkBaseURL != null && pageLinkBaseURL.length > 0) {
+      return `${pageLinkBaseURL}/${navigateTo}`
+    }
+
+    // NOTE: We use window.location to get the port instead of
+    // getBaseUriParts() because the port may differ in dev mode (since
+    // the frontend is served by the react dev server and not the
+    // streamlit server).
+    const { port, protocol } = window.location
+    const { basePath, host } = this.requireServerUri()
+    const portSection = port ? `:${port}` : ""
+    const basePathSection = basePath ? `${basePath}/` : ""
+
+    return `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
   }
 
   public async uploadFileUploaderFile(
