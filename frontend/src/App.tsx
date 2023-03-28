@@ -549,7 +549,7 @@ export class App extends PureComponent<Props, State> {
       handleFavicon(
         favicon,
         this.props.hostCommunication.sendMessage,
-        this.getBaseUriParts()
+        this.endpoints
       )
     }
 
@@ -825,7 +825,7 @@ export class App extends PureComponent<Props, State> {
     handleFavicon(
       `${process.env.PUBLIC_URL}/favicon.png`,
       this.props.hostCommunication.sendMessage,
-      this.getBaseUriParts()
+      this.endpoints
     )
 
     this.metricsMgr.setMetadata(
