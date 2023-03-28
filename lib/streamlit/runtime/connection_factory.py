@@ -15,9 +15,10 @@
 import re
 from typing import Any, Dict, Type, TypeVar, overload
 
-from typing_extensions import Final
+from typing_extensions import Final, Literal
 
-from streamlit.connections.base_connection import BaseConnection
+from streamlit.connections import SQL, BaseConnection
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -47,13 +48,32 @@ def _create_connection(
     connection_class must be a concrete type. The public-facing connection API allows
     the user to specify the connection class to use as a string literal for convenience.
     """
-    return connection_class(
-        connection_name=name,
-        **kwargs,
+    return connection_class(connection_name=name, **kwargs)
+
+
+# NOTE: Adding support for a new first party connection requires:
+#   1. Adding the new connection name and class to this function.
+#   2. Writing a new @overload signature mapping the connection's name to its class.
+def _get_first_party_connection(connection_name: str):
+    FIRST_PARTY_CONNECTIONS = {"sql"}
+
+    if connection_name == "sql":
+        return SQL
+
+    raise StreamlitAPIException(
+        f"Invalid connection {connection_name}. "
+        f"Supported connection classes: {FIRST_PARTY_CONNECTIONS}"
     )
 
 
-@overload  # type: ignore
+@overload
+def connection_factory(
+    connection_class: Literal["sql"], name: str = "default", **kwargs
+) -> SQL:
+    pass
+
+
+@overload
 def connection_factory(
     connection_class: Type[ConnectionClass], name: str = "default", **kwargs
 ) -> ConnectionClass:
@@ -68,6 +88,9 @@ def connection_factory(connection_class, name="default", **kwargs):
         literal as the connection_class.
       * Plugging your own ConnectionClass into st.experimental_connection.
     """
+    if type(connection_class) == str:
+        connection_class = _get_first_party_connection(connection_class)
+
     try:
         return _create_connection(connection_class, name=name, **kwargs)
     except ModuleNotFoundError as e:
