@@ -38,8 +38,17 @@ export interface HostCommunicationHOC {
    */
   onModalReset: () => void
 
+  /**
+   * Callback to be called when the Streamlit app rerun a script.
+   */
   onScriptRerun: () => void
+  /**
+   * Callback to be called when the Streamlit app stop a script.
+   */
   onScriptStop: () => void
+  /**
+   * Callback to be called when the Streamlit app clear a cache.
+   */
   onCacheClear: () => void
 
   /**
