@@ -15,4 +15,5 @@
 
 # Explicitly re-export public symbols.
 from streamlit.connections.base_connection import BaseConnection as BaseConnection
+from streamlit.connections.snowpark_connection import Snowpark as Snowpark
 from streamlit.connections.sql_connection import SQL as SQL

@@ -3,8 +3,8 @@ name: Python Versions
 on:
   push:
     branches:
-      - 'develop'
-      - 'feature/**'
+      - "develop"
+      - "feature/**"
   pull_request:
     types: [opened, synchronize, reopened]
   # Allows workflow to be called from other workflows
@@ -15,7 +15,7 @@ on:
         type: string
     secrets:
       PARAMETER_PASSWORD:
-        description: 'Token passed from caller workflows for snowflake integration tests'
+        description: "Token passed from caller workflows for snowflake integration tests"
         required: true
 
 # Avoid duplicate workflows on same branch
@@ -42,7 +42,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-          submodules: 'recursive'
+          submodules: "recursive"
 
       # Set $PYTHON_VERSION from either $PYTHON_MIN_VERSION or $PYTHON_MAX_VERSION,
       # depending on our 'min-or-max' strategy matrix value.
@@ -80,12 +80,12 @@ jobs:
     # See: https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions
     # Runs triggered by Release/RC are workflow_dispatch events ; Nightly is a schedule event
     if: |
-        github.repository == 'streamlit/streamlit' && (
-        (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') ||
-        (github.event_name == 'push') ||
-        (github.event_name == 'workflow_dispatch') ||
-        (github.event_name == 'schedule')
-        )
+      github.repository == 'streamlit/streamlit' && (
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') ||
+      (github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'schedule')
+      )
 
     steps:
       - name: Checkout Streamlit code
@@ -93,7 +93,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-          submodules: 'recursive'
+          submodules: "recursive"
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
         with:
@@ -106,5 +106,7 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
+      - name: Run Type Checkers
+        run: scripts/mypy --report
       - name: Run Python Tests for Snowflake
         run: make pytest-snowflake
