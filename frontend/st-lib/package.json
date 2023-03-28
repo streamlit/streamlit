@@ -9,7 +9,7 @@
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "build": "../bokeh/preload-bokeh.sh && yarn build:src && yarn build:autogen && yarn build:asset && yarn build:lib-type",
-    "test": "../bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 jest --watchAll --env=./jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
+    "test": "../bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 jest --watchAll --env=../sharedConfigs/jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "../bokeh/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 jest --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --fix src",
