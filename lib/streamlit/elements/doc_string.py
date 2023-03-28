@@ -70,6 +70,10 @@ class HelpMixin:
         >>>
         >>> st.help(pandas.DataFrame)
 
+        .. output::
+            https://doc-string.streamlit.app/
+            height: 700px
+
         Want to quickly check what data type is output by a certain function?
         Try:
 
@@ -95,6 +99,10 @@ class HelpMixin:
         >>>
         >>> st.help(fido)
 
+        .. output::
+            https://doc-string1.streamlit.app/
+            height: 300px
+
         And if you're using Magic, you can get help for functions, classes,
         and modules without even typing ``st.help``:
 
@@ -106,6 +114,10 @@ class HelpMixin:
         >>>
         >>> # Get help for Streamlit itself:
         >>> st
+
+        .. output::
+            https://doc-string2.streamlit.app/
+            height: 700px
         """
         doc_string_proto = DocStringProto()
         _marshall(doc_string_proto, obj)
