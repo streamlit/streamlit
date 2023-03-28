@@ -37,7 +37,7 @@ INSTALL_REQUIRES = [
     "importlib-metadata>=1.4",
     "numpy",
     "packaging>=14.1",
-    "pandas==2.0.0rc1",
+    "pandas>=0.25",
     "pillow>=6.2.0",
     "protobuf<4,>=3.12",
     "pyarrow>=4.0",
