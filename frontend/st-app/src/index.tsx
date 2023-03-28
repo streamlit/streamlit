@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import React from "react"
+import ReactDOM from "react-dom"
 
 import { Client as Styletron } from "styletron-engine-atomic"
 import { Provider as StyletronProvider } from "styletron-react"
 import ThemedApp from "./ThemedApp"
-
-const React = require("react")
-const ReactDOM = require("react-dom")
 
 const engine = new Styletron({ prefix: "st-" })
 
