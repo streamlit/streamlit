@@ -111,7 +111,7 @@ def pytest_configure(config: pytest.Config):
 
 
 def pytest_runtest_setup(item: pytest.Item):
-    is_require_snowflake = item.config.getoption("--require-snowflake")
+    is_require_snowflake = item.config.getoption("--require-snowflake", default=False)
     has_require_snowflake_marker = bool(
         list(item.iter_markers(name="require_snowflake"))
     )
