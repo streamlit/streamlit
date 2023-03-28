@@ -173,7 +173,12 @@ function build(previousFileSizes) {
         )
       }
       if (messages.errors.length) {
-        return reject(new Error(messages.errors.join("\n\n")))
+        // Only keep the first error. Others are often indicative
+        // of the same problem, but confuse the reader with noise.
+        if (messages.errors.length > 1) {
+          messages.errors.length = 1;
+        }
+        return reject(new Error(messages.errors.join('\n\n')));
       }
       if (
         process.env.CI &&

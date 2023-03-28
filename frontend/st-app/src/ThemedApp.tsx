@@ -76,6 +76,7 @@ const ThemedApp = (): JSX.Element => {
     mediaMatch.addEventListener("change", updateAutoTheme)
 
     return () => mediaMatch.removeEventListener("change", updateAutoTheme)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, availableThemes])
 
   return (
