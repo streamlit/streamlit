@@ -27,9 +27,6 @@ import {
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
-  RepoIsAhead,
-  UncommittedChanges,
-  UntrackedFiles,
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs"
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 
@@ -226,45 +223,6 @@ describe("App", () => {
           untrackedFiles: ["module.py"],
         },
         ModuleIsNotAdded
-      )
-    })
-
-    it("should display the correct modal if there are uncommitted changes in the repo", () => {
-      testDeployErrorModal(
-        {
-          repository: "repo",
-          branch: "branch",
-          module: "module.py",
-          state: GitStates.DEFAULT,
-          uncommittedFiles: ["module.py"],
-          untrackedFiles: [],
-        },
-        UncommittedChanges
-      )
-    })
-
-    it("should display the correct modal if there are changes not pushed to GitHub", () => {
-      const deployParams: IGitInfo = {
-        repository: "repo",
-        branch: "branch",
-        module: "module.py",
-        uncommittedFiles: [],
-        untrackedFiles: [],
-        state: GitStates.AHEAD_OF_REMOTE,
-      }
-      testDeployErrorModal(deployParams, RepoIsAhead)
-    })
-
-    it("should display the correct modal if there are untracked files", () => {
-      testDeployErrorModal(
-        {
-          repository: "repo",
-          branch: "branch",
-          module: "module.py",
-          state: GitStates.DEFAULT,
-          untrackedFiles: ["another-file.py"],
-        },
-        UntrackedFiles
       )
     })
   })

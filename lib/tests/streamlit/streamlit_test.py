@@ -49,6 +49,17 @@ def get_version():
             return m.group("version")
 
 
+def patch_varname_getter():
+    """Patches streamlit.elements.doc_string so _get_variable_name() works outside ScriptRunner."""
+    import inspect
+
+    parent_frame_filename = inspect.getouterframes(inspect.currentframe())[2].filename
+
+    return patch(
+        "streamlit.elements.doc_string.SCRIPTRUNNER_FILENAME", parent_frame_filename
+    )
+
+
 class StreamlitTest(unittest.TestCase):
     """Test Streamlit.__init__.py."""
 
@@ -386,21 +397,16 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
 
     def test_st_help(self):
         """Test st.help."""
-        st.help(st.help)
+        with patch_varname_getter():
+            st.help(os.chdir)
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.doc_string.name, "help")
-        self.assertEqual(el.doc_string.module, "streamlit")
+        el = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual("os.chdir", el.name)
+        self.assertEqual("builtin_function_or_method", el.type)
         self.assertTrue(
-            el.doc_string.doc_string.startswith(
-                "Display object's doc string, nicely formatted."
-            )
+            el.doc_string.startswith("Change the current working directory")
         )
-        self.assertEqual(el.doc_string.type, "<class 'method'>")
-        self.assertEqual(
-            el.doc_string.signature,
-            "(obj: Any) -> 'DeltaGenerator'",
-        )
+        self.assertEqual(f"posix.chdir(path)", el.value)
 
     def test_st_info(self):
         """Test st.info."""
@@ -692,6 +698,13 @@ class StreamlitAPITest(DeltaGeneratorTestCase):
             st.experimental_set_query_params(embed="True")
         with self.assertRaises(StreamlitAPIException):
             st.experimental_set_query_params(embed_options="show_colored_line")
+
+    def test_get_query_params_after_set_query_params(self):
+        """Test valid st.set_query_params sends protobuf message."""
+        p_set = dict(x=["a"])
+        st.experimental_set_query_params(**p_set)
+        p_get = st.experimental_get_query_params()
+        self.assertEqual(p_get, p_set)
 
     @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
     def test_st_alert_exceptions(self, alert_func):

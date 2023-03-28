@@ -23,11 +23,12 @@ import { ScriptRunState } from "src/lib/ScriptRunState"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import { sendMessageToHost } from "src/hocs/withHostCommunication"
 
-import AppContext from "src/components/core/AppContext"
+import { AppContext } from "src/components/core/AppContext"
 import { BlockNode, AppRoot } from "src/lib/AppNode"
 import { SessionInfo } from "src/lib/SessionInfo"
+import { IGuestToHostMessage } from "src/hocs/withHostCommunication/types"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 import {
   StyledAppViewBlockContainer,
@@ -42,7 +43,11 @@ import {
 export interface AppViewProps {
   elements: AppRoot
 
+  endpoints: StreamlitEndpoints
+
   sessionInfo: SessionInfo
+
+  sendMessageToHost: (message: IGuestToHostMessage) => void
 
   // The unique ID for the most recent script run.
   scriptRunId: string
@@ -90,6 +95,8 @@ function AppView(props: AppViewProps): ReactElement {
     currentPageScriptHash,
     hideSidebarNav,
     pageLinkBaseUrl,
+    sendMessageToHost,
+    endpoints,
   } = props
 
   React.useEffect(() => {
@@ -101,7 +108,7 @@ function AppView(props: AppViewProps): ReactElement {
     }
     window.addEventListener("hashchange", listener, false)
     return () => window.removeEventListener("hashchange", listener, false)
-  }, [])
+  }, [sendMessageToHost])
 
   const {
     wideMode,
@@ -122,6 +129,7 @@ function AppView(props: AppViewProps): ReactElement {
     >
       <VerticalBlock
         node={node}
+        endpoints={endpoints}
         sessionInfo={sessionInfo}
         scriptRunId={scriptRunId}
         scriptRunState={scriptRunState}
