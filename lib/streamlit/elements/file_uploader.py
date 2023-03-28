@@ -14,6 +14,7 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
+from types import NoneType
 from typing import List, Optional, Union, cast, overload
 
 from typing_extensions import Literal
