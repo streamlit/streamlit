@@ -345,7 +345,7 @@ class FileUploaderMixin:
 
         """
         ctx = get_script_run_ctx()
-        return cast(Union[UploadedFile, List[UploadedFile], None], self._file_uploader(
+        return self._file_uploader(
             label=label,
             type=type,
             accept_multiple_files=accept_multiple_files,
@@ -357,7 +357,7 @@ class FileUploaderMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             ctx=ctx,
-        ))
+        )
 
     def _file_uploader(
         self,
@@ -373,7 +373,7 @@ class FileUploaderMixin:
         label_visibility: LabelVisibility = "visible",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ):
+    ) -> Union[UploadedFile, List[UploadedFile], None]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -439,7 +439,7 @@ class FileUploaderMixin:
             )
 
         self.dg._enqueue("file_uploader", file_uploader_proto)
-        return widget_state.value
+        return cast(Union[UploadedFile, List[UploadedFile], None], widget_state.value)
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
