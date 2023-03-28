@@ -14,7 +14,6 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
-from types import NoneType
 from typing import List, Optional, Sequence, Union, cast, overload
 
 from typing_extensions import Literal
@@ -217,7 +216,7 @@ class FileUploaderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Union[NoneType, UploadedFile, List[UploadedFile]]:
+    ) -> Union[UploadedFile, List[UploadedFile], None]:
         r"""Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option. For more info
