@@ -67,18 +67,18 @@ class DataEditorUtilTest(unittest.TestCase):
 
         edited_cells: Mapping[str, str | int | float | bool | None] = {
             "0:1": 10,
-            "1:1": "foo",
+            "0:2": "foo",
             "1:2": None,
-            "2:1": False,
+            "0:3": False,
             # TODO: "3:1": "2020-03-20T14:28:23",
         }
 
         _apply_cell_edits(df, edited_cells)
 
         self.assertEqual(df.iat[0, 0], 10)
-        self.assertEqual(df.iat[1, 0], "foo")
+        self.assertEqual(df.iat[0, 1], "foo")
         self.assertEqual(df.iat[1, 1], None)
-        self.assertEqual(df.iat[2, 0], False)
+        self.assertEqual(df.iat[0, 2], False)
         # TODO: self.assertEqual(df.iat[3, 0], None)
 
     def test_apply_row_additions(self):
