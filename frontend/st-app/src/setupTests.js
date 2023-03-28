@@ -19,5 +19,6 @@
 import { configure } from "enzyme"
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17"
 
+// for plotly.js
 window.URL.createObjectURL = function() {};
 configure({ adapter: new Adapter() })

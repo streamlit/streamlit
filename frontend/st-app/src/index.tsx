@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-// adding this because we want to have react as peer dependencies(?)
-/* eslint @typescript-eslint/no-var-requires: "off" */
 import { Client as Styletron } from "styletron-engine-atomic"
 import { Provider as StyletronProvider } from "styletron-react"
 import ThemedApp from "./ThemedApp"
