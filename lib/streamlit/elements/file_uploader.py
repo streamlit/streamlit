@@ -15,7 +15,7 @@
 from dataclasses import dataclass
 from textwrap import dedent
 from types import NoneType
-from typing import List, Optional, Union, cast, overload
+from typing import List, Optional, Sequence, Union, cast, overload
 
 from typing_extensions import Literal
 
@@ -128,7 +128,7 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, List[str]]],
+        type: Optional[Union[str, Sequence[str]]],
         accept_multiple_files: Literal[True],
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -147,7 +147,7 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, List[str]]],
+        type: Optional[Union[str, Sequence[str]]],
         accept_multiple_files: Literal[False] = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -173,7 +173,7 @@ class FileUploaderMixin:
         label: str,
         *,
         accept_multiple_files: Literal[True],
-        type: Optional[Union[str, List[str]]] = None,
+        type: Optional[Union[str, Sequence[str]]] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -192,7 +192,7 @@ class FileUploaderMixin:
         label: str,
         *,
         accept_multiple_files: Literal[False] = False,
-        type: Optional[Union[str, List[str]]] = None,
+        type: Optional[Union[str, Sequence[str]]] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -207,7 +207,7 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, List[str]]] = None,
+        type: Optional[Union[str, Sequence[str]]] = None,
         accept_multiple_files: bool = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -363,7 +363,7 @@ class FileUploaderMixin:
     def _file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, List[str]]] = None,
+        type: Optional[Union[str, Sequence[str]]] = None,
         accept_multiple_files: bool = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
