@@ -345,7 +345,7 @@ class FileUploaderMixin:
 
         """
         ctx = get_script_run_ctx()
-        return self._file_uploader(
+        return cast(Union[UploadedFile, List[UploadedFile], None], self._file_uploader(
             label=label,
             type=type,
             accept_multiple_files=accept_multiple_files,
@@ -357,7 +357,7 @@ class FileUploaderMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             ctx=ctx,
-        )
+        ))
 
     def _file_uploader(
         self,
