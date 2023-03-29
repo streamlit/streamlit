@@ -448,7 +448,7 @@ export function extractPageNameFromPathName(
   )
 }
 
-export const TESTING_QUERY_PARAM_KEY = "testing"
+export const TESTING_QUERY_PARAM_KEY = "_stcore_testing"
 export function isTesting(): boolean {
   const urlParams = new URLSearchParams(window.location.search)
   let isTesting = false
