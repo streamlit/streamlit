@@ -71,10 +71,12 @@ class SQL(BaseConnection["Engine"]):
         ttl: Optional[Union[float, int, timedelta]] = None,
         **kwargs,
     ) -> pd.DataFrame:
+        from sqlalchemy import text
+
         @cache_data(ttl=ttl)
         def _read_sql(sql: str, **kwargs) -> pd.DataFrame:
             instance = self._instance.connect()
-            return pd.read_sql(sql, instance, **kwargs)
+            return pd.read_sql(text(sql), instance, **kwargs)
 
         return _read_sql(sql, **kwargs)
 
