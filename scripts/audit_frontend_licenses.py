@@ -49,7 +49,7 @@ ACCEPTABLE_LICENSES = {
     "Zlib",  # https://opensource.org/licenses/Zlib
     "Unlicense",  # https://unlicense.org/
     "WTFPL",  # http://www.wtfpl.net/about/
-    "MPL-2.0", # https://www.mozilla.org/en-US/MPL/2.0/
+    "MPL-2.0",  # https://www.mozilla.org/en-US/MPL/2.0/
     # Dual-licenses are acceptable if at least one of the two licenses is
     # acceptable.
     "(MIT OR Apache-2.0)",
