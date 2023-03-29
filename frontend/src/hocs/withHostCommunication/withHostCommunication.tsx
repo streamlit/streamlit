@@ -19,6 +19,7 @@ import hoistNonReactStatics from "hoist-non-react-statics"
 
 import { ICustomThemeConfig } from "src/autogen/proto"
 
+import { IS_DEV_ENV } from "src/lib/baseconsts"
 import Resolver from "src/lib/Resolver"
 import { isValidOrigin } from "src/lib/UriUtil"
 
@@ -128,6 +129,11 @@ function withHostCommunication<P extends InjectedProps>(
       }
 
       const { allowedOrigins, useExternalAuthToken } = allowedOriginsResp
+
+      if (IS_DEV_ENV) {
+        allowedOrigins.push("http://localhost:8000")
+      }
+
       if (!useExternalAuthToken) {
         deferredAuthToken.resolve(undefined)
       }
