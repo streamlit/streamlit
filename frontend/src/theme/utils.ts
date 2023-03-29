@@ -128,6 +128,7 @@ export const createBaseThemePrimitives = (
 export const createThemeOverrides = (theme: Theme): Record<string, any> => {
   const { inSidebar, colors, genericFonts, fontSizes, lineHeights, radii } =
     theme
+
   const fontStyles = {
     fontFamily: genericFonts.bodyFont,
     fontSize: fontSizes.md,
@@ -137,16 +138,36 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
     lineHeightTight: lineHeights.tight,
   }
 
+  const widgetBackgroundColor = colors.widgetBackgroundColor
+    ? colors.widgetBackgroundColor
+    : colors.secondaryBg
+
   return {
     borders: {
       radius100: radii.md,
       radius200: radii.md,
       radius300: radii.md,
       radius400: radii.md,
+
+      // Override borders that are declared from literals in
+      // https://github.com/uber/baseweb/blob/master/src/themes/shared/borders.ts
+
+      /** Datepicker (Range), Progress Bar, Slider, Tag */
+      useRoundedCorners: true,
+      /** Button, ButtonGroup */
+      buttonBorderRadiusMini: radii.md, // Unused today.
       buttonBorderRadius: radii.md,
+      /** Checkbox */
+      checkboxBorderRadius: radii.md,
+      /** Input, Select, Textarea */
+      inputBorderRadiusMini: radii.md, // Unused today.
       inputBorderRadius: radii.md,
+      /** Popover, Menu, Tooltip */
       popoverBorderRadius: radii.md,
+      /** Card, Datepicker, Modal, Toast, Notification */
       surfaceBorderRadius: radii.md,
+      /** Tag */
+      tagBorderRadius: radii.md,
     },
     typography: {
       // Here we override some fonts that are used in widgets. We don't care
@@ -177,7 +198,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       primary: colors.primary,
       primaryA: colors.primary,
       backgroundPrimary: colors.bgColor,
-      backgroundSecondary: colors.secondaryBg,
+      backgroundSecondary: widgetBackgroundColor,
       backgroundTertiary: colors.bgColor,
       borderOpaque: colors.darkenedBgMix25,
       accent: transparentize(colors.primary, 0.5),
@@ -190,16 +211,12 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       tickFillDisabled: colors.fadedText40,
       tickMarkFill: colors.lightestGray,
       tickFillSelected: colors.primary,
-      datepickerBackground: inSidebar ? colors.secondaryBg : colors.bgColor,
-      calendarBackground: inSidebar ? colors.secondaryBg : colors.bgColor,
+      datepickerBackground: widgetBackgroundColor,
+      calendarBackground: widgetBackgroundColor,
       calendarForeground: colors.bodyText,
       calendarDayForegroundPseudoSelected: colors.bodyText,
-      calendarHeaderBackground: inSidebar
-        ? colors.bgColor
-        : colors.secondaryBg,
-      calendarHeaderBackgroundActive: inSidebar
-        ? colors.bgColor
-        : colors.secondaryBg,
+      calendarHeaderBackground: widgetBackgroundColor,
+      calendarHeaderBackgroundActive: widgetBackgroundColor,
       calendarHeaderForeground: colors.bodyText,
       calendarHeaderForegroundDisabled: colors.gray40,
       calendarDayBackgroundSelected: colors.primary,
@@ -219,27 +236,29 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       notificationWarningText: colors.alertWarningTextColor,
       notificationNegativeBackground: colors.alertErrorBackgroundColor,
       notificationNegativeText: colors.alertErrorTextColor,
-      progressbarTrackFill: colors.secondaryBg,
+      progressbarTrackFill: widgetBackgroundColor,
 
       // mono100 overrides
       tickFill: colors.lightenedBg05, // Checkbox and Radio
       tickMarkFillDisabled: colors.lightenedBg05,
-      menuFill: theme.inSidebar ? colors.secondaryBg : colors.bgColor, // Dropdown BG
+      menuFill: widgetBackgroundColor, // Dropdown BG
 
       // mono200 overrides
       buttonDisabledFill: colors.lightenedBg05,
-      tickFillHover: colors.secondaryBg,
-      inputFillDisabled: colors.secondaryBg,
-      inputFillActive: colors.secondaryBg,
+      tickFillHover: widgetBackgroundColor,
+      inputFillDisabled: widgetBackgroundColor,
+      inputFillActive: widgetBackgroundColor,
 
       // mono300 overrides
-      toggleTrackFillDisabled: colors.secondaryBg,
-      tickFillActive: colors.secondaryBg,
-      sliderTrackFillDisabled: colors.secondaryBg,
-      inputBorder: colors.secondaryBg,
-      inputFill: colors.secondaryBg,
-      inputEnhanceFill: colors.secondaryBg,
-      inputEnhancerFillDisabled: colors.secondaryBg,
+      toggleTrackFillDisabled: widgetBackgroundColor,
+      tickFillActive: widgetBackgroundColor,
+      sliderTrackFillDisabled: widgetBackgroundColor,
+      inputBorder: colors.widgetBorderColor
+        ? colors.widgetBorderColor
+        : widgetBackgroundColor,
+      inputFill: widgetBackgroundColor,
+      inputEnhanceFill: widgetBackgroundColor,
+      inputEnhancerFillDisabled: widgetBackgroundColor,
 
       // mono400 overrides
       buttonDisabledSpinnerBackground: colors.gray40,
