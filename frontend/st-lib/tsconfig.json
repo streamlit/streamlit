@@ -23,6 +23,6 @@
     "rootDir": "src",
     "paths": { "src/*": ["src/*"] }
   },
-  "include": ["src", "index.d.ts"],
+  "include": ["src", "declarations.d.ts"],
   "exclude": ["**/*.test.ts", "**/*.test.tsx", "./src/autogen/**", "node_modules/**/*"]
 }
