@@ -18,9 +18,13 @@ import React from "react"
 import { BaseProvider } from "baseui"
 import { Global } from "@emotion/react"
 
+import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
+
+import FontFaceDeclaration from "src/components/core/FontFaceDeclaration"
 import ThemeProvider from "src/components/core/ThemeProvider"
 import {
   AUTO_THEME_NAME,
+  CUSTOM_THEME_NAME,
   createAutoTheme,
   createPresetThemes,
   getDefaultTheme,
@@ -29,6 +33,7 @@ import {
   removeCachedTheme,
   setCachedTheme,
   ThemeConfig,
+  createTheme,
 } from "src/theme"
 
 import AppWithScreencast from "./App"
@@ -38,6 +43,7 @@ const ThemedApp = (): JSX.Element => {
   const defaultTheme = getDefaultTheme()
 
   const [theme, setTheme] = React.useState<ThemeConfig>(defaultTheme)
+  const [fontFaces, setFontFaces] = React.useState<object[] | undefined>()
   const [availableThemes, setAvailableThemes] = React.useState<ThemeConfig[]>([
     ...createPresetThemes(),
     ...(isPresetTheme(defaultTheme) ? [] : [defaultTheme]),
@@ -71,10 +77,21 @@ const ThemedApp = (): JSX.Element => {
     setAvailableThemes([createAutoTheme(), ...constantThemes])
   }
 
+  const setImportedTheme = (themeConfigObj: ICustomThemeConfig): void => {
+    // If fonts are coming from a URL, they need to be imported through the FontFaceDeclaration
+    // component. So let's store them in state so we can pass them as props.
+    if (themeConfigObj.fontFaces) {
+      setFontFaces(themeConfigObj.fontFaces as object[] | undefined)
+    }
+
+    const themeConfigProto = new CustomThemeConfig(themeConfigObj)
+    const customTheme = createTheme(CUSTOM_THEME_NAME, themeConfigProto)
+    updateTheme(customTheme)
+  }
+
   React.useEffect(() => {
     const mediaMatch = window.matchMedia("(prefers-color-scheme: dark)")
     mediaMatch.addEventListener("change", updateAutoTheme)
-
     return () => mediaMatch.removeEventListener("change", updateAutoTheme)
   }, [theme, availableThemes])
 
@@ -85,12 +102,16 @@ const ThemedApp = (): JSX.Element => {
     >
       <ThemeProvider theme={theme.emotion} baseuiTheme={theme.basewebTheme}>
         <Global styles={globalStyles} />
+        {theme.name === CUSTOM_THEME_NAME && fontFaces && (
+          <FontFaceDeclaration fontFaces={fontFaces} />
+        )}
         <AppWithScreencast
           theme={{
             setTheme: updateTheme,
             activeTheme: theme,
             addThemes,
             availableThemes,
+            setImportedTheme,
           }}
         />
         {/* The data grid requires one root level portal element for rendering cell overlays */}

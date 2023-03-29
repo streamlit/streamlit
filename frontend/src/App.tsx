@@ -20,6 +20,8 @@ import { HotKeys, KeyMap } from "react-hotkeys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
+import { ICustomThemeConfig } from "src/autogen/proto"
+
 // Other local imports.
 import { AppContext } from "src/components/core/AppContext"
 import AppView from "src/components/core/AppView"
@@ -134,6 +136,7 @@ export interface Props {
     availableThemes: ThemeConfig[]
     setTheme: (theme: ThemeConfig) => void
     addThemes: (themes: ThemeConfig[]) => void
+    setImportedTheme: (themeConfigObj: ICustomThemeConfig) => void
   }
 }
 

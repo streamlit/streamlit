@@ -17,6 +17,8 @@
 import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
+import { ICustomThemeConfig } from "src/autogen/proto"
+
 import Resolver from "src/lib/Resolver"
 import { isValidOrigin } from "src/lib/UriUtil"
 
@@ -84,6 +86,9 @@ function sendMessageToHost(message: IGuestToHostMessage): void {
 
 interface InjectedProps {
   hostCommunication: HostCommunicationHOC
+  theme: {
+    setImportedTheme: (themeConfigObj: ICustomThemeConfig) => void
+  }
 }
 
 type WrappedProps<P extends InjectedProps> = Omit<P, "hostCommunication">
@@ -136,6 +141,7 @@ function withHostCommunication<P extends InjectedProps>(
         // processing messages received from origins we haven't explicitly
         // labeled as trusted here to lower the probability that we end up
         // processing malicious input.
+
         if (
           message.stCommVersion !== HOST_COMM_VERSION ||
           !allowedOrigins.find(allowed => isValidOrigin(allowed, event.origin))
@@ -194,6 +200,10 @@ function withHostCommunication<P extends InjectedProps>(
 
         if (message.type === "UPDATE_HASH") {
           window.location.hash = message.hash
+        }
+
+        if (message.type === "SET_CUSTOM_THEME_CONFIG") {
+          props.theme.setImportedTheme(message.theme)
         }
       }
 
