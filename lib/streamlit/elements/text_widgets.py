@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import Optional, cast
 
+from typing_extensions import Literal
+
 import streamlit
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -73,7 +75,7 @@ class TextWidgetsMixin:
         value: SupportsStr = "",
         max_chars: Optional[int] = None,
         key: Optional[Key] = None,
-        type: str = "default",
+        type: Literal["default", "password"] = "default",
         help: Optional[str] = None,
         autocomplete: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -124,7 +126,7 @@ class TextWidgetsMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
-        type : str
+        type : "default" or "password"
             The type of the text input. This can be either "default" (for
             a regular text input), or "password" (for a text input that
             masks the user's typed value). Defaults to "default".

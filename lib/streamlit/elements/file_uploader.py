@@ -14,7 +14,7 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import List, Optional, Union, cast, overload
+from typing import List, Optional, Sequence, Union, cast, overload
 
 from typing_extensions import Literal
 
@@ -127,7 +127,7 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, List[str]]],
+        type: Optional[Union[str, Sequence[str]]],
         accept_multiple_files: Literal[True],
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -146,7 +146,7 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, List[str]]],
+        type: Optional[Union[str, Sequence[str]]],
         accept_multiple_files: Literal[False] = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -172,7 +172,7 @@ class FileUploaderMixin:
         label: str,
         *,
         accept_multiple_files: Literal[True],
-        type: Optional[Union[str, List[str]]] = None,
+        type: Optional[Union[str, Sequence[str]]] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -191,7 +191,7 @@ class FileUploaderMixin:
         label: str,
         *,
         accept_multiple_files: Literal[False] = False,
-        type: Optional[Union[str, List[str]]] = None,
+        type: Optional[Union[str, Sequence[str]]] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -206,7 +206,7 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, List[str]]] = None,
+        type: Optional[Union[str, Sequence[str]]] = None,
         accept_multiple_files: bool = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -216,7 +216,7 @@ class FileUploaderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ):
+    ) -> SomeUploadedFiles:
         r"""Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option. For more info
@@ -362,7 +362,7 @@ class FileUploaderMixin:
     def _file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, List[str]]] = None,
+        type: Optional[Union[str, Sequence[str]]] = None,
         accept_multiple_files: bool = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -373,7 +373,7 @@ class FileUploaderMixin:
         label_visibility: LabelVisibility = "visible",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ):
+    ) -> SomeUploadedFiles:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
