@@ -26,7 +26,7 @@ import {
   darkTheme,
   setCachedTheme,
   ThemeConfig,
-} from "@streamlit/st-lib"
+} from "@streamlit/lib"
 
 import AppWithScreencast from "./App"
 import ThemedApp from "./ThemedApp"

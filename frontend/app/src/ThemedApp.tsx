@@ -29,7 +29,7 @@ import {
   removeCachedTheme,
   setCachedTheme,
   ThemeConfig,
-} from "@streamlit/st-lib"
+} from "@streamlit/lib"
 
 import AppWithScreencast from "./App"
 import { StyledDataFrameOverlay } from "./styled-components"

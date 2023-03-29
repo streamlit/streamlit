@@ -42,7 +42,7 @@ import {
   MainMenu,
   ToolbarActions,
   HostCommunicationHOC,
-} from "@streamlit/st-lib"
+} from "@streamlit/lib"
 
 import { App, Props } from "./App"
 
@@ -56,7 +56,7 @@ import {
   PagesChanged,
 } from "src/autogen/proto"
 
-jest.mock("@streamlit/st-lib/dist/lib/ConnectionManager")
+jest.mock("@streamlit/lib/dist/lib/ConnectionManager")
 
 const getHostCommunicationState = (
   extend?: Partial<HostCommunicationState>

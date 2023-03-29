@@ -1,5 +1,5 @@
 {
-  "name": "@streamlit/st-app",
+  "name": "@streamlit/app",
   "version": "1.0.0",
   "license": "Apache-2.0",
   "private": true,
@@ -142,7 +142,7 @@
     "semver": "^7.3.5",
     "source-map-loader": "^3.0.0",
     "sprintf-js": "^1.1.2",
-    "@streamlit/st-lib": "1.0.0",
+    "@streamlit/lib": "1.0.0",
     "style-loader": "^3.3.1",
     "styletron-engine-atomic": "^1.5.0",
     "styletron-react": "^6.1.0",

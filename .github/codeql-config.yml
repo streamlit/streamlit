@@ -1,4 +1,4 @@
 paths:
   - lib/streamlit
-  - frontend/st-lib/src
-  - frontend/st-app/src
+  - frontend/lib/src
+  - frontend/app/src

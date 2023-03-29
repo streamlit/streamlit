@@ -85,7 +85,7 @@ import {
   DefaultStreamlitEndpoints,
   StreamlitEndpoints,
   DeployButton,
-} from "@streamlit/st-lib"
+} from "@streamlit/lib"
 
 import {
   AppPage,
