@@ -97,6 +97,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     availableThemes: [],
     setTheme: jest.fn(),
     addThemes: jest.fn(),
+    setImportedTheme: jest.fn(),
   },
   ...extend,
 })
