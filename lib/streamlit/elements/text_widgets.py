@@ -14,7 +14,9 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Literal, Optional, cast
+from typing import Optional, cast
+
+from typing_extensions import Literal
 
 import streamlit
 from streamlit.elements.form import current_form_id
