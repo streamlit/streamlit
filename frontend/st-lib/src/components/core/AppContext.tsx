@@ -18,7 +18,6 @@ import React from "react"
 
 import { PageConfig } from "src/autogen/proto"
 import { baseTheme, ThemeConfig } from "src/theme"
-import { BaseUriParts, getWindowBaseUriParts } from "src/lib/UriUtil"
 
 export interface AppContextProps {
   /**
@@ -110,13 +109,6 @@ export interface AppContextProps {
    * @see StyledSidebarCollapsedControl
    */
   sidebarChevronDownshift: number
-
-  /**
-   * Function that returns the BaseUriParts object for the server we're
-   * connected to, if we're connected.
-   * @see WebsocketConnection.getBaseUriParts
-   */
-  getBaseUriParts: () => BaseUriParts | undefined
 }
 
 export const AppContext = React.createContext<AppContextProps>({
@@ -137,5 +129,4 @@ export const AppContext = React.createContext<AppContextProps>({
   availableThemes: [],
   addThemes: () => {},
   sidebarChevronDownshift: 0,
-  getBaseUriParts: getWindowBaseUriParts,
 })

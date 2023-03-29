@@ -14,5 +14,5 @@
 
 import streamlit as st
 
-# no need to set it using this since we add ?testing=true to the url param
-# st.experimental_set_query_params(testing="true")
+# no need to set it using this since we add ?_stcore_testing=true to the url param
+# st.experimental_set_query_params(_stcore_testing="true")

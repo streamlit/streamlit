@@ -25,7 +25,8 @@ import { act } from "react-dom/test-utils"
 import Icon from "src/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/Hooks"
 import { mount, shallow } from "src/lib/test_util"
-import { BaseUriParts } from "src/lib/UriUtil"
+import { mockEndpoints } from "src/lib/mocks/mocks"
+import { IAppPage } from "src/autogen/proto"
 
 import SidebarNav, { Props } from "./SidebarNav"
 import {
@@ -58,6 +59,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   hideParentScrollbar: jest.fn(),
   onPageChange: jest.fn(),
   pageLinkBaseUrl: "",
+  endpoints: mockEndpoints(),
   ...props,
 })
 
@@ -112,86 +114,22 @@ describe("SidebarNav", () => {
     })
 
     it("are added to each link", () => {
-      const wrapper = shallow(<SidebarNav {...getProps()} />)
+      const buildAppPageURL = jest
+        .fn()
+        .mockImplementation(
+          (pageLinkBaseURL: string, page: IAppPage, pageIndex: number) => {
+            return `http://mock/app/page/${page.pageName}.${pageIndex}`
+          }
+        )
+      const props = getProps({ endpoints: mockEndpoints({ buildAppPageURL }) })
 
-      expect(
-        wrapper.find("StyledSidebarNavLink").map(node => node.props().href)
-      ).toEqual(["http://localhost/", "http://localhost/my_other_page"])
-    })
-
-    it("work with non-default port", () => {
-      window.location.port = "3000"
-      const wrapper = shallow(<SidebarNav {...getProps()} />)
-
-      expect(
-        wrapper.find("StyledSidebarNavLink").map(node => node.props().href)
-      ).toEqual([
-        "http://localhost:3000/",
-        "http://localhost:3000/my_other_page",
-      ])
-    })
-
-    it("work with non-default baseUrlPaths", () => {
-      const getBaseUriParts = (): Partial<BaseUriParts> => ({
-        basePath: "foo/bar",
-        host: "example.com",
-      })
-
-      const mockUseContext = jest
-        .spyOn(React, "useContext")
-        .mockImplementation(() => ({ getBaseUriParts }))
-
-      const wrapper = shallow(<SidebarNav {...getProps()} />)
+      const wrapper = shallow(<SidebarNav {...props} />)
 
       expect(
         wrapper.find("StyledSidebarNavLink").map(node => node.props().href)
       ).toEqual([
-        "http://example.com/foo/bar/",
-        "http://example.com/foo/bar/my_other_page",
-      ])
-
-      mockUseContext.mockRestore()
-    })
-
-    it("work with non-default port and non-default baseUrlPaths", () => {
-      window.location.port = "3000"
-      const getBaseUriParts = (): Partial<BaseUriParts> => ({
-        basePath: "foo/bar",
-        host: "localhost",
-      })
-
-      const mockUseContext = jest
-        .spyOn(React, "useContext")
-        .mockImplementation(() => ({ getBaseUriParts }))
-
-      const wrapper = shallow(<SidebarNav {...getProps()} />)
-
-      expect(
-        wrapper.find("StyledSidebarNavLink").map(node => node.props().href)
-      ).toEqual([
-        "http://localhost:3000/foo/bar/",
-        "http://localhost:3000/foo/bar/my_other_page",
-      ])
-
-      mockUseContext.mockRestore()
-    })
-
-    it("is built using the pageLinkBaseUrl if one is set", () => {
-      window.location.port = "3000"
-
-      const wrapper = shallow(
-        <SidebarNav
-          {...getProps({
-            pageLinkBaseUrl: "https://share.streamlit.io/vdonato/foo/bar",
-          })}
-        />
-      )
-
-      expect(
-        wrapper.find("StyledSidebarNavLink").map(node => node.props().href)
-      ).toEqual([
-        "https://share.streamlit.io/vdonato/foo/bar/",
-        "https://share.streamlit.io/vdonato/foo/bar/my_other_page",
+        "http://mock/app/page/streamlit_app.0",
+        "http://mock/app/page/my_other_page.1",
       ])
     })
   })
