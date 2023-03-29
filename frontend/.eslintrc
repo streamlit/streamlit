@@ -20,7 +20,7 @@
   // Specifies the ESLint parser
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": "./st-lib/tsconfig.json",
+    "project": "./st-app/tsconfig.json",
     "ecmaFeatures": {
       "jsx": true // Allows for the parsing of JSX
     },
