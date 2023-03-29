@@ -62,7 +62,7 @@ WidgetProto: TypeAlias = Union[
     TimeInput,
 ]
 
-GENERATED_WIDGET_ID_PREFIX: Final = "$$GENERATED_WIDGET_ID"
+GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"
 
 
 T = TypeVar("T")
