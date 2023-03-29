@@ -233,58 +233,9 @@ test("data automatically includes device data", () => {
   const mm = getMetricsManagerAnalyticsForTest()
   mm.initialize({ gatherUsageStats: true })
 
-  expect(mm.analytics.identify.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "browser",
-  ])
-  expect(mm.analytics.identify.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "browserVersion",
-  ])
-  expect(mm.analytics.identify.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "OS",
-  ])
-  expect(mm.analytics.identify.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "OSVersion",
-  ])
-  expect(mm.analytics.identify.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "deviceType",
-  ])
-  expect(mm.analytics.identify.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "engine",
-  ])
-  expect(mm.analytics.identify.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "engineVersion",
-  ])
+  expect(mm.analytics.emit.mock.calls[0][0]).toBe("identify")
+  expect(mm.analytics.emit.mock.calls[0][2]).toHaveProperty(["deviceBrowser"])
 
-  expect(mm.analytics.track.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "browser",
-  ])
-  expect(mm.analytics.track.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "browserVersion",
-  ])
-  expect(mm.analytics.track.mock.calls[0][2]).toHaveProperty(["device", "OS"])
-  expect(mm.analytics.track.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "OSVersion",
-  ])
-  expect(mm.analytics.track.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "deviceType",
-  ])
-  expect(mm.analytics.track.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "engine",
-  ])
-  expect(mm.analytics.track.mock.calls[0][2]).toHaveProperty([
-    "device",
-    "engineVersion",
-  ])
+  expect(mm.analytics.emit.mock.calls[1][0]).toBe("track")
+  expect(mm.analytics.emit.mock.calls[1][2]).toHaveProperty(["deviceBrowser"])
 })

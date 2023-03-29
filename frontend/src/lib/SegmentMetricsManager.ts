@@ -101,6 +101,20 @@ export class SegmentMetricsManager implements MetricsManager {
         userTraits.authoremail = this.sessionInfo.current.authorEmail
       }
 
+      const parser = new UAParser("user-agent")
+      const parsedUA = parser.getResult()
+
+      const old_normalize = analytics.normalize
+
+      const new_normalize = (message: any) => {
+        let msg = old_normalize(message)
+        msg["context"]["ip"] = "0.0.0.0"
+        msg["context"]["page"]["title"] = ""
+        return msg
+      }
+
+      analytics.normalize = new_normalize
+
       this.identify(this.sessionInfo.current.installationId, userTraits)
       this.sendPendingEvents()
     }
@@ -172,6 +186,9 @@ export class SegmentMetricsManager implements MetricsManager {
   // only be changed when requested by the data team. This is why `reportHash`
   // retains its old name.
   private send(evName: string, evData: Record<string, unknown> = {}): void {
+    const parser = new UAParser("user-agent")
+    const parsedUA = parser.getResult()
+
     const data = {
       ...evData,
       ...this.getHostTrackingData(),
@@ -181,6 +198,15 @@ export class SegmentMetricsManager implements MetricsManager {
       source: "browser",
       streamlitVersion: this.sessionInfo.current.streamlitVersion,
       isHello: this.sessionInfo.isHello,
+      // Combine the data with the user agent info since raw user agent strings are
+      // intentionally dropped
+      deviceBrowser: parsedUA.browser.name,
+      deviceBrowserVersion: parsedUA.browser.version,
+      deviceOS: parsedUA.os.name,
+      deviceOSVersion: parsedUA.os.version,
+      deviceDeviceType: parsedUA.device.type,
+      deviceEngine: parsedUA.engine.name,
+      deviceEngineVersion: parsedUA.engine.version,
     }
 
     // Don't actually track events when in dev mode, just print them instead.
@@ -206,65 +232,13 @@ export class SegmentMetricsManager implements MetricsManager {
     if (IS_DEV_ENV) {
       logAlways("[Dev mode] Not sending id: ", id, data)
     } else {
-      const parser = new UAParser("user-agent")
-      const parsedUA = parser.getResult()
-
-      // Combine the data with the user agent info
-      data = {
-        ...data,
-        device: {
-          browser: parsedUA.browser.name,
-          browserVersion: parsedUA.browser.version,
-          OS: parsedUA.os.name,
-          OSVersion: parsedUA.os.version,
-          deviceType: parsedUA.device.type,
-          engine: parsedUA.engine.name,
-          engineVersion: parsedUA.engine.version,
-        },
-      }
-
-      // Zero-out IP and page title because we intentionally don't collect them
-      // raw userAgent is sent automatically, but will be dropped later
-      analytics.identify(id, data, {
-        context: {
-          ip: "0.0.0.0",
-          page: {
-            title: "",
-          },
-        },
-      })
+      analytics.identify(id, data)
     }
   }
 
   // eslint-disable-next-line class-methods-use-this
   private track(evName: string, data: Record<string, unknown>): void {
-    const parser = new UAParser("user-agent")
-    const parsedUA = parser.getResult()
-
-    // Combine the data with the user agent info
-    data = {
-      ...data,
-      device: {
-        browser: parsedUA.browser.name,
-        browserVersion: parsedUA.browser.version,
-        OS: parsedUA.os.name,
-        OSVersion: parsedUA.os.version,
-        deviceType: parsedUA.device.type,
-        engine: parsedUA.engine.name,
-        engineVersion: parsedUA.engine.version,
-      },
-    }
-
-    // Zero-out IP and page title because we intentionally don't collect them
-    // raw userAgent is sent automatically, but will be dropped later
-    analytics.track(evName, data, {
-      context: {
-        ip: "0.0.0.0",
-        page: {
-          title: "",
-        },
-      },
-    })
+    analytics.track(evName, data)
   }
 
   // Get the installation IDs from the session

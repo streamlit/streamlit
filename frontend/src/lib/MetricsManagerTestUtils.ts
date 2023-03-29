@@ -38,8 +38,7 @@ export function getMetricsManagerAnalyticsForTest(
   const mm = new SegmentMetricsManager(sessionInfo || mockSessionInfo())
   // @ts-expect-error
   mm.analytics = {
-    track: jest.fn(),
-    identify: jest.fn(),
+    emit: jest.fn(),
   }
   return mm
 }

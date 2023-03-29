@@ -16,7 +16,30 @@ export const initializeSegment = (): void => {
   const analytics = (window.analytics = window.analytics || [])
 
   // If the real analytics.js is already on the page return.
-  if (analytics.initialize) return
+  if (analytics.initialize) {
+    if (analytics.customNormalize) {
+      return
+    }
+    const oldNormalize = analytics.normalize
+    // Zero-out IP, page title and userAgent because we intentionally don't collect them
+    const newNormalize = (message: any) => {
+      let msg = oldNormalize(message)
+      if (msg["context"] == null) {
+        msg["context"] = {}
+      }
+      msg["context"]["ip"] = "0.0.0.0"
+      if (msg["context"]["page"] == null) {
+        msg["context"]["page"] = {}
+      }
+      msg["context"]["page"]["title"] = ""
+      msg["context"]["userAgent"] = ""
+
+      return msg
+    }
+
+    analytics.normalize = newNormalize
+    analytics.customNormalize = true
+  }
 
   // If the snippet was invoked already show an error.
   if (analytics.invoked) {
