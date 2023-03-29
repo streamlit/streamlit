@@ -1,9 +1,12 @@
 name: Build info
-description: Sets common environment variables that are needed for other build steps
+description: Sets common builds variables that are needed for other build steps
 
 outputs:
   PYTHON_VERSIONS:
-    description: Python versions for which tests will be run
+    description: |
+      Python versions for which tests will be run.
+      The oldest version is replaced by the literal "min" and
+      the newest is replaced by the literal "max".
     value: ${{ steps.build_info.outputs.PYTHON_VERSIONS }}
   PYTHON_MIN_VERSION:
     description: Oldest version of Python supported by Streamlit

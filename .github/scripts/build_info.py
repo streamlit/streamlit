@@ -12,6 +12,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Generates variables that are needed to execute the Github Action build.
+
+The description of the variables is in the
+`.github/actions/build_info/action.yml` file, but variables are also available
+in other contexts.
+
+Variables are saved in 3 places to handle 3 use cases:
+- The file specified by the GITHUB_OUTPUT environment variable, which
+  means the values will be available in the GitHub expression.
+  This allows us to have values when communicating between jobs.
+  For details, see:
+  https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-output-parameter
+- The file specified by the GITHUB_ENV environment variable, which
+  means the values will be available for other tools run in the following step
+  of the same job as environment variable.
+  For details, see:
+  https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable
+- The standard output, which means the values will be available in the GitHub logs,
+  making troubleshooting easier.
+"""
 import enum
 import fnmatch
 import json
@@ -30,11 +51,14 @@ GITHUB_CONTEXT_ENV_VAR = "GITHUB_CONTEXT"
 GITHUB_OUTPUT_ENV_VAR = "GITHUB_OUTPUT"
 GITHUB_ENV_ENV_VAR = "GITHUB_ENV"
 
+REQUIRED_ENV_VAR = (
+    [GITHUB_CONTEXT_ENV_VAR, GITHUB_OUTPUT_ENV_VAR, GITHUB_ENV_ENV_VAR]
+    if "CI" in os.environ
+    else [GITHUB_CONTEXT_ENV_VAR]
+)
 # The walrus operator requires Python 3.8 or newer
 if missing_envs := [
-    env_var
-    for env_var in [GITHUB_CONTEXT_ENV_VAR, GITHUB_OUTPUT_ENV_VAR, GITHUB_ENV_ENV_VAR]
-    if env_var not in os.environ
+    env_var for env_var in REQUIRED_ENV_VAR if env_var not in os.environ
 ]:
     raise SystemExit(f"Missing environment variables: {', '.join(missing_envs)}")
 
@@ -68,6 +92,24 @@ class GithubEvent(enum.Enum):
 
 
 def get_changed_files() -> List[str]:
+    """
+    Checks the modified files in the last commit.
+
+    Note that GITHUB_SHA for pull_request event is the last merge commit of the pull
+    request merge branch, which means that the last commit for a pull request always
+    lists all files modified by PR.
+
+    This script required the repository to have at least two recent commits checked
+    out, which means that Github Action actions/checkout must set the a parameter
+    fetch-depth to a value greater than 2.
+
+    Example:
+
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+    """
     git_output = subprocess.check_output(
         [
             "git",
@@ -83,6 +125,22 @@ def get_changed_files() -> List[str]:
 
 
 def should_test_all_python_versions() -> bool:
+    """
+    Checks whether tests should be run for all supported Python versions, or whether
+    it is enough to check the oldest and latest versions.
+
+    The behavior depends on what event triggered the current GitHub Action build to run.
+
+    For pull_request event, we return true when at least one of the conditions is met:
+    - PR has "dev:full-matrix" label
+    - Python dependencies have been modified
+    In other case, we return false.
+
+    For push event, we return true when the default branch is checked. In other case,
+    we return false.
+
+    For other events, we return false
+    """
     print(f"Current github event name: {GITHUB_EVENT_NAME!r}")
     if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
         pr_labels = [
@@ -131,6 +189,9 @@ def should_test_all_python_versions() -> bool:
 
 
 def get_output_variables() -> Dict[str, str]:
+    """
+    Compute build variables.
+    """
     return {
         "PYTHON_MIN_VERSION": PYTHON_MIN_VERSION,
         "PYTHON_MAX_VERSION": PYTHON_MAX_VERSION,
@@ -142,10 +203,15 @@ def get_output_variables() -> Dict[str, str]:
     }
 
 
-def save_env_variables(variables) -> None:
+def save_output_variables(variables: Dict[str, str]) -> None:
+    """
+    Saves builds variables
+    """
     print("Saving output variables")
-    with open(os.environ[GITHUB_ENV_ENV_VAR], "w+") as github_env_file, open(
-        os.environ[GITHUB_OUTPUT_ENV_VAR], "w+"
+    with open(
+        os.environ.get(GITHUB_ENV_ENV_VAR, "/dev/null"), "w+"
+    ) as github_env_file, open(
+        os.environ.get(GITHUB_OUTPUT_ENV_VAR, "/dev/null"), "w+"
     ) as github_output_file:
         for target_file in [sys.stdout, github_env_file, github_output_file]:
             for name, value in variables.items():
@@ -155,7 +221,7 @@ def save_env_variables(variables) -> None:
 
 def main() -> None:
     output_variables = get_output_variables()
-    save_env_variables(output_variables)
+    save_output_variables(output_variables)
 
 
 main()

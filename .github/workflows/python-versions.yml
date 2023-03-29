@@ -198,7 +198,7 @@ jobs:
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
         with:
-          python-version: '3.8'
+          python-version: "3.8"
       - name: Decrypt credentials
         run: ./.github/scripts/decrypt_credentials.sh
         env:
