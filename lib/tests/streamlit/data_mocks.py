@@ -55,7 +55,9 @@ SHARED_TEST_CASES = [
     (pd.DataFrame(), TestCaseMetadata(0, 0, DataFormat.PANDAS_DATAFRAME)),
     # Empty dataframe with columns:
     (
-        pd.DataFrame(columns=["name", "type"]),
+        pd.DataFrame(
+            columns=["name", "type"], index=pd.RangeIndex(start=0, step=1)
+        ),  # Explicitly set the range index to have the same behavior across versions
         TestCaseMetadata(0, 2, DataFormat.PANDAS_DATAFRAME),
     ),
     # Pandas DataFrame:

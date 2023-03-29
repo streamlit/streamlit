@@ -14,21 +14,24 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext, useEffect, useRef } from "react"
-import { AppContext } from "src/components/core/AppContext"
+import React, { ReactElement, useEffect, useRef } from "react"
 import { Video as VideoProto } from "src/autogen/proto"
-import { buildMediaUri } from "src/lib/UriUtil"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 const DEFAULT_HEIGHT = 528
 
 export interface VideoProps {
+  endpoints: StreamlitEndpoints
   width: number
   element: VideoProto
 }
 
-export default function Video({ element, width }: VideoProps): ReactElement {
+export default function Video({
+  element,
+  width,
+  endpoints,
+}: VideoProps): ReactElement {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const { getBaseUriParts } = useContext(AppContext)
 
   /* Element may contain "url" or "data" property. */
 
@@ -92,7 +95,7 @@ export default function Video({ element, width }: VideoProps): ReactElement {
     <video
       ref={videoRef}
       controls
-      src={buildMediaUri(url, getBaseUriParts())}
+      src={endpoints.buildMediaURL(url)}
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}
     />

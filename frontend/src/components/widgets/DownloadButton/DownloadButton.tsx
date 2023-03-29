@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useContext } from "react"
+import React, { ReactElement } from "react"
 import { DownloadButton as DownloadButtonProto } from "src/autogen/proto"
-import { AppContext } from "src/components/core/AppContext"
 import UIButton, {
   ButtonTooltip,
   Kind,
@@ -24,9 +23,10 @@ import UIButton, {
 } from "src/components/shared/Button"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
-import { buildMediaUri } from "src/lib/UriUtil"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 export interface Props {
+  endpoints: StreamlitEndpoints
   disabled: boolean
   element: DownloadButtonProto
   widgetMgr: WidgetStateManager
@@ -34,18 +34,16 @@ export interface Props {
 }
 
 function DownloadButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, width } = props
+  const { disabled, element, widgetMgr, width, endpoints } = props
   const style = { width }
-  const { getBaseUriParts } = useContext(AppContext)
 
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
     widgetMgr.setTriggerValue(element, { fromUi: true })
     const link = document.createElement("a")
-    const uri = `${buildMediaUri(
-      element.url,
-      getBaseUriParts()
+    const uri = `${endpoints.buildMediaURL(
+      element.url
     )}?title=${encodeURIComponent(document.title)}`
     link.setAttribute("href", uri)
     link.setAttribute("target", "_blank")
