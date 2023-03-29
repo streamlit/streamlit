@@ -16,7 +16,7 @@
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --fix src",
+    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --fix config",
     "jest_cache_clear": "jest --clearCache"
   },
   "dependencies": {
