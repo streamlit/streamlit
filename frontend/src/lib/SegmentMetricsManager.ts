@@ -206,8 +206,8 @@ export class SegmentMetricsManager implements MetricsManager {
     if (IS_DEV_ENV) {
       logAlways("[Dev mode] Not sending id: ", id, data)
     } else {
-      let parser = new UAParser("user-agent")
-      let parsedUA = parser.getResult()
+      const parser = new UAParser("user-agent")
+      const parsedUA = parser.getResult()
 
       // Combine the data with the user agent info
       data = {
@@ -238,8 +238,8 @@ export class SegmentMetricsManager implements MetricsManager {
 
   // eslint-disable-next-line class-methods-use-this
   private track(evName: string, data: Record<string, unknown>): void {
-    let parser = new UAParser("user-agent")
-    let parsedUA = parser.getResult()
+    const parser = new UAParser("user-agent")
+    const parsedUA = parser.getResult()
 
     // Combine the data with the user agent info
     data = {
