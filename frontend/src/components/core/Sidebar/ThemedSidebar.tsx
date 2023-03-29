@@ -26,6 +26,8 @@ const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>
     {
       secondaryBackgroundColor: theme.emotion.colors.bgColor,
       backgroundColor: theme.emotion.colors.secondaryBg,
+      widgetBackgroundColor: theme.emotion.colors.widgetBackgroundColor,
+      widgetBorderColor: theme.emotion.colors.widgetBorderColor,
     },
     theme,
     // inSidebar
