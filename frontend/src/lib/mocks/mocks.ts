@@ -52,6 +52,7 @@ export function mockEndpoints(
   return {
     buildComponentURL: jest.fn(),
     buildMediaURL: jest.fn(),
+    buildAppPageURL: jest.fn(),
     uploadFileUploaderFile: jest
       .fn()
       .mockRejectedValue(new Error("unimplemented mock endpoint")),

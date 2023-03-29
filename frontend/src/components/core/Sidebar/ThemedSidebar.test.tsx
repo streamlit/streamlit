@@ -17,6 +17,7 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 import lightTheme from "src/theme/lightTheme"
+import { mockEndpoints } from "src/lib/mocks/mocks"
 import { SidebarProps } from "./Sidebar"
 import ThemedSidebar from "./ThemedSidebar"
 
@@ -24,6 +25,7 @@ function getProps(
   props: Partial<SidebarProps> = {}
 ): Omit<SidebarProps, "chevronDownshift" | "theme"> {
   return {
+    endpoints: mockEndpoints(),
     appPages: [],
     onPageChange: jest.fn(),
     currentPageScriptHash: "page_hash",
