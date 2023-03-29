@@ -1541,7 +1541,6 @@ export class App extends PureComponent<Props, State> {
           addThemes: this.props.theme.addThemes,
           sidebarChevronDownshift:
             this.props.hostCommunication.currentState.sidebarChevronDownshift,
-          getBaseUriParts: this.getBaseUriParts,
           embedded: isEmbed(),
           showPadding: !isEmbed() || isPaddingDisplayed(),
           disableScrolling: isScrollingHidden(),
