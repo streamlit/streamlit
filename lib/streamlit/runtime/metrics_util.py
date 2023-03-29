@@ -277,7 +277,7 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
         # get_script_run_ctx gets imported here to prevent circular dependencies
         from streamlit.runtime.scriptrunner import get_script_run_ctx
 
-        ctx = get_script_run_ctx()
+        ctx = get_script_run_ctx(suppress_warning=True)
 
         tracking_activated = (
             ctx is not None
