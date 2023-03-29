@@ -369,7 +369,7 @@ export const createEmotionTheme = (
   baseThemeConfig = baseTheme
 ): Theme => {
   const { genericColors, genericFonts } = baseThemeConfig.emotion
-  const { font, ...customColors } = themeInput
+  const { font, radii, fontSizes, ...customColors } = themeInput
 
   const parsedFont = fontEnumToString(font)
 
@@ -395,14 +395,52 @@ export const createEmotionTheme = (
     backgroundColor: bgColor,
     primaryColor: primary,
     textColor: bodyText,
+    widgetBackgroundColor: widgetBackgroundColor,
+    widgetBorderColor: widgetBorderColor,
   } = parsedColors
 
-  const newGenericColors = {
-    ...genericColors,
-    ...(primary && { primary }),
-    ...(bodyText && { bodyText }),
-    ...(secondaryBg && { secondaryBg }),
-    ...(bgColor && { bgColor }),
+  const newGenericColors = { ...genericColors }
+
+  if (primary) newGenericColors.primary = primary
+  if (bodyText) newGenericColors.bodyText = bodyText
+  if (secondaryBg) newGenericColors.secondaryBg = secondaryBg
+  if (bgColor) newGenericColors.bgColor = bgColor
+  if (widgetBackgroundColor)
+    newGenericColors.widgetBackgroundColor = widgetBackgroundColor
+  if (widgetBorderColor) newGenericColors.widgetBorderColor = widgetBorderColor
+
+  const conditionalOverrides: any = {}
+
+  if (radii) {
+    conditionalOverrides.radii = {
+      ...baseThemeConfig.emotion.radii,
+    }
+
+    if (radii.checkboxRadius)
+      conditionalOverrides.radii.sm = addPxUnit(radii.checkboxRadius)
+    if (radii.baseWidgetRadius)
+      conditionalOverrides.radii.md = addPxUnit(radii.baseWidgetRadius)
+  }
+
+  if (fontSizes) {
+    conditionalOverrides.fontSizes = {
+      ...baseThemeConfig.emotion.fontSizes,
+    }
+
+    if (fontSizes.tinyFontSize) {
+      conditionalOverrides.fontSizes.twoSm = addPxUnit(fontSizes.tinyFontSize)
+      conditionalOverrides.fontSizes.twoSmPx = fontSizes.tinyFontSize
+    }
+
+    if (fontSizes.smallFontSize) {
+      conditionalOverrides.fontSizes.sm = addPxUnit(fontSizes.smallFontSize)
+      conditionalOverrides.fontSizes.smPx = fontSizes.smallFontSize
+    }
+
+    if (fontSizes.baseFontSize) {
+      conditionalOverrides.fontSizes.md = addPxUnit(fontSizes.baseFontSize)
+      conditionalOverrides.fontSizes.mdPx = fontSizes.baseFontSize
+    }
   }
 
   return {
@@ -412,10 +450,12 @@ export const createEmotionTheme = (
     genericFonts: {
       ...genericFonts,
       ...(parsedFont && {
-        bodyFont: parsedFont,
-        headingFont: parsedFont,
+        bodyFont: themeInput.bodyFont ? themeInput.bodyFont : parsedFont,
+        headingFont: themeInput.bodyFont ? themeInput.bodyFont : parsedFont,
+        codeFont: themeInput.codeFont ? themeInput.codeFont : parsedFont,
       }),
     },
+    ...conditionalOverrides,
   }
 }
 
@@ -765,4 +805,8 @@ export function getIncreasingGreen(theme: Theme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.blueGreen80
     : theme.colors.green40
+}
+
+function addPxUnit(n: number) {
+  return `${n}px`
 }
