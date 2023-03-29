@@ -17,6 +17,8 @@
 import React, { PureComponent, ReactElement } from "react"
 import { act } from "react-dom/test-utils"
 
+import { ICustomThemeConfig } from "src/autogen/proto"
+
 import { mount, shallow } from "src/lib/test_util"
 
 import withHostCommunication, {
@@ -26,6 +28,9 @@ import withHostCommunication, {
 
 interface TestProps {
   hostCommunication: HostCommunicationHOC
+  theme: {
+    setImportedTheme: (themeConfigObj: ICustomThemeConfig) => void
+  }
 
   /**
    * A property that's not related to the withHostCommunication wrapper.
@@ -55,7 +60,10 @@ function mockEventListeners(): (type: string, event: any) => void {
 describe("withHostCommunication HOC", () => {
   it("renders without crashing", () => {
     const wrapper = shallow(
-      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+      <WrappedTestComponent
+        unrelatedProp={"mockLabel"}
+        theme={{ setImportedTheme: jest.fn() }}
+      />
     )
 
     expect(wrapper.html()).not.toBeNull()
@@ -63,14 +71,20 @@ describe("withHostCommunication HOC", () => {
 
   it("wrapped component should have hostCommunication prop", () => {
     const wrapper = shallow(
-      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+      <WrappedTestComponent
+        unrelatedProp={"mockLabel"}
+        theme={{ setImportedTheme: jest.fn() }}
+      />
     )
     expect(wrapper.find(TestComponent).prop("hostCommunication")).toBeDefined()
   })
 
   it("passes other props to wrapped component", () => {
     const wrapper = shallow(
-      <WrappedTestComponent unrelatedProp={"mockLabel"} />
+      <WrappedTestComponent
+        unrelatedProp={"mockLabel"}
+        theme={{ setImportedTheme: jest.fn() }}
+      />
     )
     expect(wrapper.find(TestComponent).props().unrelatedProp).toBe("mockLabel")
   })
@@ -94,7 +108,12 @@ describe("withHostCommunication HOC", () => {
 
     window.addEventListener("message", listener)
 
-    const wrapper = mount(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
+    const wrapper = mount(
+      <WrappedTestComponent
+        unrelatedProp={"mockLabel"}
+        theme={{ setImportedTheme: jest.fn() }}
+      />
+    )
     const hostCommunication: any = wrapper
       .find(TestComponent)
       .prop("hostCommunication")
@@ -119,7 +138,12 @@ describe("withHostCommunication HOC receiving messages", () => {
     // interfere with each other.
     originalHash = window.location.hash
     dispatchEvent = mockEventListeners()
-    wrapper = mount(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
+    wrapper = mount(
+      <WrappedTestComponent
+        unrelatedProp={"mockLabel"}
+        theme={{ setImportedTheme: jest.fn() }}
+      />
+    )
 
     const hostCommunication = wrapper
       .find(TestComponent)
@@ -369,7 +393,12 @@ describe("withHostCommunication HOC receiving messages", () => {
 
 describe("withHostCommunication HOC external auth token handling", () => {
   it("resolves promise to undefined immediately if useExternalAuthToken is false", async () => {
-    const wrapper = mount(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
+    const wrapper = mount(
+      <WrappedTestComponent
+        unrelatedProp={"mockLabel"}
+        theme={{ setImportedTheme: jest.fn() }}
+      />
+    )
 
     const hostCommunication = wrapper
       .find(TestComponent)
@@ -389,7 +418,12 @@ describe("withHostCommunication HOC external auth token handling", () => {
 
   it("waits to receive SET_AUTH_TOKEN message before resolving promise if useExternalAuthToken is true", async () => {
     const dispatchEvent = mockEventListeners()
-    const wrapper = mount(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
+    const wrapper = mount(
+      <WrappedTestComponent
+        unrelatedProp={"mockLabel"}
+        theme={{ setImportedTheme: jest.fn() }}
+      />
+    )
 
     let hostCommunication = wrapper
       .find(TestComponent)
