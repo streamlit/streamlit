@@ -158,7 +158,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       buttonBorderRadiusMini: radii.md, // Unused today.
       buttonBorderRadius: radii.md,
       /** Checkbox */
-      checkboxBorderRadius: radii.md,
+      checkboxBorderRadius: radii.sm,
       /** Input, Select, Textarea */
       inputBorderRadiusMini: radii.md, // Unused today.
       inputBorderRadius: radii.md,
