@@ -150,13 +150,13 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
         self.assertEqual([1, 2, 3, 4], proto.timedelta_index.data.data)
 
         # int64index
-        df_int64 = pd.Int64Index(np.arange(1, 5))
+        df_int64 = pd.Index(np.arange(1, 5), dtype="int64")
         proto = Index()
         data_frame._marshall_index(df_int64, proto)
         self.assertEqual([1, 2, 3, 4], proto.int_64_index.data.data)
 
         # float64index
-        df_float64 = pd.Float64Index(np.arange(1, 5))
+        df_float64 = pd.Index(np.arange(1, 5), dtype="float64")
         proto = Index()
         data_frame._marshall_index(df_float64, proto)
         self.assertEqual([1, 2, 3, 4], proto.float_64_index.data.data)
