@@ -125,7 +125,7 @@ describe("App", () => {
   beforeEach(() => {
     // @ts-expect-error
     window.prerenderReady = false
-    location = global.window.location
+    const location = global.window.location
     // This was not necessary before as jsdom should solve this. However, this is undefined in jest for some reason.
     // @ts-expect-error
     global.window.location = {
