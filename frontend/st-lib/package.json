@@ -8,7 +8,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "yarn build:src && yarn build:autogen && yarn build:asset && yarn build:lib-type",
-    "test": "env NODE_OPTIONS=--max_old_space_size=8192 jest --watchAll --env=../sharedConfigs/jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
+    "test":  "env NODE_OPTIONS=--max_old_space_size=8192 jest --env=../sharedConfigs/jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
+    "testWatch": "env NODE_OPTIONS=--max_old_space_size=8192 jest --watchAll --env=../sharedConfigs/jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 jest --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --fix src",
