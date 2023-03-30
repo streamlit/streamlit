@@ -85,10 +85,7 @@ const ThemedApp = (): JSX.Element => {
       zIndex={theme.emotion.zIndices.popupMenu}
     >
       <ThemeProvider theme={theme.emotion} baseuiTheme={theme.basewebTheme}>
-        <Global
-          // @ts-expect-error
-          styles={globalStyles}
-        />
+        <Global styles={globalStyles} />
         <AppWithScreencast
           theme={{
             setTheme: updateTheme,

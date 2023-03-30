@@ -19,7 +19,7 @@
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "yarn workspace @streamlit/lib typecheck && yarn workspace @streamlit/app typecheck",
     "lint": "yarn workspace @streamlit/lib lint && yarn workspace @streamlit/app lint",
     "prettier": "prettier --write --config .prettierrc app/config"
   },

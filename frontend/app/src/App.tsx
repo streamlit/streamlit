@@ -707,7 +707,7 @@ export class App extends PureComponent<Props, State> {
     ) {
       const newDialog: DialogProps = {
         type: DialogType.SCRIPT_CHANGED,
-        onRerun: this.rerunScript,
+        rerunCallback: this.rerunScript,
         onClose: () => {},
         allowRunOnSave: this.state.allowRunOnSave,
       }
