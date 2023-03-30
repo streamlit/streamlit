@@ -561,7 +561,13 @@ export const createTheme = (
   // themeInput.base === LIGHT and themeInput.backgroundColor === "black".
   const bgColor = themeInput.backgroundColor as string
   const startingTheme = merge(
-    cloneDeep(getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme),
+    cloneDeep(
+      baseThemeConfig
+        ? baseThemeConfig
+        : getLuminance(bgColor) > 0.5
+        ? lightTheme
+        : darkTheme
+    ),
     { emotion: { inSidebar } }
   )
 
