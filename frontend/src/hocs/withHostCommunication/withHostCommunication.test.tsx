@@ -39,6 +39,15 @@ interface TestProps {
   unrelatedProp: string
 }
 
+const mockCustomThemeConfig = {
+  primaryColor: "#1A6CE7",
+  backgroundColor: "#FFFFFF",
+  secondaryBackgroundColor: "#F5F5F5",
+  textColor: "#1A1D21",
+  widgetBackgroundColor: "#FFFFFF",
+  widgetBorderColor: "#D3DAE8",
+}
+
 class TestComponent extends PureComponent<TestProps> {
   public render = (): ReactElement => <div>test</div>
 }
