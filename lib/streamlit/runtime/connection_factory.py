@@ -68,7 +68,10 @@ def _get_first_party_connection(connection_name: str):
 
 @overload
 def connection_factory(
-    connection_class: Literal["sql"], name: str = "default", **kwargs
+    connection_class: Literal["sql"],
+    name: str = "default",
+    autocommit: bool = False,
+    **kwargs,
 ) -> SQL:
     pass
 
