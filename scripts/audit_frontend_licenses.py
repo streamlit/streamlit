@@ -139,7 +139,7 @@ def get_license_type(package: PackageInfo) -> str:
     return package[2]
 
 
-def check_licenses(licenses):
+def check_licenses(licenses) -> NoReturn:
     # `yarn licenses` outputs a bunch of lines.
     # The last line contains the JSON object we care about
     licenses_json = json.loads(licenses[len(licenses) - 1])
@@ -181,7 +181,7 @@ def check_licenses(licenses):
 
 def main() -> NoReturn:
     # Run `yarn licenses` for lib.
-    licenses_output_lib = (
+    licenses_output = (
         subprocess.check_output(
             ["yarn", "licenses", "list", "--json", "--production", "--ignore-platform"],
             cwd=str(FRONTEND_DIR_LIB),
@@ -191,7 +191,7 @@ def main() -> NoReturn:
     )
 
     # Run `yarn licenses` for app.
-    licenses_output_app = (
+    licenses_output = licenses_output + (
         subprocess.check_output(
             ["yarn", "licenses", "list", "--json", "--production", "--ignore-platform"],
             cwd=str(FRONTEND_DIR_APP),
@@ -200,8 +200,7 @@ def main() -> NoReturn:
         .splitlines()
     )
 
-    check_licenses(licenses_output_lib)
-    check_licenses(licenses_output_app)
+    check_licenses(licenses_output)
 
 
 if __name__ == "__main__":
