@@ -74,6 +74,12 @@ export interface AppViewProps {
   hideSidebarNav: boolean
 
   pageLinkBaseUrl: string
+
+  setOpenModalId?: ((openModalId: string) => void) | null | undefined
+
+  openModalId?: string | null
+
+  closeModal?: (() => void) | null | undefined
 }
 
 /**
@@ -97,6 +103,9 @@ function AppView(props: AppViewProps): ReactElement {
     pageLinkBaseUrl,
     sendMessageToHost,
     endpoints,
+    setOpenModalId,
+    openModalId,
+    closeModal,
   } = props
 
   React.useEffect(() => {
@@ -138,6 +147,9 @@ function AppView(props: AppViewProps): ReactElement {
         uploadClient={uploadClient}
         componentRegistry={componentRegistry}
         formsData={formsData}
+        openModalId={openModalId}
+        closeModal={closeModal}
+        setOpenModalId={setOpenModalId}
       />
     </StyledAppViewBlockContainer>
   )

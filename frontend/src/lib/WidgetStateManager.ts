@@ -139,7 +139,9 @@ class FormState {
   public readonly widgetStates = new WidgetStateDict()
 
   /** True if the form was created with the clear_on_submit flag. */
-  public clearOnSubmit = false
+  public clearOnSubmit?: boolean | null | undefined = false
+
+  public closeOnSubmit?: boolean | null | undefined = false
 
   /** Signal emitted when the form is cleared. */
   public readonly formCleared = new Signal()
@@ -152,7 +154,11 @@ class FormState {
 
 interface Props {
   /** Callback to deliver a message to the server */
-  sendRerunBackMsg: (widgetStates: WidgetStates) => void
+  sendRerunBackMsg: (
+    widgetStates: WidgetStates,
+    pageScriptHash?: string | null,
+    closeModal?: boolean | null
+  ) => void
 
   /**
    * Callback invoked whenever our FormsData changed. (Because FormsData
@@ -196,8 +202,62 @@ export class WidgetStateManager {
    * Register a Form, and assign its clearOnSubmit value.
    * The `Form` element calls this when it's first mounted.
    */
-  public setFormClearOnSubmit(formId: string, clearOnSubmit: boolean): void {
+  public setFormClearOnSubmit(
+    formId: string,
+    clearOnSubmit: boolean | null | undefined = false,
+    closeOnSubmit: boolean | null | undefined = false
+  ): void {
     this.getOrCreateFormState(formId).clearOnSubmit = clearOnSubmit
+    this.getOrCreateFormState(formId).closeOnSubmit = closeOnSubmit
+  }
+
+  public submitModal(
+    submitButton: WidgetInfo,
+    closeModal: boolean,
+    setOpenModalId?: ((openModalId: string) => void) | null | undefined
+  ): void {
+    const { formId } = submitButton
+
+    if (!isValidFormId(formId)) {
+      // This should never get thrown - only FormSubmitButton calls this
+      // function.
+      throw new Error(`invalid formID '${formId}'`)
+    }
+
+    const form = this.getOrCreateFormState(formId)
+
+    if (setOpenModalId && form.closeOnSubmit) {
+      setOpenModalId("")
+    }
+
+    // Create the button's triggerValue. Just like with a regular button,
+    // `st.form_submit_button()` returns True during a rerun after
+    // it's clicked.
+    this.createWidgetState(submitButton, { fromUi: true }).triggerValue = true
+
+    // Copy the form's values into widgetStates, delete the form's pending
+    // changes, and send our widgetStates back to the server.
+    this.widgetStates.copyFrom(form.widgetStates)
+    form.widgetStates.clear()
+
+    // Important! Do not reset the button's triggerValue.
+    // this.deleteWidgetState(submitButton.id)
+
+    // If the form has the clearOnSubmit flag, we emit a signal to all widgets
+    // in the form. Each widget that handles this signal will reset to their
+    // default values, and submit those new default values to the WidgetStateManager
+    // in their signal handlers. (Because all of these widgets are in a form,
+    // none of these value submissions will trigger re-run requests.)
+    if (form.clearOnSubmit) {
+      form.formCleared.emit()
+    }
+
+    if (form.closeOnSubmit) {
+      this.sendUpdateWidgetsMessage(closeModal)
+    } else {
+      this.sendUpdateWidgetsMessage()
+    }
+    this.syncFormsWithPendingChanges()
   }
 
   /**
@@ -492,7 +552,7 @@ export class WidgetStateManager {
    * Update FormsData.formsWithPendingChanges with the current set of forms
    * that have pending changes. This is called after widget values are updated.
    */
-  private syncFormsWithPendingChanges(): void {
+  public syncFormsWithPendingChanges(): void {
     const pendingFormIds = new Set<string>()
     this.forms.forEach((form, formId) => {
       if (form.hasPendingChanges) {
@@ -505,8 +565,12 @@ export class WidgetStateManager {
     })
   }
 
-  public sendUpdateWidgetsMessage(): void {
-    this.props.sendRerunBackMsg(this.widgetStates.createWidgetStatesMsg())
+  public sendUpdateWidgetsMessage(closeModal?: boolean | null): void {
+    this.props.sendRerunBackMsg(
+      this.widgetStates.createWidgetStatesMsg(),
+      null,
+      closeModal
+    )
   }
 
   /**
@@ -559,7 +623,7 @@ export class WidgetStateManager {
   }
 
   /** Return the FormState for the given form. Create it if it doesn't exist. */
-  private getOrCreateFormState(formId: string): FormState {
+  public getOrCreateFormState(formId: string): FormState {
     let form = this.forms.get(formId)
     if (form != null) {
       return form

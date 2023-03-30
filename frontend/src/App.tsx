@@ -83,8 +83,9 @@ import {
   PageProfile,
   PagesChanged,
   SessionEvent,
-  SessionStatus,
+  UpdateModalStateEvent,
   WidgetStates,
+  SessionStatus,
 } from "src/autogen/proto"
 import { concat, noop, without } from "lodash"
 
@@ -161,6 +162,7 @@ interface State {
   appPages: IAppPage[]
   currentPageScriptHash: string
   latestRunTime: number
+  openModalId?: string | null
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -504,6 +506,8 @@ export class App extends PureComponent<Props, State> {
             deltaMsg,
             msgProto.metadata as ForwardMsgMetadata
           ),
+        updateModalStateEvent: (evtMsg: UpdateModalStateEvent) =>
+          this.handleUpdateModalStateEvent(evtMsg),
         pageConfigChanged: (pageConfig: PageConfig) =>
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
@@ -625,6 +629,16 @@ export class App extends PureComponent<Props, State> {
         (performance.now() - this.state.latestRunTime) * 1000
       ),
     })
+  }
+
+  handleUpdateModalStateEvent = (
+    updateModalStateEventProto: UpdateModalStateEvent
+  ): void => {
+    this.setState({ openModalId: updateModalStateEventProto.openModalId })
+  }
+
+  setOpenModalId = (openModalId: string): void => {
+    this.setState({ openModalId })
   }
 
   /**
@@ -1033,6 +1047,17 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Closes any currently open modal
+   */
+  closeModal(): void {
+    if (this.isServerConnected()) {
+      const backMsg = new BackMsg({ closeModal: true })
+      backMsg.type = "closeModal"
+      this.sendBackMsg(backMsg)
+    }
+  }
+
+  /**
    * Opens a dialog with the specified state.
    */
   openDialog(dialogProps: DialogProps): void {
@@ -1199,7 +1224,8 @@ export class App extends PureComponent<Props, State> {
 
   sendRerunBackMsg = (
     widgetStates?: WidgetStates,
-    pageScriptHash?: string
+    pageScriptHash?: string | null,
+    closeModal?: boolean | null
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1236,12 +1262,22 @@ export class App extends PureComponent<Props, State> {
       )
       pageScriptHash = ""
     }
-
-    this.sendBackMsg(
-      new BackMsg({
-        rerunScript: { queryString, widgetStates, pageScriptHash, pageName },
+    let backMsg = new BackMsg({
+      rerunScript: { queryString, widgetStates, pageScriptHash, pageName },
+    })
+    if (closeModal) {
+      backMsg = new BackMsg({
+        rerunScript: {
+          queryString,
+          widgetStates,
+          pageScriptHash,
+          pageName,
+          closeModal: true,
+        },
       })
-    )
+    }
+    backMsg.type = "rerunScript"
+    this.sendBackMsg(backMsg)
 
     PerformanceEvents.record({
       name: "RequestedRerun",
@@ -1501,6 +1537,7 @@ export class App extends PureComponent<Props, State> {
       hideTopBar,
       hideSidebarNav,
       currentPageScriptHash,
+      openModalId,
     } = this.state
 
     const { hideSidebarNav: hostHideSidebarNav } =
@@ -1627,6 +1664,9 @@ export class App extends PureComponent<Props, State> {
               pageLinkBaseUrl={
                 this.props.hostCommunication.currentState.pageLinkBaseUrl
               }
+              openModalId={openModalId}
+              setOpenModalId={this.setOpenModalId.bind(this)}
+              closeModal={this.closeModal.bind(this)}
             />
             {renderedDialog}
           </StyledApp>

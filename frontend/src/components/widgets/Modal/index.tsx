@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,27 +14,4 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
-
-message Button {
-  string id = 1;
-  string label = 2;
-  bool default = 3;
-  string help = 4;
-  string form_id = 5;
-
-  // If true, this is a form submission button. The frontend will defer
-  // sending updates for all widgets inside the button's form until
-  // the button is pressed.
-  bool is_form_submitter = 6;
-  string type = 7;
-  bool disabled = 8;
-  bool use_container_width = 9;
-
-  // If true, this is a modal close button. The frontend will render button as Close mark inside modal.
-  bool is_modal_close_button = 10;
-  bool can_modal_be_closed = 11;
-  string modal_title = 12;
-
-  // NEXT: 13
-}
+export { Modal } from "./Modal"

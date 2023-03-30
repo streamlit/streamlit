@@ -30,10 +30,22 @@ export interface Props {
   hasInProgressUpload: boolean
   widgetMgr: WidgetStateManager
   width: number
+  openModalId?: string | null
+  setOpenModalId?: ((openModalId: string) => void) | null | undefined
+  closeModal?: any
 }
 
 export function FormSubmitButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, hasInProgressUpload, width } = props
+  const {
+    disabled,
+    element,
+    widgetMgr,
+    hasInProgressUpload,
+    width,
+    openModalId,
+    closeModal,
+    setOpenModalId,
+  } = props
   const { formId } = element
   const style = { width }
   const kind =
@@ -58,7 +70,15 @@ export function FormSubmitButton(props: Props): ReactElement {
           size={Size.SMALL}
           fluidWidth={element.useContainerWidth || false}
           disabled={disabled || hasInProgressUpload}
-          onClick={() => widgetMgr.submitForm(element)}
+          onClick={
+            openModalId
+              ? () => {
+                  widgetMgr.submitModal(element, closeModal, setOpenModalId)
+                }
+              : () => {
+                  widgetMgr.submitForm(element)
+                }
+          }
         >
           <StreamlitMarkdown
             source={element.label}

@@ -59,6 +59,15 @@ def _generate_scriptrun_id() -> str:
     return str(uuid.uuid4())
 
 
+def create_update_open_modal_id_modal_event(open_modal_id: str = "") -> ForwardMsg:
+    """Create ForwardMsg which sets open_modal_id protobuf.
+    By default it's empty, which should close the modal.
+    """
+    msg = ForwardMsg()
+    msg.update_modal_state_event.open_modal_id = open_modal_id
+    return msg
+
+
 class AppSession:
     """
     Contains session data for a single "user" of an active app
@@ -269,8 +278,12 @@ class AppSession:
             if msg_type == "rerun_script":
                 if msg.debug_last_backmsg_id:
                     self._debug_last_backmsg_id = msg.debug_last_backmsg_id
-
-                self._handle_rerun_script_request(msg.rerun_script)
+                if msg.rerun_script.closeModal:
+                    self._handle_rerun_script_request(
+                        msg.rerun_script, close_modal=True
+                    )
+                else:
+                    self._handle_rerun_script_request(msg.rerun_script)
             elif msg_type == "load_git_info":
                 self._handle_git_information_request()
             elif msg_type == "clear_cache":
@@ -279,6 +292,8 @@ class AppSession:
                 self._handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == "stop_script":
                 self._handle_stop_script_request()
+            elif msg_type == "close_modal":
+                self._handle_close_modal()
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -315,7 +330,9 @@ class AppSession:
             lambda: self._enqueue_forward_msg(self._create_exception_message(e))
         )
 
-    def request_rerun(self, client_state: Optional[ClientState]) -> None:
+    def request_rerun(
+        self, client_state: Optional[ClientState], close_modal: Optional[bool] = False
+    ) -> None:
         """Signal that we're interested in running the script.
 
         If the script is not already running, it will be started immediately.
@@ -355,12 +372,14 @@ class AppSession:
                 # request. If the request is accepted, we're done.
                 success = self._scriptrunner.request_rerun(rerun_data)
                 if success:
+                    if close_modal:
+                        self._handle_close_modal()
                     return
 
         # If we are here, then either we have no ScriptRunner, or our
         # current ScriptRunner is shutting down and cannot handle a rerun
         # request - so we'll create and start a new ScriptRunner.
-        self._create_scriptrunner(rerun_data)
+        self._create_scriptrunner(rerun_data, close_modal=close_modal)
 
     def request_script_stop(self) -> None:
         """Request that the scriptrunner stop execution.
@@ -370,7 +389,9 @@ class AppSession:
         if self._scriptrunner is not None:
             self._scriptrunner.request_stop()
 
-    def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
+    def _create_scriptrunner(
+        self, initial_rerun_data: RerunData, close_modal: Optional[bool] = False
+    ) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
@@ -383,6 +404,11 @@ class AppSession:
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
+        if close_modal:
+            # try to close a modal a few times, to make sure we're connected to script runner
+            self._event_loop.call_soon_threadsafe(self._handle_close_modal)
+            for i in range(1, 2):
+                self._event_loop.call_later(i, self._handle_close_modal)
 
     @property
     def session_state(self) -> "SessionState":
@@ -687,7 +713,9 @@ class AppSession:
             LOGGER.debug("Obtaining Git information produced an error", exc_info=ex)
 
     def _handle_rerun_script_request(
-        self, client_state: Optional[ClientState] = None
+        self,
+        client_state: Optional[ClientState] = None,
+        close_modal: Optional[bool] = False,
     ) -> None:
         """Tell the ScriptRunner to re-run its script.
 
@@ -698,7 +726,7 @@ class AppSession:
             to use previous client state.
 
         """
-        self.request_rerun(client_state)
+        self.request_rerun(client_state, close_modal)
 
     def _handle_stop_script_request(self) -> None:
         """Tell the ScriptRunner to stop running its script."""
@@ -714,6 +742,12 @@ class AppSession:
         caching.cache_data.clear()
         caching.cache_resource.clear()
         self._session_state.clear()
+
+    def _handle_close_modal(self) -> None:
+        """Closes any currently open modal, by enqueueing ForwardMsg with empty open_modal_id."""
+        # empty open_modal_id should effectively close the modal
+        msg = create_update_open_modal_id_modal_event(open_modal_id="")
+        self._enqueue_forward_msg(msg)
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.

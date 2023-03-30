@@ -423,7 +423,10 @@ const RawElementNodeRenderer = (
           <FormSubmitContent
             element={buttonProto}
             width={width}
+            openModalId={props.openModalId}
+            setOpenModalId={props.setOpenModalId}
             hasInProgressUpload={hasInProgressUpload}
+            closeModal={props.closeModal}
             {...widgetProps}
           />
         )

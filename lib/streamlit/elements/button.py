@@ -392,7 +392,10 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
+        modal_title: str = "",
         use_container_width: bool = False,
+        is_modal_close_button: bool = False,
+        can_modal_be_closed: bool = True,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         if not is_form_submitter:
@@ -414,13 +417,17 @@ class ButtonMixin:
                     f"`st.form_submit_button()` must be used inside an `st.form()`.{FORM_DOCS_INFO}"
                 )
 
-        button_proto = ButtonProto()
-        button_proto.label = label
-        button_proto.default = False
-        button_proto.is_form_submitter = is_form_submitter
-        button_proto.form_id = current_form_id(self.dg)
-        button_proto.type = type
-        button_proto.use_container_width = use_container_width
+        button_proto = ButtonProto(
+            label=label,
+            default=False,
+            is_form_submitter=is_form_submitter,
+            form_id=current_form_id(self.dg),
+            type=type,
+            use_container_width=use_container_width,
+            is_modal_close_button=is_modal_close_button,
+            can_modal_be_closed=can_modal_be_closed,
+            modal_title=modal_title,
+        )
         if help is not None:
             button_proto.help = dedent(help)
 

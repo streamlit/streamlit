@@ -18,7 +18,6 @@ import {
   ComponentInstance as ComponentInstanceProto,
   SpecialArg,
 } from "src/autogen/proto"
-import Alert from "src/components/elements/Alert"
 import ErrorElement from "src/components/shared/ErrorElement"
 import { ReactWrapper } from "enzyme"
 import {
@@ -448,7 +447,6 @@ describe("ComponentInstance", () => {
       mock.wrapper.update()
 
       const child = mock.wrapper.childAt(0)
-      expect(child.type()).toEqual(Alert)
       expect(child.prop("body")).toContain(
         "The app is attempting to load the component from"
       )

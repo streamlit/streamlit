@@ -171,6 +171,7 @@ class StreamlitTest(unittest.TestCase):
                 "experimental_data_editor",
                 "get_option",
                 "set_option",
+                "dialog",
             },
         )
 

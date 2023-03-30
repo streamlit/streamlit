@@ -766,3 +766,11 @@ export function getIncreasingGreen(theme: Theme): string {
     ? theme.colors.blueGreen80
     : theme.colors.green40
 }
+
+export function getBlackWhenLightBackgroundWhiteOtherwise(
+  theme: Theme
+): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.black
+    : theme.colors.white
+}

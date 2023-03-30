@@ -24,4 +24,5 @@ message ClientState {
   WidgetStates widget_states = 2;
   string page_script_hash = 3;
   string page_name = 4;
+  bool closeModal = 5;
 }
