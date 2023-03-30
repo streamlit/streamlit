@@ -411,3 +411,52 @@ class ExceptionTest(InteractiveScriptTests):
         sr = script.run()
 
         assert sr.get("exception")[0].is_markdown
+
+
+class TextInputTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "text_input.py",
+            """
+            import streamlit as st
+
+            st.text_input("label")
+            st.text_input("with default", value="default", max_chars=20)
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("text_input")[0].value == ""
+        assert sr.get("text_input")[1].value == "default"
+
+        long_string = "".join(["this is a long string fragment."] * 10)
+        sr.get("text_input")[0].input(long_string)
+        sr2 = sr.get("text_input")[1].input(long_string).run()
+
+        assert sr2.get("text_input")[0].value == long_string
+        assert sr2.get("text_input")[1].value == "default"
+        # assert sr2.get("text_input")[1].value == long_string[:20]
+
+
+class TextAreaTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "text_area.py",
+            """
+            import streamlit as st
+
+            st.text_area("label")
+            st.text_area("with default", value="default", max_chars=20)
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("text_area")[0].value == ""
+        assert sr.get("text_area")[1].value == "default"
+
+        long_string = "".join(["this is a long string fragment."] * 10)
+        sr.get("text_area")[0].input(long_string)
+        sr2 = sr.get("text_area")[1].input(long_string).run()
+
+        assert sr2.get("text_area")[0].value == long_string
+        assert sr2.get("text_area")[1].value == "default"

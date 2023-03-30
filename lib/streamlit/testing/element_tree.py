@@ -37,6 +37,8 @@ from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.Text_pb2 import Text as TextProto
+from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
+from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import user_key_from_widget_id
 from streamlit.runtime.state.session_state import SessionState
@@ -711,6 +713,124 @@ class SelectSlider(Element, Widget, Generic[T]):
         return self.set_value([lower, upper])
 
 
+@dataclass(repr=False)
+class TextInput(Element):
+    _value: str | None
+    proto: TextInputProto
+    type: str
+    id: str
+    label: str
+    max_chars: int
+    help: str
+    form_id: str
+    autocomplete: str
+    placeholder: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: TextInputProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "text_input"
+        self.id = proto.id
+        self.label = proto.label
+        self.max_chars = proto.max_chars
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.autocomplete = proto.autocomplete
+        self.placeholder = proto.placeholder
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def set_value(self, v: str) -> TextInput:
+        self._value = v
+        return self
+
+    def widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        ws.string_value = self.value
+        return ws
+
+    @property
+    def value(self) -> str:
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            # Awkward to do this with `cast`
+            return state[self.id]  # type: ignore
+
+    def input(self, v: str) -> TextInput:
+        # TODO should input be setting or appending?
+        if self.max_chars and len(v) > self.max_chars:
+            return self
+        return self.set_value(v)
+
+
+@dataclass(repr=False)
+class TextArea(Element):
+    _value: str | None
+    proto: TextAreaProto
+    type: str
+    id: str
+    label: str
+    max_chars: int
+    help: str
+    form_id: str
+    placeholder: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: TextAreaProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "text_area"
+        self.id = proto.id
+        self.label = proto.label
+        self.max_chars = proto.max_chars
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.placeholder = proto.placeholder
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def set_value(self, v: str) -> TextArea:
+        self._value = v
+        return self
+
+    def widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        ws.string_value = self.value
+        return ws
+
+    @property
+    def value(self) -> str:
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            # Awkward to do this with `cast`
+            return state[self.id]  # type: ignore
+
+    def input(self, v: str) -> TextArea:
+        # TODO should input be setting or appending?
+        if self.max_chars and len(v) > self.max_chars:
+            return self
+        return self.set_value(v)
+
+
 @dataclass(init=False, repr=False)
 class Block:
     type: str
@@ -821,6 +941,14 @@ class Block:
 
     @overload
     def get(self, element_type: Literal["button"]) -> Sequence[Button]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["text_input"]) -> Sequence[TextInput]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["text_area"]) -> Sequence[TextArea]:
         ...
 
     def get(self, element_type: str) -> Sequence[Node]:
@@ -972,6 +1100,10 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     raise ValueError(f"Slider with unknown type {elt.slider}")
             elif elt.WhichOneof("type") == "button":
                 new_node = Button(elt.button, root=root)
+            elif elt.WhichOneof("type") == "text_input":
+                new_node = TextInput(elt.text_input, root=root)
+            elif elt.WhichOneof("type") == "text_area":
+                new_node = TextArea(elt.text_area, root=root)
             elif elt.WhichOneof("type") == "code":
                 new_node = Code(elt.code, root=root)
             else:
