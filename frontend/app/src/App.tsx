@@ -705,9 +705,10 @@ export class App extends PureComponent<Props, State> {
       RERUN_PROMPT_MODAL_DIALOG &&
       sessionEvent.type === "scriptChangedOnDisk"
     ) {
+      // @ts-expect-error
       const newDialog: DialogProps = {
         type: DialogType.SCRIPT_CHANGED,
-        rerunCallback: this.rerunScript,
+        onRerun: this.rerunScript,
         onClose: () => {},
         allowRunOnSave: this.state.allowRunOnSave,
       }
