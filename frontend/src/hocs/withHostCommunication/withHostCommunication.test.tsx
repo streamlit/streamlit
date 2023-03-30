@@ -39,15 +39,6 @@ interface TestProps {
   unrelatedProp: string
 }
 
-const mockCustomThemeConfig = {
-  primaryColor: "#1A6CE7",
-  backgroundColor: "#FFFFFF",
-  secondaryBackgroundColor: "#F5F5F5",
-  textColor: "#1A1D21",
-  widgetBackgroundColor: "#FFFFFF",
-  widgetBorderColor: "#D3DAE8",
-}
-
 class TestComponent extends PureComponent<TestProps> {
   public render = (): ReactElement => <div>test</div>
 }
@@ -219,6 +210,35 @@ describe("withHostCommunication HOC receiving messages", () => {
         label: "",
       },
     ])
+  })
+
+  it("can process a received SET_CUSTOM_THEME_CONFIG message", () => {
+    const mockCustomThemeConfig = {
+      primaryColor: "#1A6CE7",
+      backgroundColor: "#FFFFFF",
+      secondaryBackgroundColor: "#F5F5F5",
+      textColor: "#1A1D21",
+      widgetBackgroundColor: "#FFFFFF",
+      widgetBorderColor: "#D3DAE8",
+    }
+    act(() => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "SET_CUSTOM_THEME_CONFIG",
+            themeInfo: mockCustomThemeConfig,
+          },
+          origin: "http://devel.streamlit.test",
+        })
+      )
+    })
+
+    wrapper.update()
+
+    const theme = wrapper.find(TestComponent).prop("theme")
+    expect(theme.setImportedTheme).toHaveBeenCalledWith(mockCustomThemeConfig)
   })
 
   it("can process a received SET_SIDEBAR_CHEVRON_DOWNSHIFT message", () => {
