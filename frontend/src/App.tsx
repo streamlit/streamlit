@@ -20,8 +20,6 @@ import { HotKeys, KeyMap } from "react-hotkeys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
-import { ICustomThemeConfig } from "src/autogen/proto"
-
 // Other local imports.
 import { AppContext } from "src/components/core/AppContext"
 import AppView from "src/components/core/AppView"
@@ -76,6 +74,7 @@ import {
   ForwardMsgMetadata,
   GitInfo,
   IAppPage,
+  ICustomThemeConfig,
   IGitInfo,
   Initialize,
   NewSession,
