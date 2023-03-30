@@ -63,7 +63,7 @@ repos:
       - id: typecheck
         name: Typecheck
         always_run: true
-        entry: yarn --cwd frontend tsc --noEmit
+        entry: yarn --cwd frontend typecheck
         files: \.(js|jsx|ts|tsx)$
         language: node
         pass_filenames: false
