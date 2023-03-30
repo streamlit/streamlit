@@ -29,7 +29,7 @@ import withHostCommunication, {
 interface TestProps {
   hostCommunication: HostCommunicationHOC
   theme: {
-    setImportedTheme: (themeConfigObj: ICustomThemeConfig) => void
+    setImportedTheme: (themeInfo: ICustomThemeConfig) => void
   }
 
   /**

@@ -88,7 +88,7 @@ function sendMessageToHost(message: IGuestToHostMessage): void {
 interface InjectedProps {
   hostCommunication: HostCommunicationHOC
   theme: {
-    setImportedTheme: (themeConfigObj: ICustomThemeConfig) => void
+    setImportedTheme: (themeInfo: ICustomThemeConfig) => void
   }
 }
 
@@ -209,7 +209,7 @@ function withHostCommunication<P extends InjectedProps>(
         }
 
         if (message.type === "SET_CUSTOM_THEME_CONFIG") {
-          props.theme.setImportedTheme(message.theme)
+          props.theme.setImportedTheme(message.themeInfo)
         }
       }
 

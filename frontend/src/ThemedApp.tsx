@@ -77,14 +77,14 @@ const ThemedApp = (): JSX.Element => {
     setAvailableThemes([createAutoTheme(), ...constantThemes])
   }
 
-  const setImportedTheme = (themeConfigObj: ICustomThemeConfig): void => {
+  const setImportedTheme = (themeInfo: ICustomThemeConfig): void => {
     // If fonts are coming from a URL, they need to be imported through the FontFaceDeclaration
     // component. So let's store them in state so we can pass them as props.
-    if (themeConfigObj.fontFaces) {
-      setFontFaces(themeConfigObj.fontFaces as object[] | undefined)
+    if (themeInfo.fontFaces) {
+      setFontFaces(themeInfo.fontFaces as object[] | undefined)
     }
 
-    const themeConfigProto = new CustomThemeConfig(themeConfigObj)
+    const themeConfigProto = new CustomThemeConfig(themeInfo)
     const customTheme = createTheme(CUSTOM_THEME_NAME, themeConfigProto)
     updateTheme(customTheme)
   }
