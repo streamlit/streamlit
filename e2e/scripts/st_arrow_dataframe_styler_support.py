@@ -62,7 +62,7 @@ styled_df.apply(
 
 styled_df.apply(
     highlight_max, props="color:white;background-color:hsl(273, 98%, 60%);", axis=1
-).apply(highlight_max, props="color:white;background-color:purple", axis=None)
+).apply(highlight_max, props="color:white;background-color:purple", axis=0)
 
 st._arrow_dataframe(styled_df)
 
