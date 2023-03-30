@@ -33,10 +33,7 @@ import { IException } from "src/autogen/proto"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { STREAMLIT_HOME_URL } from "src/urls"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
-import {
-  SettingsDialogProps,
-  SettingsDialog,
-} from "./SettingsDialog"
+import { SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
   ThemeCreatorDialogProps,
 } from "./ThemeCreatorDialog"

@@ -535,7 +535,6 @@ const MainMenu = memo(function MainMenu(props: MainMenuProps): ReactElement {
       </span>
     </StatefulPopover>
   )
-}
-)
+})
 
 export { MainMenu }

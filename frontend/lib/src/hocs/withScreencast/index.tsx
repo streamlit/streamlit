@@ -14,6 +14,5 @@
  * limitations under the License.
  */
 
-
 export { default } from "./withScreencast"
 export type { ScreenCastHOC } from "./withScreencast"

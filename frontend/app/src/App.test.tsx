@@ -131,17 +131,17 @@ describe("App", () => {
     global.window.location = {
       ancestorOrigins: {} as DOMStringList,
       hash: null,
-      host: 'dummy.com',
-      port: '80',
-      protocol: 'http:',
-      hostname: 'dummy.com',
-      href: 'http://dummy.com?page=1&name=testing',
-      origin: 'http://dummy.com',
+      host: "dummy.com",
+      port: "80",
+      protocol: "http:",
+      hostname: "dummy.com",
+      href: "http://dummy.com?page=1&name=testing",
+      origin: "http://dummy.com",
       pathname: "test",
       search: location.search,
       assign: location.assign,
       replace: location.replace,
-      reload: location.reload
+      reload: location.reload,
     } as Location
   })
 

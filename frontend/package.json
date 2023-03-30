@@ -20,7 +20,8 @@
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
     "typecheck": "tsc --noEmit",
-    "lint": "yarn workspace @streamlit/lib lint && yarn workspace @streamlit/app lint"
+    "lint": "yarn workspace @streamlit/lib lint && yarn workspace @streamlit/app lint",
+    "prettier": "prettier --write --config .prettierrc app/config"
   },
   "browserslist": [
     ">0.2%",

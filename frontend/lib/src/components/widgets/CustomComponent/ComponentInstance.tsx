@@ -76,7 +76,10 @@ interface DataframeArg {
   value: any
 }
 
-export class ComponentInstance extends React.PureComponent<CustomComponentProps, State> {
+export class ComponentInstance extends React.PureComponent<
+  CustomComponentProps,
+  State
+> {
   private readonly iframeRef = createRef<HTMLIFrameElement>()
 
   // True when we've received the COMPONENT_READY message
