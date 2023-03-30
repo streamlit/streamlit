@@ -125,7 +125,7 @@ class Checkbox extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const { theme, width, element, disabled, widgetMgr } = this.props
-    const { colors, spacing, radii } = theme
+    const { colors, spacing } = theme
     const style = { width }
     const color = disabled ? colors.fadedText40 : colors.bodyText
 

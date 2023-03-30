@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
+import React, { ReactElement } from "react"
 import { Global, css } from "@emotion/react"
 
 export interface FontFaceDeclarationProps {
   fontFaces: object[]
 }
 
-const FontFaceDeclaration = ({ fontFaces }: FontFaceDeclarationProps) => {
+const FontFaceDeclaration = ({
+  fontFaces,
+}: FontFaceDeclarationProps): ReactElement => {
   const fontMarkup = fontFaces.map((font: any) => {
     const { family, weight, url } = font
 
