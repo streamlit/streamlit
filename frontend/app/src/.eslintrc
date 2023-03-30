@@ -1,3 +1,19 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 {
   "env": {
     // allow using browser-defined globals like `window` and `document`
@@ -20,7 +36,7 @@
   // Specifies the ESLint parser
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": "./tsconfig.json",
+    "project": "./app/tsconfig.json",
     "ecmaFeatures": {
       "jsx": true // Allows for the parsing of JSX
     },
@@ -30,7 +46,7 @@
     "sourceType": "module"
   },
   // Ignore our auto-generated code
-  "ignorePatterns": ["src/autogen/*"],
+  "ignorePatterns": ["src/lib/autogen/*", "src/app/autogen/*", "src/app"],
   "plugins": ["no-relative-import-paths"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
@@ -58,8 +74,13 @@
     "@typescript-eslint/explicit-module-boundary-types": "off",
     // Don't warn about unused function params
     "@typescript-eslint/no-unused-vars": [
-      "warn",
-      { "args": "none", "ignoreRestSiblings": true }
+      "error",
+      {
+        "vars": "all",
+        "args": "after-used",
+        "ignoreRestSiblings": false,
+        "argsIgnorePattern": "^_"
+      }
     ],
     // It's safe to use functions before they're defined
     "@typescript-eslint/no-use-before-define": [
@@ -72,10 +93,17 @@
       "warn",
       { "allowExpressions": true }
     ],
-    // It's OK to use ts-ignore when we're missing type definitions
-    // for a JS library.
-    "@typescript-eslint/ban-ts-ignore": "off",
-    "@typescript-eslint/ban-ts-comment": "off",
+    // Disallow the @ts-ignore directive in favor of the more
+    // strict @ts-expect-error.
+    "@typescript-eslint/ban-ts-comment": [
+      "error",
+      {
+        "ts-expect-error": false,
+        "ts-nocheck": false,
+        "ts-check": false,
+        "ts-ignore": true
+      }
+    ],
     // Permit for-of loops (https://stackoverflow.com/a/42237667)
     "no-restricted-syntax": [
       "error",
@@ -114,7 +142,8 @@
     "no-relative-import-paths/no-relative-import-paths": [
       "error",
       { "allowSameFolder": true, "rootDir": "src", "prefix": "src" }
-    ]
+    ],
+    "no-else-return": ["error", { "allowElseIf": true }]
   },
   "settings": {
     "react": {
