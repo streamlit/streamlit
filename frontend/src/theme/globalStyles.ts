@@ -60,7 +60,7 @@ export const globalStyles = (theme: Theme): any => css`
       background: transparent;
       border: 0;
       display: inline;
-      font-size: ${theme.fontSizes.smPx}px;
+      font-size: ${theme.fontSizes.sm};
       line-height: inherit;
       margin: 0;
       padding: 0;
@@ -88,7 +88,7 @@ export const globalStyles = (theme: Theme): any => css`
     color: ${theme.colors.bodyText};
     border: 1px solid ${theme.colors.fadedText10};
     background-color: ${transparentize(theme.colors.bgColor, 0.05)};
-    font-size: ${theme.fontSizes.smPx}px;
+    font-size: ${theme.fontSizes.sm};
     box-shadow: rgb(0 0 0 / 16%) 0px 1px 4px;
     padding: ${theme.spacing.xs} ${theme.spacing.md};
     border-radius: ${theme.radii.md};
