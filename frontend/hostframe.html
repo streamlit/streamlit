@@ -19,10 +19,22 @@
 This file is used to help develop Host<->Guest communications.
 
 Usage:
-  $ cd frontend
-  $ python -m http.server
 
-  Then open localhost:8000 in a browser.
+  * In terminal 1: start the dev frontend server
+    $ cd frontend
+    $ yarn start
+
+  * In terminal 2: run your Streamlit app
+    $ cd lib
+    $ pipenv shell
+    $ cd ..
+    $ streamlit run foo.py
+
+  * In terminal 3: serve this file
+    $ cd frontend
+    $ python -m http.server
+
+  ...then open localhost:8000 in a browser!
 
 -->
 
