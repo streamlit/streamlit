@@ -142,6 +142,13 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
     ? colors.widgetBackgroundColor
     : colors.secondaryBg
 
+  // We want menuFill to always use bgColor. But when in sidebar, bgColor and secondaryBg are
+  // swapped! So here we unswap them.
+  const mainPaneBgColor = inSidebar ? colors.secondaryBg : colors.bgColor
+  const mainPaneSecondaryBgColor = inSidebar
+    ? colors.bgColor
+    : colors.secondaryBg
+
   return {
     borders: {
       radius100: radii.md,
@@ -211,12 +218,12 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       tickFillDisabled: colors.fadedText40,
       tickMarkFill: colors.lightestGray,
       tickFillSelected: colors.primary,
-      datepickerBackground: widgetBackgroundColor,
-      calendarBackground: widgetBackgroundColor,
+      datepickerBackground: mainPaneBgColor,
+      calendarBackground: mainPaneBgColor,
       calendarForeground: colors.bodyText,
       calendarDayForegroundPseudoSelected: colors.bodyText,
-      calendarHeaderBackground: widgetBackgroundColor,
-      calendarHeaderBackgroundActive: widgetBackgroundColor,
+      calendarHeaderBackground: mainPaneSecondaryBgColor,
+      calendarHeaderBackgroundActive: mainPaneSecondaryBgColor,
       calendarHeaderForeground: colors.bodyText,
       calendarHeaderForegroundDisabled: colors.gray40,
       calendarDayBackgroundSelected: colors.primary,
@@ -241,7 +248,9 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
       // mono100 overrides
       tickFill: colors.lightenedBg05, // Checkbox and Radio
       tickMarkFillDisabled: colors.lightenedBg05,
-      menuFill: widgetBackgroundColor, // Dropdown BG
+      // We want menuFill to always use bgColor. But when in sidebar, bgColor and secondaryBg are
+      // swapped! So here we unswap them.
+      menuFill: mainPaneBgColor,
 
       // mono200 overrides
       buttonDisabledFill: colors.lightenedBg05,
