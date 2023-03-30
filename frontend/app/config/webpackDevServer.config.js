@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-
-
 const fs = require("fs")
 const evalSourceMapMiddleware = require("react-dev-utils/evalSourceMapMiddleware")
 const noopServiceWorkerMiddleware = require("react-dev-utils/noopServiceWorkerMiddleware")
@@ -52,7 +50,7 @@ module.exports = function (proxy) {
     // really know what you're doing with a special environment variable.
     // Note: ["localhost", ".localhost"] will support subdomains - but we might
     // want to allow setting the allowedHosts manually for more complex setups
-    allowedHosts: disableFirewall ? "all" : 'auto',
+    allowedHosts: disableFirewall ? "all" : "auto",
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "*",
@@ -120,16 +118,12 @@ module.exports = function (proxy) {
     proxy,
     setupMiddlewares: (middlewares, devServer) => {
       if (!devServer) {
-        throw new Error('webpack-dev-server is not defined');
+        throw new Error("webpack-dev-server is not defined")
       }
       // Keep `evalSourceMapMiddleware`
       // middlewares before `redirectServedPath` otherwise will not have any effect
       // This lets us fetch source contents from webpack for the error overlay
-      middlewares.unshift(
-        evalSourceMapMiddleware(
-          devServer,
-        ),
-      );
+      middlewares.unshift(evalSourceMapMiddleware(devServer))
       if (fs.existsSync(paths.proxySetup)) {
         // This registers user provided middleware for proxy reasons
         require(paths.proxySetup)(devServer.app)

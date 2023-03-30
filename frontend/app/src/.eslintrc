@@ -46,7 +46,7 @@
     "sourceType": "module"
   },
   // Ignore our auto-generated code
-  "ignorePatterns": ["src/lib/autogen/*", "src/app/autogen/*", "src/app"],
+  "ignorePatterns": ["src/lib/autogen/*", "src/app/autogen/*", "app/config/*"],
   "plugins": ["no-relative-import-paths"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs

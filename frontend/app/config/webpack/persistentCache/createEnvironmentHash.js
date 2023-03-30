@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 const { createHash } = require("crypto")
 
 module.exports = env => {
