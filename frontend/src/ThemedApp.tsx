@@ -53,21 +53,24 @@ const ThemedApp = (): JSX.Element => {
     setAvailableThemes([...createPresetThemes(), ...themeConfigs])
   }
 
-  const updateTheme = (newTheme: ThemeConfig): void => {
-    if (newTheme !== theme) {
-      setTheme(newTheme)
+  const updateTheme = React.useCallback(
+    (newTheme: ThemeConfig): void => {
+      if (newTheme !== theme) {
+        setTheme(newTheme)
 
-      // Only save to localStorage if it is not Auto since auto is the default.
-      // Important to not save since it can change depending on time of day.
-      if (newTheme.name === AUTO_THEME_NAME) {
-        removeCachedTheme()
-      } else {
-        setCachedTheme(newTheme)
+        // Only save to localStorage if it is not Auto since auto is the default.
+        // Important to not save since it can change depending on time of day.
+        if (newTheme.name === AUTO_THEME_NAME) {
+          removeCachedTheme()
+        } else {
+          setCachedTheme(newTheme)
+        }
       }
-    }
-  }
+    },
+    [setTheme, theme, removeCachedTheme, setCachedTheme]
+  )
 
-  const updateAutoTheme = (): void => {
+  const updateAutoTheme = React.useCallback((): void => {
     if (theme.name === AUTO_THEME_NAME) {
       updateTheme(createAutoTheme())
     }
@@ -75,19 +78,22 @@ const ThemedApp = (): JSX.Element => {
       theme => theme.name !== AUTO_THEME_NAME
     )
     setAvailableThemes([createAutoTheme(), ...constantThemes])
-  }
+  }, [theme, updateTheme, setAvailableThemes])
 
-  const setImportedTheme = (themeInfo: ICustomThemeConfig): void => {
-    // If fonts are coming from a URL, they need to be imported through the FontFaceDeclaration
-    // component. So let's store them in state so we can pass them as props.
-    if (themeInfo.fontFaces) {
-      setFontFaces(themeInfo.fontFaces as object[] | undefined)
-    }
+  const setImportedTheme = React.useCallback(
+    (themeInfo: ICustomThemeConfig): void => {
+      // If fonts are coming from a URL, they need to be imported through the FontFaceDeclaration
+      // component. So let's store them in state so we can pass them as props.
+      if (themeInfo.fontFaces) {
+        setFontFaces(themeInfo.fontFaces as object[] | undefined)
+      }
 
-    const themeConfigProto = new CustomThemeConfig(themeInfo)
-    const customTheme = createTheme(CUSTOM_THEME_NAME, themeConfigProto)
-    updateTheme(customTheme)
-  }
+      const themeConfigProto = new CustomThemeConfig(themeInfo)
+      const customTheme = createTheme(CUSTOM_THEME_NAME, themeConfigProto)
+      updateTheme(customTheme)
+    },
+    [setFontFaces, updateTheme]
+  )
 
   React.useEffect(() => {
     const mediaMatch = window.matchMedia("(prefers-color-scheme: dark)")
