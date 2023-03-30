@@ -835,6 +835,6 @@ export function getIncreasingGreen(theme: Theme): string {
     : theme.colors.green40
 }
 
-function addPxUnit(n: number) {
+function addPxUnit(n: number): string {
   return `${n}px`
 }
