@@ -18,6 +18,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 from streamlit.connections import BaseConnection
 from streamlit.runtime.connection_factory import _create_connection, connection_factory
@@ -52,35 +53,31 @@ class ConnectionFactoryTest(unittest.TestCase):
         conn = connection_factory(MockConnection)
         assert connection_factory(MockConnection) is conn
 
+    @parameterized.expand(
+        [
+            ("sqlalchemy", "sqlalchemy"),
+            ("snowflake", "snowflake-snowpark-python"),
+            ("snowflake.snowpark", "snowflake-snowpark-python"),
+        ]
+    )
     @patch("streamlit.runtime.connection_factory._create_connection")
     def test_friendly_error_with_certain_missing_dependencies(
-        self, patched_create_connection
+        self, missing_module, pypi_package, patched_create_connection
     ):
         """Test that our error messages are extra-friendly when a ModuleNotFoundError
         error is thrown for certain missing packages.
         """
 
-        patched_create_connection.side_effect = ModuleNotFoundError(
-            "No module named 'sqlalchemy'"
-        )
-
-        with pytest.raises(ModuleNotFoundError) as e:
-            connection_factory(MockConnection)
-        assert str(e.value) == (
-            "No module named 'sqlalchemy'. "
-            "You need to install the 'sqlalchemy' package to use this connection."
-        )
-
         _create_connection.clear()
         patched_create_connection.side_effect = ModuleNotFoundError(
-            "No module named 'snowflake.snowpark'"
+            f"No module named '{missing_module}'"
         )
 
         with pytest.raises(ModuleNotFoundError) as e:
             connection_factory(MockConnection)
         assert str(e.value) == (
-            "No module named 'snowflake.snowpark'. "
-            "You need to install the 'snowflake-snowpark-python' package to use this connection."
+            f"No module named '{missing_module}'. "
+            f"You need to install the '{pypi_package}' package to use this connection."
         )
 
     @patch(
