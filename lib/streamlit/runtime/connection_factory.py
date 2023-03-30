@@ -24,6 +24,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 MODULE_EXTRACTION_REGEX = re.compile(r"No module named \'(.+)\'")
 MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
     "sqlalchemy": "sqlalchemy",
+    "snowflake": "snowflake-snowpark-python",
     "snowflake.snowpark": "snowflake-snowpark-python",
 }
 
