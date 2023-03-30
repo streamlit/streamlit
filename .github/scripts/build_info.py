@@ -124,6 +124,34 @@ def get_changed_files() -> List[str]:
     return [line for line in git_output.decode().splitlines() if line]
 
 
+def get_current_pr_labels() -> List[str]:
+    """
+    Returns a list of all tags associated with the current PR.
+    Note that this function works only when the current event is pull_request.
+    """
+    if GITHUB_EVENT_NAME != GithubEvent.PULL_REQUEST.value:
+        raise Exception(
+            f"Invalid github event. "
+            f"Current value: {GITHUB_EVENT_NAME}. "
+            f"Expected state: {GithubEvent.PULL_REQUEST.value}"
+        )
+    return [label["name"] for label in GITHUB_EVENT["pull_request"].get("labels", [])]
+
+
+def get_changed_python_dependencies_files() -> List[str]:
+    """
+    Gets a list of files that contain Python dependency definitions and have
+    been modified.
+    """
+    changed_files = get_changed_files()
+    changed_dependencies_files = sorted(
+        path
+        for pattern in FILES_WITH_PYTHON_DEPENDENCIES
+        for path in fnmatch.filter(changed_files, pattern)
+    )
+    return changed_dependencies_files
+
+
 def should_test_all_python_versions() -> bool:
     """
     Checks whether tests should be run for all supported Python versions, or whether
@@ -143,9 +171,7 @@ def should_test_all_python_versions() -> bool:
     """
     print(f"Current github event name: {GITHUB_EVENT_NAME!r}")
     if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
-        pr_labels = [
-            label["name"] for label in GITHUB_EVENT["pull_request"].get("labels", [])
-        ]
+        pr_labels = get_current_pr_labels()
         if LABEL_FULL_MATRIX in pr_labels:
             print(f"PR has the following labels: {pr_labels}")
             print(
@@ -153,12 +179,7 @@ def should_test_all_python_versions() -> bool:
                 f"because PR has {LABEL_FULL_MATRIX!r} label."
             )
             return True
-        changed_files = get_changed_files()
-        changed_dependencies_files = sorted(
-            path
-            for pattern in FILES_WITH_PYTHON_DEPENDENCIES
-            for path in fnmatch.filter(changed_files, pattern)
-        )
+        changed_dependencies_files = get_changed_python_dependencies_files()
         if changed_dependencies_files:
             print(f"{len(changed_dependencies_files)} files changed in this build.")
             print(
