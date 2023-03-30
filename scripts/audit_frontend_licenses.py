@@ -98,6 +98,15 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
     (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
         "mapbox-gl",
+        "1.13.3",
+        "SEE LICENSE IN LICENSE.txt",
+        "git://github.com/mapbox/mapbox-gl-js.git",
+        "Unknown",
+        "Unknown",
+    ),
+    (
+        # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
+        "mapbox-gl",
         "1.10.1",
         "SEE LICENSE IN LICENSE.txt",
         "git://github.com/mapbox/mapbox-gl-js.git",
@@ -164,6 +173,8 @@ def check_licenses(licenses):
         for package in packages
         if (get_license_type(package) not in ACCEPTABLE_LICENSES)
         and (package not in PACKAGE_EXCEPTIONS)
+        # workspace aggregator is yarn workspaces
+        or "workspace-aggregator" not in package[0]
     ]
 
     if len(bad_packages) > 0:
