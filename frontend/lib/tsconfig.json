@@ -1,13 +1,27 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "lib": ["dom", "dom.iterable", "esnext", "ES6"],
+    "module": "esnext",
+    "moduleResolution": "node",
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
     "target": "es6",
     "noEmit": false,
     "emitDeclarationOnly": true,
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src",
-    "paths": { "src/*": ["./src/*"] }
+    "paths": { "src/*": ["src/*"] }
   },
   "include": ["src", "declarations.d.ts"],
   "exclude": ["**/*.test.ts", "**/*.test.tsx", "./src/autogen/**", "node_modules/**/*"]
