@@ -21,6 +21,7 @@ import unittest
 from typing import Any, Dict, List, Mapping
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pandas as pd
 from parameterized import parameterized
 
@@ -445,3 +446,21 @@ class DataEditorTest(DeltaGeneratorTestCase):
             # This should run without an issue and return a valid dataframe
             return_df = st.experimental_data_editor(df)
             self.assertIsInstance(return_df, pd.DataFrame)
+
+    def test_pandas_styler_support(self):
+        """Test that it supports Pandas styler styles."""
+        df = pd.DataFrame(
+            index=[0, 1],
+            columns=[[2, 3, 4], ["c1", "c2", "c3"]],
+            data=np.arange(0, 6, 1).reshape(2, 3),
+        )
+        styler = df.style
+        # NOTE: If UUID is not set - a random UUID will be generated.
+        styler.set_uuid("FAKE_UUID")
+        styler.highlight_max(axis=None)
+        st.experimental_data_editor(styler)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(
+            proto.styler.styles, "#T_FAKE_UUIDrow1_col2 { background-color: yellow }"
+        )

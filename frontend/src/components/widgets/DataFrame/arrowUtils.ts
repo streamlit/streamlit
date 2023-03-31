@@ -358,30 +358,33 @@ export function getCellFromArrow(
     return cellTemplate
   }
 
-  if (notNullOrUndefined(arrowCell.displayContent)) {
-    const displayData = processDisplayData(arrowCell.displayContent)
-    // If the display content is set, use that instead of the content.
-    // This is only supported for text, object, date, datetime, time and number cells.
-    if (cellTemplate.kind === GridCellKind.Text) {
-      cellTemplate = {
-        ...cellTemplate,
-        displayData,
-      } as TextCell
-    } else if (cellTemplate.kind === GridCellKind.Number) {
-      cellTemplate = {
-        ...cellTemplate,
-        displayData,
-      } as NumberCell
+  if (!column.isEditable) {
+    // Only apply display content and css styles to non-editable cells.
+    if (notNullOrUndefined(arrowCell.displayContent)) {
+      const displayData = processDisplayData(arrowCell.displayContent)
+      // If the display content is set, use that instead of the content.
+      // This is only supported for text, object, date, datetime, time and number cells.
+      if (cellTemplate.kind === GridCellKind.Text) {
+        cellTemplate = {
+          ...cellTemplate,
+          displayData,
+        } as TextCell
+      } else if (cellTemplate.kind === GridCellKind.Number) {
+        cellTemplate = {
+          ...cellTemplate,
+          displayData,
+        } as NumberCell
+      }
+      // TODO (lukasmasuch): Also support datetime formatting here
     }
-    // TODO (lukasmasuch): Also support datetime formatting here
-  }
 
-  if (cssStyles && arrowCell.cssId) {
-    cellTemplate = applyPandasStylerCss(
-      cellTemplate,
-      arrowCell.cssId,
-      cssStyles
-    )
+    if (cssStyles && arrowCell.cssId) {
+      cellTemplate = applyPandasStylerCss(
+        cellTemplate,
+        arrowCell.cssId,
+        cssStyles
+      )
+    }
   }
   return cellTemplate
 }

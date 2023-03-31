@@ -538,6 +538,39 @@ describe("getCellFromArrow", () => {
   })
 })
 
+it("doesn't apply Pandas Styler CSS for editable columns", () => {
+  const element = {
+    data: STYLER,
+    styler: {
+      uuid: "FAKE_UUID",
+      styles:
+        "#T_FAKE_UUIDrow1_col1, #T_FAKE_UUIDrow0_col0 { color: white; background-color: pink }",
+      displayValues: DISPLAY_VALUES,
+      caption: "FAKE_CAPTION",
+    },
+  }
+  const data = new Quiver(element)
+
+  const cell = getCellFromArrow(
+    { ...MOCK_NUMBER_COLUMN, isEditable: true },
+    data.getCell(1, 1),
+    element.styler.styles
+  )
+
+  expect(cell).toEqual({
+    allowOverlay: true,
+    contentAlign: "right",
+    data: 1,
+    displayData: "1",
+    isMissingValue: false,
+    kind: "number",
+    readonly: true,
+    style: "normal",
+    allowNegative: true,
+    fixedDecimals: 0,
+  })
+})
+
 describe("getColumnTypeFromArrow", () => {
   it.each([
     [
