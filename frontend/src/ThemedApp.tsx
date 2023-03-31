@@ -47,19 +47,25 @@ const ThemedApp = (): JSX.Element => {
     setAvailableThemes([...createPresetThemes(), ...themeConfigs])
   }
 
-  const updateTheme = (newTheme: ThemeConfig): void => {
-    if (newTheme !== theme) {
-      setTheme(newTheme)
+  // A callback that:
+  // - sets the current ThemeConfig
+  // - caches that ThemeConfig in local storage
+  const updateTheme = React.useCallback(
+    (newTheme: ThemeConfig): void => {
+      if (newTheme !== theme) {
+        setTheme(newTheme)
 
-      // Only save to localStorage if it is not Auto since auto is the default.
-      // Important to not save since it can change depending on time of day.
-      if (newTheme.name === AUTO_THEME_NAME) {
-        removeCachedTheme()
-      } else {
-        setCachedTheme(newTheme)
+        // Only save to localStorage if it is not Auto since auto is the default.
+        // Important to not save since it can change depending on time of day.
+        if (newTheme.name === AUTO_THEME_NAME) {
+          removeCachedTheme()
+        } else {
+          setCachedTheme(newTheme)
+        }
       }
-    }
-  }
+    },
+    [theme]
+  )
 
   React.useEffect(() => {
     const updateAutoTheme = (): void => {
@@ -76,9 +82,7 @@ const ThemedApp = (): JSX.Element => {
     mediaMatch.addEventListener("change", updateAutoTheme)
 
     return () => mediaMatch.removeEventListener("change", updateAutoTheme)
-    // willhuang1997 TODO: Disabling temporarily but need to come back and fix this
-    /* eslint-disable react-hooks/exhaustive-deps */
-  }, [theme, availableThemes])
+  }, [theme, availableThemes, updateTheme])
 
   return (
     <BaseProvider
