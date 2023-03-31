@@ -33,7 +33,7 @@ class BaseConnection(ABC, Generic[T]):
         self._kwargs = kwargs
 
         self._raw_instance: Optional[T] = self.connect(**kwargs)
-        secrets_dict = self.get_secrets().__nested_secrets__
+        secrets_dict = self.get_secrets().to_dict()
         self._config_section_hash = calc_md5(json.dumps(secrets_dict))
         secrets_singleton.file_change_listener.connect(self._on_secrets_changed)
 
@@ -47,7 +47,7 @@ class BaseConnection(ABC, Generic[T]):
     # Methods with default implementations that we don't expect subclasses to want or
     # need to overwrite.
     def _on_secrets_changed(self, _) -> None:
-        secrets_dict = self.get_secrets().__nested_secrets__
+        secrets_dict = self.get_secrets().to_dict()
         new_hash = calc_md5(json.dumps(secrets_dict))
 
         # Only reset the connection if the secrets file section specific to this
