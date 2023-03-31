@@ -229,7 +229,7 @@ function withHostCommunication<P extends InjectedProps>(
       return () => {
         window.removeEventListener("message", receiveMessage)
       }
-    }, [allowedOriginsResp, deferredAuthToken])
+    }, [allowedOriginsResp, deferredAuthToken, props.theme])
 
     return (
       <WrappedComponent
