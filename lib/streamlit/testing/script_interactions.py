@@ -20,7 +20,7 @@ import textwrap
 import unittest
 from unittest.mock import MagicMock
 
-from streamlit import source_util
+from streamlit import config, source_util
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -53,6 +53,11 @@ class InteractiveScriptTests(unittest.TestCase):
         with source_util._pages_cache_lock:
             source_util._cached_pages = self.saved_cached_pages
         Runtime._instance = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        # set unconditionally for whole process, since we are just running tests
+        config.set_option("runner.postScriptGC", False)
 
     def script_from_string(self, script_name: str, script: str) -> LocalScriptRunner:
         """Create a runner for a script with the contents from a string.
