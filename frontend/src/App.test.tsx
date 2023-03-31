@@ -430,6 +430,7 @@ describe("App.handleNewSession", () => {
     },
     customTheme: {
       primaryColor: "red",
+      fontFaces: [],
     },
     initialize: {
       userInfo: {
