@@ -369,16 +369,16 @@ notices:
 	cd frontend; \
 		yarn licenses generate-disclaimer --silent --production --ignore-platform > ../NOTICES
 
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
-	./scripts/append_license.sh frontend/public/vendor/bokeh/bokeh-LICENSE.txt
-	./scripts/append_license.sh frontend/public/vendor/viz/viz.js-LICENSE.txt
-	./scripts/append_license.sh frontend/src/vendor/twemoji-LICENSE.txt
-	./scripts/append_license.sh frontend/src/vendor/Segment-LICENSE.txt
-	./scripts/append_license.sh frontend/src/vendor/react-bootstrap-LICENSE.txt
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
+	./scripts/append_license.sh frontend/lib/src/assets/img/Material-Icons.LICENSE
+	./scripts/append_license.sh frontend/lib/src/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/app/public/vendor/bokeh/bokeh-LICENSE.txt
+	./scripts/append_license.sh frontend/app/public/vendor/viz/viz.js-LICENSE.txt
+	./scripts/append_license.sh frontend/lib/src/vendor/twemoji-LICENSE.txt
+	./scripts/append_license.sh frontend/lib/src/vendor/Segment-LICENSE.txt
+	./scripts/append_license.sh frontend/lib/src/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh lib/streamlit/vendor/ipython/IPython-LICENSE.txt
 
 .PHONY: headers
