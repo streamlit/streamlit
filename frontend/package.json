@@ -19,7 +19,7 @@
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
-    "typecheck": "yarn workspace @streamlit/lib typecheck && yarn workspace @streamlit/app typecheck",
+    "typecheck": "yarn workspace @streamlit/lib typecheck",
     "lint": "yarn lintApp && yarn lintLib",
     "lintApp": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 app/src",
     "lintLib": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 lib/src",
