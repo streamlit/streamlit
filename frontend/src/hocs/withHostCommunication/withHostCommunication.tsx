@@ -19,9 +19,12 @@ import hoistNonReactStatics from "hoist-non-react-statics"
 
 import { ICustomThemeConfig } from "src/autogen/proto"
 
-import { IS_DEV_ENV } from "src/lib/baseconsts"
 import Resolver from "src/lib/Resolver"
 import { isValidOrigin } from "src/lib/UriUtil"
+
+// Uncomment this code if testing out host communication with
+// frontend/hostframe.html:
+// import { IS_DEV_ENV } from "src/lib/baseconsts"
 
 import {
   IAllowedMessageOriginsResponse,
