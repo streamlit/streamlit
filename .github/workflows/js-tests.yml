@@ -44,8 +44,8 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
-      - name: Run make frontend
-        run: make frontend
+      - name: Run make frontend-lib
+        run: make frontend-lib
       - name: Audit frontend licenses
         run: ./scripts/audit_frontend_licenses.py
       - name: Run linters

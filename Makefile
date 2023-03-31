@@ -302,6 +302,14 @@ frontend-fast:
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
 
+.PHONY: frontend-lib
+frontend-lib:
+	cd frontend/ ; yarn run buildLib
+
+.PHONY: frontend-app
+frontend-app:
+	cd frontend/ ; yarn run buildApp
+
 .PHONY: jslint
 # Lint the JS code
 jslint:
