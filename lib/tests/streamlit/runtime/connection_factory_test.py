@@ -20,7 +20,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from parameterized import parameterized
 
-from streamlit.connections import SQL, BaseConnection
+from streamlit.connections import SQL, BaseConnection, Snowpark
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.connection_factory import _create_connection, connection_factory
 from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -117,10 +117,9 @@ class ConnectionFactoryTest(unittest.TestCase):
         assert "Invalid connection nonexistent" in str(e.value)
 
     @patch("streamlit.runtime.connection_factory._create_connection")
-    def test_sql_connection_string_shorthand(self, patched_create_connection):
+    def test_connection_string_shorthand(self, patched_create_connection):
         connection_factory("sql")
+        patched_create_connection.assert_called_with(SQL, name="default")
 
-        patched_create_connection.assert_called_once_with(
-            SQL,
-            name="default",
-        )
+        connection_factory("snowpark")
+        patched_create_connection.assert_called_with(Snowpark, name="default")

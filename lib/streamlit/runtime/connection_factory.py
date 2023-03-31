@@ -17,7 +17,7 @@ from typing import Any, Dict, Type, TypeVar, overload
 
 from typing_extensions import Final, Literal
 
-from streamlit.connections import SQL, BaseConnection
+from streamlit.connections import SQL, BaseConnection, Snowpark
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
@@ -56,9 +56,11 @@ def _create_connection(
 #   1. Adding the new connection name and class to this function.
 #   2. Writing a new @overload signature mapping the connection's name to its class.
 def _get_first_party_connection(connection_name: str):
-    FIRST_PARTY_CONNECTIONS = {"sql"}
+    FIRST_PARTY_CONNECTIONS = {"snowpark", "sql"}
 
-    if connection_name == "sql":
+    if connection_name == "snowpark":
+        return Snowpark
+    elif connection_name == "sql":
         return SQL
 
     raise StreamlitAPIException(
