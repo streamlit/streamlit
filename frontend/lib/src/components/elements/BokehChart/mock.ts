@@ -15,7 +15,7 @@
  */
 
 // Serialized BokehChart data for testing purposes
-export default {
+const bokehMock = {
   target_id: null,
   root_id: "1088",
   doc: {
@@ -247,3 +247,5 @@ export default {
     version: "1.4.0",
   },
 }
+
+export default bokehMock

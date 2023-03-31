@@ -12,7 +12,7 @@
     "testWatch": "env NODE_OPTIONS=--max_old_space_size=8192 jest --watchAll --env=../sharedConfigs/jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 jest --env=./jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
     "typecheck": "tsc",
-    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --fix src",
+    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx src",
     "build:lib-type": "tsc -P tsconfig.json && tsc-alias -p tsconfig.json",
     "build:asset": "cp -R ./src/assets ./dist",
     "build:autogen": "cp -R ./src/autogen ./dist",

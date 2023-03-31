@@ -22,7 +22,7 @@
   // Specifies the ESLint parser
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": "./app/tsconfig.json",
+    "project": "./tsconfig.json",
     "ecmaFeatures": {
       "jsx": true // Allows for the parsing of JSX
     },
@@ -31,8 +31,8 @@
     // Allows for the use of imports
     "sourceType": "module"
   },
-  // Ignore our auto-generated code
-  "ignorePatterns": ["lib/src/autogen/*", "app/src/autogen/*", "*.js"],
+  // Ignore our auto-generated code and js build scripts
+  "ignorePatterns": ["autogen/*"],
   "plugins": ["no-relative-import-paths"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs

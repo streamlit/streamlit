@@ -83,6 +83,10 @@ const SidebarNav = ({
     return null
   }
 
+  if (appPages.length < 2) {
+    return null
+  }
+
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
       <StyledSidebarNavItems

@@ -31,7 +31,7 @@ import {
 import { createEmotionColors } from "src/theme/utils"
 import genericColors from "./themeColors"
 
-export default {
+const baseTheme = {
   inSidebar: false,
   breakpoints,
   colors: createEmotionColors(genericColors),
@@ -48,3 +48,5 @@ export default {
   spacing,
   zIndices,
 }
+
+export default baseTheme

@@ -15,7 +15,7 @@
  */
 
 // Serialized Vega object for testing purposes
-export default {
+const vegaLiteMock = {
   datasets: [],
   spec: '{"mark": "circle", "encoding": {"x": {"field": "a", "type": "quantitative"}, "y": {"field": "b", "type": "quantitative"}, "size": {"field": "c", "type": "quantitative"}, "color": {"field": "c", "type": "quantitative"}}, "autosize": {"type": "fit", "contains": "padding"}}',
   data: {
@@ -2071,3 +2071,4 @@ export default {
   },
   useContainerWidth: true,
 }
+export default vegaLiteMock

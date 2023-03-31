@@ -229,7 +229,7 @@ export function notNull<T>(value: T | null): value is T {
 export function notNullOrUndefined<T>(
   value: T | null | undefined
 ): value is T {
-  return <T>value !== null && <T>value !== undefined
+  return (value as T) !== null && (value as T) !== undefined
 }
 
 /**
@@ -239,7 +239,7 @@ export function notNullOrUndefined<T>(
 export function isNullOrUndefined<T>(
   value: T | null | undefined
 ): value is null | undefined {
-  return <T>value === null || <T>value === undefined
+  return (value as T) === null || (value as T) === undefined
 }
 
 /**

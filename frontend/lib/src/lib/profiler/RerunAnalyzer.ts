@@ -44,13 +44,11 @@ class RerunAnalyzer {
     }
 
     this.rerunEvents = allEvents.slice(firstEventIndex, lastEventIndex + 1)
-    this.requestedRerun = <RequestedRerunEvent>(
-      findPrevEvent(
-        allEvents,
-        firstEventIndex - 1,
-        evt => evt.name === "RequestedRerun"
-      )
-    )
+    this.requestedRerun = findPrevEvent(
+      allEvents,
+      firstEventIndex - 1,
+      evt => evt.name === "RequestedRerun"
+    ) as RequestedRerunEvent
   }
 
   public getResults = (): JSON => {
@@ -108,7 +106,7 @@ class RerunAnalyzer {
       }
 
       handleMessageEvents.push(
-        <HandleMessageEvent>this.rerunEvents[nextEventIndex]
+        this.rerunEvents[nextEventIndex] as HandleMessageEvent
       )
       curIndex = nextEventIndex + 1
     }
@@ -172,7 +170,9 @@ function findRunStartEventIndex(
   }
 
   // Find the newSession's "BeginHandleMessage" event
-  const { messageIndex } = <DecodedMessageEvent>events[newSessionDecodedIndex]
+  const { messageIndex } = events[
+    newSessionDecodedIndex
+  ] as DecodedMessageEvent
 
   return findPrevEventIndex(
     events,

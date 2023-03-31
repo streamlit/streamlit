@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "es6",
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "paths": { "src/*": ["src/*"] }
+  },
+  "include": ["src", "declarations.d.ts"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "./src/autogen/**", "node_modules/**/*"]
+}

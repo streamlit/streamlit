@@ -942,7 +942,7 @@ describe("App.handleNewSession", () => {
         { pageScriptHash: "subpage_hash", pageName: "page2" },
       ]
 
-      history.replaceState({}, "", "/") // The URL is set to the main page from the beginning.
+      window.history.replaceState({}, "", "/") // The URL is set to the main page from the beginning.
 
       // Because the page URL is already "/" pointing to the main page, no new history is pushed.
       instance.handleNewSession(
@@ -973,7 +973,7 @@ describe("App.handleNewSession", () => {
         { pageScriptHash: "subpage_hash", pageName: "page2" },
       ]
 
-      history.replaceState({}, "", "/page2") // Starting from a not main page.
+      window.history.replaceState({}, "", "/page2") // Starting from a not main page.
 
       // When running the top page first, a new history for the page is pushed.
       instance.handleNewSession(
@@ -1379,6 +1379,7 @@ describe("test app has printCallback method", () => {
   it("test app has printCallback method", () => {
     const props = getProps()
     const wrapper = mount(
+      // eslint-disable-next-line jsx-a11y/iframe-has-title
       <iframe>
         <App {...props} />
       </iframe>
