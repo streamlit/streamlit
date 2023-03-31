@@ -1,5 +1,3 @@
-// willhuang1997 TODO: Disabling temporarily but need to come back and fix this
-/* eslint-disable react-hooks/exhaustive-deps */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
@@ -119,7 +117,12 @@ function useTableSizer(
         height: resizableSize.height,
       })
     }
-  }, [containerWidth])
+  }, [
+    containerWidth,
+    element.useContainerWidth,
+    resizableSize.height,
+    resizableSize.width,
+  ])
 
   // Reset the height if the number of rows changes (e.g. via add_rows):
   React.useLayoutEffect(() => {
@@ -127,7 +130,7 @@ function useTableSizer(
       width: resizableSize.width,
       height: initialHeight,
     })
-  }, [numRows])
+  }, [initialHeight, numRows, resizableSize.width])
 
   // Reset the width if the element width parameter was changed:
   React.useLayoutEffect(() => {
@@ -135,7 +138,7 @@ function useTableSizer(
       width: initialWidth || "100%",
       height: resizableSize.height,
     })
-  }, [initialWidth])
+  }, [initialWidth, resizableSize.height])
 
   // Reset the height if the element height parameter was changed:
   React.useLayoutEffect(() => {
@@ -143,7 +146,7 @@ function useTableSizer(
       width: resizableSize.width,
       height: initialHeight,
     })
-  }, [initialHeight])
+  }, [initialHeight, resizableSize.width])
 
   // Change sizing if the fullscreen mode is activated or deactivated:
   React.useLayoutEffect(() => {
@@ -161,7 +164,15 @@ function useTableSizer(
         height: initialHeight,
       })
     }
-  }, [isFullScreen])
+  }, [
+    element.useContainerWidth,
+    element.width,
+    initialHeight,
+    initialWidth,
+    isFullScreen,
+    maxHeight,
+    maxWidth,
+  ])
 
   return {
     rowHeight: ROW_HEIGHT,
