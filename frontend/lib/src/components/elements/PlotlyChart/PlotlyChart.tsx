@@ -1,3 +1,6 @@
+// willhuang1997 TODO: Disabling temporarily but need to come back and fix this
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/rules-of-hooks */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *

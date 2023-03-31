@@ -14,8 +14,10 @@
 
 import os
 import threading
+from copy import deepcopy
 from typing import (
     Any,
+    Dict,
     ItemsView,
     Iterator,
     KeysView,
@@ -104,6 +106,9 @@ class AttrDict(Mapping[str, Any]):
 
     def __setattr__(self, key, value) -> NoReturn:
         raise TypeError("Secrets does not support attribute assignment.")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return deepcopy(self.__nested_secrets__)
 
 
 class Secrets(Mapping[str, Any]):

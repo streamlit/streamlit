@@ -56,10 +56,6 @@ const SidebarNav = ({
   onPageChange,
   pageLinkBaseUrl,
 }: Props): ReactElement | null => {
-  if (appPages.length < 2) {
-    return null
-  }
-
   const [expanded, setExpanded] = useState(false)
   const navItemsRef = useRef<HTMLUListElement>(null)
   const isOverflowing = useIsOverflowing(navItemsRef)
@@ -82,6 +78,10 @@ const SidebarNav = ({
       setExpanded(false)
     }
   }, [expanded, isOverflowing])
+
+  if (appPages.length < 2) {
+    return null
+  }
 
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
