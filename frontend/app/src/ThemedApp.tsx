@@ -18,9 +18,13 @@ import React from "react"
 import { BaseProvider } from "baseui"
 import { Global } from "@emotion/react"
 
+import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
+
 import {
+  FontFaceDeclaration,
   ThemeProvider,
   AUTO_THEME_NAME,
+  CUSTOM_THEME_NAME,
   createAutoTheme,
   createPresetThemes,
   getDefaultTheme,
@@ -29,6 +33,7 @@ import {
   removeCachedTheme,
   setCachedTheme,
   ThemeConfig,
+  createTheme,
 } from "@streamlit/lib"
 
 import AppWithScreencast from "./App"
@@ -38,6 +43,7 @@ const ThemedApp = (): JSX.Element => {
   const defaultTheme = getDefaultTheme()
 
   const [theme, setTheme] = React.useState<ThemeConfig>(defaultTheme)
+  const [fontFaces, setFontFaces] = React.useState<object[] | undefined>()
   const [availableThemes, setAvailableThemes] = React.useState<ThemeConfig[]>([
     ...createPresetThemes(),
     ...(isPresetTheme(defaultTheme) ? [] : [defaultTheme]),
@@ -47,21 +53,24 @@ const ThemedApp = (): JSX.Element => {
     setAvailableThemes([...createPresetThemes(), ...themeConfigs])
   }
 
-  const updateTheme = (newTheme: ThemeConfig): void => {
-    if (newTheme !== theme) {
-      setTheme(newTheme)
+  const updateTheme = React.useCallback(
+    (newTheme: ThemeConfig): void => {
+      if (newTheme !== theme) {
+        setTheme(newTheme)
 
-      // Only save to localStorage if it is not Auto since auto is the default.
-      // Important to not save since it can change depending on time of day.
-      if (newTheme.name === AUTO_THEME_NAME) {
-        removeCachedTheme()
-      } else {
-        setCachedTheme(newTheme)
+        // Only save to localStorage if it is not Auto since auto is the default.
+        // Important to not save since it can change depending on time of day.
+        if (newTheme.name === AUTO_THEME_NAME) {
+          removeCachedTheme()
+        } else {
+          setCachedTheme(newTheme)
+        }
       }
-    }
-  }
+    },
+    [setTheme, theme, removeCachedTheme, setCachedTheme]
+  )
 
-  const updateAutoTheme = (): void => {
+  const updateAutoTheme = React.useCallback((): void => {
     if (theme.name === AUTO_THEME_NAME) {
       updateTheme(createAutoTheme())
     }
@@ -69,12 +78,26 @@ const ThemedApp = (): JSX.Element => {
       theme => theme.name !== AUTO_THEME_NAME
     )
     setAvailableThemes([createAutoTheme(), ...constantThemes])
-  }
+  }, [theme, updateTheme, setAvailableThemes])
+
+  const setImportedTheme = React.useCallback(
+    (themeInfo: ICustomThemeConfig): void => {
+      // If fonts are coming from a URL, they need to be imported through the FontFaceDeclaration
+      // component. So let's store them in state so we can pass them as props.
+      if (themeInfo.fontFaces) {
+        setFontFaces(themeInfo.fontFaces as object[] | undefined)
+      }
+
+      const themeConfigProto = new CustomThemeConfig(themeInfo)
+      const customTheme = createTheme(CUSTOM_THEME_NAME, themeConfigProto)
+      updateTheme(customTheme)
+    },
+    [setFontFaces, updateTheme]
+  )
 
   React.useEffect(() => {
     const mediaMatch = window.matchMedia("(prefers-color-scheme: dark)")
     mediaMatch.addEventListener("change", updateAutoTheme)
-
     return () => mediaMatch.removeEventListener("change", updateAutoTheme)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, availableThemes])
@@ -85,16 +108,17 @@ const ThemedApp = (): JSX.Element => {
       zIndex={theme.emotion.zIndices.popupMenu}
     >
       <ThemeProvider theme={theme.emotion} baseuiTheme={theme.basewebTheme}>
-        <Global
-          // eslint-disable-next-line
-          styles={globalStyles}
-        />
+        <Global styles={globalStyles} />
+        {theme.name === CUSTOM_THEME_NAME && fontFaces && (
+          <FontFaceDeclaration fontFaces={fontFaces} />
+        )}
         <AppWithScreencast
           theme={{
             setTheme: updateTheme,
             activeTheme: theme,
             addThemes,
             availableThemes,
+            setImportedTheme,
           }}
         />
         {/* The data grid requires one root level portal element for rendering cell overlays */}

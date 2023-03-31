@@ -188,7 +188,7 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
         assert isinstance(
             default_uuid, str
         ), "Default UUID must be a string for Styler data."
-        _marshall_styler(proto, data, default_uuid)
+        marshall_styler(proto, data, default_uuid)
 
     if isinstance(data, pa.Table):
         proto.data = type_util.pyarrow_table_to_bytes(data)
@@ -197,7 +197,7 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
         proto.data = type_util.data_frame_to_bytes(df)
 
 
-def _marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
+def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
     """Marshall pandas.Styler into an Arrow proto.
 
     Parameters

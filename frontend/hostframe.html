@@ -1,0 +1,153 @@
+<!--
+ Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<!--
+
+This file is used to help develop Host<->Guest communications.
+
+Usage:
+
+  1. Uncomment the import and code block in `withHostCommunication.tsx` that mention
+     hostframe.html
+
+  2. In terminal 1: start the dev frontend server
+     $ cd frontend
+     $ yarn start
+
+  3. In terminal 2: run your Streamlit app
+     $ cd lib
+     $ pipenv shell
+     $ cd ..
+     $ streamlit run foo.py
+
+  4. In terminal 3: serve this file
+     $ cd frontend
+     $ python -m http.server
+
+  ...then open localhost:8000 in a browser!
+
+-->
+
+<script>
+  window.addEventListener('message', (event) => {
+    console.log("Received message event:", event)
+  })
+
+  function sendMessage(data) {
+    const guestwindow = document.getElementById('guest').contentWindow;
+
+    guestwindow.postMessage({
+      stCommVersion: 1,
+      ...data,
+    }, '*')
+  }
+
+  function sendThemeMessage() {
+    sendMessage({
+      type: "SET_CUSTOM_THEME_CONFIG",
+      themeInfo: {
+        primaryColor: "#1A6CE7",
+        backgroundColor: "#FFFFFF",
+        secondaryBackgroundColor: "#F5F5F5",
+        textColor: "#1A1D21",
+        widgetBackgroundColor: "#FFFFFF",
+        widgetBorderColor: "#D3DAE8",
+        font: 0,
+        base: 0,
+        bodyFont: '"Inter", "Source Sans Pro", sans-serif',
+        codeFont: '"Apercu Mono", "Source Code Pro", monospace',
+        fontFaces: [
+          {
+            family: "Inter",
+            url: "https://rsms.me/inter/font-files/Inter-Regular.woff2?v=3.19",
+            weight: 400,
+          },
+          {
+            family: "Inter",
+            url: "https://rsms.me/inter/font-files/Inter-SemiBold.woff2?v=3.19",
+            weight: 600,
+          },
+          {
+            family: "Inter",
+            url: "https://rsms.me/inter/font-files/Inter-Bold.woff2?v=3.19",
+            weight: 700,
+          },
+          {
+            family: "Apercu Mono",
+            url: "https://app.snowflake.com/static/2c4863733dec5a69523e.woff2",
+            weight: 400,
+          },
+          {
+            family: "Apercu Mono",
+            url: "https://app.snowflake.com/static/e903ae189d31a97e231e.woff2",
+            weight: 500,
+          },
+          {
+            family: "Apercu Mono",
+            url: "https://app.snowflake.com/static/32447307374154c88bc0.woff2",
+            weight: 700,
+          },
+        ],
+        radii: {
+          checkboxRadius: 3,
+          baseWidgetRadius: 6,
+        },
+        fontSizes: {
+          tinyFontSize: 10,
+          smallFontSize: 12,
+          baseFontSize: 14,
+        },
+      },
+    })
+  }
+</script>
+
+<style>
+html {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  inset: 0;
+  background-image: linear-gradient(45deg, #fff4c9 25%, #ffffff 25%, #ffffff 50%, #fff4c9 50%, #fff4c9 75%, #ffffff 75%, #ffffff 100%);
+  background-size: 56.57px 56.57px;
+}
+
+#toolbar {
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+}
+
+#guest {
+  flex: 1;
+  border: none;
+}
+</style>
+
+<div id="toolbar">
+  This is the host frame.
+  <button onclick="sendThemeMessage()">send theme message</button>
+</div>
+
+<iframe id="guest" src="http://localhost:3000" />

@@ -97,6 +97,7 @@ import {
   ForwardMsgMetadata,
   GitInfo,
   IAppPage,
+  ICustomThemeConfig,
   IGitInfo,
   Initialize,
   NewSession,
@@ -124,6 +125,7 @@ export interface Props {
     availableThemes: ThemeConfig[]
     setTheme: (theme: ThemeConfig) => void
     addThemes: (themes: ThemeConfig[]) => void
+    setImportedTheme: (themeInfo: ICustomThemeConfig) => void
   }
 }
 
