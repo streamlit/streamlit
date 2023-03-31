@@ -110,7 +110,7 @@ export type IHostToGuestMessage = {
     }
   | {
       type: "SET_CUSTOM_THEME_CONFIG"
-      theme: ICustomThemeConfig
+      themeInfo: ICustomThemeConfig
     }
 )
 
