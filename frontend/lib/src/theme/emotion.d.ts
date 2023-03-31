@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { Theme as StreamlitTheme } from "src/theme"
+import { Theme as StreamlitTheme } from "src/theme"
 
 // Outside imports make declarations not ambient, so we separate out from
 // the ambient declarations.d.ts

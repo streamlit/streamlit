@@ -17,7 +17,6 @@
 export * from "./baseui"
 export * from "./globalStyles"
 export * from "./types"
-export type { Theme } from "./types"
 export * from "./utils"
 export * from "./themeConfigs"
 export * from "./primitives"

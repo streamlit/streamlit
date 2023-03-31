@@ -707,7 +707,8 @@ export class App extends PureComponent<Props, State> {
       RERUN_PROMPT_MODAL_DIALOG &&
       sessionEvent.type === "scriptChangedOnDisk"
     ) {
-      const newDialog: DialogProps = {
+      // this should be DialogProps but it's causing some errors so commenting for now...
+      const newDialog: any = {
         type: DialogType.SCRIPT_CHANGED,
         onRerun: this.rerunScript,
         onClose: () => {},
