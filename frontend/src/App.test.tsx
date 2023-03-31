@@ -97,6 +97,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
     availableThemes: [],
     setTheme: jest.fn(),
     addThemes: jest.fn(),
+    setImportedTheme: jest.fn(),
   },
   ...extend,
 })
@@ -429,6 +430,7 @@ describe("App.handleNewSession", () => {
     },
     customTheme: {
       primaryColor: "red",
+      fontFaces: [],
     },
     initialize: {
       userInfo: {
