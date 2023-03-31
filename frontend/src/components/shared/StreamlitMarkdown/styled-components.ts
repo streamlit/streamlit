@@ -45,6 +45,7 @@ export const StyledStreamlitMarkdown =
       return {
         fontFamily: theme.genericFonts.bodyFont,
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
+        overflow: ["auto", "overlay"],
         ...sharedMarkdownStyle(theme),
         p: {
           wordBreak: "break-word",
