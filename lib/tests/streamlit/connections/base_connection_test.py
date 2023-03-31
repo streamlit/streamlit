@@ -16,24 +16,17 @@ import os
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
-import pytest
-
 import streamlit as st
 from streamlit.connections import BaseConnection
 from streamlit.runtime.secrets import AttrDict
 
 MOCK_TOML = """
-[connections.mock_connection]
+[connections.my_mock_connection]
 foo="bar"
-
-[connections.nondefault_connection_name]
-baz="qux"
 """
 
 
 class MockConnection(BaseConnection[str]):
-    _default_connection_name = "mock_connection"
-
     def connect(self, **kwargs) -> str:
         return "hooray, I'm connected!"
 
@@ -50,54 +43,38 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
         st.secrets._reset()
 
     def test_instance_set_to_connect_return_value(self):
-        assert MockConnection()._instance == "hooray, I'm connected!"
-
-    def test_default_connection_name(self):
-        assert MockConnection().default_connection_name() == "mock_connection"
-
-    def test_default_connection_name_with_unset_default(self):
-        class ExplodingConnection(BaseConnection[str]):
-            # Intentionally don't define _default_connection_name.
-
-            def connect(self, **kwargs):
-                pass
-
-        with pytest.raises(NotImplementedError):
-            ExplodingConnection()
+        assert (
+            MockConnection("my_mock_connection")._instance == "hooray, I'm connected!"
+        )
 
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_get_secrets(self, _):
-        conn = MockConnection()
+        conn = MockConnection("my_mock_connection")
         assert conn.get_secrets().foo == "bar"
 
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
-    def test_get_secrets_nondefault_connection_name(self, _):
-        conn = MockConnection(connection_name="nondefault_connection_name")
-        assert conn.get_secrets().baz == "qux"
-
-    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_get_secrets_no_matching_section(self, _):
-        conn = MockConnection(connection_name="nonexistent")
+        conn = MockConnection("nonexistent")
         assert conn.get_secrets() == {}
 
     def test_get_secrets_no_secrets(self):
-        conn = MockConnection()
+        conn = MockConnection("my_mock_connection")
         assert conn.get_secrets() == {}
 
     def test_instance_prop_caches_raw_instance(self):
-        conn = MockConnection()
+        conn = MockConnection("my_mock_connection")
         conn._raw_instance = "some other value"
 
         assert conn._instance == "some other value"
 
     def test_instance_prop_reinitializes_if_reset(self):
-        conn = MockConnection()
+        conn = MockConnection("my_mock_connection")
         conn._raw_instance = None
 
         assert conn._instance == "hooray, I'm connected!"
 
     def test_on_secrets_changed_when_nothing_changed(self):
-        conn = MockConnection()
+        conn = MockConnection("my_mock_connection")
 
         # conn.reset() shouldn't be called because secrets haven't changed since conn
         # was constructed.
@@ -108,7 +85,7 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
             patched_reset.assert_not_called()
 
     def test_on_secrets_changed(self):
-        conn = MockConnection()
+        conn = MockConnection("my_mock_connection")
 
         with patch(
             "streamlit.connections.base_connection.BaseConnection.reset"

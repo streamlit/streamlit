@@ -25,10 +25,7 @@ T = TypeVar("T")
 class BaseConnection(ABC, Generic[T]):
     """TODO(vdonato): docstrings for this class and all public methods."""
 
-    def __init__(self, connection_name: str = "default", **kwargs) -> None:
-        if connection_name == "default":
-            connection_name = self.default_connection_name()
-
+    def __init__(self, connection_name: str, **kwargs) -> None:
         self._connection_name = connection_name
         self._kwargs = kwargs
 
@@ -42,7 +39,7 @@ class BaseConnection(ABC, Generic[T]):
 
     def _repr_html_(self) -> str:
         # TODO(vdonato): Change this to whatever we actually want the default to be.
-        return f"Hi, I am a {self.default_connection_name()} connection!"
+        return f"Hi, I am a {self._connection_name} connection!"
 
     # Methods with default implementations that we don't expect subclasses to want or
     # need to overwrite.
@@ -66,16 +63,6 @@ class BaseConnection(ABC, Generic[T]):
 
         return connections_section.get(self._connection_name, AttrDict({}))
 
-    @classmethod
-    def default_connection_name(cls) -> str:
-        name = cls._default_connection_name
-
-        if name is None:
-            raise NotImplementedError(
-                "Subclasses of BaseConnection must define a _default_connection_name attribute."
-            )
-        return name
-
     # TODO(vdonato): Finalize the name for this method. Should this be `invalidate`?
     def reset(self) -> None:
         self._raw_instance = None
@@ -88,8 +75,6 @@ class BaseConnection(ABC, Generic[T]):
         return self._raw_instance
 
     # Abstract fields/methods that subclasses of BaseConnection must implement
-    _default_connection_name: Optional[str] = None
-
     @abstractmethod
     def connect(self, **kwargs) -> T:
         raise NotImplementedError

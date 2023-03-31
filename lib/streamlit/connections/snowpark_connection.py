@@ -57,9 +57,7 @@ def _load_from_snowsql_config_file() -> Dict[str, Any]:
 
 
 class Snowpark(BaseConnection["Session"]):
-    _default_connection_name = "snowpark"
-
-    def __init__(self, connection_name: str = "default", **kwargs) -> None:
+    def __init__(self, connection_name: str, **kwargs) -> None:
         self._lock = threading.RLock()
 
         # Grab the lock before calling BaseConnection.__init__() so that we can guarantee
