@@ -19,7 +19,7 @@ describe("st.error and friends", () => {
     cy.loadApp("http://localhost:3000/");
 
     // Wait for the "Please, wait" alert to disappear.
-    cy.get(".element-container .stAlert").should("have.length", 13);
+    cy.get(".element-container .stAlert").should("have.length", 11);
   });
 
   it("displays an error message correctly", () => {

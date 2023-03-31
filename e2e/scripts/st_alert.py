@@ -44,5 +44,3 @@ st.write("Hello world!")
 ```
 """
 st.info(text)
-st.success(text)
-st.warning(text)
