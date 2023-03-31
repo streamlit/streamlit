@@ -103,6 +103,9 @@ message Config {
 
 // Custom theme configuration options. Like other config options, these are set
 // in .streamlit/config.toml.
+//
+// IMPORTANT: This message is passed in JSON format in a host-to-guest postMessage. So DOT NOT
+// rename its proto fields!
 message CustomThemeConfig {
   enum BaseTheme {
     LIGHT = 0;
@@ -121,6 +124,33 @@ message CustomThemeConfig {
   string text_color = 4;
   FontFamily font = 5;
   BaseTheme base = 6;
+  string widget_background_color = 7;
+  string widget_border_color = 8;
+  Radii radii = 9;
+  string body_font = 13;
+  string code_font = 14;
+  repeated FontFace font_faces = 15;
+  FontSizes font_sizes = 16;
+}
+
+message FontFace {
+  string url = 1;
+  string family = 2;
+  int32 weight = 3;
+  string style = 4;
+}
+
+message Radii {
+  // In pixels.
+  int32 baseWidgetRadius = 1;
+  int32 checkboxRadius = 2;
+}
+
+message FontSizes {
+  // In pixels.
+  int32 tinyFontSize = 1;
+  int32 smallFontSize = 2;
+  int32 baseFontSize = 3;
 }
 
 // Data that identifies the Streamlit app creator.
