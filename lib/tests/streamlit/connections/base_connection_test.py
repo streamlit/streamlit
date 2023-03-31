@@ -27,7 +27,7 @@ foo="bar"
 
 
 class MockConnection(BaseConnection[str]):
-    def connect(self, **kwargs) -> str:
+    def _connect(self, **kwargs) -> str:
         return "hooray, I'm connected!"
 
 

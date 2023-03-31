@@ -67,7 +67,7 @@ class Snowpark(BaseConnection["Session"]):
 
     # TODO(vdonato): Teach the .connect() method how to automagically connect in a SiS
     # runtime environment.
-    def connect(self, **kwargs) -> "Session":
+    def _connect(self, **kwargs) -> "Session":
         from snowflake.snowpark.session import Session
 
         conn_params = self.get_secrets().to_dict()

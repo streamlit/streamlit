@@ -36,7 +36,7 @@ from tests.testutil import create_mock_script_run_ctx
 class MockConnection(BaseConnection[None]):
     _default_connection_name = "mock_connection"
 
-    def connect(self, **kwargs):
+    def _connect(self, **kwargs):
         pass
 
 
