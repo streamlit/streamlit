@@ -7,7 +7,7 @@
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src",
-    "paths": { "src/*": ["src/*"] }
+    "paths": { "src/*": ["./src/*"] }
   },
   "include": ["src", "declarations.d.ts"],
   "exclude": ["**/*.test.ts", "**/*.test.tsx", "./src/autogen/**", "node_modules/**/*"]
