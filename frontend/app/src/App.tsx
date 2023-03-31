@@ -707,7 +707,6 @@ export class App extends PureComponent<Props, State> {
     ) {
       const newDialog: DialogProps = {
         type: DialogType.SCRIPT_CHANGED,
-        // @ts-expect-error
         onRerun: this.rerunScript,
         onClose: () => {},
         allowRunOnSave: this.state.allowRunOnSave,

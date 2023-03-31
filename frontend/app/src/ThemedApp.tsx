@@ -61,23 +61,22 @@ const ThemedApp = (): JSX.Element => {
     }
   }
 
-  React.useEffect(() => {
-    const updateAutoTheme = (): void => {
-      if (theme.name === AUTO_THEME_NAME) {
-        updateTheme(createAutoTheme())
-      }
-      const constantThemes = availableThemes.filter(
-        theme => theme.name !== AUTO_THEME_NAME
-      )
-      setAvailableThemes([createAutoTheme(), ...constantThemes])
+  const updateAutoTheme = (): void => {
+    if (theme.name === AUTO_THEME_NAME) {
+      updateTheme(createAutoTheme())
     }
+    const constantThemes = availableThemes.filter(
+      theme => theme.name !== AUTO_THEME_NAME
+    )
+    setAvailableThemes([createAutoTheme(), ...constantThemes])
+  }
 
+  React.useEffect(() => {
     const mediaMatch = window.matchMedia("(prefers-color-scheme: dark)")
     mediaMatch.addEventListener("change", updateAutoTheme)
 
     return () => mediaMatch.removeEventListener("change", updateAutoTheme)
-    // willhuang1997 TODO: Disabling temporarily but need to come back and fix this
-    /* eslint-disable react-hooks/exhaustive-deps */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, availableThemes])
 
   return (
@@ -86,7 +85,10 @@ const ThemedApp = (): JSX.Element => {
       zIndex={theme.emotion.zIndices.popupMenu}
     >
       <ThemeProvider theme={theme.emotion} baseuiTheme={theme.basewebTheme}>
-        <Global styles={globalStyles} />
+        <Global
+          // @ts-expect-error
+          styles={globalStyles}
+        />
         <AppWithScreencast
           theme={{
             setTheme: updateTheme,

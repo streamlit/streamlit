@@ -23,7 +23,7 @@
     "lint": "yarn lintApp && yarn lintLib",
     "lintApp": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 app/src",
     "lintLib": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 lib/src",
-    "prettier": "prettier --write --config .prettierrc app/config"
+    "prettier": "prettier --write --config .prettierrc app/src"
   },
   "browserslist": [
     ">0.2%",
