@@ -1,5 +1,3 @@
-// willhuang1997 TODO: Disabling temporarily but need to come back and fix this
-/* eslint-disable react-hooks/exhaustive-deps */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
@@ -15,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// TODO: fix incorrect hook usage and delete this lint suppression
+/* eslint-disable react-hooks/exhaustive-deps */
 
 import React from "react"
 
