@@ -33,6 +33,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
+from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
@@ -776,6 +777,7 @@ class TextInput(Element):
 @dataclass(repr=False)
 class TextArea(Element):
     _value: str | None
+
     proto: TextAreaProto
     type: str
     id: str
@@ -829,6 +831,70 @@ class TextArea(Element):
         if self.max_chars and len(v) > self.max_chars:
             return self
         return self.set_value(v)
+
+
+Number = Union[int, float]
+
+
+@dataclass(repr=False)
+class NumberInput(Element, Widget):
+    _value: Number | None
+    proto: NumberInputProto
+    type: str
+    id: str
+    label: str
+    min_value: Number
+    max_value: Number
+    step: Number
+    help: str
+    form_id: str
+    placeholder: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: NumberInputProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "number_input"
+        self.id = proto.id
+        self.label = proto.label
+        self.min_value = proto.min
+        self.max_value = proto.max
+        self.step = proto.step
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def set_value(self, v: Number) -> NumberInput:
+        self._value = v
+        return self
+
+    def widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        ws.double_value = self.value
+        return ws
+
+    @property
+    def value(self) -> Number:
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            # Awkward to do this with `cast`
+            return state[self.id]  # type: ignore
+
+    def increment(self) -> NumberInput:
+        return self.set_value(self.value + self.step)
+
+    def decrement(self) -> NumberInput:
+        return self.set_value(self.value - self.step)
 
 
 @dataclass(init=False, repr=False)
@@ -949,6 +1015,10 @@ class Block:
 
     @overload
     def get(self, element_type: Literal["text_area"]) -> Sequence[TextArea]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["number_input"]) -> Sequence[NumberInput]:
         ...
 
     def get(self, element_type: str) -> Sequence[Node]:
@@ -1104,6 +1174,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = TextInput(elt.text_input, root=root)
             elif elt.WhichOneof("type") == "text_area":
                 new_node = TextArea(elt.text_area, root=root)
+            elif elt.WhichOneof("type") == "number_input":
+                new_node = NumberInput(elt.number_input, root=root)
             elif elt.WhichOneof("type") == "code":
                 new_node = Code(elt.code, root=root)
             else:
