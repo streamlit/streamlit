@@ -20,9 +20,9 @@ import { Global } from "@emotion/react"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
 
+import FontFaceDeclaration from "src/components/core/FontFaceDeclaration"
+import ThemeProvider from "src/components/core/ThemeProvider"
 import {
-  FontFaceDeclaration,
-  ThemeProvider,
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
   createAutoTheme,
@@ -34,7 +34,7 @@ import {
   setCachedTheme,
   ThemeConfig,
   createTheme,
-} from "@streamlit/lib"
+} from "src/theme"
 
 import AppWithScreencast from "./App"
 import { StyledDataFrameOverlay } from "./styled-components"
@@ -99,8 +99,7 @@ const ThemedApp = (): JSX.Element => {
     const mediaMatch = window.matchMedia("(prefers-color-scheme: dark)")
     mediaMatch.addEventListener("change", updateAutoTheme)
     return () => mediaMatch.removeEventListener("change", updateAutoTheme)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, availableThemes])
+  }, [theme, availableThemes, updateAutoTheme])
 
   return (
     <BaseProvider
