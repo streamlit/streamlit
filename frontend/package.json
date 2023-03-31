@@ -14,7 +14,8 @@
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src"
+    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 ./src",
+    "lintFix": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --fix ./src"
   },
   "jest": {
     "resetMocks": false,
@@ -256,5 +257,8 @@
     "not dead",
     "not ie <= 11",
     "not op_mini all"
-  ]
+  ],
+  "eslintConfig": {
+    "extends": "react-app"
+  }
 }

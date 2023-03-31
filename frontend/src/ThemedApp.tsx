@@ -47,31 +47,31 @@ const ThemedApp = (): JSX.Element => {
     setAvailableThemes([...createPresetThemes(), ...themeConfigs])
   }
 
-  const updateTheme = (newTheme: ThemeConfig): void => {
-    if (newTheme !== theme) {
-      setTheme(newTheme)
+  React.useEffect(() => {
+    const updateTheme = (newTheme: ThemeConfig): void => {
+      if (newTheme !== theme) {
+        setTheme(newTheme)
 
-      // Only save to localStorage if it is not Auto since auto is the default.
-      // Important to not save since it can change depending on time of day.
-      if (newTheme.name === AUTO_THEME_NAME) {
-        removeCachedTheme()
-      } else {
-        setCachedTheme(newTheme)
+        // Only save to localStorage if it is not Auto since auto is the default.
+        // Important to not save since it can change depending on time of day.
+        if (newTheme.name === AUTO_THEME_NAME) {
+          removeCachedTheme()
+        } else {
+          setCachedTheme(newTheme)
+        }
       }
     }
-  }
 
-  const updateAutoTheme = (): void => {
-    if (theme.name === AUTO_THEME_NAME) {
-      updateTheme(createAutoTheme())
+    const updateAutoTheme = (): void => {
+      if (theme.name === AUTO_THEME_NAME) {
+        updateTheme(createAutoTheme())
+      }
+      const constantThemes = availableThemes.filter(
+        theme => theme.name !== AUTO_THEME_NAME
+      )
+      setAvailableThemes([createAutoTheme(), ...constantThemes])
     }
-    const constantThemes = availableThemes.filter(
-      theme => theme.name !== AUTO_THEME_NAME
-    )
-    setAvailableThemes([createAutoTheme(), ...constantThemes])
-  }
 
-  React.useEffect(() => {
     const mediaMatch = window.matchMedia("(prefers-color-scheme: dark)")
     mediaMatch.addEventListener("change", updateAutoTheme)
 

@@ -46,7 +46,7 @@ function Tabs(props: Props): ReactElement {
       const { scrollWidth, clientWidth } = tabListRef.current
       setIsOverflowing(scrollWidth > clientWidth)
     }
-  }, [tabListRef.current, node.children.length])
+  }, [node.children.length])
 
   const TAB_HEIGHT = "2.5rem"
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS
