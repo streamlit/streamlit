@@ -130,9 +130,12 @@ function withHostCommunication<P extends InjectedProps>(
 
       const { allowedOrigins, useExternalAuthToken } = allowedOriginsResp
 
-      if (IS_DEV_ENV) {
-        allowedOrigins.push("http://localhost:8000")
-      }
+      // Uncomment this code if testing out host communication with
+      // frontend/hostframe.html:
+      //
+      // if (IS_DEV_ENV) {
+      //   allowedOrigins.push("http://localhost:8000")
+      // }
 
       if (!useExternalAuthToken) {
         deferredAuthToken.resolve(undefined)

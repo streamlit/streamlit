@@ -20,19 +20,22 @@ This file is used to help develop Host<->Guest communications.
 
 Usage:
 
-  * In terminal 1: start the dev frontend server
-    $ cd frontend
-    $ yarn start
+  1. Uncomment the code block in `withHostCommunication.tsx` that mentions
+     hostframe.html
 
-  * In terminal 2: run your Streamlit app
-    $ cd lib
-    $ pipenv shell
-    $ cd ..
-    $ streamlit run foo.py
+  2. In terminal 1: start the dev frontend server
+     $ cd frontend
+     $ yarn start
 
-  * In terminal 3: serve this file
-    $ cd frontend
-    $ python -m http.server
+  3. In terminal 2: run your Streamlit app
+     $ cd lib
+     $ pipenv shell
+     $ cd ..
+     $ streamlit run foo.py
+
+  4. In terminal 3: serve this file
+     $ cd frontend
+     $ python -m http.server
 
   ...then open localhost:8000 in a browser!
 
