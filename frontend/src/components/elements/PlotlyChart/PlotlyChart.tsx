@@ -1,5 +1,3 @@
-// willhuang1997 TODO: Disabling temporarily but need to come back and fix this
-/* eslint-disable react-hooks/rules-of-hooks */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
@@ -54,6 +52,7 @@ function isFullScreen(height: number | undefined): boolean {
   return !!height
 }
 
+/** Render an iframed Plotly chart from a URL */
 function renderIFrame({
   url,
   width,
@@ -63,7 +62,8 @@ function renderIFrame({
   return <iframe title="Plotly" src={url} style={{ width, height }} />
 }
 
-function renderFigure({
+/** Render a Plotly chart from a FigureProto */
+function PlotlyFigure({
   element,
   width,
   height,
@@ -143,7 +143,7 @@ export function PlotlyChart({
         width,
       })
     case "figure":
-      return renderFigure({ element, height, width })
+      return <PlotlyFigure width={width} element={element} height={height} />
     default:
       throw new Error(`Unrecognized PlotlyChart type: ${element.chart}`)
   }
