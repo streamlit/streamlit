@@ -86,7 +86,7 @@ const ThemedApp = (): JSX.Element => {
     >
       <ThemeProvider theme={theme.emotion} baseuiTheme={theme.basewebTheme}>
         <Global
-          // @ts-expect-error
+          // eslint-disable-next-line
           styles={globalStyles}
         />
         <AppWithScreencast
