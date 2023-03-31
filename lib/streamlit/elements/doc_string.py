@@ -109,8 +109,8 @@ class HelpMixin:
         >>> import streamlit as st
         >>> import pandas
         >>>
-        >>> # Get help for Pandas DataFrame:
-        >>> pandas.DataFrame
+        >>> # Get help for Pandas read_csv:
+        >>> pandas.read_csv
         >>>
         >>> # Get help for Streamlit itself:
         >>> st
