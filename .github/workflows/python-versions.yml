@@ -212,5 +212,7 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
+      - name: Run Type Checkers
+        run: scripts/mypy --report
       - name: Run Python Tests for Snowflake
         run: make pytest-snowflake
