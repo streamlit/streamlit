@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import sys
 import threading
 import unittest
 from unittest.mock import MagicMock, patch
@@ -20,7 +20,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from parameterized import parameterized
 
-from streamlit.connections import BaseConnection
+from streamlit.connections import SQL, BaseConnection
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.connection_factory import _create_connection, connection_factory
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from tests.testutil import create_mock_script_run_ctx
@@ -91,4 +92,35 @@ class ConnectionFactoryTest(unittest.TestCase):
         assert str(e.value) == (
             "No module named 'foo'. "
             "You may be missing a dependency required to use this connection."
+        )
+
+    @pytest.mark.skip(
+        reason="Existing tests import some of these modules, so we need to figure out some other way to test this."
+    )
+    def test_optional_dependencies_not_imported(self):
+        """Test that the dependencies of first party connections aren't transitively
+        imported just by importing the connection_factory function.
+        """
+
+        DISALLOWED_IMPORTS = ["sqlalchemy"]
+
+        modules = list(sys.modules.keys())
+
+        for m in modules:
+            for disallowed_import in DISALLOWED_IMPORTS:
+                assert disallowed_import not in m
+
+    def test_raises_exception_when_passed_invalid_class_string(self):
+        with pytest.raises(StreamlitAPIException) as e:
+            connection_factory("nonexistent")
+
+        assert "Invalid connection nonexistent" in str(e.value)
+
+    @patch("streamlit.runtime.connection_factory._create_connection")
+    def test_sql_connection_string_shorthand(self, patched_create_connection):
+        connection_factory("sql")
+
+        patched_create_connection.assert_called_once_with(
+            SQL,
+            name="default",
         )
