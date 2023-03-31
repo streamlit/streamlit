@@ -241,6 +241,8 @@ class WriteMixin:
                 self.dg.pydeck_chart(arg)
             elif inspect.isclass(arg):
                 flush_buffer()
+                # We cast arg to type here to appease mypy, due to bug in mypy:
+                # https://github.com/python/mypy/issues/12933
                 self.dg.help(cast(type, arg))
             elif hasattr(arg, "_repr_html_"):
                 self.dg.markdown(
