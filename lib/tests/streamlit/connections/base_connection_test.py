@@ -52,10 +52,10 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
     def test_instance_set_to_connect_return_value(self):
         assert MockConnection()._instance == "hooray, I'm connected!"
 
-    def test_default_connection_name(self):
-        assert MockConnection().default_connection_name() == "mock_connection"
+    def test_default_name(self):
+        assert MockConnection()._default_name() == "mock_connection"
 
-    def test_default_connection_name_with_unset_default(self):
+    def test_default_name_with_unset_default(self):
         class ExplodingConnection(BaseConnection[str]):
             # Intentionally don't define _default_connection_name.
 

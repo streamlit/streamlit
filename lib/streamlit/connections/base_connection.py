@@ -27,7 +27,7 @@ class BaseConnection(ABC, Generic[T]):
 
     def __init__(self, connection_name: str = "default", **kwargs) -> None:
         if connection_name == "default":
-            connection_name = self.default_connection_name()
+            connection_name = self._default_name()
 
         self._connection_name = connection_name
         self._kwargs = kwargs
@@ -42,7 +42,7 @@ class BaseConnection(ABC, Generic[T]):
 
     def _repr_html_(self) -> str:
         # TODO(vdonato): Change this to whatever we actually want the default to be.
-        return f"Hi, I am a {self.default_connection_name()} connection!"
+        return f"Hi, I am a {self._default_name()} connection!"
 
     # Methods with default implementations that we don't expect subclasses to want or
     # need to overwrite.
@@ -67,7 +67,7 @@ class BaseConnection(ABC, Generic[T]):
         return connections_section.get(self._connection_name, AttrDict({}))
 
     @classmethod
-    def default_connection_name(cls) -> str:
+    def _default_name(cls) -> str:
         name = cls._default_connection_name
 
         if name is None:
