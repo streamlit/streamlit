@@ -33,7 +33,7 @@ _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 class SQL(BaseConnection["Engine"]):
     _default_connection_name = "sql"
 
-    def connect(self, autocommit: bool = False, **kwargs) -> "Engine":
+    def _connect(self, autocommit: bool = False, **kwargs) -> "Engine":
         import sqlalchemy
 
         secrets = self._get_secrets()

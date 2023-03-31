@@ -78,7 +78,7 @@ class SQLConnectionTest(unittest.TestCase):
 
             assert str(e.value) == f"Missing SQL DB connection param: {missing_param}"
 
-    @patch("streamlit.connections.sql_connection.SQL.connect", MagicMock())
+    @patch("streamlit.connections.sql_connection.SQL._connect", MagicMock())
     @patch("streamlit.connections.sql_connection.pd.read_sql")
     def test_read_sql_caches_value(self, patched_read_sql):
         # Caching functions rely on an active script run ctx

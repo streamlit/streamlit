@@ -32,10 +32,11 @@ class BaseConnection(ABC, Generic[T]):
         self._connection_name = connection_name
         self._kwargs = kwargs
 
-        self._raw_instance: Optional[T] = self.connect(**kwargs)
         secrets_dict = self._get_secrets().to_dict()
         self._config_section_hash = calc_md5(json.dumps(secrets_dict))
         secrets_singleton.file_change_listener.connect(self._on_secrets_changed)
+
+        self._raw_instance: Optional[T] = self._connect(**kwargs)
 
     def __del__(self) -> None:
         secrets_singleton.file_change_listener.disconnect(self._on_secrets_changed)
@@ -83,7 +84,7 @@ class BaseConnection(ABC, Generic[T]):
     @property
     def _instance(self) -> T:
         if self._raw_instance is None:
-            self._raw_instance = self.connect(**self._kwargs)
+            self._raw_instance = self._connect(**self._kwargs)
 
         return self._raw_instance
 
@@ -91,5 +92,5 @@ class BaseConnection(ABC, Generic[T]):
     _default_connection_name: Optional[str] = None
 
     @abstractmethod
-    def connect(self, **kwargs) -> T:
+    def _connect(self, **kwargs) -> T:
         raise NotImplementedError

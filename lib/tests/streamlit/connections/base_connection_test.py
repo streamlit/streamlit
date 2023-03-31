@@ -34,7 +34,7 @@ baz="qux"
 class MockConnection(BaseConnection[str]):
     _default_connection_name = "mock_connection"
 
-    def connect(self, **kwargs) -> str:
+    def _connect(self, **kwargs) -> str:
         return "hooray, I'm connected!"
 
 
@@ -59,7 +59,7 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
         class ExplodingConnection(BaseConnection[str]):
             # Intentionally don't define _default_connection_name.
 
-            def connect(self, **kwargs):
+            def _connect(self, **kwargs):
                 pass
 
         with pytest.raises(NotImplementedError):
