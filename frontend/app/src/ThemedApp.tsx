@@ -20,9 +20,9 @@ import { Global } from "@emotion/react"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
 
-import FontFaceDeclaration from "src/components/core/FontFaceDeclaration"
-import ThemeProvider from "src/components/core/ThemeProvider"
 import {
+  FontFaceDeclaration,
+  ThemeProvider,
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
   createAutoTheme,
@@ -34,7 +34,7 @@ import {
   setCachedTheme,
   ThemeConfig,
   createTheme,
-} from "src/theme"
+} from "@streamlit/lib"
 
 import AppWithScreencast from "./App"
 import { StyledDataFrameOverlay } from "./styled-components"
