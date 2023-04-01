@@ -212,15 +212,20 @@ function DataFrame({
   // On the first rendering, try to load initial widget state if
   // it exist. This is required in the case that other elements
   // are inserted before this widget.
-  React.useEffect(() => {
-    if (element.editingMode !== READ_ONLY) {
-      const initialWidgetValue = widgetMgr.getStringValue(element)
-      if (initialWidgetValue) {
-        editingState.current.fromJson(initialWidgetValue, originalColumns)
-        setNumRows(editingState.current.getNumRows())
+  React.useEffect(
+    () => {
+      if (element.editingMode !== READ_ONLY) {
+        const initialWidgetValue = widgetMgr.getStringValue(element)
+        if (initialWidgetValue) {
+          editingState.current.fromJson(initialWidgetValue, originalColumns)
+          setNumRows(editingState.current.getNumRows())
+        }
       }
-    }
-  }, [widgetMgr, originalColumns, element, READ_ONLY])
+    },
+    // TODO: fix incorrect hook usage. Could misbehave with add_rows so leaving here for now
+    /* eslint-disable react-hooks/exhaustive-deps */
+    []
+  )
 
   const { getCellContent: getOriginalCellContent } = useDataLoader(
     data,
