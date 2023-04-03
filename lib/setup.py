@@ -38,6 +38,7 @@ INSTALL_REQUIRES = [
     "numpy",
     "packaging>=14.1",
     "pandas<2,>=0.25",
+    # Temp pin pillow to below 9.5 until we investigate the breaking changes that cause our tests to fail
     "pillow>=6.2.0, <9.5.0",
     "protobuf<4,>=3.12",
     "pyarrow>=4.0",
