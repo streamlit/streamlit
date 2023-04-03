@@ -379,7 +379,8 @@ notices:
 
 	@# When `yarn licenses` is run in a yarn workspace, it misnames the project as
 	@# "WORKSPACE AGGREGATOR 2B7C80A7 6734 4A68 BB93 8CC72B9A5DEA". We fix that here.
-	sed -i "" "s/PORTIONS OF THE .*PRODUCT/PORTIONS OF THE STREAMLIT PRODUCT/" NOTICES
+	sed -i ".bak" "s/PORTIONS OF THE .*PRODUCT/PORTIONS OF THE STREAMLIT PRODUCT/" NOTICES
+	rm -f NOTICES.bak
 
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
