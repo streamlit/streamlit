@@ -212,7 +212,7 @@
     "babel-runtime": "^6.26.0",
     "buffer": "^6.0.3",
     "circular-dependency-plugin": "^5.2.2",
-    "cypress": "^6.3.0",
+    "cypress": "^9.7.0",
     "cypress-file-upload": "^5.0.8",
     "cypress-image-snapshot": "^4.0.1",
     "enzyme": "^3.11.0",

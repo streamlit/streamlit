@@ -214,7 +214,7 @@
     "babel-plugin-emotion": "^11.0.0",
     "babel-plugin-tsconfig-paths-module-resolver": "^1.0.4",
     "buffer": "^6.0.3",
-    "cypress": "^6.3.0",
+    "cypress": "^9.7.0",
     "cypress-file-upload": "^5.0.8",
     "cypress-image-snapshot": "^4.0.1",
     "enzyme": "^3.11.0",

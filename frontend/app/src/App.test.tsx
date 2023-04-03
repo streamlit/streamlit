@@ -127,12 +127,10 @@ describe("App", () => {
   beforeEach(() => {
     // @ts-expect-error
     window.prerenderReady = false
-    const location = global.window.location
     // This was not necessary before as jsdom should solve this. However, this is undefined in jest for some reason.
-    // @ts-expect-error
-    global.window.location = {
+    window.location = {
       ancestorOrigins: {} as DOMStringList,
-      hash: null,
+      hash: originalLocation.hash,
       host: "dummy.com",
       port: "80",
       protocol: "http:",
@@ -140,10 +138,10 @@ describe("App", () => {
       href: "http://dummy.com?page=1&name=testing",
       origin: "http://dummy.com",
       pathname: "test",
-      search: location.search,
-      assign: location.assign,
-      replace: location.replace,
-      reload: location.reload,
+      search: originalLocation.search,
+      assign: originalLocation.assign,
+      replace: originalLocation.replace,
+      reload: originalLocation.reload,
     } as Location
   })
 
