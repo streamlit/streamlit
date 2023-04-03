@@ -41,7 +41,7 @@ import os
 import re
 import sys
 
-import semver
+from semver import VersionInfo
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 VERSION_FILE = ".prerelease-version"
@@ -72,11 +72,9 @@ def main():
             'Specify target version as an argument: "%s 1.2.3"' % sys.argv[0]
         )
 
-    target_version = semver.VersionInfo.parse(sys.argv[1])
+    target_version = VersionInfo.parse(sys.argv[1])
     # Ensure that current version is semver-compliant (it's stored as PEP440-compliant in setup.py)
-    current_version = semver.VersionInfo.parse(
-        get_current_version().replace("rc", "-rc.")
-    )
+    current_version = VersionInfo.parse(get_current_version().replace("rc", "-rc."))
 
     if current_version.finalize_version() < target_version:
         current_version = target_version

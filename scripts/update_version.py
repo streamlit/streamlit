@@ -48,7 +48,7 @@ import re
 import sys
 
 import packaging.version
-import semver
+from semver import VersionInfo
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -85,7 +85,7 @@ def verify_semver(version):
     """
 
     try:
-        return str(semver.VersionInfo.parse(version))
+        return str(VersionInfo.parse(version))
     except ValueError as e:
         raise (e)
 
