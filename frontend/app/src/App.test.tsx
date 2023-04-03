@@ -123,6 +123,7 @@ jest.mock("moment", () =>
 )
 
 describe("App", () => {
+  const { location: originalLocation } = window
   beforeEach(() => {
     // @ts-expect-error
     window.prerenderReady = false
@@ -144,6 +145,10 @@ describe("App", () => {
       replace: location.replace,
       reload: location.reload,
     } as Location
+  })
+
+  afterEach(() => {
+    window.location = originalLocation
   })
 
   it("renders without crashing", () => {
