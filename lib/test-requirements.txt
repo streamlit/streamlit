@@ -7,6 +7,7 @@ chart-studio>=1.1.0
 graphviz>=0.17
 matplotlib>=3.3.4
 opencv-python>=4.5.3
+pillow<9.5.0
 plotly>=5.3.1
 pydot>=1.4.2
 scipy>=1.7.3
