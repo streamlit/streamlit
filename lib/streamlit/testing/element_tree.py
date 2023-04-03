@@ -891,10 +891,12 @@ class NumberInput(Element, Widget):
             return state[self.id]  # type: ignore
 
     def increment(self) -> NumberInput:
-        return self.set_value(self.value + self.step)
+        v = min(self.value + self.step, self.max_value)
+        return self.set_value(v)
 
     def decrement(self) -> NumberInput:
-        return self.set_value(self.value - self.step)
+        v = max(self.value - self.step, self.min_value)
+        return self.set_value(v)
 
 
 @dataclass(init=False, repr=False)
