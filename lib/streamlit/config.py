@@ -461,11 +461,11 @@ _create_option(
         and settings dialog (top right of the app).
 
         Allowed values:
-        * “auto”      : Show the developer options if the app is accessed through
+        * "auto"      : Show the developer options if the app is accessed through
                         localhost and hide them otherwise.
-        * “developer” : Show the developer options.
-        * “viewer”    : Hide the developer options.
-        * “minimal”   : Show only options set externally (e.g. through
+        * "developer" : Show the developer options.
+        * "viewer"    : Hide the developer options.
+        * "minimal"   : Show only options set externally (e.g. through
                         Streamlit Community Cloud) or through st.set_page_config.
                         If there are no options left, hide the menu.
 """,
