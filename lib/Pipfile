@@ -31,6 +31,8 @@ protobuf = ">=3.19, <4"
 pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
+# semver 3 renames VersionInfo so temporarily pin until we deal with it
+semver = "<3"
 setuptools = ">=65.5.1"
 testfixtures = "*"
 twine = "*"
