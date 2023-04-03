@@ -25,6 +25,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state import SessionStateProxy
+from streamlit.string_util import is_mem_address_str
 from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
@@ -70,6 +71,7 @@ class WriteMixin:
             - write(error)      : Prints an exception specially.
             - write(func)       : Displays information about a function.
             - write(module)     : Displays information about the module.
+            - write(class)      : Displays information about a class.
             - write(dict)       : Displays dict in an interactive widget.
             - write(mpl_fig)    : Displays a Matplotlib figure.
             - write(altair)     : Displays an Altair chart.
@@ -108,7 +110,7 @@ class WriteMixin:
             https://doc-write1.streamlitapp.com/
             height: 150px
 
-        As mentioned earlier, `st.write()` also accepts other data formats, such as
+        As mentioned earlier, ``st.write()`` also accepts other data formats, such as
         numbers, data frames, styled data frames, and assorted objects:
 
         >>> import streamlit as st
@@ -135,7 +137,7 @@ class WriteMixin:
             https://doc-write3.streamlitapp.com/
             height: 410px
 
-        Oh, one more thing: `st.write` accepts chart objects too! For example:
+        Oh, one more thing: ``st.write`` accepts chart objects too! For example:
 
         >>> import streamlit as st
         >>> import pandas as pd
@@ -239,14 +241,23 @@ class WriteMixin:
                 self.dg.pydeck_chart(arg)
             elif inspect.isclass(arg):
                 flush_buffer()
-                self.dg.text(arg)
+                # We cast arg to type here to appease mypy, due to bug in mypy:
+                # https://github.com/python/mypy/issues/12933
+                self.dg.help(cast(type, arg))
             elif hasattr(arg, "_repr_html_"):
                 self.dg.markdown(
                     arg._repr_html_(),
                     unsafe_allow_html=True,
                 )
             else:
-                string_buffer.append("`%s`" % str(arg).replace("`", "\\`"))
+                stringified_arg = str(arg)
+
+                if is_mem_address_str(stringified_arg):
+                    flush_buffer()
+                    self.dg.help(arg)
+
+                else:
+                    string_buffer.append("`%s`" % stringified_arg.replace("`", "\\`"))
 
         flush_buffer()
 

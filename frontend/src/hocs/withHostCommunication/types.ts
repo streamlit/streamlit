@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { IAppPage } from "src/autogen/proto"
+import { ICustomThemeConfig, IAppPage } from "src/autogen/proto"
 import { ExportedTheme } from "src/theme"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 
@@ -120,6 +120,10 @@ export type IHostToGuestMessage = {
     }
   | {
       type: "CLEAR_CACHE"
+    }
+  | {
+      type: "SET_CUSTOM_THEME_CONFIG"
+      themeInfo: ICustomThemeConfig
     }
 )
 

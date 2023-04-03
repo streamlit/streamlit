@@ -17,8 +17,7 @@
 import { transparentize } from "color2k"
 import { colors } from "src/theme/primitives/colors"
 
-export default {
-  ...colors,
+const requiredThemeColors = {
   bgColor: colors.white,
   secondaryBg: colors.gray20,
   bodyText: colors.gray85,
@@ -41,4 +40,17 @@ export default {
   blue: colors.blue80,
   green: colors.green80,
   yellow: colors.yellow80,
+}
+
+interface OptionalThemeColors {
+  widgetBackgroundColor?: string
+  widgetBorderColor?: string
+}
+
+const optionalThemeColors: OptionalThemeColors = {}
+
+export default {
+  ...colors,
+  ...requiredThemeColors,
+  ...optionalThemeColors,
 }

@@ -223,7 +223,13 @@ const RawElementNodeRenderer = (
     }
 
     case "audio":
-      return <Audio width={width} element={node.element.audio as AudioProto} />
+      return (
+        <Audio
+          width={width}
+          element={node.element.audio as AudioProto}
+          endpoints={props.endpoints}
+        />
+      )
 
     case "balloons":
       return hideIfStale(
@@ -307,6 +313,7 @@ const RawElementNodeRenderer = (
         <ImageList
           width={width}
           element={node.element.imgs as ImageListProto}
+          endpoints={props.endpoints}
         />
       )
 
@@ -374,7 +381,13 @@ const RawElementNodeRenderer = (
       )
 
     case "video":
-      return <Video width={width} element={node.element.video as VideoProto} />
+      return (
+        <Video
+          width={width}
+          element={node.element.video as VideoProto}
+          endpoints={props.endpoints}
+        />
+      )
 
     // Widgets
     case "arrowDataFrame": {
@@ -425,6 +438,7 @@ const RawElementNodeRenderer = (
         widgetProps.disabled || downloadButtonProto.disabled
       return (
         <DownloadButton
+          endpoints={props.endpoints}
           key={downloadButtonProto.id}
           element={downloadButtonProto}
           width={width}

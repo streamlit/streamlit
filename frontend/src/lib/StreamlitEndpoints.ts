@@ -15,6 +15,7 @@
  */
 
 import { CancelToken } from "axios"
+import { IAppPage } from "src/autogen/proto"
 
 /** Exposes non-websocket endpoints used by the frontend. */
 export interface StreamlitEndpoints {
@@ -24,6 +25,26 @@ export interface StreamlitEndpoints {
    * @param path The path of the component resource to fetch, e.g. "index.html".
    */
   buildComponentURL(componentName: string, path: string): string
+
+  /**
+   * Construct a URL for a media file.
+   * @param url a relative or absolute URL. If `url` is absolute, it will be
+   * returned unchanged. Otherwise, the return value will be a URL for fetching
+   * the media file from the connected Streamlit instance.
+   */
+  buildMediaURL(url: string): string
+
+  /**
+   * Construct a URL for an app page in a multi-page app.
+   * @param pageLinkBaseURL the optional pageLinkBaseURL set by the host communication layer.
+   * @param page the page's AppPage protobuf properties
+   * @param pageIndex the page's zero-based index
+   */
+  buildAppPageURL(
+    pageLinkBaseURL: string | undefined,
+    page: IAppPage,
+    pageIndex: number
+  ): string
 
   /**
    * Upload a file to the FileUploader endpoint.

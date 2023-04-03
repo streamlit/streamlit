@@ -24,6 +24,7 @@ import Button, { Kind } from "src/components/shared/Button"
 import { IAppPage, PageConfig } from "src/autogen/proto"
 import { Theme } from "src/theme"
 import { localStorageAvailable } from "src/lib/storageUtils"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 import {
   StyledSidebar,
@@ -37,6 +38,7 @@ import IsSidebarContext from "./IsSidebarContext"
 import SidebarNav from "./SidebarNav"
 
 export interface SidebarProps {
+  endpoints: StreamlitEndpoints
   chevronDownshift: number
   children?: ReactElement
   initialSidebarState?: PageConfig.SidebarState
@@ -259,6 +261,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             </StyledSidebarCloseButton>
             {!hideSidebarNav && (
               <SidebarNav
+                endpoints={this.props.endpoints}
                 appPages={appPages}
                 collapseSidebar={this.toggleCollapse}
                 currentPageScriptHash={currentPageScriptHash}

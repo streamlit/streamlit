@@ -23,7 +23,7 @@ import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 const MOCK_SERVER_URI = {
   host: "streamlit.mock",
   port: 80,
-  basePath: "",
+  basePath: "mock/base/path",
 }
 
 function createMockForwardMsg(hash: string, cacheable = true): ForwardMsg {
@@ -34,6 +34,18 @@ function createMockForwardMsg(hash: string, cacheable = true): ForwardMsg {
 }
 
 describe("DefaultStreamlitEndpoints", () => {
+  const { location: originalLocation } = window
+  beforeEach(() => {
+    // Replace window.location with a mutable object that otherwise has
+    // the same contents so that we can change port below.
+    // @ts-expect-error
+    delete window.location
+    window.location = { ...originalLocation }
+  })
+  afterEach(() => {
+    window.location = originalLocation
+  })
+
   describe("buildComponentURL()", () => {
     it("errors if no serverURI", () => {
       // If we never connect to a server, getComponentURL will fail:
@@ -55,14 +67,73 @@ describe("DefaultStreamlitEndpoints", () => {
       // "Connect" to the server. `buildComponentURL` will succeed.
       serverURI = MOCK_SERVER_URI
       expect(endpoint.buildComponentURL("foo", "index.html")).toEqual(
-        "http://streamlit.mock:80/component/foo/index.html"
+        "http://streamlit.mock:80/mock/base/path/component/foo/index.html"
       )
 
       // "Disconnect" from the server, and call buildComponentURL again;
       // it should return a URL constructed from the cached server URI.
       serverURI = undefined
       expect(endpoint.buildComponentURL("bar", "index.html")).toEqual(
-        "http://streamlit.mock:80/component/bar/index.html"
+        "http://streamlit.mock:80/mock/base/path/component/bar/index.html"
+      )
+    })
+  })
+
+  describe("buildMediaURL", () => {
+    const endpoints = new DefaultStreamlitEndpoints({
+      getServerUri: () => MOCK_SERVER_URI,
+      csrfEnabled: false,
+    })
+
+    it("builds URL correctly for streamlit-served media", () => {
+      const url = endpoints.buildMediaURL("/media/1234567890.png")
+      expect(url).toBe(
+        "http://streamlit.mock:80/mock/base/path/media/1234567890.png"
+      )
+    })
+
+    it("passes through other media uris", () => {
+      const uri = endpoints.buildMediaURL("http://example/blah.png")
+      expect(uri).toBe("http://example/blah.png")
+    })
+
+    it("sanitizes SVG uris", () => {
+      const url = endpoints.buildMediaURL(
+        `data:image/svg+xml,<svg><script>alert('evil')</script></svg>`
+      )
+      expect(url).toBe(`data:image/svg+xml,<svg></svg>`)
+    })
+  })
+
+  describe("buildAppPageURL", () => {
+    const endpoints = new DefaultStreamlitEndpoints({
+      getServerUri: () => MOCK_SERVER_URI,
+      csrfEnabled: false,
+    })
+
+    const appPages = [
+      { pageScriptHash: "main_page_hash", pageName: "streamlit_app" },
+      { pageScriptHash: "other_page_hash", pageName: "my_other_page" },
+    ]
+
+    it("uses window.location.port", () => {
+      window.location.port = "3000"
+      expect(endpoints.buildAppPageURL("", appPages[0], 0)).toBe(
+        "http://streamlit.mock:3000/mock/base/path/"
+      )
+      expect(endpoints.buildAppPageURL("", appPages[1], 1)).toBe(
+        "http://streamlit.mock:3000/mock/base/path/my_other_page"
+      )
+    })
+
+    it("is built using pageLinkBaseURL if set", () => {
+      window.location.port = "3000"
+      const pageLinkBaseURL = "https://share.streamlit.io/vdonato/foo/bar"
+      expect(endpoints.buildAppPageURL(pageLinkBaseURL, appPages[0], 0)).toBe(
+        "https://share.streamlit.io/vdonato/foo/bar/"
+      )
+      expect(endpoints.buildAppPageURL(pageLinkBaseURL, appPages[1], 1)).toBe(
+        "https://share.streamlit.io/vdonato/foo/bar/my_other_page"
       )
     })
   })
@@ -88,7 +159,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
     it("calls the appropriate endpoint", async () => {
       axiosMock
-        .onPost("http://streamlit.mock:80/_stcore/upload_file")
+        .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
         .reply(() => [200, 1])
 
       const mockOnUploadProgress = (_: any): void => {}
@@ -110,7 +181,7 @@ describe("DefaultStreamlitEndpoints", () => {
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
       expect(spyRequest).toHaveBeenCalledWith({
-        url: "http://streamlit.mock:80/_stcore/upload_file",
+        url: "http://streamlit.mock:80/mock/base/path/_stcore/upload_file",
         method: "POST",
         responseType: "text",
         data: expectedData,
@@ -122,7 +193,7 @@ describe("DefaultStreamlitEndpoints", () => {
     it("errors on unexpected return value", async () => {
       // If our endpoint returns a non-number, we'll return a failed promise.
       axiosMock
-        .onPost("http://streamlit.mock:80/_stcore/upload_file")
+        .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
         .reply(() => [200, "invalidFileId"])
 
       await expect(
@@ -140,7 +211,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
     it("errors on bad status", async () => {
       axiosMock
-        .onPost("http://streamlit.mock:80/_stcore/upload_file")
+        .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
         .reply(() => [400])
 
       await expect(
@@ -175,7 +246,9 @@ describe("DefaultStreamlitEndpoints", () => {
       ).finish()
 
       axiosMock
-        .onGet("http://streamlit.mock:80/_stcore/message?hash=mockHash")
+        .onGet(
+          "http://streamlit.mock:80/mock/base/path/_stcore/message?hash=mockHash"
+        )
         .reply(() => {
           return [200, mockForwardMsgBytes]
         })
@@ -187,7 +260,9 @@ describe("DefaultStreamlitEndpoints", () => {
 
     it("errors on bad status", async () => {
       axiosMock
-        .onGet("http://streamlit.mock:80/_stcore/message?hash=mockHash")
+        .onGet(
+          "http://streamlit.mock:80/mock/base/path/_stcore/message?hash=mockHash"
+        )
         .reply(() => [400])
 
       await expect(

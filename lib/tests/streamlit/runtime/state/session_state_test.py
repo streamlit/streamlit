@@ -40,6 +40,7 @@ from streamlit.runtime.state.session_state import (
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.testing.script_interactions import InteractiveScriptTests
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.testutil import patch_config_options
 
 identity = lambda x: x
 
@@ -316,6 +317,45 @@ class SessionStateInteractionTest(InteractiveScriptTests):
         sr5 = sr4.get("slider")[0].set_value(100.0).run()
         assert sr5.get("slider")[0].value == 100.0
         assert sr5.get("slider")[1].value == 212.0
+
+    def test_serializable_check(self):
+        """When the config option is on, adding unserializable data to session
+        state should result in an exception.
+        """
+        with patch_config_options({"runner.enforceSerializableSessionState": True}):
+            script = self.script_from_string(
+                "unserializable.py",
+                """
+                import streamlit as st
+
+                def unserializable_data():
+                    return lambda x: x
+
+                st.session_state.unserializable = unserializable_data()
+                """,
+            )
+            sr = script.run()
+            assert sr.get("exception")
+            assert "pickle" in sr.get("exception")[0].value
+
+    def test_serializable_check_off(self):
+        """When the config option is off, adding unserializable data to session
+        state should work without errors.
+        """
+        with patch_config_options({"runner.enforceSerializableSessionState": False}):
+            script = self.script_from_string(
+                "unserializable.py",
+                """
+                import streamlit as st
+
+                def unserializable_data():
+                    return lambda x: x
+
+                st.session_state.unserializable = unserializable_data()
+                """,
+            )
+            sr = script.run()
+            assert not sr.get("exception")
 
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
@@ -646,6 +686,18 @@ class SessionStateMethodTests(unittest.TestCase):
         )
         assert not wsr.value_changed
         assert self.session_state["widget_id_1"] == WIDGET_VALUE
+
+    def test_detect_unserializable(self):
+        # Doesn't error when only serializable data is present
+        self.session_state._check_serializable()
+
+        def nested():
+            return lambda x: x
+
+        lam_func = nested()
+        self.session_state["unserializable"] = lam_func
+        with pytest.raises(Exception):
+            self.session_state._check_serializable()
 
 
 @given(state=stst.session_state())

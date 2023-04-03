@@ -45,18 +45,20 @@ export function mockSessionInfo(
   return sessionInfo
 }
 
-const MOCK_ENDPOINTS: StreamlitEndpoints = {
-  buildComponentURL: (componentName: string, path: string): string => {
-    return `http://streamlit.mock:80/component/${componentName}/${path}`
-  },
-
-  uploadFileUploaderFile: jest.fn().mockResolvedValue(1),
-  fetchCachedForwardMsg: jest
-    .fn()
-    .mockRejectedValue(new Error("unimplemented mock endpoint")),
-}
-
-/** Return a mock Endpoints implementation. */
-export function mockEndpoints(): StreamlitEndpoints {
-  return MOCK_ENDPOINTS
+/** Return a mock StreamlitEndpoints implementation. */
+export function mockEndpoints(
+  overrides: Partial<StreamlitEndpoints> = {}
+): StreamlitEndpoints {
+  return {
+    buildComponentURL: jest.fn(),
+    buildMediaURL: jest.fn(),
+    buildAppPageURL: jest.fn(),
+    uploadFileUploaderFile: jest
+      .fn()
+      .mockRejectedValue(new Error("unimplemented mock endpoint")),
+    fetchCachedForwardMsg: jest
+      .fn()
+      .mockRejectedValue(new Error("unimplemented mock endpoint")),
+    ...overrides,
+  }
 }

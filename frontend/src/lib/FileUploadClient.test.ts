@@ -32,6 +32,8 @@ describe("FileUploadClient Upload", () => {
       sessionInfo: mockSessionInfo(),
       endpoints: {
         buildComponentURL: jest.fn(),
+        buildMediaURL: jest.fn(),
+        buildAppPageURL: jest.fn(),
         uploadFileUploaderFile: uploadFileUploaderFile,
         fetchCachedForwardMsg: jest.fn(),
       },

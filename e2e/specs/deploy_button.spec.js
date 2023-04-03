@@ -16,7 +16,7 @@
 
 describe("displays deploy button correctly", () => {
   before(() => {
-    cy.loadApp("http://localhost:3000/?testing=true");
+    cy.loadApp("http://localhost:3000/?_stcore_testing=true");
   });
 
   it("deploy button matches the snapshot", () => {

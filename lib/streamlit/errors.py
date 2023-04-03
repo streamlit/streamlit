@@ -70,6 +70,10 @@ class DuplicateWidgetID(StreamlitAPIException):
     pass
 
 
+class UnserializableSessionStateError(StreamlitAPIException):
+    pass
+
+
 class StreamlitAPIWarning(StreamlitAPIException, Warning):
     """Used to display a warning.
 
