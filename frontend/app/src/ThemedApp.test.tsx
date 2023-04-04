@@ -158,7 +158,7 @@ describe("ThemedApp", () => {
   })
 
   it("handles custom theme sent from Host", () => {
-    const wrapper = shallow(<ThemedApp />)
+    const wrapper = mount(<ThemedApp />)
 
     let fontFaceComponent = wrapper.find(FontFaceDeclaration)
     expect(fontFaceComponent.exists()).toBe(false)
