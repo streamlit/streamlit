@@ -1,0 +1,26 @@
+name: Build info
+description: Sets common builds variables that are needed for other build steps
+
+outputs:
+  PYTHON_VERSIONS:
+    description: |
+      Python versions for which tests will be run.
+      The oldest version is replaced by the literal "min" and
+      the newest is replaced by the literal "max".
+    value: ${{ steps.build_info.outputs.PYTHON_VERSIONS }}
+  PYTHON_MIN_VERSION:
+    description: Oldest version of Python supported by Streamlit
+    value: ${{ steps.build_info.outputs.PYTHON_MIN_VERSION }}
+  PYTHON_MAX_VERSION:
+    description: Latest version of Python supported by Streamlit
+    value: ${{ steps.build_info.outputs.PYTHON_MAX_VERSION }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set Python version vars
+      id: build_info
+      run: ./.github/scripts/build_info.py
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      shell: bash --login -eo pipefail {0}

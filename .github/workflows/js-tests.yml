@@ -34,8 +34,9 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: 'recursive'
+          fetch-depth: 2
       - name: Set Python version vars
-        uses: ./.github/actions/set_python_versions
+        uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
         uses: actions/setup-python@v4
         with:
