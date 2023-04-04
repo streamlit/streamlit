@@ -180,6 +180,10 @@ distribution:
 # Build lib and frontend, and then run 'distribution'.
 package: build-deps frontend distribution
 
+.PHONY package-fast
+# Build lib and frontend fast, and then run 'distribution'.
+package: build-deps frontend-fast distribution
+
 .PHONY: conda-distribution
 # Create conda distribution files in lib/conda-recipe/dist.
 conda-distribution:
@@ -296,7 +300,7 @@ react-build:
 		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-fast
-# Build frontend into static files faster by setting BUILD_AS_FAST_AS_POSSIBLE=true flag, which disables eslint and typechecking.
+# Build frontend into static files faster which disables eslint and typechecking.
 frontend-fast:
 	cd frontend/ ; yarn run buildFast
 	rsync -av --delete --delete-excluded --exclude=reports \
