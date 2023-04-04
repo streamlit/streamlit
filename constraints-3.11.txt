@@ -53,7 +53,7 @@ packaging==23.0
 pandas==1.5.3
 parameterized==0.9.0
 pathspec==0.11.1
-Pillow==9.4.0
+Pillow==9.5.0
 pipenv==2023.3.20
 pkginfo==1.9.6
 platformdirs==3.2.0
@@ -94,7 +94,7 @@ six==1.16.0
 smmap==5.0.0
 sortedcontainers==2.4.0
 SQLAlchemy==1.4.47
-sqlalchemy2-stubs==0.0.2a32
+sqlalchemy2-stubs==0.0.2a33
 tenacity==8.2.2
 testfixtures==7.1.0
 toml==0.10.2
@@ -102,11 +102,11 @@ toolz==0.12.0
 tornado==6.2
 twine==4.0.2
 types-click==7.1.8
-types-protobuf==4.22.0.1
-types-python-dateutil==2.8.19.11
+types-protobuf==4.22.0.2
+types-python-dateutil==2.8.19.12
 types-pytz==2023.3.0.0
 types-requests==2.28.11.17
-types-setuptools==67.6.0.6
+types-setuptools==67.6.0.7
 types-toml==0.10.8.6
 types-typed-ast==1.5.8.6
 types-urllib3==1.26.25.10
