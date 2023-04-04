@@ -182,7 +182,7 @@ package: build-deps frontend distribution
 
 .PHONY package-fast
 # Build lib and frontend fast, and then run 'distribution'.
-package: build-deps frontend-fast distribution
+package-fast: build-deps frontend-fast distribution
 
 .PHONY: conda-distribution
 # Create conda distribution files in lib/conda-recipe/dist.
