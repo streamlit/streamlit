@@ -37,7 +37,7 @@ INSTALL_REQUIRES = [
     "importlib-metadata>=1.4",
     "numpy",
     "packaging>=14.1",
-    "pandas<2,>=0.25",
+    "pandas>=1.0, <=2.0.0",
     # Temp pin pillow to below 9.5 until we investigate the breaking changes that cause our tests to fail
     "pillow>=6.2.0, <9.5.0",
     "protobuf<4,>=3.12",
