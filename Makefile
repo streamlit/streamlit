@@ -180,7 +180,7 @@ distribution:
 # Build lib and frontend, and then run 'distribution'.
 package: build-deps frontend distribution
 
-.PHONY package-fast
+.PHONY: package-fast
 # Build lib and frontend fast, and then run 'distribution'.
 package-fast: build-deps frontend-fast distribution
 
