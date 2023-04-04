@@ -196,7 +196,7 @@ conda-distribution:
 
 .PHONY: conda-package
 # Build lib and frontend, and then run 'conda-distribution'
-conda-package: build-deps frontend conda-distribution
+conda-package: build-deps frontend-fast conda-distribution
 
 .PHONY: clean
 # Remove all generated files.
