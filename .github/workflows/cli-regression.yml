@@ -40,7 +40,7 @@ jobs:
         timeout-minutes: 120
         run: |
           sudo apt install rsync
-          BUILD_AS_FAST_AS_POSSIBLE=1 make package
+          make package-fast
       - name: Run CLI regression tests
         run: |
           export SKIP_VERSION_CHECK=true; make cli-regression-tests

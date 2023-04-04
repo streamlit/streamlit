@@ -49,7 +49,7 @@ jobs:
         timeout-minutes: 120
         run: |
           sudo apt install rsync
-          BUILD_AS_FAST_AS_POSSIBLE=1 make package
+          make package-fast
       - name: Store Whl File
         uses: actions/upload-artifact@v3
         with:

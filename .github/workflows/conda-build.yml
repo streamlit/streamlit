@@ -46,4 +46,4 @@ jobs:
         timeout-minutes: 120
         run: |
           sudo apt install rsync
-          SNOWPARK_CONDA_BUILD=1 BUILD_AS_FAST_AS_POSSIBLE=1 make conda-package
+          SNOWPARK_CONDA_BUILD=1 make conda-package
