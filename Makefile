@@ -207,10 +207,12 @@ clean:
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock
 	rm -rf frontend/app/build
+	rm -rf frontend/app/node_modules
+	rm -rf frontend/lib/node_modules
 	rm -rf frontend/node_modules
 	rm -rf frontend/test_results
-	rm -f frontend/src/autogen/proto.js
-	rm -f frontend/src/autogen/proto.d.ts
+	rm -f frontend/lib/src/autogen/proto.js
+	rm -f frontend/app/src/autogen/proto.d.ts
 	rm -rf frontend/public/reports
 	rm -rf ~/.cache/pre-commit
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
@@ -339,7 +341,7 @@ jsformat:
 # Run JS unit tests.
 jstest:
 ifndef CIRCLECI
-	cd frontend; TESTPATH=$(TESTPATH) yarn run test
+	cd frontend; TESTPATH=$(TESTPATH) yarn workspace @streamlit/lib run test
 else
 	# Previously we used --runInBand here, which just completely turns off parallelization.
 	# But since our CircleCI instance has 2 CPUs, use maxWorkers instead:
