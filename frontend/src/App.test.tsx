@@ -296,7 +296,8 @@ describe("App", () => {
 
     instance.isServerConnected = jest.fn().mockReturnValue(true)
 
-    //TODO [KAREN] Add explanatory comment here
+    // We explicitly set the scriptRunState to RUNNING, so we can test that
+    // scriptStopRequested is handled correctly.
     wrapper.setState({
       scriptRunState: ScriptRunState.RUNNING,
     })
