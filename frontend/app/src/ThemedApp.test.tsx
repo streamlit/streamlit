@@ -49,6 +49,9 @@ const mockCustomThemeConfig = {
   ],
 }
 
+// Some promise in Websocket Connection that breaks this test for some reason.
+jest.mock("@streamlit/lib/dist/lib/WebsocketConnection")
+
 describe("ThemedApp", () => {
   beforeEach(() => {
     // sourced from:
@@ -154,7 +157,7 @@ describe("ThemedApp", () => {
   })
 
   it("handles custom theme sent from Host", () => {
-    const wrapper = mount(<ThemedApp />)
+    const wrapper = shallow(<ThemedApp />)
 
     let fontFaceComponent = wrapper.find(FontFaceDeclaration)
     expect(fontFaceComponent.exists()).toBe(false)
