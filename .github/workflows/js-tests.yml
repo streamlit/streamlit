@@ -55,5 +55,20 @@ jobs:
           PRE_COMMIT_NO_CONCURRENCY=true SKIP=eslint pipenv run pre-commit run --hook-stage manual --show-diff-on-failure --color=always --all-files
           # Run eslint using Makefile omitting the pre-commit
           make jslint
+      - name: Validate NOTICES
+        run: |
+          # Run `make notices`. If it results in changes, warn the user and fail.
+          make notices
+
+          git_status=$(git status --porcelain -- NOTICES)
+          if [[ -n $git_status ]]; then
+            echo "::error::The NOTICES file is out of date! Please run \`make notices\` and commit the result."
+            echo "::group::git diff NOTICES"
+            git diff NOTICES
+            echo "::endgroup::"
+            exit 1
+          else
+            echo "NOTICES is up to date."
+          fi
       - name: Run frontend tests
         run: make jstest
