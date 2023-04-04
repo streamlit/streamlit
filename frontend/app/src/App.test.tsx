@@ -123,18 +123,9 @@ jest.mock("moment", () =>
 )
 
 describe("App", () => {
-  const { location: originalLocation } = window
   beforeEach(() => {
     // @ts-expect-error
     window.prerenderReady = false
-    const { location: originalLocation } = window
-    // Replace window.location with a mutable object
-    delete window.location
-    window.location = { ...originalLocation }
-  })
-
-  afterEach(() => {
-    window.location = originalLocation
   })
 
   it("renders without crashing", () => {

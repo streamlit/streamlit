@@ -135,9 +135,7 @@ function makePath(basePath: string, subPath: string): string {
  * True if we're connected to the host via HTTPS.
  */
 function isHttps(): boolean {
-  return (
-    window.location !== null && window.location.href.startsWith("https://")
-  )
+  return window.location.href.startsWith("https://")
 }
 
 /**
