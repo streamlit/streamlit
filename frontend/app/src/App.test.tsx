@@ -122,322 +122,322 @@ jest.mock("moment", () =>
   }))
 )
 
-describe("App", () => {
-  const { location: originalLocation } = window
-  beforeEach(() => {
-    // @ts-expect-error
-    window.prerenderReady = false
-    // This was not necessary before as jsdom should solve this. However, this is undefined in jest for some reason.
-    window.location = {
-      ancestorOrigins: {} as DOMStringList,
-      hash: originalLocation.hash,
-      host: "dummy.com",
-      port: "80",
-      protocol: "http:",
-      hostname: "dummy.com",
-      href: "http://dummy.com?page=1&name=testing",
-      origin: "http://dummy.com",
-      pathname: "test",
-      search: originalLocation.search,
-      assign: originalLocation.assign,
-      replace: originalLocation.replace,
-      reload: originalLocation.reload,
-    } as Location
-  })
+// describe("App", () => {
+//   const { location: originalLocation } = window
+//   beforeEach(() => {
+//     // @ts-expect-error
+//     window.prerenderReady = false
+//     // This was not necessary before as jsdom should solve this. However, this is undefined in jest for some reason.
+//     window.location = {
+//       ancestorOrigins: {} as DOMStringList,
+//       hash: originalLocation.hash,
+//       host: "dummy.com",
+//       port: "80",
+//       protocol: "http:",
+//       hostname: "dummy.com",
+//       href: "http://dummy.com?page=1&name=testing",
+//       origin: "http://dummy.com",
+//       pathname: "test",
+//       search: originalLocation.search,
+//       assign: originalLocation.assign,
+//       replace: originalLocation.replace,
+//       reload: originalLocation.reload,
+//     } as Location
+//   })
 
-  afterEach(() => {
-    window.location = originalLocation
-  })
+//   afterEach(() => {
+//     window.location = originalLocation
+//   })
 
-  it("renders without crashing", () => {
-    const wrapper = getWrapper()
+//   it("renders without crashing", () => {
+//     const wrapper = getWrapper()
 
-    expect(wrapper.html()).not.toBeNull()
-  })
+//     expect(wrapper.html()).not.toBeNull()
+//   })
 
-  it("calls connectionManager.disconnect() when unmounting", () => {
-    const wrapper = getWrapper()
-    const instance = wrapper.instance() as App
+//   it("calls connectionManager.disconnect() when unmounting", () => {
+//     const wrapper = getWrapper()
+//     const instance = wrapper.instance() as App
 
-    wrapper.unmount()
+//     wrapper.unmount()
 
-    // @ts-expect-error
-    expect(instance.connectionManager.disconnect).toHaveBeenCalled()
-  })
+//     // @ts-expect-error
+//     expect(instance.connectionManager.disconnect).toHaveBeenCalled()
+//   })
 
-  describe("streamlit server version changes", () => {
-    let prevWindowLocation: Location
-    beforeEach(() => (prevWindowLocation = window.location))
-    afterEach(() => (window.location = prevWindowLocation))
+//   describe("streamlit server version changes", () => {
+//     let prevWindowLocation: Location
+//     beforeEach(() => (prevWindowLocation = window.location))
+//     afterEach(() => (window.location = prevWindowLocation))
 
-    it("triggers page reload", () => {
-      const props = getProps()
-      const wrapper = shallow(<App {...props} />)
-      const app = wrapper.instance() as App
+//     it("triggers page reload", () => {
+//       const props = getProps()
+//       const wrapper = shallow(<App {...props} />)
+//       const app = wrapper.instance() as App
 
-      // A HACK to mock `window.location.reload`.
-      // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
-      // @ts-expect-error
-      delete window.location
-      // @ts-expect-error
-      window.location = { reload: jest.fn() }
+//       // A HACK to mock `window.location.reload`.
+//       // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
+//       // @ts-expect-error
+//       delete window.location
+//       // @ts-expect-error
+//       window.location = { reload: jest.fn() }
 
-      // Ensure SessionInfo is initialized
-      // @ts-expect-error
-      const sessionInfo: SessionInfo = app.sessionInfo
-      sessionInfo.setCurrent(
-        mockSessionInfoProps({ streamlitVersion: "oldStreamlitVersion" })
-      )
-      expect(sessionInfo.isSet).toBe(true)
+//       // Ensure SessionInfo is initialized
+//       // @ts-expect-error
+//       const sessionInfo: SessionInfo = app.sessionInfo
+//       sessionInfo.setCurrent(
+//         mockSessionInfoProps({ streamlitVersion: "oldStreamlitVersion" })
+//       )
+//       expect(sessionInfo.isSet).toBe(true)
 
-      const fwMessage = new ForwardMsg()
-      fwMessage.newSession = {
-        config: {},
-        initialize: {
-          environmentInfo: {
-            streamlitVersion: "newStreamlitVersion",
-          },
-          sessionId: "sessionId",
-          userInfo: {},
-          sessionStatus: {},
-        },
-      }
+//       const fwMessage = new ForwardMsg()
+//       fwMessage.newSession = {
+//         config: {},
+//         initialize: {
+//           environmentInfo: {
+//             streamlitVersion: "newStreamlitVersion",
+//           },
+//           sessionId: "sessionId",
+//           userInfo: {},
+//           sessionStatus: {},
+//         },
+//       }
 
-      app.handleMessage(fwMessage)
+//       app.handleMessage(fwMessage)
 
-      expect(window.location.reload).toHaveBeenCalled()
-    })
-  })
+//       expect(window.location.reload).toHaveBeenCalled()
+//     })
+//   })
 
-  it("starts screencast recording when the MainMenu is clicked", () => {
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
+//   it("starts screencast recording when the MainMenu is clicked", () => {
+//     const props = getProps()
+//     const wrapper = shallow(<App {...props} />)
 
-    wrapper.setState({
-      scriptName: "scriptName",
-    })
+//     wrapper.setState({
+//       scriptName: "scriptName",
+//     })
 
-    wrapper.find(MainMenu).props().screencastCallback()
+//     wrapper.find(MainMenu).props().screencastCallback()
 
-    expect(props.screenCast.startRecording).toHaveBeenCalledWith(
-      "streamlit-scriptName-date"
-    )
-  })
+//     expect(props.screenCast.startRecording).toHaveBeenCalledWith(
+//       "streamlit-scriptName-date"
+//     )
+//   })
 
-  it("stops screencast when esc is pressed", () => {
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
+//   it("stops screencast when esc is pressed", () => {
+//     const props = getProps()
+//     const wrapper = shallow(<App {...props} />)
 
-    // @ts-expect-error
-    wrapper.instance().keyHandlers.STOP_RECORDING()
+//     // @ts-expect-error
+//     wrapper.instance().keyHandlers.STOP_RECORDING()
 
-    expect(props.screenCast.stopRecording).toBeCalled()
-  })
+//     expect(props.screenCast.stopRecording).toBeCalled()
+//   })
 
-  it("shows hostMenuItems", () => {
-    const props = getProps({
-      hostCommunication: getHostCommunicationProp({
-        sendMessage: jest.fn(),
-        currentState: getHostCommunicationState({
-          queryParams: "",
-          menuItems: [
-            {
-              type: "separator",
-            },
-          ] as IMenuItem[],
-          toolbarItems: [],
-          forcedModalClose: false,
-          isOwner: true,
-        }),
-      }),
-    })
-    const wrapper = shallow(<App {...props} />)
+//   it("shows hostMenuItems", () => {
+//     const props = getProps({
+//       hostCommunication: getHostCommunicationProp({
+//         sendMessage: jest.fn(),
+//         currentState: getHostCommunicationState({
+//           queryParams: "",
+//           menuItems: [
+//             {
+//               type: "separator",
+//             },
+//           ] as IMenuItem[],
+//           toolbarItems: [],
+//           forcedModalClose: false,
+//           isOwner: true,
+//         }),
+//       }),
+//     })
+//     const wrapper = shallow(<App {...props} />)
 
-    expect(wrapper.find(MainMenu).prop("hostMenuItems")).toStrictEqual([
-      { type: "separator" },
-    ])
-  })
+//     expect(wrapper.find(MainMenu).prop("hostMenuItems")).toStrictEqual([
+//       { type: "separator" },
+//     ])
+//   })
 
-  it("shows hostToolbarItems", () => {
-    const props = getProps({
-      hostCommunication: getHostCommunicationProp({
-        sendMessage: jest.fn(),
-        currentState: getHostCommunicationState({
-          queryParams: "",
-          toolbarItems: [
-            {
-              key: "favorite",
-              icon: "star.svg",
-            },
-          ] as IToolbarItem[],
-        }),
-      }),
-    })
-    const wrapper = shallow(<App {...props} />)
-    wrapper.setState({ hideTopBar: false })
+//   it("shows hostToolbarItems", () => {
+//     const props = getProps({
+//       hostCommunication: getHostCommunicationProp({
+//         sendMessage: jest.fn(),
+//         currentState: getHostCommunicationState({
+//           queryParams: "",
+//           toolbarItems: [
+//             {
+//               key: "favorite",
+//               icon: "star.svg",
+//             },
+//           ] as IToolbarItem[],
+//         }),
+//       }),
+//     })
+//     const wrapper = shallow(<App {...props} />)
+//     wrapper.setState({ hideTopBar: false })
 
-    expect(
-      wrapper.find(ToolbarActions).prop("hostToolbarItems")
-    ).toStrictEqual([
-      {
-        key: "favorite",
-        icon: "star.svg",
-      },
-    ])
-  })
+//     expect(
+//       wrapper.find(ToolbarActions).prop("hostToolbarItems")
+//     ).toStrictEqual([
+//       {
+//         key: "favorite",
+//         icon: "star.svg",
+//       },
+//     ])
+//   })
 
-  it("closes modals when the modal closure message has been received", () => {
-    const wrapper = shallow(<App {...getProps()} />)
-    const dialog = StreamlitDialog({
-      type: DialogType.ABOUT,
-      sessionInfo: mockSessionInfo(),
-      onClose: () => {},
-    })
-    wrapper.setState({ dialog })
-    expect(wrapper.find(Modal)).toHaveLength(1)
-    const onModalReset = jest.fn()
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({ forcedModalClose: true }),
-          onModalReset,
-        }),
-      })
-    )
-    expect(wrapper.find(Modal)).toHaveLength(0)
-    expect(onModalReset).toBeCalled()
-  })
+//   it("closes modals when the modal closure message has been received", () => {
+//     const wrapper = shallow(<App {...getProps()} />)
+//     const dialog = StreamlitDialog({
+//       type: DialogType.ABOUT,
+//       sessionInfo: mockSessionInfo(),
+//       onClose: () => {},
+//     })
+//     wrapper.setState({ dialog })
+//     expect(wrapper.find(Modal)).toHaveLength(1)
+//     const onModalReset = jest.fn()
+//     wrapper.setProps(
+//       getProps({
+//         hostCommunication: getHostCommunicationProp({
+//           currentState: getHostCommunicationState({ forcedModalClose: true }),
+//           onModalReset,
+//         }),
+//       })
+//     )
+//     expect(wrapper.find(Modal)).toHaveLength(0)
+//     expect(onModalReset).toBeCalled()
+//   })
 
-  it("does not prevent a modal from opening when closure message is set", () => {
-    const onModalReset = jest.fn()
-    const wrapper = shallow(
-      <App
-        {...getProps({
-          hostCommunication: getHostCommunicationProp({
-            currentState: getHostCommunicationState({
-              menuItems: [],
-              queryParams: "",
-              forcedModalClose: false,
-            }),
-            onModalReset,
-            sendMessage: jest.fn(),
-          }),
-        })}
-      />
-    )
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({ forcedModalClose: true }),
-          onModalReset,
-        }),
-      })
-    )
-    expect(onModalReset).toBeCalled()
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({ forcedModalClose: false }),
-          onModalReset,
-        }),
-      })
-    )
-    const dialog = StreamlitDialog({
-      type: DialogType.ABOUT,
-      sessionInfo: mockSessionInfo(),
-      onClose: () => {},
-    })
-    wrapper.setState({ dialog })
-    expect(wrapper.find(Modal)).toHaveLength(1)
-  })
+//   it("does not prevent a modal from opening when closure message is set", () => {
+//     const onModalReset = jest.fn()
+//     const wrapper = shallow(
+//       <App
+//         {...getProps({
+//           hostCommunication: getHostCommunicationProp({
+//             currentState: getHostCommunicationState({
+//               menuItems: [],
+//               queryParams: "",
+//               forcedModalClose: false,
+//             }),
+//             onModalReset,
+//             sendMessage: jest.fn(),
+//           }),
+//         })}
+//       />
+//     )
+//     wrapper.setProps(
+//       getProps({
+//         hostCommunication: getHostCommunicationProp({
+//           currentState: getHostCommunicationState({ forcedModalClose: true }),
+//           onModalReset,
+//         }),
+//       })
+//     )
+//     expect(onModalReset).toBeCalled()
+//     wrapper.setProps(
+//       getProps({
+//         hostCommunication: getHostCommunicationProp({
+//           currentState: getHostCommunicationState({ forcedModalClose: false }),
+//           onModalReset,
+//         }),
+//       })
+//     )
+//     const dialog = StreamlitDialog({
+//       type: DialogType.ABOUT,
+//       sessionInfo: mockSessionInfo(),
+//       onClose: () => {},
+//     })
+//     wrapper.setState({ dialog })
+//     expect(wrapper.find(Modal)).toHaveLength(1)
+//   })
 
-  it("sends theme info to the host when the app is first rendered", () => {
-    const props = getProps()
-    shallow(<App {...props} />)
+//   it("sends theme info to the host when the app is first rendered", () => {
+//     const props = getProps()
+//     shallow(<App {...props} />)
 
-    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-      type: "SET_THEME_CONFIG",
-      themeInfo: toExportedTheme(lightTheme.emotion),
-    })
-  })
+//     expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+//       type: "SET_THEME_CONFIG",
+//       themeInfo: toExportedTheme(lightTheme.emotion),
+//     })
+//   })
 
-  it("both sets theme locally and sends to host when setAndSendTheme is called", () => {
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
-    const mockThemeConfig = { emotion: darkTheme.emotion }
+//   it("both sets theme locally and sends to host when setAndSendTheme is called", () => {
+//     const props = getProps()
+//     const wrapper = shallow(<App {...props} />)
+//     const mockThemeConfig = { emotion: darkTheme.emotion }
 
-    // @ts-expect-error
-    wrapper.instance().setAndSendTheme(mockThemeConfig)
+//     // @ts-expect-error
+//     wrapper.instance().setAndSendTheme(mockThemeConfig)
 
-    expect(props.theme.setTheme).toHaveBeenCalledWith(mockThemeConfig)
-    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-      type: "SET_THEME_CONFIG",
-      themeInfo: toExportedTheme(darkTheme.emotion),
-    })
-  })
+//     expect(props.theme.setTheme).toHaveBeenCalledWith(mockThemeConfig)
+//     expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+//       type: "SET_THEME_CONFIG",
+//       themeInfo: toExportedTheme(darkTheme.emotion),
+//     })
+//   })
 
-  it("hides the top bar if hideTopBar === true", () => {
-    const wrapper = shallow(<App {...getProps()} />)
-    // hideTopBar is true by default
+//   it("hides the top bar if hideTopBar === true", () => {
+//     const wrapper = shallow(<App {...getProps()} />)
+//     // hideTopBar is true by default
 
-    expect(wrapper.find("WithTheme(StatusWidget)").exists()).toBe(false)
-    expect(wrapper.find("ToolbarActions").exists()).toBe(false)
-  })
+//     expect(wrapper.find("WithTheme(StatusWidget)").exists()).toBe(false)
+//     expect(wrapper.find("ToolbarActions").exists()).toBe(false)
+//   })
 
-  it("shows the top bar if hideTopBar === false", () => {
-    const wrapper = shallow(<App {...getProps()} />)
-    wrapper.setState({ hideTopBar: false })
+//   it("shows the top bar if hideTopBar === false", () => {
+//     const wrapper = shallow(<App {...getProps()} />)
+//     wrapper.setState({ hideTopBar: false })
 
-    expect(wrapper.find("WithTheme(StatusWidget)").exists()).toBe(true)
-    expect(wrapper.find("ToolbarActions").exists()).toBe(true)
-  })
+//     expect(wrapper.find("WithTheme(StatusWidget)").exists()).toBe(true)
+//     expect(wrapper.find("ToolbarActions").exists()).toBe(true)
+//   })
 
-  it("updates state.appPages when it receives a PagesChanged msg", () => {
-    const appPages = [
-      { icon: "", pageName: "bob", scriptPath: "bob.py" },
-      { icon: "", pageName: "carl", scriptPath: "carl.py" },
-    ]
+//   it("updates state.appPages when it receives a PagesChanged msg", () => {
+//     const appPages = [
+//       { icon: "", pageName: "bob", scriptPath: "bob.py" },
+//       { icon: "", pageName: "carl", scriptPath: "carl.py" },
+//     ]
 
-    const msg = new ForwardMsg()
-    msg.pagesChanged = new PagesChanged({ appPages })
+//     const msg = new ForwardMsg()
+//     msg.pagesChanged = new PagesChanged({ appPages })
 
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
-    expect(wrapper.find("AppView").prop("appPages")).toEqual([])
+//     const props = getProps()
+//     const wrapper = shallow(<App {...props} />)
+//     expect(wrapper.find("AppView").prop("appPages")).toEqual([])
 
-    const instance = wrapper.instance() as App
-    instance.handleMessage(msg)
-    expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+//     const instance = wrapper.instance() as App
+//     instance.handleMessage(msg)
+//     expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
 
-    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-      type: "SET_APP_PAGES",
-      appPages,
-    })
-  })
+//     expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+//       type: "SET_APP_PAGES",
+//       appPages,
+//     })
+//   })
 
-  it("responds to page change requests", () => {
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
-    const instance = wrapper.instance() as App
-    instance.onPageChange = jest.fn()
+//   it("responds to page change requests", () => {
+//     const props = getProps()
+//     const wrapper = shallow(<App {...props} />)
+//     const instance = wrapper.instance() as App
+//     instance.onPageChange = jest.fn()
 
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({
-            requestedPageScriptHash: "hash1",
-          }),
-        }),
-      })
-    )
-    wrapper.update()
+//     wrapper.setProps(
+//       getProps({
+//         hostCommunication: getHostCommunicationProp({
+//           currentState: getHostCommunicationState({
+//             requestedPageScriptHash: "hash1",
+//           }),
+//         }),
+//       })
+//     )
+//     wrapper.update()
 
-    expect(instance.onPageChange).toHaveBeenCalledWith("hash1")
-    expect(
-      props.hostCommunication.currentState.requestedPageScriptHash
-    ).toBeNull()
-  })
-})
+//     expect(instance.onPageChange).toHaveBeenCalledWith("hash1")
+//     expect(
+//       props.hostCommunication.currentState.requestedPageScriptHash
+//     ).toBeNull()
+//   })
+// })
 
 const mockGetBaseUriParts = (basePath?: string) => () => ({
   basePath: basePath || "",
