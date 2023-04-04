@@ -49,7 +49,8 @@ const mockCustomThemeConfig = {
   ],
 }
 
-// Some promise in Websocket Connection that breaks this test for some reason.
+// Some promise in Websocket Connection breaks this test for some reason.
+// TODO: Investigate this mocking more
 jest.mock("@streamlit/lib/dist/lib/WebsocketConnection")
 
 describe("ThemedApp", () => {
