@@ -64,7 +64,7 @@ jobs:
       matrix:
         python_version: "${{ fromJson(needs.build_info.outputs.PYTHON_VERSIONS) }}"
 
-    # TODO: Should we add developer-friendly name for this jobs also?
+    # TODO: Should we add developer-friendly name for this job also?
     #   This will unfortunately require a branch protection update.
 
     env:

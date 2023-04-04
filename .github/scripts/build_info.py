@@ -75,7 +75,7 @@ PYTHON_MIN_VERSION = ALL_PYTHON_VERSIONS[0]
 PYTHON_MAX_VERSION = ALL_PYTHON_VERSIONS[-1]
 
 # To avoid the need to update the protected branch, we replace the boundary
-# values with fixed text. We map it to real values in the Github workflow.
+# values with fixed literal. We map it to real values in the Github workflow.
 ALL_PYTHON_VERSIONS[0] = "min"
 ALL_PYTHON_VERSIONS[-1] = "max"
 
@@ -101,7 +101,7 @@ def get_changed_files() -> List[str]:
 
     This script required the repository to have at least two recent commits checked
     out, which means that Github Action actions/checkout must set the a parameter
-    fetch-depth to a value greater than 2.
+    fetch-depth to a value equal or greater than 2.
 
     Example:
 
@@ -226,7 +226,7 @@ def get_output_variables() -> Dict[str, str]:
 
 def save_output_variables(variables: Dict[str, str]) -> None:
     """
-    Saves builds variables
+    Saves build variables
     """
     print("Saving output variables")
     with open(
