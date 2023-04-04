@@ -50,22 +50,25 @@ export function BokehChart({
     return JSON.parse(element.figure)
   }, [element])
 
-  const getChartDimensions = (plot: any): Dimensions => {
-    // Default values
-    let chartWidth: number = plot.attributes.plot_width
-    let chartHeight: number = plot.attributes.plot_height
+  const getChartDimensions = useCallback(
+    (plot: any): Dimensions => {
+      // Default values
+      let chartWidth: number = plot.attributes.plot_width
+      let chartHeight: number = plot.attributes.plot_height
 
-    // if is not fullscreen and useContainerWidth==false, we should use default values
-    if (height) {
-      // fullscreen
-      chartWidth = width
-      chartHeight = height
-    } else if (element.useContainerWidth) {
-      chartWidth = width
-    }
+      // if is not fullscreen and useContainerWidth==false, we should use default values
+      if (height) {
+        // fullscreen
+        chartWidth = width
+        chartHeight = height
+      } else if (element.useContainerWidth) {
+        chartWidth = width
+      }
 
-    return { chartWidth, chartHeight }
-  }
+      return { chartWidth, chartHeight }
+    },
+    [element.useContainerWidth, height, width]
+  )
 
   const removeAllChildNodes = (element: Node): void => {
     while (element.lastChild) {
@@ -110,9 +113,8 @@ export function BokehChart({
   }
 
   const memoizedUpdateChart = useCallback(updateChart, [
-    width,
-    height,
-    element,
+    chartId,
+    getChartDimensions,
   ])
 
   // We only want useEffect to run once per prop update, because of the embed_item

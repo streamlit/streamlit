@@ -67,7 +67,7 @@ const ThemedApp = (): JSX.Element => {
         }
       }
     },
-    [setTheme, theme, removeCachedTheme, setCachedTheme]
+    [setTheme, theme]
   )
 
   const updateAutoTheme = React.useCallback((): void => {
@@ -78,7 +78,7 @@ const ThemedApp = (): JSX.Element => {
       theme => theme.name !== AUTO_THEME_NAME
     )
     setAvailableThemes([createAutoTheme(), ...constantThemes])
-  }, [theme, updateTheme, setAvailableThemes])
+  }, [theme.name, availableThemes, updateTheme])
 
   const setImportedTheme = React.useCallback(
     (themeInfo: ICustomThemeConfig): void => {
@@ -99,7 +99,7 @@ const ThemedApp = (): JSX.Element => {
     const mediaMatch = window.matchMedia("(prefers-color-scheme: dark)")
     mediaMatch.addEventListener("change", updateAutoTheme)
     return () => mediaMatch.removeEventListener("change", updateAutoTheme)
-  }, [theme, availableThemes])
+  }, [theme, availableThemes, updateAutoTheme])
 
   return (
     <BaseProvider

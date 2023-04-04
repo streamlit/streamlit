@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+// TODO: fix incorrect hook usage and delete this lint suppression
+/* eslint-disable react-hooks/exhaustive-deps */
+
 import React from "react"
 
 import { Size as ResizableSize } from "re-resizable"

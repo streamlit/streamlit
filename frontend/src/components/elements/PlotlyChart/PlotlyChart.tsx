@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useLayoutEffect, useState } from "react"
+import React, {
+  ReactElement,
+  useCallback,
+  useLayoutEffect,
+  useState,
+} from "react"
 import { useTheme } from "@emotion/react"
 import { Theme } from "src/theme"
 import {
@@ -43,6 +48,11 @@ export interface PlotlyIFrameProps {
 
 export const DEFAULT_HEIGHT = 450
 
+function isFullScreen(height: number | undefined): boolean {
+  return !!height
+}
+
+/** Render an iframed Plotly chart from a URL */
 function renderIFrame({
   url,
   width,
@@ -52,24 +62,24 @@ function renderIFrame({
   return <iframe title="Plotly" src={url} style={{ width, height }} />
 }
 
-function renderFigure({
+/** Render a Plotly chart from a FigureProto */
+function PlotlyFigure({
   element,
   width,
   height,
 }: PlotlyChartProps): ReactElement {
   const figure = element.figure as FigureProto
-  const isFullScreen = (): boolean => !!height
 
   const theme: Theme = useTheme()
 
-  const generateSpec = (): any => {
+  const generateSpec = useCallback((): any => {
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
     const initialHeight = spec.layout.height
     const initialWidth = spec.layout.width
 
-    if (isFullScreen()) {
+    if (isFullScreen(height)) {
       spec.layout.width = width
       spec.layout.height = height
     } else if (element.useContainerWidth) {
@@ -86,7 +96,14 @@ function renderFigure({
     }
 
     return spec
-  }
+  }, [
+    element.theme,
+    element.useContainerWidth,
+    figure.spec,
+    height,
+    theme,
+    width,
+  ])
 
   const [config, setConfig] = useState(JSON.parse(figure.config))
   const [spec, setSpec] = useState(generateSpec())
@@ -97,13 +114,13 @@ function renderFigure({
   useLayoutEffect(() => {
     setConfig(JSON.parse(figure.config))
     setSpec(generateSpec())
-  }, [element, theme, height, width])
+  }, [element, theme, height, width, figure.config, generateSpec])
 
   const { data, layout, frames } = spec
 
   return (
     <Plot
-      key={isFullScreen() ? "fullscreen" : "original"}
+      key={isFullScreen(height) ? "fullscreen" : "original"}
       className="stPlotlyChart"
       data={data}
       layout={layout}
@@ -126,7 +143,7 @@ export function PlotlyChart({
         width,
       })
     case "figure":
-      return renderFigure({ element, height, width })
+      return <PlotlyFigure width={width} element={element} height={height} />
     default:
       throw new Error(`Unrecognized PlotlyChart type: ${element.chart}`)
   }
