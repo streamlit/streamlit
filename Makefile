@@ -341,7 +341,7 @@ jsformat:
 # Run JS unit tests.
 jstest:
 ifndef CIRCLECI
-	cd frontend; TESTPATH=$(TESTPATH) yarn workspace @streamlit/lib run test
+	cd frontend; TESTPATH=$(TESTPATH) yarn workspace @streamlit/app run test
 else
 	# Previously we used --runInBand here, which just completely turns off parallelization.
 	# But since our CircleCI instance has 2 CPUs, use maxWorkers instead:
