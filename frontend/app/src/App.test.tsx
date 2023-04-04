@@ -127,22 +127,10 @@ describe("App", () => {
   beforeEach(() => {
     // @ts-expect-error
     window.prerenderReady = false
-    // This was not necessary before as jsdom should solve this. However, this is undefined in jest for some reason.
-    window.location = {
-      ancestorOrigins: {} as DOMStringList,
-      hash: originalLocation.hash,
-      host: "dummy.com",
-      port: "80",
-      protocol: "http:",
-      hostname: "dummy.com",
-      href: "http://dummy.com?page=1&name=testing",
-      origin: "http://dummy.com",
-      pathname: "test",
-      search: originalLocation.search,
-      assign: originalLocation.assign,
-      replace: originalLocation.replace,
-      reload: originalLocation.reload,
-    } as Location
+    const { location: originalLocation } = window
+    // Replace window.location with a mutable object
+    delete window.location
+    window.location = { ...originalLocation }
   })
 
   afterEach(() => {
