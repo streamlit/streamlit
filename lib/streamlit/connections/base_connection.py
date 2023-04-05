@@ -22,7 +22,7 @@ from streamlit.util import calc_md5
 RawConnectionT = TypeVar("RawConnectionT")
 
 
-class BaseConnection(ABC, Generic[RawConnectionT]):
+class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
     """TODO(vdonato): docstrings for this class and all public methods."""
 
     def __init__(self, connection_name: str, **kwargs) -> None:
@@ -76,7 +76,7 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
 
         return self._raw_instance
 
-    # Abstract fields/methods that subclasses of BaseConnection must implement
+    # Abstract fields/methods that subclasses of ExperimentalBaseConnection must implement
     @abstractmethod
     def _connect(self, **kwargs) -> RawConnectionT:
         raise NotImplementedError

@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional, Union, cast
 
 import pandas as pd
 
-from streamlit.connections import BaseConnection
+from streamlit.connections import ExperimentalBaseConnection
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
@@ -56,12 +56,13 @@ def _load_from_snowsql_config_file() -> Dict[str, Any]:
     return conn_params
 
 
-class Snowpark(BaseConnection["Session"]):
+class Snowpark(ExperimentalBaseConnection["Session"]):
     def __init__(self, connection_name: str, **kwargs) -> None:
         self._lock = threading.RLock()
 
-        # Grab the lock before calling BaseConnection.__init__() so that we can guarantee
-        # thread safety when the parent class' constructor initializes our connection.
+        # Grab the lock before calling ExperimentalBaseConnection.__init__() so that we
+        # can guarantee thread safety when the parent class' constructor initializes our
+        # connection.
         with self._lock:
             super().__init__(connection_name, **kwargs)
 
