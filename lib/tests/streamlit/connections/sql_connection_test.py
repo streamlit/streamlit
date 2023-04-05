@@ -40,7 +40,7 @@ DB_SECRETS = {
 class SQLConnectionTest(unittest.TestCase):
     @patch("sqlalchemy.engine.make_url", MagicMock(return_value="some_sql_conn_string"))
     @patch(
-        "streamlit.connections.sql_connection.SQL.get_secrets",
+        "streamlit.connections.sql_connection.SQL._get_secrets",
         MagicMock(return_value=AttrDict({"url": "some_sql_conn_string"})),
     )
     @patch("sqlalchemy.create_engine")
@@ -50,7 +50,7 @@ class SQLConnectionTest(unittest.TestCase):
         patched_create_engine.assert_called_once_with("some_sql_conn_string")
 
     @patch(
-        "streamlit.connections.sql_connection.SQL.get_secrets",
+        "streamlit.connections.sql_connection.SQL._get_secrets",
         MagicMock(return_value=AttrDict(DB_SECRETS)),
     )
     @patch("sqlalchemy.create_engine")
@@ -70,7 +70,7 @@ class SQLConnectionTest(unittest.TestCase):
         del secrets[missing_param]
 
         with patch(
-            "streamlit.connections.sql_connection.SQL.get_secrets",
+            "streamlit.connections.sql_connection.SQL._get_secrets",
             MagicMock(return_value=AttrDict(secrets)),
         ):
             with pytest.raises(StreamlitAPIException) as e:

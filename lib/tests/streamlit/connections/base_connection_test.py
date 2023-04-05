@@ -50,16 +50,16 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_get_secrets(self, _):
         conn = MockConnection("my_mock_connection")
-        assert conn.get_secrets().foo == "bar"
+        assert conn._get_secrets().foo == "bar"
 
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
     def test_get_secrets_no_matching_section(self, _):
         conn = MockConnection("nonexistent")
-        assert conn.get_secrets() == {}
+        assert conn._get_secrets() == {}
 
     def test_get_secrets_no_secrets(self):
         conn = MockConnection("my_mock_connection")
-        assert conn.get_secrets() == {}
+        assert conn._get_secrets() == {}
 
     def test_instance_prop_caches_raw_instance(self):
         conn = MockConnection("my_mock_connection")
@@ -90,7 +90,7 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
         with patch(
             "streamlit.connections.base_connection.BaseConnection.reset"
         ) as patched_reset, patch(
-            "streamlit.connections.base_connection.BaseConnection.get_secrets",
+            "streamlit.connections.base_connection.BaseConnection._get_secrets",
             MagicMock(return_value=AttrDict({"mock_connection": {"new": "secret"}})),
         ):
             conn._on_secrets_changed("unused_arg")
