@@ -128,7 +128,7 @@ def get_current_pr_labels() -> List[str]:
     """
     Returns a list of all tags associated with the current PR.
 
-    Note that this function works only when the current event is pull_request.
+    Note that this function works only when the current event is `pull_request`.
     """
     if GITHUB_EVENT_NAME != GithubEvent.PULL_REQUEST.value:
         raise Exception(
@@ -153,16 +153,29 @@ def get_changed_python_dependencies_files() -> List[str]:
     return changed_dependencies_files
 
 
-def should_test_all_python_versions(*, canary_build) -> bool:
+def check_if_pr_has_label(action: str, label: str):
+    """
+    Checks if the PR has the given label.
+
+    The function works all GitHub events, but then returns false.
+    """
+    if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
+        pr_labels = get_current_pr_labels()
+        if label in pr_labels:
+            print(f"PR has the following labels: {pr_labels}")
+            print(f"{action}, because PR has {label !r} label.")
+            return True
+    return False
+
+
+def is_canary_build() -> bool:
     """
     Checks whether tests should be run for all supported Python versions, or whether
     it is enough to check the oldest and latest versions.
 
     The behavior depends on what event triggered the current GitHub Action build to run.
 
-    For pull_request event, we return true when at least one of the conditions is met:
-    - PR has "dev:full-matrix" label
-    - Python dependencies have been modified
+    For pull_request event, we return true when Python dependencies have been modified
     In other case, we return false.
 
     For push event, we return true when the default branch is checked. In other case,
@@ -170,38 +183,6 @@ def should_test_all_python_versions(*, canary_build) -> bool:
 
     For other events, we return false
     """
-    print(f"Current github event name: {GITHUB_EVENT_NAME!r}")
-    if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
-        pr_labels = get_current_pr_labels()
-        if LABEL_FULL_MATRIX in pr_labels:
-            print(f"PR has the following labels: {pr_labels}")
-            print(
-                "All Python versions will be tested, "
-                f"because PR has {LABEL_FULL_MATRIX!r} label."
-            )
-            return True
-        changed_dependencies_files = get_changed_python_dependencies_files()
-    if canary_build:
-        print("All Python versions will be tested, because current build is canary")
-    return True
-
-
-def should_use_latest_dependencies(*, canary_build) -> bool:
-    if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
-        pr_labels = get_current_pr_labels()
-        if LABEL_UPGRADE_DEPENDENCIES in pr_labels:
-            print(f"PR has the following labels: {pr_labels}")
-            print(
-                "Latest dependencies will be used, "
-                f"because PR has {LABEL_UPGRADE_DEPENDENCIES!r} label."
-            )
-            return True
-    if canary_build:
-        print("Latest dependencies will be used, because current build is canary")
-    return True
-
-
-def is_canary_build() -> bool:
     if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
         changed_dependencies_files = get_changed_python_dependencies_files()
         if changed_dependencies_files:
@@ -230,7 +211,7 @@ def is_canary_build() -> bool:
         "Current build is canary, "
         f"because current github event name is {GITHUB_EVENT_NAME!r}"
     )
-    return True
+    return False
 
 
 def get_output_variables() -> Dict[str, str]:
@@ -238,17 +219,22 @@ def get_output_variables() -> Dict[str, str]:
     Compute build variables.
     """
     canary_build = is_canary_build()
+    python_versions = (
+        ALL_PYTHON_VERSIONS
+        if canary_build
+        or check_if_pr_has_label(
+            "All Python versions will be tested", LABEL_FULL_MATRIX
+        )
+        else [ALL_PYTHON_VERSIONS[0], ALL_PYTHON_VERSIONS[-1]]
+    )
+    use_constraint_file = canary_build or check_if_pr_has_label(
+        "Latest dependencies will be used", LABEL_UPGRADE_DEPENDENCIES
+    )
     return {
         "PYTHON_MIN_VERSION": PYTHON_MIN_VERSION,
         "PYTHON_MAX_VERSION": PYTHON_MAX_VERSION,
-        "PYTHON_VERSIONS": json.dumps(
-            ALL_PYTHON_VERSIONS
-            if should_test_all_python_versions(canary_build=canary_build)
-            else [ALL_PYTHON_VERSIONS[0], ALL_PYTHON_VERSIONS[-1]]
-        ),
-        "USE_CONSTRAINT_FILE": str(
-            should_use_latest_dependencies(canary_build=canary_build)
-        ).lower(),
+        "PYTHON_VERSIONS": json.dumps(python_versions),
+        "USE_CONSTRAINT_FILE": str(use_constraint_file).lower(),
     }
 
 
