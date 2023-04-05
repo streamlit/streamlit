@@ -16,19 +16,7 @@
 
 // this is copied from here: https://github.com/facebook/create-react-app/blob/main/packages/babel-preset-react-app/create.js
 
-console.log("In custom babel plugin. This is needed for glide data grid.")
-
-const validateBoolOption = (name, value, defaultValue) => {
-  if (typeof value === "undefined") {
-    value = defaultValue
-  }
-
-  if (typeof value !== "boolean") {
-    throw new Error(`Preset react-app: '${name}' option must be a boolean.`)
-  }
-
-  return value
-}
+console.log("Using custom babel plugin. This is needed for glide data grid.")
 
 module.exports = function (api, opts, env) {
   if (!opts) {
@@ -66,6 +54,7 @@ module.exports = function (api, opts, env) {
         // Latest stable ECMAScript features
         require("@babel/preset-env").default,
         {
+          // ensure ES6 is supported
           modules: false,
           // Allow importing core-js in entrypoint and use browserlist to select polyfills
           useBuiltIns: "entry",
