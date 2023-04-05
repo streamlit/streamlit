@@ -14,7 +14,7 @@
 
 import os
 import unittest
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import PropertyMock, mock_open, patch
 
 import streamlit as st
 from streamlit.connections import BaseConnection
@@ -48,18 +48,18 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
         )
 
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
-    def test_get_secrets(self, _):
+    def test_secrets_property(self, _):
         conn = MockConnection("my_mock_connection")
-        assert conn._get_secrets().foo == "bar"
+        assert conn._secrets.foo == "bar"
 
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
-    def test_get_secrets_no_matching_section(self, _):
+    def test_secrets_property_no_matching_section(self, _):
         conn = MockConnection("nonexistent")
-        assert conn._get_secrets() == {}
+        assert conn._secrets == {}
 
-    def test_get_secrets_no_secrets(self):
+    def test_secrets_property_no_secrets(self):
         conn = MockConnection("my_mock_connection")
-        assert conn._get_secrets() == {}
+        assert conn._secrets == {}
 
     def test_instance_prop_caches_raw_instance(self):
         conn = MockConnection("my_mock_connection")
@@ -90,8 +90,8 @@ class BaseConnectionDefaultMethodTests(unittest.TestCase):
         with patch(
             "streamlit.connections.base_connection.BaseConnection.reset"
         ) as patched_reset, patch(
-            "streamlit.connections.base_connection.BaseConnection._get_secrets",
-            MagicMock(return_value=AttrDict({"mock_connection": {"new": "secret"}})),
+            "streamlit.connections.base_connection.BaseConnection._secrets",
+            PropertyMock(return_value=AttrDict({"mock_connection": {"new": "secret"}})),
         ):
             conn._on_secrets_changed("unused_arg")
             patched_reset.assert_called_once()

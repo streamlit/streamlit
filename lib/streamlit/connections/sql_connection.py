@@ -34,7 +34,7 @@ class SQL(BaseConnection["Engine"]):
     def _connect(self, autocommit: bool = False, **kwargs) -> "Engine":
         import sqlalchemy
 
-        secrets = self._get_secrets()
+        secrets = self._secrets
 
         if "url" in secrets:
             url = sqlalchemy.engine.make_url(secrets["url"])

@@ -70,7 +70,7 @@ class Snowpark(BaseConnection["Session"]):
     def _connect(self, **kwargs) -> "Session":
         from snowflake.snowpark.session import Session
 
-        conn_params = self._get_secrets().to_dict()
+        conn_params = self._secrets.to_dict()
 
         if not conn_params:
             conn_params = _load_from_snowsql_config_file()

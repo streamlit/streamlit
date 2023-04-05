@@ -29,7 +29,7 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         self._connection_name = connection_name
         self._kwargs = kwargs
 
-        secrets_dict = self._get_secrets().to_dict()
+        secrets_dict = self._secrets.to_dict()
         self._config_section_hash = calc_md5(json.dumps(secrets_dict))
         secrets_singleton.file_change_listener.connect(self._on_secrets_changed)
 
@@ -45,7 +45,7 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
     # Methods with default implementations that we don't expect subclasses to want or
     # need to overwrite.
     def _on_secrets_changed(self, _) -> None:
-        secrets_dict = self._get_secrets().to_dict()
+        secrets_dict = self._secrets.to_dict()
         new_hash = calc_md5(json.dumps(secrets_dict))
 
         # Only reset the connection if the secrets file section specific to this
@@ -54,7 +54,8 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
             self._config_section_hash = new_hash
             self.reset()
 
-    def _get_secrets(self) -> AttrDict:
+    @property
+    def _secrets(self) -> AttrDict:
         connections_section = None
         if secrets_singleton.load_if_toml_exists():
             connections_section = secrets_singleton.get("connections")
