@@ -58,7 +58,7 @@ Pillow==9.5.0
 pipenv==2023.3.20
 pkginfo==1.9.6
 platformdirs==3.2.0
-plotly==5.14.0
+plotly==5.14.1
 pluggy==1.0.0
 pre-commit==3.2.2
 protobuf==3.20.3
