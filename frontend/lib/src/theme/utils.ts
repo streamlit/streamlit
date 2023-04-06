@@ -23,19 +23,14 @@ import merge from "lodash/merge"
 import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
 import { logError } from "src/lib/log"
 import { LocalStore, localStorageAvailable } from "src/lib/storageUtils"
+import { CachedTheme, Theme, ThemeConfig, ThemeSpacing } from "./types"
+import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
+import { createBaseUiTheme } from "./createThemeUtil"
 import {
-  CachedTheme,
-  Theme,
-  ThemeConfig,
-  ThemeSpacing,
-} from "./types"
-import {
-  baseTheme,
-  darkTheme,
-  lightTheme,
-} from "./themeConfigs"
-import {createBaseUiTheme} from './createThemeUtil';
-import {createEmotionColors, DerivedColors, computeDerivedColors} from './getColors';
+  createEmotionColors,
+  DerivedColors,
+  computeDerivedColors,
+} from "./getColors"
 
 import { fonts } from "./primitives/typography"
 
