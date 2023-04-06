@@ -45,7 +45,7 @@ class SQLConnectionTest(unittest.TestCase):
     )
     @patch("sqlalchemy.create_engine")
     def test_url_set_explicitly_in_secrets(self, patched_create_engine):
-        SQL()
+        SQL("my_sql_connection")
 
         patched_create_engine.assert_called_once_with("some_sql_conn_string")
 
@@ -55,7 +55,7 @@ class SQLConnectionTest(unittest.TestCase):
     )
     @patch("sqlalchemy.create_engine")
     def test_url_constructed_from_secrets_params(self, patched_create_engine):
-        SQL()
+        SQL("my_sql_connection")
 
         patched_create_engine.assert_called_once()
         args, _ = patched_create_engine.call_args_list[0]
@@ -74,7 +74,7 @@ class SQLConnectionTest(unittest.TestCase):
             MagicMock(return_value=AttrDict(secrets)),
         ):
             with pytest.raises(StreamlitAPIException) as e:
-                SQL()
+                SQL("my_sql_connection")
 
             assert str(e.value) == f"Missing SQL DB connection param: {missing_param}"
 
@@ -85,7 +85,7 @@ class SQLConnectionTest(unittest.TestCase):
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         patched_read_sql.return_value = "i am a dataframe"
 
-        conn = SQL()
+        conn = SQL("my_sql_connection")
 
         assert conn.read_sql("SELECT 1;") == "i am a dataframe"
         assert conn.read_sql("SELECT 1;") == "i am a dataframe"
