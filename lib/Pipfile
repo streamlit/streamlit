@@ -17,41 +17,8 @@ name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
 
-[dev-packages]
-# Minimum version compatible with click>=8.1
-black = ">=22.3.0"
-pre-commit = "*"
-hypothesis = ">=6.17.4"
-mypy = ">=0.981"
-mypy-protobuf = ">=3.2"
-parameterized = "*"
-pipenv = "*"
-# Lower protobuf versions cause mypy issues during development builds
-protobuf = ">=3.19, <4"
-pytest = "*"
-pytest-cov = "*"
-requests-mock = "*"
-# semver 3 renames VersionInfo so temporarily pin until we deal with it
-semver = "<3"
-setuptools = ">=65.5.1"
-testfixtures = "*"
-twine = "*"
-wheel = "*"
-# mypy types
-types-click = "*"
-types-protobuf = "*"
-types-python-dateutil = "*"
-types-pytz = "*"
-types-requests = "*"
-types-setuptools = "*"
-types-toml = "*"
-types-typed-ast = "*"
-# IMPORTANT: If you need to add a package just for testing, please add it to
-# test-requirements.txt instead.
-
-[packages]
-# NOTE: We only use this Pipfile to manage dev and test dependencies.
-# Dependencies for releases of the Streamlit library itself should be added in
-# setup.py. See https://pipenv.pypa.io/en/latest/advanced/#pipfile-vs-setup-py
-# for more information on why things are done in this way.
-streamlit = {editable = true, extras = ["snowflake"], path = "."}
+# This file exists only so that developers can use previously created
+# environments by pipenv, but now we manage all dependencies by pip tool.
+# Dependencies are defined in lib/*-requirements*.txt files.
+# We recommend using python -m venv to manage your virtual environment.
+# To install the dependencies, use the Makefile script.
