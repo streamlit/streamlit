@@ -32,7 +32,7 @@ from pympler.asizeof import asizeof
 from typing_extensions import Final, TypeAlias
 
 import streamlit as st
-from streamlit import config
+from streamlit import config, util
 from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -82,6 +82,9 @@ class WStates(MutableMapping[str, Any]):
 
     states: dict[str, WState] = field(default_factory=dict)
     widget_metadata: dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
+
+    def __repr__(self):
+        return util.repr_(self)
 
     def __getitem__(self, k: str) -> Any:
         """Return the value of the widget with the given key.
@@ -281,6 +284,9 @@ class SessionState:
 
     # Keys used for widgets will be eagerly converted to the matching widget id
     _key_id_mapping: dict[str, str] = field(default_factory=dict)
+
+    def __repr__(self):
+        return util.repr_(self)
 
     # is it possible for a value to get through this without being deserialized?
     def _compact_state(self) -> None:

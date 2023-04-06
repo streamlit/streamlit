@@ -21,6 +21,7 @@ from typing import Any, Callable, Dict, Generic, Optional, Tuple, TypeVar, Union
 
 from typing_extensions import Final, TypeAlias
 
+from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.Button_pb2 import Button
@@ -62,7 +63,7 @@ WidgetProto: TypeAlias = Union[
     TimeInput,
 ]
 
-GENERATED_WIDGET_ID_PREFIX: Final = "$$GENERATED_WIDGET_ID"
+GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"
 
 
 T = TypeVar("T")
@@ -96,6 +97,9 @@ class WidgetMetadata(Generic[T]):
     callback: WidgetCallback | None = None
     callback_args: WidgetArgs | None = None
     callback_kwargs: WidgetKwargs | None = None
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
 
 @dataclass(frozen=True)
