@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 from parameterized import parameterized
 
-from streamlit.connections import SQL, BaseConnection, Snowpark
+from streamlit.connections import SQL, ExperimentalBaseConnection, Snowpark
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.connection_factory import (
     _create_connection,
@@ -33,10 +33,10 @@ from streamlit.runtime.secrets import secrets_singleton
 from tests.testutil import create_mock_script_run_ctx
 
 
-class MockConnection(BaseConnection[None]):
+class MockConnection(ExperimentalBaseConnection[None]):
     _default_connection_name = "mock_connection"
 
-    def connect(self, **kwargs):
+    def _connect(self, **kwargs):
         pass
 
 
@@ -60,14 +60,16 @@ class ConnectionFactoryTest(unittest.TestCase):
         os.environ.clear()
         os.environ.update(self._prev_environ)
 
-    def test_create_connection_helper_explodes_if_not_BaseConnection_subclass(self):
+    def test_create_connection_helper_explodes_if_not_ExperimentalBaseConnection_subclass(
+        self,
+    ):
         class NotABaseConnection:
             pass
 
         with pytest.raises(StreamlitAPIException) as e:
             _create_connection("my_connection", NotABaseConnection)
 
-        assert "is not a subclass of BaseConnection" in str(e.value)
+        assert "is not a subclass of ExperimentalBaseConnection" in str(e.value)
 
     @parameterized.expand(
         [
