@@ -30,7 +30,7 @@ class SnowparkConnectionTest(unittest.TestCase):
         mock_sql_return = MagicMock()
         mock_sql_return.to_pandas = MagicMock(return_value="i am a dataframe")
 
-        conn = Snowpark()
+        conn = Snowpark("my_snowpark_connection")
         conn._instance.sql.return_value = mock_sql_return
 
         assert conn.read_sql("SELECT 1;") == "i am a dataframe"
