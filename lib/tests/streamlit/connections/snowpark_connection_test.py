@@ -22,7 +22,7 @@ from tests.testutil import create_mock_script_run_ctx
 
 
 class SnowparkConnectionTest(unittest.TestCase):
-    @patch("streamlit.connections.snowpark_connection.Snowpark.connect", MagicMock())
+    @patch("streamlit.connections.snowpark_connection.Snowpark._connect", MagicMock())
     def test_read_sql_caches_value(self):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
