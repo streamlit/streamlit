@@ -14,7 +14,7 @@
 
 import importlib
 import re
-from typing import Any, Dict, Type, TypeVar, Union, overload
+from typing import Any, Dict, Optional, Type, TypeVar, overload
 
 from typing_extensions import Final, Literal
 
@@ -101,7 +101,7 @@ def connection_factory(
 
 @overload
 def connection_factory(
-    name: str, connection_class: Union[str, None], **kwargs
+    name: str, connection_class: Optional[str], **kwargs
 ) -> BaseConnection[Any]:
     pass
 
