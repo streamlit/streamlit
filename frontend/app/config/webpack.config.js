@@ -40,8 +40,7 @@ const ForkTsCheckerWebpackPlugin =
     : require("react-dev-utils/ForkTsCheckerWebpackPlugin")
 const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin")
 const createEnvironmentHash = require("./webpack/persistentCache/createEnvironmentHash")
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
-const CircularDependencyPlugin = require('circular-dependency-plugin')
+const CircularDependencyPlugin = require("circular-dependency-plugin")
 
 // Source maps are resource heavy and can cause out of memory issue for large source files.
 const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== "false"
@@ -800,17 +799,15 @@ module.exports = function (webpackEnv) {
             },
           },
         }),
-        new CircularDependencyPlugin({
-          // exclude detection of files based on a RegExp
-          exclude: /node_modules/,
-          // add errors to webpack instead of warnings
-          failOnError: false,
-          // allow import cycles that include an asyncronous import,
-          // e.g. via import(/* webpackMode: "weak" */ './file.js')
-          allowAsyncCycles: false,
-        }),
-      // new BundleAnalyzerPlugin(),
-      
+      new CircularDependencyPlugin({
+        // exclude detection of files based on a RegExp
+        exclude: /node_modules/,
+        // add errors to webpack instead of warnings
+        failOnError: false,
+        // allow import cycles that include an asyncronous import,
+        // e.g. via import(/* webpackMode: "weak" */ './file.js')
+        allowAsyncCycles: false,
+      }),
     ].filter(Boolean),
     // Turn off performance processing because we utilize
     // our own hints via the FileSizeReporter
