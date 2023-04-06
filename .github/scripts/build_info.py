@@ -64,10 +64,9 @@ if missing_envs := [
 
 
 FILES_WITH_PYTHON_DEPENDENCIES = [
+    "lib/dev-requirements.txt",
     "lib/test-requirements*.txt",
     "lib/setup.py",
-    "lib/Pipfile",
-    "lib/Pipfile.lock",
 ]
 # +1 to make range inclusive.
 ALL_PYTHON_VERSIONS = [f"3.{d}" for d in range(7, 11 + 1)]

@@ -33,6 +33,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import sqlalchemy as db
+from packaging.version import Version
 from parameterized import parameterized
 
 try:
@@ -44,6 +45,13 @@ try:
     HAS_TENSORFLOW = True
 except ImportError:
     HAS_TENSORFLOW = False
+
+try:
+    import keras
+
+    HAS_SUPPORTED_KERAS = Version(keras.__version__) < Version("2.5.0")
+except ImportError:
+    HAS_SUPPORTED_KERAS = False
 
 
 import streamlit as st
@@ -390,6 +398,11 @@ class HashTest(unittest.TestCase):
             self.assertEqual(h1, get_hash(f))
 
     @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
+    @unittest.skipIf(
+        not HAS_SUPPORTED_KERAS,
+        "The supported version of Keras is not installed. "
+        "Streamlit requires Keras<2.5.0",
+    )
     def test_keras_model(self):
         a = keras.applications.vgg16.VGG16(include_top=False, weights=None)
         b = keras.applications.vgg16.VGG16(include_top=False, weights=None)
@@ -401,6 +414,11 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(a), get_hash(b))
 
     @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
+    @unittest.skipIf(
+        not HAS_SUPPORTED_KERAS,
+        "The supported version of Keras is not installed. "
+        "Streamlit requires Keras<2.5.0",
+    )
     def test_tf_keras_model(self):
         a = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
         b = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
