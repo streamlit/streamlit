@@ -12,7 +12,7 @@ charset-normalizer==3.1.0
 chart-studio==1.1.0
 click==8.1.3
 contourpy==1.0.7
-coverage==7.2.2
+coverage==7.2.3
 cryptography==40.0.1
 cx-Oracle==7.3.0
 cycler==0.11.0
@@ -21,7 +21,7 @@ distlib==0.3.6
 docutils==0.19
 entrypoints==0.4
 exceptiongroup==1.1.1
-filelock==3.10.7
+filelock==3.11.0
 fonttools==4.39.3
 gitdb==4.0.10
 GitPython==3.1.31
@@ -44,7 +44,7 @@ MarkupSafe==2.1.2
 matplotlib==3.7.1
 mdurl==0.1.2
 more-itertools==9.1.0
-mypy==1.1.1
+mypy==1.2.0
 mypy-extensions==1.0.0
 mypy-protobuf==3.3.0
 mysqlclient==2.1.1
