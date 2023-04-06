@@ -18,7 +18,7 @@ from typing import Any, Dict, Optional, Type, TypeVar, overload
 
 from typing_extensions import Final, Literal
 
-from streamlit.connections import SQL, BaseConnection, Snowpark
+from streamlit.connections import SQL, ExperimentalBaseConnection, Snowpark
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
@@ -39,10 +39,11 @@ MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
     "snowflake.snowpark": "snowflake-snowpark-python",
 }
 
-# The BaseConnection bound is parameterized to `Any` below as subclasses of
-# BaseConnection are responsible for binding the type parameter of BaseConnection to a
-# concrete type, but the type it gets bound to isn't important to us here.
-ConnectionClass = TypeVar("ConnectionClass", bound=BaseConnection[Any])
+# The ExperimentalBaseConnection bound is parameterized to `Any` below as subclasses of
+# ExperimentalBaseConnection are responsible for binding the type parameter of
+# ExperimentalBaseConnection to a concrete type, but the type it gets bound to isn't
+# important to us here.
+ConnectionClass = TypeVar("ConnectionClass", bound=ExperimentalBaseConnection[Any])
 
 
 # NOTE: The order of the decorators below is important: @gather_metrics must be above
@@ -60,9 +61,9 @@ def _create_connection(
     the user to specify the connection class to use as a string literal for convenience.
     """
 
-    if not issubclass(connection_class, BaseConnection):
+    if not issubclass(connection_class, ExperimentalBaseConnection):
         raise StreamlitAPIException(
-            f"{connection_class} is not a subclass of BaseConnection!"
+            f"{connection_class} is not a subclass of ExperimentalBaseConnection!"
         )
 
     return connection_class(connection_name=name, **kwargs)
@@ -102,7 +103,7 @@ def connection_factory(
 @overload
 def connection_factory(
     name: str, connection_class: Optional[str], **kwargs
-) -> BaseConnection[Any]:
+) -> ExperimentalBaseConnection[Any]:
     pass
 
 
