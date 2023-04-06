@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Iterator, Optional, Union, cast
 
 import pandas as pd
 
-from streamlit.connections import BaseConnection
+from streamlit.connections import ExperimentalBaseConnection
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
@@ -30,11 +30,11 @@ if TYPE_CHECKING:
 _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
-class SQL(BaseConnection["Engine"]):
-    def connect(self, autocommit: bool = False, **kwargs) -> "Engine":
+class SQL(ExperimentalBaseConnection["Engine"]):
+    def _connect(self, autocommit: bool = False, **kwargs) -> "Engine":
         import sqlalchemy
 
-        secrets = self.get_secrets()
+        secrets = self._secrets
 
         if "url" in secrets:
             url = sqlalchemy.engine.make_url(secrets["url"])
