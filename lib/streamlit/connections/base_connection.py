@@ -22,17 +22,18 @@ from streamlit.util import calc_md5
 RawConnectionT = TypeVar("RawConnectionT")
 
 
-class BaseConnection(ABC, Generic[RawConnectionT]):
+class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
     """TODO(vdonato): docstrings for this class and all public methods."""
 
     def __init__(self, connection_name: str, **kwargs) -> None:
         self._connection_name = connection_name
         self._kwargs = kwargs
 
-        self._raw_instance: Optional[RawConnectionT] = self.connect(**kwargs)
-        secrets_dict = self.get_secrets().to_dict()
+        secrets_dict = self._secrets.to_dict()
         self._config_section_hash = calc_md5(json.dumps(secrets_dict))
         secrets_singleton.file_change_listener.connect(self._on_secrets_changed)
+
+        self._raw_instance: Optional[RawConnectionT] = self._connect(**kwargs)
 
     def __del__(self) -> None:
         secrets_singleton.file_change_listener.disconnect(self._on_secrets_changed)
@@ -44,7 +45,7 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
     # Methods with default implementations that we don't expect subclasses to want or
     # need to overwrite.
     def _on_secrets_changed(self, _) -> None:
-        secrets_dict = self.get_secrets().to_dict()
+        secrets_dict = self._secrets.to_dict()
         new_hash = calc_md5(json.dumps(secrets_dict))
 
         # Only reset the connection if the secrets file section specific to this
@@ -53,7 +54,8 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
             self._config_section_hash = new_hash
             self.reset()
 
-    def get_secrets(self) -> AttrDict:
+    @property
+    def _secrets(self) -> AttrDict:
         connections_section = None
         if secrets_singleton.load_if_toml_exists():
             connections_section = secrets_singleton.get("connections")
@@ -70,11 +72,11 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
     @property
     def _instance(self) -> RawConnectionT:
         if self._raw_instance is None:
-            self._raw_instance = self.connect(**self._kwargs)
+            self._raw_instance = self._connect(**self._kwargs)
 
         return self._raw_instance
 
-    # Abstract fields/methods that subclasses of BaseConnection must implement
+    # Abstract fields/methods that subclasses of ExperimentalBaseConnection must implement
     @abstractmethod
-    def connect(self, **kwargs) -> RawConnectionT:
+    def _connect(self, **kwargs) -> RawConnectionT:
         raise NotImplementedError

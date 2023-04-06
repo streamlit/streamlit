@@ -15,7 +15,7 @@
 import threading
 import unittest
 from copy import deepcopy
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from parameterized import parameterized
@@ -40,8 +40,8 @@ DB_SECRETS = {
 class SQLConnectionTest(unittest.TestCase):
     @patch("sqlalchemy.engine.make_url", MagicMock(return_value="some_sql_conn_string"))
     @patch(
-        "streamlit.connections.sql_connection.SQL.get_secrets",
-        MagicMock(return_value=AttrDict({"url": "some_sql_conn_string"})),
+        "streamlit.connections.sql_connection.SQL._secrets",
+        PropertyMock(return_value=AttrDict({"url": "some_sql_conn_string"})),
     )
     @patch("sqlalchemy.create_engine")
     def test_url_set_explicitly_in_secrets(self, patched_create_engine):
@@ -50,8 +50,8 @@ class SQLConnectionTest(unittest.TestCase):
         patched_create_engine.assert_called_once_with("some_sql_conn_string")
 
     @patch(
-        "streamlit.connections.sql_connection.SQL.get_secrets",
-        MagicMock(return_value=AttrDict(DB_SECRETS)),
+        "streamlit.connections.sql_connection.SQL._secrets",
+        PropertyMock(return_value=AttrDict(DB_SECRETS)),
     )
     @patch("sqlalchemy.create_engine")
     def test_url_constructed_from_secrets_params(self, patched_create_engine):
@@ -70,15 +70,15 @@ class SQLConnectionTest(unittest.TestCase):
         del secrets[missing_param]
 
         with patch(
-            "streamlit.connections.sql_connection.SQL.get_secrets",
-            MagicMock(return_value=AttrDict(secrets)),
+            "streamlit.connections.sql_connection.SQL._secrets",
+            PropertyMock(return_value=AttrDict(secrets)),
         ):
             with pytest.raises(StreamlitAPIException) as e:
                 SQL("my_sql_connection")
 
             assert str(e.value) == f"Missing SQL DB connection param: {missing_param}"
 
-    @patch("streamlit.connections.sql_connection.SQL.connect", MagicMock())
+    @patch("streamlit.connections.sql_connection.SQL._connect", MagicMock())
     @patch("streamlit.connections.sql_connection.pd.read_sql")
     def test_read_sql_caches_value(self, patched_read_sql):
         # Caching functions rely on an active script run ctx
