@@ -157,7 +157,7 @@ def check_if_pr_has_label(action: str, label: str):
     """
     Checks if the PR has the given label.
 
-    The function works all GitHub events, but then returns false.
+    The function works for all GitHub events, but then returns false.
     """
     if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
         pr_labels = get_current_pr_labels()
@@ -227,8 +227,11 @@ def get_output_variables() -> Dict[str, str]:
         )
         else [ALL_PYTHON_VERSIONS[0], ALL_PYTHON_VERSIONS[-1]]
     )
-    use_constraint_file = canary_build or check_if_pr_has_label(
-        "Latest dependencies will be used", LABEL_UPGRADE_DEPENDENCIES
+    use_constraint_file = not (
+        canary_build
+        or check_if_pr_has_label(
+            "Latest dependencies will be used", LABEL_UPGRADE_DEPENDENCIES
+        )
     )
     return {
         "PYTHON_MIN_VERSION": PYTHON_MIN_VERSION,
