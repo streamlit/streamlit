@@ -138,7 +138,7 @@ class TextWidgetsMixin:
             "new-password" for "password" inputs, and the empty string for
             "default" inputs. For more details, see https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
         on_change : callable
-            An optional callback invoked when this text_input's value changes.
+            An optional callback invoked when this text input's value changes.
         args : tuple
             An optional tuple of args to pass to the callback.
         kwargs : dict
