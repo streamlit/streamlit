@@ -27,6 +27,7 @@ from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Code_pb2 import Code as CodeProto
+from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -254,6 +255,49 @@ class Widget(Protocol):
 
 
 T = TypeVar("T")
+
+
+@dataclass(repr=False)
+class ColorPicker(Element, Widget):
+    _value: str | None
+
+    proto: ColorPickerProto
+    type: str
+    id: str
+    label: str
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: ColorPickerProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "color_picker"
+        self.id = proto.id
+        self.label = proto.label
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    @property
+    def value(self) -> str:
+        """The currently selected value from the options."""
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return cast(str, state[self.id])
+
+    def set_value(self, v: str) -> ColorPicker:
+        self._value = v
+        return self
 
 
 @dataclass(init=False, repr=False)
@@ -951,6 +995,10 @@ class Block:
     def get(self, element_type: Literal["text_area"]) -> Sequence[TextArea]:
         ...
 
+    @overload
+    def get(self, element_type: Literal["color_picker"]) -> Sequence[ColorPicker]:
+        ...
+
     def get(self, element_type: str) -> Sequence[Node]:
         return [e for e in self if e.type == element_type]
 
@@ -1106,6 +1154,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = TextArea(elt.text_area, root=root)
             elif elt.WhichOneof("type") == "code":
                 new_node = Code(elt.code, root=root)
+            elif elt.WhichOneof("type") == "color_picker":
+                new_node = ColorPicker(elt.color_picker, root=root)
             else:
                 new_node = Element(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":
