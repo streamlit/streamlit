@@ -19,17 +19,17 @@ from typing import Generic, Optional, TypeVar
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
 from streamlit.util import calc_md5
 
-T = TypeVar("T")
+RawConnectionT = TypeVar("RawConnectionT")
 
 
-class BaseConnection(ABC, Generic[T]):
+class BaseConnection(ABC, Generic[RawConnectionT]):
     """TODO(vdonato): docstrings for this class and all public methods."""
 
     def __init__(self, connection_name: str, **kwargs) -> None:
         self._connection_name = connection_name
         self._kwargs = kwargs
 
-        self._raw_instance: Optional[T] = self.connect(**kwargs)
+        self._raw_instance: Optional[RawConnectionT] = self.connect(**kwargs)
         secrets_dict = self.get_secrets().to_dict()
         self._config_section_hash = calc_md5(json.dumps(secrets_dict))
         secrets_singleton.file_change_listener.connect(self._on_secrets_changed)
@@ -68,7 +68,7 @@ class BaseConnection(ABC, Generic[T]):
         self._raw_instance = None
 
     @property
-    def _instance(self) -> T:
+    def _instance(self) -> RawConnectionT:
         if self._raw_instance is None:
             self._raw_instance = self.connect(**self._kwargs)
 
@@ -76,5 +76,5 @@ class BaseConnection(ABC, Generic[T]):
 
     # Abstract fields/methods that subclasses of BaseConnection must implement
     @abstractmethod
-    def connect(self, **kwargs) -> T:
+    def connect(self, **kwargs) -> RawConnectionT:
         raise NotImplementedError
