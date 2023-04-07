@@ -509,3 +509,24 @@ class NumberInputTest(InteractiveScriptTests):
         )
         assert sr4.get("number_input")[0].value == -10
         assert sr4.get("number_input")[1].value == -1.0
+
+
+class ColorPickerTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "color_picker.py",
+            """
+            import streamlit as st
+
+            st.color_picker("what is your favorite color?")
+            st.color_picker("short hex", value="#ABC")
+            st.color_picker("invalid", value="blue")
+            """,
+        )
+        sr = script.run()
+        assert len(sr.get("color_picker")) == 2
+        assert [c.value for c in sr.get("color_picker")] == ["#000000", "#ABC"]
+        assert "blue" in sr.get("exception")[0].value
+
+        sr2 = sr.get("color_picker")[0].pick("#123456").run()
+        assert sr2.get("color_picker")[0].value == "#123456"
