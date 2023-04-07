@@ -16,6 +16,11 @@
 # /bin/sh is POSIX compliant, ie it's not bash.  So let's be explicit:
 SHELL=/bin/bash
 
+INSTALL_DEV_REQS ?= true
+INSTALL_TEST_REQS ?= true
+TENSORFLOW_SUPPORTED ?= $(shell python scripts/should_install_tensorflow.py)
+INSTALL_TENSORFLOW ?= $(shell python scripts/should_install_tensorflow.py)
+
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
@@ -52,52 +57,62 @@ build-deps: mini-init develop
 
 .PHONY: init
 # Install all Python and JS dependencies.
-init: setup pipenv-install react-init protobuf
+init: python-init-all react-init protobuf
 
 .PHONY: mini-init
 # Install minimal Python and JS dependencies for development.
-mini-init: setup pipenv-dev-install react-init protobuf
+mini-init: python-init-dev-only react-init protobuf
 
 .PHONY: frontend
 # Build frontend into static files.
 frontend: react-build
 
-.PHONY: setup
-setup:
-	pip install pipenv
+.PHONY: install
+# Install Streamlit into your Python environment.
+install:
+	cd lib ; python setup.py install
 
-.PHONY: pipenv-install
-pipenv-install: pipenv-dev-install py-test-install
+.PHONY: develop
+# Install Streamlit as links in your Python environment, pointing to local workspace.
+develop:
+	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init
 
-.PHONY: pipenv-dev-install
-pipenv-dev-install: lib/Pipfile
-	# Run pipenv install; don't update the Pipfile.lock.
-	# The lockfile is created to force resolution of all dependencies at once,
-	# but we don't actually want to use the lockfile.
-	cd lib; \
-		rm Pipfile.lock; \
-		pipenv install --dev
+.PHONY: python-init-all
+# Install Streamlit and all (test and dev) requirements
+python-init-all:
+	INSTALL_DEV_REQS=true INSTALL_TEST_REQS=true make python-init
 
-SHOULD_INSTALL_TENSORFLOW := $(shell python scripts/should_install_tensorflow.py)
-.PHONY: py-test-install
-py-test-install: lib/test-requirements.txt
-  	# As of Python 3.9, we're using pip's legacy-resolver when installing
-	# test-requirements.txt, because otherwise pip takes literal hours to finish.
-	# Skip --use-deprecated option, when building local E2E docker image, since it's not present in Python 3.7.11
-	if [ "${DOCKER}" = "true" ] ; then\
-  		pip install -r lib/test-requirements.txt;\
-  	else\
-		pip install -r lib/test-requirements.txt --use-deprecated=legacy-resolver;\
-	fi
-ifeq (${SHOULD_INSTALL_TENSORFLOW},true)
-	pip install -r lib/test-requirements-with-tensorflow.txt --use-deprecated=legacy-resolver
-else
-	@echo ""
-	@echo "Your system does not support the official, pre-built tensorflow binaries."
-	@echo "This generally happens because you are running Python 3.10 or have an Apple Silicon machine."
-	@echo "Skipping incompatible dependencies."
-	@echo ""
-endif
+.PHONY: python-init-dev-only
+# Install Streamlit and dev requirements
+python-init-dev-only:
+	INSTALL_DEV_REQS=true INSTALL_TEST_REQS=false make python-init
+
+.PHONY: python-init-test-only
+# Install Streamlit and test requirements
+python-init-test-only: lib/test-requirements.txt
+	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true make python-init
+
+.PHONY: python-init
+python-init:
+	pip_args=("install" "--editable" "lib[snowflake]");\
+	if [ "${INSTALL_DEV_REQS}" = "true" ] ; then\
+		pip_args+=("--requirement" "lib/dev-requirements.txt"); \
+	fi;\
+	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+		pip_args+=("--requirement" "lib/test-requirements.txt"); \
+		if [ "${INSTALL_TENSORFLOW}" = "true" ] ; then \
+			if [ "${TENSORFLOW_SUPPORTED}" = "false" ]; then \
+					echo "";\
+					echo "Your system does not support the official, pre-built tensorflow binaries.";\
+					echo "This generally happens because you are running Python 3.10 or have an Apple Silicon machine.";\
+					echo "";\
+					exit 1;\
+			fi;\
+			pip_args+=(--requirement lib/test-requirements-with-tensorflow.txt); \
+		fi;\
+	fi;\
+	echo "Running command: pip install $${pip_args[@]}";\
+	pip install $${pip_args[@]};
 
 .PHONY: pylint
 # Verify that our Python files are properly formatted.
@@ -157,17 +172,6 @@ cli-smoke-tests:
 # Verify that CLI boots as expected when called with `python -m streamlit`
 cli-regression-tests: install
 	pytest scripts/cli_regression_tests.py
-
-.PHONY: install
-# Install Streamlit into your Python environment.
-install:
-	cd lib ; python setup.py install
-
-.PHONY: develop
-# Install Streamlit as links in your Python environment, pointing to local workspace.
-develop:
-	cd lib; \
-		pipenv install --skip-lock
 
 .PHONY: distribution
 # Create Python distribution files in dist/.

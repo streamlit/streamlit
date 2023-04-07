@@ -66,6 +66,9 @@ jobs:
 
   run-python-tests:
     needs: create-nightly-tag
+    permissions:
+      # Pass additional permission needed to upload constraints
+      contents: write
     uses: ./.github/workflows/python-versions.yml
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}

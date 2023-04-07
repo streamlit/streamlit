@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.20.0"  # PEP-440
+VERSION = "1.21.0"  # PEP-440
 
 NAME = "streamlit"
 
@@ -38,8 +38,7 @@ INSTALL_REQUIRES = [
     "numpy",
     "packaging>=14.1",
     "pandas<2,>=0.25",
-    # Temp pin pillow to below 9.5 until we investigate the breaking changes that cause our tests to fail
-    "pillow>=6.2.0, <9.5.0",
+    "pillow>=6.2.0",
     "protobuf<4,>=3.12",
     "pyarrow>=4.0",
     "pympler>=0.9",
