@@ -63,8 +63,8 @@ function Tabs(props: Props): ReactElement {
           setActiveKey(activeKey)
         }}
         /* renderAll on UITabs should always be set to true to avoid scrolling issue
-          https://github.com/streamlit/streamlit/issues/5069
-        */
+           https://github.com/streamlit/streamlit/issues/5069
+         */
         renderAll={true}
         disabled={widgetsDisabled}
         overrides={{
