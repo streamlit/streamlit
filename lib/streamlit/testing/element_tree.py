@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from abc import ABC
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
 from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
@@ -27,6 +28,7 @@ from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Code_pb2 import Code as CodeProto
+from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -40,6 +42,7 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
+from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import user_key_from_widget_id
 from streamlit.runtime.state.session_state import SessionState
@@ -715,7 +718,7 @@ class SelectSlider(Element, Widget, Generic[T]):
 
 
 @dataclass(repr=False)
-class TextInput(Element):
+class TextInput(Element, Widget):
     _value: str | None
     proto: TextInputProto
     type: str
@@ -775,7 +778,7 @@ class TextInput(Element):
 
 
 @dataclass(repr=False)
-class TextArea(Element):
+class TextArea(Element, Widget):
     _value: str | None
 
     proto: TextAreaProto
@@ -897,6 +900,60 @@ class NumberInput(Element, Widget):
     def decrement(self) -> NumberInput:
         v = max(self.value - self.step, self.min_value)
         return self.set_value(v)
+
+
+@dataclass(repr=False)
+class DateInput(Element, Widget):
+    _value: date | None
+    proto: DateInputProto
+    type: str
+    id: str
+    label: str
+    min: date
+    max: date
+    is_range: bool
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: DateInputProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "text_area"
+        self.id = proto.id
+        self.label = proto.label
+        self.min = datetime.strptime(proto.min, "%Y/%m/%d").date()
+        self.max = datetime.strptime(proto.max, "%Y/%m/%d").date()
+        self.is_range = proto.is_range
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def set_value(self, v: date) -> DateInput:
+        self._value = v
+        return self
+
+    def widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        ws.string_value = self.value
+        return ws
+
+    @property
+    def value(self) -> date:
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            # Awkward to do this with `cast`
+            return state[self.id]  # type: ignore
 
 
 @dataclass(init=False, repr=False)
