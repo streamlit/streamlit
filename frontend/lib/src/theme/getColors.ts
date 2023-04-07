@@ -16,9 +16,6 @@
 
 import { getLuminance, darken, lighten, mix, transparentize } from "color2k"
 
-import { Theme } from "./types"
-import { CustomThemeConfig } from "src/autogen/proto"
-
 export type DerivedColors = {
   linkText: string
   fadedText05: string

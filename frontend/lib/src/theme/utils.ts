@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { getLuminance, darken, lighten, mix, transparentize } from "color2k"
+import { getLuminance } from "color2k"
 import camelcase from "camelcase"
 import decamelize from "decamelize"
 import cloneDeep from "lodash/cloneDeep"
