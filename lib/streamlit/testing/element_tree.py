@@ -28,6 +28,7 @@ from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Code_pb2 import Code as CodeProto
+from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
@@ -258,6 +259,64 @@ class Widget(Protocol):
 
 
 T = TypeVar("T")
+
+
+@dataclass(repr=False)
+class ColorPicker(Element, Widget):
+    _value: str | None
+
+    proto: ColorPickerProto
+    type: str
+    id: str
+    label: str
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: ColorPickerProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "color_picker"
+        self.id = proto.id
+        self.label = proto.label
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    @property
+    def value(self) -> str:
+        """The currently selected value from the options."""
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return cast(str, state[self.id])
+
+    def widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+        """
+        ws = WidgetState()
+        ws.id = self.id
+        ws.string_value = self.value
+        return ws
+
+    def set_value(self, v: str) -> ColorPicker:
+        self._value = v
+        return self
+
+    def pick(self, v: str) -> ColorPicker:
+        if not v.startswith("#"):
+            v = f"#{v}"
+        return self.set_value(v)
 
 
 @dataclass(init=False, repr=False)
@@ -1077,6 +1136,10 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["color_picker"]) -> Sequence[ColorPicker]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["number_input"]) -> Sequence[NumberInput]:
         ...
 
@@ -1237,6 +1300,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = NumberInput(elt.number_input, root=root)
             elif elt.WhichOneof("type") == "code":
                 new_node = Code(elt.code, root=root)
+            elif elt.WhichOneof("type") == "color_picker":
+                new_node = ColorPicker(elt.color_picker, root=root)
             else:
                 new_node = Element(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":
