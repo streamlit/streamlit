@@ -41,6 +41,7 @@ const getProps = (props?: Partial<Props>): Props =>
     widgetsDisabled: false,
     node: makeTabsNode(5),
     isStale: false,
+    renderTabContent: jest.fn(),
     ...props,
   })
 
