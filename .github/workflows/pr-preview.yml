@@ -131,6 +131,9 @@ jobs:
           # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo.
           # Accessing streamlit/core-previews repo requires a separate auth token.
           token: ${{ secrets.CORE_PREVIEWS_REPO_TOKEN }}
+          # To limit the ways a secret can be leaked, it should not be kept
+          # in the repository, but in this case we need git commands to work.
+          persist-credentials: true
       - name: Setup preview repo
         env:
           PREVIEW_BRANCH: ${{ needs.upload-whl.outputs.preview-branch }}

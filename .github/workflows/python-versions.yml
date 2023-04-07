@@ -144,6 +144,9 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ env.TARGET_BRANCH }}
+          # To limit the ways a secret can be leaked, it should not be kept
+          # in the repository, but in this case we need git commands to work.
+          persist-credentials: true
 
       - uses: actions/download-artifact@v3
         with:
@@ -193,7 +196,9 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ inputs.ref }}
-          persist-credentials: false
+          # To limit the ways a secret can be leaked, it should not be kept
+          # in the repository, but in this case we need git commands to work.
+          persist-credentials: true
           submodules: 'recursive'
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
