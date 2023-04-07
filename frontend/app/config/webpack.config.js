@@ -40,7 +40,7 @@ const ForkTsCheckerWebpackPlugin =
     : require("react-dev-utils/ForkTsCheckerWebpackPlugin")
 const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin")
 const createEnvironmentHash = require("./webpack/persistentCache/createEnvironmentHash")
-// reenable when circular dependencies are going to be fixed
+// determine if we actually want this plugin
 const CircularDependencyPlugin = require("circular-dependency-plugin")
 
 // Source maps are resource heavy and can cause out of memory issue for large source files.
@@ -801,7 +801,7 @@ module.exports = function (webpackEnv) {
             },
           },
         }),
-      // reenable when circular dependencies are going to be fixed
+      // determine whether or not we want this plugin
       new CircularDependencyPlugin({
         // exclude detection of files based on a RegExp
         exclude: /node_modules/,
