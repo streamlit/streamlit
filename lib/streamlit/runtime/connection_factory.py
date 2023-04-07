@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import importlib
 import os
 import re
-from typing import Any, Dict, Optional, Type, TypeVar, overload
+from datetime import timedelta
+from typing import Any, Dict, Type, TypeVar, overload
 
 from typing_extensions import Final, Literal
 
@@ -47,27 +50,34 @@ MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
 ConnectionClass = TypeVar("ConnectionClass", bound=ExperimentalBaseConnection[Any])
 
 
-# NOTE: The order of the decorators below is important: @gather_metrics must be above
-# @cache_resource so that it is called even if the return value of _create_connection
-# is cached.
 @gather_metrics("experimental_connection")
-@cache_resource
 def _create_connection(
-    name: str, connection_class: Type[ConnectionClass], **kwargs
+    name: str,
+    connection_class: Type[ConnectionClass],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    **kwargs,
 ) -> ConnectionClass:
     """Create an instance of connection_class with the given name and kwargs.
 
-    This function is useful because it allows us to @gather_metrics at a point where
-    connection_class must be a concrete type. The public-facing connection API allows
-    the user to specify the connection class to use as a string literal for convenience.
+    The weird implementation of this function with the @cache_resource annotated
+    function defined internally is done to:
+      * Always @gather_metrics on the call even if the return value is a cached one.
+      * Allow the user to specify ttl and max_entries when calling st.experimental_connection.
     """
+
+    @cache_resource(ttl=ttl, max_entries=max_entries)
+    def __create_connection(
+        name: str, connection_class: Type[ConnectionClass]
+    ) -> ConnectionClass:
+        return connection_class(connection_name=name, **kwargs)
 
     if not issubclass(connection_class, ExperimentalBaseConnection):
         raise StreamlitAPIException(
             f"{connection_class} is not a subclass of ExperimentalBaseConnection!"
         )
 
-    return connection_class(connection_name=name, **kwargs)
+    return __create_connection(name, connection_class)
 
 
 def _get_first_party_connection(connection_class: str):
@@ -82,31 +92,56 @@ def _get_first_party_connection(connection_class: str):
 
 @overload
 def connection_factory(
-    name: str, type: Literal["sql"], autocommit: bool = False, **kwargs
+    name: str,
+    type: Literal["sql"],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    autocommit: bool = False,
+    **kwargs,
 ) -> SQL:
     pass
 
 
 @overload
-def connection_factory(name: str, type: Literal["snowpark"], **kwargs) -> Snowpark:
+def connection_factory(
+    name: str,
+    type: Literal["snowpark"],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    **kwargs,
+) -> Snowpark:
     pass
 
 
 @overload
 def connection_factory(
-    name: str, type: Type[ConnectionClass], **kwargs
+    name: str,
+    type: Type[ConnectionClass],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    **kwargs,
 ) -> ConnectionClass:
     pass
 
 
 @overload
 def connection_factory(
-    name: str, type: Optional[str], **kwargs
+    name: str,
+    type: str | None,
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    **kwargs,
 ) -> ExperimentalBaseConnection[Any]:
     pass
 
 
-def connection_factory(name, type=None, **kwargs):
+def connection_factory(
+    name,
+    type=None,
+    max_entries=None,
+    ttl=None,
+    **kwargs,
+):
     """TODO(vdonato): Write a docstring (maybe with the help of the documentation team).
 
     The docstring should describe:
@@ -152,7 +187,9 @@ def connection_factory(name, type=None, **kwargs):
 
     # At this point, connection_class should be of type Type[ConnectionClass].
     try:
-        return _create_connection(name, connection_class, **kwargs)
+        return _create_connection(
+            name, connection_class, max_entries=max_entries, ttl=ttl, **kwargs
+        )
     except ModuleNotFoundError as e:
         err_string = str(e)
         missing_module = re.search(MODULE_EXTRACTION_REGEX, err_string)
