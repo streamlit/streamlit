@@ -63,7 +63,7 @@ class SQL(ExperimentalBaseConnection["Engine"]):
         else:
             return cast("Engine", eng)
 
-    def read_sql(
+    def query(
         self,
         sql: str,
         ttl: Optional[Union[float, int, timedelta]] = None,
@@ -72,11 +72,11 @@ class SQL(ExperimentalBaseConnection["Engine"]):
         from sqlalchemy import text
 
         @cache_data(ttl=ttl)
-        def _read_sql(sql: str, **kwargs) -> pd.DataFrame:
+        def _query(sql: str, **kwargs) -> pd.DataFrame:
             instance = self._instance.connect()
             return pd.read_sql(text(sql), instance, **kwargs)
 
-        return _read_sql(sql, **kwargs)
+        return _query(sql, **kwargs)
 
     @contextmanager
     def session(self) -> Iterator["Session"]:
