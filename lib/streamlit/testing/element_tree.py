@@ -295,6 +295,16 @@ class ColorPicker(Element, Widget):
             assert state
             return cast(str, state[self.id])
 
+    def widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+        """
+        ws = WidgetState()
+        ws.id = self.id
+        ws.string_value = self.value
+        return ws
+
     def set_value(self, v: str) -> ColorPicker:
         self._value = v
         return self
