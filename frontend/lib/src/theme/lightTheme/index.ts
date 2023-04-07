@@ -15,7 +15,7 @@
  */
 
 import baseTheme from "src/theme/baseTheme"
-import { createEmotionColors } from "src/theme/utils"
+import { createEmotionColors } from "src/theme/getColors"
 import genericColors from "./themeColors"
 
 const lightTheme = {
