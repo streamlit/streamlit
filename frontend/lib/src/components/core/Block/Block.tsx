@@ -115,7 +115,12 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   if (node.deltaBlock.tabContainer) {
     const tabsProps = { ...childProps, isStale }
-    return <Tabs {...tabsProps} />
+    return (
+      <Tabs
+        {...tabsProps}
+        renderTabContent={tabsProps => <VerticalBlock {...childProps} />}
+      />
+    )
   }
 
   return child

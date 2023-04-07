@@ -142,5 +142,6 @@ module.exports = function (proxy) {
       )
       return middlewares
     },
+    watchFiles: ["../lib/src/**"],
   }
 }
