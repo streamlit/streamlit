@@ -460,3 +460,52 @@ class TextAreaTest(InteractiveScriptTests):
 
         assert sr2.get("text_area")[0].value == long_string
         assert sr2.get("text_area")[1].value == "default"
+
+
+class NumberInputTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "number_input.py",
+            """
+            import streamlit as st
+
+            st.number_input("int", min_value=-10, max_value=10)
+            st.number_input("float", min_value=-1.0, max_value=100.0)
+            """,
+        )
+        sr = script.run()
+        assert sr.get("number_input")[0].value == -10
+        assert sr.get("number_input")[1].value == -1.0
+
+        sr2 = (
+            sr.get("number_input")[0]
+            .increment()
+            .run()
+            .get("number_input")[1]
+            .increment()
+            .run()
+        )
+        assert sr2.get("number_input")[0].value == -9
+        assert sr2.get("number_input")[1].value == -0.99
+
+        sr3 = (
+            sr2.get("number_input")[0]
+            .decrement()
+            .run()
+            .get("number_input")[1]
+            .decrement()
+            .run()
+        )
+        assert sr3.get("number_input")[0].value == -10
+        assert sr3.get("number_input")[1].value == -1.0
+
+        sr4 = (
+            sr3.get("number_input")[0]
+            .decrement()
+            .run()
+            .get("number_input")[1]
+            .decrement()
+            .run()
+        )
+        assert sr4.get("number_input")[0].value == -10
+        assert sr4.get("number_input")[1].value == -1.0
