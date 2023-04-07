@@ -309,6 +309,11 @@ class ColorPicker(Element, Widget):
         self._value = v
         return self
 
+    def pick(self, v: str) -> ColorPicker:
+        if not v.startswith("#"):
+            v = f"#{v}"
+        return self.set_value(v)
+
 
 @dataclass(init=False, repr=False)
 class Radio(Element, Widget, Generic[T]):

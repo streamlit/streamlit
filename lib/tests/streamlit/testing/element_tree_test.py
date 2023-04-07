@@ -478,3 +478,6 @@ class ColorPickerTest(InteractiveScriptTests):
         assert len(sr.get("color_picker")) == 2
         assert [c.value for c in sr.get("color_picker")] == ["#000000", "#ABC"]
         assert "blue" in sr.get("exception")[0].value
+
+        sr2 = sr.get("color_picker")[0].pick("#123456").run()
+        assert sr2.get("color_picker")[0].value == "#123456"
