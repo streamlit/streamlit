@@ -17,6 +17,8 @@ import sys
 
 from typing_extensions import Final
 
+from .tree_transformers import IpywidgetsToStreamlitTransformer
+
 # When a Streamlit app is magicified, we insert a `magic_funcs` import near the top of
 # its module's AST:
 # import streamlit.runtime.scriptrunner.magic_funcs as __streamlitmagic__
@@ -41,7 +43,9 @@ def add_magic(code, script_path):
     """
     # Pass script_path so we get pretty exceptions.
     tree = ast.parse(code, script_path, "exec")
-    return _modify_ast_subtree(tree, is_root=True)
+    transformer = IpywidgetsToStreamlitTransformer()
+    output_ast = transformer.visit(tree)
+    return _modify_ast_subtree(output_ast, is_root=True)
 
 
 def _modify_ast_subtree(tree, body_attr="body", is_root=False):
