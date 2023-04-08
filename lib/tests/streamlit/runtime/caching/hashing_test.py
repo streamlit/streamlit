@@ -21,6 +21,7 @@ import re
 import tempfile
 import types
 import unittest
+import uuid
 from dataclasses import dataclass
 from enum import Enum, auto
 from io import BytesIO, StringIO
@@ -73,6 +74,15 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(-1), get_hash(1))
         self.assertNotEqual(get_hash(2**7), get_hash(2**7 - 1))
         self.assertNotEqual(get_hash(2**7), get_hash(2**7 + 1))
+
+    def test_uuid(self):
+        uuid1 = uuid.uuid4()
+        uuid1_copy = uuid.UUID(uuid1.hex)
+        uuid2 = uuid.uuid4()
+
+        self.assertEqual(get_hash(uuid1), get_hash(uuid1_copy))
+        self.assertNotEqual(id(uuid1), id(uuid1_copy))
+        self.assertNotEqual(get_hash(uuid1), get_hash(uuid2))
 
     def test_mocks_do_not_result_in_infinite_recursion(self):
         try:
