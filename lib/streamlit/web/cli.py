@@ -31,7 +31,7 @@ from streamlit.web.cache_storage_manager_config import (
     create_default_cache_storage_manager,
 )
 
-ACCEPTED_FILE_EXTENSIONS = ("py", "py3")
+ACCEPTED_FILE_EXTENSIONS = ("py", "py3", "ipynb")
 
 LOG_LEVELS = ("error", "warning", "info", "debug")
 

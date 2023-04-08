@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import gc
+import os
+import re
 import sys
 import threading
 import types
@@ -22,6 +24,7 @@ from timeit import default_timer as timer
 from typing import Callable, Dict, Optional
 
 from blinker import Signal
+from nbconvert import PythonExporter
 
 from streamlit import config, runtime, source_util, util
 from streamlit.error_util import handle_uncaught_app_exception
@@ -488,6 +491,13 @@ class ScriptRunner:
 
             with source_util.open_python_file(script_path) as f:
                 filebody = f.read()
+
+            _, file_extension = os.path.splitext(script_path)
+            if file_extension == ".ipynb":
+                python_exporter = PythonExporter()
+                filebody, _ = python_exporter.from_filename(script_path)
+                filebody = re.sub(r"#.*", "", filebody)
+                print(filebody)
 
             if config.get_option("runner.magicEnabled"):
                 filebody = magic.add_magic(filebody, script_path)

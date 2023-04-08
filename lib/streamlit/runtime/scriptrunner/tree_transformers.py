@@ -27,6 +27,15 @@ class IpywidgetsToStreamlitTransformer(ast.NodeTransformer):
         return super().generic_visit(node)
 
     def visit_Expr(self, node):
+        if (
+            isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Attribute)
+            and isinstance(node.value.func.value, ast.Call)
+            and isinstance(node.value.func.value.func, ast.Name)
+            and node.value.func.value.func.id == "get_ipython"
+        ):
+            return None
+
         if isinstance(node.value, ast.Call):
             if hasattr(node.value.func, "attr") and node.value.func.attr == "display":
                 if isinstance(node.value.args[0], ast.Name):
@@ -74,6 +83,7 @@ class IpywidgetsToStreamlitTransformer(ast.NodeTransformer):
         st_slider_call = ast.Call(func=st_slider, args=[], keywords=[])
 
         description_found = False
+        supported_args = {"value", "min", "max", "step", "description"}
 
         for kw in node.value.keywords:
             if kw.arg not in supported_args:
