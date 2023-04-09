@@ -207,6 +207,11 @@ class NumberInputMixin:
     ) -> Number:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
+        if value is None:
+            value = 0
+            streamlit.warning(
+                f'The "value" of number_input is set to None, which defaults to integer 0'
+            )
         check_session_state_rules(
             default_value=None if isinstance(value, NoValue) else value, key=key
         )
@@ -246,9 +251,10 @@ class NumberInputMixin:
         float_value = isinstance(value, float)
 
         if value is None:
-            raise StreamlitAPIException(
-                "Default value for number_input should be an int or a float."
-            )
+            pass
+            # raise StreamlitAPIException(
+            #     "Default value for number_input should be an int or a float."
+            # )
         else:
             if format is None:
                 format = "%d" if int_value else "%0.2f"
