@@ -137,10 +137,10 @@ Key: TypeAlias = Union[str, int]
 
 LabelVisibility = Literal["visible", "hidden", "collapsed"]
 
-# This should really be a Protocol, but can't be, due to:
-# https://github.com/python/mypy/issues/12933
-# https://github.com/python/mypy/issues/13081
-SupportsStr: TypeAlias = object
+
+class SupportsStr(Protocol):
+    def __str__(self) -> str:
+        ...
 
 
 def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:

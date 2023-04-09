@@ -25,7 +25,7 @@ from unittest.mock import MagicMock, mock_open, patch
 from parameterized import parameterized
 from toml import TomlDecodeError
 
-from streamlit.runtime.secrets import SECRETS_FILE_LOCS, Secrets
+from streamlit.runtime.secrets import SECRETS_FILE_LOCS, AttrDict, Secrets
 from tests.exception_capturing_thread import call_on_threads
 
 MOCK_TOML = """
@@ -169,16 +169,6 @@ class SecretsTest(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             self.secrets.subsection.new_secret = "123"
-
-    @patch("streamlit.watcher.path_watcher.watch_file")
-    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
-    def test_attr_dict_is_mapping_but_not_built_in_dict(self, *mocks):
-        """Verify that AttrDict implements Mapping, but not built-in Dict"""
-        self.assertIsInstance(self.secrets.subsection, Mapping)
-        self.assertIsInstance(self.secrets.subsection, MappingABC)
-        self.assertNotIsInstance(self.secrets.subsection, MutableMapping)
-        self.assertNotIsInstance(self.secrets.subsection, MutableMappingABC)
-        self.assertNotIsInstance(self.secrets.subsection, dict)
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
@@ -361,3 +351,26 @@ class SecretsThreadingTests(unittest.TestCase):
             self.assertEqual(self.secrets["db_username"], "Jane")
 
         call_on_threads(reload_secrets, num_threads=self.NUM_THREADS)
+
+
+class AttrDictTest(unittest.TestCase):
+    def test_attr_dict_is_mapping_but_not_built_in_dict(self):
+        """Verify that AttrDict implements Mapping, but not built-in Dict"""
+        attr_dict = AttrDict({"x": {"y": "z"}})
+        self.assertIsInstance(attr_dict.x, Mapping)
+        self.assertIsInstance(attr_dict.x, MappingABC)
+        self.assertNotIsInstance(attr_dict.x, MutableMapping)
+        self.assertNotIsInstance(attr_dict.x, MutableMappingABC)
+        self.assertNotIsInstance(attr_dict.x, dict)
+
+    def test_attr_dict_to_dict(self):
+        d = {"x": {"y": "z"}}
+        attr_dict = AttrDict(d)
+
+        assert attr_dict.to_dict() == d
+
+        # Also check that mutation on the return value of to_dict() does not
+        # touch attr_dict or the original object.
+        attr_dict.to_dict()["x"]["y"] = "zed"
+        assert attr_dict.x.y == "z"
+        assert d["x"]["y"] == "z"

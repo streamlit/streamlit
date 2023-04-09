@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.20.0"  # PEP-440
+VERSION = "1.21.0"  # PEP-440
 
 NAME = "streamlit"
 
@@ -45,7 +45,6 @@ INSTALL_REQUIRES = [
     "python-dateutil",
     "requests>=2.4",
     "rich>=10.11.0",
-    "semver",
     "toml",
     "typing-extensions>=3.10.0.0",
     "tzlocal>=1.1",

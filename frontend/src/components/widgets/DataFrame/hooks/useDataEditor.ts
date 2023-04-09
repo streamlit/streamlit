@@ -113,7 +113,7 @@ function useDataEditor(
     })
     editingState.current.addRow(newRow)
     applyEdits(false, false)
-  }, [columns, editingState, fixedNumRows])
+  }, [columns, editingState, fixedNumRows, applyEdits])
 
   const onDelete = React.useCallback(
     (selection: GridSelection): GridSelection | boolean => {
@@ -176,6 +176,7 @@ function useDataEditor(
       refreshCells,
       getOriginalIndex,
       applyEdits,
+      onCellEdited,
     ]
   )
 

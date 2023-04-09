@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import json
+import pickle
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from typing import (
@@ -31,7 +32,8 @@ from pympler.asizeof import asizeof
 from typing_extensions import Final, TypeAlias
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit import config, util
+from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.state.common import (
@@ -80,6 +82,9 @@ class WStates(MutableMapping[str, Any]):
 
     states: dict[str, WState] = field(default_factory=dict)
     widget_metadata: dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
+
+    def __repr__(self):
+        return util.repr_(self)
 
     def __getitem__(self, k: str) -> Any:
         """Return the value of the widget with the given key.
@@ -279,6 +284,9 @@ class SessionState:
 
     # Keys used for widgets will be eagerly converted to the matching widget id
     _key_id_mapping: dict[str, str] = field(default_factory=dict)
+
+    def __repr__(self):
+        return util.repr_(self)
 
     # is it possible for a value to get through this without being deserialized?
     def _compact_state(self) -> None:
@@ -605,6 +613,29 @@ class SessionState:
     def get_stats(self) -> list[CacheStat]:
         stat = CacheStat("st_session_state", "", asizeof(self))
         return [stat]
+
+    def _check_serializable(self) -> None:
+        """Verify that everything added to session state can be serialized.
+        We use pickleability as the metric for serializability, and test for
+        pickleability by just trying it.
+        """
+        for k in self:
+            try:
+                pickle.dumps(self[k])
+            except Exception as e:
+                err_msg = f"""Cannot serialize the value (of type `{type(self[k])}`) of '{k}' in st.session_state.
+                Streamlit has been configured to use [pickle](https://docs.python.org/3/library/pickle.html) to
+                serialize session_state values. Please convert the value to a pickle-serializable type. To learn
+                more about this behavior, see [our docs](https://docs.streamlit.io/knowledge-base/using-streamlit/serializable-session-state). """
+                raise UnserializableSessionStateError(err_msg) from e
+
+    def maybe_check_serializable(self) -> None:
+        """Verify that session state can be serialized, if the relevant config
+        option is set.
+
+        See `_check_serializable` for details."""
+        if config.get_option("runner.enforceSerializableSessionState"):
+            self._check_serializable()
 
 
 def _is_internal_key(key: str) -> bool:

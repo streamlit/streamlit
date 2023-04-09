@@ -26,9 +26,12 @@ runs:
         cache: 'yarn'
         cache-dependency-path: '**/yarn.lock'
     - name: Initialize React
-      run: make react-init
+      run: |
+        # Create the cache directory if it does not exist.
+        mkdir -p $(yarn cache dir)
+        make react-init
       shell: bash --login -eo pipefail {0}
-    - name: Install Dependencies
+    - name: Install system dependencies
       run: |
         echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
@@ -54,7 +57,7 @@ runs:
       name: Create Python environment cache key
       run: |
         md5sum $(which python) > $GITHUB_WORKSPACE/python_cache_key.md5
-        md5sum lib/Pipfile >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/dev-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/test-requirements-with-tensorflow.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
@@ -73,8 +76,7 @@ runs:
         python -m venv venv
         source venv/bin/activate
         pip install --upgrade pip
-        make setup
-        make pipenv-install
+        make python-init
         deactivate
       shell: bash --login -eo pipefail {0}
     - name: Activate virtualenv
