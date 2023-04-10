@@ -422,6 +422,20 @@ describe("App", () => {
     })
   })
 
+  it("does not sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing to the same state", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    const scriptRunState = ScriptRunState.RUNNING
+    wrapper.setState({ scriptRunState })
+    // @ts-expect-error
+    props.hostCommunication.sendMessage.mockClear()
+    // When scriptRunState changed to the same,
+    // sendMessage should not be called again.
+    wrapper.setState({ scriptRunState })
+    expect(props.hostCommunication.sendMessage).not.toHaveBeenCalled()
+  })
+
   it("sends theme info to the host when the app is first rendered", () => {
     const props = getProps()
     shallow(<App {...props} />)
