@@ -30,9 +30,8 @@ import {
   StreamlitEndpoints,
   ThemedSidebar,
   IGuestToHostMessage,
+  AppContext,
 } from "@streamlit/lib"
-
-import { AppContext } from "src/AppContext"
 
 import {
   StyledAppViewBlockContainer,

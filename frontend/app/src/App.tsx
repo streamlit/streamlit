@@ -107,10 +107,10 @@ import {
   SessionEvent,
   SessionStatus,
   WidgetStates,
+  AppContext,
 } from "src/autogen/proto"
 
 import AppView from "src/components/AppView"
-import { AppContext } from "src/AppContext"
 
 import { concat, noop, without } from "lodash"
 
