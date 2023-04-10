@@ -409,7 +409,7 @@ class CliTest(unittest.TestCase):
         """Test that saving a new Credential sends an email"""
 
         with requests_mock.mock() as m:
-            m.post("https://api.segment.io/v1/i", status_code=200)
+            m.post("https://api.segment.io/v1/i", status_code=403)
             creds: Credentials = Credentials.get_current()  # type: ignore
             creds._conf_file = str(Path(temp_dir.path, "config.toml"))
             creds.activation = _verify_email("email@test.com")
