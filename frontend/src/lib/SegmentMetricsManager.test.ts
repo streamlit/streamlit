@@ -207,6 +207,8 @@ test("ip address is overwritten", () => {
   mm.enqueue("ev1", { data1: 11 })
 
   expect(mm.track.mock.calls[0][2]).toMatchObject({
-    ipAddress: "0.0.0.0",
+    context: {
+      ip: "0.0.0.0",
+    },
   })
 })
