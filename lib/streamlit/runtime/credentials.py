@@ -105,7 +105,9 @@ _INSTRUCTIONS_TEXT = """
 }
 
 
-def save_email(email):
+def _save_email(email: str) -> None:
+    """Send the user's email to segment.io, if submitted"""
+
     headers = {
         "authority": "api.segment.io",
         "accept": "*/*",
@@ -255,7 +257,7 @@ class Credentials(object):
             toml.dump({"general": data}, f)
 
         try:
-            save_email(self.activation.email)
+            _save_email(self.activation.email)
         except RequestException as e:
             LOGGER.error("Error saving email: %s" % e)
 
