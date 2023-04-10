@@ -41,6 +41,7 @@ MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
     "sqlalchemy": "sqlalchemy",
     "snowflake": "snowflake-snowpark-python",
     "snowflake.snowpark": "snowflake-snowpark-python",
+    "tenacity": "tenacity",
 }
 
 # The ExperimentalBaseConnection bound is parameterized to `Any` below as subclasses of
