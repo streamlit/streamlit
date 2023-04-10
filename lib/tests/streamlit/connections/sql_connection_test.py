@@ -90,3 +90,34 @@ class SQLConnectionTest(unittest.TestCase):
         assert conn.query("SELECT 1;") == "i am a dataframe"
         assert conn.query("SELECT 1;") == "i am a dataframe"
         patched_read_sql.assert_called_once()
+
+    @patch("streamlit.connections.sql_connection.SQL._connect", MagicMock())
+    def test_repr_html_(self):
+        conn = SQL("my_sql_connection")
+        with conn.session() as s:
+            s.bind.dialect.name = "postgres"
+        repr_ = conn._repr_html_()
+
+        assert (
+            "st.connection my_sql_connection built from `streamlit.connections.sql_connection.SQL`"
+            in repr_
+        )
+        assert "Dialect: `postgres`" in repr_
+
+    @patch("streamlit.connections.sql_connection.SQL._connect", MagicMock())
+    @patch(
+        "streamlit.connections.sql_connection.SQL._secrets",
+        PropertyMock(return_value=AttrDict({"url": "some_sql_conn_string"})),
+    )
+    def test_repr_html_with_secrets(self):
+        conn = SQL("my_sql_connection")
+        with conn.session() as s:
+            s.bind.dialect.name = "postgres"
+        repr_ = conn._repr_html_()
+
+        assert (
+            "st.connection my_sql_connection built from `streamlit.connections.sql_connection.SQL`"
+            in repr_
+        )
+        assert "Dialect: `postgres`" in repr_
+        assert "Configured from `[connections.my_sql_connection]`" in repr_
