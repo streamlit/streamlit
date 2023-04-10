@@ -188,7 +188,11 @@ export class SegmentMetricsManager implements MetricsManager {
     if (IS_DEV_ENV) {
       logAlways("[Dev mode] Not tracking stat datapoint: ", evName, data)
     } else {
-      this.track(evName, data)
+      this.track(evName, data, {
+        context: {
+          ip: "0.0.0.0",
+        },
+      })
     }
   }
 
@@ -210,8 +214,12 @@ export class SegmentMetricsManager implements MetricsManager {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private track(evName: string, data: Record<string, unknown>): void {
-    analytics.track(evName, data)
+  private track(
+    evName: string,
+    data: Record<string, unknown>,
+    context: Record<string, unknown>
+  ): void {
+    analytics.track(evName, data, context)
   }
 
   // Get the installation IDs from the session
