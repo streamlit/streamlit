@@ -37,6 +37,7 @@ export const initializeSegment = (): void => {
     "trackLink",
     "trackForm",
     "pageview",
+    "identify",
     "reset",
     "group",
     "track",
