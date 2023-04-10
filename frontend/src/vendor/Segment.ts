@@ -37,7 +37,6 @@ export const initializeSegment = (): void => {
     "trackLink",
     "trackForm",
     "pageview",
-    "identify",
     "reset",
     "group",
     "track",
@@ -58,8 +57,8 @@ export const initializeSegment = (): void => {
   // for methods in Analytics.js so that you never have to wait
   // for it to load to actually record data. The `method` is
   // stored as the first argument, so we can replay the data.
-  analytics.factory = function(method: any) {
-    return function(...args: any[]) {
+  analytics.factory = function (method: any) {
+    return function (...args: any[]) {
       const _args = Array.prototype.slice.call(args)
       _args.unshift(method)
       analytics.push(_args)
@@ -75,7 +74,7 @@ export const initializeSegment = (): void => {
 
   // Define a method to load Analytics.js from our CDN,
   // and that will be sure to only ever load it once.
-  analytics.load = function(key: string, options: any) {
+  analytics.load = function (key: string, options: any) {
     // Create an async script element based on your key.
     const script = document.createElement("script")
     script.type = "text/javascript"

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Disable Typescript checking, since mm.track and identify have private scope
+// Disable Typescript checking, since mm.track has private scope
 // @ts-nocheck
 import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 import { mockSessionInfo, mockSessionInfoProps } from "./mocks/mocks"
@@ -31,7 +31,6 @@ test("does not track while uninitialized", () => {
   mm.enqueue("ev3", { data3: 13 })
 
   expect(mm.track.mock.calls.length).toBe(0)
-  expect(mm.identify.mock.calls.length).toBe(0)
 })
 
 test("does not track when initialized with gatherUsageStats=false", () => {
@@ -43,7 +42,6 @@ test("does not track when initialized with gatherUsageStats=false", () => {
   mm.enqueue("ev3", { data3: 13 })
 
   expect(mm.track.mock.calls.length).toBe(0)
-  expect(mm.identify.mock.calls.length).toBe(0)
 })
 
 test("does not initialize Segment analytics when gatherUsageStats=false", () => {
@@ -76,11 +74,6 @@ test("enqueues events before initialization", () => {
   mm.initialize({ gatherUsageStats: true })
 
   expect(mm.track.mock.calls.length).toBe(3)
-  expect(mm.identify.mock.calls.length).toBe(1)
-  expect(mm.identify.mock.calls[0][0]).toBe(sessionInfo.current.installationId)
-  expect(mm.identify.mock.calls[0][1]).toMatchObject({
-    authoremail: sessionInfo.current.authorEmail,
-  })
 })
 
 test("enqueues events when disconnected, then sends them when connected again", () => {
@@ -127,9 +120,6 @@ test("tracks host data when in an iFrame", () => {
   mm.initialize({ gatherUsageStats: true })
   mm.enqueue("ev1", { data1: 11 })
 
-  expect(mm.identify.mock.calls[0][1]).toMatchObject({
-    hostedAt: "S4A",
-  })
   expect(mm.track.mock.calls[0][1]).toMatchObject({
     hostedAt: "S4A",
     data1: 11,
@@ -145,9 +135,6 @@ test("tracks installation data", () => {
   mm.initialize({ gatherUsageStats: true })
   mm.enqueue("ev1", { data1: 11 })
 
-  expect(mm.identify.mock.calls[0][1]).toMatchObject({
-    machineIdV3: sessionInfo.current.installationIdV3,
-  })
   expect(mm.track.mock.calls[0][1]).toMatchObject({
     machineIdV3: sessionInfo.current.installationIdV3,
   })
