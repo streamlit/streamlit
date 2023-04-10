@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DeployErrorDialog - UntrackedFiles should render without crashing 1`] = `
+Object {
+  "body": <StyledParagraph>
+    Some code changes are not pushed to GitHub. You can continue but the deployed app might look different than your local app.
+  </StyledParagraph>,
+  "title": "Unsynced changes",
+}
+`;
