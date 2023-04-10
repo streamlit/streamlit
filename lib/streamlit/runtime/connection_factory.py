@@ -68,7 +68,7 @@ def _create_connection(
 
     @cache_resource(ttl=ttl, max_entries=max_entries)
     def __create_connection(
-        name: str, connection_class: Type[ConnectionClass]
+        name: str, connection_class: Type[ConnectionClass], **kwargs
     ) -> ConnectionClass:
         return connection_class(connection_name=name, **kwargs)
 
@@ -77,7 +77,7 @@ def _create_connection(
             f"{connection_class} is not a subclass of ExperimentalBaseConnection!"
         )
 
-    return __create_connection(name, connection_class)
+    return __create_connection(name, connection_class, **kwargs)
 
 
 def _get_first_party_connection(connection_class: str):
