@@ -422,7 +422,9 @@ class CliTest(unittest.TestCase):
     # @patch("streamlit.runtime.credentials.LOGGER")
     @tempdir()
     def test_email_send_exception_handling(self, temp_dir):
-        """Test that saving a new Credential sends an email"""
+        """
+        Test that saving a new Credential and getting an error gets handled and logged
+        """
 
         with requests_mock.mock() as m:
             m.post("https://api.segment.io/v1/i", status_code=403)
