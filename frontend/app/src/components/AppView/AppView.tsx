@@ -17,18 +17,21 @@
 import React, { ReactElement } from "react"
 import { IAppPage } from "src/autogen/proto"
 
-import VerticalBlock from "src/components/core/Block"
-import { ThemedSidebar } from "src/components/core/Sidebar"
-import { ScriptRunState } from "src/lib/ScriptRunState"
-import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
-import { FileUploadClient } from "src/lib/FileUploadClient"
-import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-
-import { AppContext } from "src/components/core/AppContext"
-import { BlockNode, AppRoot } from "src/lib/AppNode"
-import { SessionInfo } from "src/lib/SessionInfo"
-import { IGuestToHostMessage } from "src/hocs/withHostCommunication/types"
-import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
+import {
+  VerticalBlock,
+  ScriptRunState,
+  FormsData,
+  WidgetStateManager,
+  FileUploadClient,
+  ComponentRegistry,
+  BlockNode,
+  AppRoot,
+  SessionInfo,
+  StreamlitEndpoints,
+  ThemedSidebar,
+  IGuestToHostMessage,
+  AppContext,
+} from "@streamlit/lib"
 
 import {
   StyledAppViewBlockContainer,

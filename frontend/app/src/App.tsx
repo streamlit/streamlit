@@ -23,7 +23,6 @@ import classNames from "classnames"
 // Other local imports.
 import {
   AppContext,
-  AppView,
   setCookie,
   ConnectionManager,
   getIFrameEnclosingApp,
@@ -110,6 +109,9 @@ import {
   SessionStatus,
   WidgetStates,
 } from "src/autogen/proto"
+
+import AppView from "src/components/AppView"
+
 import { concat, noop, without } from "lodash"
 
 import { StyledApp } from "./styled-components"
