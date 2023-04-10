@@ -22,8 +22,6 @@ import classNames from "classnames"
 
 // Other local imports.
 import {
-  AppContext,
-  AppView,
   setCookie,
   ConnectionManager,
   getIFrameEnclosingApp,
@@ -64,14 +62,6 @@ import {
   UserSettings,
   ComponentRegistry,
   handleFavicon,
-  CUSTOM_THEME_NAME,
-  createAutoTheme,
-  createPresetThemes,
-  createTheme,
-  getCachedTheme,
-  isPresetTheme,
-  ThemeConfig,
-  toExportedTheme,
   withHostCommunication,
   withScreencast,
   ensureError,
@@ -85,6 +75,14 @@ import {
   DefaultStreamlitEndpoints,
   StreamlitEndpoints,
   DeployButton,
+  CUSTOM_THEME_NAME,
+  createAutoTheme,
+  createPresetThemes,
+  createTheme,
+  getCachedTheme,
+  isPresetTheme,
+  ThemeConfig,
+  toExportedTheme,
 } from "@streamlit/lib"
 
 import {
@@ -110,6 +108,10 @@ import {
   SessionStatus,
   WidgetStates,
 } from "src/autogen/proto"
+
+import AppView from "src/components/AppView"
+import { AppContext } from "src/AppContext"
+
 import { concat, noop, without } from "lodash"
 
 import { StyledApp } from "./styled-components"

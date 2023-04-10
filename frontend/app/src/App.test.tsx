@@ -33,8 +33,6 @@ import {
   SessionInfo,
   CUSTOM_THEME_NAME,
   createAutoTheme,
-  darkTheme,
-  lightTheme,
   toExportedTheme,
   Modal,
   DialogType,
@@ -42,6 +40,8 @@ import {
   MainMenu,
   ToolbarActions,
   HostCommunicationHOC,
+  darkTheme,
+  lightTheme,
 } from "@streamlit/lib"
 
 import { App, Props } from "./App"

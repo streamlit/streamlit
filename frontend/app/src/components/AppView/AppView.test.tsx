@@ -16,18 +16,22 @@
 
 import React from "react"
 import { Block as BlockProto, ForwardMsgMetadata } from "src/autogen/proto"
-import { ScriptRunState } from "src/lib/ScriptRunState"
-import { BlockNode, ElementNode, AppRoot } from "src/lib/AppNode"
-import { FileUploadClient } from "src/lib/FileUploadClient"
 import {
   createFormsData,
   WidgetStateManager,
-} from "src/lib/WidgetStateManager"
-import { makeElementWithInfoText } from "src/lib/utils"
-import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
-import { mockEndpoints, mockSessionInfo } from "src/lib/mocks/mocks"
-import { render, shallow } from "src/lib/test_util"
+  FileUploadClient,
+  BlockNode,
+  ElementNode,
+  AppRoot,
+  makeElementWithInfoText,
+  ComponentRegistry,
+  getMetricsManagerForTest,
+  mockEndpoints,
+  mockSessionInfo,
+  render,
+  shallow,
+  ScriptRunState,
+} from "@streamlit/lib"
 import AppView, { AppViewProps } from "./AppView"
 
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
