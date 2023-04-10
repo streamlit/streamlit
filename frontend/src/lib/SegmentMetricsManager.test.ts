@@ -59,7 +59,7 @@ test("initializes Segment analytics when gatherUsageStats=true", () => {
   mm.initialize({ gatherUsageStats: true })
   expect(window.analytics).toBeDefined()
   expect(window.analytics.invoked).toBe(true)
-  expect(window.analytics.methods).toHaveLength(19)
+  expect(window.analytics.methods).toHaveLength(20)
   expect(window.analytics.load).toBeDefined()
 })
 
