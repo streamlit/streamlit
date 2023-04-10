@@ -36,7 +36,7 @@ import streamlit
 import streamlit.web.bootstrap
 from streamlit import config
 from streamlit.config_option import ConfigOption
-from streamlit.runtime.credentials import Credentials
+from streamlit.runtime.credentials import Credentials, _verify_email
 from streamlit.web import cli
 from streamlit.web.cli import _convert_config_option_to_click_option
 from tests import testutil
@@ -403,6 +403,21 @@ class CliTest(unittest.TestCase):
         ):
             self.runner.invoke(cli, ["activate"])
             mock_credential.activate.assert_called()
+
+    @tempdir()
+    def test_email_send(self, temp_dir):
+        """Test that saving a new Credential sends an email"""
+
+        with requests_mock.mock() as m:
+            m.post("https://api.segment.io/v1/i", status_code=200)
+            creds: Credentials = Credentials.get_current()  # type: ignore
+            creds._conf_file = str(Path(temp_dir.path, "config.toml"))
+            creds.activation = _verify_email("email@test.com")
+            creds.save()
+            last_request = m.request_history[-1]
+            assert last_request.method == "POST"
+            assert last_request.url == "https://api.segment.io/v1/i"
+            assert "'userId': 'email@test.com'" in last_request.text
 
     def test_activate_without_command(self):
         """Tests that it doesn't activate the credential when not specified"""
