@@ -34,6 +34,18 @@ function createMockForwardMsg(hash: string, cacheable = true): ForwardMsg {
 }
 
 describe("DefaultStreamlitEndpoints", () => {
+  const { location: originalLocation } = window
+  beforeEach(() => {
+    // Replace window.location with a mutable object that otherwise has
+    // the same contents so that we can change port below.
+    // @ts-expect-error
+    delete window.location
+    window.location = { ...originalLocation }
+  })
+  afterEach(() => {
+    window.location = originalLocation
+  })
+
   describe("buildComponentURL()", () => {
     it("errors if no serverURI", () => {
       // If we never connect to a server, getComponentURL will fail:
@@ -90,6 +102,39 @@ describe("DefaultStreamlitEndpoints", () => {
         `data:image/svg+xml,<svg><script>alert('evil')</script></svg>`
       )
       expect(url).toBe(`data:image/svg+xml,<svg></svg>`)
+    })
+  })
+
+  describe("buildAppPageURL", () => {
+    const endpoints = new DefaultStreamlitEndpoints({
+      getServerUri: () => MOCK_SERVER_URI,
+      csrfEnabled: false,
+    })
+
+    const appPages = [
+      { pageScriptHash: "main_page_hash", pageName: "streamlit_app" },
+      { pageScriptHash: "other_page_hash", pageName: "my_other_page" },
+    ]
+
+    it("uses window.location.port", () => {
+      window.location.port = "3000"
+      expect(endpoints.buildAppPageURL("", appPages[0], 0)).toBe(
+        "http://streamlit.mock:3000/mock/base/path/"
+      )
+      expect(endpoints.buildAppPageURL("", appPages[1], 1)).toBe(
+        "http://streamlit.mock:3000/mock/base/path/my_other_page"
+      )
+    })
+
+    it("is built using pageLinkBaseURL if set", () => {
+      window.location.port = "3000"
+      const pageLinkBaseURL = "https://share.streamlit.io/vdonato/foo/bar"
+      expect(endpoints.buildAppPageURL(pageLinkBaseURL, appPages[0], 0)).toBe(
+        "https://share.streamlit.io/vdonato/foo/bar/"
+      )
+      expect(endpoints.buildAppPageURL(pageLinkBaseURL, appPages[1], 1)).toBe(
+        "https://share.streamlit.io/vdonato/foo/bar/my_other_page"
+      )
     })
   })
 

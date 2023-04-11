@@ -21,9 +21,9 @@ import * as reactDeviceDetect from "react-device-detect"
 import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { IAppPage } from "src/autogen/proto"
-import { AppContext } from "src/components/core/AppContext"
 import Icon, { EmojiIcon } from "src/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/Hooks"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 import {
   StyledSidebarNavContainer,
@@ -35,6 +35,7 @@ import {
 } from "./styled-components"
 
 export interface Props {
+  endpoints: StreamlitEndpoints
   appPages: IAppPage[]
   collapseSidebar: () => void
   currentPageScriptHash: string
@@ -44,7 +45,9 @@ export interface Props {
   pageLinkBaseUrl: string
 }
 
+/** Displays a list of navigable app page links for multi-page apps. */
 const SidebarNav = ({
+  endpoints,
   appPages,
   collapseSidebar,
   currentPageScriptHash,
@@ -60,9 +63,6 @@ const SidebarNav = ({
   const [expanded, setExpanded] = useState(false)
   const navItemsRef = useRef<HTMLUListElement>(null)
   const isOverflowing = useIsOverflowing(navItemsRef)
-  // We use React.useContext here instead of destructuring it in the imports
-  // above so that we can mock it in tests.
-  const { getBaseUriParts } = React.useContext(AppContext)
 
   const onMouseOver = useCallback(() => {
     if (isOverflowing) {
@@ -93,61 +93,42 @@ const SidebarNav = ({
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
       >
-        {appPages.map(
-          (
-            { icon: pageIcon, pageName, pageScriptHash }: IAppPage,
-            pageIndex: number
-          ) => {
-            pageName = pageName as string
-            // NOTE: We use window.location to get the port instead of
-            // getBaseUriParts() because the port may differ in dev mode (since
-            // the frontend is served by the react dev server and not the
-            // streamlit server).
-            const { port, protocol } = window.location
-            const baseUriParts = getBaseUriParts()
+        {appPages.map((page: IAppPage, pageIndex: number) => {
+          const pageUrl = endpoints.buildAppPageURL(
+            pageLinkBaseUrl,
+            page,
+            pageIndex
+          )
 
-            const navigateTo = pageIndex === 0 ? "" : pageName
-            let pageUrl = ""
+          const pageName = page.pageName as string
+          const tooltipContent = pageName.replace(/_/g, " ")
+          const isActive = page.pageScriptHash === currentPageScriptHash
 
-            if (pageLinkBaseUrl) {
-              pageUrl = `${pageLinkBaseUrl}/${navigateTo}`
-            } else if (baseUriParts) {
-              const { basePath, host } = baseUriParts
-              const portSection = port ? `:${port}` : ""
-              const basePathSection = basePath ? `${basePath}/` : ""
-
-              pageUrl = `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
-            }
-
-            const tooltipContent = pageName.replace(/_/g, " ")
-            const isActive = pageScriptHash === currentPageScriptHash
-
-            return (
-              <li key={pageName}>
-                <StyledSidebarNavLinkContainer>
-                  <StyledSidebarNavLink
-                    isActive={isActive}
-                    href={pageUrl}
-                    onClick={e => {
-                      e.preventDefault()
-                      onPageChange(pageScriptHash as string)
-                      if (reactDeviceDetect.isMobile) {
-                        collapseSidebar()
-                      }
-                    }}
-                  >
-                    {pageIcon && pageIcon.length && (
-                      <EmojiIcon size="lg">{pageIcon}</EmojiIcon>
-                    )}
-                    <StyledSidebarLinkText isActive={isActive}>
-                      {tooltipContent}
-                    </StyledSidebarLinkText>
-                  </StyledSidebarNavLink>
-                </StyledSidebarNavLinkContainer>
-              </li>
-            )
-          }
-        )}
+          return (
+            <li key={pageName}>
+              <StyledSidebarNavLinkContainer>
+                <StyledSidebarNavLink
+                  isActive={isActive}
+                  href={pageUrl}
+                  onClick={e => {
+                    e.preventDefault()
+                    onPageChange(page.pageScriptHash as string)
+                    if (reactDeviceDetect.isMobile) {
+                      collapseSidebar()
+                    }
+                  }}
+                >
+                  {page.icon && page.icon.length && (
+                    <EmojiIcon size="lg">{page.icon}</EmojiIcon>
+                  )}
+                  <StyledSidebarLinkText isActive={isActive}>
+                    {tooltipContent}
+                  </StyledSidebarLinkText>
+                </StyledSidebarNavLink>
+              </StyledSidebarNavLinkContainer>
+            </li>
+          )
+        })}
       </StyledSidebarNavItems>
 
       {hasSidebarElements && (
