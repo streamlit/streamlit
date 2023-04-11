@@ -24,6 +24,11 @@ from streamlit import util
 from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.select_slider import SelectSliderSerde
 from streamlit.elements.slider import SliderScalar, SliderScalarT, SliderSerde, Step
+from streamlit.elements.time_widgets import (
+    DateInputSerde,
+    DateWidgetReturn,
+    _parse_date_value,
+)
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
@@ -961,9 +966,13 @@ class NumberInput(Element, Widget):
         return self.set_value(v)
 
 
+SingleDateValue: TypeAlias = Union[date, datetime]
+DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
+
+
 @dataclass(repr=False)
 class DateInput(Element, Widget):
-    _value: date | None
+    _value: DateValue | None
     proto: DateInputProto
     type: str
     id: str
@@ -994,24 +1003,26 @@ class DateInput(Element, Widget):
         self.disabled = proto.disabled
         self.key = user_key_from_widget_id(self.id)
 
-    def set_value(self, v: date) -> DateInput:
+    def set_value(self, v: DateValue) -> DateInput:
         self._value = v
         return self
 
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
-        ws.string_value = self.value
+
+        serde = DateInputSerde(None)
+        ws.string_array_value.data[:] = serde.serialize(self.value)
         return ws
 
     @property
-    def value(self) -> date:
+    def value(self) -> DateWidgetReturn:
         if self._value is not None:
-            return self._value
+            parsed, _ = _parse_date_value(self._value)
+            return tuple(parsed)
         else:
             state = self.root.session_state
             assert state
-            # Awkward to do this with `cast`
             return state[self.id]  # type: ignore
 
 
