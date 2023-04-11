@@ -45,6 +45,19 @@ export interface HostCommunicationHOC {
   onModalReset: () => void
 
   /**
+   * Callback to be called when the Streamlit app rerun a script.
+   */
+  onScriptRerun: () => void
+  /**
+   * Callback to be called when the Streamlit app stop a script.
+   */
+  onScriptStop: () => void
+  /**
+   * Callback to be called when the Streamlit app clear a cache.
+   */
+  onCacheClear: () => void
+
+  /**
    * Callback to be called when the Streamlit app's page is changed.
    */
   onPageChanged: () => void
@@ -108,6 +121,9 @@ function withHostCommunication<P extends InjectedProps>(
     // even if we're not using redux just because it's so useful for reducing
     // this type of boilerplate.
     const [forcedModalClose, setForcedModalClose] = useState(false)
+    const [scriptStopRequested, setScriptStopRequested] = useState(false)
+    const [scriptRerunRequested, setScriptRerunRequested] = useState(false)
+    const [cacheClearRequested, setCacheClearRequested] = useState(false)
     const [hideSidebarNav, setHideSidebarNav] = useState(false)
     const [isOwner, setIsOwner] = useState(false)
     const [menuItems, setMenuItems] = useState<IMenuItem[]>([])
@@ -163,6 +179,15 @@ function withHostCommunication<P extends InjectedProps>(
 
         if (message.type === "CLOSE_MODAL") {
           setForcedModalClose(true)
+        }
+        if (message.type === "STOP_SCRIPT") {
+          setScriptStopRequested(true)
+        }
+        if (message.type === "RERUN_SCRIPT") {
+          setScriptRerunRequested(true)
+        }
+        if (message.type === "CLEAR_CACHE") {
+          setCacheClearRequested(true)
         }
 
         if (message.type === "REQUEST_PAGE_CHANGE") {
@@ -239,6 +264,9 @@ function withHostCommunication<P extends InjectedProps>(
             currentState: {
               authTokenPromise: deferredAuthToken.promise,
               forcedModalClose,
+              scriptRerunRequested,
+              scriptStopRequested,
+              cacheClearRequested,
               hideSidebarNav,
               isOwner,
               menuItems,
@@ -254,6 +282,15 @@ function withHostCommunication<P extends InjectedProps>(
             },
             onModalReset: () => {
               setForcedModalClose(false)
+            },
+            onScriptStop: () => {
+              setScriptStopRequested(false)
+            },
+            onScriptRerun: () => {
+              setScriptRerunRequested(false)
+            },
+            onCacheClear: () => {
+              setCacheClearRequested(false)
             },
             onPageChanged: () => {
               setRequestedPageScriptHash(null)

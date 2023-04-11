@@ -60,6 +60,9 @@ const getHostCommunicationState = (
 ): HostCommunicationState => ({
   authTokenPromise: Promise.resolve(undefined),
   forcedModalClose: false,
+  scriptRerunRequested: false,
+  scriptStopRequested: false,
+  cacheClearRequested: false,
   hideSidebarNav: false,
   isOwner: true,
   menuItems: [],
@@ -80,6 +83,9 @@ const getHostCommunicationProp = (
   onPageChanged: jest.fn(),
   resetAuthToken: jest.fn(),
   sendMessage: jest.fn(),
+  onScriptStop: jest.fn(),
+  onScriptRerun: jest.fn(),
+  onCacheClear: jest.fn(),
   setAllowedOriginsResp: jest.fn(),
   ...extend,
 })
@@ -284,6 +290,72 @@ describe("App", () => {
     expect(onModalReset).toBeCalled()
   })
 
+  it("changes scriptRunState and fires withHostCommunication callback when scriptStopRequested signal has been received", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+
+    instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+    // We explicitly set the scriptRunState to RUNNING, so we can test that
+    // scriptStopRequested is handled correctly.
+    wrapper.setState({
+      scriptRunState: ScriptRunState.RUNNING,
+    })
+
+    wrapper.setProps(
+      getProps({
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({
+            scriptStopRequested: true,
+          }),
+        }),
+      })
+    )
+
+    expect(wrapper.state("scriptRunState")).toBe(ScriptRunState.STOP_REQUESTED)
+    expect(instance.props.hostCommunication.onScriptStop).toHaveBeenCalled()
+  })
+
+  it("changes scriptRunState and fires withHostCommunication callback when scriptRerunRequested signal has been received", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+
+    instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+    wrapper.setProps(
+      getProps({
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({
+            scriptRerunRequested: true,
+          }),
+        }),
+      })
+    )
+
+    expect(wrapper.state("scriptRunState")).toBe(
+      ScriptRunState.RERUN_REQUESTED
+    )
+    expect(instance.props.hostCommunication.onScriptRerun).toHaveBeenCalled()
+  })
+
+  it("fires withHostCommunication callback when cacheClearRequested signal has been received", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+
+    instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+    wrapper.setProps(
+      getProps({
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({
+            cacheClearRequested: true,
+          }),
+        }),
+      })
+    )
+    expect(instance.props.hostCommunication.onCacheClear).toHaveBeenCalled()
+  })
+
   it("does not prevent a modal from opening when closure message is set", () => {
     const onModalReset = jest.fn()
     const wrapper = shallow(
@@ -325,6 +397,43 @@ describe("App", () => {
     })
     wrapper.setState({ dialog })
     expect(wrapper.find(Modal)).toHaveLength(1)
+  })
+
+  it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when the app is first rendered", () => {
+    const props = getProps()
+    shallow(<App {...props} />)
+
+    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+      type: "SCRIPT_RUN_STATE_CHANGED",
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+    })
+  })
+
+  it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    Object.values(ScriptRunState).forEach(scriptRunState => {
+      wrapper.setState({ scriptRunState })
+      expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+        type: "SCRIPT_RUN_STATE_CHANGED",
+        scriptRunState,
+      })
+    })
+  })
+
+  it("does not sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing to the same state", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+
+    const scriptRunState = ScriptRunState.RUNNING
+    wrapper.setState({ scriptRunState })
+    // @ts-expect-error
+    props.hostCommunication.sendMessage.mockClear()
+    // When scriptRunState changed to the same,
+    // sendMessage should not be called again.
+    wrapper.setState({ scriptRunState })
+    expect(props.hostCommunication.sendMessage).not.toHaveBeenCalled()
   })
 
   it("sends theme info to the host when the app is first rendered", () => {

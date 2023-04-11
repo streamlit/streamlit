@@ -283,6 +283,90 @@ describe("withHostCommunication HOC receiving messages", () => {
     expect(props.currentState.hideSidebarNav).toBe(true)
   })
 
+  it("can process a received STOP_SCRIPT message", () => {
+    act(() => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "STOP_SCRIPT",
+          },
+          origin: "http://devel.streamlit.test",
+        })
+      )
+    })
+
+    wrapper.update()
+
+    const props = wrapper.find(TestComponent).prop("hostCommunication")
+    expect(props.currentState.scriptStopRequested).toBe(true)
+
+    act(() => {
+      props.onScriptStop()
+    })
+    wrapper.update()
+
+    const updatedProps = wrapper.find(TestComponent).prop("hostCommunication")
+    expect(updatedProps.currentState.scriptStopRequested).toBe(false)
+  })
+
+  it("can process a received RERUN_SCRIPT message", () => {
+    act(() => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "RERUN_SCRIPT",
+          },
+          origin: "http://devel.streamlit.test",
+        })
+      )
+    })
+
+    wrapper.update()
+
+    const props = wrapper.find(TestComponent).prop("hostCommunication")
+    expect(props.currentState.scriptRerunRequested).toBe(true)
+
+    act(() => {
+      props.onScriptRerun()
+    })
+    wrapper.update()
+
+    const updatedProps = wrapper.find(TestComponent).prop("hostCommunication")
+    expect(updatedProps.currentState.scriptRerunRequested).toBe(false)
+  })
+
+  it("can process a received CLEAR_CACHE message", () => {
+    act(() => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "CLEAR_CACHE",
+          },
+          origin: "http://devel.streamlit.test",
+        })
+      )
+    })
+
+    wrapper.update()
+
+    const props = wrapper.find(TestComponent).prop("hostCommunication")
+    expect(props.currentState.cacheClearRequested).toBe(true)
+
+    act(() => {
+      props.onCacheClear()
+    })
+    wrapper.update()
+
+    const updatedProps = wrapper.find(TestComponent).prop("hostCommunication")
+    expect(updatedProps.currentState.cacheClearRequested).toBe(false)
+  })
+
   it("can process a received REQUEST_PAGE_CHANGE message", () => {
     act(() => {
       dispatchEvent(

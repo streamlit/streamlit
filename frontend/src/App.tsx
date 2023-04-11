@@ -354,6 +354,11 @@ export class App extends PureComponent<Props, State> {
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
     })
 
+    this.props.hostCommunication.sendMessage({
+      type: "SCRIPT_RUN_STATE_CHANGED",
+      scriptRunState: this.state.scriptRunState,
+    })
+
     this.metricsMgr.enqueue("viewReport")
 
     window.addEventListener("popstate", this.onHistoryChange, false)
@@ -372,6 +377,15 @@ export class App extends PureComponent<Props, State> {
     if (this.props.hostCommunication.currentState.forcedModalClose) {
       this.closeDialog()
     }
+    if (this.props.hostCommunication.currentState.scriptRerunRequested) {
+      this.rerunScript()
+    }
+    if (this.props.hostCommunication.currentState.scriptStopRequested) {
+      this.stopScript()
+    }
+    if (this.props.hostCommunication.currentState.cacheClearRequested) {
+      this.clearCache()
+    }
 
     const { requestedPageScriptHash } =
       this.props.hostCommunication.currentState
@@ -383,6 +397,12 @@ export class App extends PureComponent<Props, State> {
     if (window.prerenderReady === false && this.isAppInReadyState(prevState)) {
       // @ts-expect-error
       window.prerenderReady = true
+    }
+    if (this.state.scriptRunState !== prevState.scriptRunState) {
+      this.props.hostCommunication.sendMessage({
+        type: "SCRIPT_RUN_STATE_CHANGED",
+        scriptRunState: this.state.scriptRunState,
+      })
     }
   }
 
@@ -1170,6 +1190,7 @@ export class App extends PureComponent<Props, State> {
       this.saveSettings({ ...this.state.userSettings, runOnSave: true })
     }
 
+    this.props.hostCommunication.onScriptRerun()
     this.widgetMgr.sendUpdateWidgetsMessage()
   }
 
@@ -1270,6 +1291,7 @@ export class App extends PureComponent<Props, State> {
     backMsg.type = "stopScript"
     this.sendBackMsg(backMsg)
     this.setState({ scriptRunState: ScriptRunState.STOP_REQUESTED })
+    this.props.hostCommunication.onScriptStop()
   }
 
   /**
@@ -1316,7 +1338,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Asks the server to clear the st_cache
+   * Asks the server to clear the st_cache and st_cache_data and st_cache_resource
    */
   clearCache = (): void => {
     this.closeDialog()
@@ -1328,6 +1350,7 @@ export class App extends PureComponent<Props, State> {
     } else {
       logError("Cannot clear cache: disconnected from server")
     }
+    this.props.hostCommunication.onCacheClear()
   }
 
   /**
