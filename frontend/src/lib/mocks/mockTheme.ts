@@ -16,8 +16,9 @@
 
 /** A mock theme definition for use in unit tests. */
 
+import { LightTheme, lightThemePrimitives } from "baseui"
 import { transparentize } from "color2k"
-import { createEmotionColors } from "src/theme"
+import { createEmotionColors, lightBaseUITheme, ThemeConfig } from "src/theme"
 import {
   breakpoints,
   fonts,
@@ -72,7 +73,7 @@ const genericColors = {
   ...optionalThemeColors,
 }
 
-export default {
+const themeBase = {
   inSidebar: false,
   breakpoints,
   colors: createEmotionColors(genericColors),
@@ -88,4 +89,25 @@ export default {
   sizes,
   spacing,
   zIndices,
+}
+
+const emotionTheme = {
+  ...themeBase,
+  inSidebar: false,
+  genericColors: {
+    ...themeBase.genericColors,
+    ...genericColors,
+  },
+  colors: createEmotionColors({
+    ...themeBase.colors,
+    ...genericColors,
+  }),
+}
+
+export const mockTheme: ThemeConfig = {
+  name: "Mock",
+  emotion: emotionTheme,
+  baseweb: LightTheme,
+  basewebTheme: lightBaseUITheme,
+  primitives: lightThemePrimitives,
 }

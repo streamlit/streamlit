@@ -18,7 +18,7 @@ import { LightTheme, lightThemePrimitives } from "baseui"
 
 import { CustomThemeConfig } from "src/autogen/proto"
 
-import base from "./baseTheme"
+import base from "./emotionBaseTheme"
 import { lightBaseUITheme } from "./baseui"
 
 export type Theme = typeof base
