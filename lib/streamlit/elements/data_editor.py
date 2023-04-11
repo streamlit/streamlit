@@ -44,8 +44,10 @@ from pandas.api.types import (
 from pandas.io.formats.style import Styler
 from typing_extensions import Final, Literal, TypeAlias, TypedDict
 
+from streamlit import logger as _logger
 from streamlit import type_util
 from streamlit.elements.arrow import marshall_styler
+from streamlit.elements.column_types import ColumnDataKind, _determine_data_kind
 from streamlit.elements.form import current_form_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
@@ -57,20 +59,14 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.type_util import (
-    DataFormat,
-    DataFrameGenericAlias,
-    Key,
-    is_type,
-    maybe_convert_datetime_date_edit_df,
-    maybe_convert_datetime_time_edit_df,
-    to_key,
-)
+from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type, to_key
 
 if TYPE_CHECKING:
     import numpy as np
 
     from streamlit.delta_generator import DeltaGenerator
+
+_LOGGER = _logger.get_logger("root")
 
 _INDEX_IDENTIFIER: Final = "index"
 
@@ -206,8 +202,7 @@ class DataEditorSerde:
 
 def _parse_value(
     value: Union[str, int, float, bool, None],
-    orig_col: Union[pd.Series, pd.Index],
-    arrow_field: pa.Field,
+    column_data_kind: ColumnDataKind,
 ) -> Any:
     """Convert a value to the correct type.
 
@@ -216,44 +211,60 @@ def _parse_value(
     value : str | int | float | bool | None
         The value to convert.
 
-    orig_col : pd.Series | pd.Index
-        The underlying column or index.
-
-    arrow_field : pa.Field
-        The Arrow field information for this column.
-
     Returns
     -------
     The converted value.
     """
     if value is None:
         return None
-    if pd.api.types.infer_dtype(orig_col) == "time":
-        return maybe_convert_datetime_time_edit_df(value)
-    elif pd.api.types.infer_dtype(orig_col) == "date":
-        return maybe_convert_datetime_date_edit_df(value)
-    elif is_datetime64_any_dtype(orig_col.dtype):
-        if is_datetime64tz_dtype(orig_col.dtype):
-            return pd.to_datetime(value, errors="ignore")
-        else:
-            try:
-                return pd.to_datetime(value, errors="ignore").replace(tzinfo=None)
-            except:
-                # default with timezone
-                return pd.to_datetime(value, errors="ignore")
-    elif is_integer_dtype(orig_col.dtype):
-        with contextlib.suppress(ValueError):
+
+    try:
+        if column_data_kind == ColumnDataKind.STRING:
+            return str(value)
+
+        if column_data_kind == ColumnDataKind.INTEGER:
             return int(value)
-    elif is_float_dtype(orig_col.dtype):
-        with contextlib.suppress(ValueError):
+
+        if column_data_kind == ColumnDataKind.FLOAT:
             return float(value)
+
+        if column_data_kind == ColumnDataKind.BOOLEAN:
+            return bool(value)
+
+        if column_data_kind in [
+            ColumnDataKind.DATETIME,
+            ColumnDataKind.DATE,
+            ColumnDataKind.TIME,
+        ]:
+            datetime_value = pd.to_datetime(value, utc=False)
+
+            if datetime_value is pd.NaT:
+                return None
+
+            if isinstance(datetime_value, pd.Timestamp):
+                datetime_value = datetime_value.to_pydatetime()
+
+            if column_data_kind == ColumnDataKind.DATETIME:
+                return datetime_value
+
+            if column_data_kind == ColumnDataKind.DATE:
+                return datetime_value.date()
+
+            if column_data_kind == ColumnDataKind.TIME:
+                return datetime_value.time()
+
+    except (ValueError, pd.errors.ParserError) as ex:
+        _LOGGER.warning(
+            "Failed to parse value %s as %s. Exception: %s", value, column_data_kind, ex
+        )
+        return None
     return value
 
 
 def _apply_cell_edits(
     df: pd.DataFrame,
     edited_cells: Mapping[str, str | int | float | bool | None],
-    schema: pa.Schema,
+    column_data_kinds: List[ColumnDataKind],
 ) -> None:
     """Apply cell edits to the provided dataframe (inplace).
 
@@ -276,18 +287,20 @@ def _apply_cell_edits(
             # The edited cell is part of the index
             # To support multi-index in the future: use a tuple of values here
             # instead of a single value
-            df.index.values[row_pos] = _parse_value(value, df.index)
+            df.index.values[row_pos] = _parse_value(value, column_data_kinds[col_pos])
         else:
             # We need to subtract the number of index levels from col_pos
             # to get the correct column position for Pandas DataFrames
             mapped_column = col_pos - index_count
             df.iat[row_pos, mapped_column] = _parse_value(
-                value, df.iloc[:, mapped_column], schema.field(mapped_column)
+                value, column_data_kinds[col_pos]
             )
 
 
 def _apply_row_additions(
-    df: pd.DataFrame, added_rows: List[Dict[str, Any]], schema: pa.Schema
+    df: pd.DataFrame,
+    added_rows: List[Dict[str, Any]],
+    column_data_kinds: List[ColumnDataKind],
 ) -> None:
     """Apply row additions to the provided dataframe (inplace).
 
@@ -299,9 +312,6 @@ def _apply_row_additions(
     added_rows : List[Dict[str, Any]]
         A list of row additions. Each row addition is a dictionary with the
         column position as key and the new cell value as value.
-
-    schema : pa.Schema
-        The Arrow schema of the dataframe.
     """
     if not added_rows:
         return
@@ -313,7 +323,7 @@ def _apply_row_additions(
     # combination with loc. As a workaround, we manually track the values here:
     range_index_stop = None
     range_index_step = None
-    if type(df.index) == pd.RangeIndex:
+    if isinstance(df.index, pd.RangeIndex):
         range_index_stop = df.index.stop
         range_index_step = df.index.step
 
@@ -326,17 +336,12 @@ def _apply_row_additions(
             if col_pos < index_count:
                 # To support multi-index in the future: use a tuple of values here
                 # instead of a single value
-                index_value = _parse_value(
-                    value,
-                    df.index,
-                )
+                index_value = _parse_value(value, column_data_kinds[col_pos])
             else:
                 # We need to subtract the number of index levels from the col_pos
                 # to get the correct column position for Pandas DataFrames
                 mapped_column = col_pos - index_count
-                new_row[mapped_column] = _parse_value(
-                    value, df.iloc[:, mapped_column], schema.field(mapped_column)
-                )
+                new_row[mapped_column] = _parse_value(value, column_data_kinds[col_pos])
         # Append the new row to the dataframe
         if range_index_stop is not None:
             df.loc[range_index_stop, :] = new_row
@@ -370,7 +375,9 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: List[int]) -> None:
 
 
 def _apply_dataframe_edits(
-    df: pd.DataFrame, data_editor_state: EditingState, schema: pa.Schema
+    df: pd.DataFrame,
+    data_editor_state: EditingState,
+    column_data_kinds: List[ColumnDataKind],
 ) -> None:
     """Apply edits to the provided dataframe (inplace).
 
@@ -388,10 +395,10 @@ def _apply_dataframe_edits(
         The Arrow schema of the dataframe.
     """
     if data_editor_state.get("edited_cells"):
-        _apply_cell_edits(df, data_editor_state["edited_cells"], schema)
+        _apply_cell_edits(df, data_editor_state["edited_cells"], column_data_kinds)
 
     if data_editor_state.get("added_rows"):
-        _apply_row_additions(df, data_editor_state["added_rows"], schema)
+        _apply_row_additions(df, data_editor_state["added_rows"], column_data_kinds)
 
     if data_editor_state.get("deleted_rows"):
         _apply_row_deletions(df, data_editor_state["deleted_rows"])
@@ -481,6 +488,23 @@ def _is_supported_index(df_index: pd.Index) -> bool:
         or is_type(df_index, "pandas.core.indexes.numeric.Float64Index")
         or is_type(df_index, "pandas.core.indexes.numeric.UInt64Index")
     )
+
+
+def _determine_column_data_kinds(
+    data_df: pd.DataFrame, arrow_schema: pa.Schema
+) -> List[ColumnDataKind]:
+    column_data_kinds: List[ColumnDataKind] = []
+
+    # Add type of index:
+    column_data_kinds.append(_determine_data_kind(data_df.index))
+
+    # Add types for all columns:
+    for i, column in enumerate(data_df.items()):
+        _, column_data = column
+        column_data_kinds.append(
+            _determine_data_kind(column_data, arrow_schema.field(i))
+        )
+    return column_data_kinds
 
 
 class DataEditorMixin:
@@ -659,6 +683,9 @@ class DataEditorMixin:
                 columns_config[_INDEX_IDENTIFIER] = {}
             columns_config[_INDEX_IDENTIFIER]["hidden"] = True
 
+        arrow_table = pa.Table.from_pandas(data_df)
+        column_data_kinds = _determine_column_data_kinds(data_df, arrow_table.schema)
+
         proto = ArrowProto()
 
         proto.use_container_width = use_container_width
@@ -680,8 +707,7 @@ class DataEditorMixin:
             default_uuid = str(hash(delta_path))
             marshall_styler(proto, data, default_uuid)
 
-        table = pa.Table.from_pandas(data_df)
-        proto.data = type_util.pyarrow_table_to_bytes(table)
+        proto.data = type_util.pyarrow_table_to_bytes(arrow_table)
 
         _marshall_column_config(proto, columns_config)
 
@@ -699,7 +725,7 @@ class DataEditorMixin:
             ctx=get_script_run_ctx(),
         )
 
-        _apply_dataframe_edits(data_df, widget_state.value, table.schema)
+        _apply_dataframe_edits(data_df, widget_state.value, column_data_kinds)
         self.dg._enqueue("arrow_data_frame", proto)
         return type_util.convert_df_to_data_format(data_df, data_format)
 
