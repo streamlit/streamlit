@@ -39,8 +39,10 @@ export const StyledThumb = styled.div<StyledSliderProps>(
     justifyContent: "center",
     width: theme.radii.xl,
     ":focus": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
       outline: "none",
+    },
+    ":focus-visible": {
+      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
     },
   })
 )

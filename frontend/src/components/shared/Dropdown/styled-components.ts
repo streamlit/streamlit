@@ -36,7 +36,7 @@ export const ThemedStyledDropdownListItem = styled(StyledDropdownListItem, {
       minHeight: "40px",
       height: "auto !important",
     },
-    "&:hover, &:active, &:focus": {
+    "&:hover, &:active, &:focus-visible": {
       background: backgroundColor,
     },
   }

@@ -87,8 +87,10 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
     width: fluidWidth ? "100%" : "auto",
     userSelect: "none",
     "&:focus": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
       outline: "none",
+    },
+    "&:focus-visible": {
+      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
     },
     ...getSizeStyle(size, theme),
   })
@@ -195,7 +197,7 @@ export const StyledMinimalButton = styled(
   border: "none",
   boxShadow: "none",
   padding: 0,
-  "&:hover, &:active, &:focus": {
+  "&:hover, &:active, &:focus-visible": {
     color: theme.colors.primary,
   },
 }))

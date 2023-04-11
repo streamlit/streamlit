@@ -30,6 +30,8 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
     borderRadius: theme.radii.md,
     ":focus": {
       outline: "none",
+    },
+    ":focus-visible": {
       boxShadow: `0 0 0 1px ${theme.colors.primary}`,
     },
     color: isDisabled ? theme.colors.gray : theme.colors.bodyText,
