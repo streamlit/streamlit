@@ -16,7 +16,7 @@
 
 import React from "react"
 import { mount } from "src/lib/test_util"
-import lightTheme from "src/theme/emotionLightTheme"
+import emotionLightTheme from "src/theme/emotionLightTheme"
 import { mockEndpoints } from "src/lib/mocks/mocks"
 import { SidebarProps } from "./Sidebar"
 import ThemedSidebar from "./ThemedSidebar"
@@ -49,7 +49,9 @@ describe("ThemedSidebar Component", () => {
     const updatedTheme = wrapper.find("Sidebar").prop("theme")
 
     // @ts-expect-error
-    expect(updatedTheme.colors.bgColor).toBe(lightTheme.colors.secondaryBg)
+    expect(updatedTheme.colors.bgColor).toBe(
+      emotionLightTheme.colors.secondaryBg
+    )
     // @ts-expect-error
     expect(updatedTheme.inSidebar).toBe(true)
   })
