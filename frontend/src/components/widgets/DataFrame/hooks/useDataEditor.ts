@@ -23,6 +23,7 @@ import {
   Item,
 } from "@glideapps/glide-data-grid"
 
+import { logWarning } from "src/lib/log"
 import {
   BaseColumn,
   isErrorCell,
@@ -90,13 +91,19 @@ function useDataEditor(
       }
 
       const newCell = column.getCell(newValue)
+      // Only update the cell if the new cell is not causing any errors:
+      if (!isErrorCell(newCell)) {
+        editingState.current.setCell(originalCol, originalRow, {
+          ...newCell,
+          lastUpdated: performance.now(),
+        })
 
-      editingState.current.setCell(originalCol, originalRow, {
-        ...newCell,
-        lastUpdated: performance.now(),
-      })
-
-      applyEdits()
+        applyEdits()
+      } else {
+        logWarning(
+          `Not applying the cell edit since it causes this error:\n ${newCell.data}`
+        )
+      }
     },
     [columns, editingState, getOriginalIndex, getCellContent, applyEdits]
   )
