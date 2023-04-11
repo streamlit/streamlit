@@ -56,7 +56,7 @@ class LoggerTest(unittest.TestCase):
         ]
         for k in data:
             logger.set_log_level(k)
-            self.assertEqual(k, logging.getLogger().getEffectiveLevel())
+            self.assertEqual(k, logging.getLogger("streamlit").getEffectiveLevel())
 
     def test_set_log_level_error(self):
         """Test streamlit.logger.set_log_level."""
