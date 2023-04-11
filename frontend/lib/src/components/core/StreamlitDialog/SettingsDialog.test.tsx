@@ -22,6 +22,7 @@ import { Props as ContextProps } from "src/components/core/AppContext"
 import UISelectbox from "src/components/shared/Dropdown"
 
 import { SettingsDialog, SettingsDialogProps } from "./SettingsDialog"
+import { MockMetricsManager } from "src/lib/mocks/mocks"
 
 const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()
