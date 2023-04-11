@@ -23,6 +23,7 @@ from parameterized import parameterized
 
 from streamlit.connections import SQL, ExperimentalBaseConnection, Snowpark
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.caching.cache_resource_api import _resource_caches
 from streamlit.runtime.connection_factory import (
     _create_connection,
     _get_first_party_connection,
@@ -51,9 +52,9 @@ class ConnectionFactoryTest(unittest.TestCase):
 
     def tearDown(self) -> None:
         super().tearDown()
-        _create_connection.clear()
 
         secrets_singleton._reset()
+        _resource_caches.clear_all()
 
         os.environ.clear()
         os.environ.update(self._prev_environ)
@@ -128,13 +129,17 @@ class ConnectionFactoryTest(unittest.TestCase):
     ):
         connection_factory("my_connection", type="streamlit.connections.SQL")
 
-        patched_create_connection.assert_called_once_with("my_connection", SQL)
+        patched_create_connection.assert_called_once_with(
+            "my_connection", SQL, max_entries=None, ttl=None
+        )
 
     @patch("streamlit.runtime.connection_factory._create_connection")
     def test_can_specify_first_party_class_in_kwargs(self, patched_create_connection):
         connection_factory("my_connection", type="sql")
 
-        patched_create_connection.assert_called_once_with("my_connection", SQL)
+        patched_create_connection.assert_called_once_with(
+            "my_connection", SQL, max_entries=None, ttl=None
+        )
 
     @patch("streamlit.runtime.connection_factory._create_connection")
     def test_can_specify_class_with_full_name_in_config(
@@ -147,7 +152,9 @@ type="streamlit.connections.SQL"
         with patch("builtins.open", new_callable=mock_open, read_data=mock_toml):
             connection_factory("my_connection")
 
-        patched_create_connection.assert_called_once_with("my_connection", SQL)
+        patched_create_connection.assert_called_once_with(
+            "my_connection", SQL, max_entries=None, ttl=None
+        )
 
     @patch("streamlit.runtime.connection_factory._create_connection")
     def test_can_specify_first_party_class_in_config(self, patched_create_connection):
@@ -158,7 +165,9 @@ type="snowpark"
         with patch("builtins.open", new_callable=mock_open, read_data=mock_toml):
             connection_factory("my_connection")
 
-        patched_create_connection.assert_called_once_with("my_connection", Snowpark)
+        patched_create_connection.assert_called_once_with(
+            "my_connection", Snowpark, max_entries=None, ttl=None
+        )
 
     def test_can_pass_class_directly_to_factory_func(self):
         conn = connection_factory("my_connection", MockConnection, foo="bar")
@@ -184,7 +193,6 @@ type="snowpark"
         error is thrown for certain missing packages.
         """
 
-        _create_connection.clear()
         patched_create_connection.side_effect = ModuleNotFoundError(
             f"No module named '{missing_module}'"
         )
@@ -230,4 +238,6 @@ type="snowpark"
         os.environ["MY_CONN_NAME"] = "staging"
         connection_factory("env:MY_CONN_NAME", MockConnection)
 
-        patched_create_connection.assert_called_once_with("staging", MockConnection)
+        patched_create_connection.assert_called_once_with(
+            "staging", MockConnection, max_entries=None, ttl=None
+        )
