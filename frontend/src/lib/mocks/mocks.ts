@@ -75,35 +75,11 @@ export class MockMetricsManager implements MetricsManager {
     this.sessionInfo = sessionInfo
   }
 
-  enqueue(_evName: string, _evData: Record<string, any>): void {}
-
-  incrementDeltaCounter(_deltaType: string): void {}
-
-  getAndResetDeltaCounter(): DeltaCounter {
-    return {}
-  }
-
-  clearDeltaCounter(): void {
-    throw new Error("Method not implemented.")
-  }
-
-  incrementCustomComponentCounter(_customInstanceName: string): void {}
-
-  getAndResetCustomComponentCounter(): CustomComponentCounter {
-    return {}
-  }
-
-  clearCustomComponentCounter(): void {}
-}
-
-/** Return a mock MetricsManager implementation */
-export function mockMetricManager(
-  sessionInfo?: SessionInfo
-): MockMetricsManager {
-  const mm = new MockMetricsManager(sessionInfo)
-  // @ts-expect-error
-  mm.track = jest.fn()
-  // @ts-expect-error
-  mm.identify = jest.fn()
-  return mm
+  public enqueue = jest.fn()
+  public incrementDeltaCounter = jest.fn()
+  public getAndResetDeltaCounter = jest.fn()
+  public clearDeltaCounter = jest.fn()
+  public incrementCustomComponentCounter = jest.fn()
+  public getAndResetCustomComponentCounter = jest.fn()
+  public clearCustomComponentCounter = jest.fn()
 }
