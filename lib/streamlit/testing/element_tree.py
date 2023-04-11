@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from abc import ABC
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
 from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
@@ -27,6 +27,7 @@ from streamlit.elements.slider import SliderScalar, SliderScalarT, SliderSerde, 
 from streamlit.elements.time_widgets import (
     DateInputSerde,
     DateWidgetReturn,
+    TimeInputSerde,
     _parse_date_value,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -992,7 +993,7 @@ class DateInput(Element, Widget):
         self.root = root
         self._value = None
 
-        self.type = "text_area"
+        self.type = "date_input"
         self.id = proto.id
         self.label = proto.label
         self.min = datetime.strptime(proto.min, "%Y/%m/%d").date()
@@ -1020,6 +1021,60 @@ class DateInput(Element, Widget):
         if self._value is not None:
             parsed, _ = _parse_date_value(self._value)
             return tuple(parsed)
+        else:
+            state = self.root.session_state
+            assert state
+            return state[self.id]  # type: ignore
+
+
+TimeValue: TypeAlias = Union[time, datetime]
+
+
+@dataclass(repr=False)
+class TimeInput(Element, Widget):
+    _value: TimeValue | None
+    proto: TimeInputProto
+    type: str
+    id: str
+    label: str
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: TimeInputProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "time_input"
+        self.id = proto.id
+        self.label = proto.label
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def set_value(self, v: TimeValue) -> TimeInput:
+        self._value = v
+        return self
+
+    def widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+
+        serde = TimeInputSerde(None)
+        ws.string_value = serde.serialize(self.value)
+        return ws
+
+    @property
+    def value(self) -> time:
+        if self._value is not None:
+            v = self._value
+            v = v.time() if isinstance(v, datetime) else v
+            return v
         else:
             state = self.root.session_state
             assert state
