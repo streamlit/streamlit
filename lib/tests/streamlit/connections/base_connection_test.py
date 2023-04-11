@@ -95,3 +95,21 @@ class ExperimentalBaseConnectionDefaultMethodTests(unittest.TestCase):
         ):
             conn._on_secrets_changed("unused_arg")
             patched_reset.assert_called_once()
+
+    def test_repr_html_(self):
+        repr_ = MockConnection("my_mock_connection")._repr_html_()
+
+        assert (
+            "st.connection my_mock_connection built from `tests.streamlit.connections.base_connection_test.MockConnection`"
+            in repr_
+        )
+
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_repr_html_with_secrets(self, _):
+        repr_ = MockConnection("my_mock_connection")._repr_html_()
+
+        assert (
+            "st.connection my_mock_connection built from `tests.streamlit.connections.base_connection_test.MockConnection`"
+            in repr_
+        )
+        assert "Configured from `[connections.my_mock_connection]`" in repr_
