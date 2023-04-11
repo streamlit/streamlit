@@ -20,34 +20,34 @@ import {
   lightThemePrimitives,
   darkThemePrimitives,
 } from "baseui"
-import { lightBaseUITheme, darkBaseUITheme } from "./baseui"
-import base from "./baseTheme"
-import light from "./lightTheme"
-import dark from "./darkTheme"
+import { baseuiLightTheme, baseuiDarkTheme } from "./baseui"
+import emotionBaseTheme from "./emotionBaseTheme"
+import emotionLightTheme from "./emotionLightTheme"
+import emotionDarkTheme from "./emotionDarkTheme"
 import { ThemeConfig } from "./types"
 import { AUTO_THEME_NAME, getSystemTheme } from "./utils"
 
 export const baseTheme: ThemeConfig = {
   name: "base",
-  emotion: base,
+  emotion: emotionBaseTheme,
   baseweb: LightTheme,
-  basewebTheme: lightBaseUITheme,
+  basewebTheme: baseuiLightTheme,
   primitives: lightThemePrimitives,
 }
 
 export const darkTheme: ThemeConfig = {
   name: "Dark",
-  emotion: dark,
+  emotion: emotionDarkTheme,
   baseweb: DarkTheme,
-  basewebTheme: darkBaseUITheme,
+  basewebTheme: baseuiDarkTheme,
   primitives: darkThemePrimitives,
 }
 
 export const lightTheme: ThemeConfig = {
   name: "Light",
-  emotion: light,
+  emotion: emotionLightTheme,
   baseweb: LightTheme,
-  basewebTheme: lightBaseUITheme,
+  basewebTheme: baseuiLightTheme,
   primitives: lightThemePrimitives,
 }
 

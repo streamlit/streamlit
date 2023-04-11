@@ -29,7 +29,7 @@ import { debounce } from "src/lib/utils"
 
 import Icon from "src/components/shared/Icon"
 import { Theme } from "src/theme"
-import themeColors from "src/theme/baseTheme/themeColors"
+import themeColors from "src/theme/emotionBaseTheme/themeColors"
 import { CAMERA_PERMISSION_URL } from "src/urls"
 
 import CameraInputButton from "./CameraInputButton"

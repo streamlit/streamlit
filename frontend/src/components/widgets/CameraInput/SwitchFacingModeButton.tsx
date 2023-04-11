@@ -20,7 +20,7 @@ import { SwitchCamera } from "@emotion-icons/material-rounded"
 import Button, { Kind } from "src/components/shared/Button"
 import Icon from "src/components/shared/Icon"
 import Tooltip, { Placement } from "src/components/shared/Tooltip"
-import themeColors from "src/theme/baseTheme/themeColors"
+import themeColors from "src/theme/emotionBaseTheme/themeColors"
 import { StyledSwitchFacingModeButton } from "./styled-components"
 
 export enum FacingMode {

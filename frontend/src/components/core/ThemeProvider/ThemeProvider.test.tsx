@@ -20,16 +20,16 @@ import { ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 import { shallow } from "src/lib/test_util"
 import {
   darkTheme,
-  darkBaseUITheme,
+  baseuiDarkTheme,
   lightTheme,
-  lightBaseUITheme,
+  baseuiLightTheme,
 } from "src/theme"
 import ThemeProvider from "./ThemeProvider"
 
 describe("ThemeProvider component", () => {
   it("renders both theme providers without an error", () => {
     const wrapper = shallow(
-      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={lightBaseUITheme}>
+      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={baseuiLightTheme}>
         null
       </ThemeProvider>
     )
@@ -39,24 +39,24 @@ describe("ThemeProvider component", () => {
 
   it("sets the correct themes", () => {
     let wrapper = shallow(
-      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={lightBaseUITheme}>
+      <ThemeProvider theme={lightTheme.emotion} baseuiTheme={baseuiLightTheme}>
         null
       </ThemeProvider>
     )
     expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
-      lightBaseUITheme
+      baseuiLightTheme
     )
     expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(
       lightTheme.emotion
     )
 
     wrapper = shallow(
-      <ThemeProvider theme={darkTheme.emotion} baseuiTheme={darkBaseUITheme}>
+      <ThemeProvider theme={darkTheme.emotion} baseuiTheme={baseuiDarkTheme}>
         null
       </ThemeProvider>
     )
     expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
-      darkBaseUITheme
+      baseuiDarkTheme
     )
     expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(
       darkTheme.emotion
@@ -68,7 +68,7 @@ describe("ThemeProvider component", () => {
       <ThemeProvider theme={lightTheme.emotion}>null</ThemeProvider>
     )
     expect(wrapper.find(BaseUIThemeProvider).prop("theme")).toEqual(
-      lightBaseUITheme
+      baseuiLightTheme
     )
     expect(wrapper.find(EmotionThemeProvider).prop("theme")).toEqual(
       lightTheme.emotion
