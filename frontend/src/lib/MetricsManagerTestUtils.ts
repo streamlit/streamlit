@@ -17,11 +17,7 @@
 // This file is only used in tests, so these imports can be in devDependencies
 /* eslint-disable import/no-extraneous-dependencies */
 
-import {
-  mockMetricManager,
-  MockMetricsManager,
-  mockSessionInfo,
-} from "./mocks/mocks"
+import { MockMetricsManager, mockSessionInfo } from "./mocks/mocks"
 import { SessionInfo } from "./SessionInfo"
 
 export function getMetricsManagerForTest(
