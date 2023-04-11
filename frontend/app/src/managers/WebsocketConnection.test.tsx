@@ -20,16 +20,19 @@ import { zip } from "lodash"
 import React, { Fragment } from "react"
 
 import { BackMsg } from "src/autogen/proto"
-import { ConnectionState } from "src/lib/ConnectionState"
-import { SessionInfo } from "src/lib/SessionInfo"
+import {
+  ConnectionState,
+  SessionInfo,
+  mockEndpoints,
+  mockSessionInfoProps,
+} from "@streamlit/lib"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   StyledBashCode,
   WebsocketConnection,
   doInitPings,
   Args,
-} from "src/lib/WebsocketConnection"
-import { mockEndpoints, mockSessionInfoProps } from "./mocks/mocks"
+} from "./WebsocketConnection"
 
 const MOCK_ALLOWED_ORIGINS_RESPONSE = {
   data: {

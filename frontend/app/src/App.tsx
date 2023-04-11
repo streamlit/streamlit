@@ -24,7 +24,6 @@ import classNames from "classnames"
 import {
   AppContext,
   setCookie,
-  ConnectionManager,
   getIFrameEnclosingApp,
   hashString,
   isColoredLineDisplayed,
@@ -111,6 +110,7 @@ import {
 } from "src/autogen/proto"
 
 import AppView from "src/components/AppView"
+import { ConnectionManager } from "src/managers/ConnectionManager"
 
 import { concat, noop, without } from "lodash"
 
