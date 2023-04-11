@@ -18,11 +18,11 @@ import React, { ReactElement, ReactNode } from "react"
 import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 import { ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 
-import { Theme, lightBaseUITheme, LightBaseUITheme } from "src/theme"
+import { Theme, baseuiLightTheme, BaseUILightTheme } from "src/theme"
 
 export interface ThemeProviderProps {
   theme: Theme
-  baseuiTheme?: LightBaseUITheme
+  baseuiTheme?: BaseUILightTheme
   children: ReactNode
 }
 
@@ -32,7 +32,7 @@ function ThemeProvider({
   children,
 }: ThemeProviderProps): ReactElement {
   return (
-    <BaseUIThemeProvider theme={baseuiTheme || lightBaseUITheme}>
+    <BaseUIThemeProvider theme={baseuiTheme || baseuiLightTheme}>
       <EmotionThemeProvider theme={theme}>{children}</EmotionThemeProvider>
     </BaseUIThemeProvider>
   )

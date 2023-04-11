@@ -18,7 +18,7 @@ import React from "react"
 import { mount } from "src/lib/test_util"
 import { Json as JsonProto } from "src/autogen/proto"
 import ThemeProvider from "src/components/core/ThemeProvider"
-import { darkTheme, darkBaseUITheme } from "src/theme"
+import { darkTheme, baseuiDarkTheme } from "src/theme"
 import Json, { JsonProps } from "./Json"
 
 const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({
@@ -66,7 +66,7 @@ describe("JSON element", () => {
   it("picks a reasonable theme when the background is dark", () => {
     const props = getProps()
     const wrapper = mount(
-      <ThemeProvider theme={darkTheme.emotion} baseuiTheme={darkBaseUITheme}>
+      <ThemeProvider theme={darkTheme.emotion} baseuiTheme={baseuiDarkTheme}>
         <Json {...props} />
       </ThemeProvider>
     )
