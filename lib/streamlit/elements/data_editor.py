@@ -45,7 +45,7 @@ from pandas.io.formats.style import Styler
 from typing_extensions import Final, Literal, TypeAlias, TypedDict
 
 from streamlit import type_util
-from streamlit.elements.arrow import _marshall_styler, marshall
+from streamlit.elements.arrow import marshall_styler
 from streamlit.elements.form import current_form_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
@@ -678,10 +678,11 @@ class DataEditorMixin:
         if type_util.is_pandas_styler(data):
             delta_path = self.dg._get_delta_path_str()
             default_uuid = str(hash(delta_path))
-            _marshall_styler(proto, data, default_uuid)
+            marshall_styler(proto, data, default_uuid)
 
         table = pa.Table.from_pandas(data_df)
         proto.data = type_util.pyarrow_table_to_bytes(table)
+
         _marshall_column_config(proto, columns_config)
 
         serde = DataEditorSerde()

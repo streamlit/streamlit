@@ -157,10 +157,6 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
 
   const { addScriptFinishedHandler, removeScriptFinishedHandler } =
     React.useContext(AppContext)
-  if (isSidebar) {
-    return React.createElement(tag, tagProps, children)
-  }
-
   const onScriptFinished = React.useCallback(() => {
     if (target !== null) {
       // wait a bit for everything on page to finish loading
@@ -191,6 +187,9 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
     },
     [propsAnchor]
   )
+  if (isSidebar) {
+    return React.createElement(tag, tagProps, children)
+  }
 
   return React.createElement(
     tag,
