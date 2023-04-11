@@ -79,8 +79,6 @@ import {
   DialogType,
   ScreenCastHOC,
   extractPageNameFromPathName,
-  SegmentMetricsManager,
-  DefaultStreamlitEndpoints,
   StreamlitEndpoints,
   DeployButton,
 } from "@streamlit/lib"
@@ -111,6 +109,8 @@ import {
 
 import AppView from "src/components/AppView"
 import { ConnectionManager } from "src/managers/ConnectionManager"
+import { DefaultStreamlitEndpoints } from "src/managers/DefaultStreamlitEndpoints"
+import { SegmentMetricsManager } from "src/managers/SegmentMetricsManager"
 
 import { concat, noop, without } from "lodash"
 
