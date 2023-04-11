@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
-import { mockSessionInfo } from "./mocks/mocks"
-import { SessionInfo } from "./SessionInfo"
-
 // This file is only used in tests, so these imports can be in devDependencies
 /* eslint-disable import/no-extraneous-dependencies */
-import { SegmentMetricsManager } from "./SegmentMetricsManager"
+
+import {
+  mockMetricManager,
+  MockMetricsManager,
+  mockSessionInfo,
+} from "./mocks/mocks"
+import { SessionInfo } from "./SessionInfo"
 
 export function getMetricsManagerForTest(
   sessionInfo?: SessionInfo
-): SegmentMetricsManager {
-  const mm = new SegmentMetricsManager(sessionInfo || mockSessionInfo())
+): MockMetricsManager {
+  const mm = new MockMetricsManager(sessionInfo || mockSessionInfo())
   // @ts-expect-error
   mm.track = jest.fn()
   // @ts-expect-error
