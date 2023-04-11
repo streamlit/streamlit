@@ -34,8 +34,6 @@ from tests.testutil import create_mock_script_run_ctx
 
 
 class MockConnection(ExperimentalBaseConnection[None]):
-    _default_connection_name = "mock_connection"
-
     def _connect(self, **kwargs):
         pass
 
@@ -230,3 +228,10 @@ connection_class="snowpark"
         for m in modules:
             for disallowed_import in DISALLOWED_IMPORTS:
                 assert disallowed_import not in m
+
+    @patch("streamlit.runtime.connection_factory._create_connection")
+    def test_can_set_connection_name_via_env_var(self, patched_create_connection):
+        os.environ["MY_CONN_NAME"] = "staging"
+        connection_factory("env:MY_CONN_NAME", MockConnection)
+
+        patched_create_connection.assert_called_once_with("staging", MockConnection)

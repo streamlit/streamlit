@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import importlib
+import os
 import re
 from typing import Any, Dict, Optional, Type, TypeVar, overload
 
@@ -120,6 +121,13 @@ def connection_factory(name, connection_class=None, **kwargs):
         literal as the connection_class.
       * Plugging your own ConnectionClass into st.experimental_connection.
     """
+    USE_ENV_PREFIX = "env:"
+
+    if name.startswith(USE_ENV_PREFIX):
+        # It'd be nice to use str.removeprefix() here, but we won't be able to do that
+        # until the minimium Python version we support is 3.9.
+        envvar_name = name[len(USE_ENV_PREFIX) :]
+        name = os.environ[envvar_name]
 
     if connection_class is None:
         secrets_singleton.load_if_toml_exists()
