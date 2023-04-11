@@ -80,13 +80,13 @@ class SQLConnectionTest(unittest.TestCase):
 
     @patch("streamlit.connections.sql_connection.SQL._connect", MagicMock())
     @patch("streamlit.connections.sql_connection.pd.read_sql")
-    def test_read_sql_caches_value(self, patched_read_sql):
+    def test_query_caches_value(self, patched_read_sql):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         patched_read_sql.return_value = "i am a dataframe"
 
         conn = SQL("my_sql_connection")
 
-        assert conn.read_sql("SELECT 1;") == "i am a dataframe"
-        assert conn.read_sql("SELECT 1;") == "i am a dataframe"
+        assert conn.query("SELECT 1;") == "i am a dataframe"
+        assert conn.query("SELECT 1;") == "i am a dataframe"
         patched_read_sql.assert_called_once()
