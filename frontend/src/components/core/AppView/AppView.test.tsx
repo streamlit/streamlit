@@ -25,8 +25,11 @@ import {
 } from "src/lib/WidgetStateManager"
 import { makeElementWithInfoText } from "src/lib/utils"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
-import { mockEndpoints, mockSessionInfo } from "src/lib/mocks/mocks"
+import {
+  MockMetricsManager,
+  mockEndpoints,
+  mockSessionInfo,
+} from "src/lib/mocks/mocks"
 import { render, shallow } from "src/lib/test_util"
 import AppView, { AppViewProps } from "./AppView"
 
@@ -38,7 +41,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 
   return {
     endpoints: endpoints,
-    elements: AppRoot.empty(getMetricsManagerForTest(sessionInfo)),
+    elements: AppRoot.empty(new MockMetricsManager()),
     sendMessageToHost: jest.fn(),
     sessionInfo: sessionInfo,
     scriptRunId: "script run 123",
@@ -99,7 +102,7 @@ describe("AppView element", () => {
 
     const props = getProps({
       elements: new AppRoot(
-        getMetricsManagerForTest(),
+        new MockMetricsManager(),
         new BlockNode([main, sidebar])
       ),
     })
@@ -145,7 +148,7 @@ describe("AppView element", () => {
     ]
     const props = getProps({
       elements: new AppRoot(
-        getMetricsManagerForTest(),
+        new MockMetricsManager(),
         new BlockNode([main, sidebar])
       ),
       appPages,

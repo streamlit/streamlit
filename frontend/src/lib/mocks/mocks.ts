@@ -16,6 +16,7 @@
 
 import { Props as SessionInfoProps, SessionInfo } from "src/lib/SessionInfo"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
+import { MetricsManager } from "src/lib/MetricsManager"
 
 /** Create mock SessionInfo.props */
 export function mockSessionInfoProps(
@@ -61,4 +62,20 @@ export function mockEndpoints(
       .mockRejectedValue(new Error("unimplemented mock endpoint")),
     ...overrides,
   }
+}
+
+export class MockMetricsManager implements MetricsManager {
+  public enqueue = jest.fn()
+
+  public incrementDeltaCounter = jest.fn()
+
+  public getAndResetDeltaCounter = jest.fn()
+
+  public clearDeltaCounter = jest.fn()
+
+  public incrementCustomComponentCounter = jest.fn()
+
+  public getAndResetCustomComponentCounter = jest.fn()
+
+  public clearCustomComponentCounter = jest.fn()
 }
