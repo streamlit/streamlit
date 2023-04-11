@@ -56,7 +56,7 @@ import {
   PagesChanged,
 } from "src/autogen/proto"
 
-jest.mock("@streamlit/lib/dist/lib/ConnectionManager")
+jest.mock("src/managers/ConnectionManager")
 
 const getHostCommunicationState = (
   extend?: Partial<HostCommunicationState>

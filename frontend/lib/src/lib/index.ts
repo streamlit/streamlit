@@ -15,7 +15,6 @@
  */
 
 export * from "./AppNode"
-export * from "./ConnectionManager"
 export * from "./ConnectionState"
 export * from "./ErrorHandling"
 export * from "./FileHelper"
@@ -34,7 +33,6 @@ export * from "./SessionEventDispatcher"
 export * from "./SessionInfo"
 export * from "./Timer"
 export * from "./UriUtil"
-export * from "./WebsocketConnection"
 export * from "./WidgetStateManager"
 export * from "./baseconsts"
 export * from "./dataFrameProto"
