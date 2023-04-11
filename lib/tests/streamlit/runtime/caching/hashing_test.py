@@ -80,9 +80,20 @@ class HashTest(unittest.TestCase):
         uuid1_copy = uuid.UUID(uuid1.hex)
         uuid2 = uuid.uuid4()
 
+        # Our hashing functionality should work with UUIDs
+        # regardless of UUID factory function.
+
+        uuid3 = uuid.uuid5(uuid.NAMESPACE_DNS, "streamlit.io")
+        uuid3_copy = uuid.UUID(uuid3.hex)
+        uuid4 = uuid.uuid5(uuid.NAMESPACE_DNS, "snowflake.com")
+
         self.assertEqual(get_hash(uuid1), get_hash(uuid1_copy))
         self.assertNotEqual(id(uuid1), id(uuid1_copy))
         self.assertNotEqual(get_hash(uuid1), get_hash(uuid2))
+
+        self.assertEqual(get_hash(uuid3), get_hash(uuid3_copy))
+        self.assertNotEqual(id(uuid3), id(uuid3_copy))
+        self.assertNotEqual(get_hash(uuid3), get_hash(uuid4))
 
     def test_mocks_do_not_result_in_infinite_recursion(self):
         try:
