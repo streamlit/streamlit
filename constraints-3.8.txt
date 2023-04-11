@@ -95,7 +95,7 @@ pydot==1.4.2
 Pygments==2.15.0
 PyJWT==2.6.0
 Pympler==1.0.1
-pyodbc==4.0.35
+pyodbc==4.0.38
 pyOpenSSL==23.1.1
 pyparsing==3.0.9
 pyrsistent==0.19.3

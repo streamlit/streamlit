@@ -70,7 +70,7 @@ pydeck==0.8.0
 pydot==1.4.2
 Pygments==2.15.0
 Pympler==1.0.1
-pyodbc==4.0.35
+pyodbc==4.0.38
 pyparsing==3.0.9
 pyrsistent==0.19.3
 pyspark==3.3.2
