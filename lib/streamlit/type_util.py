@@ -540,7 +540,6 @@ def convert_anything_to_df(
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
     try:
-
         return DataFrame(data)
 
     except ValueError as ex:
@@ -850,6 +849,11 @@ def determine_data_format(input_data: Any) -> DataFormat:
     return DataFormat.UNKNOWN
 
 
+def _unify_missing_values(df: DataFrame) -> DataFrame:
+    """Unify all missing values in a DataFrame to None."""
+    return df.fillna(np.nan).replace([np.nan], [None])
+
+
 def convert_df_to_data_format(
     df: DataFrame, data_format: DataFormat
 ) -> Union[
@@ -906,14 +910,14 @@ def convert_df_to_data_format(
             )
         return df[df.columns[0]]
     elif data_format == DataFormat.LIST_OF_RECORDS:
-        return df.to_dict(orient="records")
+        return _unify_missing_values(df).to_dict(orient="records")
     elif data_format == DataFormat.LIST_OF_ROWS:
         # to_numpy converts the dataframe to a list of rows
-        return df.to_numpy().tolist()
+        return _unify_missing_values(df).to_numpy().tolist()
     elif data_format == DataFormat.COLUMN_INDEX_MAPPING:
-        return df.to_dict(orient="dict")
+        return _unify_missing_values(df).to_dict(orient="dict")
     elif data_format == DataFormat.COLUMN_VALUE_MAPPING:
-        return df.to_dict(orient="list")
+        return _unify_missing_values(df).to_dict(orient="list")
     elif data_format == DataFormat.COLUMN_SERIES_MAPPING:
         return df.to_dict(orient="series")
     elif data_format in [
@@ -921,6 +925,7 @@ def convert_df_to_data_format(
         DataFormat.TUPLE_OF_VALUES,
         DataFormat.SET_OF_VALUES,
     ]:
+        df = _unify_missing_values(df)
         return_list = []
         if len(df.columns) == 1:
             #  Get the first column and convert to list
@@ -935,6 +940,7 @@ def convert_df_to_data_format(
             return set(return_list)
         return return_list
     elif data_format == DataFormat.KEY_VALUE_DICT:
+        df = _unify_missing_values(df)
         # The key is expected to be the index -> this will return the first column
         # as a dict with index as key.
         return dict() if df.empty else df.iloc[:, 0].to_dict()
@@ -972,49 +978,3 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
             f"Unsupported label_visibility option '{label_visibility}'. "
             f"Valid values are 'visible', 'hidden' or 'collapsed'."
         )
-
-
-def can_be_float_or_int(value: str | int | float) -> bool:
-    if isinstance(value, (int, float)):
-        return True
-    if value.isdigit():
-        return True
-    elif value.replace(".", "", 1).isdigit() and value.count(".") < 2:
-        return True
-    else:
-        return False
-
-
-def maybe_convert_datetime_date_edit_df(value: Union[str, int, float]) -> date | None:
-    converted_datetime = maybe_convert_datetime_datetime_edit_df(value)
-    if converted_datetime is None:
-        return None
-    else:
-        return converted_datetime.date()
-
-
-def maybe_convert_datetime_time_edit_df(value: Union[str, int, float]) -> time | None:
-    converted_datetime = maybe_convert_datetime_datetime_edit_df(value)
-    if converted_datetime is None:
-        return None
-    else:
-        return converted_datetime.time()
-
-
-def maybe_convert_datetime_datetime_edit_df(value) -> datetime | None:
-    try:
-        import dateutil.parser
-        from dateutil.tz import tzutc
-
-        # handle pasting as the input is a string type but actually a number
-        if isinstance(value, str) and not can_be_float_or_int(value):
-            date_converted = dateutil.parser.isoparse(value).astimezone(tz=tzutc())
-        elif can_be_float_or_int(value) or isinstance(value, (int, float)):
-            # Python datetime uses microseconds, but JS & Moment uses milliseconds
-            date_converted = datetime.fromtimestamp(float(value) / 1000).astimezone(
-                tz=tzutc()
-            )
-        return date_converted
-    except Exception as e:
-        _LOGGER.info(f"Failed to convert the edited cell to datetime. Exception: {e}")
-    return None
