@@ -192,12 +192,6 @@ class StreamlitTest(unittest.TestCase):
 class StreamlitAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
-    def test_st_balloons(self):
-        """Test st.balloons."""
-        st.balloons()
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.balloons.show, True)
-
     def test_st_legacy_bar_chart(self):
         """Test st._legacy_bar_chart."""
         df = pd.DataFrame([[10, 20, 30]], columns=["a", "b", "c"])
