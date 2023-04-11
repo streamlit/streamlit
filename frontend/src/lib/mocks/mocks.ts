@@ -20,7 +20,7 @@ import {
   CustomComponentCounter,
   DeltaCounter,
   MetricsManager,
-} from "../MetricsManager"
+} from "src/lib/MetricsManager"
 
 /** Create mock SessionInfo.props */
 export function mockSessionInfoProps(
@@ -75,23 +75,31 @@ export class MockMetricsManager implements MetricsManager {
     this.sessionInfo = sessionInfo
   }
 
-  enqueue(evName: string, evData: Record<string, any>): void {}
-  incrementDeltaCounter(deltaType: string): void {}
+  enqueue(_evName: string, _evData: Record<string, any>): void {}
+
+  incrementDeltaCounter(_deltaType: string): void {}
+
   getAndResetDeltaCounter(): DeltaCounter {
     return {}
   }
+
   clearDeltaCounter(): void {
     throw new Error("Method not implemented.")
   }
-  incrementCustomComponentCounter(customInstanceName: string): void {}
+
+  incrementCustomComponentCounter(_customInstanceName: string): void {}
+
   getAndResetCustomComponentCounter(): CustomComponentCounter {
     return {}
   }
+
   clearCustomComponentCounter(): void {}
 }
 
 /** Return a mock MetricsManager implementation */
-export function mockMetricManager(sessionInfo?: SessionInfo) {
+export function mockMetricManager(
+  sessionInfo?: SessionInfo
+): MockMetricsManager {
   const mm = new MockMetricsManager(sessionInfo)
   // @ts-expect-error
   mm.track = jest.fn()
