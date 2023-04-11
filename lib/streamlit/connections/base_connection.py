@@ -39,8 +39,22 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
         secrets_singleton.file_change_listener.disconnect(self._on_secrets_changed)
 
     def _repr_html_(self) -> str:
-        # TODO(vdonato): Change this to whatever we actually want the default to be.
-        return f"Hi, I am a {self._connection_name} connection!"
+        module_name = getattr(self, "__module__", None)
+        class_name = type(self).__name__
+
+        cfg = (
+            f"- Configured from `[connections.{self._connection_name}]`"
+            if len(self._secrets)
+            else ""
+        )
+
+        return f"""
+---
+**st.connection {self._connection_name} built from `{module_name}.{class_name}`**
+{cfg}
+- Learn more using `st.help()`
+---
+"""
 
     # Methods with default implementations that we don't expect subclasses to want or
     # need to overwrite.

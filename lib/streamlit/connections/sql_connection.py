@@ -125,3 +125,28 @@ class SQL(ExperimentalBaseConnection["Engine"]):
 
         with Session(self._instance) as s:
             yield s
+
+    # NOTE: This more or less duplicates the default implementation in
+    # ExperimentalBaseConnection so that we can add another bullet point between the
+    # "Configured from" and "Learn more" items :/
+    def _repr_html_(self) -> str:
+        module_name = getattr(self, "__module__", None)
+        class_name = type(self).__name__
+
+        cfg = (
+            f"- Configured from `[connections.{self._connection_name}]`"
+            if len(self._secrets)
+            else ""
+        )
+
+        with self.session() as s:
+            dialect = s.bind.dialect.name if s.bind is not None else "unknown"
+
+        return f"""
+---
+**st.connection {self._connection_name} built from `{module_name}.{class_name}`**
+{cfg}
+- Dialect: `{dialect}`
+- Learn more using `st.help()`
+---
+"""
