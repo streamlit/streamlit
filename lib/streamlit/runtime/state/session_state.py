@@ -249,8 +249,9 @@ class WStates(MutableMapping[str, Any]):
 
 def _missing_key_error_message(key: str) -> str:
     return (
-        f'st.session_state has no key "{key}". Did you forget to initialize it? '
-        f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
+        key
+        # f'st.session_state has no key "{key}". Did you forget to initialize it? '
+        # f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
     )
 
 
@@ -375,6 +376,10 @@ class SessionState:
         try:
             return self._getitem(widget_id, key)
         except KeyError:
+            st.warning(
+                f'st.session_state has no key "{key}". Did you forget to initialize it? '
+                f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
+            )
             raise KeyError(_missing_key_error_message(key))
 
     def _getitem(self, widget_id: str | None, user_key: str | None) -> Any:
@@ -447,6 +452,10 @@ class SessionState:
         widget_id = self._get_widget_id(key)
 
         if not (key in self or widget_id in self):
+            st.warning(
+                f'st.session_state has no key "{key}". Did you forget to initialize it? '
+                f"More info: https://docs.streamlit.io/library/advanced-features/session-state#initialization"
+            )
             raise KeyError(_missing_key_error_message(key))
 
         if key in self._new_session_state:
