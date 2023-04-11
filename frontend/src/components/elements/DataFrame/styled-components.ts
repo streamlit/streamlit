@@ -15,7 +15,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
-import { Theme } from "src/theme"
+import { EmotionTheme } from "src/theme"
 
 export interface StyledDataFrameContainerProps {
   width: number
@@ -68,14 +68,14 @@ const StyledDataFrameCell = styled.div(({ theme }) => ({
   justifyContent: "flex-start",
 }))
 
-const headerCellFormatter = (theme: Theme): CSSObject => ({
+const headerCellFormatter = (theme: EmotionTheme): CSSObject => ({
   color: theme.colors.fadedText60,
   borderBottom: `1px solid ${theme.colors.fadedText05}`,
   borderRight: `1px solid ${theme.colors.fadedText05}`,
   zIndex: 1,
 })
 
-const cellTextFormatter = (theme: Theme): CSSObject => ({
+const cellTextFormatter = (theme: EmotionTheme): CSSObject => ({
   overflow: "hidden",
   whiteSpace: "nowrap",
   textOverflow: "ellipsis",
