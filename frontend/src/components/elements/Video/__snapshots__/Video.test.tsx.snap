@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Video Element YouTube should render a youtube iframe 1`] = `
+exports[`Video Element YouTube renders a youtube iframe 1`] = `
 Object {
   "allow": "autoplay; encrypted-media",
   "allowFullScreen": true,
@@ -12,7 +12,7 @@ Object {
 }
 `;
 
-exports[`Video Element YouTube should render a youtube iframe with an starting time 1`] = `
+exports[`Video Element YouTube renders a youtube iframe with an starting time 1`] = `
 Object {
   "allow": "autoplay; encrypted-media",
   "allowFullScreen": true,

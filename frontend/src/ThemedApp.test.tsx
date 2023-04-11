@@ -29,6 +29,24 @@ import {
 
 import AppWithScreencast from "./App"
 import ThemedApp from "./ThemedApp"
+import { act } from "react-dom/test-utils"
+import FontFaceDeclaration from "./components/core/FontFaceDeclaration"
+
+const mockCustomThemeConfig = {
+  primaryColor: "#1A6CE7",
+  backgroundColor: "#FFFFFF",
+  secondaryBackgroundColor: "#F5F5F5",
+  textColor: "#1A1D21",
+  widgetBackgroundColor: "#FFFFFF",
+  widgetBorderColor: "#D3DAE8",
+  fontFaces: [
+    {
+      family: "Inter",
+      url: "https://rsms.me/inter/font-files/Inter-Regular.woff2?v=3.19",
+      weight: 400,
+    },
+  ],
+}
 
 jest.mock("src/lib/ConnectionManager")
 
@@ -134,5 +152,32 @@ describe("ThemedApp", () => {
   it("contains the overlay portal required by the interactive table", () => {
     const wrapper = mount(<ThemedApp />)
     expect(wrapper.find("div#portal")).toHaveLength(1)
+  })
+
+  it("handles custom theme sent from Host", () => {
+    const wrapper = mount(<ThemedApp />)
+
+    let fontFaceComponent = wrapper.find(FontFaceDeclaration)
+    expect(fontFaceComponent.exists()).toBe(false)
+
+    const props = wrapper.find(AppWithScreencast).props()
+    act(() => {
+      props.theme.setImportedTheme(mockCustomThemeConfig)
+    })
+
+    wrapper.update()
+
+    const updatedTheme: ThemeConfig = wrapper.find(AppWithScreencast).props()
+      .theme.activeTheme
+    expect(updatedTheme.name).toBe(CUSTOM_THEME_NAME)
+    expect(updatedTheme.emotion.genericColors.primary).toBe(
+      mockCustomThemeConfig.primaryColor
+    )
+
+    fontFaceComponent = wrapper.find(FontFaceDeclaration)
+    expect(fontFaceComponent.exists()).toBe(true)
+    expect(fontFaceComponent.props().fontFaces).toEqual(
+      mockCustomThemeConfig.fontFaces
+    )
   })
 })

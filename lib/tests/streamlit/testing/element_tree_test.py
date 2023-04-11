@@ -411,3 +411,122 @@ class ExceptionTest(InteractiveScriptTests):
         sr = script.run()
 
         assert sr.get("exception")[0].is_markdown
+
+
+class TextInputTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "text_input.py",
+            """
+            import streamlit as st
+
+            st.text_input("label")
+            st.text_input("with default", value="default", max_chars=20)
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("text_input")[0].value == ""
+        assert sr.get("text_input")[1].value == "default"
+
+        long_string = "".join(["this is a long string fragment."] * 10)
+        sr.get("text_input")[0].input(long_string)
+        sr2 = sr.get("text_input")[1].input(long_string).run()
+
+        assert sr2.get("text_input")[0].value == long_string
+        assert sr2.get("text_input")[1].value == "default"
+        # assert sr2.get("text_input")[1].value == long_string[:20]
+
+
+class TextAreaTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "text_area.py",
+            """
+            import streamlit as st
+
+            st.text_area("label")
+            st.text_area("with default", value="default", max_chars=20)
+            """,
+        )
+        sr = script.run()
+
+        assert sr.get("text_area")[0].value == ""
+        assert sr.get("text_area")[1].value == "default"
+
+        long_string = "".join(["this is a long string fragment."] * 10)
+        sr.get("text_area")[0].input(long_string)
+        sr2 = sr.get("text_area")[1].input(long_string).run()
+
+        assert sr2.get("text_area")[0].value == long_string
+        assert sr2.get("text_area")[1].value == "default"
+
+
+class NumberInputTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "number_input.py",
+            """
+            import streamlit as st
+
+            st.number_input("int", min_value=-10, max_value=10)
+            st.number_input("float", min_value=-1.0, max_value=100.0)
+            """,
+        )
+        sr = script.run()
+        assert sr.get("number_input")[0].value == -10
+        assert sr.get("number_input")[1].value == -1.0
+
+        sr2 = (
+            sr.get("number_input")[0]
+            .increment()
+            .run()
+            .get("number_input")[1]
+            .increment()
+            .run()
+        )
+        assert sr2.get("number_input")[0].value == -9
+        assert sr2.get("number_input")[1].value == -0.99
+
+        sr3 = (
+            sr2.get("number_input")[0]
+            .decrement()
+            .run()
+            .get("number_input")[1]
+            .decrement()
+            .run()
+        )
+        assert sr3.get("number_input")[0].value == -10
+        assert sr3.get("number_input")[1].value == -1.0
+
+        sr4 = (
+            sr3.get("number_input")[0]
+            .decrement()
+            .run()
+            .get("number_input")[1]
+            .decrement()
+            .run()
+        )
+        assert sr4.get("number_input")[0].value == -10
+        assert sr4.get("number_input")[1].value == -1.0
+
+
+class ColorPickerTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "color_picker.py",
+            """
+            import streamlit as st
+
+            st.color_picker("what is your favorite color?")
+            st.color_picker("short hex", value="#ABC")
+            st.color_picker("invalid", value="blue")
+            """,
+        )
+        sr = script.run()
+        assert len(sr.get("color_picker")) == 2
+        assert [c.value for c in sr.get("color_picker")] == ["#000000", "#ABC"]
+        assert "blue" in sr.get("exception")[0].value
+
+        sr2 = sr.get("color_picker")[0].pick("#123456").run()
+        assert sr2.get("color_picker")[0].value == "#123456"

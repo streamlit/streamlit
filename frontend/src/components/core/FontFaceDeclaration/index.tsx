@@ -14,21 +14,4 @@
  * limitations under the License.
  */
 
-describe("displays deploy button correctly", () => {
-  before(() => {
-    cy.loadApp("http://localhost:3000/?_stcore_testing=true");
-  });
-
-  it("deploy button matches the snapshot", () => {
-    cy.get("div[class='stDeployButton']").matchThemedSnapshots(
-      "deploy_button"
-    );
-  });
-
-  it("deploy dialog matches the snapshot", () => {
-    cy.get("div[class='stDeployButton'] > button").click({force: true})
-    cy.get("div[role='dialog']").matchImageSnapshot(
-      "deploy_dialog_opened"
-    );
-  })
-});
+export { default } from "./FontFaceDeclaration"

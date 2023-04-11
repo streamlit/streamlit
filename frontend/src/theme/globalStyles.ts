@@ -24,6 +24,12 @@ export const globalStyles = (theme: Theme): any => css`
     color: ${theme.colors.primary};
   }
 
+  // Override the base font-size value here.
+  // This overrides the value set in reboot.scss.
+  html {
+    font-size: ${theme.fontSizes.mdPx}px;
+  }
+
   a:hover,
   a:active {
     color: ${theme.colors.primary};
