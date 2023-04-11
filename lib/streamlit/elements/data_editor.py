@@ -17,6 +17,7 @@ from __future__ import annotations
 import contextlib
 import json
 from dataclasses import dataclass
+from enum import Enum, auto
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -44,7 +45,7 @@ from pandas.io.formats.style import Styler
 from typing_extensions import Final, Literal, TypeAlias, TypedDict
 
 from streamlit import type_util
-from streamlit.elements.arrow import marshall
+from streamlit.elements.arrow import _marshall_styler, marshall
 from streamlit.elements.form import current_form_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
@@ -203,15 +204,23 @@ class DataEditorSerde:
         return json.dumps(editing_state, default=str)
 
 
-def _parse_value(value: Union[str, int, float, bool, None], orig_col) -> Any:
+def _parse_value(
+    value: Union[str, int, float, bool, None],
+    orig_col: Union[pd.Series, pd.Index],
+    arrow_field: pa.Field,
+) -> Any:
     """Convert a value to the correct type.
 
     Parameters
     ----------
     value : str | int | float | bool | None
         The value to convert.
-    orig_col
-        The original column in order to use infer_dtype or check .dtype
+
+    orig_col : pd.Series | pd.Index
+        The underlying column or index.
+
+    arrow_field : pa.Field
+        The Arrow field information for this column.
 
     Returns
     -------
@@ -242,7 +251,9 @@ def _parse_value(value: Union[str, int, float, bool, None], orig_col) -> Any:
 
 
 def _apply_cell_edits(
-    df: pd.DataFrame, edited_cells: Mapping[str, str | int | float | bool | None]
+    df: pd.DataFrame,
+    edited_cells: Mapping[str, str | int | float | bool | None],
+    schema: pa.Schema,
 ) -> None:
     """Apply cell edits to the provided dataframe (inplace).
 
@@ -271,11 +282,13 @@ def _apply_cell_edits(
             # to get the correct column position for Pandas DataFrames
             mapped_column = col_pos - index_count
             df.iat[row_pos, mapped_column] = _parse_value(
-                value, df.iloc[:, mapped_column]
+                value, df.iloc[:, mapped_column], schema.field(mapped_column)
             )
 
 
-def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> None:
+def _apply_row_additions(
+    df: pd.DataFrame, added_rows: List[Dict[str, Any]], schema: pa.Schema
+) -> None:
     """Apply row additions to the provided dataframe (inplace).
 
     Parameters
@@ -286,6 +299,9 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
     added_rows : List[Dict[str, Any]]
         A list of row additions. Each row addition is a dictionary with the
         column position as key and the new cell value as value.
+
+    schema : pa.Schema
+        The Arrow schema of the dataframe.
     """
     if not added_rows:
         return
@@ -310,12 +326,17 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
             if col_pos < index_count:
                 # To support multi-index in the future: use a tuple of values here
                 # instead of a single value
-                index_value = _parse_value(value, df.index)
+                index_value = _parse_value(
+                    value,
+                    df.index,
+                )
             else:
                 # We need to subtract the number of index levels from the col_pos
                 # to get the correct column position for Pandas DataFrames
                 mapped_column = col_pos - index_count
-                new_row[mapped_column] = _parse_value(value, df.iloc[:, mapped_column])
+                new_row[mapped_column] = _parse_value(
+                    value, df.iloc[:, mapped_column], schema.field(mapped_column)
+                )
         # Append the new row to the dataframe
         if range_index_stop is not None:
             df.loc[range_index_stop, :] = new_row
@@ -340,12 +361,17 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: List[int]) -> None:
 
     deleted_rows : List[int]
         A list of row numbers to delete.
+
+    schema : pa.Schema
+        The Arrow schema of the dataframe.
     """
     # Drop rows based in numeric row positions
     df.drop(df.index[deleted_rows], inplace=True)
 
 
-def _apply_dataframe_edits(df: pd.DataFrame, data_editor_state: EditingState) -> None:
+def _apply_dataframe_edits(
+    df: pd.DataFrame, data_editor_state: EditingState, schema: pa.Schema
+) -> None:
     """Apply edits to the provided dataframe (inplace).
 
     This includes cell edits, row additions and row deletions.
@@ -357,12 +383,15 @@ def _apply_dataframe_edits(df: pd.DataFrame, data_editor_state: EditingState) ->
 
     data_editor_state : EditingState
         The editing state of the data editor component.
+
+    schema : pa.Schema
+        The Arrow schema of the dataframe.
     """
     if data_editor_state.get("edited_cells"):
-        _apply_cell_edits(df, data_editor_state["edited_cells"])
+        _apply_cell_edits(df, data_editor_state["edited_cells"], schema)
 
     if data_editor_state.get("added_rows"):
-        _apply_row_additions(df, data_editor_state["added_rows"])
+        _apply_row_additions(df, data_editor_state["added_rows"], schema)
 
     if data_editor_state.get("deleted_rows"):
         _apply_row_deletions(df, data_editor_state["deleted_rows"])
@@ -424,6 +453,34 @@ def _apply_data_specific_configs(
         # Pandas automatically names the first column "0"
         # We rename it to "value" in selected cases to make it more descriptive
         data_df.rename(columns={0: "value"}, inplace=True)
+
+
+def _is_supported_index(df_index: pd.Index) -> bool:
+    """Check if the index is supported by the data editor component.
+
+    Parameters
+    ----------
+    df_index : pd.Index
+        The index to check.
+
+    Returns
+    -------
+    bool
+        True if the index is supported, False otherwise.
+    """
+
+    return (
+        type(df_index)
+        in [
+            pd.RangeIndex,
+            pd.Index,
+        ]
+        # We need to check these index types without importing, since they are deprecated
+        # and planned to be removed soon.
+        or is_type(df_index, "pandas.core.indexes.numeric.Int64Index")
+        or is_type(df_index, "pandas.core.indexes.numeric.Float64Index")
+        or is_type(df_index, "pandas.core.indexes.numeric.UInt64Index")
+    )
 
 
 class DataEditorMixin:
@@ -587,19 +644,7 @@ class DataEditorMixin:
         # since we will apply edits directly to it.
         data_df = type_util.convert_anything_to_df(data, ensure_copy=True)
 
-        # Check if the index is supported.
-        if not (
-            type(data_df.index)
-            in [
-                pd.RangeIndex,
-                pd.Index,
-            ]
-            # We need to check these index types without importing, since they are deprecated
-            # and planned to be removed soon.
-            or is_type(data_df.index, "pandas.core.indexes.numeric.Int64Index")
-            or is_type(data_df.index, "pandas.core.indexes.numeric.Float64Index")
-            or is_type(data_df.index, "pandas.core.indexes.numeric.UInt64Index")
-        ):
+        if not _is_supported_index(data_df.index):
             raise StreamlitAPIException(
                 f"The type of the dataframe index - {type(data_df.index).__name__} - is not "
                 "yet supported by the data editor."
@@ -609,15 +654,13 @@ class DataEditorMixin:
 
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.
-        if type(data_df.index) is pd.RangeIndex and num_rows == "dynamic":
+        if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
             if _INDEX_IDENTIFIER not in columns_config:
                 columns_config[_INDEX_IDENTIFIER] = {}
             columns_config[_INDEX_IDENTIFIER]["hidden"] = True
 
-        delta_path = self.dg._get_delta_path_str()
-        default_uuid = str(hash(delta_path))
-
         proto = ArrowProto()
+
         proto.use_container_width = use_container_width
         if width:
             proto.width = width
@@ -632,7 +675,13 @@ class DataEditorMixin:
         )
         proto.form_id = current_form_id(self.dg)
 
-        marshall(proto, data_df, default_uuid)
+        if type_util.is_pandas_styler(data):
+            delta_path = self.dg._get_delta_path_str()
+            default_uuid = str(hash(delta_path))
+            _marshall_styler(proto, data, default_uuid)
+
+        table = pa.Table.from_pandas(data_df)
+        proto.data = type_util.pyarrow_table_to_bytes(table)
         _marshall_column_config(proto, columns_config)
 
         serde = DataEditorSerde()
@@ -649,7 +698,7 @@ class DataEditorMixin:
             ctx=get_script_run_ctx(),
         )
 
-        _apply_dataframe_edits(data_df, widget_state.value)
+        _apply_dataframe_edits(data_df, widget_state.value, table.schema)
         self.dg._enqueue("arrow_data_frame", proto)
         return type_util.convert_df_to_data_format(data_df, data_format)
 
