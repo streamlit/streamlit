@@ -18,7 +18,7 @@
 
 import { LightTheme, lightThemePrimitives } from "baseui"
 import { transparentize } from "color2k"
-import { createEmotionColors, lightBaseUITheme, ThemeConfig } from "src/theme"
+import { createEmotionColors, baseuiLightTheme, ThemeConfig } from "src/theme"
 import {
   breakpoints,
   fonts,
@@ -108,6 +108,6 @@ export const mockTheme: ThemeConfig = {
   name: "Mock",
   emotion: emotionTheme,
   baseweb: LightTheme,
-  basewebTheme: lightBaseUITheme,
+  basewebTheme: baseuiLightTheme,
   primitives: lightThemePrimitives,
 }

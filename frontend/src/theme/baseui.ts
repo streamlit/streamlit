@@ -22,14 +22,14 @@ import emotionLightTheme from "./emotionLightTheme"
 import emotionDarkTheme from "./emotionDarkTheme"
 import { createBaseUiTheme } from "./utils"
 
-export const lightBaseUITheme = createBaseUiTheme(
+export const baseuiLightTheme = createBaseUiTheme(
   emotionLightTheme,
   baseuiLightThemePrimitives
 )
 
-export const darkBaseUITheme = createBaseUiTheme(
+export const baseuiDarkTheme = createBaseUiTheme(
   emotionDarkTheme,
   baseuiDarkThemePrimitives
 )
 
-export type LightBaseUITheme = typeof lightBaseUITheme
+export type BaseUILightTheme = typeof baseuiLightTheme

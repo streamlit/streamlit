@@ -19,7 +19,7 @@ import { LightTheme, lightThemePrimitives } from "baseui"
 import { CustomThemeConfig } from "src/autogen/proto"
 
 import base from "./emotionBaseTheme"
-import { lightBaseUITheme } from "./baseui"
+import { baseuiLightTheme } from "./baseui"
 
 export type Theme = typeof base
 
@@ -32,7 +32,7 @@ export type ThemeConfig = {
   // For use with Baseweb's ThemeProvider. This is required in order for us to
   // create separate themes for in the children. Currently required to accommodate
   // sidebar theming.
-  basewebTheme: typeof lightBaseUITheme
+  basewebTheme: typeof baseuiLightTheme
   primitives: typeof lightThemePrimitives
 }
 
