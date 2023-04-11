@@ -65,7 +65,6 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
 
         return connections_section.get(self._connection_name, AttrDict({}))
 
-    # TODO(vdonato): Finalize the name for this method. Should this be `invalidate`?
     def reset(self) -> None:
         self._raw_instance = None
 

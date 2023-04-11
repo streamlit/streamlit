@@ -82,17 +82,17 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
 
         return cast(Session, Session.builder.configs(conn_params).create())
 
-    def read_sql(
+    def query(
         self,
         sql: str,
         ttl: Optional[Union[float, int, timedelta]] = None,
     ) -> pd.DataFrame:
         @cache_data(ttl=ttl)
-        def _read_sql(sql: str) -> pd.DataFrame:
+        def _query(sql: str) -> pd.DataFrame:
             with self._lock:
                 return self._instance.sql(sql).to_pandas()
 
-        return _read_sql(sql)
+        return _query(sql)
 
     @contextmanager
     def session(self) -> Iterator["Session"]:
