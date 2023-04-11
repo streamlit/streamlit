@@ -175,6 +175,7 @@ function BaseDateTimeColumn(
 }
 
 export function DateTimeColumn(props: BaseColumnProps): BaseColumn {
+  // TODO: Support configurable timezone (from columnTypeMetadata)
   const timezone: string | undefined = props.arrowType?.meta?.timezone
 
   return BaseDateTimeColumn(
@@ -186,7 +187,10 @@ export function DateTimeColumn(props: BaseColumnProps): BaseColumn {
     "1",
     "datetime-local",
     (date: Date): string => {
-      return date.toISOString()
+      if (notNullOrUndefined(timezone)) {
+        return date.toISOString()
+      }
+      return date.toISOString().replace("Z", "")
     },
     timezone
   )
