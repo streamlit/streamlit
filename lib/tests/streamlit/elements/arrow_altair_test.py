@@ -160,12 +160,14 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame([[20, 30]], columns=["a", "b"])
 
-        chart_command(df, x="a", y="b")
+        chart_command(df, x="a", y="b", width=640, height=480)
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
         self.assertEqual(chart_spec["mark"], altair_type)
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
         self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
         self.assertEqual(chart_spec["encoding"]["y"]["field"], "b")
         pd.testing.assert_frame_equal(
