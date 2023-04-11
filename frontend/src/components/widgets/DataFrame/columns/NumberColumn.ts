@@ -95,6 +95,13 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
           )
         }
 
+        if (Number.isInteger(cellData) && !Number.isSafeInteger(cellData)) {
+          return getErrorCell(
+            toSafeString(data),
+            "The value is larger than the maximum supported integer in number columns (2^53)."
+          )
+        }
+
         // Apply precision parameter
         if (notNullOrUndefined(parameters.precision)) {
           cellData =
