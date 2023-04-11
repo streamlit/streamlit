@@ -55,6 +55,24 @@ Usage:
     }, '*')
   }
 
+  function rerunScript() {
+    sendMessage({
+      type: "RERUN_SCRIPT",
+    })
+  }
+
+  function stopScript() {
+    sendMessage({
+      type: "STOP_SCRIPT",
+    })
+  }
+
+  function clearCache() {
+    sendMessage({
+      type: "CLEAR_CACHE",
+    })
+  }
+
   function sendThemeMessage() {
     sendMessage({
       type: "SET_CUSTOM_THEME_CONFIG",
@@ -148,6 +166,9 @@ body {
 <div id="toolbar">
   This is the host frame.
   <button onclick="sendThemeMessage()">send theme message</button>
+  <button onclick="rerunScript()">rerun</button>
+  <button onclick="stopScript()">stop</button>
+  <button onclick="clearCache()">clear cache</button>
 </div>
 
 <iframe id="guest" src="http://localhost:3000" />
