@@ -153,11 +153,12 @@ def get_changed_python_dependencies_files() -> List[str]:
     return changed_dependencies_files
 
 
-def check_if_pr_has_label(action: str, label: str):
+def check_if_pr_has_label(label: str, action: str):
     """
     Checks if the PR has the given label.
 
-    The function works for all GitHub events, but then returns false.
+    The function works for all GitHub events, but returns false
+    for any event that is not a PR.
     """
     if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
         pr_labels = get_current_pr_labels()
@@ -223,14 +224,14 @@ def get_output_variables() -> Dict[str, str]:
         ALL_PYTHON_VERSIONS
         if canary_build
         or check_if_pr_has_label(
-            "All Python versions will be tested", LABEL_FULL_MATRIX
+            LABEL_FULL_MATRIX, "All Python versions will be tested"
         )
         else [ALL_PYTHON_VERSIONS[0], ALL_PYTHON_VERSIONS[-1]]
     )
     use_constraint_file = not (
         canary_build
         or check_if_pr_has_label(
-            "Latest dependencies will be used", LABEL_UPGRADE_DEPENDENCIES
+            LABEL_UPGRADE_DEPENDENCIES, "Latest dependencies will be used"
         )
     )
     return {
