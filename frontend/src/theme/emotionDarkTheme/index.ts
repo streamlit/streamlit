@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import baseTheme from "src/theme/emotionBaseTheme"
+import emotionBaseTheme from "src/theme/emotionBaseTheme"
 import { createEmotionColors } from "src/theme/utils"
 import genericColors from "./themeColors"
 
 export default {
-  ...baseTheme,
+  ...emotionBaseTheme,
   inSidebar: false,
   genericColors: {
-    ...baseTheme.genericColors,
+    ...emotionBaseTheme.genericColors,
     ...genericColors,
   },
   colors: createEmotionColors({
-    ...baseTheme.colors,
+    ...emotionBaseTheme.colors,
     ...genericColors,
   }),
 }
