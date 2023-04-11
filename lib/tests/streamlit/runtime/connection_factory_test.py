@@ -91,7 +91,7 @@ class ConnectionFactoryTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            # No connection_class is specified, and there's no config file to find one
+            # No type is specified, and there's no config file to find one
             # in.
             (None, FileNotFoundError, "No secrets files found"),
             # Nonexistent module.
@@ -115,12 +115,10 @@ class ConnectionFactoryTest(unittest.TestCase):
         ]
     )
     def test_connection_factory_errors(
-        self, connection_class, expected_error_class, expected_error_msg
+        self, type, expected_error_class, expected_error_msg
     ):
         with pytest.raises(expected_error_class) as e:
-            connection_factory(
-                "nonexistsent_connection", connection_class=connection_class
-            )
+            connection_factory("nonexistsent_connection", type=type)
 
         assert expected_error_msg in str(e.value)
 
@@ -128,15 +126,13 @@ class ConnectionFactoryTest(unittest.TestCase):
     def test_can_specify_class_with_full_name_in_kwargs(
         self, patched_create_connection
     ):
-        connection_factory(
-            "my_connection", connection_class="streamlit.connections.SQL"
-        )
+        connection_factory("my_connection", type="streamlit.connections.SQL")
 
         patched_create_connection.assert_called_once_with("my_connection", SQL)
 
     @patch("streamlit.runtime.connection_factory._create_connection")
     def test_can_specify_first_party_class_in_kwargs(self, patched_create_connection):
-        connection_factory("my_connection", connection_class="sql")
+        connection_factory("my_connection", type="sql")
 
         patched_create_connection.assert_called_once_with("my_connection", SQL)
 
@@ -146,7 +142,7 @@ class ConnectionFactoryTest(unittest.TestCase):
     ):
         mock_toml = """
 [connections.my_connection]
-connection_class="streamlit.connections.SQL"
+type="streamlit.connections.SQL"
 """
         with patch("builtins.open", new_callable=mock_open, read_data=mock_toml):
             connection_factory("my_connection")
@@ -157,7 +153,7 @@ connection_class="streamlit.connections.SQL"
     def test_can_specify_first_party_class_in_config(self, patched_create_connection):
         mock_toml = """
 [connections.my_connection]
-connection_class="snowpark"
+type="snowpark"
 """
         with patch("builtins.open", new_callable=mock_open, read_data=mock_toml):
             connection_factory("my_connection")

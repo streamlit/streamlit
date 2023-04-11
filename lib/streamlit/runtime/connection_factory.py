@@ -82,43 +82,36 @@ def _get_first_party_connection(connection_class: str):
 
 @overload
 def connection_factory(
-    name: str, connection_class: Literal["sql"], autocommit: bool = False, **kwargs
+    name: str, type: Literal["sql"], autocommit: bool = False, **kwargs
 ) -> SQL:
     pass
 
 
 @overload
-def connection_factory(
-    name: str, connection_class: Literal["snowpark"], **kwargs
-) -> Snowpark:
+def connection_factory(name: str, type: Literal["snowpark"], **kwargs) -> Snowpark:
     pass
 
 
 @overload
 def connection_factory(
-    name: str, connection_class: Type[ConnectionClass], **kwargs
+    name: str, type: Type[ConnectionClass], **kwargs
 ) -> ConnectionClass:
     pass
 
 
 @overload
 def connection_factory(
-    name: str, connection_class: Optional[str], **kwargs
+    name: str, type: Optional[str], **kwargs
 ) -> ExperimentalBaseConnection[Any]:
     pass
 
 
-# TODO(vdonato): Decide between the following names for the second parameter of this
-# function:
-#   * type (not great because it conflicts with a builtin function)
-#   * type_ (the Python convention for avoiding `type` the name conflict, but feels funny)
-#   * connection_class (a bit more verbose than `type_`)
-def connection_factory(name, connection_class=None, **kwargs):
+def connection_factory(name, type=None, **kwargs):
     """TODO(vdonato): Write a docstring (maybe with the help of the documentation team).
 
     The docstring should describe:
       * Using st.connection with one of our first party connections by passing a string
-        literal as the connection_class.
+        literal as the type.
       * Plugging your own ConnectionClass into st.experimental_connection.
     """
     USE_ENV_PREFIX = "env:"
@@ -129,17 +122,22 @@ def connection_factory(name, connection_class=None, **kwargs):
         envvar_name = name[len(USE_ENV_PREFIX) :]
         name = os.environ[envvar_name]
 
-    if connection_class is None:
+    if type is None:
         secrets_singleton.load_if_toml_exists()
 
-        # The user didn't specify a connection_class, so we try to pull it out from
-        # their secrets.toml file. NOTE: we're okay with any of the dict lookups
-        # below exploding with a KeyError since, if connection_class isn't explicitly
-        # specified here, it must be the case that it's defined in secrets.toml and
-        # should raise an Exception otherwise.
-        connection_class = secrets_singleton["connections"][name]["connection_class"]
+        # The user didn't specify a type, so we try to pull it out from their
+        # secrets.toml file. NOTE: we're okay with any of the dict lookups below
+        # exploding with a KeyError since, if type isn't explicitly specified here, it
+        # must be the case that it's defined in secrets.toml and should raise an
+        # Exception otherwise.
+        type = secrets_singleton["connections"][name]["type"]
 
-    if type(connection_class) == str:
+    # type is a nice kwarg name for the st.experimental_connection user but is annoying
+    # to work with since it conflicts with the builtin function name and thus gets
+    # syntax highlighted.
+    connection_class = type
+
+    if isinstance(connection_class, str):
         # We assume that a connection_class specified via string is either the fully
         # qualified name of a class (its module and exported classname) or the string
         # literal shorthand for one of our first party connections. In the former case,

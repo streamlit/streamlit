@@ -23,7 +23,7 @@ from tests.testutil import create_mock_script_run_ctx
 
 class SnowparkConnectionTest(unittest.TestCase):
     @patch("streamlit.connections.snowpark_connection.Snowpark._connect", MagicMock())
-    def test_read_sql_caches_value(self):
+    def test_query_caches_value(self):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
 
@@ -33,6 +33,6 @@ class SnowparkConnectionTest(unittest.TestCase):
         conn = Snowpark("my_snowpark_connection")
         conn._instance.sql.return_value = mock_sql_return
 
-        assert conn.read_sql("SELECT 1;") == "i am a dataframe"
-        assert conn.read_sql("SELECT 1;") == "i am a dataframe"
+        assert conn.query("SELECT 1;") == "i am a dataframe"
+        assert conn.query("SELECT 1;") == "i am a dataframe"
         conn._instance.sql.assert_called_once()

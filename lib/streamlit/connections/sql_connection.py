@@ -14,7 +14,7 @@
 
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import TYPE_CHECKING, Iterator, Optional, Union, cast
+from typing import TYPE_CHECKING, Iterator, List, Optional, Union, cast
 
 import pandas as pd
 
@@ -63,20 +63,43 @@ class SQL(ExperimentalBaseConnection["Engine"]):
         else:
             return cast("Engine", eng)
 
-    def read_sql(
+    def query(
         self,
         sql: str,
+        *,  # keyword-only arguments:
         ttl: Optional[Union[float, int, timedelta]] = None,
+        index_col: Optional[Union[str, List[str]]] = None,
+        chunksize: Optional[int] = None,
+        params=None,
         **kwargs,
     ) -> pd.DataFrame:
         from sqlalchemy import text
 
         @cache_data(ttl=ttl)
-        def _read_sql(sql: str, **kwargs) -> pd.DataFrame:
+        def _query(
+            sql: str,
+            index_col=None,
+            chunksize=None,
+            params=None,
+            **kwargs,
+        ) -> pd.DataFrame:
             instance = self._instance.connect()
-            return pd.read_sql(text(sql), instance, **kwargs)
+            return pd.read_sql(
+                text(sql),
+                instance,
+                index_col=index_col,
+                chunksize=chunksize,
+                params=params,
+                **kwargs,
+            )
 
-        return _read_sql(sql, **kwargs)
+        return _query(
+            sql,
+            index_col=index_col,
+            chunksize=chunksize,
+            params=params,
+            **kwargs,
+        )
 
     @contextmanager
     def session(self) -> Iterator["Session"]:
