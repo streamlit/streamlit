@@ -69,11 +69,7 @@ export function mockEndpoints(
 }
 
 export class MockMetricsManager implements MetricsManager {
-  private sessionInfo
-
-  public constructor(sessionInfo?: SessionInfo) {
-    this.sessionInfo = sessionInfo
-  }
+  public constructor() {}
 
   public enqueue = jest.fn()
   public incrementDeltaCounter = jest.fn()
