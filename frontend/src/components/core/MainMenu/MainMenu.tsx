@@ -27,7 +27,7 @@ import { StatefulMenu } from "baseui/menu"
 import { Menu } from "@emotion-icons/material-outlined"
 
 import { useTheme } from "@emotion/react"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 import Button, { Kind } from "src/components/shared/Button"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import {
@@ -244,7 +244,7 @@ function buildMenuItemComponent(
 }
 
 const SubMenu = (props: SubMenuProps): ReactElement => {
-  const { colors }: EmotionTheme = useTheme()
+  const { colors }: Theme = useTheme()
   const StyledMenuItemType = props.isDevMenu ? StyledDevItem : StyledCoreItem
   return (
     <StatefulMenu

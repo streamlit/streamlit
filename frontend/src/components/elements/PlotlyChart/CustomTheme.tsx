@@ -23,7 +23,7 @@ import {
   getGray90,
   getIncreasingGreen,
   hasLightBackgroundColor,
-  EmotionTheme,
+  Theme,
   getSequentialColorsArray,
   getCategoricalColorsArray,
   getDivergingColorsArray,
@@ -39,7 +39,7 @@ import { logError } from "src/lib/log"
  */
 export function applyStreamlitThemeTemplateLayout(
   layout: any,
-  theme: EmotionTheme
+  theme: Theme
 ): void {
   const { genericFonts, colors, fontSizes } = theme
 
@@ -217,7 +217,7 @@ export function applyStreamlitThemeTemplateLayout(
  */
 function replaceCategoricalColors(
   spec: string,
-  theme: EmotionTheme,
+  theme: Theme,
   elementTheme: string
 ): string {
   // All the placeholder constants defined here are matching the placeholders in the python implementation.
@@ -262,7 +262,7 @@ function replaceCategoricalColors(
 
 function replaceSequentialColors(
   spec: string,
-  theme: EmotionTheme,
+  theme: Theme,
   elementTheme: string
 ): string {
   // All the placeholder constants defined here are matching the placeholders in the python implementation.
@@ -307,7 +307,7 @@ function replaceSequentialColors(
 
 function replaceDivergingColors(
   spec: string,
-  theme: EmotionTheme,
+  theme: Theme,
   elementTheme: string
 ): string {
   // All the placeholder constants defined here are matching the placeholders in the python implementation.
@@ -357,7 +357,7 @@ function replaceDivergingColors(
  * Because Template.layout doesn't affect the go(plotly.graph_objects) graphs,
  * we use this method to specifically replace these graph properties.
  * */
-function replaceGOSpecificColors(spec: string, theme: EmotionTheme): string {
+function replaceGOSpecificColors(spec: string, theme: Theme): string {
   // All the placeholder constants defined here are matching the placeholders in the python implementation.
   const INCREASING = "#000032"
   const DECREASING = "#000033"
@@ -389,7 +389,7 @@ function replaceGOSpecificColors(spec: string, theme: EmotionTheme): string {
 
 export function replaceTemporaryColors(
   spec: string,
-  theme: EmotionTheme,
+  theme: Theme,
   elementTheme: string
 ): string {
   spec = replaceGOSpecificColors(spec, theme)
@@ -404,7 +404,7 @@ export function replaceTemporaryColors(
  * spec.data, spec.layout.template.data, and spec.layout.template.layout
  * @param spec - spec
  */
-export function applyStreamlitTheme(spec: any, theme: EmotionTheme): void {
+export function applyStreamlitTheme(spec: any, theme: Theme): void {
   try {
     applyStreamlitThemeTemplateLayout(spec.layout.template.layout, theme)
   } catch (e) {
@@ -424,10 +424,7 @@ export function applyStreamlitTheme(spec: any, theme: EmotionTheme): void {
  * @param theme - theme from useTheme()
  * @returns modified spec.layout
  */
-export function layoutWithThemeDefaults(
-  layout: any,
-  theme: EmotionTheme
-): any {
+export function layoutWithThemeDefaults(layout: any, theme: Theme): any {
   const { colors, genericFonts } = theme
 
   const themeDefaults = {

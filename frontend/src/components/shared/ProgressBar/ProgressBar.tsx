@@ -17,7 +17,7 @@
 import React, { ReactElement } from "react"
 import { useTheme } from "@emotion/react"
 import { AppContext } from "src/components/core/AppContext"
-import { EmotionTheme, isPresetTheme } from "src/theme"
+import { Theme, isPresetTheme } from "src/theme"
 import {
   ProgressBar as UIProgressBar,
   ProgressBarOverrides,
@@ -46,7 +46,7 @@ function ProgressBar({
   size = Size.SMALL,
   overrides,
 }: ProgressBarProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme: Theme = useTheme()
   const heightMap = {
     xs: theme.spacing.twoXS,
     sm: theme.spacing.sm,

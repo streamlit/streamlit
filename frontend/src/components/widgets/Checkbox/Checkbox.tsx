@@ -22,7 +22,7 @@ import { Checkbox as CheckboxProto } from "src/autogen/proto"
 import { transparentize } from "color2k"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { StyledWidgetLabelHelpInline } from "src/components/widgets/BaseWidget"
@@ -38,7 +38,7 @@ export interface OwnProps {
 }
 
 interface ThemeProps {
-  theme: EmotionTheme
+  theme: Theme
 }
 
 export type Props = OwnProps & ThemeProps

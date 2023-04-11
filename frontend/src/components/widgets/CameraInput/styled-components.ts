@@ -17,7 +17,7 @@
 import styled, { CSSObject } from "@emotion/styled"
 import { transparentize } from "color2k"
 import { MouseEvent, ReactNode } from "react"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 
 export interface CameraInputButtonProps {
   onClick?: (event: MouseEvent<HTMLButtonElement>) => any
@@ -37,7 +37,7 @@ enum Size {
   LARGE = "large",
 }
 
-function getSizeStyle(size: Size, theme: EmotionTheme): CSSObject {
+function getSizeStyle(size: Size, theme: Theme): CSSObject {
   switch (size) {
     case Size.XSMALL:
       return {

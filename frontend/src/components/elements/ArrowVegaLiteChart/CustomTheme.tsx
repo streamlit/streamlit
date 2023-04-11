@@ -23,10 +23,10 @@ import {
   getCategoricalColorsArray,
   getDivergingColorsArray,
   getSequentialColorsArray,
-  EmotionTheme,
+  Theme,
 } from "src/theme"
 
-export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
+export function applyStreamlitTheme(config: any, theme: Theme): any {
   // This theming config contains multiple hard coded spacing values.
   // The reason is that we currently only have rem values in our spacing
   // definitions and vega lite requires numerical (pixel) values.
@@ -137,7 +137,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
   )
 }
 
-export function applyThemeDefaults(config: any, theme: EmotionTheme): any {
+export function applyThemeDefaults(config: any, theme: Theme): any {
   const { colors, fontSizes, genericFonts } = theme
   const themeFonts = {
     labelFont: genericFonts.bodyFont,

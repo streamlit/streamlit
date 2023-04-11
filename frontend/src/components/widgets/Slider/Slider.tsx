@@ -30,7 +30,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 import {
   StyledThumb,
   StyledThumbValue,
@@ -43,7 +43,7 @@ const DEBOUNCE_TIME_MS = 200
 export interface Props {
   disabled: boolean
   element: SliderProto
-  theme: EmotionTheme
+  theme: Theme
   widgetMgr: WidgetStateManager
   width: number
 }

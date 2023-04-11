@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import { Metric as MetricProto } from "src/autogen/proto"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 import Icon from "src/components/shared/Icon"
 import { useTheme } from "@emotion/react"
@@ -37,7 +37,7 @@ export interface MetricProps {
 }
 
 export default function Metric({ element }: MetricProps): ReactElement {
-  const { colors }: EmotionTheme = useTheme()
+  const { colors }: Theme = useTheme()
   const { MetricColor, MetricDirection } = MetricProto
 
   let direction: any = null

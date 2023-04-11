@@ -24,12 +24,12 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { LabelVisibilityOptions } from "src/lib/utils"
 import { Placement } from "src/components/shared/Tooltip"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 
 export interface Props {
   disabled: boolean
   horizontal: boolean
-  theme: EmotionTheme
+  theme: Theme
   width?: number
   value: number
   onChange: (selectedIndex: number) => any

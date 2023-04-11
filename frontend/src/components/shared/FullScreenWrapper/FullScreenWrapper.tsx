@@ -19,7 +19,7 @@ import { withTheme } from "@emotion/react"
 import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
 import Icon from "src/components/shared/Icon"
 import { AppContext } from "src/components/core/AppContext"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 import {
   StyledFullScreenFrame,
   StyledFullScreenButton,
@@ -40,7 +40,7 @@ interface Props {
   children: (props: Size) => React.ReactNode
   width: number
   height?: number
-  theme: EmotionTheme
+  theme: Theme
 }
 
 interface State {

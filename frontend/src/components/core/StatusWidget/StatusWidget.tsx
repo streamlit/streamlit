@@ -31,7 +31,7 @@ import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { Timer } from "src/lib/Timer"
 import Icon from "src/components/shared/Icon"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 
 /*
  * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served
@@ -77,7 +77,7 @@ export interface StatusWidgetProps {
   /** Allows users to change user settings to allow rerun on save */
   allowRunOnSave: boolean
 
-  theme: EmotionTheme
+  theme: Theme
 }
 
 /** Component state */

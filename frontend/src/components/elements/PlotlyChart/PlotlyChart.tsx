@@ -21,7 +21,7 @@ import React, {
   useState,
 } from "react"
 import { useTheme } from "@emotion/react"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 import {
   Figure as FigureProto,
   PlotlyChart as PlotlyChartProto,
@@ -70,7 +70,7 @@ function PlotlyFigure({
 }: PlotlyChartProps): ReactElement {
   const figure = element.figure as FigureProto
 
-  const theme: EmotionTheme = useTheme()
+  const theme: Theme = useTheme()
 
   const generateSpec = useCallback((): any => {
     const spec = JSON.parse(

@@ -26,7 +26,7 @@ import {
   tableGet,
 } from "src/lib/dataFrameProto"
 import { ensureError } from "src/lib/ErrorHandling"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 import embed from "vega-embed"
 import * as vega from "vega"
 import { expressionInterpreter } from "vega-interpreter"
@@ -62,7 +62,7 @@ const SUPPORTED_INDEX_TYPES = new Set([
 interface Props {
   width: number
   element: ImmutableMap<string, any>
-  theme: EmotionTheme
+  theme: Theme
 }
 
 export interface PropsWithHeight extends Props {
@@ -482,7 +482,7 @@ export function dataIsAnAppendOfPrev(
   return true
 }
 
-function configWithThemeDefaults(config: any, theme: EmotionTheme): any {
+function configWithThemeDefaults(config: any, theme: Theme): any {
   const { colors, fontSizes, genericFonts } = theme
   const themeFonts = {
     labelFont: genericFonts.bodyFont,

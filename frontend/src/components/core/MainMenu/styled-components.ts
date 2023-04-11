@@ -17,10 +17,10 @@
 import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
 import { Keyframes } from "@emotion/serialize"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 import { transparentize } from "color2k"
 
-const recordingIndicatorPulse = (theme: EmotionTheme): Keyframes => keyframes`
+const recordingIndicatorPulse = (theme: Theme): Keyframes => keyframes`
 0% {
   box-shadow: 0 0 ${theme.spacing.twoXS} ${theme.colors.red};
 }

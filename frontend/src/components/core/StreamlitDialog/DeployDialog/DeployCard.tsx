@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import { Card } from "baseui/card"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 import { useTheme } from "@emotion/react"
 
 interface IDeployCardProps {
@@ -26,7 +26,7 @@ interface IDeployCardProps {
 function DeployCard(
   props: React.PropsWithChildren<IDeployCardProps>
 ): ReactElement {
-  const { colors, spacing }: EmotionTheme = useTheme()
+  const { colors, spacing }: Theme = useTheme()
   const { children } = props
   return (
     <Card

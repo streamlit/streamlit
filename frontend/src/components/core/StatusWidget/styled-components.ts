@@ -15,7 +15,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
-import { hasLightBackgroundColor, EmotionTheme } from "src/theme"
+import { hasLightBackgroundColor, Theme } from "src/theme"
 
 /*
   "ConnectionStatus" styles are used for displaying
@@ -68,7 +68,7 @@ export const StyledAppStatus = styled.div(({ theme }) => ({
   height: "1.6rem",
 }))
 
-const minimizedStyles = (theme: EmotionTheme): CSSObject => ({
+const minimizedStyles = (theme: Theme): CSSObject => ({
   opacity: 0,
   padding: theme.spacing.none,
   margin: theme.spacing.none,

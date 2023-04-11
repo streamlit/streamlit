@@ -21,7 +21,7 @@ import StreamlitMarkdown, {
   StreamlitMarkdownProps,
 } from "src/components/shared/StreamlitMarkdown"
 import { useTheme } from "@emotion/react"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 import {
   StyledTooltipIconWrapper,
   StyledLabelHelpInline,
@@ -44,7 +44,7 @@ function TooltipIcon({
   children,
   markdownProps,
 }: TooltipIconProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
+  const theme: Theme = useTheme()
   return (
     <StyledTooltipIconWrapper className="stTooltipIcon" isLatex={isLatex}>
       <Tooltip

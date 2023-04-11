@@ -28,7 +28,7 @@ import Webcam from "react-webcam"
 import { debounce } from "src/lib/utils"
 
 import Icon from "src/components/shared/Icon"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 import themeColors from "src/theme/emotionBaseTheme/themeColors"
 import { CAMERA_PERMISSION_URL } from "src/urls"
 
@@ -112,7 +112,7 @@ const WebcamComponent = ({
     }
   }
 
-  const theme: EmotionTheme = useTheme()
+  const theme: Theme = useTheme()
 
   return (
     <StyledCameraInput width={debouncedWidth}>

@@ -16,9 +16,9 @@
 
 import React from "react"
 import styled from "@emotion/styled"
-import { EmotionTheme } from "src/theme"
+import { Theme } from "src/theme"
 
-function translateGapWidth(gap: string, theme: EmotionTheme): string {
+function translateGapWidth(gap: string, theme: Theme): string {
   let gapWidth = theme.spacing.lg
   if (gap === "medium") {
     gapWidth = theme.spacing.threeXL
