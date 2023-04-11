@@ -238,4 +238,6 @@ type="snowpark"
         os.environ["MY_CONN_NAME"] = "staging"
         connection_factory("env:MY_CONN_NAME", MockConnection)
 
-        patched_create_connection.assert_called_once_with("staging", MockConnection)
+        patched_create_connection.assert_called_once_with(
+            "staging", MockConnection, max_entries=None, ttl=None
+        )
