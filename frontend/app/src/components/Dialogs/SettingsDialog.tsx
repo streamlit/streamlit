@@ -20,12 +20,18 @@ import React, {
   ReactElement,
   ReactNode,
 } from "react"
-import { ThemeConfig } from "src/theme"
-import Button, { Kind } from "src/components/shared/Button"
-import { Modal, ModalHeader, ModalBody } from "src/components/shared/Modal"
-import { AppContext, AppContextProps } from "src/components/core/AppContext"
-import UISelectbox from "src/components/shared/Dropdown"
-import { MetricsManager } from "src/lib/MetricsManager"
+import {
+  ThemeConfig,
+  BaseButton,
+  BaseButtonKind,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  AppContext,
+  AppContextProps,
+  UISelectbox,
+  MetricsManager,
+} from "@streamlit/lib"
 
 import {
   StyledCheckbox,
@@ -73,9 +79,12 @@ export class SettingsDialog extends PureComponent<
   private renderThemeCreatorButton = (): ReactElement | false =>
     this.props.developerMode && (
       <div>
-        <Button onClick={this.props.openThemeCreator} kind={Kind.SECONDARY}>
+        <BaseButton
+          onClick={this.props.openThemeCreator}
+          kind={BaseButtonKind.SECONDARY}
+        >
           Edit active theme
-        </Button>
+        </BaseButton>
       </div>
     )
 

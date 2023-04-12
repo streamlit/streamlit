@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// No check here because theme type is not properly being recognized
+// @ts-nocheck
 
 import styled from "@emotion/styled"
 import { ChevronLeft } from "react-feather"
-import { Small } from "src/components/shared/TextElements"
+import { Small } from "@streamlit/lib"
 
 export const StyledRerunHeader = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,

@@ -18,20 +18,21 @@ import React from "react"
 import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { mount, render } from "src/lib/test_util"
-import { IMenuItem } from "src/hocs/withHostCommunication/types"
-
-import { GitInfo, IGitInfo } from "src/autogen/proto"
-import { IDeployErrorDialog } from "src/components/core/StreamlitDialog/DeployErrorDialogs/types"
 import {
+  mount,
+  render,
+  IMenuItem,
+  IDeployErrorDialog,
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
-} from "src/components/core/StreamlitDialog/DeployErrorDialogs"
+  MockMetricsManager,
+} from "@streamlit/lib"
+
+import { GitInfo, IGitInfo } from "src/autogen/proto"
 
 import { MainMenu, MainMenuProps } from "./MainMenu"
 import { waitFor } from "@testing-library/dom"
-import { MockMetricsManager } from "src/lib/mocks/mocks"
 
 const { GitStates } = GitInfo
 

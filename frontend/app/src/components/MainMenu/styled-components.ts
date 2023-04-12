@@ -13,11 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// No check here because theme type is not properly being recognized
+// @ts-nocheck
 
 import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
 import { Keyframes } from "@emotion/serialize"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "@streamlit/lib"
 import { transparentize } from "color2k"
 
 const recordingIndicatorPulse = (theme: EmotionTheme): Keyframes => keyframes`

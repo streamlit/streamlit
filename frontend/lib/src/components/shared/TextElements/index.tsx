@@ -13,5 +13,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export { Small, Kind } from "./Text"
+export { Small, Kind as TextKind } from "./Text"
 export type { TextProps } from "./Text"

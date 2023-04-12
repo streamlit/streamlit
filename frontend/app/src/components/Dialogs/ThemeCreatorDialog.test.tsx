@@ -16,13 +16,18 @@
 
 import React from "react"
 import { CustomThemeConfig } from "src/autogen/proto"
-import { shallow } from "src/lib/test_util"
-import ColorPicker from "src/components/shared/ColorPicker"
-import UISelectbox from "src/components/shared/Dropdown"
-import { baseTheme, darkTheme, lightTheme, toThemeInput } from "src/theme"
-import { fonts } from "src/theme/primitives/typography"
+import {
+  shallow,
+  BaseColorPicker,
+  UISelectbox,
+  baseTheme,
+  darkTheme,
+  lightTheme,
+  toThemeInput,
+  fonts,
+} from "@streamlit/lib"
 import ThemeCreatorDialog, {
-  Props as ThemeCreatorDialogProps,
+  ThemeCreatorDialogProps,
   toMinimalToml,
 } from "./ThemeCreatorDialog"
 
@@ -174,7 +179,7 @@ describe("Opened ThemeCreatorDialog", () => {
       .first()
       .dive()
 
-    const colorpicker = wrapper.find(ColorPicker)
+    const colorpicker = wrapper.find(BaseColorPicker)
     expect(colorpicker).toHaveLength(1)
 
     colorpicker.at(0).prop("onChange")("pink")

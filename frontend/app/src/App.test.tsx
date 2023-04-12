@@ -37,14 +37,13 @@ import {
   lightTheme,
   toExportedTheme,
   Modal,
-  DialogType,
-  StreamlitDialog,
-  MainMenu,
   ToolbarActions,
   HostCommunicationHOC,
 } from "@streamlit/lib"
 
 import { App, Props } from "./App"
+import { MainMenu } from "src/components/MainMenu"
+import { DialogType, StreamlitDialog } from "src/components/Dialogs"
 
 import {
   CustomThemeConfig,

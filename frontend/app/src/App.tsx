@@ -27,7 +27,6 @@ import {
   getIFrameEnclosingApp,
   hashString,
   isColoredLineDisplayed,
-  isLocalhost,
   isDarkTheme,
   isEmbed,
   isTesting,
@@ -41,8 +40,6 @@ import {
   getElementWidgetID,
   generateUID,
   getEmbeddingIdClassName,
-  MainMenu,
-  StreamlitDialog,
   ToolbarActions,
   PerformanceEvents,
   createFormsData,
@@ -57,7 +54,6 @@ import {
   logError,
   logMessage,
   AppRoot,
-  UserSettings,
   ComponentRegistry,
   handleFavicon,
   CUSTOM_THEME_NAME,
@@ -73,8 +69,6 @@ import {
   ensureError,
   BaseUriParts,
   HostCommunicationHOC,
-  DialogProps,
-  DialogType,
   ScreenCastHOC,
   extractPageNameFromPathName,
   StreamlitEndpoints,
@@ -110,7 +104,14 @@ import { ConnectionManager } from "src/managers/ConnectionManager"
 import { DefaultStreamlitEndpoints } from "src/managers/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "src/managers/SegmentMetricsManager"
 import Header from "src/components/Header"
-import StatusWidget from "./components/StatusWidget"
+import StatusWidget from "src/components/StatusWidget"
+import {
+  DialogType,
+  StreamlitDialog,
+  UserSettings,
+  DialogProps,
+} from "src/components/Dialogs"
+import { MainMenu, isLocalhost } from "src/components/MainMenu"
 
 import { concat, noop, without } from "lodash"
 

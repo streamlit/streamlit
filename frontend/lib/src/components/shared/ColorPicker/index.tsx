@@ -14,4 +14,4 @@
  * limitations under the License.
  */
 
-export { default } from "./ColorPicker"
+export { default as BaseColorPicker } from "./ColorPicker"

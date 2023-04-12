@@ -27,22 +27,22 @@ import { StatefulMenu } from "baseui/menu"
 import { Menu } from "@emotion-icons/material-outlined"
 
 import { useTheme } from "@emotion/react"
-import { EmotionTheme } from "src/theme"
-import Button, { Kind } from "src/components/shared/Button"
-import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import {
+  EmotionTheme,
+  BaseButton,
+  BaseButtonKind,
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
-} from "src/components/core/StreamlitDialog/DeployErrorDialogs"
-import Icon from "src/components/shared/Icon"
-import {
+  Icon,
   IGuestToHostMessage,
   IMenuItem,
-} from "src/hocs/withHostCommunication/types"
+  MetricsManager,
+  DEPLOY_URL,
+  STREAMLIT_CLOUD_URL,
+} from "@streamlit/lib"
+import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
-import { MetricsManager } from "src/lib/MetricsManager"
-import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/urls"
 import {
   StyledMenuDivider,
   StyledMenuItem,
@@ -244,6 +244,8 @@ function buildMenuItemComponent(
 }
 
 const SubMenu = (props: SubMenuProps): ReactElement => {
+  // commenting out because theme is not properly recognized
+  // @ts-expect-error
   const { colors }: EmotionTheme = useTheme()
   const StyledMenuItemType = props.isDevMenu ? StyledDevItem : StyledCoreItem
   return (
@@ -528,9 +530,9 @@ const MainMenu = memo(function MainMenu(props: MainMenuProps): ReactElement {
       }}
     >
       <span id="MainMenu">
-        <Button kind={Kind.HEADER_BUTTON}>
+        <BaseButton kind={BaseButtonKind.HEADER_BUTTON}>
           <Icon content={Menu} size="lg" />
-        </Button>
+        </BaseButton>
         {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}
       </span>
     </StatefulPopover>

@@ -22,8 +22,8 @@ import {
   ModalBody,
   ModalFooter,
   ModalButton,
-} from "src/components/shared/Modal"
-import { Kind } from "src/components/shared/Button"
+  BaseButtonKind,
+} from "@streamlit/lib"
 import { StyledShortcutLabel } from "./styled-components"
 
 export interface ScriptChangedDialogProps {
@@ -68,11 +68,14 @@ export class ScriptChangedDialog extends PureComponent<ScriptChangedDialogProps>
           </ModalBody>
           <ModalFooter>
             {this.props.allowRunOnSave ? (
-              <ModalButton kind={Kind.TERTIARY} onClick={this.alwaysRerun}>
+              <ModalButton
+                kind={BaseButtonKind.TERTIARY}
+                onClick={this.alwaysRerun}
+              >
                 <StyledShortcutLabel>Always rerun</StyledShortcutLabel>
               </ModalButton>
             ) : null}
-            <ModalButton kind={Kind.SECONDARY} onClick={this.rerun}>
+            <ModalButton kind={BaseButtonKind.SECONDARY} onClick={this.rerun}>
               <StyledShortcutLabel>Rerun</StyledShortcutLabel>
             </ModalButton>
           </ModalFooter>

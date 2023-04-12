@@ -16,20 +16,24 @@
 
 import React from "react"
 import PropTypes from "prop-types"
-import { createPresetThemes, lightTheme, darkTheme } from "src/theme"
-import { shallow } from "src/lib/test_util"
-import { Props as ContextProps } from "src/components/core/AppContext"
-import UISelectbox from "src/components/shared/Dropdown"
+import {
+  createPresetThemes,
+  lightTheme,
+  darkTheme,
+  shallow,
+  AppContextProps,
+  UISelectbox,
+  MockMetricsManager,
+} from "@streamlit/lib"
 
 import { SettingsDialog, SettingsDialogProps } from "./SettingsDialog"
-import { MockMetricsManager } from "src/lib/mocks/mocks"
 
 const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()
 
 const getContext = (
-  extend?: Partial<ContextProps>
-): Partial<ContextProps> => ({
+  extend?: Partial<AppContextProps>
+): Partial<AppContextProps> => ({
   activeTheme: lightTheme,
   setTheme: mockSetTheme,
   availableThemes: [],

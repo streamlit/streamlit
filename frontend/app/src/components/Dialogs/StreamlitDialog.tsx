@@ -15,24 +15,24 @@
  */
 
 import React, { ReactElement, ReactNode, CSSProperties } from "react"
-import { Kind } from "src/components/shared/Button"
 import {
+  BaseButtonKind,
   Modal,
   ModalHeader,
   ModalBody,
   ModalFooter,
   ModalButton,
-} from "src/components/shared/Modal"
+  SessionInfo,
+  STREAMLIT_HOME_URL,
+  StreamlitMarkdown,
+} from "@streamlit/lib"
 import { HotKeys } from "react-hotkeys"
 
 import {
   ScriptChangedDialog,
   ScriptChangedDialogProps,
-} from "src/components/core/StreamlitDialog/ScriptChangedDialog"
+} from "src/components/Dialogs/ScriptChangedDialog"
 import { IException } from "src/autogen/proto"
-import { SessionInfo } from "src/lib/SessionInfo"
-import { STREAMLIT_HOME_URL } from "src/urls"
-import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import { SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
   ThemeCreatorDialogProps,
@@ -157,7 +157,7 @@ function aboutDialog(props: AboutProps): ReactElement {
           </StyledAboutInfo>
         </ModalBody>
         <ModalFooter>
-          <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
+          <ModalButton kind={BaseButtonKind.SECONDARY} onClick={props.onClose}>
             Close
           </ModalButton>
         </ModalFooter>
@@ -184,7 +184,7 @@ function aboutDialog(props: AboutProps): ReactElement {
         </div>
       </ModalBody>
       <ModalFooter>
-        <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
+        <ModalButton kind={BaseButtonKind.SECONDARY} onClick={props.onClose}>
           Close
         </ModalButton>
       </ModalFooter>
@@ -233,12 +233,15 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
             </div>
           </ModalBody>
           <ModalFooter>
-            <ModalButton kind={Kind.TERTIARY} onClick={props.onClose}>
+            <ModalButton
+              kind={BaseButtonKind.TERTIARY}
+              onClick={props.onClose}
+            >
               Cancel
             </ModalButton>
             <ModalButton
               autoFocus
-              kind={Kind.SECONDARY}
+              kind={BaseButtonKind.SECONDARY}
               onClick={props.confirmCallback}
             >
               Clear caches
@@ -294,11 +297,11 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
           </div>
         </ModalBody>
         <ModalFooter>
-          <ModalButton kind={Kind.TERTIARY} onClick={props.onClose}>
+          <ModalButton kind={BaseButtonKind.TERTIARY} onClick={props.onClose}>
             Cancel
           </ModalButton>
           <ModalButton
-            kind={Kind.SECONDARY}
+            kind={BaseButtonKind.SECONDARY}
             onClick={() => props.rerunCallback()}
           >
             Rerun
@@ -331,7 +334,7 @@ function scriptCompileErrorDialog(
         </div>
       </ModalBody>
       <ModalFooter>
-        <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
+        <ModalButton kind={BaseButtonKind.SECONDARY} onClick={props.onClose}>
           Close
         </ModalButton>
       </ModalFooter>
@@ -362,7 +365,7 @@ function warningDialog(props: WarningProps): ReactElement {
       <ModalHeader>{props.title}</ModalHeader>
       <ModalBody>{props.msg}</ModalBody>
       <ModalFooter>
-        <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
+        <ModalButton kind={BaseButtonKind.SECONDARY} onClick={props.onClose}>
           Done
         </ModalButton>
       </ModalFooter>
@@ -404,10 +407,13 @@ function deployErrorDialog({
         <StyledDeployErrorContent>{msg}</StyledDeployErrorContent>
       </ModalBody>
       <ModalFooter>
-        <ModalButton kind={Kind.TERTIARY} onClick={onTryAgain}>
+        <ModalButton kind={BaseButtonKind.TERTIARY} onClick={onTryAgain}>
           Try again
         </ModalButton>
-        <ModalButton kind={Kind.SECONDARY} onClick={handlePrimaryButton}>
+        <ModalButton
+          kind={BaseButtonKind.SECONDARY}
+          onClick={handlePrimaryButton}
+        >
           {onContinue ? "Continue anyway" : "Close"}
         </ModalButton>
       </ModalFooter>

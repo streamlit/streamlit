@@ -18,7 +18,7 @@ import React from "react"
 import { ColorPicker as ColorPickerProto } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
-import UIColorPicker from "src/components/shared/ColorPicker"
+import { BaseColorPicker } from "src/components/shared/ColorPicker"
 import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 
 export interface Props {
@@ -121,7 +121,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
     )
 
     return (
-      <UIColorPicker
+      <BaseColorPicker
         label={element.label}
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
