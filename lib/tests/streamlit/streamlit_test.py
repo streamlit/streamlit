@@ -178,26 +178,6 @@ class StreamlitTest(unittest.TestCase):
 class StreamlitAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
-    def test_st_markdown(self):
-        """Test st.markdown."""
-        st.markdown("    some markdown  ")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, "some markdown")
-
-        # test the unsafe_allow_html keyword
-        st.markdown("    some markdown  ", unsafe_allow_html=True)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, "some markdown")
-        self.assertTrue(el.markdown.allow_html)
-
-        # test the help keyword
-        st.markdown("    some markdown  ", help="help text")
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.body, "some markdown")
-        self.assertEqual(el.markdown.help, "help text")
-
     def test_st_plotly_chart_simple(self):
         """Test st.plotly_chart."""
         import plotly.graph_objs as go
