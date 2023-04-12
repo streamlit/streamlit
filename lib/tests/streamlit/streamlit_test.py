@@ -179,19 +179,6 @@ class StreamlitTest(unittest.TestCase):
 class StreamlitAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
-    def test_st_help(self):
-        """Test st.help."""
-        with patch_varname_getter():
-            st.help(os.chdir)
-
-        el = self.get_delta_from_queue().new_element.doc_string
-        self.assertEqual("os.chdir", el.name)
-        self.assertEqual("builtin_function_or_method", el.type)
-        self.assertTrue(
-            el.doc_string.startswith("Change the current working directory")
-        )
-        self.assertEqual(f"posix.chdir(path)", el.value)
-
     def test_st_json(self):
         """Test st.json."""
         st.json('{"some": "json"}')

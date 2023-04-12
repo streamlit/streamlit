@@ -20,7 +20,10 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def patch_varname_getter():
-    """Patches streamlit.elements.doc_string so _get_variable_name() works outside ScriptRunner."""
+    """
+    Patches streamlit.elements.doc_string so _get_variable_name()
+    works outside ScriptRunner.
+    """
     import inspect
 
     parent_frame_filename = inspect.getouterframes(inspect.currentframe())[2].filename
