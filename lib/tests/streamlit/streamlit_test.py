@@ -177,19 +177,6 @@ class StreamlitTest(unittest.TestCase):
 class StreamlitAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
-    def test_st_latex_with_help(self):
-        """Test st.latex with help."""
-        st.latex(
-            r"""
-            a + ar + a r^2 + a r^3 + \cdots + a r^{n-1} =
-            \sum_{k=0}^{n-1} ar^k =
-            a \left(\frac{1-r^{n}}{1-r}\right)
-            """,
-            help="help text",
-        )
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.help, "help text")
-
     def test_st_time_input(self):
         """Test st.time_input."""
         value = datetime.time(8, 45)
