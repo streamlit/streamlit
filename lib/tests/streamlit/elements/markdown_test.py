@@ -38,3 +38,13 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.markdown.body, "some markdown")
         self.assertEqual(el.markdown.help, "help text")
+
+
+class StCaptionAPITest(DeltaGeneratorTestCase):
+    """Test st.caption  APIs."""
+
+    def test_st_caption_with_help(self):
+        """Test st.caption with help."""
+        st.caption("some caption", help="help text")
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.markdown.help, "help text")

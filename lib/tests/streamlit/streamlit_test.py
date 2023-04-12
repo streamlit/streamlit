@@ -177,12 +177,6 @@ class StreamlitTest(unittest.TestCase):
 class StreamlitAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
-    def test_st_caption_with_help(self):
-        """Test st.caption with help."""
-        st.caption("some caption", help="help text")
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.markdown.help, "help text")
-
     def test_st_latex_with_help(self):
         """Test st.latex with help."""
         st.latex(
