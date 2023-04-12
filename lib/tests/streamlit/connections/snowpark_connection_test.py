@@ -29,6 +29,7 @@ class SnowparkConnectionTest(unittest.TestCase):
     def tearDown(self) -> None:
         st.cache_data.clear()
 
+    @pytest.mark.require_snowflake
     @patch(
         "streamlit.connections.snowpark_connection._load_from_snowsql_config_file",
         MagicMock(return_value=AttrDict({"account": "some_val_1"})),
