@@ -241,3 +241,13 @@ type="snowpark"
         patched_create_connection.assert_called_once_with(
             "staging", MockConnection, max_entries=None, ttl=None
         )
+
+    @patch("streamlit.runtime.connection_factory._create_connection")
+    def test_can_only_set_name_if_equal_to_desired_type(
+        self, patched_create_connection
+    ):
+        connection_factory("sql")
+
+        patched_create_connection.assert_called_once_with(
+            "sql", SQL, max_entries=None, ttl=None
+        )
