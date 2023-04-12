@@ -14,6 +14,10 @@ outputs:
   PYTHON_MAX_VERSION:
     description: Latest version of Python supported by Streamlit
     value: ${{ steps.build_info.outputs.PYTHON_MAX_VERSION }}
+  USE_CONSTRAINT_FILE:
+    description: Whether to use a constraint file to install Python dependencies
+    value: ${{ steps.build_info.outputs.USE_CONSTRAINT_FILE }}
+
 
 runs:
   using: composite
