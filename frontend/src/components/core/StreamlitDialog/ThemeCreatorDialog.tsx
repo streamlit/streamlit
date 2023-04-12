@@ -32,7 +32,7 @@ import {
   createTheme,
   darkTheme,
   lightTheme,
-  Theme,
+  EmotionTheme,
   ThemeConfig,
   toThemeInput,
 } from "src/theme"
@@ -105,7 +105,7 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
 
 const changedColorConfig = (
   themeInput: Partial<CustomThemeConfig>,
-  baseTheme: Theme
+  baseTheme: EmotionTheme
 ): Array<string> => {
   const toLowerCaseIfString = (x: any): any => {
     if (typeof x === "string") {
