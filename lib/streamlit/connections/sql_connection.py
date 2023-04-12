@@ -13,12 +13,14 @@
 # limitations under the License.
 
 from contextlib import contextmanager
+from copy import deepcopy
 from datetime import timedelta
 from typing import TYPE_CHECKING, Iterator, List, Optional, Union, cast
 
 import pandas as pd
 
 from streamlit.connections import ExperimentalBaseConnection
+from streamlit.connections.util import extract_from_dict, merge_dicts
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
@@ -27,6 +29,16 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 
+_ALL_CONNECTION_PARAMS = {
+    "url",
+    "driver",
+    "dialect",
+    "username",
+    "password",
+    "host",
+    "port",
+    "database",
+}
 _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
@@ -34,26 +46,27 @@ class SQL(ExperimentalBaseConnection["Engine"]):
     def _connect(self, autocommit: bool = False, **kwargs) -> "Engine":
         import sqlalchemy
 
-        secrets = self._secrets
+        kwargs = extract_from_dict(_ALL_CONNECTION_PARAMS, deepcopy(kwargs))
+        conn_params = merge_dicts([self._secrets.to_dict(), kwargs])
 
-        if "url" in secrets:
-            url = sqlalchemy.engine.make_url(secrets["url"])
+        if "url" in conn_params:
+            url = sqlalchemy.engine.make_url(conn_params["url"])
         else:
             for p in _REQUIRED_CONNECTION_PARAMS:
-                if p not in secrets:
+                if p not in conn_params:
                     raise StreamlitAPIException(f"Missing SQL DB connection param: {p}")
 
-            drivername = secrets["dialect"] + (
-                f"+{secrets['driver']}" if "driver" in secrets else ""
+            drivername = conn_params["dialect"] + (
+                f"+{conn_params['driver']}" if "driver" in conn_params else ""
             )
 
             url = sqlalchemy.engine.URL.create(
                 drivername=drivername,
-                username=secrets["username"],
-                password=secrets.get("password"),
-                host=secrets["host"],
-                port=int(secrets["port"]) if "port" in secrets else None,
-                database=secrets.get("database"),
+                username=conn_params["username"],
+                password=conn_params.get("password"),
+                host=conn_params["host"],
+                port=int(conn_params["port"]) if "port" in conn_params else None,
+                database=conn_params.get("database"),
             )
 
         eng = sqlalchemy.create_engine(url, **kwargs)
