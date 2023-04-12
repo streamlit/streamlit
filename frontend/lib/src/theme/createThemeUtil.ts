@@ -20,7 +20,7 @@ import {
 } from "baseui"
 import { ThemePrimitives, Theme as BaseTheme } from "baseui/theme"
 import { transparentize } from "color2k"
-import { Theme } from "./types"
+import { EmotionTheme } from "./types"
 
 // Theme primitives. See lightThemePrimitives for what's available. These are
 // used to create a large JSON-style structure with theme values for all
@@ -31,7 +31,7 @@ import { Theme } from "./types"
 // this file to output values.
 export const createBaseThemePrimitives = (
   baseTheme: ThemePrimitives,
-  theme: Theme
+  theme: EmotionTheme
 ): ThemePrimitives => {
   const { colors, genericFonts } = theme
 
@@ -66,7 +66,9 @@ export const createBaseThemePrimitives = (
 // Theme overrides.
 // NOTE: A lot of the properties we can override here don't seem to actually
 // be used anywhere in BaseWeb's source. Will report a bug about it.
-export const createThemeOverrides = (theme: Theme): Record<string, any> => {
+export const createThemeOverrides = (
+  theme: EmotionTheme
+): Record<string, any> => {
   const { inSidebar, colors, genericFonts, fontSizes, lineHeights, radii } =
     theme
 
@@ -221,7 +223,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
 }
 
 export const createBaseUiTheme = (
-  theme: Theme,
+  theme: EmotionTheme,
   primitives = lightBaseThemePrimitives
 ): BaseTheme & Record<string, any> =>
   createBaseTheme(
