@@ -20,7 +20,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, call, mock_open, patch
 
 import pytest
-import requests_mock
+import segment.analytics as analytics
 from testfixtures import tempdir
 
 from streamlit import file_util
@@ -46,9 +46,11 @@ class CredentialsClassTest(unittest.TestCase):
         # Credentials._singleton should be None here, but a mis-behaving
         # test may have left it intact.
         Credentials._singleton = None
+        analytics.send = False
 
     def tearDown(self) -> None:
         Credentials._singleton = None
+        analytics.send = True
 
     @patch(
         "streamlit.runtime.credentials.file_util.get_streamlit_file_path", mock_get_path
@@ -304,16 +306,18 @@ class CredentialsClassTest(unittest.TestCase):
     def test_email_send(self, temp_dir):
         """Test that saving a new Credential sends an email"""
 
-        with requests_mock.mock() as m:
-            m.post("https://api.segment.io/v1/i", status_code=200)
+        with patch("segment.analytics.identify") as mock_identify:
             creds: Credentials = Credentials.get_current()  # type: ignore
             creds._conf_file = str(Path(temp_dir.path) / "config.toml")
             creds.activation = _verify_email("email@test.com")
             creds.save()
-            last_request = m.request_history[-1]
-            assert last_request.method == "POST"
-            assert last_request.url == "https://api.segment.io/v1/i"
-            assert "'userId': 'email@test.com'" in last_request.text
+            mock_identify.assert_called_once_with(
+                "email@test.com",
+                {
+                    "authoremail": "email@test.com",
+                    "source": "provided_email",
+                },
+            )
 
     @tempdir()
     def test_email_send_exception_handling(self, temp_dir):
@@ -321,9 +325,7 @@ class CredentialsClassTest(unittest.TestCase):
         Test that saving a new Credential catches and logs failures from the segment
         endpoint
         """
-
-        with requests_mock.mock() as m:
-            m.post("https://api.segment.io/v1/i", status_code=403)
+        with patch("segment.analytics.identify", side_effect=Exception("SomeError")):
             creds: Credentials = Credentials.get_current()  # type: ignore
             creds._conf_file = str(Path(temp_dir.path) / "config.toml")
             creds.activation = _verify_email("email@test.com")
@@ -332,7 +334,7 @@ class CredentialsClassTest(unittest.TestCase):
             ) as mock_logger:
                 creds.save()
                 assert len(mock_logger.output) == 1
-                assert "Error saving email: 403" in mock_logger.output[0]
+                assert "Error saving email: SomeError" in mock_logger.output[0]
 
 
 class CredentialsModulesTest(unittest.TestCase):
@@ -349,4 +351,5 @@ class CredentialsModulesTest(unittest.TestCase):
 
     @patch("streamlit.runtime.credentials.env_util.IS_WINDOWS", new=True)
     def test_show_emojis_windows(self):
+        self.assertNotIn("👋", email_prompt())
         self.assertNotIn("👋", email_prompt())

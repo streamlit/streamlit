@@ -49,6 +49,7 @@ INSTALL_REQUIRES = [
     "typing-extensions>=3.10.0.0",
     "tzlocal>=1.1",
     "validators>=0.2",
+    "segment-analytics-python>=2.2.2",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
     "watchdog; platform_system != 'Darwin'",

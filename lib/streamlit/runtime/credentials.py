@@ -18,13 +18,11 @@ import os
 import sys
 import textwrap
 from collections import namedtuple
-from datetime import datetime
 from typing import Optional
 
 import click
-import requests
+import segment.analytics as analytics
 import toml
-from requests.exceptions import RequestException
 
 from streamlit import env_util, file_util, util
 from streamlit.logger import get_logger
@@ -105,52 +103,18 @@ _INSTRUCTIONS_TEXT = """
 }
 
 
-def _save_email(email: str) -> None:
+def _send_email(email: str) -> None:
     """Send the user's email to segment.io, if submitted"""
 
-    headers = {
-        "authority": "api.segment.io",
-        "accept": "*/*",
-        "accept-language": "en-US,en;q=0.9",
-        "content-type": "text/plain",
-        "origin": "http://localhost:8501",
-        "referer": "http://localhost:8501/",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "cross-site",
-        "user-agent": "",
-    }
+    analytics.write_key = "25DefF4C87Ln9xaSnKua3LnPAuW28Hp3"
 
-    data = {
-        "timestamp": datetime.now().isoformat(),
-        "integrations": {},
-        "userId": email,
-        "anonymousId": "",
-        "type": "identify",
-        "traits": {
+    analytics.identify(
+        email,
+        {
             "authoremail": email,
+            "source": "provided_email",
         },
-        "context": {
-            "page": {
-                "path": "/",
-                "referrer": "",
-                "search": "",
-                "title": "",
-                "url": "http://localhost:8501/",
-            },
-            "userAgent": "",
-            "locale": "",
-            "library": {"name": "requests", "version": "1"},
-        },
-        "writeKey": "iCkMy7ymtJ9qYzQRXkQpnAJEq7D4NyMU",
-        "sentAt": datetime.now().isoformat(),
-        "_metadata": {"bundled": ["Segment.io"], "unbundled": [], "bundledIds": []},
-    }
-
-    response = requests.post(
-        "https://api.segment.io/v1/i", headers=headers, data=str(data)
     )
-
-    response.raise_for_status()
 
 
 class Credentials(object):
@@ -257,8 +221,8 @@ class Credentials(object):
             toml.dump({"general": data}, f)
 
         try:
-            _save_email(self.activation.email)
-        except RequestException as e:
+            _send_email(self.activation.email)
+        except Exception as e:
             LOGGER.error("Error saving email: %s" % e)
 
     def activate(self, show_instructions: bool = True) -> None:
