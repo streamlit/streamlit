@@ -14,19 +14,41 @@
 
 import threading
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
 import streamlit as st
 from streamlit.connections import Snowpark
 from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.secrets import AttrDict
 from tests.testutil import create_mock_script_run_ctx
 
 
 class SnowparkConnectionTest(unittest.TestCase):
     def tearDown(self) -> None:
         st.cache_data.clear()
+
+    @patch(
+        "streamlit.connections.snowpark_connection._load_from_snowsql_config_file",
+        MagicMock(return_value=AttrDict({"account": "some_val_1"})),
+    )
+    @patch(
+        "streamlit.connections.snowpark_connection.Snowpark._secrets",
+        PropertyMock(return_value=AttrDict({"user": "some_val_2"})),
+    )
+    @patch("snowflake.snowpark.session.Session")
+    def test_merges_params_from_all_config_sources(self, patched_session):
+        Snowpark("my_snowpark_connection", some_key="some_val_3", password="hunter2")
+
+        patched_session.builder.configs.assert_called_with(
+            {
+                "account": "some_val_1",
+                "user": "some_val_2",
+                "some_key": "some_val_3",
+                "password": "hunter2",
+            }
+        )
 
     @patch("streamlit.connections.snowpark_connection.Snowpark._connect", MagicMock())
     def test_query_caches_value(self):
