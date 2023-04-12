@@ -33,7 +33,6 @@ import streamlit as st
 from streamlit import __version__
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Alert_pb2 import Alert
-from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from tests import testutil
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -191,13 +190,6 @@ class StreamlitTest(unittest.TestCase):
 
 class StreamlitAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
-
-    def test_st_empty(self):
-        """Test st.empty."""
-        st.empty()
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.empty, EmptyProto())
 
     def test_st_error(self):
         """Test st.error."""
