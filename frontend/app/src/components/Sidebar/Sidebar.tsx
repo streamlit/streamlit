@@ -19,12 +19,16 @@ import { ChevronRight, Close } from "@emotion-icons/material-outlined"
 import { withTheme } from "@emotion/react"
 import { Resizable } from "re-resizable"
 
-import Icon from "src/components/shared/Icon"
-import Button, { Kind } from "src/components/shared/Button"
+import {
+  Icon,
+  BaseButton,
+  BaseButtonKind,
+  EmotionTheme,
+  StreamlitEndpoints,
+  localStorageAvailable,
+  IsSidebarContext,
+} from "@streamlit/lib"
 import { IAppPage, PageConfig } from "src/autogen/proto"
-import { EmotionTheme } from "src/theme"
-import { localStorageAvailable } from "src/lib/storageUtils"
-import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 import {
   StyledSidebar,
@@ -34,7 +38,6 @@ import {
   StyledSidebarUserContent,
   StyledResizeHandle,
 } from "./styled-components"
-import IsSidebarContext from "./IsSidebarContext"
 import SidebarNav from "./SidebarNav"
 
 export interface SidebarProps {
@@ -221,9 +224,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             isCollapsed={collapsedSidebar}
             data-testid="collapsedControl"
           >
-            <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
+            <BaseButton
+              kind={BaseButtonKind.HEADER_BUTTON}
+              onClick={this.toggleCollapse}
+            >
               <Icon content={ChevronRight} size="lg" />
-            </Button>
+            </BaseButton>
           </StyledSidebarCollapsedControl>
         )}
         <Resizable
@@ -255,9 +261,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             ref={this.sidebarRef}
           >
             <StyledSidebarCloseButton>
-              <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
+              <BaseButton
+                kind={BaseButtonKind.HEADER_BUTTON}
+                onClick={this.toggleCollapse}
+              >
                 <Icon content={Close} size="lg" />
-              </Button>
+              </BaseButton>
             </StyledSidebarCloseButton>
             {!hideSidebarNav && (
               <SidebarNav

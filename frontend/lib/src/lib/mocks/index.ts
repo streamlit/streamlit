@@ -15,3 +15,4 @@
  */
 
 export * from "./mocks"
+export * from "./mockTheme"

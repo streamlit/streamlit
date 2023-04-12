@@ -17,21 +17,25 @@
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
-import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
+import {
+  RERUN_PROMPT_MODAL_DIALOG,
+  BaseButton,
+  BaseButtonKind,
+  Tooltip,
+  Placement,
+  ConnectionState,
+  SessionEventDispatcher,
+  ScriptRunState,
+  Timer,
+  Icon,
+  EmotionTheme,
+} from "@streamlit/lib"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
 import { CSSTransition } from "react-transition-group"
-import Button, { Kind } from "src/components/shared/Button"
-import Tooltip, { Placement } from "src/components/shared/Tooltip"
 import { SignalConnection } from "typed-signals"
 
-import { ConnectionState } from "src/lib/ConnectionState"
 import { SessionEvent } from "src/autogen/proto"
-import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
-import { ScriptRunState } from "src/lib/ScriptRunState"
-import { Timer } from "src/lib/Timer"
-import Icon from "src/components/shared/Icon"
-import { EmotionTheme } from "src/theme"
 
 /*
  * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served
@@ -435,14 +439,14 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   ): ReactNode {
     return (
       <StyledAppButtonContainer isMinimized={isMinimized}>
-        <Button
-          kind={Kind.HEADER_BUTTON}
+        <BaseButton
+          kind={BaseButtonKind.HEADER_BUTTON}
           disabled={disabled}
           fluidWidth
           onClick={onClick}
         >
           {title}
-        </Button>
+        </BaseButton>
       </StyledAppButtonContainer>
     )
   }

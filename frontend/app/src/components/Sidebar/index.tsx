@@ -16,5 +16,5 @@
 
 import ThemedSidebar from "./ThemedSidebar"
 
-export { default as Sidebar } from "./Sidebar"
+export { default } from "./Sidebar"
 export { ThemedSidebar }

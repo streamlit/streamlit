@@ -17,7 +17,7 @@
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx src",
-    "jest_cache_clear": "jest --clearCache"
+    "jestCacheClear": "jest --clearCache"
   },
   "dependencies": {
     "@babel/core": "^7.20.7",

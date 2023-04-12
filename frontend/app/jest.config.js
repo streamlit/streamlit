@@ -60,8 +60,5 @@ module.exports = {
   ],
   resetMocks: false,
   coverageReporters: ["text", "html"],
-  snapshotSerializers: [
-    "enzyme-to-json/serializer",
-    "@emotion/jest/enzyme-serializer",
-  ],
+  snapshotSerializers: ["enzyme-to-json/serializer"],
 }

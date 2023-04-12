@@ -14,21 +14,4 @@
  * limitations under the License.
  */
 
-import emotionBaseTheme from "src/theme/emotionBaseTheme"
-import { createEmotionColors } from "src/theme/getColors"
-import genericColors from "./themeColors"
-
-const emotionLightTheme = {
-  ...emotionBaseTheme,
-  inSidebar: false,
-  genericColors: {
-    ...emotionBaseTheme.genericColors,
-    ...genericColors,
-  },
-  colors: createEmotionColors({
-    ...emotionBaseTheme.colors,
-    ...genericColors,
-  }),
-}
-
-export default emotionLightTheme
+export { default as IsSidebarContext } from "./IsSidebarContext"
