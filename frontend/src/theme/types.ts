@@ -18,21 +18,21 @@ import { LightTheme, lightThemePrimitives } from "baseui"
 
 import { CustomThemeConfig } from "src/autogen/proto"
 
-import base from "./baseTheme"
-import { lightBaseUITheme } from "./baseui"
+import emotionBaseTheme from "./emotionBaseTheme"
+import { baseuiLightTheme } from "./baseui"
 
-export type Theme = typeof base
+export type EmotionTheme = typeof emotionBaseTheme
 
 export type ThemeConfig = {
   name: string
-  emotion: Theme
+  emotion: EmotionTheme
   // For use with the BaseProvider that adds a LayersManager and ThemeProvider.
   // Unfortunately Theme is required.
   baseweb: typeof LightTheme
   // For use with Baseweb's ThemeProvider. This is required in order for us to
   // create separate themes for in the children. Currently required to accommodate
   // sidebar theming.
-  basewebTheme: typeof lightBaseUITheme
+  basewebTheme: typeof baseuiLightTheme
   primitives: typeof lightThemePrimitives
 }
 
@@ -42,9 +42,9 @@ export type CachedTheme = {
   themeInput?: Partial<CustomThemeConfig>
 }
 
-type IconSizes = typeof base.iconSizes
-type ThemeSpacings = typeof base.spacing
-type ThemeColors = typeof base.colors
+type IconSizes = typeof emotionBaseTheme.iconSizes
+type ThemeSpacings = typeof emotionBaseTheme.spacing
+type ThemeColors = typeof emotionBaseTheme.colors
 
 export type IconSize = keyof IconSizes
 export type ThemeColor = Extract<keyof ThemeColors, string>

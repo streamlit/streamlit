@@ -28,10 +28,10 @@ import {
   ModuleIsNotAdded,
   NoRepositoryDetected,
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs"
-import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 
 import MainMenu, { Props } from "./MainMenu"
 import { waitFor } from "@testing-library/dom"
+import { MockMetricsManager } from "src/lib/mocks/mocks"
 
 const { GitStates } = GitInfo
 
@@ -54,7 +54,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   menuItems: {},
   hostIsOwner: false,
   gitInfo: null,
-  metricsMgr: getMetricsManagerForTest(),
+  metricsMgr: new MockMetricsManager(),
   ...extend,
 })
 

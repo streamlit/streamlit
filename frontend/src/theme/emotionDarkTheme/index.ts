@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-import { mockSessionInfo } from "./mocks/mocks"
-import { SessionInfo } from "./SessionInfo"
+import emotionBaseTheme from "src/theme/emotionBaseTheme"
+import { createEmotionColors } from "src/theme/utils"
+import genericColors from "./themeColors"
 
-// This file is only used in tests, so these imports can be in devDependencies
-/* eslint-disable import/no-extraneous-dependencies */
-import { SegmentMetricsManager } from "./SegmentMetricsManager"
-
-export function getMetricsManagerForTest(
-  sessionInfo?: SessionInfo
-): SegmentMetricsManager {
-  const mm = new SegmentMetricsManager(sessionInfo || mockSessionInfo())
-  // @ts-expect-error
-  mm.track = jest.fn()
-  return mm
+export default {
+  ...emotionBaseTheme,
+  inSidebar: false,
+  genericColors: {
+    ...emotionBaseTheme.genericColors,
+    ...genericColors,
+  },
+  colors: createEmotionColors({
+    ...emotionBaseTheme.colors,
+    ...genericColors,
+  }),
 }
