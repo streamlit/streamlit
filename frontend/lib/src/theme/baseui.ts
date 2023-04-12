@@ -20,7 +20,7 @@ import {
 } from "baseui"
 import lightTheme from "./lightTheme"
 import darkTheme from "./darkTheme"
-import { createBaseUiTheme } from "./utils"
+import { createBaseUiTheme } from "./createThemeUtil"
 
 export const lightBaseUITheme = createBaseUiTheme(
   lightTheme,

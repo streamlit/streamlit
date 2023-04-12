@@ -14,11 +14,6 @@
  * limitations under the License.
  */
 
-import {
-  createTheme as createBaseTheme,
-  lightThemePrimitives as lightBaseThemePrimitives,
-} from "baseui"
-import { ThemePrimitives, Theme as BaseTheme } from "baseui/theme"
 import { getLuminance, darken, lighten, mix, transparentize } from "color2k"
 import camelcase from "camelcase"
 import decamelize from "decamelize"
@@ -29,21 +24,35 @@ import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
 import { logError } from "src/lib/log"
 import { LocalStore, localStorageAvailable } from "src/lib/storageUtils"
 import {
-  baseTheme,
   CachedTheme,
-  createAutoTheme,
-  createPresetThemes,
-  darkTheme,
-  lightTheme,
   Theme,
   ThemeConfig,
   ThemeSpacing,
-} from "src/theme"
+} from "./types"
+import {
+  baseTheme,
+  darkTheme,
+  lightTheme,
+} from "./themeConfigs"
+import {createBaseUiTheme} from './createThemeUtil';
+import {createEmotionColors, DerivedColors, computeDerivedColors} from './getColors';
 
 import { fonts } from "./primitives/typography"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
+
+export const createAutoTheme = (): ThemeConfig => ({
+  ...getSystemTheme(),
+  name: AUTO_THEME_NAME,
+})
+
+// Update auto theme in case it has changed
+export const createPresetThemes = (): ThemeConfig[] => [
+  createAutoTheme(),
+  lightTheme,
+  darkTheme,
+]
 
 export const isPresetTheme = (themeConfig: ThemeConfig): boolean => {
   const presetThemeNames = createPresetThemes().map((t: ThemeConfig) => t.name)
@@ -80,311 +89,6 @@ export const fontEnumToString = (
 
 export const bgColorToBaseString = (bgColor?: string): string =>
   bgColor === undefined || getLuminance(bgColor) > 0.5 ? "light" : "dark"
-
-// Theme primitives. See lightThemePrimitives for what's available. These are
-// used to create a large JSON-style structure with theme values for all
-// widgets.
-// - See node_modules/baseui/themes/light-theme-primitives.js for an example
-// of primitives we can use here.
-// - See node_modules/baseui/themes/creator.js for the mapping of values from
-// this file to output values.
-export const createBaseThemePrimitives = (
-  baseTheme: ThemePrimitives,
-  theme: Theme
-): ThemePrimitives => {
-  const { colors, genericFonts } = theme
-
-  return {
-    ...baseTheme,
-
-    primaryFontFamily: genericFonts.bodyFont,
-
-    primary100: colors.primary,
-    primary200: colors.primary,
-    primary300: colors.primary,
-    primary400: colors.primary,
-    primary500: colors.primary,
-    primary600: colors.primary,
-    primary700: colors.primary,
-
-    // Override gray values based on what is actually used in BaseWeb, and the
-    // way we want it to match our theme originating from Bootstrap.
-    mono100: colors.bgColor, // Popup menu
-    mono200: colors.secondaryBg, // Text input, text area, selectbox
-    mono300: colors.lightGray, // Disabled widget background
-    mono400: colors.lightGray, // Slider track
-    mono500: colors.gray, // Clicked checkbox and radio
-    mono600: colors.fadedText40, // Disabled widget text
-    mono700: colors.gray, // Unselected checkbox and radio
-    mono800: colors.bodyText, // Selectbox text
-    mono900: colors.bodyText, // Not used, but just in case.
-    mono1000: colors.black,
-  }
-}
-
-// Theme overrides.
-// NOTE: A lot of the properties we can override here don't seem to actually
-// be used anywhere in BaseWeb's source. Will report a bug about it.
-export const createThemeOverrides = (theme: Theme): Record<string, any> => {
-  const { inSidebar, colors, genericFonts, fontSizes, lineHeights, radii } =
-    theme
-
-  const fontStyles = {
-    fontFamily: genericFonts.bodyFont,
-    fontSize: fontSizes.md,
-    fontSizeSm: fontSizes.sm,
-    fontWeight: "normal",
-    lineHeight: lineHeights.base,
-    lineHeightTight: lineHeights.tight,
-  }
-
-  const widgetBackgroundColor = colors.widgetBackgroundColor
-    ? colors.widgetBackgroundColor
-    : colors.secondaryBg
-
-  // We want menuFill to always use bgColor. But when in sidebar, bgColor and secondaryBg are
-  // swapped! So here we unswap them.
-  const mainPaneBgColor = inSidebar ? colors.secondaryBg : colors.bgColor
-  const mainPaneSecondaryBgColor = inSidebar
-    ? colors.bgColor
-    : colors.secondaryBg
-
-  return {
-    borders: {
-      radius100: radii.md,
-      radius200: radii.md,
-      radius300: radii.md,
-      radius400: radii.md,
-
-      // Override borders that are declared from literals in
-      // https://github.com/uber/baseweb/blob/master/src/themes/shared/borders.ts
-
-      /** Datepicker (Range), Progress Bar, Slider, Tag */
-      useRoundedCorners: true,
-      /** Button, ButtonGroup */
-      buttonBorderRadiusMini: radii.md, // Unused today.
-      buttonBorderRadius: radii.md,
-      /** Checkbox */
-      checkboxBorderRadius: radii.sm,
-      /** Input, Select, Textarea */
-      inputBorderRadiusMini: radii.md, // Unused today.
-      inputBorderRadius: radii.md,
-      /** Popover, Menu, Tooltip */
-      popoverBorderRadius: radii.md,
-      /** Card, Datepicker, Modal, Toast, Notification */
-      surfaceBorderRadius: radii.md,
-      /** Tag */
-      tagBorderRadius: radii.md,
-    },
-    typography: {
-      // Here we override some fonts that are used in widgets. We don't care
-      // about the ones that are not used.
-      font100: {},
-      font150: { ...fontStyles }, // Popup menus
-      font200: {},
-      font250: {},
-      font300: { ...fontStyles }, // Popup menus
-      font350: { ...fontStyles }, // Checkbox
-      font400: { ...fontStyles }, // Textinput, textarea, selectboxes
-      font450: { ...fontStyles }, // Radio
-      font460: { ...fontStyles }, // Calendar header buttons
-      font470: { ...fontStyles }, // Button
-      font500: { ...fontStyles }, // Selected items in selectbox
-      font600: {},
-
-      LabelXSmall: { ...fontStyles },
-      LabelSmall: { ...fontStyles },
-      LabelMedium: { ...fontStyles },
-      LabelLarge: { ...fontStyles },
-      ParagraphSmall: { ...fontStyles },
-    },
-
-    colors: {
-      white: colors.white,
-      black: colors.black,
-      primary: colors.primary,
-      primaryA: colors.primary,
-      backgroundPrimary: colors.bgColor,
-      backgroundSecondary: widgetBackgroundColor,
-      backgroundTertiary: colors.bgColor,
-      borderOpaque: colors.darkenedBgMix25,
-      accent: transparentize(colors.primary, 0.5),
-      tagPrimarySolidBackground: colors.primary,
-      tagPrimaryFontDisabled: colors.fadedText40,
-      tagPrimaryOutlinedDisabled: colors.transparent,
-      borderSelected: colors.primary,
-      contentPrimary: colors.bodyText,
-      inputPlaceholder: colors.fadedText60,
-      tickFillDisabled: colors.fadedText40,
-      tickMarkFill: colors.lightestGray,
-      tickFillSelected: colors.primary,
-      datepickerBackground: mainPaneBgColor,
-      calendarBackground: mainPaneBgColor,
-      calendarForeground: colors.bodyText,
-      calendarDayForegroundPseudoSelected: colors.bodyText,
-      calendarHeaderBackground: mainPaneSecondaryBgColor,
-      calendarHeaderBackgroundActive: mainPaneSecondaryBgColor,
-      calendarHeaderForeground: colors.bodyText,
-      calendarHeaderForegroundDisabled: colors.gray40,
-      calendarDayBackgroundSelected: colors.primary,
-      calendarDayBackgroundSelectedHighlighted: colors.primary,
-      calendarDayForegroundSelected: colors.white,
-      calendarDayForegroundSelectedHighlighted: colors.white,
-      calendarDayForegroundPseudoSelectedHighlighted: colors.bodyText,
-      menuFontHighlighted: colors.bodyText,
-
-      modalCloseColor: colors.bodyText,
-
-      notificationInfoBackground: colors.alertInfoBackgroundColor,
-      notificationInfoText: colors.alertInfoTextColor,
-      notificationPositiveBackground: colors.alertSuccessBackgroundColor,
-      notificationPositiveText: colors.alertSuccessTextColor,
-      notificationWarningBackground: colors.alertWarningBackgroundColor,
-      notificationWarningText: colors.alertWarningTextColor,
-      notificationNegativeBackground: colors.alertErrorBackgroundColor,
-      notificationNegativeText: colors.alertErrorTextColor,
-      progressbarTrackFill: widgetBackgroundColor,
-
-      // mono100 overrides
-      tickFill: colors.lightenedBg05, // Checkbox and Radio
-      tickMarkFillDisabled: colors.lightenedBg05,
-      // We want menuFill to always use bgColor. But when in sidebar, bgColor and secondaryBg are
-      // swapped! So here we unswap them.
-      menuFill: mainPaneBgColor,
-
-      // mono200 overrides
-      buttonDisabledFill: colors.lightenedBg05,
-      tickFillHover: widgetBackgroundColor,
-      inputFillDisabled: widgetBackgroundColor,
-      inputFillActive: widgetBackgroundColor,
-
-      // mono300 overrides
-      toggleTrackFillDisabled: widgetBackgroundColor,
-      tickFillActive: widgetBackgroundColor,
-      sliderTrackFillDisabled: widgetBackgroundColor,
-      inputBorder: colors.widgetBorderColor
-        ? colors.widgetBorderColor
-        : widgetBackgroundColor,
-      inputFill: widgetBackgroundColor,
-      inputEnhanceFill: widgetBackgroundColor,
-      inputEnhancerFillDisabled: widgetBackgroundColor,
-
-      // mono400 overrides
-      buttonDisabledSpinnerBackground: colors.gray40,
-      toggleTrackFill: colors.gray40,
-      sliderTrackFill: colors.gray40,
-      sliderHandleInnerFill: colors.gray40,
-      sliderHandleInnerFillDisabled: colors.gray40,
-    },
-  }
-}
-
-export const createBaseUiTheme = (
-  theme: Theme,
-  primitives = lightBaseThemePrimitives
-): BaseTheme & Record<string, any> =>
-  createBaseTheme(
-    createBaseThemePrimitives(primitives, theme),
-    createThemeOverrides(theme)
-  )
-
-type DerivedColors = {
-  linkText: string
-  fadedText05: string
-  fadedText10: string
-  fadedText20: string
-  fadedText40: string
-  fadedText60: string
-
-  bgMix: string
-  darkenedBgMix100: string
-  darkenedBgMix25: string
-  darkenedBgMix15: string
-  lightenedBg05: string
-}
-
-const computeDerivedColors = (
-  genericColors: Record<string, string>
-): DerivedColors => {
-  const { bodyText, secondaryBg, bgColor } = genericColors
-
-  const hasLightBg = getLuminance(bgColor) > 0.5
-
-  // Always keep links blue, but brighten them up a bit on dark backgrounds so
-  // they're easier to read.
-  const linkText = hasLightBg
-    ? genericColors.blue
-    : lighten(genericColors.blue, 0.2)
-
-  const fadedText05 = transparentize(bodyText, 0.9) // Mostly used for very faint 1px lines.
-  const fadedText10 = transparentize(bodyText, 0.8) // Mostly used for 1px lines.
-  const fadedText20 = transparentize(bodyText, 0.7) // Used for 1px lines.
-  const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
-  const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
-
-  const bgMix = mix(bgColor, secondaryBg, 0.5)
-  const darkenedBgMix100 = hasLightBg
-    ? darken(bgMix, 0.3)
-    : lighten(bgMix, 0.6) // Icons.
-  // TODO(tvst): Rename to darkenedBgMix25 (number = opacity)
-  const darkenedBgMix25 = transparentize(darkenedBgMix100, 0.75)
-  const darkenedBgMix15 = transparentize(darkenedBgMix100, 0.85) // Hovered menu/nav items.
-
-  const lightenedBg05 = lighten(bgColor, 0.025) // Button, checkbox, radio background.
-
-  return {
-    linkText,
-    fadedText05,
-    fadedText10,
-    fadedText20,
-    fadedText40,
-    fadedText60,
-
-    bgMix,
-    darkenedBgMix100,
-    darkenedBgMix25,
-    darkenedBgMix15,
-    lightenedBg05,
-  }
-}
-
-export const createEmotionColors = (genericColors: {
-  [key: string]: string
-}): { [key: string]: string } => {
-  const derivedColors = computeDerivedColors(genericColors)
-  return {
-    ...genericColors,
-    ...derivedColors,
-
-    // Alerts
-    alertErrorBorderColor: genericColors.dangerBg,
-    alertErrorBackgroundColor: genericColors.dangerBg,
-    alertErrorTextColor: genericColors.danger,
-
-    alertInfoBorderColor: genericColors.infoBg,
-    alertInfoBackgroundColor: genericColors.infoBg,
-    alertInfoTextColor: genericColors.info,
-
-    alertSuccessBorderColor: genericColors.successBg,
-    alertSuccessBackgroundColor: genericColors.successBg,
-    alertSuccessTextColor: genericColors.success,
-
-    alertWarningBorderColor: genericColors.warningBg,
-    alertWarningBackgroundColor: genericColors.warningBg,
-    alertWarningTextColor: genericColors.warning,
-
-    codeTextColor: genericColors.green80,
-    codeHighlightColor: derivedColors.bgMix,
-
-    docStringModuleText: genericColors.bodyText,
-    docStringContainerBackground: transparentize(
-      genericColors.secondaryBg,
-      0.6
-    ),
-
-    headingColor: genericColors.bodyText,
-  }
-}
 
 export const isColor = (strColor: string): boolean => {
   const s = new Option().style
