@@ -298,12 +298,14 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             columns=["index", "variable", "value"],
         )
 
-        st._arrow_bar_chart(df)
+        st._arrow_bar_chart(df, width=640, height=480)
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
         self.assertEqual(chart_spec["mark"], "bar")
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
         pd.testing.assert_frame_equal(
             bytes_to_data_frame(proto.datasets[0].data.data),
             EXPECTED_DATAFRAME,
