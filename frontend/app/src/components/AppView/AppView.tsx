@@ -28,10 +28,11 @@ import {
   AppRoot,
   SessionInfo,
   StreamlitEndpoints,
-  ThemedSidebar,
   IGuestToHostMessage,
   AppContext,
 } from "@streamlit/lib"
+
+import { ThemedSidebar } from "src/components/Sidebar"
 
 import {
   StyledAppViewBlockContainer,

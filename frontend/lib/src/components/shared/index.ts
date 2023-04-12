@@ -14,5 +14,15 @@
  * limitations under the License.
  */
 
+export {
+  default as BaseButton,
+  Kind as BaseButtonKind,
+  Size as BaseButtonSize,
+  ButtonTooltip,
+} from "./Button"
+export type { ButtonProps } from "./Button"
 export * from "./StreamlitMarkdown"
 export * from "./Modal"
+export { default as Icon, EmojiIcon } from "./Icon"
+export { StyledIcon } from "./Icon/styled-components"
+export { default as Tooltip, Placement } from "./Tooltip"

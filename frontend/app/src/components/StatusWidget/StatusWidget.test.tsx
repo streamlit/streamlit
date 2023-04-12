@@ -15,12 +15,15 @@
  */
 
 import React from "react"
-import { shallow, mount } from "src/lib/test_util"
-import { ConnectionState } from "src/lib/ConnectionState"
-import { ScriptRunState } from "src/lib/ScriptRunState"
-import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
+import {
+  shallow,
+  mount,
+  ConnectionState,
+  ScriptRunState,
+  SessionEventDispatcher,
+  mockTheme,
+} from "@streamlit/lib"
 import { SessionEvent } from "src/autogen/proto"
-import { mockTheme } from "src/lib/mocks/mockTheme"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 
