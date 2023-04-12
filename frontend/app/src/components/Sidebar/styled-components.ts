@@ -27,7 +27,6 @@ export interface StyledSidebarProps {
 
 export const StyledSidebar = styled.section<StyledSidebarProps>(
   ({ theme, isCollapsed, sidebarWidth }) => {
-    // console.log(theme)
     const minWidth = isCollapsed ? 0 : Math.min(244, window.innerWidth)
     const maxWidth = isCollapsed ? 0 : Math.min(550, window.innerWidth * 0.9)
 

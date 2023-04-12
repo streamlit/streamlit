@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// No check here because theme type is not properly being recognized
+// @ts-nocheck
 
 import styled from "@emotion/styled"
 

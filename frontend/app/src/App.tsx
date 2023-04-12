@@ -41,9 +41,7 @@ import {
   getElementWidgetID,
   generateUID,
   getEmbeddingIdClassName,
-  Header,
   MainMenu,
-  StatusWidget,
   StreamlitDialog,
   ToolbarActions,
   PerformanceEvents,
@@ -110,7 +108,9 @@ import {
 import AppView from "src/components/AppView"
 import { ConnectionManager } from "src/managers/ConnectionManager"
 import { DefaultStreamlitEndpoints } from "src/managers/DefaultStreamlitEndpoints"
-import { SegmentMetricsManager } from "./managers/SegmentMetricsManager"
+import { SegmentMetricsManager } from "src/managers/SegmentMetricsManager"
+import Header from "src/components/Header"
+import StatusWidget from "./components/StatusWidget"
 
 import { concat, noop, without } from "lodash"
 
