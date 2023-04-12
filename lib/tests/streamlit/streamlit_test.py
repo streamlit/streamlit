@@ -192,18 +192,6 @@ class StreamlitTest(unittest.TestCase):
 class StreamlitAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
-    def test_st_legacy_dataframe(self):
-        """Test st._legacy_dataframe."""
-        df = pd.DataFrame({"one": [1, 2], "two": [11, 22]})
-
-        st._legacy_dataframe(df)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.data_frame.data.cols[0].int64s.data, [1, 2])
-        self.assertEqual(
-            el.data_frame.columns.plain_index.data.strings.data, ["one", "two"]
-        )
-
     def test_st_arrow_dataframe(self):
         """Test st._arrow_dataframe."""
         from streamlit.type_util import bytes_to_data_frame

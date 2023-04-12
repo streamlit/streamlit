@@ -24,9 +24,11 @@ import pyarrow as pa
 import pytest
 from google.protobuf import json_format
 
+import streamlit as st
 import streamlit.elements.legacy_data_frame as data_frame
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DataFrame_pb2 import AnyArray, CSSStyle, DataFrame, Index, Table
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def _css_style(prop, value):
@@ -263,3 +265,19 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
 
         with pytest.raises(NotImplementedError, match="^Dtype <U6 not understood.$"):
             data_frame._marshall_any_array(str_data, str_proto)
+
+
+class LegacyDataframeTest(DeltaGeneratorTestCase):
+    """Test ability to marshall legacy_dataframe proto."""
+
+    def test_st_legacy_dataframe(self):
+        """Test st._legacy_dataframe."""
+        df = pd.DataFrame({"one": [1, 2], "two": [11, 22]})
+
+        st._legacy_dataframe(df)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.data_frame.data.cols[0].int64s.data, [1, 2])
+        self.assertEqual(
+            el.data_frame.columns.plain_index.data.strings.data, ["one", "two"]
+        )
