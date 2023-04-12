@@ -37,12 +37,12 @@ import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
 import { fuzzyFilterSelectOptions } from "src/components/shared/Dropdown/Selectbox"
 import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
-import { Theme } from "src/theme"
+import { EmotionTheme } from "src/theme"
 
 export interface Props {
   disabled: boolean
   element: MultiSelectProto
-  theme: Theme
+  theme: EmotionTheme
   widgetMgr: WidgetStateManager
   width: number
 }

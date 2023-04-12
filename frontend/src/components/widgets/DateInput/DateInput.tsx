@@ -26,7 +26,7 @@ import {
   WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
-import { Theme } from "src/theme"
+import { EmotionTheme } from "src/theme"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 
@@ -35,7 +35,7 @@ import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
 export interface Props {
   disabled: boolean
   element: DateInputProto
-  theme: Theme
+  theme: EmotionTheme
   widgetMgr: WidgetStateManager
   width: number
 }

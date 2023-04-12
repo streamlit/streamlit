@@ -35,7 +35,7 @@ import {
   createPresetThemes,
   darkTheme,
   lightTheme,
-  Theme,
+  EmotionTheme,
   ThemeConfig,
   ThemeSpacing,
 } from "src/theme"
@@ -90,7 +90,7 @@ export const bgColorToBaseString = (bgColor?: string): string =>
 // this file to output values.
 export const createBaseThemePrimitives = (
   baseTheme: ThemePrimitives,
-  theme: Theme
+  theme: EmotionTheme
 ): ThemePrimitives => {
   const { colors, genericFonts } = theme
 
@@ -125,7 +125,9 @@ export const createBaseThemePrimitives = (
 // Theme overrides.
 // NOTE: A lot of the properties we can override here don't seem to actually
 // be used anywhere in BaseWeb's source. Will report a bug about it.
-export const createThemeOverrides = (theme: Theme): Record<string, any> => {
+export const createThemeOverrides = (
+  theme: EmotionTheme
+): Record<string, any> => {
   const { inSidebar, colors, genericFonts, fontSizes, lineHeights, radii } =
     theme
 
@@ -280,7 +282,7 @@ export const createThemeOverrides = (theme: Theme): Record<string, any> => {
 }
 
 export const createBaseUiTheme = (
-  theme: Theme,
+  theme: EmotionTheme,
   primitives = lightBaseThemePrimitives
 ): BaseTheme & Record<string, any> =>
   createBaseTheme(
@@ -395,7 +397,7 @@ export const isColor = (strColor: string): boolean => {
 export const createEmotionTheme = (
   themeInput: Partial<ICustomThemeConfig>,
   baseThemeConfig = baseTheme
-): Theme => {
+): EmotionTheme => {
   const { genericColors, genericFonts } = baseThemeConfig.emotion
   const { font, radii, fontSizes, ...customColors } = themeInput
 
@@ -487,7 +489,9 @@ export const createEmotionTheme = (
   }
 }
 
-export const toThemeInput = (theme: Theme): Partial<CustomThemeConfig> => {
+export const toThemeInput = (
+  theme: EmotionTheme
+): Partial<CustomThemeConfig> => {
   const { colors, genericFonts } = theme
   return {
     primaryColor: colors.primary,
@@ -507,7 +511,7 @@ export type ExportedTheme = {
   font: string
 } & DerivedColors
 
-export const toExportedTheme = (theme: Theme): ExportedTheme => {
+export const toExportedTheme = (theme: EmotionTheme): ExportedTheme => {
   const { genericColors } = theme
   const themeInput = toThemeInput(theme)
 
@@ -672,7 +676,10 @@ export const getDefaultTheme = (): ThemeConfig => {
 }
 
 const whiteSpace = /\s+/
-export function computeSpacingStyle(value: string, theme: Theme): string {
+export function computeSpacingStyle(
+  value: string,
+  theme: EmotionTheme
+): string {
   if (value === "") {
     return ""
   }
@@ -694,59 +701,59 @@ export function computeSpacingStyle(value: string, theme: Theme): string {
     .join(" ")
 }
 
-export function hasLightBackgroundColor(theme: Theme): boolean {
+export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
   return getLuminance(theme.colors.bgColor) > 0.5
 }
 
-export function getGray70(theme: Theme): string {
+export function getGray70(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.gray70
     : theme.colors.gray30
 }
 
-export function getGray30(theme: Theme): string {
+export function getGray30(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.gray30
     : theme.colors.gray85
 }
 
-export function getGray90(theme: Theme): string {
+export function getGray90(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.gray90
     : theme.colors.gray10
 }
 
-export function getMdRed(theme: Theme): string {
+export function getMdRed(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.red80
     : theme.colors.red70
 }
 
-export function getMdBlue(theme: Theme): string {
+export function getMdBlue(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.blue80
     : theme.colors.blue50
 }
 
-export function getMdGreen(theme: Theme): string {
+export function getMdGreen(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.green90
     : theme.colors.green60
 }
 
-export function getMdViolet(theme: Theme): string {
+export function getMdViolet(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.purple80
     : theme.colors.purple50
 }
 
-export function getMdOrange(theme: Theme): string {
+export function getMdOrange(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.orange100
     : theme.colors.orange60
 }
 
-function getBlueArrayAsc(theme: Theme): string[] {
+function getBlueArrayAsc(theme: EmotionTheme): string[] {
   const { colors } = theme
   return [
     colors.blue10,
@@ -762,7 +769,7 @@ function getBlueArrayAsc(theme: Theme): string[] {
   ]
 }
 
-function getBlueArrayDesc(theme: Theme): string[] {
+function getBlueArrayDesc(theme: EmotionTheme): string[] {
   const { colors } = theme
   return [
     colors.blue100,
@@ -778,13 +785,13 @@ function getBlueArrayDesc(theme: Theme): string[] {
   ]
 }
 
-export function getSequentialColorsArray(theme: Theme): string[] {
+export function getSequentialColorsArray(theme: EmotionTheme): string[] {
   return hasLightBackgroundColor(theme)
     ? getBlueArrayAsc(theme)
     : getBlueArrayDesc(theme)
 }
 
-export function getDivergingColorsArray(theme: Theme): string[] {
+export function getDivergingColorsArray(theme: EmotionTheme): string[] {
   const { colors } = theme
   return [
     colors.red100,
@@ -800,7 +807,7 @@ export function getDivergingColorsArray(theme: Theme): string[] {
   ]
 }
 
-export function getCategoricalColorsArray(theme: Theme): string[] {
+export function getCategoricalColorsArray(theme: EmotionTheme): string[] {
   const { colors } = theme
   return hasLightBackgroundColor(theme)
     ? [
@@ -829,13 +836,13 @@ export function getCategoricalColorsArray(theme: Theme): string[] {
       ]
 }
 
-export function getDecreasingRed(theme: Theme): string {
+export function getDecreasingRed(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.red80
     : theme.colors.red40
 }
 
-export function getIncreasingGreen(theme: Theme): string {
+export function getIncreasingGreen(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.blueGreen80
     : theme.colors.green40

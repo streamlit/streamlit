@@ -31,12 +31,12 @@ import {
 /* eslint-enable */
 import React, { Component, FC, ReactElement } from "react"
 import ThemeProvider from "src/components/core/ThemeProvider"
-import { lightTheme, Theme } from "src/theme"
+import { lightTheme, EmotionTheme } from "src/theme"
 
 export function mount<C extends Component, P = C["props"], S = C["state"]>(
   node: ReactElement<P>,
   options?: MountRendererProps,
-  theme?: Theme
+  theme?: EmotionTheme
 ): ReactWrapper<P, S, C> {
   const opts: MountRendererProps = {
     ...(options || {}),
@@ -52,7 +52,7 @@ export function mount<C extends Component, P = C["props"], S = C["state"]>(
 export function shallow<C extends Component, P = C["props"], S = C["state"]>(
   node: ReactElement<P>,
   options?: ShallowRendererProps,
-  theme?: Theme
+  theme?: EmotionTheme
 ): ShallowWrapper<P, S, C> {
   const opts: ShallowRendererProps = {
     ...(options || {}),

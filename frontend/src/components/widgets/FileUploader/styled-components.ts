@@ -15,7 +15,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
-import { Theme } from "src/theme"
+import { EmotionTheme } from "src/theme"
 
 export interface StyledFileDropzone {
   isDisabled: boolean
@@ -125,7 +125,7 @@ export const StyledFileError = styled.small(({ theme }) => ({
 
 export const StyledFileErrorIcon = styled.span({})
 
-const compactFileUploader = (theme: Theme): CSSObject => ({
+const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
   [StyledFileDropzoneSection as any]: {
     display: "flex",
     flexDirection: "column",

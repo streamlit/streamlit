@@ -21,11 +21,11 @@ import { CustomThemeConfig } from "src/autogen/proto"
 import emotionBaseTheme from "./emotionBaseTheme"
 import { baseuiLightTheme } from "./baseui"
 
-export type Theme = typeof emotionBaseTheme
+export type EmotionTheme = typeof emotionBaseTheme
 
 export type ThemeConfig = {
   name: string
-  emotion: Theme
+  emotion: EmotionTheme
   // For use with the BaseProvider that adds a LayersManager and ThemeProvider.
   // Unfortunately Theme is required.
   baseweb: typeof LightTheme

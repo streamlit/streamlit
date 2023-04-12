@@ -17,7 +17,7 @@
 import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
-import { Theme } from "src/theme"
+import { EmotionTheme } from "src/theme"
 
 export enum Kind {
   PRIMARY = "primary",
@@ -51,7 +51,7 @@ export interface ButtonProps {
 
 type RequiredButtonProps = Required<ButtonProps>
 
-function getSizeStyle(size: Size, theme: Theme): CSSObject {
+function getSizeStyle(size: Size, theme: EmotionTheme): CSSObject {
   switch (size) {
     case Size.XSMALL:
       return {

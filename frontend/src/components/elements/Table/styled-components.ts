@@ -15,7 +15,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
-import { Theme } from "src/theme"
+import { EmotionTheme } from "src/theme"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.md,
@@ -33,7 +33,7 @@ export const StyledTable = styled.table(({ theme }) => ({
   border: `1px solid ${theme.colors.fadedText05}`,
 }))
 
-const styleCellFunction = (theme: Theme): CSSObject => ({
+const styleCellFunction = (theme: EmotionTheme): CSSObject => ({
   borderBottom: `1px solid ${theme.colors.fadedText05}`,
   borderRight: `1px solid ${theme.colors.fadedText05}`,
   verticalAlign: "middle",

@@ -18,7 +18,7 @@ import { transparentize } from "color2k"
 import { Theme as GlideTheme } from "@glideapps/glide-data-grid"
 import { useTheme } from "@emotion/react"
 
-import { Theme } from "src/theme"
+import { EmotionTheme } from "src/theme"
 
 /**
  * Creates a glide-data-grid compatible theme based on our theme configuration.
@@ -28,7 +28,7 @@ import { Theme } from "src/theme"
 function useCustomTheme(): Partial<GlideTheme> & {
   tableBorderRadius: string
 } {
-  const theme: Theme = useTheme()
+  const theme: EmotionTheme = useTheme()
 
   return {
     // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
