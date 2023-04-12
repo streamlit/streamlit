@@ -19,8 +19,8 @@ import { mount } from "src/lib/test_util"
 import Plot from "react-plotly.js"
 
 import ThemeProvider from "src/components/core/ThemeProvider"
-import { darkTheme } from "src/theme"
 import { PlotlyChart as PlotlyChartProto } from "src/autogen/proto"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 import mock from "./mock"
 import { DEFAULT_HEIGHT, PlotlyChartProps } from "./PlotlyChart"
 
@@ -164,16 +164,16 @@ describe("PlotlyChart Element", () => {
       const props = getProps()
       const wrapper = mount(
         <ThemeProvider
-          theme={darkTheme.emotion}
-          baseuiTheme={darkTheme.basewebTheme}
+          theme={mockTheme.emotion}
+          baseuiTheme={mockTheme.basewebTheme}
         >
           <PlotlyChart {...props} />
         </ThemeProvider>
       )
 
       const { layout } = wrapper.find(Plot).first().props()
-      expect(layout.paper_bgcolor).toBe(darkTheme.emotion.colors.bgColor)
-      expect(layout.font?.color).toBe(darkTheme.emotion.colors.bodyText)
+      expect(layout.paper_bgcolor).toBe(mockTheme.emotion.colors.bgColor)
+      expect(layout.font?.color).toBe(mockTheme.emotion.colors.bodyText)
     })
 
     it("has user specified config take priority", () => {
@@ -190,8 +190,8 @@ describe("PlotlyChart Element", () => {
 
       const wrapper = mount(
         <ThemeProvider
-          theme={darkTheme.emotion}
-          baseuiTheme={darkTheme.basewebTheme}
+          theme={mockTheme.emotion}
+          baseuiTheme={mockTheme.basewebTheme}
         >
           <PlotlyChart {...props} />
         </ThemeProvider>
@@ -201,7 +201,7 @@ describe("PlotlyChart Element", () => {
       expect(layout.paper_bgcolor).toBe("orange")
       // Verify that things not overwritten by the user still fall back to the
       // theme default.
-      expect(layout.font?.color).toBe(darkTheme.emotion.colors.bodyText)
+      expect(layout.font?.color).toBe(mockTheme.emotion.colors.bodyText)
     })
   })
 })
