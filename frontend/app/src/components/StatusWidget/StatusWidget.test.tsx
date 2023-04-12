@@ -27,7 +27,6 @@ import { SessionEvent } from "src/autogen/proto"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 
-console.log(mockTheme)
 const getProps = (
   propOverrides: Partial<StatusWidgetProps> = {}
 ): StatusWidgetProps => ({

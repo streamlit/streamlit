@@ -31,7 +31,6 @@ import SidebarNav from "./SidebarNav"
 expect.extend(matchers)
 
 function renderSideBar(props: Partial<SidebarProps> = {}): ReactWrapper {
-  // console.log(lightTheme)
   return mount(
     <Sidebar
       endpoints={mockEndpoints()}
