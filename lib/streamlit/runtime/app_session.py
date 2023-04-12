@@ -730,10 +730,15 @@ class AppSession:
         self._enqueue_forward_msg(self._create_session_status_changed_message())
 
 
-def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
+# Config.ToolbarMode.ValueType does not exist at runtime (only in the pyi stubs), so
+# we need to use quotes.
+# This field will be available at runtime as of protobuf 3.20.1, but
+# we are using an older version.
+# For details, see: https://github.com/protocolbuffers/protobuf/issues/8175
+def _get_toolbar_mode() -> "Config.ToolbarMode.ValueType":
     config_key = "client.toolbarMode"
     config_value = config.get_option(config_key)
-    enum_value: Optional[Config.ToolbarMode.ValueType] = getattr(
+    enum_value: Optional["Config.ToolbarMode.ValueType"] = getattr(
         Config.ToolbarMode, config_value.upper()
     )
     if enum_value is None:
