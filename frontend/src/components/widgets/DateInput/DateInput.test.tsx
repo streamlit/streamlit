@@ -23,7 +23,7 @@ import {
 } from "src/autogen/proto"
 
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
-import { lightTheme } from "src/theme"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 import DateInput, { Props } from "./DateInput"
 
 const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
@@ -36,7 +36,7 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  theme: lightTheme.emotion,
+  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
