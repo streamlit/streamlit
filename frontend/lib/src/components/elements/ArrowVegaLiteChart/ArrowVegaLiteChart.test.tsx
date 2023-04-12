@@ -27,7 +27,7 @@ import {
   VEGA_LITE,
 } from "src/lib/mocks/arrow"
 import { Quiver } from "src/lib/Quiver"
-import { darkTheme, lightTheme } from "src/theme"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 import {
   PropsWithHeight,
   ArrowVegaLiteChart,
@@ -56,7 +56,7 @@ const getProps = (props: Partial<PropsWithHeight> = {}): PropsWithHeight => ({
   element: MOCK,
   width: 0,
   height: 0,
-  theme: lightTheme.emotion,
+  theme: mockTheme.emotion,
   ...props,
 })
 
@@ -69,17 +69,17 @@ describe("VegaLiteChart Element", () => {
   })
 
   it("pulls default config values from theme", () => {
-    const props = getProps({ theme: darkTheme.emotion })
+    const props = getProps({ theme: mockTheme.emotion })
 
     const wrapper = mount(<ArrowVegaLiteChart {...props} />)
     // @ts-expect-error
     const generatedSpec = wrapper.instance().generateSpec()
 
     expect(generatedSpec.config.background).toBe(
-      darkTheme.emotion.colors.bgColor
+      mockTheme.emotion.colors.bgColor
     )
     expect(generatedSpec.config.axis.labelColor).toBe(
-      darkTheme.emotion.colors.bodyText
+      mockTheme.emotion.colors.bodyText
     )
   })
 
@@ -108,7 +108,7 @@ describe("VegaLiteChart Element", () => {
   })
 
   it("has user specified config take priority", () => {
-    const props = getProps({ theme: darkTheme.emotion })
+    const props = getProps({ theme: mockTheme.emotion })
 
     const spec = JSON.parse(props.element.spec)
     spec.config = { background: "purple", axis: { labelColor: "blue" } }
@@ -127,7 +127,7 @@ describe("VegaLiteChart Element", () => {
     // Verify that things not overwritten by the user still fall back to the
     // theme default.
     expect(generatedSpec.config.axis.titleColor).toBe(
-      darkTheme.emotion.colors.bodyText
+      mockTheme.emotion.colors.bodyText
     )
   })
 

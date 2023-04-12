@@ -17,10 +17,10 @@
 import React from "react"
 import { DeckGL, PickingInfo } from "deck.gl/typed"
 import { shallow } from "src/lib/test_util"
-import { lightTheme } from "src/theme"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
 import { NavigationControl } from "react-map-gl"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 import { DeckGlJsonChart, PropsWithHeight } from "./DeckGlJsonChart"
 import { ViewStateChangeParameters } from "@deck.gl/core/typed/controllers/controller"
 
@@ -69,7 +69,7 @@ const getProps = (
     width: 0,
     mapboxToken: "mapboxToken",
     height: undefined,
-    theme: lightTheme.emotion,
+    theme: mockTheme.emotion,
   }
 }
 

@@ -30,9 +30,10 @@ import { mount } from "src/lib/test_util"
 import { buildHttpUri } from "src/lib/UriUtil"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import React from "react"
-import { darkTheme, lightTheme, toExportedTheme } from "src/theme"
+import { bgColorToBaseString, toExportedTheme } from "src/theme"
 import { fonts } from "src/theme/primitives/typography"
 import { mockEndpoints } from "src/lib/mocks/mocks"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 import {
   COMPONENT_READY_WARNING_TIME_MS,
   ComponentInstance,
@@ -101,7 +102,7 @@ class MockComponent {
         registry={this.registry}
         width={100}
         disabled={false}
-        theme={lightTheme.emotion}
+        theme={mockTheme.emotion}
         widgetMgr={
           new WidgetStateManager({
             sendRerunBackMsg: jest.fn(),
@@ -325,15 +326,15 @@ describe("ComponentInstance", () => {
 
     const jsonArgs = {}
     const element = createElementProp(jsonArgs, [])
-    mc.wrapper.setProps({ element, theme: darkTheme.emotion })
+    mc.wrapper.setProps({ element, theme: mockTheme.emotion })
 
     expect(mc.instance.state.componentError).toBeUndefined()
 
     // We should get the theme object in our receiveForwardMsg callback.
     expect(mc.receiveForwardMsg).toHaveBeenLastCalledWith(
       renderMsg(jsonArgs, [], false, {
-        ...toExportedTheme(darkTheme.emotion),
-        base: "dark",
+        ...toExportedTheme(mockTheme.emotion),
+        base: bgColorToBaseString(mockTheme.emotion.colors.bgColor),
         font: fonts.sansSerif,
       }),
       "*"
@@ -429,7 +430,7 @@ describe("ComponentInstance", () => {
       const element = createElementProp(jsonArgs, [
         new SpecialArg({ key: "foo" }),
       ])
-      mc.wrapper.setProps({ element, theme: darkTheme.emotion })
+      mc.wrapper.setProps({ element, theme: mockTheme.emotion })
       const child = mc.wrapper.childAt(0)
       expect(child.type()).toEqual(ErrorElement)
       expect(child.prop("message")).toEqual(
@@ -593,8 +594,8 @@ function renderMsg(
   dataframes: any[],
   disabled = false,
   theme = {
-    ...toExportedTheme(lightTheme.emotion),
-    base: "light",
+    ...toExportedTheme(mockTheme.emotion),
+    base: bgColorToBaseString(mockTheme.emotion.colors.bgColor),
     font: fonts.sansSerif,
   }
 ): any {

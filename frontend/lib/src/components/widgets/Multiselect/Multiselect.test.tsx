@@ -23,7 +23,7 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   MultiSelect as MultiSelectProto,
 } from "src/autogen/proto"
-import { lightTheme } from "src/theme"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 import Multiselect, { Props } from "./Multiselect"
 
 const getProps = (elementProps: Partial<MultiSelectProto> = {}): Props => ({
@@ -36,7 +36,7 @@ const getProps = (elementProps: Partial<MultiSelectProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
-  theme: lightTheme.emotion,
+  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
