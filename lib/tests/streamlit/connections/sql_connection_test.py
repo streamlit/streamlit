@@ -20,6 +20,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 from parameterized import parameterized
 
+import streamlit as st
 from streamlit.connections import SQL
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -38,6 +39,9 @@ DB_SECRETS = {
 
 
 class SQLConnectionTest(unittest.TestCase):
+    def tearDown(self) -> None:
+        st.cache_data.clear()
+
     @patch("sqlalchemy.engine.make_url", MagicMock(return_value="some_sql_conn_string"))
     @patch(
         "streamlit.connections.sql_connection.SQL._secrets",
@@ -121,3 +125,23 @@ class SQLConnectionTest(unittest.TestCase):
         )
         assert "Dialect: `postgres`" in repr_
         assert "Configured from `[connections.my_sql_connection]`" in repr_
+
+    @patch("streamlit.connections.sql_connection.SQL._connect", MagicMock())
+    @patch("streamlit.connections.sql_connection.pd.read_sql")
+    def test_retry_behavior(self, patched_read_sql):
+        patched_read_sql.side_effect = Exception("kaboom")
+
+        conn = SQL("my_sql_connection")
+
+        with patch.object(conn, "reset", wraps=conn.reset) as wrapped_reset:
+            with pytest.raises(Exception):
+                conn.query("SELECT 1;")
+
+            # Our connection should have been reset after each failed attempt to call
+            # query.
+            assert wrapped_reset.call_count == 3
+
+        # conn._connect should have been called three times: once in the initial
+        # connection, then once each after the second and third attempts to call
+        # query.
+        assert conn._connect.call_count == 3
