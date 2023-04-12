@@ -18,7 +18,9 @@
 
 import { LightTheme, lightThemePrimitives } from "baseui"
 import { transparentize } from "color2k"
-import { createBaseUiTheme, createEmotionColors, ThemeConfig } from "src/theme"
+import { ThemeConfig } from "src/theme"
+import { createEmotionColors } from "src/theme/getColors"
+import { createBaseUiTheme } from "src/theme/createThemeUtil"
 import {
   breakpoints,
   fonts,
