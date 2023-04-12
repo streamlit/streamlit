@@ -87,6 +87,14 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
         sql: str,
         ttl: Optional[Union[float, int, timedelta]] = None,
     ) -> pd.DataFrame:
+        from tenacity import retry, stop_after_attempt, wait_fixed
+
+        @retry(
+            after=lambda _: self.reset(),
+            stop=stop_after_attempt(3),
+            reraise=True,
+            wait=wait_fixed(1),
+        )
         @cache_data(ttl=ttl)
         def _query(sql: str) -> pd.DataFrame:
             with self._lock:
