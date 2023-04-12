@@ -90,12 +90,17 @@ class LegacyChartsTest(DeltaGeneratorTestCase):
         """Test dg._legacy_line_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        st._legacy_line_chart(data)
+        st._legacy_line_chart(data, width=640, height=480)
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
         self.assertEqual(chart_spec["mark"], "line")
-        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
+
+        self.assertEqual(
+            element.datasets[0].data.data.cols[2].int64s.data, [20, 30, 50]
+        )
 
     def test_legacy_line_chart_with_generic_index(self):
         """Test dg._legacy_line_chart with a generic index."""
