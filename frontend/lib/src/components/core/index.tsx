@@ -23,7 +23,7 @@ export * from "./Countdown"
 export { default as Header } from "./Header"
 export * from "./MainMenu"
 export { default as Maybe } from "./Maybe"
-export { default as Sidebar } from "./Sidebar"
+export { Sidebar } from "./Sidebar"
 export { ThemedSidebar }
 export { default as StatusWidget } from "./StatusWidget"
 export * from "./StreamlitDialog"
