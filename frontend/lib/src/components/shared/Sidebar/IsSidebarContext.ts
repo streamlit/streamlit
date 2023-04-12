@@ -14,15 +14,6 @@
  * limitations under the License.
  */
 
-export {
-  default as BaseButton,
-  Kind as BaseButtonKind,
-  Size as BaseButtonSize,
-  ButtonTooltip,
-} from "./Button"
-export type { ButtonProps } from "./Button"
-export * from "./StreamlitMarkdown"
-export * from "./Modal"
-export { IsSidebarContext } from "./Sidebar"
-export { default as Icon, EmojiIcon } from "./Icon"
-export { StyledIcon } from "./Icon/styled-components"
+import React from "react"
+
+export default React.createContext(false)

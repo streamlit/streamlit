@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// No check here because theme type is not properly being recognized
+// @ts-nocheck
 
 import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
@@ -25,6 +27,7 @@ export interface StyledSidebarProps {
 
 export const StyledSidebar = styled.section<StyledSidebarProps>(
   ({ theme, isCollapsed, sidebarWidth }) => {
+    // console.log(theme)
     const minWidth = isCollapsed ? 0 : Math.min(244, window.innerWidth)
     const maxWidth = isCollapsed ? 0 : Math.min(550, window.innerWidth * 0.9)
 

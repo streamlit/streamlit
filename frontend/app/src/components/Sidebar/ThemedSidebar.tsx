@@ -15,9 +15,12 @@
  */
 
 import React, { ReactElement } from "react"
-import { AppContext } from "src/components/core/AppContext"
-import ThemeProvider from "src/components/core/ThemeProvider"
-import { createTheme, ThemeConfig } from "src/theme"
+import {
+  AppContext,
+  ThemeProvider,
+  ThemeConfig,
+  createTheme,
+} from "@streamlit/lib"
 import Sidebar, { SidebarProps } from "./Sidebar"
 
 const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>

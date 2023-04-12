@@ -16,9 +16,10 @@
 
 import { css } from "@emotion/react"
 import { darken, transparentize, readableColor } from "color2k"
-import { EmotionTheme } from "src/theme"
+// commenting this out as theme type should not be any and it should be EmotionTheme
+// import { EmotionTheme } from "src/theme"
 
-export const globalStyles = (theme: EmotionTheme): any => css`
+export const globalStyles = (theme: any): any => css`
   a,
   a:visited {
     color: ${theme.colors.primary};

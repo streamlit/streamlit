@@ -18,7 +18,7 @@ import emotionBaseTheme from "src/theme/emotionBaseTheme"
 import { createEmotionColors } from "src/theme/getColors"
 import genericColors from "./themeColors"
 
-const lightTheme = {
+const emotionDarkTheme = {
   ...emotionBaseTheme,
   inSidebar: false,
   genericColors: {
@@ -31,4 +31,4 @@ const lightTheme = {
   }),
 }
 
-export default lightTheme
+export default emotionDarkTheme

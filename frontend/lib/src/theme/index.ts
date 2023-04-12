@@ -20,3 +20,7 @@ export * from "./types"
 export * from "./utils"
 export * from "./themeConfigs"
 export * from "./primitives"
+// temporary. these will move to app.
+export { default as emotionLightTheme } from "./emotionLightTheme"
+export { default as emotionDarkTheme } from "./emotionDarkTheme"
+export { default as emotionBaseTheme } from "./emotionBaseTheme"

@@ -19,16 +19,19 @@ import React from "react"
 import { ReactWrapper } from "enzyme"
 
 import { PageConfig } from "src/autogen/proto"
-import { mount } from "src/lib/test_util"
-import { spacing } from "src/theme/primitives/spacing"
-import emotionLightTheme from "src/theme/emotionLightTheme"
-import { mockEndpoints } from "src/lib/mocks/mocks"
+import {
+  mount,
+  spacing,
+  emotionLightTheme,
+  mockEndpoints,
+} from "@streamlit/lib"
 import Sidebar, { SidebarProps } from "./Sidebar"
 import SidebarNav from "./SidebarNav"
 
 expect.extend(matchers)
 
 function renderSideBar(props: Partial<SidebarProps> = {}): ReactWrapper {
+  // console.log(lightTheme)
   return mount(
     <Sidebar
       endpoints={mockEndpoints()}
