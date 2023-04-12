@@ -21,16 +21,8 @@ import sys
 import tempfile
 import unittest
 
-import numpy as np
-import pandas as pd
-from google.protobuf import json_format
-from parameterized import parameterized
-
 import streamlit as st
 from streamlit import __version__
-from streamlit.errors import StreamlitAPIException
-from tests import testutil
-from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def get_version():
@@ -171,11 +163,3 @@ class StreamlitTest(unittest.TestCase):
             self.assertIn("Help on package streamlit:", output)
         finally:
             os.chdir(cwd)
-
-
-class StreamlitAPITest(DeltaGeneratorTestCase):
-    """Test Public Streamlit Public APIs."""
-
-    def test_st_legacy_vega_lite_chart(self):
-        """Test st._legacy_vega_lite_chart."""
-        pass
