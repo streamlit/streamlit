@@ -425,3 +425,25 @@ connect-test-env:
 .PHONY: pre-commit-install
 pre-commit-install:
 	pre-commit install
+
+.PHONY: pybabel-extract
+pybabel-extract:
+	pybabel extract -o lib/streamlit/locale/streamlit.pot lib/streamlit --omit-header
+
+.PHONY: pybabel-init
+pybabel-init:
+	pybabel init -i lib/streamlit/locale/streamlit.pot -d lib/streamlit/locale -l pl
+
+.PHONY: pybabel-update
+pybabel-update:
+	pybabel update -i lib/streamlit/locale/streamlit.pot -d lib/streamlit/locale --omit-header
+
+.PHONY: pybabel-compile
+pybabel-compile:
+	pybabel compile -f -d lib/streamlit/locale
+
+.PHONY: pybabel
+pybabel: pybabel-extract pybabel-update pybabel-compile
+
+.PHONY: pybabel-reset
+pybabel-reset: pybabel-extract pybabel-init pybabel

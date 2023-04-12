@@ -18,6 +18,7 @@ syntax = "proto3";
 
 import "streamlit/proto/Delta.proto";
 import "streamlit/proto/GitInfo.proto";
+import "streamlit/proto/LanguageInfo.proto";
 import "streamlit/proto/NewSession.proto";
 import "streamlit/proto/PageConfig.proto";
 import "streamlit/proto/PageInfo.proto";
@@ -57,6 +58,7 @@ message ForwardMsg {
     ScriptFinishedStatus script_finished = 6;
     GitInfo git_info_changed = 14;
     PageProfile page_profile = 18;
+    LanguageInfo language_info_changed = 19;
 
     // Status change and event messages.
     SessionStatus session_status_changed = 9;
@@ -79,7 +81,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 19
+  // Next: 20
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

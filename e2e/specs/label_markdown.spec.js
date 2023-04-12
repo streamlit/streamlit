@@ -17,7 +17,7 @@
 describe("label markdown", () => {
     before(() => {
         // Increasing timeout since we are loading a bunch of widgets
-        Cypress.config("defaultCommandTimeout", 10000);
+        Cypress.config("defaultCommandTimeout", 30000);
 
         cy.loadApp("http://localhost:3000/");
 

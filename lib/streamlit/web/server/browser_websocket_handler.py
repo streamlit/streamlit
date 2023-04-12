@@ -103,6 +103,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             user_info["email"] = None
         else:
             user_info["email"] = email
+        user_info["language"] = self.request.headers.get("Accept-Language")
 
         existing_session_id = None
         try:

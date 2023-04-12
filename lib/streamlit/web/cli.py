@@ -15,7 +15,10 @@
 """A script which is run when the Streamlit package is executed."""
 
 import os
+import shlex
+import subprocess
 import sys
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import click
@@ -207,6 +210,126 @@ def main_run(target: str, args=None, **kwargs):
         if not os.path.exists(target):
             raise click.BadParameter(f"File does not exist: {target}")
         _main_run(target, args, flag_options=kwargs)
+
+
+@main.command("makemessages")
+@click.argument("target", required=False, envvar="STREAMLIT_RUN_TARGET", type=Path)
+@click.argument("langs", nargs=-1)
+def make_messages(target: Optional[Path] = None, langs=None):
+    """Extracts translation messages from the app."""
+    from streamlit.file_util import APP_LOCALE_FOLDER_NAME
+    from streamlit.locale import APP_LOCALE_DOMAIN
+
+    # Make lang accepts both comma and space separated lists
+    if langs and len(langs) > 0:
+        if "," in langs[0]:
+            langs = langs[0].split(",")
+
+    # By default take current director as working one
+    if not target:
+        target = Path(".")
+
+    # Create and extract .pot file
+    target_name = target.name
+    if "." in target_name:
+        target_name = target_name.split(".")[0]
+    if not target_name:
+        target_name = APP_LOCALE_DOMAIN
+    if target.is_dir():
+        app_dir = target
+    else:
+        app_dir = target.parent.absolute()
+    if not app_dir.is_dir():
+        raise click.BadParameter(
+            f"Could not find parent directory of given Streamlit app: {app_dir}."
+        )
+    locale_dir = Path(app_dir, APP_LOCALE_FOLDER_NAME)
+    if not locale_dir.is_dir():
+        os.makedirs(locale_dir)
+    pot_path = Path(locale_dir, f"{target_name}.pot").absolute()
+    cmd = ["pybabel", "extract", "-o", str(pot_path), str(app_dir), "--omit-header"]
+    try:
+        subprocess.run(
+            cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+    except subprocess.CalledProcessError:
+        print(f"Failed pybabel extract command: {shlex.join(cmd)}.")
+        exit(-1)
+
+    # Init locale files based on generated .pot files.
+    # Init only these locales which were never initialized.
+    if langs and len(langs) > 0:
+        for lang in langs:
+            if Path(locale_dir, lang, f"LC_MESSAGES/{APP_LOCALE_DOMAIN}.po").is_file():
+                continue
+            cmd = [
+                "pybabel",
+                "init",
+                "-i",
+                str(pot_path),
+                "-d",
+                str(locale_dir),
+                "-l",
+                lang,
+            ]
+            try:
+                subprocess.run(
+                    cmd,
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except subprocess.CalledProcessError:
+                subprocess.run(["pybabel", "--list-locales"], stderr=subprocess.DEVNULL)
+                print("You must provide pybabel locale names from above.")
+                print(f"Failed pybabel init command: {' '.join(cmd)}.")
+                exit(-2)
+
+    # Update locale files
+    po_file_exists = False
+    for _ in locale_dir.rglob(f"*/LC_MESSAGES/{APP_LOCALE_DOMAIN}.po"):
+        po_file_exists = True
+        break
+    if po_file_exists:
+        cmd = [
+            "pybabel",
+            "update",
+            "-i",
+            str(pot_path),
+            "-d",
+            str(locale_dir),
+            "--omit-header",
+            "--previous",
+        ]
+        if langs and len(langs) == 1:
+            cmd.append("--init-missing")
+            cmd.append("--locale")
+            cmd.append(langs[0])
+        try:
+            subprocess.run(
+                cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        except subprocess.CalledProcessError:
+            print(f"Failed pybabel update command: {' '.join(cmd)}.")
+            exit(-3)
+
+    # Cleanup pot file
+    os.remove(str(pot_path))
+
+    # Compile messages
+    po_file_exists = False
+    for _ in locale_dir.rglob(f"*/LC_MESSAGES/{APP_LOCALE_DOMAIN}.po"):
+        po_file_exists = True
+        break
+    if po_file_exists:
+        cmd = ["pybabel", "compile", "-f", "-d", str(locale_dir)]
+        try:
+            subprocess.run(
+                cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        except subprocess.CalledProcessError:
+            print(f"Failed pybabel compile command: {' '.join(cmd)}.")
+            exit(-4)
 
 
 def _get_command_line_as_string() -> Optional[str]:

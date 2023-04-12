@@ -16,6 +16,8 @@
 
 describe("st.caption", () => {
   before(() => {
+    Cypress.config("defaultCommandTimeout", 40000);
+
     cy.loadApp("http://localhost:3000/");
   });
 

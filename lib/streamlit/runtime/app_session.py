@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
 import streamlit.elements.exception as exception_utils
 from streamlit import config, runtime, source_util
 from streamlit.case_converters import to_snake_case
+from streamlit.locale import get_session_language
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
@@ -142,6 +143,10 @@ class AppSession:
         from streamlit.runtime.state import SessionState
 
         self._session_state = SessionState()
+        self._session_state["browser_language"] = user_info.get("language")
+        self._session_state["language"] = get_session_language(
+            session_language_as_str=user_info.get("language")
+        )
         self._user_info = user_info
 
         self._debug_last_backmsg_id: Optional[str] = None
@@ -265,7 +270,6 @@ class AppSession:
         """Process a BackMsg."""
         try:
             msg_type = msg.WhichOneof("type")
-
             if msg_type == "rerun_script":
                 if msg.debug_last_backmsg_id:
                     self._debug_last_backmsg_id = msg.debug_last_backmsg_id
@@ -273,6 +277,10 @@ class AppSession:
                 self._handle_rerun_script_request(msg.rerun_script)
             elif msg_type == "load_git_info":
                 self._handle_git_information_request()
+            elif msg_type == "load_language_info":
+                self._handle_load_language_info_request(
+                    change_language=msg.change_language
+                )
             elif msg_type == "clear_cache":
                 self._handle_clear_cache_request()
             elif msg_type == "set_run_on_save":
@@ -685,6 +693,26 @@ class AppSession:
             # Users may never even install Git in the first place, so this
             # error requires no action. It can be useful for debugging.
             LOGGER.debug("Obtaining Git information produced an error", exc_info=ex)
+
+    def _handle_load_language_info_request(self, change_language: str) -> None:
+        try:
+            from streamlit.locale import get_app_locales_meta
+
+            if change_language:
+                self._session_state["language"] = change_language
+                self.request_rerun(client_state=None)
+                return
+            else:
+                app_locales = get_app_locales_meta(
+                    session_language_as_str=self._session_state["browser_language"],
+                    change_language=self._session_state["language"],
+                )
+                self._enqueue_forward_msg(ForwardMsg(language_info_changed=app_locales))
+                return
+        except Exception as ex:
+            LOGGER.debug(
+                "Obtaining Language information produced an error", exc_info=ex
+            )
 
     def _handle_rerun_script_request(
         self, client_state: Optional[ClientState] = None

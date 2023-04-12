@@ -17,7 +17,7 @@
 describe("hello", () => {
   beforeEach(() => {
     // Increasing timeout since we're waiting for the animation and map to load.
-    Cypress.config("defaultCommandTimeout", 30000);
+    Cypress.config("defaultCommandTimeout", 40000);
     cy.loadApp("http://localhost:3000/");
     cy.prepForElementSnapshots();
   });

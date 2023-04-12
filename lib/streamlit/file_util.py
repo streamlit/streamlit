@@ -28,6 +28,8 @@ CONFIG_FOLDER_NAME = ".streamlit"
 # If enableStaticServing is enabled, static file served from the ./static folder
 APP_STATIC_FOLDER_NAME = "static"
 
+APP_LOCALE_FOLDER_NAME = "locale"
+
 
 def get_encoded_file_data(data, encoding="auto"):
     """Coerce bytes to a BytesIO or a StringIO.
@@ -122,11 +124,32 @@ def get_static_dir():
     return os.path.normpath(os.path.join(dirname, "static"))
 
 
+def get_main_script_path() -> str:
+    import sys
+
+    # Script path should always be added to path, see _fix_sys_path method
+    if sys.argv[0].endswith(".py"):
+        return str(Path(sys.argv[0]).absolute())
+    else:
+        for arg_name in sys.argv:
+            if arg_name.endswith(".py"):
+                return str(Path(arg_name).absolute())
+
+    return str(Path(sys.argv[0]).absolute())
+
+
 def get_app_static_dir(main_script_path: str) -> str:
     """Get the folder where app static files live"""
     main_script_path = Path(main_script_path)
-    static_dir = main_script_path.parent / APP_STATIC_FOLDER_NAME
-    return os.path.abspath(static_dir)
+    static_dir = (main_script_path.parent / APP_STATIC_FOLDER_NAME).absolute()
+    return str(static_dir)
+
+
+def get_app_locale_dir() -> str:
+    """Get the folder where app locale files live"""
+    main_script_path = Path(get_main_script_path())
+    locale_dir = (main_script_path.parent / APP_LOCALE_FOLDER_NAME).absolute()
+    return str(locale_dir)
 
 
 def get_assets_dir():
