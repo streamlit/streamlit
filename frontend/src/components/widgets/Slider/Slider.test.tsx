@@ -24,7 +24,7 @@ import {
 } from "src/autogen/proto"
 import { mount } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { lightTheme } from "src/theme"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 import Slider, { Props } from "./Slider"
 
 const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
@@ -45,7 +45,7 @@ const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
-  theme: lightTheme.emotion,
+  theme: mockTheme.emotion,
 })
 
 describe("Slider widget", () => {

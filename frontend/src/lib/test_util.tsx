@@ -31,7 +31,8 @@ import {
 /* eslint-enable */
 import React, { Component, FC, ReactElement } from "react"
 import ThemeProvider from "src/components/core/ThemeProvider"
-import { lightTheme, EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/theme"
+import { mockTheme } from "./mocks/mockTheme"
 
 export function mount<C extends Component, P = C["props"], S = C["state"]>(
   node: ReactElement<P>,
@@ -42,7 +43,7 @@ export function mount<C extends Component, P = C["props"], S = C["state"]>(
     ...(options || {}),
     wrappingComponent: ThemeProvider,
     wrappingComponentProps: {
-      theme: theme || lightTheme.emotion,
+      theme: theme || mockTheme.emotion,
     },
   }
 
@@ -58,7 +59,7 @@ export function shallow<C extends Component, P = C["props"], S = C["state"]>(
     ...(options || {}),
     wrappingComponent: ThemeProvider,
     wrappingComponentProps: {
-      theme: theme || lightTheme.emotion,
+      theme: theme || mockTheme.emotion,
     },
   }
 
@@ -66,7 +67,7 @@ export function shallow<C extends Component, P = C["props"], S = C["state"]>(
 }
 
 const RenderWrapper: FC = ({ children }) => {
-  return <ThemeProvider theme={lightTheme.emotion}>{children}</ThemeProvider>
+  return <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
 }
 
 /**

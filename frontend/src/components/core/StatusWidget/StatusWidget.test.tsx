@@ -20,7 +20,7 @@ import { ConnectionState } from "src/lib/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import { SessionEvent } from "src/autogen/proto"
-import { lightTheme } from "src/theme"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 
@@ -33,7 +33,7 @@ const getProps = (
   rerunScript: () => {},
   stopScript: () => {},
   allowRunOnSave: true,
-  theme: lightTheme.emotion,
+  theme: mockTheme.emotion,
   ...propOverrides,
 })
 

@@ -17,10 +17,10 @@
 import React from "react"
 import { DeckGL } from "deck.gl"
 import { shallow } from "src/lib/test_util"
-import { lightTheme } from "src/theme"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
 import { NavigationControl } from "react-map-gl"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 import { DeckGlJsonChart, PropsWithHeight } from "./DeckGlJsonChart"
 
 const getProps = (
@@ -68,7 +68,7 @@ const getProps = (
     width: 0,
     mapboxToken: "mapboxToken",
     height: undefined,
-    theme: lightTheme.emotion,
+    theme: mockTheme.emotion,
   }
 }
 
