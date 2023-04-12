@@ -8,13 +8,14 @@ graphviz>=0.17
 matplotlib>=3.3.4
 opencv-python>=4.5.3
 plotly>=5.3.1
+pyspark>=3.1.1
 pydot>=1.4.2
+rich>=11.2.0
 scipy>=1.7.3
 seaborn>=0.11.2
 setuptools>=65.5.1
+tenacity>=8.2.2
 watchdog>=2.1.5
-rich>=11.2.0
-pyspark>=3.1.1
 
 # These requirements exist only for `@st.cache` tests. st.cache is deprecated, and
 # we're not going to update its associated tests anymore. Please don't modify
