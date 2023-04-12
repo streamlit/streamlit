@@ -59,6 +59,8 @@ describe("JSON element", () => {
   })
 
   it("picks a reasonable theme when the background is light", () => {
+    // <Json> uses `hasLightBackgroundColor` to test whether our theme
+    // is "light" or "dark". Mock the return value for the test.
     jest.spyOn(themeUtils, "hasLightBackgroundColor").mockReturnValue(true)
 
     const props = getProps()
@@ -69,6 +71,8 @@ describe("JSON element", () => {
   })
 
   it("picks a reasonable theme when the background is dark", () => {
+    // <Json> uses `hasLightBackgroundColor` to test whether our theme
+    // is "light" or "dark". Mock the return value for the test.
     jest.spyOn(themeUtils, "hasLightBackgroundColor").mockReturnValue(false)
 
     const props = getProps()
