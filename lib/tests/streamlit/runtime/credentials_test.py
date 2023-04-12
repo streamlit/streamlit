@@ -352,4 +352,3 @@ class CredentialsModulesTest(unittest.TestCase):
     @patch("streamlit.runtime.credentials.env_util.IS_WINDOWS", new=True)
     def test_show_emojis_windows(self):
         self.assertNotIn("👋", email_prompt())
-        self.assertNotIn("👋", email_prompt())
