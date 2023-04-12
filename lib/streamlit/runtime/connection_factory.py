@@ -158,14 +158,18 @@ def connection_factory(
         name = os.environ[envvar_name]
 
     if type is None:
-        secrets_singleton.load_if_toml_exists()
-
-        # The user didn't specify a type, so we try to pull it out from their
-        # secrets.toml file. NOTE: we're okay with any of the dict lookups below
-        # exploding with a KeyError since, if type isn't explicitly specified here, it
-        # must be the case that it's defined in secrets.toml and should raise an
-        # Exception otherwise.
-        type = secrets_singleton["connections"][name]["type"]
+        if name in FIRST_PARTY_CONNECTIONS:
+            # We allow users to simply write `st.experimental_connection("sql")`
+            # instead of `st.experimental_connection("sql", type="sql")`.
+            type = _get_first_party_connection(name)
+        else:
+            # The user didn't specify a type, so we try to pull it out from their
+            # secrets.toml file. NOTE: we're okay with any of the dict lookups below
+            # exploding with a KeyError since, if type isn't explicitly specified here,
+            # it must be the case that it's defined in secrets.toml and should raise an
+            # Exception otherwise.
+            secrets_singleton.load_if_toml_exists()
+            type = secrets_singleton["connections"][name]["type"]
 
     # type is a nice kwarg name for the st.experimental_connection user but is annoying
     # to work with since it conflicts with the builtin function name and thus gets
