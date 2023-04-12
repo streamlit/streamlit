@@ -25,6 +25,7 @@ import sys
 import tempfile
 import threading
 import unittest.mock
+import uuid
 import weakref
 from enum import Enum
 from typing import Any, Dict, List, Optional, Pattern
@@ -130,6 +131,7 @@ def _key(obj: Optional[Any]) -> Any:
             or isinstance(obj, float)
             or isinstance(obj, int)
             or isinstance(obj, bool)
+            or isinstance(obj, uuid.UUID)
             or obj is None
         )
 
@@ -232,6 +234,9 @@ class _CacheFuncHasher:
 
         elif isinstance(obj, int):
             return _int_to_bytes(obj)
+
+        elif isinstance(obj, uuid.UUID):
+            return obj.bytes
 
         elif isinstance(obj, (list, tuple)):
             h = hashlib.new("md5")

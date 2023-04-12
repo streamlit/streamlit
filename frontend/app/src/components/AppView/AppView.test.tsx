@@ -25,7 +25,7 @@ import {
   AppRoot,
   makeElementWithInfoText,
   ComponentRegistry,
-  getMetricsManagerForTest,
+  MockMetricsManager,
   mockEndpoints,
   mockSessionInfo,
   render,
@@ -42,7 +42,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 
   return {
     endpoints: endpoints,
-    elements: AppRoot.empty(getMetricsManagerForTest(sessionInfo)),
+    elements: AppRoot.empty(new MockMetricsManager()),
     sendMessageToHost: jest.fn(),
     sessionInfo: sessionInfo,
     scriptRunId: "script run 123",
@@ -103,7 +103,7 @@ describe("AppView element", () => {
 
     const props = getProps({
       elements: new AppRoot(
-        getMetricsManagerForTest(),
+        new MockMetricsManager(),
         new BlockNode([main, sidebar])
       ),
     })
@@ -149,7 +149,7 @@ describe("AppView element", () => {
     ]
     const props = getProps({
       elements: new AppRoot(
-        getMetricsManagerForTest(),
+        new MockMetricsManager(),
         new BlockNode([main, sidebar])
       ),
       appPages,

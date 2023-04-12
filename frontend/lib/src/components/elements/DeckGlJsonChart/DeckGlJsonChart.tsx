@@ -19,12 +19,12 @@ import { DeckGL, LayersList, PickingInfo } from "deck.gl/typed"
 import isEqual from "lodash/isEqual"
 import { MapContext, StaticMap, NavigationControl } from "react-map-gl"
 import { withTheme } from "@emotion/react"
-import { hasLightBackgroundColor, Theme } from "src/theme"
 import * as layers from "@deck.gl/layers/typed"
 import { JSONConverter } from "@deck.gl/json/typed"
 import * as geoLayers from "@deck.gl/geo-layers/typed"
 import * as aggregationLayers from "@deck.gl/aggregation-layers/typed"
 import * as meshLayers from "@deck.gl/mesh-layers/typed"
+import { hasLightBackgroundColor, EmotionTheme } from "src/theme"
 
 import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
@@ -64,7 +64,7 @@ const jsonConverter = new JSONConverter({ configuration })
 
 interface Props {
   width: number
-  theme: Theme
+  theme: EmotionTheme
   mapboxToken: string
   element: DeckGlJsonChartProto
 }
