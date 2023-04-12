@@ -17,6 +17,15 @@
 console.log("Using lib custom babel file to preserve modules")
 module.exports = {
   presets: [["./scripts/babel-preset-dev-env.js"]],
-  plugins: ["@emotion"],
+  plugins: ["@emotion", [
+    require.resolve('babel-plugin-module-resolver'),
+    {
+      root: ["."],
+      alias: {
+        'src': "./src",
+      },
+      cwd: "babelrc"
+    }
+  ]],
   ignore: ["./src/autogen/**", "**/*.test.ts", "**/*.test.tsx"],
 }

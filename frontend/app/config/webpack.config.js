@@ -40,6 +40,8 @@ const ForkTsCheckerWebpackPlugin =
     : require("react-dev-utils/ForkTsCheckerWebpackPlugin")
 const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin")
 const createEnvironmentHash = require("./webpack/persistentCache/createEnvironmentHash")
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const CircularDependencyPlugin = require('circular-dependency-plugin')
 
 // Source maps are resource heavy and can cause out of memory issue for large source files.
 const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== "false"
@@ -209,7 +211,7 @@ module.exports = function (webpackEnv) {
       ? shouldUseSourceMap
         ? "source-map"
         : false
-      : isEnvDevelopment && "cheap-module-source-map",
+      : isEnvDevelopment && "eval-cheap-module-source-map",
     // These are the "entry points" to our application.
     // This means they will be the "root" imports that are included in JS bundle.
     entry: paths.appIndexJs,
@@ -326,6 +328,7 @@ module.exports = function (webpackEnv) {
         // Support React Native Web
         // https://www.smashingmagazine.com/2016/08/a-glimpse-into-the-future-with-react-native-for-web/
         "react-native": "react-native-web",
+        "@streamlit/lib": "@streamlit/lib/src",
         // Allows for better profiling with ReactDevTools
         ...(isEnvProductionProfile && {
           "react-dom$": "react-dom/profiling",
@@ -442,6 +445,19 @@ module.exports = function (webpackEnv) {
                 // directory for faster rebuilds.
                 cacheDirectory: true,
                 // See #6846 for context on why cacheCompression is disabled
+                cacheCompression: false,
+                compact: isEnvProduction,
+              },
+            },
+            {
+              // Transpile frontend/lib following file-specific babel config in that package root
+              test: /\.(js|mjs|jsx|ts|tsx)$/,
+              include: /streamlit\/frontend\/lib/,
+              loader: require.resolve("babel-loader"),
+              options: {
+                // Look upward to find babel.config.js in monorepo setup
+                rootMode: 'upward',
+                cacheDirectory: true,
                 cacheCompression: false,
                 compact: isEnvProduction,
               },
@@ -758,6 +774,17 @@ module.exports = function (webpackEnv) {
             },
           },
         }),
+        // new CircularDependencyPlugin({
+        //   // exclude detection of files based on a RegExp
+        //   exclude: /node_modules/,
+        //   // add errors to webpack instead of warnings
+        //   failOnError: false,
+        //   // allow import cycles that include an asyncronous import,
+        //   // e.g. via import(/* webpackMode: "weak" */ './file.js')
+        //   allowAsyncCycles: false,
+        // }),
+      // new BundleAnalyzerPlugin(),
+      
     ].filter(Boolean),
     // Turn off performance processing because we utilize
     // our own hints via the FileSizeReporter
