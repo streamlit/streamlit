@@ -47,17 +47,6 @@ def get_version():
             return m.group("version")
 
 
-def patch_varname_getter():
-    """Patches streamlit.elements.doc_string so _get_variable_name() works outside ScriptRunner."""
-    import inspect
-
-    parent_frame_filename = inspect.getouterframes(inspect.currentframe())[2].filename
-
-    return patch(
-        "streamlit.elements.doc_string.SCRIPTRUNNER_FILENAME", parent_frame_filename
-    )
-
-
 class StreamlitTest(unittest.TestCase):
     """Test Streamlit.__init__.py."""
 
