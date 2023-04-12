@@ -145,13 +145,21 @@ class LegacyChartsTest(DeltaGeneratorTestCase):
         """Test dg._legacy_bar_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        st._legacy_bar_chart(data)
+        st._legacy_bar_chart(data, width=640, height=480)
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
 
         self.assertEqual(chart_spec["mark"], "bar")
-        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
+        self.assertEqual(
+            element.datasets[0].data.columns.plain_index.data.strings.data,
+            ["index", "variable", "value"],
+        )
+        self.assertEqual(
+            element.datasets[0].data.data.cols[2].int64s.data, [20, 30, 50]
+        )
 
     def test_legacy_line_chart_with_pyarrow_table_data(self):
         """Test that an error is raised when called with `pyarrow.Table` data."""
