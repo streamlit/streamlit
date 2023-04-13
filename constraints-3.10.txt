@@ -63,7 +63,7 @@ pluggy==1.0.0
 pre-commit==3.2.2
 protobuf==3.20.3
 psycopg2-binary==2.9.6
-py4j==0.10.9.5
+py4j==0.10.9.7
 pyarrow==11.0.0
 pycparser==2.21
 pydeck==0.8.0
@@ -73,7 +73,7 @@ Pympler==1.0.1
 pyodbc==4.0.38
 pyparsing==3.0.9
 pyrsistent==0.19.3
-pyspark==3.3.2
+pyspark==3.4.0
 pytest==7.3.0
 pytest-cov==4.0.0
 python-dateutil==2.8.2
