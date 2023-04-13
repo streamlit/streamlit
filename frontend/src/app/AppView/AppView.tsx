@@ -18,7 +18,7 @@ import React, { ReactElement } from "react"
 import { IAppPage } from "src/autogen/proto"
 
 import VerticalBlock from "src/components/core/Block"
-import { ThemedSidebar } from "src/components/core/Sidebar"
+import { ThemedSidebar } from "src/app/Sidebar"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"

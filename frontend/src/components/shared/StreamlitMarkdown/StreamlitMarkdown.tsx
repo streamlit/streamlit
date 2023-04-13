@@ -41,7 +41,7 @@ import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import { AppContext } from "src/components/core/AppContext"
 import CodeBlock from "src/components/elements/CodeBlock/"
-import IsSidebarContext from "src/components/core/Sidebar/IsSidebarContext"
+import IsSidebarContext from "src/app/Sidebar/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
 import ErrorBoundary from "src/components/shared/ErrorBoundary/"
 import {
