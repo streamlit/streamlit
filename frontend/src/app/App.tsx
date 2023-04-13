@@ -23,7 +23,7 @@ import classNames from "classnames"
 // Other local imports.
 import { AppContext } from "src/components/core/AppContext"
 import AppView from "src/app/AppView"
-import StatusWidget from "src/components/core/StatusWidget"
+import StatusWidget from "src/app/StatusWidget"
 import MainMenu, { isLocalhost } from "src/app/MainMenu"
 import ToolbarActions from "src/components/core/ToolbarActions"
 import DeployButton from "src/app/DeployButton"
