@@ -32,10 +32,10 @@ import {
   TimeColumn,
   DateTimeColumn,
   ObjectColumn,
-  BooleanColumn,
+  CheckboxColumn,
   NumberColumn,
   TextColumn,
-  CategoricalColumn,
+  SelectColumn,
   ListColumn,
   isErrorCell,
   ColumnCreator,
@@ -156,7 +156,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
     return ObjectColumn
   }
   if (["bool"].includes(typeName)) {
-    return BooleanColumn
+    return CheckboxColumn
   }
   if (
     [
@@ -179,7 +179,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
     return NumberColumn
   }
   if (typeName === "categorical") {
-    return CategoricalColumn
+    return SelectColumn
   }
   if (typeName.startsWith("list")) {
     return ListColumn
@@ -259,7 +259,7 @@ export function getColumnFromArrow(
     isEditable: true,
     title,
     arrowType,
-    columnTypeMetadata,
+    columnTypeOptions: columnTypeMetadata,
     isIndex: false,
     isHidden: false,
   } as BaseColumnProps

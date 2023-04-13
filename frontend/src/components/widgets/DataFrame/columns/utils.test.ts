@@ -29,6 +29,8 @@ import {
   BaseColumnProps,
   toSafeBoolean,
   toGlideColumn,
+  truncateDecimals,
+  countDecimals,
 } from "./utils"
 import { TextColumn } from "."
 
@@ -308,5 +310,50 @@ describe("toGlideColumn", () => {
     })
 
     expect(toGlideColumn(indexColumn).grow).toEqual(1)
+  })
+})
+
+describe("truncateDecimals", () => {
+  it.each([
+    [3.14159265, 2, 3.14],
+    [123.456, 1, 123.4],
+    [-3.14159265, 2, -3.14],
+    [-123.456, 1, -123.4],
+    [3.14159265, 0, 3],
+    [123.456, 0, 123],
+    [-3.14159265, 0, -3],
+    [-123.456, 0, -123],
+    [42, 0, 42],
+    [-42, 0, -42],
+    [0.1 + 0.2, 2, 0.3],
+  ])(
+    "truncates value %f to %i decimal places, resulting in %f",
+    (value, decimals, expected) => {
+      expect(truncateDecimals(value, decimals)).toBe(expected)
+    }
+  )
+})
+
+describe("countDecimals", () => {
+  it.each([
+    [0, 0],
+    [1, 0],
+    [0.1, 1],
+    [0.01, 2],
+    [0.123456789, 9],
+    [0.000001, 6],
+    [0.0000001, 7],
+    [1.23456789e-10, 18],
+    [0.0000000000000000001, 19],
+    [-0.12345, 5],
+    [123456789432, 0],
+    [123456789876543212312313, 0],
+    // It is expected that very large and small numbers won't work correctly:
+    [1234567898765432.1, 0],
+    [0.0000000000000000000001, 0],
+    [1.234567890123456e-20, 20],
+  ])("should return correct decimal count for %d", (value, expected) => {
+    const result = countDecimals(value)
+    expect(result).toEqual(expected)
   })
 })

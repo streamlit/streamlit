@@ -81,6 +81,7 @@ from streamlit.commands.execution_control import (
     stop as stop,
     rerun as _rerun,
 )
+from streamlit import column_types as column_types
 
 # We add the metrics tracking for caching here,
 # since the actual cache function calls itself recursively

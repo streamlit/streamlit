@@ -23,7 +23,6 @@ import { notNullOrUndefined } from "src/lib/utils"
 import {
   BaseColumn,
   BaseColumnProps,
-  ColumnCreator,
   getErrorCell,
   toSafeString,
   mergeColumnParameters,
@@ -31,8 +30,8 @@ import {
   toSafeBoolean,
 } from "./utils"
 
-export interface CategoricalColumnParams {
-  /** A list of options available in the dropdown.
+export interface SelectColumnParams {
+  /** A list of options available in the selectbox.
    * Every value in the column needs to match one of the options.
    */
   readonly options: (string | number | boolean)[]
@@ -40,11 +39,11 @@ export interface CategoricalColumnParams {
 
 /**
  * A column type that supports optimized rendering and editing for categorical values
- * by using a dropdown. This is automatically used by categorical columns (Pandas).
+ * by using a selectbox. This is automatically used by categorical columns (Pandas).
  *
  */
-function CategoricalColumn(props: BaseColumnProps): BaseColumn {
-  // Categorical column can be either string, number or boolean type based on the options
+function SelectColumn(props: BaseColumnProps): BaseColumn {
+  // Select column can be either string, number or boolean type based on the options
   let dataType: "number" | "boolean" | "string" = "string"
 
   const parameters = mergeColumnParameters(
@@ -54,8 +53,8 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
         Quiver.getTypeName(props.arrowType) === "bool" ? [true, false] : [],
     },
     // User parameters:
-    props.columnTypeMetadata
-  ) as CategoricalColumnParams
+    props.columnTypeOptions
+  ) as SelectColumnParams
 
   const uniqueTypes = new Set(parameters.options.map(x => typeof x))
   if (uniqueTypes.size === 1) {
@@ -87,7 +86,7 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
 
   return {
     ...props,
-    kind: "categorical",
+    kind: "select",
     sortMode: "default",
     getCell(data?: any): GridCell {
       // Empty string refers to a missing value
@@ -126,6 +125,6 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-CategoricalColumn.isEditableType = true
+SelectColumn.isEditableType = true
 
-export default CategoricalColumn as ColumnCreator
+export default SelectColumn

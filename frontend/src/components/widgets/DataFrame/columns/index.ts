@@ -16,11 +16,15 @@
 
 import ObjectColumn from "./ObjectColumn"
 import TextColumn from "./TextColumn"
-import BooleanColumn from "./BooleanColumn"
-import CategoricalColumn from "./CategoricalColumn"
+import CheckboxColumn from "./CheckboxColumn"
+import SelectColumn from "./SelectColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
 import { DateTimeColumn, TimeColumn, DateColumn } from "./DateTimeColumn"
+import { LineChartColumn, BarChartColumn } from "./ChartColumn"
+import UrlColumn from "./UrlColumn"
+import ImageColumn from "./ImageColumn"
+import RangeColumn from "./RangeColumn"
 
 import DatePickerCell from "./cells/DatePickerCell"
 
@@ -35,13 +39,18 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
   Object.entries({
     object: ObjectColumn,
     text: TextColumn,
-    boolean: BooleanColumn,
-    categorical: CategoricalColumn,
+    number: NumberColumn,
+    checkbox: CheckboxColumn,
+    select: SelectColumn,
     date: DateColumn,
     datetime: DateTimeColumn,
     time: TimeColumn,
     list: ListColumn,
-    number: NumberColumn,
+    line_chart: LineChartColumn,
+    bar_chart: BarChartColumn,
+    url: UrlColumn,
+    image: ImageColumn,
+    range: RangeColumn,
   })
 )
 
@@ -50,11 +59,16 @@ export const CustomCells = [DatePickerCell]
 export {
   ObjectColumn,
   TextColumn,
-  BooleanColumn,
-  CategoricalColumn,
+  CheckboxColumn,
+  SelectColumn,
   DateColumn,
   DateTimeColumn,
   TimeColumn,
   ListColumn,
   NumberColumn,
+  LineChartColumn,
+  BarChartColumn,
+  UrlColumn,
+  ImageColumn,
+  RangeColumn,
 }

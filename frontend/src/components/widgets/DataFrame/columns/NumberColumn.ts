@@ -15,6 +15,7 @@
  */
 
 import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
+import { sprintf } from "sprintf-js"
 
 import { Quiver } from "src/lib/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
@@ -23,21 +24,26 @@ import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
-  ColumnCreator,
   toSafeString,
   mergeColumnParameters,
   toSafeNumber,
   formatNumber,
+  countDecimals,
+  truncateDecimals,
+  adaptToStep,
 } from "./utils"
 
 export interface NumberColumnParams {
-  // Floating point precision to limit the number of digits after the decimal point.
-  // This is set to 0 for integer columns.
-  readonly precision?: number
   // The minimum allowed value for editing. Is set to 0 for unsigned values.
-  readonly min?: number
+  readonly min_value?: number
   // The maximum allowed value for editing.
-  readonly max?: number
+  readonly max_value?: number
+  // A formatting syntax (e.g. sprintf) to format the display value.
+  // This can be used for adding prefix or suffix, or changing the number of decimals of the display value.
+  readonly format?: string
+  // Specifies the granularity that the value must adhere.
+  // This is set to 1 for integer types.
+  readonly step?: number
 }
 
 /**
@@ -50,23 +56,27 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
   const parameters = mergeColumnParameters(
     // Default parameters:
     {
-      precision:
+      // Set step to 1 for integer types
+      step:
         arrowTypeName.startsWith("int") ||
         arrowTypeName === "range" ||
         arrowTypeName.startsWith("uint")
-          ? 0
+          ? 1
           : undefined,
       // if uint (unsigned int), only positive numbers are allowed
-      min: arrowTypeName.startsWith("uint") ? 0 : undefined,
-    },
+      min_value: arrowTypeName.startsWith("uint") ? 0 : undefined,
+    } as NumberColumnParams,
     // User parameters:
-    props.columnTypeMetadata
+    props.columnTypeOptions
   ) as NumberColumnParams
 
-  const allowNegative = isNullOrUndefined(parameters.min) || parameters.min < 0
-  const fixedDecimals = notNullOrUndefined(parameters.precision)
-    ? parameters.precision
-    : undefined
+  const allowNegative =
+    isNullOrUndefined(parameters.min_value) || parameters.min_value < 0
+
+  const fixedDecimals =
+    notNullOrUndefined(parameters.step) && !Number.isNaN(parameters.step)
+      ? countDecimals(parameters.step)
+      : undefined
 
   const cellTemplate = {
     kind: GridCellKind.Number,
@@ -86,6 +96,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "smart",
     getCell(data?: any): GridCell {
       let cellData: number | null = toSafeNumber(data)
+      let displayData: string | undefined
 
       if (notNullOrUndefined(cellData)) {
         if (Number.isNaN(cellData)) {
@@ -93,6 +104,28 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
             toSafeString(data),
             "The value cannot be interpreted as a number."
           )
+        }
+        // Apply step configuration option:
+        if (notNullOrUndefined(parameters.step) && parameters.step !== 1) {
+          // TODO: Only apply this if it is actually a new submitted value?
+          cellData = adaptToStep(cellData, parameters.step)
+        }
+
+        // Cut decimals:
+        if (notNullOrUndefined(fixedDecimals)) {
+          cellData = truncateDecimals(cellData, fixedDecimals)
+        }
+
+        // Apply min_value configuration option:
+        if (notNullOrUndefined(parameters.min_value)) {
+          // TODO: Only apply this if it is actually a new submitted value?
+          cellData = Math.max(cellData, parameters.min_value)
+        }
+
+        // Apply max_value configuration option:
+        if (notNullOrUndefined(parameters.max_value)) {
+          // TODO: Only apply this if it is actually a new submitted value?
+          cellData = Math.min(cellData, parameters.max_value)
         }
 
         if (Number.isInteger(cellData) && !Number.isSafeInteger(cellData)) {
@@ -102,32 +135,33 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
           )
         }
 
-        // Apply precision parameter
-        if (notNullOrUndefined(parameters.precision)) {
-          cellData =
-            parameters.precision === 0
-              ? Math.trunc(cellData)
-              : Math.trunc(cellData * 10 ** parameters.precision) /
-                10 ** parameters.precision
+        // Apply format configuration option:
+        if (notNullOrUndefined(parameters.format)) {
+          try {
+            displayData = sprintf(parameters.format, cellData)
+          } catch (error) {
+            return getErrorCell(
+              toSafeString(cellData),
+              `Format configuration (${parameters.format}) is not sprintf compatible. Error: ${error}`
+            )
+          }
         }
+      }
 
-        // Apply min parameter
-        if (notNullOrUndefined(parameters.min)) {
-          cellData = Math.max(cellData, parameters.min)
-        }
-
-        // Apply max parameter
-        if (notNullOrUndefined(parameters.max)) {
-          cellData = Math.min(cellData, parameters.max)
+      if (displayData === undefined) {
+        if (isNullOrUndefined(cellData)) {
+          displayData = ""
+        } else if (notNullOrUndefined(fixedDecimals)) {
+          displayData = formatNumber(cellData, fixedDecimals, true)
+        } else {
+          displayData = formatNumber(cellData)
         }
       }
 
       return {
         ...cellTemplate,
         data: cellData,
-        displayData: notNullOrUndefined(cellData)
-          ? formatNumber(cellData)
-          : "",
+        displayData,
         isMissingValue: isNullOrUndefined(cellData),
       } as NumberCell
     },
@@ -139,4 +173,4 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
 NumberColumn.isEditableType = true
 
-export default NumberColumn as ColumnCreator
+export default NumberColumn

@@ -50,14 +50,20 @@ export interface BaseColumnProps {
   readonly isIndex: boolean
   // If `True`, the column is a stretched:
   readonly isStretched: boolean
+  // If `True`, a value is required before the cell or row can be submitted:
+  readonly isRequired?: boolean
   // The initial width of the column:
   readonly width?: number
+  // A help text that is displayed on hovering the column header.
+  readonly help?: string
   // Column type selected via column config:
   readonly customType?: string
   // Additional metadata related to the column type:
-  readonly columnTypeMetadata?: Record<string, any>
+  readonly columnTypeOptions?: Record<string, any>
   // The content alignment of the column:
   readonly contentAlignment?: "left" | "center" | "right"
+  // The default value of the column used when adding a new row:
+  readonly defaultValue?: string | number | boolean
   // Theme overrides for this column:
   readonly themeOverride?: Partial<GlideTheme>
 }
@@ -391,7 +397,7 @@ export function formatNumber(
 ): string {
   if (!Number.isNaN(value) && Number.isFinite(value)) {
     if (maxPrecision === 0) {
-      // Numbro is unable to format the numb with 0 decimals.
+      // Numbro is unable to format the number with 0 decimals.
       value = Math.round(value)
     }
     return numbro(value).format(
@@ -465,4 +471,61 @@ export function toSafeDate(value: any): Date | null | undefined {
 
   // Unable to interpret this value as a date:
   return undefined
+}
+
+/**
+ * Count the number of decimals in a number.
+ *
+ * @param {number} value - The number to count the decimals for.
+ *
+ * @returns {number} The number of decimals.
+ */
+export function countDecimals(value: number): number {
+  if (value % 1 === 0) {
+    return 0
+  }
+
+  let numberStr = value.toString()
+
+  if (numberStr.indexOf("e") !== -1) {
+    // Handle scientific notation
+    numberStr = value.toLocaleString("fullwide", {
+      useGrouping: false,
+      maximumFractionDigits: 20,
+    })
+  }
+
+  if (numberStr.indexOf(".") === -1) {
+    // Fallback to 0 decimals, this can happen with
+    // extremely large or small numbers
+    return 0
+  }
+
+  return numberStr.split(".")[1].length
+}
+
+export function adaptToStep(value: number, increment: number): number {
+  // https://stackoverflow.com/a/11832950/102479
+  // ( x+ Number.EPSILON)
+  // Math.ceil(value / increment) * increment
+  // TODO: IMPLEMENT this method
+  return value
+}
+
+/**
+ * Truncates a number to a specified number of decimal places without rounding.
+ *
+ * @param {number} value - The number to be truncated.
+ * @param {number} decimals - The number of decimal places to preserve after truncation.
+ *
+ * @returns {number} The truncated number.
+ *
+ * @example
+ * truncateDecimals(3.14159265, 2); // returns 3.14
+ * truncateDecimals(123.456, 0); // returns 123
+ */
+export function truncateDecimals(value: number, decimals: number): number {
+  return decimals === 0
+    ? Math.trunc(value)
+    : Math.trunc(value * 10 ** decimals) / 10 ** decimals
 }

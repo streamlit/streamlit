@@ -66,7 +66,7 @@ function BaseDateTimeColumn(
       timezone,
     },
     // User parameters:
-    props.columnTypeMetadata
+    props.columnTypeOptions
   ) as DateTimeColumnParams
 
   let defaultTimezoneOffset: number | undefined = undefined

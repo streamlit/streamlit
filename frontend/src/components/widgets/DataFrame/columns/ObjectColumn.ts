@@ -70,4 +70,4 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
 
 ObjectColumn.isEditableType = false
 
-export default ObjectColumn as ColumnCreator
+export default ObjectColumn

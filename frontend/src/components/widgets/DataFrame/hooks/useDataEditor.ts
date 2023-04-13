@@ -116,7 +116,7 @@ function useDataEditor(
 
     const newRow: Map<number, GridCell> = new Map()
     columns.forEach(column => {
-      newRow.set(column.indexNumber, column.getCell(undefined))
+      newRow.set(column.indexNumber, column.getCell(column.defaultValue))
     })
     editingState.current.addRow(newRow)
     applyEdits(false, false)

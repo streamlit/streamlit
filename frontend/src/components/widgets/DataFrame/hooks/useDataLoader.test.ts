@@ -55,7 +55,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
   }),
   TextColumn({
     arrowType: { meta: null, numpy_type: "object", pandas_type: "unicode" },
-    columnTypeMetadata: undefined,
+    columnTypeOptions: undefined,
     id: "column-c2-1",
     indexNumber: 2,
     isEditable: true,

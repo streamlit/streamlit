@@ -53,7 +53,7 @@ function getNumberColumn(
   return NumberColumn({
     ...NUMBER_COLUMN_TEMPLATE,
     arrowType,
-    columnTypeMetadata: params,
+    columnTypeOptions: params,
   } as BaseColumnProps)
 }
 
@@ -144,17 +144,17 @@ describe("NumberColumn", () => {
 
   it.each([
     [0, 1.234567, 1],
-    [1, 1.234567, 1.2],
-    [2, 1.234567, 1.23],
-    [3, 1.234567, 1.234],
-    [4, 1.234567, 1.2345],
-    [3, 1.1, 1.1],
-    [100, 1, 1],
+    [0.1, 1.234567, 1.2],
+    [0.01, 1.234567, 1.23],
+    [0.001, 1.234567, 1.234],
+    [0.0001, 1.234567, 1.2345],
+    [0.001, 1.1, 1.1],
+    [0.00000001, 1, 1],
   ])(
-    "converts value to precision %p (%p parsed to %p)",
-    (precision: number, input: DataType, value: number | null) => {
+    "converts value to precision from step %p (%p parsed to %p)",
+    (step: number, input: DataType, value: number | null) => {
       const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
-        precision,
+        step,
       })
       const mockCell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(mockCell)).toEqual(value)
@@ -168,9 +168,9 @@ describe("NumberColumn", () => {
     [10, -5, 10],
   ])(
     "supports minimal value %p (%p parsed to %p)",
-    (min: number, input: DataType, value: number | null) => {
+    (min_value: number, input: DataType, value: number | null) => {
       const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
-        min,
+        min_value,
       })
       const mockCell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(mockCell)).toEqual(value)
@@ -184,9 +184,9 @@ describe("NumberColumn", () => {
     [10, -5, -5],
   ])(
     "supports maximal value %p (%p parsed to %p)",
-    (max: number, input: DataType, value: number | null) => {
+    (max_value: number, input: DataType, value: number | null) => {
       const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
-        max,
+        max_value,
       })
       const mockCell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(mockCell)).toEqual(value)

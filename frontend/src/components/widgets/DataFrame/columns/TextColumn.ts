@@ -22,7 +22,6 @@ import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
-  ColumnCreator,
   toSafeString,
 } from "./utils"
 
@@ -70,4 +69,4 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
 
 TextColumn.isEditableType = true
 
-export default TextColumn as ColumnCreator
+export default TextColumn

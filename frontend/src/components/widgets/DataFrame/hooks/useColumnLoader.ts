@@ -38,16 +38,28 @@ export const INDEX_IDENTIFIER = "index"
 // Prefix used in the config column mapping when referring to a column via the numeric position
 export const COLUMN_POSITION_PREFIX = "col:"
 
+export const COLUMN_WIDTH_MAPPING = {
+  small: 75,
+  medium: 200,
+  large: 400,
+}
 /**
  * Options to configure columns.
+ *
+ * This needs to be kept in sync with the ColumnConfig TypeDict in the backend.
+ * This will eventually replaced with a proto message.
  */
 export interface ColumnConfigProps {
-  width?: number
   title?: string
-  type?: string
+  width?: "small" | "medium" | "large"
+  help?: string
   hidden?: boolean
-  editable?: boolean
-  metadata?: Record<string, unknown>
+  disabled?: boolean
+  required?: boolean
+  default?: number | string | boolean
+  type?: string
+  // uses snake_case to match the property names in the backend:
+  type_options?: Record<string, unknown>
   alignment?: string
 }
 
@@ -70,7 +82,7 @@ export function applyColumnConfig(
 
   let columnConfig
   if (columnConfigMapping.has(columnProps.title)) {
-    // Config is configured based on the column title
+    // Config is configured based on the column name
     columnConfig = columnConfigMapping.get(columnProps.title)
   } else if (
     columnConfigMapping.has(
@@ -95,19 +107,25 @@ export function applyColumnConfig(
   }
 
   // This will update all column props with the user-defined config for all
-  // configuration option that are not undefined:
-  return merge(
-    { ...columnProps },
-    {
-      title: columnConfig.title,
-      width: columnConfig.width,
-      customType: columnConfig.type?.toLowerCase().trim(),
-      isEditable: columnConfig.editable,
-      isHidden: columnConfig.hidden,
-      columnTypeMetadata: columnConfig.metadata,
-      contentAlignment: columnConfig.alignment,
-    }
-  ) as BaseColumnProps
+  // configuration options that are not undefined:
+  return merge({ ...columnProps }, {
+    title: columnConfig.title,
+    width:
+      notNullOrUndefined(columnConfig.width) &&
+      columnConfig.width in COLUMN_WIDTH_MAPPING
+        ? COLUMN_WIDTH_MAPPING[columnConfig.width]
+        : undefined,
+    customType: columnConfig.type?.toLowerCase().trim(),
+    isEditable: notNullOrUndefined(columnConfig.disabled)
+      ? !columnConfig.disabled
+      : undefined,
+    isHidden: columnConfig.hidden,
+    isRequired: columnConfig.required,
+    columnTypeOptions: columnConfig.type_options,
+    contentAlignment: columnConfig.alignment,
+    help: columnConfig.help,
+    defaultValue: columnConfig.default,
+  } as BaseColumnProps) as BaseColumnProps
 }
 
 /**

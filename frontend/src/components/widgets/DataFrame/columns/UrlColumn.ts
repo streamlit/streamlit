@@ -14,43 +14,43 @@
  * limitations under the License.
  */
 
-import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCell, UriCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import { isNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps, toSafeArray } from "./utils"
+import { BaseColumn, BaseColumnProps, toSafeString } from "./utils"
 
 /**
- * A column type that supports optimized rendering values of array/list types.
+ * The URL column is a special column that interprets the cell content as a URL
+ * and allows the user to click on it.
  */
-function ListColumn(props: BaseColumnProps): BaseColumn {
+function UrlColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
-    kind: GridCellKind.Bubble,
-    data: [],
+    kind: GridCellKind.Uri,
+    data: "",
+    readonly: !props.isEditable,
     allowOverlay: true,
     contentAlign: props.contentAlignment,
     style: props.isIndex ? "faded" : "normal",
-  } as BubbleCell
+  } as UriCell
 
   return {
     ...props,
-    kind: "list",
+    kind: "url",
     sortMode: "default",
-    isEditable: false, // List column is always readonly
     getCell(data?: any): GridCell {
-      // TODO(lukasmasuch): if notNullOrUndefined -> use empty cell to return null value
       return {
         ...cellTemplate,
-        data: toSafeArray(data),
+        data: notNullOrUndefined(data) ? toSafeString(data) : null,
         isMissingValue: isNullOrUndefined(data),
-      } as BubbleCell
+      } as UriCell
     },
-    getCellValue(cell: BubbleCell): string[] | null {
+    getCellValue(cell: UriCell): string | null {
       return cell.data === undefined ? null : cell.data
     },
   }
 }
 
-ListColumn.isEditableType = false
+UrlColumn.isEditableType = true
 
-export default ListColumn
+export default UrlColumn
