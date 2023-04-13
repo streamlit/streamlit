@@ -45,13 +45,16 @@ import {
   lightTheme,
   toExportedTheme,
 } from "src/theme"
-import Modal from "./components/shared/Modal"
-import { DialogType, StreamlitDialog } from "./components/core/StreamlitDialog"
+import Modal from "src/components/shared/Modal"
+import {
+  DialogType,
+  StreamlitDialog,
+} from "src/components/core/StreamlitDialog"
 import { App, Props } from "./App"
-import MainMenu from "./components/core/MainMenu"
-import ToolbarActions from "./components/core/ToolbarActions"
-import { mockSessionInfo, mockSessionInfoProps } from "./lib/mocks/mocks"
-import { SessionInfo } from "./lib/SessionInfo"
+import MainMenu from "src/components/core/MainMenu"
+import ToolbarActions from "src/components/core/ToolbarActions"
+import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
+import { SessionInfo } from "src/lib/SessionInfo"
 
 jest.mock("src/lib/ConnectionManager")
 

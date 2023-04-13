@@ -32,7 +32,7 @@ import {
   DialogProps,
   DialogType,
   StreamlitDialog,
-} from "src/components/core/StreamlitDialog/"
+} from "src/components/core/StreamlitDialog"
 import { ConnectionManager } from "src/lib/ConnectionManager"
 import { PerformanceEvents } from "src/lib/profiler/PerformanceEvents"
 import {
@@ -109,23 +109,23 @@ import {
   ThemeConfig,
   toExportedTheme,
 } from "src/theme"
-import { DefaultStreamlitEndpoints } from "./lib/DefaultStreamlitEndpoints"
-import { SegmentMetricsManager } from "./lib/SegmentMetricsManager"
-import { StreamlitEndpoints } from "./lib/StreamlitEndpoints"
+import { DefaultStreamlitEndpoints } from "src/lib/DefaultStreamlitEndpoints"
+import { SegmentMetricsManager } from "src/lib/SegmentMetricsManager"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
-import { StyledApp } from "./styled-components"
+import { StyledApp } from "src/styled-components"
 
 import withHostCommunication, {
   HostCommunicationHOC,
-} from "./hocs/withHostCommunication"
+} from "src/hocs/withHostCommunication"
 
 import withScreencast, {
   ScreenCastHOC,
-} from "./hocs/withScreencast/withScreencast"
+} from "src/hocs/withScreencast/withScreencast"
 
 // Used to import fonts + responsive reboot items
 import "src/assets/css/theme.scss"
-import { ensureError } from "./lib/ErrorHandling"
+import { ensureError } from "src/lib/ErrorHandling"
 
 export interface Props {
   screenCast: ScreenCastHOC

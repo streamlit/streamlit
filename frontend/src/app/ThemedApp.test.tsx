@@ -30,7 +30,7 @@ import {
 import AppWithScreencast from "./App"
 import ThemedApp from "./ThemedApp"
 import { act } from "react-dom/test-utils"
-import FontFaceDeclaration from "./components/core/FontFaceDeclaration"
+import FontFaceDeclaration from "src/components/core/FontFaceDeclaration"
 
 const mockCustomThemeConfig = {
   primaryColor: "#1A6CE7",
