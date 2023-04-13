@@ -37,7 +37,7 @@ import {
   ModuleIsNotAdded,
   NoRepositoryDetected,
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs/index"
-import { getDeployAppUrl } from "src/components/core/MainMenu/MainMenu"
+import { getDeployAppUrl } from "src/app/MainMenu/MainMenu"
 import { GitInfo, IGitInfo } from "src/autogen/proto"
 import { MetricsManager } from "src/lib/MetricsManager"
 

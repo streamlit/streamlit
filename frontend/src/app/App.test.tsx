@@ -51,7 +51,7 @@ import {
   StreamlitDialog,
 } from "src/components/core/StreamlitDialog"
 import { App, Props } from "./App"
-import MainMenu from "src/components/core/MainMenu"
+import MainMenu from "src/app/MainMenu"
 import ToolbarActions from "src/components/core/ToolbarActions"
 import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
 import { SessionInfo } from "src/lib/SessionInfo"
