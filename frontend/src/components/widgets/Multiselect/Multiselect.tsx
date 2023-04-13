@@ -321,7 +321,6 @@ class Multiselect extends React.PureComponent<Props, State> {
 
                         ":hover": {
                           fill: theme.colors.bodyText,
-                          // opacity: '.8'
                         },
                       },
                     },
