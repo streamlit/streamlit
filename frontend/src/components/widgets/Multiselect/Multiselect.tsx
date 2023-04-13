@@ -313,7 +313,7 @@ class Multiselect extends React.PureComponent<Props, State> {
                     Svg: {
                       style: {
                         color: theme.colors.darkGray,
-                        // Since the close icon is an SVG, and we can control its viewbox nor its attributes,
+                        // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
                         // Let's use a scale transform effect to make it bigger.
                         // The width property only enlarges its bounding box, so it's easier to click.
                         transform: "scale(1.5)",
