@@ -18,11 +18,14 @@ import os
 import sys
 import textwrap
 from collections import namedtuple
+from datetime import datetime
 from typing import Optional
+from uuid import uuid4
 
 import click
-import segment.analytics as analytics
+import requests
 import toml
+from requests.exceptions import RequestException
 
 from streamlit import env_util, file_util, util
 from streamlit.logger import get_logger
@@ -106,15 +109,52 @@ _INSTRUCTIONS_TEXT = """
 def _send_email(email: str) -> None:
     """Send the user's email to segment.io, if submitted"""
 
-    analytics.write_key = "25DefF4C87Ln9xaSnKua3LnPAuW28Hp3"
+    if email is None or "@" not in email:
+        LOGGER.error("That doesn't look like an email :(")
+        return
 
-    analytics.identify(
-        email,
-        {
+    headers = {
+        "authority": "api.segment.io",
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "content-type": "application/json",
+        "origin": "http://localhost:8501",
+        "referer": "http://localhost:8501/",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "cross-site",
+        "user-agent": "",
+    }
+
+    dt = datetime.utcnow().isoformat() + "Z"
+
+    ANONYMOUS_ID = "cf41d0b9-8977-409a-852e-de16f281160e"
+
+    data = {
+        "anonymous_id": ANONYMOUS_ID,
+        "context": {
+            "library": {"name": "analytics-python", "version": "2.2.2"},
+        },
+        "integrations": {},
+        "messageId": str(uuid4()),
+        "sentAt": dt,
+        "timestamp": dt,
+        "traits": {
             "authoremail": email,
             "source": "provided_email",
         },
+        "type": "identify",
+        "userId": email,
+        "writeKey": "iCkMy7ymtJ9qYzQRXkQpnAJEq7D4NyMU",
+        "_metadata": {"bundled": ["Segment.io"], "unbundled": [], "bundledIds": []},
+    }
+
+    response = requests.post(
+        "https://api.segment.io/v1/i",
+        headers=headers,
+        data=str(data).encode(),
     )
+
+    response.raise_for_status()
 
 
 class Credentials(object):
@@ -222,8 +262,8 @@ class Credentials(object):
 
         try:
             _send_email(self.activation.email)
-        except Exception as e:
-            LOGGER.error("Error saving email: %s" % e)
+        except RequestException as e:
+            LOGGER.error(f"Error saving email: {e}")
 
     def activate(self, show_instructions: bool = True) -> None:
         """Activate Streamlit.
