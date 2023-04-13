@@ -24,7 +24,7 @@ import { FlexGrid, FlexGridItem } from "baseui/flex-grid"
 import {
   DialogType,
   PlainEventHandler,
-} from "src/components/core/StreamlitDialog/StreamlitDialog"
+} from "src/app/StreamlitDialog/StreamlitDialog"
 import Button, { Kind } from "src/components/shared/Button"
 import StreamlitLogo from "src/assets/svg/logo.svg"
 import Rocket from "src/assets/svg/rocket.svg"
@@ -36,7 +36,7 @@ import {
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
-} from "src/components/core/StreamlitDialog/DeployErrorDialogs/index"
+} from "src/app/StreamlitDialog/DeployErrorDialogs"
 import { getDeployAppUrl } from "src/app/MainMenu/MainMenu"
 import { GitInfo, IGitInfo } from "src/autogen/proto"
 import { MetricsManager } from "src/lib/MetricsManager"

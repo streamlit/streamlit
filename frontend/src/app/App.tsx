@@ -32,7 +32,7 @@ import {
   DialogProps,
   DialogType,
   StreamlitDialog,
-} from "src/components/core/StreamlitDialog"
+} from "src/app/StreamlitDialog"
 import { ConnectionManager } from "src/lib/ConnectionManager"
 import { PerformanceEvents } from "src/lib/profiler/PerformanceEvents"
 import {
@@ -95,7 +95,7 @@ import { FileUploadClient } from "src/lib/FileUploadClient"
 import { logError, logMessage } from "src/lib/log"
 import { AppRoot } from "src/lib/AppNode"
 
-import { UserSettings } from "src/components/core/StreamlitDialog/UserSettings"
+import { UserSettings } from "src/app/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { handleFavicon } from "src/components/elements/Favicon"
 

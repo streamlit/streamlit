@@ -46,10 +46,7 @@ import {
   toExportedTheme,
 } from "src/theme"
 import Modal from "src/components/shared/Modal"
-import {
-  DialogType,
-  StreamlitDialog,
-} from "src/components/core/StreamlitDialog"
+import { DialogType, StreamlitDialog } from "src/app/StreamlitDialog"
 import { App, Props } from "./App"
 import MainMenu from "src/app/MainMenu"
 import ToolbarActions from "src/components/core/ToolbarActions"
