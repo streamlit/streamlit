@@ -18,8 +18,8 @@ import React from "react"
 import { mount } from "src/lib/test_util"
 import { fromJS, Map as ImmutableMap } from "immutable"
 import { VegaLiteChart as VegaLiteChartProto } from "src/autogen/proto"
-import { darkTheme, lightTheme } from "src/theme"
 import { tableGetRowsAndCols } from "src/lib/dataFrameProto"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 
 import mock from "./mock"
 import {
@@ -38,7 +38,7 @@ const getProps = (
   }) as ImmutableMap<string, any>,
   width: 0,
   height: 0,
-  theme: lightTheme.emotion,
+  theme: mockTheme.emotion,
   ...props,
 })
 
@@ -166,21 +166,21 @@ describe("VegaLiteChart Element", () => {
   })
 
   it("pulls default config values from theme", () => {
-    const props = getProps(undefined, { theme: darkTheme.emotion })
+    const props = getProps(undefined, { theme: mockTheme.emotion })
 
     const wrapper = mount<VegaLiteChart>(<VegaLiteChart {...props} />)
     const generatedSpec = wrapper.instance().generateSpec()
 
     expect(generatedSpec.config.background).toBe(
-      darkTheme.emotion.colors.bgColor
+      mockTheme.emotion.colors.bgColor
     )
     expect(generatedSpec.config.axis.labelColor).toBe(
-      darkTheme.emotion.colors.bodyText
+      mockTheme.emotion.colors.bodyText
     )
   })
 
   it("has user specified config take priority", () => {
-    const props = getProps(undefined, { theme: darkTheme.emotion })
+    const props = getProps(undefined, { theme: mockTheme.emotion })
 
     const spec = JSON.parse(props.element.get("spec"))
     spec.config = { background: "purple", axis: { labelColor: "blue" } }
@@ -198,7 +198,7 @@ describe("VegaLiteChart Element", () => {
     // Verify that things not overwritten by the user still fall back to the
     // theme default.
     expect(generatedSpec.config.axis.titleColor).toBe(
-      darkTheme.emotion.colors.bodyText
+      mockTheme.emotion.colors.bodyText
     )
   })
 })

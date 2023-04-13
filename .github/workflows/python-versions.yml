@@ -52,6 +52,7 @@ jobs:
       PYTHON_VERSIONS: ${{ steps.build_info.outputs.PYTHON_VERSIONS }}
       PYTHON_MIN_VERSION: ${{ steps.build_info.outputs.PYTHON_MIN_VERSION }}
       PYTHON_MAX_VERSION: ${{ steps.build_info.outputs.PYTHON_MAX_VERSION }}
+      USE_CONSTRAINT_FILE: ${{ steps.build_info.outputs.USE_CONSTRAINT_FILE }}
 
   py_version:
     needs:
@@ -75,6 +76,7 @@ jobs:
             (matrix.python_version == 'max' && needs.build_info.outputs.PYTHON_MAX_VERSION || matrix.python_version)
           )
         }}
+      USE_CONSTRAINT_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINT_FILE )}}"
 
     steps:
       - name: Checkout Streamlit code
@@ -144,6 +146,9 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ env.TARGET_BRANCH }}
+          # Save the access token to the local git config, so
+          # later git commands can work.
+          persist-credentials: true
 
       - uses: actions/download-artifact@v3
         with:

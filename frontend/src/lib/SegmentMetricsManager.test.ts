@@ -16,15 +16,26 @@
 
 // Disable Typescript checking, since mm.track and identify have private scope
 // @ts-nocheck
-import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
+
 import { mockSessionInfo, mockSessionInfoProps } from "./mocks/mocks"
+import { SegmentMetricsManager } from "./SegmentMetricsManager"
+import { SessionInfo } from "./SessionInfo"
+
+const getSegmentMetricsManager = (
+  sessionInfo?: SessionInfo
+): SegmentMetricsManager => {
+  const mm = new SegmentMetricsManager(sessionInfo || mockSessionInfo())
+  mm.track = jest.fn()
+  mm.identify = jest.fn()
+  return mm
+}
 
 afterEach(() => {
   window.analytics = undefined
 })
 
 test("does not track while uninitialized", () => {
-  const mm = getMetricsManagerForTest()
+  const mm = getSegmentMetricsManager()
 
   mm.enqueue("ev1", { data1: 11 })
   mm.enqueue("ev2", { data2: 12 })
@@ -35,7 +46,7 @@ test("does not track while uninitialized", () => {
 })
 
 test("does not track when initialized with gatherUsageStats=false", () => {
-  const mm = getMetricsManagerForTest()
+  const mm = getSegmentMetricsManager()
   mm.initialize({ gatherUsageStats: false })
 
   mm.enqueue("ev1", { data1: 11 })
@@ -47,14 +58,14 @@ test("does not track when initialized with gatherUsageStats=false", () => {
 })
 
 test("does not initialize Segment analytics when gatherUsageStats=false", () => {
-  const mm = getMetricsManagerForTest()
+  const mm = getSegmentMetricsManager()
   expect(window.analytics).toBeUndefined()
   mm.initialize({ gatherUsageStats: false })
   expect(window.analytics).toBeUndefined()
 })
 
 test("initializes Segment analytics when gatherUsageStats=true", () => {
-  const mm = getMetricsManagerForTest()
+  const mm = getSegmentMetricsManager()
   expect(window.analytics).toBeUndefined()
   mm.initialize({ gatherUsageStats: true })
   expect(window.analytics).toBeDefined()
@@ -65,7 +76,7 @@ test("initializes Segment analytics when gatherUsageStats=true", () => {
 
 test("enqueues events before initialization", () => {
   const sessionInfo = mockSessionInfo()
-  const mm = getMetricsManagerForTest(sessionInfo)
+  const mm = getSegmentMetricsManager(sessionInfo)
 
   mm.enqueue("ev1", { data1: 11 })
   mm.enqueue("ev2", { data2: 12 })
@@ -85,7 +96,7 @@ test("enqueues events before initialization", () => {
 
 test("enqueues events when disconnected, then sends them when connected again", () => {
   const sessionInfo = mockSessionInfo()
-  const mm = getMetricsManagerForTest(sessionInfo)
+  const mm = getSegmentMetricsManager(sessionInfo)
   mm.initialize({ gatherUsageStats: true })
 
   // "Disconnect" our SessionInfo. Enqueued events should not be tracked.
@@ -106,7 +117,7 @@ test("enqueues events when disconnected, then sends them when connected again", 
 })
 
 test("tracks events immediately after initialized", () => {
-  const mm = getMetricsManagerForTest()
+  const mm = getSegmentMetricsManager()
   mm.initialize({ gatherUsageStats: true })
 
   expect(mm.track.mock.calls.length).toBe(0)
@@ -119,7 +130,7 @@ test("tracks events immediately after initialized", () => {
 })
 
 test("tracks host data when in an iFrame", () => {
-  const mm = getMetricsManagerForTest()
+  const mm = getSegmentMetricsManager()
   mm.setMetadata({
     hostedAt: "S4A",
     k: "v",
@@ -141,7 +152,7 @@ test("tracks host data when in an iFrame", () => {
 
 test("tracks installation data", () => {
   const sessionInfo = mockSessionInfo()
-  const mm = getMetricsManagerForTest(sessionInfo)
+  const mm = getSegmentMetricsManager(sessionInfo)
   mm.initialize({ gatherUsageStats: true })
   mm.enqueue("ev1", { data1: 11 })
 
@@ -154,7 +165,7 @@ test("tracks installation data", () => {
 })
 
 test("increments deltas", () => {
-  const mm = getMetricsManagerForTest()
+  const mm = getSegmentMetricsManager()
 
   mm.incrementDeltaCounter("foo")
   mm.incrementDeltaCounter("foo")
@@ -170,7 +181,7 @@ test("increments deltas", () => {
 })
 
 test("clears deltas", () => {
-  const mm = getMetricsManagerForTest()
+  const mm = getSegmentMetricsManager()
 
   mm.incrementDeltaCounter("foo")
   mm.incrementDeltaCounter("foo")
@@ -185,7 +196,7 @@ test("clears deltas", () => {
 })
 
 test("clears deltas automatically on read", () => {
-  const mm = getMetricsManagerForTest()
+  const mm = getSegmentMetricsManager()
 
   mm.incrementDeltaCounter("foo")
   mm.incrementDeltaCounter("foo")
