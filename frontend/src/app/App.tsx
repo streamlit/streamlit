@@ -26,7 +26,7 @@ import AppView from "src/app/AppView"
 import StatusWidget from "src/components/core/StatusWidget"
 import MainMenu, { isLocalhost } from "src/app/MainMenu"
 import ToolbarActions from "src/components/core/ToolbarActions"
-import DeployButton from "src/components/core/DeployButton"
+import DeployButton from "src/app/DeployButton"
 import Header from "src/components/core/Header"
 import {
   DialogProps,
