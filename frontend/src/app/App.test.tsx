@@ -49,7 +49,7 @@ import Modal from "src/components/shared/Modal"
 import { DialogType, StreamlitDialog } from "src/app/StreamlitDialog"
 import { App, Props } from "./App"
 import MainMenu from "src/app/MainMenu"
-import ToolbarActions from "src/components/core/ToolbarActions"
+import ToolbarActions from "src/app/ToolbarActions"
 import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
 import { SessionInfo } from "src/lib/SessionInfo"
 

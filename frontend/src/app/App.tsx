@@ -25,7 +25,7 @@ import { AppContext } from "src/components/core/AppContext"
 import AppView from "src/app/AppView"
 import StatusWidget from "src/app/StatusWidget"
 import MainMenu, { isLocalhost } from "src/app/MainMenu"
-import ToolbarActions from "src/components/core/ToolbarActions"
+import ToolbarActions from "src/app/ToolbarActions"
 import DeployButton from "src/app/DeployButton"
 import Header from "src/app/Header"
 import {
