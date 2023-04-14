@@ -15,15 +15,18 @@
  */
 
 import React from "react"
-import { ShallowWrapper, ReactWrapper } from "enzyme"
+import { ReactWrapper, ShallowWrapper } from "enzyme"
 import { waitFor } from "@testing-library/dom"
 import cloneDeep from "lodash/cloneDeep"
 import { LocalStore } from "src/lib/util/storageUtils"
 import { hashString } from "src/lib/util/utils"
-import { shallow, mount } from "src/lib/test_util"
+import { shallow, mount, mockWindowLocation } from "src/lib/test_util"
 import {
+  Config,
   CustomThemeConfig,
   ForwardMsg,
+  ICustomThemeConfig,
+  INewSession,
   NewSession,
   PageConfig,
   PageInfo,
@@ -32,15 +35,16 @@ import {
 } from "src/autogen/proto"
 import { HostCommunicationHOC } from "src/lib/hocs/withHostCommunication"
 import {
+  HostCommunicationState,
   IMenuItem,
   IToolbarItem,
-  HostCommunicationState,
 } from "src/lib/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
+import { SessionInfo } from "src/lib/SessionInfo"
 import {
-  CUSTOM_THEME_NAME,
   createAutoTheme,
+  CUSTOM_THEME_NAME,
   darkTheme,
   lightTheme,
   toExportedTheme,
@@ -50,13 +54,18 @@ import {
   DialogType,
   StreamlitDialog,
 } from "src/app/components/StreamlitDialog"
-import { App, Props } from "./App"
+import { App, Props, showDevelopmentOptions } from "./App"
 import MainMenu from "src/app/components/MainMenu"
 import ToolbarActions from "src/app/components/ToolbarActions"
 import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
-import { SessionInfo } from "src/lib/SessionInfo"
 
 jest.mock("src/app/connection/ConnectionManager")
+jest.mock("src/lib/baseconsts", () => {
+  return {
+    ...jest.requireActual("src/lib/baseconsts"),
+    SHOW_DEPLOY_BUTTON: true,
+  }
+})
 
 const getHostCommunicationState = (
   extend?: Partial<HostCommunicationState>
@@ -532,7 +541,7 @@ const mockGetBaseUriParts = (basePath?: string) => () => ({
 })
 
 describe("App.handleNewSession", () => {
-  const NEW_SESSION_JSON = {
+  const NEW_SESSION_JSON: INewSession = {
     config: {
       gatherUsageStats: false,
       maxCachedMessageAge: 0,
@@ -632,9 +641,8 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...props} />)
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
-    // @ts-expect-error
-    newSessionJson.customTheme = null
 
+    newSessionJson.customTheme = null
     // @ts-expect-error
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
     expect(props.theme.addThemes).toHaveBeenCalled()
@@ -649,7 +657,6 @@ describe("App.handleNewSession", () => {
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
 
-    // @ts-expect-error
     newSessionJson.customTheme = null
 
     // @ts-expect-error
@@ -672,7 +679,6 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...props} />)
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
-    // @ts-expect-error
     newSessionJson.customTheme = null
 
     // @ts-expect-error
@@ -708,7 +714,7 @@ describe("App.handleNewSession", () => {
     const wrapper = shallow(<App {...props} />)
 
     const customThemeConfig = new CustomThemeConfig(
-      NEW_SESSION_JSON.customTheme
+      NEW_SESSION_JSON.customTheme as ICustomThemeConfig
     )
     // @ts-expect-error
     const themeHash = wrapper.instance().createThemeHash(customThemeConfig)
@@ -727,7 +733,6 @@ describe("App.handleNewSession", () => {
     wrapper.setState({ themeHash: "hash_for_undefined_custom_theme" })
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
-    // @ts-expect-error
     newSessionJson.customTheme = null
 
     // @ts-expect-error
@@ -1098,6 +1103,99 @@ describe("App.handleNewSession", () => {
       window.history.pushState.mockClear()
     })
   })
+
+  describe("DeployButton", () => {
+    it("initially button should be hidden", () => {
+      const props = getProps()
+      const wrapper = shallow(<App {...props} />)
+
+      expect(wrapper.find("DeployButton")).toHaveLength(0)
+    })
+
+    it("button should be visible in development mode", () => {
+      const props = getProps()
+      const wrapper = shallow(<App {...props} />)
+      const instance = wrapper.instance() as App
+
+      const newSession = new NewSession({
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+      instance.handleNewSession(newSession)
+
+      expect(wrapper.find("DeployButton")).toHaveLength(1)
+    })
+
+    it("button should be hidden in viewer mode", () => {
+      const props = getProps()
+      const wrapper = shallow(<App {...props} />)
+      const instance = wrapper.instance() as App
+
+      instance.handleNewSession(
+        new NewSession({
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.VIEWER,
+          },
+        })
+      )
+
+      expect(wrapper.find("DeployButton")).toHaveLength(0)
+    })
+
+    it("button should be hidden for hello app", () => {
+      const props = getProps()
+      const wrapper = shallow(<App {...props} />)
+      const instance = wrapper.instance() as App
+
+      instance.handleNewSession(
+        new NewSession({
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+          initialize: {
+            ...NEW_SESSION_JSON.initialize,
+            commandLine: "streamlit hello",
+          },
+        })
+      )
+
+      expect(wrapper.find("DeployButton")).toHaveLength(0)
+    })
+
+    it("button should be hidden for cloud environment", () => {
+      const props = getProps({
+        hostCommunication: getHostCommunicationProp({
+          currentState: getHostCommunicationState({
+            isOwner: false,
+            menuItems: [
+              { label: "Host menu item", key: "host-item", type: "text" },
+            ],
+          }),
+        }),
+      })
+      const wrapper = shallow(<App {...props} />)
+      const instance = wrapper.instance() as App
+
+      instance.handleNewSession(
+        new NewSession({
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
+      )
+
+      expect(wrapper.find("DeployButton")).toHaveLength(0)
+    })
+  })
 })
 
 describe("App.onHistoryChange", () => {
@@ -1462,6 +1560,9 @@ describe("Test Main Menu shortcut functionality", () => {
     const wrapper = shallow<App>(<App {...props} />)
 
     wrapper.instance().openClearCacheDialog = jest.fn()
+
+    wrapper.instance().setState({ toolbarMode: Config.ToolbarMode.DEVELOPER })
+
     wrapper.instance().keyHandlers.CLEAR_CACHE()
 
     expect(wrapper.instance().openClearCacheDialog).toBeCalled()
@@ -1479,4 +1580,43 @@ describe("test app has printCallback method", () => {
     const appComponentInstance = wrapper.find(App).instance() as App
     expect(appComponentInstance.printCallback).toBeDefined()
   })
+})
+
+describe("showDevelopmentMenu", () => {
+  it.each([
+    // # Test cases for toolbarMode = Config.ToolbarMode.AUTO
+    // Show developer menu only for localhost.
+    ["localhost", false, Config.ToolbarMode.AUTO, true],
+    ["127.0.0.1", false, Config.ToolbarMode.AUTO, true],
+    ["remoteHost", false, Config.ToolbarMode.AUTO, false],
+    // Show developer menu only for all host when hostIsOwner == true.
+    ["localhost", true, Config.ToolbarMode.AUTO, true],
+    ["127.0.0.1", true, Config.ToolbarMode.AUTO, true],
+    ["remoteHost", true, Config.ToolbarMode.AUTO, true],
+    // # Test cases for toolbarMode = Config.ToolbarMode.DEVELOPER
+    // Show developer menu always regardless of other parameters
+    ["localhost", false, Config.ToolbarMode.DEVELOPER, true],
+    ["127.0.0.1", false, Config.ToolbarMode.DEVELOPER, true],
+    ["remoteHost", false, Config.ToolbarMode.DEVELOPER, true],
+    ["localhost", true, Config.ToolbarMode.DEVELOPER, true],
+    ["127.0.0.1", true, Config.ToolbarMode.DEVELOPER, true],
+    ["remoteHost", true, Config.ToolbarMode.DEVELOPER, true],
+    // # Test cases for toolbarMode = Config.ToolbarMode.VIEWER
+    // Hide developer menu always regardless of other parameters
+    ["localhost", false, Config.ToolbarMode.VIEWER, false],
+    ["127.0.0.1", false, Config.ToolbarMode.VIEWER, false],
+    ["remoteHost", false, Config.ToolbarMode.VIEWER, false],
+    ["localhost", true, Config.ToolbarMode.VIEWER, false],
+    ["127.0.0.1", true, Config.ToolbarMode.VIEWER, false],
+    ["remoteHost", true, Config.ToolbarMode.VIEWER, false],
+  ])(
+    "should render or not render dev menu depending on hostname, host ownership, toolbarMode[%s, %s, %s]",
+    async (hostname, hostIsOwnr, toolbarMode, expectedResult) => {
+      mockWindowLocation(hostname)
+
+      const result = showDevelopmentOptions(hostIsOwnr, toolbarMode)
+
+      expect(result).toEqual(expectedResult)
+    }
+  )
 })

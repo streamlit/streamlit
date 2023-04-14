@@ -39,6 +39,7 @@ class ConfigTest(unittest.TestCase):
                 config, "_section_descriptions", new=copy.deepcopy(SECTION_DESCRIPTIONS)
             ),
             patch.object(config, "_config_options", new=copy.deepcopy(CONFIG_OPTIONS)),
+            patch.dict(os.environ),
         ]
 
         for p in self.patches:
@@ -48,10 +49,6 @@ class ConfigTest(unittest.TestCase):
         for p in self.patches:
             p.stop()
 
-        try:
-            del os.environ["TEST_ENV_VAR"]
-        except Exception:
-            pass
         config._delete_option("_test.tomlTest")
 
     def test_set_user_option_scriptable(self):
@@ -89,6 +86,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config_option.description, "Simple config option.")
         self.assertEqual(config_option.where_defined, ConfigOption.DEFAULT_DEFINITION)
         self.assertEqual(config_option.value, 12345)
+        self.assertEqual(config_option.env_var, "STREAMLIT__TEST_SIMPLE_PARAM")
 
     def test_complex_config_option(self):
         """Test setting a complex (functional) config option."""
@@ -106,6 +104,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config_option.description, "Complex config option.")
         self.assertEqual(config_option.where_defined, ConfigOption.DEFAULT_DEFINITION)
         self.assertEqual(config_option.value, 12345)
+        self.assertEqual(config_option.env_var, "STREAMLIT__TEST_COMPLEX_PARAM")
 
     def test_complex_config_option_must_have_doc_strings(self):
         """Test that complex config options use funcs with doc stringsself.
@@ -266,6 +265,32 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(config.get_option("_test.tomlTest"), DESIRED_VAL)
         self.assertEqual(config.get_where_defined("_test.tomlTest"), DUMMY_DEFINITION)
 
+    def test_parsing_sensitive_options(self):
+        """Test config._update_config_with_sensitive_env_var()."""
+        # Some useful variables.
+        DUMMY_VAL_1, DUMMY_VAL_2 = "Adam", "Malysz"
+
+        # Create a dummy default option.
+        config._create_option(
+            "_test.sensitiveTest",
+            description="This sensitive option tests the config parser.",
+            default_val=DUMMY_VAL_1,
+            sensitive=True,
+        )
+        config.get_config_options(force_reparse=True)
+        self.assertEqual(config.get_option("_test.sensitiveTest"), DUMMY_VAL_1)
+        self.assertEqual(
+            config.get_where_defined("_test.sensitiveTest"),
+            ConfigOption.DEFAULT_DEFINITION,
+        )
+        with patch.dict(os.environ, STREAMLIT__TEST_SENSITIVE_TEST=DUMMY_VAL_2):
+            config.get_config_options(force_reparse=True)
+            self.assertEqual(config.get_option("_test.sensitiveTest"), DUMMY_VAL_2)
+            self.assertEqual(
+                config.get_where_defined("_test.sensitiveTest"),
+                config._DEFINED_BY_ENV_VAR,
+            )
+
     def test_delete_option(self):
         # Create a dummy default option.
         config._create_option(
@@ -314,6 +339,7 @@ class ConfigTest(unittest.TestCase):
                 "client.caching",
                 "client.displayEnabled",
                 "client.showErrorDetails",
+                "client.toolbarMode",
                 "theme.base",
                 "theme.primaryColor",
                 "theme.backgroundColor",
