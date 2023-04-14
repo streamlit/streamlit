@@ -36,7 +36,7 @@ import {
   IToolbarItem,
   HostCommunicationState,
 } from "src/hocs/withHostCommunication/types"
-import { ConnectionState } from "src/lib/ConnectionState"
+import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import {
   CUSTOM_THEME_NAME,

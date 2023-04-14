@@ -33,14 +33,14 @@ import {
   DialogType,
   StreamlitDialog,
 } from "src/app/components/StreamlitDialog"
-import { ConnectionManager } from "src/lib/ConnectionManager"
+import { ConnectionManager } from "src/app/connection/ConnectionManager"
 import { PerformanceEvents } from "src/lib/profiler/PerformanceEvents"
 import {
   createFormsData,
   FormsData,
   WidgetStateManager,
 } from "src/lib/WidgetStateManager"
-import { ConnectionState } from "src/lib/ConnectionState"
+import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import {
@@ -109,7 +109,7 @@ import {
   ThemeConfig,
   toExportedTheme,
 } from "src/theme"
-import { DefaultStreamlitEndpoints } from "src/lib/DefaultStreamlitEndpoints"
+import { DefaultStreamlitEndpoints } from "src/app/connection/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "src/lib/SegmentMetricsManager"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 

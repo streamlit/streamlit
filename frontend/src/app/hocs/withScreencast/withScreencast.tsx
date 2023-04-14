@@ -15,7 +15,7 @@
  */
 
 import { logWarning } from "src/lib/log"
-import ScreenCastRecorder from "src/lib/ScreenCastRecorder"
+import ScreenCastRecorder from "src/app/util/ScreenCastRecorder"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { PureComponent, ComponentType, ReactNode } from "react"
 

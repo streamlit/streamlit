@@ -25,7 +25,7 @@ import Button, { Kind } from "src/components/shared/Button"
 import Tooltip, { Placement } from "src/components/shared/Tooltip"
 import { SignalConnection } from "typed-signals"
 
-import { ConnectionState } from "src/lib/ConnectionState"
+import { ConnectionState } from "src/app/connection/ConnectionState"
 import { SessionEvent } from "src/autogen/proto"
 import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
 import { ScriptRunState } from "src/lib/ScriptRunState"

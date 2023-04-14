@@ -23,7 +23,7 @@ import {
 } from "src/lib/UriUtil"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 import { IAppPage } from "src/autogen/proto"
-import { getCookie } from "./utils"
+import { getCookie } from "../../lib/utils"
 
 interface Props {
   getServerUri: () => BaseUriParts | undefined

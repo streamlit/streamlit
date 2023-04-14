@@ -15,7 +15,7 @@
  */
 
 import React, { PureComponent, ReactElement } from "react"
-import ScreenCastRecorder from "src/lib/ScreenCastRecorder"
+import ScreenCastRecorder from "src/app/util/ScreenCastRecorder"
 import { shallow } from "src/lib/test_util"
 
 import Countdown from "src/app/components/Countdown"
