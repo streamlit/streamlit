@@ -14,6 +14,7 @@
 
 """Manage the user's Streamlit credentials."""
 
+import json
 import os
 import sys
 import textwrap
@@ -110,33 +111,25 @@ def _send_email(email: str) -> None:
     """Send the user's email to segment.io, if submitted"""
 
     if email is None or "@" not in email:
-        LOGGER.error("That doesn't look like an email :(")
         return
 
     headers = {
         "authority": "api.segment.io",
         "accept": "*/*",
         "accept-language": "en-US,en;q=0.9",
-        "content-type": "application/json",
-        "origin": "http://localhost:8501",
-        "referer": "http://localhost:8501/",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "cross-site",
-        "user-agent": "",
+        "content-type": "text/plain",
+        "origin": "localhost:8501",
+        "referer": "localhost:8501/",
     }
 
-    dt = datetime.utcnow().isoformat() + "Z"
-
-    ANONYMOUS_ID = "cf41d0b9-8977-409a-852e-de16f281160e"
+    dt = datetime.utcnow().isoformat() + "+00:00"
 
     data = {
-        "anonymous_id": ANONYMOUS_ID,
+        "anonymous_id": None,
         "context": {
             "library": {"name": "analytics-python", "version": "2.2.2"},
         },
-        "integrations": {},
         "messageId": str(uuid4()),
-        "sentAt": dt,
         "timestamp": dt,
         "traits": {
             "authoremail": email,
@@ -145,13 +138,12 @@ def _send_email(email: str) -> None:
         "type": "identify",
         "userId": email,
         "writeKey": "iCkMy7ymtJ9qYzQRXkQpnAJEq7D4NyMU",
-        "_metadata": {"bundled": ["Segment.io"], "unbundled": [], "bundledIds": []},
     }
 
     response = requests.post(
         "https://api.segment.io/v1/i",
         headers=headers,
-        data=str(data).encode(),
+        data=json.dumps(data).encode(),
     )
 
     response.raise_for_status()
