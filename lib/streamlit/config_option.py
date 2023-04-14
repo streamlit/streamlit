@@ -20,6 +20,7 @@ import textwrap
 from typing import Any, Callable, Optional
 
 from streamlit import util
+from streamlit.case_converters import to_snake_case
 from streamlit.errors import DeprecationError
 
 
@@ -54,7 +55,7 @@ class ConfigOption:
     key : str
         The fully qualified section.name
     value : any
-        The value for this option. If this is a a complex config option then
+        The value for this option. If this is a complex config option then
         the callback is called EACH TIME value is evaluated.
     section : str
         The section of this option. Example: 'global'.
@@ -79,6 +80,10 @@ class ConfigOption:
         See __init__.
     replaced_by : str or None
         See __init__.
+    sensitive : bool
+        See __init__.
+    env_var: str
+        The name of the environment variable that can be used to set the option.
     '''
 
     # This is a special value for ConfigOption.where_defined which indicates
@@ -101,6 +106,7 @@ class ConfigOption:
         expiration_date: Optional[str] = None,
         replaced_by: Optional[str] = None,
         type_: type = str,
+        sensitive: bool = False,
     ):
         """Create a ConfigOption with the given name.
 
@@ -133,6 +139,8 @@ class ConfigOption:
             meaningful default (unless you override it).
         type_ : one of str, int, float or bool
             Useful to cast the config params sent by cmd option parameter.
+        sensitive: bool
+            Sensitive configuration options cannot be set by CLI parameter.
         """
         # Parse out the section and name.
         self.key = key
@@ -169,6 +177,7 @@ class ConfigOption:
         self._get_val_func: Optional[Callable[[], Any]] = None
         self.where_defined = ConfigOption.DEFAULT_DEFINITION
         self.type = type_
+        self.sensitive = sensitive
 
         if self.replaced_by:
             self.deprecated = True
@@ -290,6 +299,14 @@ class ConfigOption:
         expiration_date = _parse_yyyymmdd_str(self.expiration_date)
         now = datetime.datetime.now()
         return now > expiration_date
+
+    @property
+    def env_var(self):
+        """
+        Get the name of the environment variable that can be used to set the option.
+        """
+        name = self.key.replace(".", "_")
+        return f"STREAMLIT_{to_snake_case(name).upper()}"
 
 
 def _parse_yyyymmdd_str(date_str: str) -> datetime.datetime:
