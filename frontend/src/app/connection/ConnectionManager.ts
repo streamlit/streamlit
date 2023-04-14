@@ -20,11 +20,11 @@ import { IAllowedMessageOriginsResponse } from "src/hocs/withHostCommunication/t
 import { BaseUriParts, getPossibleBaseUris } from "src/lib/util/UriUtil"
 
 import { ConnectionState } from "./ConnectionState"
-import { logError } from "../../lib/log"
+import { logError } from "../../lib/util/log"
 import { SessionInfo } from "../../lib/SessionInfo"
 import { StreamlitEndpoints } from "../../lib/StreamlitEndpoints"
 import { WebsocketConnection } from "./WebsocketConnection"
-import { ensureError } from "../../lib/ErrorHandling"
+import { ensureError } from "../../lib/util/ErrorHandling"
 
 /**
  * When the websocket connection retries this many times, we show a dialog

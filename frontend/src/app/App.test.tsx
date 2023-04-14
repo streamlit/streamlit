@@ -18,7 +18,7 @@ import React from "react"
 import { ShallowWrapper, ReactWrapper } from "enzyme"
 import { waitFor } from "@testing-library/dom"
 import cloneDeep from "lodash/cloneDeep"
-import { LocalStore } from "src/lib/storageUtils"
+import { LocalStore } from "src/lib/util/storageUtils"
 import { hashString } from "src/lib/util/utils"
 import { shallow, mount } from "src/lib/test_util"
 import {

@@ -20,9 +20,9 @@ import embed from "vega-embed"
 import * as vega from "vega"
 import { expressionInterpreter } from "vega-interpreter"
 
-import { logMessage } from "src/lib/log"
+import { logMessage } from "src/lib/util/log"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
-import { ensureError } from "src/lib/ErrorHandling"
+import { ensureError } from "src/lib/util/ErrorHandling"
 import { IndexTypeName, Quiver } from "src/lib/dataframes/Quiver"
 import { EmotionTheme } from "src/theme"
 

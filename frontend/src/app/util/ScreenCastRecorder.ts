@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { logWarning } from "src/lib/log"
+import { logWarning } from "src/lib/util/log"
 
 const BLOB_TYPE = "video/webm"
 

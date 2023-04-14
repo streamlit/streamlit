@@ -38,9 +38,9 @@ import {
 
 expect.extend(matchers)
 
-jest.mock("src/lib/Hooks", () => ({
+jest.mock("src/lib/util/Hooks", () => ({
   __esModule: true,
-  ...jest.requireActual("src/lib/Hooks"),
+  ...jest.requireActual("src/lib/util/Hooks"),
   useIsOverflowing: jest.fn(),
 }))
 

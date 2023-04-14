@@ -24,7 +24,7 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { LabelVisibilityOptions } from "src/lib/util/utils"
-import { logWarning } from "src/lib/log"
+import { logWarning } from "src/lib/util/log"
 import {
   StyledColorPicker,
   StyledChromePicker,

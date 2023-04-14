@@ -17,7 +17,7 @@
 import React from "react"
 import { isMobile } from "react-device-detect"
 import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
-import { logWarning } from "src/lib/log"
+import { logWarning } from "src/lib/util/log"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
 import { hasMatch, score } from "fzy.js"
 import _ from "lodash"

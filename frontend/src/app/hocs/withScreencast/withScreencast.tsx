@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { logWarning } from "src/lib/log"
+import { logWarning } from "src/lib/util/log"
 import ScreenCastRecorder from "src/app/util/ScreenCastRecorder"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { PureComponent, ComponentType, ReactNode } from "react"

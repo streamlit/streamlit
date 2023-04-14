@@ -22,7 +22,7 @@ import ErrorElement from "src/components/shared/ErrorElement"
 
 import { Json as JsonProto } from "src/autogen/proto"
 import { hasLightBackgroundColor, EmotionTheme } from "src/theme"
-import { ensureError } from "src/lib/ErrorHandling"
+import { ensureError } from "src/lib/util/ErrorHandling"
 
 export interface JsonProps {
   width: number

@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { LocalStore } from "src/lib/storageUtils"
+import { LocalStore } from "src/lib/util/storageUtils"
 import { shallow, mount } from "src/lib/test_util"
 import {
   AUTO_THEME_NAME,

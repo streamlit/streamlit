@@ -26,8 +26,8 @@ import cloneDeep from "lodash/cloneDeep"
 import merge from "lodash/merge"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
-import { logError } from "src/lib/log"
-import { LocalStore, localStorageAvailable } from "src/lib/storageUtils"
+import { logError } from "src/lib/util/log"
+import { LocalStore, localStorageAvailable } from "src/lib/util/storageUtils"
 import {
   baseTheme,
   CachedTheme,

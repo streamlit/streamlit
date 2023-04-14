@@ -92,7 +92,7 @@ import { concat, noop, without } from "lodash"
 import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { FileUploadClient } from "src/lib/FileUploadClient"
-import { logError, logMessage } from "src/lib/log"
+import { logError, logMessage } from "src/lib/util/log"
 import { AppRoot } from "src/lib/AppNode"
 
 import { UserSettings } from "src/app/components/StreamlitDialog/UserSettings"
@@ -125,7 +125,7 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "src/assets/css/theme.scss"
-import { ensureError } from "src/lib/ErrorHandling"
+import { ensureError } from "src/lib/util/ErrorHandling"
 
 export interface Props {
   screenCast: ScreenCastHOC

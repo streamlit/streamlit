@@ -24,13 +24,13 @@ import Alert from "src/components/elements/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
 import ErrorElement from "src/components/shared/ErrorElement"
 import { withTheme } from "@emotion/react"
-import { ensureError } from "src/lib/ErrorHandling"
+import { ensureError } from "src/lib/util/ErrorHandling"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "src/lib/util/IFrameUtil"
-import { logError, logWarning } from "src/lib/log"
-import { Timer } from "src/lib/Timer"
+import { logError, logWarning } from "src/lib/util/log"
+import { Timer } from "src/lib/util/Timer"
 import { Source, WidgetStateManager } from "src/lib/WidgetStateManager"
 import queryString from "query-string"
 import React, { createRef, ReactNode } from "react"

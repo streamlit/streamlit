@@ -19,7 +19,7 @@ import React from "react"
 import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
 
 import { Quiver } from "src/lib/dataframes/Quiver"
-import { logError } from "src/lib/log"
+import { logError } from "src/lib/util/log"
 
 import { getCellFromArrow } from "src/components/widgets/DataFrame/arrowUtils"
 import EditingState from "src/components/widgets/DataFrame/EditingState"

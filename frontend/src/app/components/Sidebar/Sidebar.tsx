@@ -23,7 +23,7 @@ import Icon from "src/components/shared/Icon"
 import Button, { Kind } from "src/components/shared/Button"
 import { IAppPage, PageConfig } from "src/autogen/proto"
 import { EmotionTheme } from "src/theme"
-import { localStorageAvailable } from "src/lib/storageUtils"
+import { localStorageAvailable } from "src/lib/util/storageUtils"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 import {

@@ -16,7 +16,7 @@
 
 import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
-import { logMessage } from "src/lib/log"
+import { logMessage } from "src/lib/util/log"
 import { Map as ImmutableMap } from "immutable"
 import merge from "lodash/merge"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
@@ -25,7 +25,7 @@ import {
   indexGet,
   tableGet,
 } from "src/lib/dataframes/dataFrameProto"
-import { ensureError } from "src/lib/ErrorHandling"
+import { ensureError } from "src/lib/util/ErrorHandling"
 import { EmotionTheme } from "src/theme"
 import embed from "vega-embed"
 import * as vega from "vega"

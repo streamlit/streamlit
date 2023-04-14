@@ -25,7 +25,7 @@ import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "src/lib/util/IFrameUtil"
-import { logWarning } from "src/lib/log"
+import { logWarning } from "src/lib/util/log"
 import { mount } from "src/lib/test_util"
 import { buildHttpUri } from "src/lib/util/UriUtil"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
@@ -45,13 +45,13 @@ import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // Mock log functions.
-jest.mock("src/lib/log")
+jest.mock("src/lib/util/log")
 
 // We have some timeouts that we want to use fake timers for.
 jest.useFakeTimers()
 
 // Mock uri utils.
-jest.mock("src/lib/UriUtil")
+jest.mock("src/lib/util/UriUtil")
 const mockedBuildHttpUri = buildHttpUri as jest.Mock
 mockedBuildHttpUri.mockImplementation(() => "registry/url")
 

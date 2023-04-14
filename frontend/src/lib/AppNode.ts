@@ -34,7 +34,7 @@ import {
 } from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 import { Quiver } from "src/lib/dataframes/Quiver"
 import { addRows } from "./dataframes/dataFrameProto"
-import { ensureError } from "./ErrorHandling"
+import { ensureError } from "./util/ErrorHandling"
 import { toImmutableProto } from "./util/immutableProto"
 import { MetricsManager } from "./MetricsManager"
 import {

@@ -19,7 +19,7 @@ import { SessionInfo } from "src/lib/SessionInfo"
 import { initializeSegment } from "src/vendor/Segment"
 import { DeployedAppMetadata } from "src/hocs/withHostCommunication/types"
 import { IS_DEV_ENV } from "../lib/baseconsts"
-import { logAlways } from "../lib/log"
+import { logAlways } from "../lib/util/log"
 import {
   CustomComponentCounter,
   DeltaCounter,

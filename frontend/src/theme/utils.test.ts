@@ -15,7 +15,7 @@
  */
 
 import { CustomThemeConfig } from "src/autogen/proto"
-import { LocalStore } from "src/lib/storageUtils"
+import { LocalStore } from "src/lib/util/storageUtils"
 import { baseTheme, createAutoTheme, darkTheme, lightTheme } from "src/theme"
 import { ThemeConfig } from "src/theme/types"
 import { fonts } from "src/theme/primitives/typography"

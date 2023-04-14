@@ -33,7 +33,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
-import { logError } from "src/lib/log"
+import { logError } from "src/lib/util/log"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
 import {

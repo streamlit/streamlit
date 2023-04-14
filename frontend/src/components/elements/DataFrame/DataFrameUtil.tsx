@@ -20,7 +20,7 @@ import {
   dataFrameGetDimensions,
 } from "src/lib/dataframes/dataFrameProto"
 import { toFormattedString } from "src/lib/util/format"
-import { logWarning } from "src/lib/log"
+import { logWarning } from "src/lib/util/log"
 import { scrollbarSize } from "src/vendor/dom-helpers"
 import React, { ReactElement, ComponentType } from "react"
 import { Map as ImmutableMap } from "immutable"

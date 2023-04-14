@@ -28,8 +28,8 @@ import {
   getCategoricalColorsArray,
   getDivergingColorsArray,
 } from "src/theme"
-import { ensureError } from "src/lib/ErrorHandling"
-import { logError } from "src/lib/log"
+import { ensureError } from "src/lib/util/ErrorHandling"
+import { logError } from "src/lib/util/log"
 
 /**
  * This applies general layout changes to things such as x axis,

@@ -29,7 +29,7 @@ import { ConnectionState } from "src/app/connection/ConnectionState"
 import { SessionEvent } from "src/autogen/proto"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
 import { ScriptRunState } from "src/lib/ScriptRunState"
-import { Timer } from "src/lib/Timer"
+import { Timer } from "src/lib/util/Timer"
 import Icon from "src/components/shared/Icon"
 import { EmotionTheme } from "src/theme"
 
