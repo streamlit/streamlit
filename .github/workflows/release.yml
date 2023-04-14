@@ -44,6 +44,12 @@ jobs:
       # Additional permission needed to generate release
       contents: write
 
+    env:
+      # Name of the tag
+      GIT_TAG: ${{ github.ref_name }}
+      # The owner and repository name
+      GH_REPO: ${{ github.repository }}
+
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
@@ -58,12 +64,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
-      # Uses action to safely process user input (branch name) to prevent script injection attacks
-      - name: Set GIT_TAG & GH_REPO env variables
-        uses: ./.github/actions/tag_and_repo
-        with:
-          tag_name: ${{ github.ref_name }}
-          repo: ${{ github.repository }}
       - name: Look up the related GitHub PR branch name
         # Need GH Token to use gh api
         env:
