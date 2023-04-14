@@ -34,7 +34,7 @@ import {
   setCachedTheme,
   ThemeConfig,
   createTheme,
-} from "src/theme"
+} from "src/lib/theme"
 
 import AppWithScreencast from "./App"
 import { StyledDataFrameOverlay } from "src/styled-components"

@@ -15,7 +15,7 @@
  */
 
 import styled from "@emotion/styled"
-import { hasLightBackgroundColor } from "src/theme"
+import { hasLightBackgroundColor } from "src/lib/theme"
 
 export interface StyledDeckGlChartProps {
   width: number

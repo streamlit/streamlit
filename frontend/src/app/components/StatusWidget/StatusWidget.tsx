@@ -31,7 +31,7 @@ import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { Timer } from "src/lib/util/Timer"
 import Icon from "src/lib/components/shared/Icon"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 
 /*
  * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served

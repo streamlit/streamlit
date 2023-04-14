@@ -14,19 +14,37 @@
  * limitations under the License.
  */
 
-import emotionBaseTheme from "src/theme/emotionBaseTheme"
-import { createEmotionColors } from "src/theme/utils"
+import {
+  breakpoints,
+  fonts,
+  fontSizes,
+  fontWeights,
+  genericFonts,
+  iconSizes,
+  lineHeights,
+  letterSpacings,
+  radii,
+  sizes,
+  spacing,
+  zIndices,
+} from "src/lib/theme/primitives"
+import { createEmotionColors } from "src/lib/theme/utils"
 import genericColors from "./themeColors"
 
 export default {
-  ...emotionBaseTheme,
   inSidebar: false,
-  genericColors: {
-    ...emotionBaseTheme.genericColors,
-    ...genericColors,
-  },
-  colors: createEmotionColors({
-    ...emotionBaseTheme.colors,
-    ...genericColors,
-  }),
+  breakpoints,
+  colors: createEmotionColors(genericColors),
+  genericColors,
+  fonts,
+  fontSizes,
+  fontWeights,
+  genericFonts,
+  iconSizes,
+  lineHeights,
+  letterSpacings,
+  radii,
+  sizes,
+  spacing,
+  zIndices,
 }

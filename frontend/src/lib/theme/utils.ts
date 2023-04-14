@@ -38,7 +38,7 @@ import {
   EmotionTheme,
   ThemeConfig,
   ThemeSpacing,
-} from "src/theme"
+} from "src/lib/theme/index"
 
 import { fonts } from "./primitives/typography"
 

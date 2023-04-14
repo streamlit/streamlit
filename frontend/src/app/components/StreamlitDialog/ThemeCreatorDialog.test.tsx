@@ -19,8 +19,8 @@ import { CustomThemeConfig } from "src/autogen/proto"
 import { shallow } from "src/lib/test_util"
 import ColorPicker from "src/lib/components/shared/ColorPicker"
 import UISelectbox from "src/lib/components/shared/Dropdown"
-import { baseTheme, darkTheme, lightTheme, toThemeInput } from "src/theme"
-import { fonts } from "src/theme/primitives/typography"
+import { baseTheme, darkTheme, lightTheme, toThemeInput } from "src/lib/theme"
+import { fonts } from "src/lib/theme/primitives/typography"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
   toMinimalToml,

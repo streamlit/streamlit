@@ -17,7 +17,7 @@
 import styled, { CSSObject } from "@emotion/styled"
 import { transparentize } from "color2k"
 import { MouseEvent, ReactNode } from "react"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 
 export interface CameraInputButtonProps {
   onClick?: (event: MouseEvent<HTMLButtonElement>) => any

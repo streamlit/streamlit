@@ -15,7 +15,7 @@
  */
 
 import styled from "@emotion/styled"
-import { getGray90 } from "src/theme"
+import { getGray90 } from "src/lib/theme"
 
 export const StyledCaptionText = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.smPx,

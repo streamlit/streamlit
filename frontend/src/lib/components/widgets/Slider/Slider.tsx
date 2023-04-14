@@ -30,7 +30,7 @@ import {
 } from "src/lib/components/widgets/BaseWidget"
 import TooltipIcon from "src/lib/components/shared/TooltipIcon"
 import { Placement } from "src/lib/components/shared/Tooltip"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 import {
   StyledThumb,
   StyledThumbValue,

@@ -16,9 +16,14 @@
 
 import { CustomThemeConfig } from "src/autogen/proto"
 import { LocalStore } from "src/lib/util/storageUtils"
-import { baseTheme, createAutoTheme, darkTheme, lightTheme } from "src/theme"
-import { ThemeConfig } from "src/theme/types"
-import { fonts } from "src/theme/primitives/typography"
+import {
+  baseTheme,
+  createAutoTheme,
+  darkTheme,
+  lightTheme,
+} from "src/lib/theme/index"
+import { ThemeConfig } from "src/lib/theme/types"
+import { fonts } from "src/lib/theme/primitives/typography"
 
 import {
   AUTO_THEME_NAME,

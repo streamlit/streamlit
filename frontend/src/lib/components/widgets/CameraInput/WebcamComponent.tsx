@@ -28,8 +28,8 @@ import Webcam from "react-webcam"
 import { debounce } from "src/lib/util/utils"
 
 import Icon from "src/lib/components/shared/Icon"
-import { EmotionTheme } from "src/theme"
-import themeColors from "src/theme/emotionBaseTheme/themeColors"
+import { EmotionTheme } from "src/lib/theme"
+import themeColors from "src/lib/theme/emotionBaseTheme/themeColors"
 import { CAMERA_PERMISSION_URL } from "src/urls"
 
 import CameraInputButton from "./CameraInputButton"

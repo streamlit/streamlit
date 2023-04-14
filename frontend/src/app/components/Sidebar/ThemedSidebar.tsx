@@ -17,7 +17,7 @@
 import React, { ReactElement } from "react"
 import { AppContext } from "src/lib/components/core/AppContext"
 import ThemeProvider from "src/lib/components/core/ThemeProvider"
-import { createTheme, ThemeConfig } from "src/theme"
+import { createTheme, ThemeConfig } from "src/lib/theme"
 import Sidebar, { SidebarProps } from "./Sidebar"
 
 const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>

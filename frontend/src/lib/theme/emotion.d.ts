@@ -14,37 +14,13 @@
  * limitations under the License.
  */
 
-import {
-  breakpoints,
-  fonts,
-  fontSizes,
-  fontWeights,
-  genericFonts,
-  iconSizes,
-  lineHeights,
-  letterSpacings,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
-} from "src/theme/primitives"
-import { createEmotionColors } from "src/theme/utils"
-import genericColors from "./themeColors"
+import { EmotionTheme as StreamlitTheme } from "src/lib/theme/index"
 
-export default {
-  inSidebar: false,
-  breakpoints,
-  colors: createEmotionColors(genericColors),
-  genericColors,
-  fonts,
-  fontSizes,
-  fontWeights,
-  genericFonts,
-  iconSizes,
-  lineHeights,
-  letterSpacings,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
+// Outside imports make declarations not ambient, so we separate out from
+// the ambient declarations.d.ts
+//
+// This declaration allows us to extend our type declarations for emotion's
+// theme (an empty object) to be our type
+declare module "@emotion/react" {
+  export interface Theme extends StreamlitTheme {}
 }

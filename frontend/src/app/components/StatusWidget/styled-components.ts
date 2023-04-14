@@ -15,7 +15,7 @@
  */
 
 import styled, { CSSObject } from "@emotion/styled"
-import { hasLightBackgroundColor, EmotionTheme } from "src/theme"
+import { hasLightBackgroundColor, EmotionTheme } from "src/lib/theme"
 
 /*
   "ConnectionStatus" styles are used for displaying

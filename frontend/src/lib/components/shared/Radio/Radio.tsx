@@ -24,7 +24,7 @@ import {
 import TooltipIcon from "src/lib/components/shared/TooltipIcon"
 import { LabelVisibilityOptions } from "src/lib/util/utils"
 import { Placement } from "src/lib/components/shared/Tooltip"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 
 export interface Props {
   disabled: boolean

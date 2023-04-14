@@ -44,7 +44,7 @@ import {
   darkTheme,
   lightTheme,
   toExportedTheme,
-} from "src/theme"
+} from "src/lib/theme"
 import Modal from "src/lib/components/shared/Modal"
 import {
   DialogType,

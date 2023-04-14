@@ -17,7 +17,7 @@
 import React from "react"
 
 import { PageConfig } from "src/autogen/proto"
-import { baseTheme, ThemeConfig } from "src/theme"
+import { baseTheme, ThemeConfig } from "src/lib/theme"
 
 export interface Props {
   /**

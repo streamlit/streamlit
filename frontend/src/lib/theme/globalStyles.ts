@@ -16,7 +16,7 @@
 
 import { css } from "@emotion/react"
 import { darken, transparentize, readableColor } from "color2k"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme/index"
 
 export const globalStyles = (theme: EmotionTheme): any => css`
   a,

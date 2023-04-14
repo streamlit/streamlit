@@ -16,7 +16,7 @@
 
 import React from "react"
 import { mount } from "src/lib/test_util"
-import emotionLightTheme from "src/theme/emotionLightTheme"
+import emotionLightTheme from "src/lib/theme/emotionLightTheme"
 import { mockEndpoints } from "src/lib/mocks/mocks"
 import { SidebarProps } from "./Sidebar"
 import ThemedSidebar from "./ThemedSidebar"

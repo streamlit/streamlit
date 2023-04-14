@@ -27,7 +27,7 @@ import {
   getSequentialColorsArray,
   getCategoricalColorsArray,
   getDivergingColorsArray,
-} from "src/theme"
+} from "src/lib/theme"
 import { ensureError } from "src/lib/util/ErrorHandling"
 import { logError } from "src/lib/util/log"
 

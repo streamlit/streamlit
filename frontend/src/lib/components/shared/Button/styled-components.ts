@@ -17,7 +17,7 @@
 import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 
 export enum Kind {
   PRIMARY = "primary",

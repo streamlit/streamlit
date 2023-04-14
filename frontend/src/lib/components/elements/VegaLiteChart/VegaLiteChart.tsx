@@ -26,7 +26,7 @@ import {
   tableGet,
 } from "src/lib/dataframes/dataFrameProto"
 import { ensureError } from "src/lib/util/ErrorHandling"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 import embed from "vega-embed"
 import * as vega from "vega"
 import { expressionInterpreter } from "vega-interpreter"

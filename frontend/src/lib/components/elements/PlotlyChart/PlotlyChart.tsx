@@ -21,7 +21,7 @@ import React, {
   useState,
 } from "react"
 import { useTheme } from "@emotion/react"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 import {
   Figure as FigureProto,
   PlotlyChart as PlotlyChartProto,

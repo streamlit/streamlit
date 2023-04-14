@@ -23,7 +23,7 @@ import {
   baseuiDarkTheme,
   lightTheme,
   baseuiLightTheme,
-} from "src/theme"
+} from "src/lib/theme"
 import ThemeProvider from "./ThemeProvider"
 
 describe("ThemeProvider component", () => {

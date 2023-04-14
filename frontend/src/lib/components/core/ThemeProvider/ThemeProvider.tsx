@@ -18,7 +18,11 @@ import React, { ReactElement, ReactNode } from "react"
 import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 import { ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 
-import { EmotionTheme, baseuiLightTheme, BaseUILightTheme } from "src/theme"
+import {
+  EmotionTheme,
+  baseuiLightTheme,
+  BaseUILightTheme,
+} from "src/lib/theme"
 
 export interface ThemeProviderProps {
   theme: EmotionTheme

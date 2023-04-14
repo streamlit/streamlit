@@ -19,7 +19,7 @@ import { DeckGL } from "deck.gl"
 import isEqual from "lodash/isEqual"
 import { MapContext, StaticMap, NavigationControl } from "react-map-gl"
 import { withTheme } from "@emotion/react"
-import { hasLightBackgroundColor, EmotionTheme } from "src/theme"
+import { hasLightBackgroundColor, EmotionTheme } from "src/lib/theme"
 // We don't have Typescript defs for these imports, which makes ESLint unhappy
 /* eslint-disable import/no-extraneous-dependencies */
 import * as layers from "@deck.gl/layers"

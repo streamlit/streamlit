@@ -21,7 +21,7 @@ import StreamlitMarkdown, {
   StreamlitMarkdownProps,
 } from "src/lib/components/shared/StreamlitMarkdown"
 import { useTheme } from "@emotion/react"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 import {
   StyledTooltipIconWrapper,
   StyledLabelHelpInline,

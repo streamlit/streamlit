@@ -15,7 +15,7 @@
  */
 
 import { transparentize } from "color2k"
-import { colors } from "src/theme/primitives/colors"
+import { colors } from "src/lib/theme/primitives/colors"
 
 export default {
   ...colors,

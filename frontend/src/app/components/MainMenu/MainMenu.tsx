@@ -27,7 +27,7 @@ import { StatefulMenu } from "baseui/menu"
 import { Menu } from "@emotion-icons/material-outlined"
 
 import { useTheme } from "@emotion/react"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 import Button, { Kind } from "src/lib/components/shared/Button"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import {

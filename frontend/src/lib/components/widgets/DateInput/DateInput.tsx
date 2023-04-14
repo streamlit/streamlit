@@ -26,7 +26,7 @@ import {
   WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/lib/components/widgets/BaseWidget"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 import TooltipIcon from "src/lib/components/shared/TooltipIcon"
 import { Placement } from "src/lib/components/shared/Tooltip"
 

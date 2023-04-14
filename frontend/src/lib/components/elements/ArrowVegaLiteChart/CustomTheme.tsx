@@ -24,7 +24,7 @@ import {
   getDivergingColorsArray,
   getSequentialColorsArray,
   EmotionTheme,
-} from "src/theme"
+} from "src/lib/theme"
 
 export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
   // This theming config contains multiple hard coded spacing values.

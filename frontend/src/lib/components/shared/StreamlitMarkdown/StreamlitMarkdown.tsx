@@ -50,7 +50,7 @@ import {
   getMdOrange,
   getMdRed,
   getMdViolet,
-} from "src/theme"
+} from "src/lib/theme"
 
 import {
   InlineTooltipIcon,

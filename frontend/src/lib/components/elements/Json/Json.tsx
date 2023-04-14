@@ -21,7 +21,7 @@ import ReactJson from "react-json-view"
 import ErrorElement from "src/lib/components/shared/ErrorElement"
 
 import { Json as JsonProto } from "src/autogen/proto"
-import { hasLightBackgroundColor, EmotionTheme } from "src/theme"
+import { hasLightBackgroundColor, EmotionTheme } from "src/lib/theme"
 import { ensureError } from "src/lib/util/ErrorHandling"
 
 export interface JsonProps {

@@ -108,7 +108,7 @@ import {
   isPresetTheme,
   ThemeConfig,
   toExportedTheme,
-} from "src/theme"
+} from "src/lib/theme"
 import { DefaultStreamlitEndpoints } from "src/app/connection/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"

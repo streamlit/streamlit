@@ -15,7 +15,7 @@
  */
 
 import { ICustomThemeConfig, IAppPage } from "src/autogen/proto"
-import { ExportedTheme } from "src/theme"
+import { ExportedTheme } from "src/lib/theme"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 
 export type DeployedAppMetadata = {

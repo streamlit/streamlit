@@ -37,7 +37,7 @@ import { Placement } from "src/lib/components/shared/Tooltip"
 import { VirtualDropdown } from "src/lib/components/shared/Dropdown"
 import { fuzzyFilterSelectOptions } from "src/lib/components/shared/Dropdown/Selectbox"
 import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 
 export interface Props {
   disabled: boolean

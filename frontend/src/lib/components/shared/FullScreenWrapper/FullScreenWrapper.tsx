@@ -19,7 +19,7 @@ import { withTheme } from "@emotion/react"
 import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
 import Icon from "src/lib/components/shared/Icon"
 import { AppContext } from "src/lib/components/core/AppContext"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 import {
   StyledFullScreenFrame,
   StyledFullScreenButton,

@@ -17,7 +17,7 @@
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
-import { IconSize, ThemeColor, computeSpacingStyle } from "src/theme"
+import { IconSize, ThemeColor, computeSpacingStyle } from "src/lib/theme"
 
 interface StyledIconProps {
   as?: EmotionIcon

@@ -16,7 +16,7 @@
 
 import React from "react"
 import styled from "@emotion/styled"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "src/lib/theme"
 
 function translateGapWidth(gap: string, theme: EmotionTheme): string {
   let gapWidth = theme.spacing.lg

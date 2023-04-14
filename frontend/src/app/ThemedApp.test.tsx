@@ -25,7 +25,7 @@ import {
   darkTheme,
   setCachedTheme,
   ThemeConfig,
-} from "src/theme"
+} from "src/lib/theme"
 
 import AppWithScreencast from "./App"
 import ThemedApp from "./ThemedApp"

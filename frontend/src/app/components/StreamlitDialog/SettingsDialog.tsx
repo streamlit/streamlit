@@ -20,7 +20,7 @@ import React, {
   ReactElement,
   ReactNode,
 } from "react"
-import { ThemeConfig } from "src/theme"
+import { ThemeConfig } from "src/lib/theme"
 import Button, { Kind } from "src/lib/components/shared/Button"
 import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
 import {

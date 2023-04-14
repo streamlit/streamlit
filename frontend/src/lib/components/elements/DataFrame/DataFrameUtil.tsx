@@ -24,7 +24,7 @@ import { logWarning } from "src/lib/util/log"
 import { scrollbarSize } from "src/lib/vendor/dom-helpers"
 import React, { ReactElement, ComponentType } from "react"
 import { Map as ImmutableMap } from "immutable"
-import { fontSizes } from "src/theme/primitives/typography"
+import { fontSizes } from "src/lib/theme/primitives/typography"
 import {
   StyledDataFrameRowHeaderCell,
   StyledDataFrameDataCell,

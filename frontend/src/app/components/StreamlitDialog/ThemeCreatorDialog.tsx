@@ -35,7 +35,7 @@ import {
   EmotionTheme,
   ThemeConfig,
   toThemeInput,
-} from "src/theme"
+} from "src/lib/theme"
 
 import {
   StyledDialogBody,

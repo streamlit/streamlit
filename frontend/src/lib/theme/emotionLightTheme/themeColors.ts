@@ -15,21 +15,12 @@
  */
 
 import { transparentize } from "color2k"
-import { colors } from "src/theme/primitives/colors"
+import { colors } from "src/lib/theme/primitives/colors"
 
-const requiredThemeColors = {
+export default {
+  ...colors,
   bgColor: colors.white,
-  secondaryBg: colors.gray20,
   bodyText: colors.gray85,
-  warning: colors.yellow110,
-  warningBg: transparentize(colors.yellow80, 0.8),
-  success: colors.green100,
-  successBg: transparentize(colors.green80, 0.8),
-  infoBg: transparentize(colors.blue70, 0.9),
-  info: colors.blue100,
-  danger: colors.red100,
-  dangerBg: transparentize(colors.red70, 0.8),
-
   primary: colors.red70,
   disabled: colors.gray40,
   lightestGray: colors.gray20,
@@ -40,17 +31,15 @@ const requiredThemeColors = {
   blue: colors.blue80,
   green: colors.green80,
   yellow: colors.yellow80,
-}
-
-interface OptionalThemeColors {
-  widgetBackgroundColor?: string
-  widgetBorderColor?: string
-}
-
-const optionalThemeColors: OptionalThemeColors = {}
-
-export default {
-  ...colors,
-  ...requiredThemeColors,
-  ...optionalThemeColors,
+  // For this one, we use a specific color,
+  // outside our standard color palette,
+  // to ensure contrast is good enough for accessibility
+  warning: "#926C05",
+  warningBg: transparentize(colors.yellow70, 0.9),
+  success: colors.green100,
+  successBg: transparentize(colors.green70, 0.9),
+  info: colors.blue100,
+  infoBg: transparentize(colors.blue70, 0.9),
+  danger: colors.red100,
+  dangerBg: transparentize(colors.red80, 0.91),
 }
