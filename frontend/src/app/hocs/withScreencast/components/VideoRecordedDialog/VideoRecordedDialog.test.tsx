@@ -18,7 +18,7 @@ import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
 import { ReactWrapper } from "enzyme"
 
-import Modal, { ModalHeader, ModalBody } from "src/components/shared/Modal"
+import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
 import { mount } from "src/lib/test_util"
 import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 

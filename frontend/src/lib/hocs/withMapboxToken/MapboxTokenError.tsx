@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import ErrorElement from "src/components/shared/ErrorElement"
+import ErrorElement from "src/lib/components/shared/ErrorElement"
 import {
   MapboxTokenFetchingError,
   MapboxTokenNotProvidedError,

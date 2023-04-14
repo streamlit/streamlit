@@ -21,7 +21,7 @@ import * as reactDeviceDetect from "react-device-detect"
 import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { IAppPage } from "src/autogen/proto"
-import Icon, { EmojiIcon } from "src/components/shared/Icon"
+import Icon, { EmojiIcon } from "src/lib/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/util/Hooks"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 

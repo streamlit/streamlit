@@ -17,7 +17,7 @@
 import React, { PureComponent, ReactNode } from "react"
 import { mount } from "src/lib/test_util"
 
-import FullScreenWrapper from "src/components/shared/FullScreenWrapper"
+import FullScreenWrapper from "src/lib/components/shared/FullScreenWrapper"
 import withFullScreenWrapper from "./withFullScreenWrapper"
 
 interface TestProps {

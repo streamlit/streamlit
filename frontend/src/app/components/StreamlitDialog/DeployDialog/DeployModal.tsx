@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import Modal, { ModalHeader, ModalBody } from "src/components/shared/Modal"
+import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
 import { CloseSource } from "baseui/modal/types"
 
 interface IDeployModalProps {

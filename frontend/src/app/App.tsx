@@ -21,7 +21,7 @@ import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
 // Other local imports.
-import { AppContext } from "src/components/core/AppContext"
+import { AppContext } from "src/lib/components/core/AppContext"
 import AppView from "src/app/components/AppView"
 import StatusWidget from "src/app/components/StatusWidget"
 import MainMenu, { isLocalhost } from "src/app/components/MainMenu"
@@ -96,8 +96,8 @@ import { logError, logMessage } from "src/lib/util/log"
 import { AppRoot } from "src/lib/AppNode"
 
 import { UserSettings } from "src/app/components/StreamlitDialog/UserSettings"
-import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import { handleFavicon } from "src/components/elements/Favicon"
+import { ComponentRegistry } from "src/lib/components/widgets/CustomComponent"
+import { handleFavicon } from "src/lib/components/elements/Favicon"
 
 import {
   createAutoTheme,

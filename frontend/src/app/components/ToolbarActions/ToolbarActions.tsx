@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 
-import Button, { Kind } from "src/components/shared/Button"
+import Button, { Kind } from "src/lib/components/shared/Button"
 import {
   IGuestToHostMessage,
   IToolbarItem,

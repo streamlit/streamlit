@@ -21,13 +21,13 @@ import React, {
   ReactNode,
 } from "react"
 import { ThemeConfig } from "src/theme"
-import Button, { Kind } from "src/components/shared/Button"
-import Modal, { ModalHeader, ModalBody } from "src/components/shared/Modal"
+import Button, { Kind } from "src/lib/components/shared/Button"
+import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
 import {
   AppContext,
   Props as AppContextProps,
-} from "src/components/core/AppContext"
-import UISelectbox from "src/components/shared/Dropdown"
+} from "src/lib/components/core/AppContext"
+import UISelectbox from "src/lib/components/shared/Dropdown"
 import { MetricsManager } from "src/lib/MetricsManager"
 
 import {

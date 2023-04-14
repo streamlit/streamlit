@@ -18,7 +18,7 @@ import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
 import { ReactWrapper } from "enzyme"
 
-import { ModalHeader, ModalFooter } from "src/components/shared/Modal"
+import { ModalHeader, ModalFooter } from "src/lib/components/shared/Modal"
 import { mount } from "src/lib/test_util"
 import ScreencastDialog, { Props } from "./ScreencastDialog"
 

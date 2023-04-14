@@ -15,13 +15,13 @@
  */
 
 import React, { ReactElement, ReactNode, CSSProperties } from "react"
-import { Kind } from "src/components/shared/Button"
+import { Kind } from "src/lib/components/shared/Button"
 import Modal, {
   ModalHeader,
   ModalBody,
   ModalFooter,
   ModalButton,
-} from "src/components/shared/Modal"
+} from "src/lib/components/shared/Modal"
 import { HotKeys } from "react-hotkeys"
 
 import {
@@ -31,7 +31,7 @@ import {
 import { IException } from "src/autogen/proto"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { STREAMLIT_HOME_URL } from "src/urls"
-import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,

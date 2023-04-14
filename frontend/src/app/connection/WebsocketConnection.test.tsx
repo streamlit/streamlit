@@ -29,7 +29,7 @@ import {
   doInitPings,
   Args,
 } from "src/app/connection/WebsocketConnection"
-import { mockEndpoints, mockSessionInfoProps } from "../../lib/mocks/mocks"
+import { mockEndpoints, mockSessionInfoProps } from "src/lib/mocks/mocks"
 
 const MOCK_ALLOWED_ORIGINS_RESPONSE = {
   data: {

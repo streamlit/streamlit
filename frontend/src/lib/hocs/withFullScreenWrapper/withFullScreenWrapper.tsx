@@ -17,7 +17,7 @@
 import React, { PureComponent, ComponentType, ReactNode } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import FullScreenWrapper from "src/components/shared/FullScreenWrapper"
+import FullScreenWrapper from "src/lib/components/shared/FullScreenWrapper"
 
 interface Props {
   width: number

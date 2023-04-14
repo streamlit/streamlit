@@ -24,7 +24,7 @@ import {
   WidgetStateManager,
 } from "src/lib/WidgetStateManager"
 import { makeElementWithInfoText } from "src/lib/util/utils"
-import { ComponentRegistry } from "src/components/widgets/CustomComponent"
+import { ComponentRegistry } from "src/lib/components/widgets/CustomComponent"
 import {
   MockMetricsManager,
   mockEndpoints,

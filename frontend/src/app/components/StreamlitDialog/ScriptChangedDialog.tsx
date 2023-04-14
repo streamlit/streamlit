@@ -21,8 +21,8 @@ import Modal, {
   ModalBody,
   ModalFooter,
   ModalButton,
-} from "src/components/shared/Modal"
-import { Kind } from "src/components/shared/Button"
+} from "src/lib/components/shared/Modal"
+import { Kind } from "src/lib/components/shared/Button"
 import { StyledShortcutLabel } from "./styled-components"
 
 export interface Props {

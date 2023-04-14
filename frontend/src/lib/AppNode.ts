@@ -31,7 +31,7 @@ import Protobuf, {
 import {
   VegaLiteChartElement,
   WrappedNamedDataset,
-} from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
+} from "src/lib/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 import { Quiver } from "src/lib/dataframes/Quiver"
 import { addRows } from "./dataframes/dataFrameProto"
 import { ensureError } from "./util/ErrorHandling"

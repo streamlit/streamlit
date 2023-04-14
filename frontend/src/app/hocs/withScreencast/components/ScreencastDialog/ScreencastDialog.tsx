@@ -15,13 +15,13 @@
  */
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
-import { Kind } from "src/components/shared/Button"
+import { Kind } from "src/lib/components/shared/Button"
 import Modal, {
   ModalHeader,
   ModalBody,
   ModalFooter,
   ModalButton,
-} from "src/components/shared/Modal"
+} from "src/lib/components/shared/Modal"
 import { StyledInstruction, StyledRecordAudioLabel } from "./styled-components"
 
 export interface Props {

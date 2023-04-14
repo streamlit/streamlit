@@ -22,7 +22,7 @@ import React from "react"
 import * as reactDeviceDetect from "react-device-detect"
 import { act } from "react-dom/test-utils"
 
-import Icon from "src/components/shared/Icon"
+import Icon from "src/lib/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/util/Hooks"
 import { mount, shallow } from "src/lib/test_util"
 import { mockEndpoints } from "src/lib/mocks/mocks"

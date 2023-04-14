@@ -16,7 +16,7 @@
 
 import React, { ComponentType } from "react"
 import { mount } from "src/lib/test_util"
-import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 import { StatelessAccordion } from "baseui/accordion"
 import withExpandable, { Props } from "./withExpandable"
 

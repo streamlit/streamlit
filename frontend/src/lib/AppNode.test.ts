@@ -24,7 +24,7 @@ import {
   NamedDataSet,
 } from "src/autogen/proto"
 import { IndexTypeName } from "src/lib/dataframes/Quiver"
-import { mockDataFrame as mockDataFrameData } from "src/components/elements/DataFrame/mock"
+import { mockDataFrame as mockDataFrameData } from "src/lib/components/elements/DataFrame/mock"
 import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
 import { addRows } from "./dataframes/dataFrameProto"

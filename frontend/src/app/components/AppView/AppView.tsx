@@ -17,14 +17,14 @@
 import React, { ReactElement } from "react"
 import { IAppPage } from "src/autogen/proto"
 
-import VerticalBlock from "src/components/core/Block"
+import VerticalBlock from "src/lib/components/core/Block"
 import { ThemedSidebar } from "src/app/components/Sidebar"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
-import { ComponentRegistry } from "src/components/widgets/CustomComponent"
+import { ComponentRegistry } from "src/lib/components/widgets/CustomComponent"
 
-import { AppContext } from "src/components/core/AppContext"
+import { AppContext } from "src/lib/components/core/AppContext"
 import { BlockNode, AppRoot } from "src/lib/AppNode"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { IGuestToHostMessage } from "src/lib/hocs/withHostCommunication/types"

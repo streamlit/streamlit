@@ -30,7 +30,7 @@ import {
 } from "enzyme"
 /* eslint-enable */
 import React, { Component, FC, ReactElement } from "react"
-import ThemeProvider from "src/components/core/ThemeProvider"
+import ThemeProvider from "src/lib/components/core/ThemeProvider"
 import { EmotionTheme } from "src/theme"
 import { mockTheme } from "./mocks/mockTheme"
 
