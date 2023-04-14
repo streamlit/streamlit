@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { IS_DEV_ENV } from "../baseconsts"
+import { IS_DEV_ENV } from "src/lib/baseconsts"
 
 /* eslint-disable no-console */
 
