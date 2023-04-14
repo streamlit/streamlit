@@ -369,9 +369,9 @@ notices:
 	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
 	./scripts/append_license.sh frontend/public/vendor/bokeh/bokeh-LICENSE.txt
 	./scripts/append_license.sh frontend/public/vendor/viz/viz.js-LICENSE.txt
-	./scripts/append_license.sh frontend/src/vendor/twemoji-LICENSE.txt
-	./scripts/append_license.sh frontend/src/vendor/Segment-LICENSE.txt
-	./scripts/append_license.sh frontend/src/vendor/react-bootstrap-LICENSE.txt
+	./scripts/append_license.sh frontend/src/lib/vendor/twemoji-LICENSE.txt
+	./scripts/append_license.sh frontend/src/app/vendor/Segment-LICENSE.txt
+	./scripts/append_license.sh frontend/src/lib/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh lib/streamlit/vendor/ipython/IPython-LICENSE.txt
 
 .PHONY: headers
