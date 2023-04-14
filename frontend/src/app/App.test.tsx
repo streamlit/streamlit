@@ -56,7 +56,7 @@ import ToolbarActions from "src/app/components/ToolbarActions"
 import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
 import { SessionInfo } from "src/lib/SessionInfo"
 
-jest.mock("src/lib/ConnectionManager")
+jest.mock("src/app/connection/ConnectionManager")
 
 const getHostCommunicationState = (
   extend?: Partial<HostCommunicationState>

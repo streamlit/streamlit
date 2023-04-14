@@ -26,7 +26,7 @@ import {
   VideoRecordedDialog,
 } from "./components"
 
-jest.mock("src/lib/ScreenCastRecorder")
+jest.mock("src/app/util/ScreenCastRecorder")
 
 interface TestProps {
   screenCast: ScreenCastHOC

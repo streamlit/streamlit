@@ -48,7 +48,7 @@ const mockCustomThemeConfig = {
   ],
 }
 
-jest.mock("src/lib/ConnectionManager")
+jest.mock("src/app/connection/ConnectionManager")
 
 describe("ThemedApp", () => {
   beforeEach(() => {
