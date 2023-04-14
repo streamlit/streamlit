@@ -121,7 +121,7 @@ import withHostCommunication, {
 
 import withScreencast, {
   ScreenCastHOC,
-} from "src/hocs/withScreencast/withScreencast"
+} from "src/app/hocs/withScreencast/withScreencast"
 
 // Used to import fonts + responsive reboot items
 import "src/assets/css/theme.scss"
