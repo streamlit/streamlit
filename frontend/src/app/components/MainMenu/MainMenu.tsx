@@ -34,7 +34,7 @@ import {
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
-} from "src/app/StreamlitDialog/DeployErrorDialogs"
+} from "src/app/components/StreamlitDialog/DeployErrorDialogs"
 import Icon from "src/components/shared/Icon"
 import {
   IGuestToHostMessage,

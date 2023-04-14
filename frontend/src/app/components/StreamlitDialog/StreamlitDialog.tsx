@@ -27,7 +27,7 @@ import { HotKeys } from "react-hotkeys"
 import {
   ScriptChangedDialog,
   Props as ScriptChangedDialogProps,
-} from "src/app/StreamlitDialog/ScriptChangedDialog"
+} from "src/app/components/StreamlitDialog/ScriptChangedDialog"
 import { IException } from "src/autogen/proto"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { STREAMLIT_HOME_URL } from "src/urls"

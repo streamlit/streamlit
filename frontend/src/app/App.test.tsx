@@ -46,10 +46,13 @@ import {
   toExportedTheme,
 } from "src/theme"
 import Modal from "src/components/shared/Modal"
-import { DialogType, StreamlitDialog } from "src/app/StreamlitDialog"
+import {
+  DialogType,
+  StreamlitDialog,
+} from "src/app/components/StreamlitDialog"
 import { App, Props } from "./App"
-import MainMenu from "src/app/MainMenu"
-import ToolbarActions from "src/app/ToolbarActions"
+import MainMenu from "src/app/components/MainMenu"
+import ToolbarActions from "src/app/components/ToolbarActions"
 import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
 import { SessionInfo } from "src/lib/SessionInfo"
 

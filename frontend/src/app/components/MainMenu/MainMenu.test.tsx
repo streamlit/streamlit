@@ -22,12 +22,12 @@ import { mount, render } from "src/lib/test_util"
 import { IMenuItem } from "src/hocs/withHostCommunication/types"
 
 import { GitInfo, IGitInfo } from "src/autogen/proto"
-import { IDeployErrorDialog } from "src/app/StreamlitDialog/DeployErrorDialogs/types"
+import { IDeployErrorDialog } from "src/app/components/StreamlitDialog/DeployErrorDialogs/types"
 import {
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
-} from "src/app/StreamlitDialog/DeployErrorDialogs"
+} from "src/app/components/StreamlitDialog/DeployErrorDialogs"
 
 import MainMenu, { Props } from "./MainMenu"
 import { waitFor } from "@testing-library/dom"

@@ -22,17 +22,17 @@ import classNames from "classnames"
 
 // Other local imports.
 import { AppContext } from "src/components/core/AppContext"
-import AppView from "src/app/AppView"
-import StatusWidget from "src/app/StatusWidget"
-import MainMenu, { isLocalhost } from "src/app/MainMenu"
-import ToolbarActions from "src/app/ToolbarActions"
-import DeployButton from "src/app/DeployButton"
-import Header from "src/app/Header"
+import AppView from "src/app/components/AppView"
+import StatusWidget from "src/app/components/StatusWidget"
+import MainMenu, { isLocalhost } from "src/app/components/MainMenu"
+import ToolbarActions from "src/app/components/ToolbarActions"
+import DeployButton from "src/app/components/DeployButton"
+import Header from "src/app/components/Header"
 import {
   DialogProps,
   DialogType,
   StreamlitDialog,
-} from "src/app/StreamlitDialog"
+} from "src/app/components/StreamlitDialog"
 import { ConnectionManager } from "src/lib/ConnectionManager"
 import { PerformanceEvents } from "src/lib/profiler/PerformanceEvents"
 import {
@@ -95,7 +95,7 @@ import { FileUploadClient } from "src/lib/FileUploadClient"
 import { logError, logMessage } from "src/lib/log"
 import { AppRoot } from "src/lib/AppNode"
 
-import { UserSettings } from "src/app/StreamlitDialog/UserSettings"
+import { UserSettings } from "src/app/components/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { handleFavicon } from "src/components/elements/Favicon"
 
