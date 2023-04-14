@@ -24,7 +24,7 @@ import {
   ScreencastDialog,
   VideoRecordedDialog,
 } from "src/hocs/withScreencast/components"
-import Countdown from "src/components/core/Countdown"
+import Countdown from "src/app/components/Countdown"
 
 export type Steps =
   | "UNSUPPORTED"
