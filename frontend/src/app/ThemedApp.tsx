@@ -20,7 +20,7 @@ import { Global } from "@emotion/react"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
 
-import FontFaceDeclaration from "src/components/core/FontFaceDeclaration"
+import FontFaceDeclaration from "src/app/components/FontFaceDeclaration"
 import ThemeProvider from "src/components/core/ThemeProvider"
 import {
   AUTO_THEME_NAME,
