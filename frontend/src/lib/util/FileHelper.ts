@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { isFromWindows } from "src/lib/utils"
+import { isFromWindows } from "src/lib/util/utils"
 
 export enum FileSize {
   Gigabyte = "gb",

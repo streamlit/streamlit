@@ -26,7 +26,7 @@ import {
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 
-import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
 
 export interface Props {
   disabled: boolean

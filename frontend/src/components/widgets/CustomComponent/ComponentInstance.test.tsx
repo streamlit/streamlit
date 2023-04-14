@@ -27,7 +27,7 @@ import {
 } from "src/lib/util/IFrameUtil"
 import { logWarning } from "src/lib/log"
 import { mount } from "src/lib/test_util"
-import { buildHttpUri } from "src/lib/UriUtil"
+import { buildHttpUri } from "src/lib/util/UriUtil"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import React from "react"
 import { bgColorToBaseString, toExportedTheme } from "src/theme"

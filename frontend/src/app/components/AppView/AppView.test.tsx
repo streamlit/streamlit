@@ -23,7 +23,7 @@ import {
   createFormsData,
   WidgetStateManager,
 } from "src/lib/WidgetStateManager"
-import { makeElementWithInfoText } from "src/lib/utils"
+import { makeElementWithInfoText } from "src/lib/util/utils"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import {
   MockMetricsManager,

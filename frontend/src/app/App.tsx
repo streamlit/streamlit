@@ -62,8 +62,8 @@ import {
   getEmbeddingIdClassName,
   extractPageNameFromPathName,
   setCookie,
-} from "src/lib/utils"
-import { BaseUriParts } from "src/lib/UriUtil"
+} from "src/lib/util/utils"
+import { BaseUriParts } from "src/lib/util/UriUtil"
 import {
   AppPage,
   BackMsg,

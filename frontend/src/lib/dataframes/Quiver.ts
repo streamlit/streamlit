@@ -34,7 +34,7 @@ import moment from "moment-timezone"
 import numbro from "numbro"
 
 import { IArrow, Styler as StylerProto } from "src/autogen/proto"
-import { notNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined } from "src/lib/util/utils"
 
 /** Data types used by ArrowJS. */
 export type DataType =

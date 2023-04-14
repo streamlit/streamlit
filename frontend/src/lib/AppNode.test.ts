@@ -28,7 +28,7 @@ import { mockDataFrame as mockDataFrameData } from "src/components/elements/Data
 import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
 import { addRows } from "./dataframes/dataFrameProto"
-import { toImmutableProto } from "./immutableProto"
+import { toImmutableProto } from "./util/immutableProto"
 import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
 import { UNICODE } from "./mocks/arrow"
 import { MockMetricsManager } from "./mocks/mocks"

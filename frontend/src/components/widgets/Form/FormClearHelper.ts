@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { isValidFormId } from "src/lib/utils"
+import { isValidFormId } from "src/lib/util/utils"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { SignalConnection } from "typed-signals"
 

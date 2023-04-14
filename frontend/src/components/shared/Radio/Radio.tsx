@@ -22,7 +22,7 @@ import {
   StyledWidgetLabelHelpInline,
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
-import { LabelVisibilityOptions } from "src/lib/utils"
+import { LabelVisibilityOptions } from "src/lib/util/utils"
 import { Placement } from "src/components/shared/Tooltip"
 import { EmotionTheme } from "src/theme"
 

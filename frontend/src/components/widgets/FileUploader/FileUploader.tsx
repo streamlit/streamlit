@@ -26,7 +26,11 @@ import {
 } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 
-import { FileSize, getSizeDisplay, sizeConverter } from "src/lib/FileHelper"
+import {
+  FileSize,
+  getSizeDisplay,
+  sizeConverter,
+} from "src/lib/util/FileHelper"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import {
@@ -35,7 +39,7 @@ import {
 } from "src/components/widgets/BaseWidget"
 import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
-import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"

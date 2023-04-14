@@ -19,8 +19,8 @@ import hoistNonReactStatics from "hoist-non-react-statics"
 
 import { ICustomThemeConfig } from "src/autogen/proto"
 
-import Resolver from "src/lib/Resolver"
-import { isValidOrigin } from "src/lib/UriUtil"
+import Resolver from "src/lib/util/Resolver"
+import { isValidOrigin } from "src/lib/util/UriUtil"
 
 // Uncomment this code if testing out host communication with
 // frontend/hostframe.html:

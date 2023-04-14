@@ -16,7 +16,7 @@
 
 import React from "react"
 import { mount, shallow } from "src/lib/test_util"
-import { LabelVisibilityOptions } from "src/lib/utils"
+import { LabelVisibilityOptions } from "src/lib/util/utils"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
 import { WidgetLabel, LabelProps } from "./WidgetLabel"

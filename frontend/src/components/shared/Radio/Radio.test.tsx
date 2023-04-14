@@ -18,7 +18,7 @@ import React from "react"
 import { mount } from "src/lib/test_util"
 
 import { Radio as UIRadio, RadioGroup, ALIGN } from "baseui/radio"
-import { LabelVisibilityOptions } from "src/lib/utils"
+import { LabelVisibilityOptions } from "src/lib/util/utils"
 import { mockTheme } from "src/lib/mocks/mockTheme"
 import Radio, { Props } from "./Radio"
 

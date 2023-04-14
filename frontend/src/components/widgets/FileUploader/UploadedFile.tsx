@@ -24,7 +24,7 @@ import Button, { Kind } from "src/components/shared/Button"
 import Icon from "src/components/shared/Icon"
 import ProgressBar, { Size } from "src/components/shared/ProgressBar"
 import { Small } from "src/components/shared/TextElements"
-import { FileSize, getSizeDisplay } from "src/lib/FileHelper"
+import { FileSize, getSizeDisplay } from "src/lib/util/FileHelper"
 import {
   StyledUploadedFile,
   StyledFileErrorIcon,

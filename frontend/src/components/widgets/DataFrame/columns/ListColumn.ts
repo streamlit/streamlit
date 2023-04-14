@@ -16,7 +16,7 @@
 
 import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import { isNullOrUndefined } from "src/lib/utils"
+import { isNullOrUndefined } from "src/lib/util/utils"
 
 import {
   BaseColumn,

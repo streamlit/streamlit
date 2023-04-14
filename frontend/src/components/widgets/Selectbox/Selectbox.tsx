@@ -19,7 +19,7 @@ import { Selectbox as SelectboxProto } from "src/autogen/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import UISelectbox from "src/components/shared/Dropdown"
-import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
 
 export interface Props {
   disabled: boolean

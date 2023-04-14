@@ -32,7 +32,7 @@ import {
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
 
-import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
 
 import {
   StyledInputContainer,

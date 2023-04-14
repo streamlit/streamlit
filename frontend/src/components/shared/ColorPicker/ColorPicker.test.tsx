@@ -20,7 +20,7 @@ import { mount, shallow } from "src/lib/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker } from "react-color"
 
-import { LabelVisibilityOptions } from "src/lib/utils"
+import { LabelVisibilityOptions } from "src/lib/util/utils"
 import ColorPicker, { Props } from "./ColorPicker"
 
 const getProps = (props: Partial<Props> = {}): Props => ({

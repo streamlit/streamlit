@@ -17,7 +17,7 @@
 import React, { ReactElement } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { range } from "lodash"
-import { toFormattedString } from "src/lib/format"
+import { toFormattedString } from "src/lib/util/format"
 import {
   dataFrameGet,
   dataFrameGetDimensions,

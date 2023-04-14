@@ -22,7 +22,7 @@ import {
   UserInfo,
 } from "src/autogen/proto"
 
-import { hashString } from "src/lib/utils"
+import { hashString } from "src/lib/util/utils"
 
 /**
  * SessionInfo properties. These don't change during the lifetime of a session.

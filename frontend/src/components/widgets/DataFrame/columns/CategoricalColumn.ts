@@ -18,7 +18,7 @@ import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 
 import { Quiver } from "src/lib/dataframes/Quiver"
-import { notNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined } from "src/lib/util/utils"
 
 import {
   BaseColumn,

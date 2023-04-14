@@ -36,7 +36,7 @@ import { registerLoaders } from "@loaders.gl/core"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import withMapboxToken from "src/hocs/withMapboxToken"
 
-import { notNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined } from "src/lib/util/utils"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/autogen/proto"
 import {

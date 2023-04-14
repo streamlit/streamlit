@@ -17,7 +17,7 @@
 import React from "react"
 import { CloudUpload } from "@emotion-icons/material-outlined"
 import Icon from "src/components/shared/Icon"
-import { FileSize, getSizeDisplay } from "src/lib/FileHelper"
+import { FileSize, getSizeDisplay } from "src/lib/util/FileHelper"
 import { Small } from "src/components/shared/TextElements"
 
 import {

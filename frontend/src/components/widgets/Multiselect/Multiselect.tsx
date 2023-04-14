@@ -36,7 +36,7 @@ import TooltipIcon from "src/components/shared/TooltipIcon"
 import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
 import { fuzzyFilterSelectOptions } from "src/components/shared/Dropdown/Selectbox"
-import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
 import { EmotionTheme } from "src/theme"
 
 export interface Props {

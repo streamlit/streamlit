@@ -35,7 +35,7 @@ import { FormClearHelper } from "src/components/widgets/Form"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { logError } from "src/lib/log"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
 import {
   UploadedStatus,
   UploadFileInfo,

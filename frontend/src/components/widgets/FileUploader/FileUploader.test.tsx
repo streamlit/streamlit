@@ -26,7 +26,7 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "src/autogen/proto"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
-import { notUndefined } from "src/lib/utils"
+import { notUndefined } from "src/lib/util/utils"
 import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 import { ErrorStatus, UploadFileInfo, UploadingStatus } from "./UploadFileInfo"

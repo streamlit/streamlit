@@ -35,13 +35,13 @@ import {
 import { Quiver } from "src/lib/dataframes/Quiver"
 import { addRows } from "./dataframes/dataFrameProto"
 import { ensureError } from "./ErrorHandling"
-import { toImmutableProto } from "./immutableProto"
+import { toImmutableProto } from "./util/immutableProto"
 import { MetricsManager } from "./MetricsManager"
 import {
   makeElementWithInfoText,
   makeElementWithErrorText,
   notUndefined,
-} from "./utils"
+} from "./util/utils"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 

@@ -22,7 +22,7 @@ import React from "react"
 import { Size as ResizableSize } from "re-resizable"
 
 import { Arrow as ArrowProto } from "src/autogen/proto"
-import { notNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined } from "src/lib/util/utils"
 
 const ROW_HEIGHT = 35
 // Min width for the resizable table container:

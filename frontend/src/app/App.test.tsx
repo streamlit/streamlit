@@ -19,7 +19,7 @@ import { ShallowWrapper, ReactWrapper } from "enzyme"
 import { waitFor } from "@testing-library/dom"
 import cloneDeep from "lodash/cloneDeep"
 import { LocalStore } from "src/lib/storageUtils"
-import { hashString } from "src/lib/utils"
+import { hashString } from "src/lib/util/utils"
 import { shallow, mount } from "src/lib/test_util"
 import {
   CustomThemeConfig,

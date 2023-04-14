@@ -17,7 +17,7 @@
 import React, { ReactElement } from "react"
 import { Metric as MetricProto } from "src/autogen/proto"
 import { EmotionTheme } from "src/theme"
-import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
+import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
 import Icon from "src/components/shared/Icon"
 import { useTheme } from "@emotion/react"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"

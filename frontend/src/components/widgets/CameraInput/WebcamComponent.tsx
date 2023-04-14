@@ -25,7 +25,7 @@ import React, {
 } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
-import { debounce } from "src/lib/utils"
+import { debounce } from "src/lib/util/utils"
 
 import Icon from "src/components/shared/Icon"
 import { EmotionTheme } from "src/theme"

@@ -26,7 +26,7 @@ import { toString, merge, isArray } from "lodash"
 import numbro from "numbro"
 
 import { Type as ArrowType } from "src/lib/dataframes/Quiver"
-import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/util/utils"
 
 /**
  * Interface used for defining the properties (configuration options) of a column.
