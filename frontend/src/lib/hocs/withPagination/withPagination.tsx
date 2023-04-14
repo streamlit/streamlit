@@ -16,7 +16,7 @@
 
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
-import Pagination from "src/hocs/withPagination/Pagination"
+import Pagination from "src/lib/hocs/withPagination/Pagination"
 import { usePrevious } from "src/lib/util/Hooks"
 
 export interface Props {

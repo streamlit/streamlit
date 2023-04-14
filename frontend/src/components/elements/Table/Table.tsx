@@ -22,7 +22,7 @@ import {
   dataFrameGet,
   dataFrameGetDimensions,
 } from "src/lib/dataframes/dataFrameProto"
-import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import withFullScreenWrapper from "src/lib/hocs/withFullScreenWrapper"
 import {
   StyledTable,
   StyledEmptyTableCell,

@@ -20,7 +20,7 @@ import { AutoSizer } from "react-virtualized"
 import { Block as BlockProto } from "src/autogen/proto"
 import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/util/utils"
-import withExpandable from "src/hocs/withExpandable"
+import withExpandable from "src/lib/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
 import Tabs from "src/components/elements/Tabs"
 

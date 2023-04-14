@@ -17,14 +17,14 @@
 import { pick } from "lodash"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { initializeSegment } from "src/vendor/Segment"
-import { DeployedAppMetadata } from "src/hocs/withHostCommunication/types"
-import { IS_DEV_ENV } from "../lib/baseconsts"
-import { logAlways } from "../lib/util/log"
+import { DeployedAppMetadata } from "src/lib/hocs/withHostCommunication/types"
+import { IS_DEV_ENV } from "src/lib/baseconsts"
+import { logAlways } from "src/lib/util/log"
 import {
   CustomComponentCounter,
   DeltaCounter,
   MetricsManager,
-} from "../lib/MetricsManager"
+} from "src/lib/MetricsManager"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts

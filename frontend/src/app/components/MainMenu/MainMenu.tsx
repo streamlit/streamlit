@@ -39,7 +39,7 @@ import Icon from "src/components/shared/Icon"
 import {
   IGuestToHostMessage,
   IMenuItem,
-} from "src/hocs/withHostCommunication/types"
+} from "src/lib/hocs/withHostCommunication/types"
 import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
 import { MetricsManager } from "src/lib/MetricsManager"
 import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/urls"

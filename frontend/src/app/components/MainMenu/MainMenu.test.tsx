@@ -19,7 +19,7 @@ import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { mount, render } from "src/lib/test_util"
-import { IMenuItem } from "src/hocs/withHostCommunication/types"
+import { IMenuItem } from "src/lib/hocs/withHostCommunication/types"
 
 import { GitInfo, IGitInfo } from "src/autogen/proto"
 import { IDeployErrorDialog } from "src/app/components/StreamlitDialog/DeployErrorDialogs/types"

@@ -17,7 +17,7 @@
 import { range } from "lodash"
 import React, { ReactElement } from "react"
 
-import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import withFullScreenWrapper from "src/lib/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/dataframes/Quiver"
 import {
   StyledEmptyTableCell,

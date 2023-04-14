@@ -117,7 +117,7 @@ import { StyledApp } from "src/styled-components"
 
 import withHostCommunication, {
   HostCommunicationHOC,
-} from "src/hocs/withHostCommunication"
+} from "src/lib/hocs/withHostCommunication"
 
 import withScreencast, {
   ScreenCastHOC,

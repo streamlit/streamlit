@@ -17,7 +17,10 @@
 import axios from "axios"
 import { SessionInfo } from "src/lib/SessionInfo"
 import AxiosMockAdapter from "axios-mock-adapter"
-import { MapboxToken, TOKENS_URL } from "src/hocs/withMapboxToken/MapboxToken"
+import {
+  MapboxToken,
+  TOKENS_URL,
+} from "src/lib/hocs/withMapboxToken/MapboxToken"
 import { mockSessionInfo } from "src/lib/mocks/mocks"
 
 function createSessionInfo(

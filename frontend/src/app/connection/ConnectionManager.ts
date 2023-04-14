@@ -16,15 +16,15 @@
 import { ReactNode } from "react"
 
 import { BackMsg, ForwardMsg } from "src/autogen/proto"
-import { IAllowedMessageOriginsResponse } from "src/hocs/withHostCommunication/types"
+import { IAllowedMessageOriginsResponse } from "src/lib/hocs/withHostCommunication/types"
 import { BaseUriParts, getPossibleBaseUris } from "src/lib/util/UriUtil"
 
 import { ConnectionState } from "./ConnectionState"
-import { logError } from "../../lib/util/log"
-import { SessionInfo } from "../../lib/SessionInfo"
-import { StreamlitEndpoints } from "../../lib/StreamlitEndpoints"
+import { logError } from "src/lib/util/log"
+import { SessionInfo } from "src/lib/SessionInfo"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 import { WebsocketConnection } from "./WebsocketConnection"
-import { ensureError } from "../../lib/util/ErrorHandling"
+import { ensureError } from "src/lib/util/ErrorHandling"
 
 /**
  * When the websocket connection retries this many times, we show a dialog

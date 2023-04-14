@@ -16,7 +16,7 @@
 
 import Alert from "src/components/elements/Alert"
 import { Kind } from "src/components/shared/AlertContainer"
-import { MapboxToken } from "src/hocs/withMapboxToken/MapboxToken"
+import { MapboxToken } from "src/lib/hocs/withMapboxToken/MapboxToken"
 import { ensureError } from "src/lib/util/ErrorHandling"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"

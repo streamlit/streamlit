@@ -19,7 +19,7 @@ import ErrorElement from "src/components/shared/ErrorElement"
 import {
   MapboxTokenFetchingError,
   MapboxTokenNotProvidedError,
-} from "src/hocs/withMapboxToken/MapboxToken"
+} from "src/lib/hocs/withMapboxToken/MapboxToken"
 
 interface Props {
   error: Error | MapboxTokenFetchingError | MapboxTokenNotProvidedError

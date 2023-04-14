@@ -33,8 +33,8 @@ import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
 
-import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
-import withMapboxToken from "src/hocs/withMapboxToken"
+import withFullScreenWrapper from "src/lib/hocs/withFullScreenWrapper"
+import withMapboxToken from "src/lib/hocs/withMapboxToken"
 
 import { notNullOrUndefined } from "src/lib/util/utils"
 

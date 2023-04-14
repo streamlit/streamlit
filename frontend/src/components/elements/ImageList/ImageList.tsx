@@ -22,7 +22,7 @@ import {
   Image as ImageProto,
   ImageList as ImageListProto,
 } from "src/autogen/proto"
-import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import withFullScreenWrapper from "src/lib/hocs/withFullScreenWrapper"
 import { xssSanitizeSvg } from "src/lib/util/UriUtil"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 

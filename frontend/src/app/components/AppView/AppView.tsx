@@ -27,7 +27,7 @@ import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { AppContext } from "src/components/core/AppContext"
 import { BlockNode, AppRoot } from "src/lib/AppNode"
 import { SessionInfo } from "src/lib/SessionInfo"
-import { IGuestToHostMessage } from "src/hocs/withHostCommunication/types"
+import { IGuestToHostMessage } from "src/lib/hocs/withHostCommunication/types"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 import {

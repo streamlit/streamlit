@@ -19,7 +19,7 @@ import { withTheme } from "@emotion/react"
 import { logMessage } from "src/lib/util/log"
 import { Map as ImmutableMap } from "immutable"
 import merge from "lodash/merge"
-import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import withFullScreenWrapper from "src/lib/hocs/withFullScreenWrapper"
 import {
   tableGetRowsAndCols,
   indexGet,

@@ -26,7 +26,7 @@ import {
   Figure as FigureProto,
   PlotlyChart as PlotlyChartProto,
 } from "src/autogen/proto"
-import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import withFullScreenWrapper from "src/lib/hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
 import {
   applyStreamlitTheme,

@@ -30,12 +30,12 @@ import {
   PageNotFound,
   PagesChanged,
 } from "src/autogen/proto"
-import { HostCommunicationHOC } from "src/hocs/withHostCommunication"
+import { HostCommunicationHOC } from "src/lib/hocs/withHostCommunication"
 import {
   IMenuItem,
   IToolbarItem,
   HostCommunicationState,
-} from "src/hocs/withHostCommunication/types"
+} from "src/lib/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import {

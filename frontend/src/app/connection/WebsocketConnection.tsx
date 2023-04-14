@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 import axios from "axios"
 
 import { BackMsg, ForwardMsg, IBackMsg } from "src/autogen/proto"
-import { IAllowedMessageOriginsResponse } from "src/hocs/withHostCommunication/types"
+import { IAllowedMessageOriginsResponse } from "src/lib/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ForwardMsgCache } from "src/lib/ForwardMessageCache"
 import { logError, logMessage, logWarning } from "src/lib/util/log"
@@ -27,7 +27,7 @@ import Resolver from "src/lib/util/Resolver"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { BaseUriParts, buildHttpUri, buildWsUri } from "src/lib/util/UriUtil"
 import React, { Fragment } from "react"
-import { StreamlitEndpoints } from "../../lib/StreamlitEndpoints"
+import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 /**
  * Name of the logger.
