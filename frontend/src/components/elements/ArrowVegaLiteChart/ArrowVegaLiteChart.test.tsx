@@ -26,7 +26,7 @@ import {
   UNICODE,
   VEGA_LITE,
 } from "src/lib/mocks/arrow"
-import { Quiver } from "src/lib/Quiver"
+import { Quiver } from "src/lib/dataframes/Quiver"
 import { mockTheme } from "src/lib/mocks/mockTheme"
 import {
   PropsWithHeight,

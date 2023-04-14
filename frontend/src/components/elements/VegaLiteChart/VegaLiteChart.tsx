@@ -24,7 +24,7 @@ import {
   tableGetRowsAndCols,
   indexGet,
   tableGet,
-} from "src/lib/dataFrameProto"
+} from "src/lib/dataframes/dataFrameProto"
 import { ensureError } from "src/lib/ErrorHandling"
 import { EmotionTheme } from "src/theme"
 import embed from "vega-embed"

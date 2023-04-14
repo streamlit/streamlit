@@ -32,8 +32,8 @@ import {
   VegaLiteChartElement,
   WrappedNamedDataset,
 } from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
-import { Quiver } from "src/lib/Quiver"
-import { addRows } from "./dataFrameProto"
+import { Quiver } from "src/lib/dataframes/Quiver"
+import { addRows } from "./dataframes/dataFrameProto"
 import { ensureError } from "./ErrorHandling"
 import { toImmutableProto } from "./immutableProto"
 import { MetricsManager } from "./MetricsManager"

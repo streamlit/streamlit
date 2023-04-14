@@ -22,7 +22,11 @@ import {
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
-import { DataFrameCell, Quiver, Type as ArrowType } from "src/lib/Quiver"
+import {
+  DataFrameCell,
+  Quiver,
+  Type as ArrowType,
+} from "src/lib/dataframes/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 import {

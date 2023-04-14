@@ -56,7 +56,7 @@ import {
 import React, { ReactElement, Suspense } from "react"
 import debounceRender from "react-debounce-render"
 import { ElementNode } from "src/lib/AppNode"
-import { Quiver } from "src/lib/Quiver"
+import { Quiver } from "src/lib/dataframes/Quiver"
 
 // Load (non-lazy) elements.
 import Alert from "src/components/elements/Alert/"

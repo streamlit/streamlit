@@ -16,7 +16,7 @@
 
 import { GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
 
-import { DataType, Type as ArrowType } from "src/lib/Quiver"
+import { DataType, Type as ArrowType } from "src/lib/dataframes/Quiver"
 
 import { BaseColumnProps, isErrorCell } from "./utils"
 import NumberColumn, { NumberColumnParams } from "./NumberColumn"

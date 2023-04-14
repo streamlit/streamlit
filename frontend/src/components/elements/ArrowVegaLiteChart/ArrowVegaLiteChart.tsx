@@ -23,7 +23,7 @@ import { expressionInterpreter } from "vega-interpreter"
 import { logMessage } from "src/lib/log"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { ensureError } from "src/lib/ErrorHandling"
-import { IndexTypeName, Quiver } from "src/lib/Quiver"
+import { IndexTypeName, Quiver } from "src/lib/dataframes/Quiver"
 import { EmotionTheme } from "src/theme"
 
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"

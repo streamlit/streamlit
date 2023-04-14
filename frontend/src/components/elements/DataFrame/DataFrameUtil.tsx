@@ -18,7 +18,7 @@ import {
   DataFrameCellType,
   dataFrameGet,
   dataFrameGetDimensions,
-} from "src/lib/dataFrameProto"
+} from "src/lib/dataframes/dataFrameProto"
 import { toFormattedString } from "src/lib/format"
 import { logWarning } from "src/lib/log"
 import { scrollbarSize } from "src/vendor/dom-helpers"

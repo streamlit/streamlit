@@ -42,7 +42,7 @@ import {
 } from "src/lib/WidgetStateManager"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
-import { SessionEventDispatcher } from "src/lib/SessionEventDispatcher"
+import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
 import {
   getIFrameEnclosingApp,
   hashString,
@@ -110,7 +110,7 @@ import {
   toExportedTheme,
 } from "src/theme"
 import { DefaultStreamlitEndpoints } from "src/app/connection/DefaultStreamlitEndpoints"
-import { SegmentMetricsManager } from "src/lib/SegmentMetricsManager"
+import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 import { StyledApp } from "src/styled-components"

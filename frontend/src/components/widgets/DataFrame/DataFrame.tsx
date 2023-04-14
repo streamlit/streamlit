@@ -30,7 +30,7 @@ import { Resizable } from "re-resizable"
 
 import { FormClearHelper } from "src/components/widgets/Form"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
-import { Quiver } from "src/lib/Quiver"
+import { Quiver } from "src/lib/dataframes/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import { WidgetInfo, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { debounce, isNullOrUndefined } from "src/lib/utils"

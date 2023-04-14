@@ -23,11 +23,11 @@ import {
   IArrowVegaLiteChart,
   NamedDataSet,
 } from "src/autogen/proto"
-import { IndexTypeName } from "src/lib/Quiver"
+import { IndexTypeName } from "src/lib/dataframes/Quiver"
 import { mockDataFrame as mockDataFrameData } from "src/components/elements/DataFrame/mock"
 import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
-import { addRows } from "./dataFrameProto"
+import { addRows } from "./dataframes/dataFrameProto"
 import { toImmutableProto } from "./immutableProto"
 import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
 import { UNICODE } from "./mocks/arrow"

@@ -18,7 +18,7 @@ import { IFrame as IFrameProto } from "src/autogen/proto"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "src/lib/IFrameUtil"
+} from "src/lib/util/IFrameUtil"
 import React, { CSSProperties, ReactElement } from "react"
 
 export interface IFrameProps {

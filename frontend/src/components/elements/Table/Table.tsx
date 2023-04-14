@@ -18,7 +18,10 @@ import React, { ReactElement } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { range } from "lodash"
 import { toFormattedString } from "src/lib/format"
-import { dataFrameGet, dataFrameGetDimensions } from "src/lib/dataFrameProto"
+import {
+  dataFrameGet,
+  dataFrameGetDimensions,
+} from "src/lib/dataframes/dataFrameProto"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import {
   StyledTable,

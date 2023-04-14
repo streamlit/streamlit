@@ -16,7 +16,7 @@
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
 
-import { Type as ArrowType } from "src/lib/Quiver"
+import { Type as ArrowType } from "src/lib/dataframes/Quiver"
 
 import { BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
 import CategoricalColumn, {

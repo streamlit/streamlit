@@ -28,7 +28,7 @@ import { ensureError } from "src/lib/ErrorHandling"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "src/lib/IFrameUtil"
+} from "src/lib/util/IFrameUtil"
 import { logError, logWarning } from "src/lib/log"
 import { Timer } from "src/lib/Timer"
 import { Source, WidgetStateManager } from "src/lib/WidgetStateManager"

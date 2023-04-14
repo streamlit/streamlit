@@ -17,9 +17,9 @@
 // Disable Typescript checking, since mm.track and identify have private scope
 // @ts-nocheck
 
-import { mockSessionInfo, mockSessionInfoProps } from "./mocks/mocks"
+import { mockSessionInfo, mockSessionInfoProps } from "../lib/mocks/mocks"
 import { SegmentMetricsManager } from "./SegmentMetricsManager"
-import { SessionInfo } from "./SessionInfo"
+import { SessionInfo } from "../lib/SessionInfo"
 
 const getSegmentMetricsManager = (
   sessionInfo?: SessionInfo

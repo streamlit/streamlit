@@ -20,7 +20,7 @@ import { shallow } from "src/lib/test_util"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "src/lib/IFrameUtil"
+} from "src/lib/util/IFrameUtil"
 
 import { IFrame as IFrameProto } from "src/autogen/proto"
 import IFrame, { IFrameProps } from "./IFrame"

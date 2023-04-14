@@ -19,7 +19,7 @@ import React from "react"
 import { renderHook } from "@testing-library/react-hooks"
 import { GridCellKind } from "@glideapps/glide-data-grid"
 
-import { Quiver } from "src/lib/Quiver"
+import { Quiver } from "src/lib/dataframes/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import { UNICODE } from "src/lib/mocks/arrow"
 import {

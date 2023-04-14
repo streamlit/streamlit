@@ -22,7 +22,7 @@ import {
   dataFrameGetDimensions,
   getSortedDataRowIndices,
   tableGetRowsAndCols,
-} from "src/lib/dataFrameProto"
+} from "src/lib/dataframes/dataFrameProto"
 import { SortDirection } from "./SortDirection"
 import {
   StyledDataFrameContainer,

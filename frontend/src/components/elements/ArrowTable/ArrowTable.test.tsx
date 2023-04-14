@@ -18,7 +18,7 @@ import React from "react"
 import { mount } from "src/lib/test_util"
 
 import { UNICODE, EMPTY } from "src/lib/mocks/arrow"
-import { Quiver } from "src/lib/Quiver"
+import { Quiver } from "src/lib/dataframes/Quiver"
 import { ArrowTable, TableProps } from "./ArrowTable"
 
 const getProps = (data: Uint8Array): TableProps => ({

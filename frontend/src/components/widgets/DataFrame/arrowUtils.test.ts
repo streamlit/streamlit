@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Quiver, Type as ArrowType } from "src/lib/Quiver"
+import { Quiver, Type as ArrowType } from "src/lib/dataframes/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import {
   UNICODE,

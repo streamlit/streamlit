@@ -24,7 +24,7 @@ import { ReactWrapper } from "enzyme"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "src/lib/IFrameUtil"
+} from "src/lib/util/IFrameUtil"
 import { logWarning } from "src/lib/log"
 import { mount } from "src/lib/test_util"
 import { buildHttpUri } from "src/lib/UriUtil"

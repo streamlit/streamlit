@@ -20,7 +20,7 @@ import { DataEditor as GlideDataEditor } from "@glideapps/glide-data-grid"
 
 import { TEN_BY_TEN } from "src/lib/mocks/arrow"
 import { mount } from "src/lib/test_util"
-import { Quiver } from "src/lib/Quiver"
+import { Quiver } from "src/lib/dataframes/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 
 import { Resizable } from "re-resizable"
