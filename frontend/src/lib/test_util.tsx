@@ -83,3 +83,16 @@ export function render(
     ...options,
   })
 }
+
+export function mockWindowLocation(hostname: string): void {
+  // Mock window.location by creating a new object
+  // Source: https://www.benmvp.com/blog/mocking-window-location-methods-jest-jsdom/
+  // @ts-expect-error
+  delete window.location
+
+  // @ts-expect-error
+  window.location = {
+    assign: jest.fn(),
+    hostname: hostname,
+  }
+}

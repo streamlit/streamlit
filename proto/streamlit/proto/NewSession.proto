@@ -98,6 +98,15 @@ message Config {
   // See config option "ui.hideSidebarNav".
   bool hide_sidebar_nav = 7;
 
+  // See config option "client.toolbarMode".
+  enum ToolbarMode {
+    AUTO = 0;
+    DEVELOPER = 1;
+    VIEWER = 2;
+    MINIMAL = 3;
+  }
+  ToolbarMode toolbar_mode = 8;
+
   reserved 1;
 }
 
