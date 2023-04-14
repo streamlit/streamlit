@@ -131,17 +131,18 @@ def _send_email(email: str) -> None:
         },
         "messageId": str(uuid4()),
         "timestamp": dt,
+        "event": "submittedEmail",
         "traits": {
             "authoremail": email,
             "source": "provided_email",
         },
-        "type": "identify",
+        "type": "track",
         "userId": email,
         "writeKey": "iCkMy7ymtJ9qYzQRXkQpnAJEq7D4NyMU",
     }
 
     response = requests.post(
-        "https://api.segment.io/v1/i",
+        "https://api.segment.io/v1/t",
         headers=headers,
         data=json.dumps(data).encode(),
     )
