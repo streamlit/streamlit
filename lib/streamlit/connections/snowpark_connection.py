@@ -21,6 +21,7 @@
 import configparser
 import os
 import threading
+from collections import ChainMap
 from contextlib import contextmanager
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional, Union, cast
@@ -83,10 +84,11 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
     def _connect(self, **kwargs) -> "Session":
         from snowflake.snowpark.session import Session
 
-        conn_params = self._secrets.to_dict()
-
-        if not conn_params:
-            conn_params = _load_from_snowsql_config_file()
+        conn_params = ChainMap(
+            kwargs,
+            self._secrets.to_dict(),
+            _load_from_snowsql_config_file(),
+        )
 
         for p in _REQUIRED_CONNECTION_PARAMS:
             if p not in conn_params:
