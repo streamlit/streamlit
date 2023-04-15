@@ -31,6 +31,16 @@ _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
 class SQL(ExperimentalBaseConnection["Engine"]):
+    """A thin wrapper around SQLALchemy that makes it play nicely with
+    st.experimental_connection.
+
+    The SQL connection also provides the `query` convenience method, which can be used to
+    run simple read-only queries with both caching and simple error handling/retries.
+
+    More complex DB interactions can be performed by using the .session() contextmanager
+    pattern to receive a regular SQLAlchemy Session.
+    """
+
     def _connect(self, autocommit: bool = False, **kwargs) -> "Engine":
         import sqlalchemy
 
@@ -73,6 +83,22 @@ class SQL(ExperimentalBaseConnection["Engine"]):
         params=None,
         **kwargs,
     ) -> pd.DataFrame:
+        """Run a read-only query.
+
+        This method implements both query result caching (with caching behavior
+        identical to that of using @st.cache_data) as well as simple error handling/retries.
+        Note that queries that are run without a specified ttl are cached indefinitely.
+
+        Aside from the `ttl` kwarg, all kwargs passed to this function are passed down
+        to [pd.read_sql](https://pandas.pydata.org/docs/reference/api/pandas.read_sql.html).
+        and have the behavior described in the pandas documentation.
+
+        Returns
+        -------
+        pd.DataFrame
+            The result of running the query, formatted as a pandas DataFrame.
+        """
+
         from sqlalchemy import text
         from tenacity import retry, stop_after_attempt, wait_fixed
 
@@ -110,15 +136,19 @@ class SQL(ExperimentalBaseConnection["Engine"]):
 
     @contextmanager
     def session(self) -> Iterator["Session"]:
-        """A simple wrapper around SQLAlchemy Session context management.
+        """A thin wrapper around SQLAlchemy Session context management.
 
         This allows us to write
             `with conn.session() as session:`
         instead of importing the sqlalchemy.orm.Session object and writing
             `with Session(conn._instance) as session:`
 
+        Users of this connection should use the contextmanager pattern for writes,
+        transactions, and anything more complex than simple read queries.
+
         See the usage example below, which assumes we have a table `numbers` with a
-        single integer column `val`.
+        single integer column `val`. The [SQLAlchemy](https://docs.sqlalchemy.org/en/20/orm/session_basics.html)
+        docs also contain much more information on the usage of sessions.
 
         Example
         -------

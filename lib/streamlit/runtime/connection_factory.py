@@ -143,12 +143,41 @@ def connection_factory(
     ttl=None,
     **kwargs,
 ):
-    """TODO(vdonato): Write a docstring (maybe with the help of the documentation team).
+    """Create a new connection or return an existing one.
 
-    The docstring should describe:
-      * Using st.connection with one of our first party connections by passing a string
-        literal as the type.
-      * Plugging your own ConnectionClass into st.experimental_connection.
+    Config options, credentials, secrets, etc. for connections are sourced from various
+    sources:
+      * Any connection-specific configuration files.
+      * An app's `secrets.toml` files.
+      * The kwargs passed to this function.
+
+    Examples
+    --------
+    The easiest way to create a first-party (SQL or Snowpark) connection is to use their
+    default names and define corresponding sections in your config.toml file.
+
+    >>> import streamlit as st
+    >>> conn = st.connection("sql")  # Config section defined in [connections.sql] in secrets.toml.
+
+    Creating a SQL connection with a custom name requires you to explicitly specify the
+    type. If type is not passed in as a kwarg, we try to infer it from the contents of
+    your secrets.toml.
+
+    >>> import streamlit as st
+    >>> conn1 = st.connection("my_sql_connection", type="sql")  # Config section defined in [connections.my_sql_connection].
+    >>> conn2 = st.connection("my_other_sql_connection")  # Type is inferred from [connections.my_other_sql_connection].
+
+    Passing the full module path to the connection class that you want to use can be
+    useful, especially when working with a custom connection:
+
+    >>> import streamlit as st
+    >>> conn = st.connection("my_sql_connection", type="streamlit.connections.SQL")
+
+    Finally, you can even pass the connection class to use directly to this function.
+
+    >>> import streamlit as st
+    >>> from streamlit.connections import SQL
+    >>> conn = st.connection("my_sql_connection", type=SQL)
     """
     USE_ENV_PREFIX = "env:"
 

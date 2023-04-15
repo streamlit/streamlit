@@ -57,6 +57,18 @@ def _load_from_snowsql_config_file() -> Dict[str, Any]:
 
 
 class Snowpark(ExperimentalBaseConnection["Session"]):
+    """A thin wrapper around snowflake.snowpark.session.Session that makes it play
+    nicely with st.experimental_connection.
+
+    The Snowpark connection additionally ensures the underlying Snowpark Session can
+    only be accessed by a single thread at a time as Session object usage is *not* thread
+    safe.
+
+    NOTE: We don't expect this iteration of the Snowpark connection to be able to scale
+    well in apps with many concurrent users due to the lock contention that will occur
+    over the single underlying Session object under high load.
+    """
+
     def __init__(self, connection_name: str, **kwargs) -> None:
         self._lock = threading.RLock()
 
@@ -87,6 +99,12 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
         sql: str,
         ttl: Optional[Union[float, int, timedelta]] = None,
     ) -> pd.DataFrame:
+        """Run a read-only SQL query.
+
+        This method implements both query result caching (with caching behavior
+        identical to that of using @st.cache_data) as well as simple error handling/retries.
+        Note that queries that are run without a specified ttl are cached indefinitely.
+        """
         from tenacity import retry, stop_after_attempt, wait_fixed
 
         @retry(
@@ -104,5 +122,16 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
 
     @contextmanager
     def session(self) -> Iterator["Session"]:
+        """Grab the Snowpark session in a thread-safe manner.
+
+        As operations on a Snowpark session are *not* thread safe, we need to take care
+        when using a session in the context of a Streamlit app where each script run
+        occurs in its own thread. Using the contextmanager pattern to do this ensures
+        that access on this connection's underlying Session is done in a thread-safe
+        manner.
+
+        Information on how to use Snowpark sessions can be found in the
+        [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
+        """
         with self._lock:
             yield self._instance
