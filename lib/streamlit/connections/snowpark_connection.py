@@ -21,6 +21,7 @@
 import configparser
 import os
 import threading
+from collections import ChainMap
 from contextlib import contextmanager
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional, Union, cast
@@ -28,7 +29,6 @@ from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional, Union, cast
 import pandas as pd
 
 from streamlit.connections import ExperimentalBaseConnection
-from streamlit.connections.util import merge_dicts
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
@@ -72,12 +72,10 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
     def _connect(self, **kwargs) -> "Session":
         from snowflake.snowpark.session import Session
 
-        conn_params = merge_dicts(
-            [
-                _load_from_snowsql_config_file(),
-                self._secrets.to_dict(),
-                kwargs,
-            ]
+        conn_params = ChainMap(
+            kwargs,
+            self._secrets.to_dict(),
+            _load_from_snowsql_config_file(),
         )
 
         for p in _REQUIRED_CONNECTION_PARAMS:

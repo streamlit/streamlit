@@ -32,11 +32,19 @@ class SnowparkConnectionTest(unittest.TestCase):
     @pytest.mark.require_snowflake
     @patch(
         "streamlit.connections.snowpark_connection._load_from_snowsql_config_file",
-        MagicMock(return_value=AttrDict({"account": "some_val_1"})),
+        MagicMock(
+            return_value=AttrDict(
+                {"account": "some_val_1", "password": "i get overwritten"}
+            )
+        ),
     )
     @patch(
         "streamlit.connections.snowpark_connection.Snowpark._secrets",
-        PropertyMock(return_value=AttrDict({"user": "some_val_2"})),
+        PropertyMock(
+            return_value=AttrDict(
+                {"user": "some_val_2", "some_key": "i get overwritten"}
+            )
+        ),
     )
     @patch("snowflake.snowpark.session.Session")
     def test_merges_params_from_all_config_sources(self, patched_session):

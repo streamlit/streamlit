@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import ChainMap
 from contextlib import contextmanager
 from copy import deepcopy
 from datetime import timedelta
@@ -20,7 +21,7 @@ from typing import TYPE_CHECKING, Iterator, List, Optional, Union, cast
 import pandas as pd
 
 from streamlit.connections import ExperimentalBaseConnection
-from streamlit.connections.util import extract_from_dict, merge_dicts
+from streamlit.connections.util import extract_from_dict
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
@@ -46,8 +47,9 @@ class SQL(ExperimentalBaseConnection["Engine"]):
     def _connect(self, autocommit: bool = False, **kwargs) -> "Engine":
         import sqlalchemy
 
-        kwargs = extract_from_dict(_ALL_CONNECTION_PARAMS, deepcopy(kwargs))
-        conn_params = merge_dicts([self._secrets.to_dict(), kwargs])
+        kwargs = deepcopy(kwargs)
+        conn_param_kwargs = extract_from_dict(_ALL_CONNECTION_PARAMS, kwargs)
+        conn_params = ChainMap(conn_param_kwargs, self._secrets.to_dict())
 
         if "url" in conn_params:
             url = sqlalchemy.engine.make_url(conn_params["url"])

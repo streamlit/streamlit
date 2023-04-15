@@ -40,24 +40,3 @@ def extract_from_dict(
             d[k] = source_dict.pop(k)
 
     return d
-
-
-def merge_dicts(dicts: Collection[Dict[str, Any]]) -> Dict[str, Any]:
-    """Merge the given dicts, having keys in later dicts overwrite those of earlier dicts.
-
-    Parameters
-    ----------
-    dicts : Collection[Dict[str, Any]]
-        A collection of dicts to merge.
-
-    Returns
-    -------
-    Dict[str, Any]
-        The merged dict.
-    """
-    d = {}
-
-    for source_dict in dicts:
-        d.update(source_dict)
-
-    return d

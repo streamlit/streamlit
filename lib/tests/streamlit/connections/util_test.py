@@ -14,7 +14,7 @@
 
 import unittest
 
-from streamlit.connections.util import extract_from_dict, merge_dicts
+from streamlit.connections.util import extract_from_dict
 
 
 class ConnectionUtilTest(unittest.TestCase):
@@ -28,19 +28,3 @@ class ConnectionUtilTest(unittest.TestCase):
 
         assert extracted == {"k1": "v1", "k2": "v2"}
         assert d == {"k3": "v3", "k4": "v4"}
-
-    def test_merge_dicts(self):
-        assert merge_dicts(
-            [
-                {"k1": "v1_1"},
-                {"k1": "v1_2", "k2": "v2_1", "k3": "v3"},
-                {"k4": "v4", "k2": "v2_2"},
-                {"k1": "v1_3", "k5": "v5"},
-            ]
-        ) == {
-            "k1": "v1_3",
-            "k2": "v2_2",
-            "k3": "v3",
-            "k4": "v4",
-            "k5": "v5",
-        }
