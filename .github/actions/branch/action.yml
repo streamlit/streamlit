@@ -8,7 +8,7 @@ name: "Set BRANCH env variable"
 
 inputs:
   branch:
-    description: 'Name of the branch'
+    description: "Name of the branch"
 
 runs:
   using: composite

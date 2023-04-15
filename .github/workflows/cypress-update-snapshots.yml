@@ -29,7 +29,7 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
           persist-credentials: false
-          submodules: 'recursive'
+          submodules: "recursive"
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info

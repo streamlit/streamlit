@@ -3,7 +3,7 @@ name: Nightly Build
 on:
   schedule:
     # Run job at 10.30pm PST or 11.30pm PDT
-    - cron:  '30 6 * * *'
+    - cron: "30 6 * * *"
 
 jobs:
   create-nightly-tag:
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
         with:
-          submodules: 'recursive'
+          submodules: "recursive"
           # Save the access token to the local git config, so
           # later git commands can work.
           persist-credentials: true
@@ -101,7 +101,14 @@ jobs:
     if: ${{ always() }}
     # By default, jobs listed in needs must all complete successfully for the dependent job to run. always() conditional
     # added as we'd like this job to run whether or not tests pass & slack us regarding failing tests.
-    needs: [create-nightly-tag, run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+    needs:
+      [
+        create-nightly-tag,
+        run-python-tests,
+        run-javascript-tests,
+        run-py-prod-deps-smoke-test,
+        run-cypress-tests,
+      ]
 
     env:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
@@ -113,7 +120,7 @@ jobs:
         with:
           ref: ${{ needs.create-nightly-tag.outputs.tag }}
           persist-credentials: false
-          submodules: 'recursive'
+          submodules: "recursive"
       - if: ${{ needs.run-python-tests.result == 'failure' }}
         run: python scripts/slack_notifications.py nightly python
       - if: ${{ needs.run-javascript-tests.result == 'failure' }}
@@ -127,7 +134,14 @@ jobs:
     runs-on: ubuntu-latest
 
     # Tag creation & tests must all complete successfully for nightly build job to run.
-    needs: [create-nightly-tag, run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+    needs:
+      [
+        create-nightly-tag,
+        run-python-tests,
+        run-javascript-tests,
+        run-py-prod-deps-smoke-test,
+        run-cypress-tests,
+      ]
 
     defaults:
       run:
@@ -145,7 +159,7 @@ jobs:
           # Save the access token to the local git config, so
           # later git commands can work.
           persist-credentials: true
-          submodules: 'recursive'
+          submodules: "recursive"
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
