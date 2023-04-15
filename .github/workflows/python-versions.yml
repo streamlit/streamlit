@@ -13,6 +13,16 @@ on:
       ref:
         required: true
         type: string
+      force-canary:
+        description: |
+          Forces the current build to be canary.
+          Canary builds test all Python versions and do not use constraints.
+        default: false
+        type: boolean
+      constraints-branch:
+        description: "The name of the branch from which the constraints files will be downloaded or compared with."
+        default: "constraints-develop"
+        type: string
     secrets:
       PARAMETER_PASSWORD:
         description: "Token passed from caller workflows for snowflake integration tests"
@@ -47,11 +57,14 @@ jobs:
       - name: Set Python version vars
         id: build_info
         uses: ./.github/actions/build_info
+        with:
+          force-canary: ${{ inputs.force-canary || false }}
 
     outputs:
       PYTHON_VERSIONS: ${{ steps.build_info.outputs.PYTHON_VERSIONS }}
       PYTHON_MIN_VERSION: ${{ steps.build_info.outputs.PYTHON_MIN_VERSION }}
       PYTHON_MAX_VERSION: ${{ steps.build_info.outputs.PYTHON_MAX_VERSION }}
+      CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch }}
       USE_CONSTRAINT_FILE: ${{ steps.build_info.outputs.USE_CONSTRAINT_FILE }}
 
   py_version:

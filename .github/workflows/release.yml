@@ -49,13 +49,23 @@ jobs:
       GIT_TAG: ${{ github.ref_name }}
       # The owner and repository name
       GH_REPO: ${{ github.repository }}
+      # A branch with constraints files on the basis of which
+      # the tag will be created.
+      CONSTRAINTS_BRANCH: constraints-release
+      # The name of the tag that contains the constraints files
+      # for the current release
+      CONSTRAINTS_TAG: constraints/${{ github.ref_name }}
+      # We don't want to use constraints files because they might not exist yet.
+      USE_CONSTRAINT_FILE: "false"
 
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref_name }}
-          persist-credentials: false
+          # Save the access token to the local git config, so
+          # later git commands can work.
+          persist-credentials: true
           submodules: "recursive"
           fetch-depth: 2
       - name: Set Python version vars
@@ -131,6 +141,41 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/create_release.py
+
+      - name: Checkout branch "${{ env.CONSTRAINTS_BRANCH }}"
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ env.CONSTRAINTS_BRANCH }}
+          # Save the access token to the local git config, so
+          # later git commands can work.
+          persist-credentials: true
+          path: constraints
+      - uses: actions/download-artifact@v3
+        with:
+          name: constraints
+          path: constraints
+      - name: Commit and push constraint files as tag
+        run: |
+          cd constraints;
+          git add .
+          git config --local user.email "core+streamlitbot-github@streamlit.io"
+          git config --local user.name "Streamlit Bot"
+          if ! git diff --cached --color --exit-code --ignore-matching-lines="^#.*"
+          then
+            git commit --all --message "Updating constraints. Github run id:${GITHUB_RUN_ID}
+
+            This update in constraints is automatically committed by the CI based on
+            '${GITHUB_REF}' in the '${GITHUB_REPOSITORY}' repository with commit sha ${GITHUB_SHA}.
+
+            The action that build those constraints can be found at https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/
+            "
+          else
+            echo "No changes"
+          fi
+          git tag "${CONSTRAINTS_TAG}"
+          git push origin "${CONSTRAINTS_TAG}";
+          git push origin "${CONSTRAINTS_BRANCH}";
+
       - name: Successful Release Slack Message
         if: ${{ success() }}
         env:
