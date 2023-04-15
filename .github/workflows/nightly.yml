@@ -40,6 +40,8 @@ jobs:
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Run make develop
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: make develop
       - name: Create tag
         id: create_tag
@@ -165,6 +167,8 @@ jobs:
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Run make develop
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: make develop
       - name: Verify git tag vs. version
         env:
@@ -174,6 +178,8 @@ jobs:
           python setup.py verify
       - name: Build Package
         timeout-minutes: 120
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           sudo apt install rsync
           make package

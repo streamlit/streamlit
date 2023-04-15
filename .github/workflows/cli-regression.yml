@@ -38,6 +38,8 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Build Package - Fast
         timeout-minutes: 120
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           sudo apt install rsync
           BUILD_AS_FAST_AS_POSSIBLE=1 make package

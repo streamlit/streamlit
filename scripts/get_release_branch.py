@@ -14,7 +14,11 @@
 # limitations under the License.
 
 """Retrieve the branch name from the release PR"""
+import os
+
 import requests
+
+github_repo = os.environ.get("GH_REPO", "streamlit/streamlit")
 
 
 # Assumes there is only one open pull request with a release/ branch
@@ -28,14 +32,22 @@ def check_for_release_pr(pull):
 def get_release_branch():
     """Retrieve the release branch from the release PR"""
 
-    url = "https://api.github.com/repos/streamlit/streamlit/pulls"
-    response = requests.get(url).json()
-
+    headers = {}
+    # If the token is available, use it. This allows for easier
+    # testing of the script in private forks.
+    # For a public repository it doesn't matter, but it's still good practice to
+    # submit a token so GitHub can track who's sending requests.
+    github_token = os.environ.get("GH_TOKEN")
+    if github_token:
+        headers["Authorization"] = f"Bearer {github_token}"
+    url = f"https://api.github.com/repos/{github_repo}/pulls"
+    response = requests.get(url, headers=headers).json()
     # Response is in an array, must map over each pull (dict)
     for pull in response:
         ref = check_for_release_pr(pull)
         if ref != None:
             return ref
+    raise Exception("Unknown release branch")
 
 
 def main():

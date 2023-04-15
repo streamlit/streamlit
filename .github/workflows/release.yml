@@ -9,6 +9,7 @@ jobs:
     uses: ./.github/workflows/python-versions.yml
     with:
       ref: ${{ github.ref_name }}
+      force-canary: true
     secrets:
       PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
 
@@ -16,16 +17,19 @@ jobs:
     uses: ./.github/workflows/js-tests.yml
     with:
       ref: ${{ github.ref_name }}
+    secrets: inherit
 
   run-py-prod-deps-smoke-test:
     uses: ./.github/workflows/py-prod-deps-smoke-test.yml
     with:
       ref: ${{ github.ref_name }}
+    secrets: inherit
 
   run-cypress-tests:
     uses: ./.github/workflows/cypress.yml
     with:
       ref: ${{ github.ref_name }}
+    secrets: inherit
 
   build-release:
     runs-on: ubuntu-latest
@@ -43,6 +47,8 @@ jobs:
     permissions:
       # Additional permission needed to generate release
       contents: write
+      # Required by "scripts/get_release_branch.py" script
+      pull-requests: read
 
     env:
       # Name of the tag
@@ -110,6 +116,8 @@ jobs:
           python scripts/update_version.py "$STREAMLIT_RELEASE_VERSION"
       - name: Create Package
         timeout-minutes: 120
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           sudo apt install rsync
           make package
@@ -119,6 +127,8 @@ jobs:
           name: Release
           path: lib/dist
       - name: Upload to PyPI
+        # For private forks, we don't want to publish releases in PyPi.
+        if: github.repository == 'streamlit/streamlit'
         env:
           TWINE_USERNAME: ${{ secrets.STREAMLIT_PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.STREAMLIT_PYPI_API_TOKEN }}

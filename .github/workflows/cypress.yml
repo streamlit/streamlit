@@ -21,7 +21,8 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest-8-cores
+    # Forks may not have 8 cores runners available, so use the default runners.
+    runs-on: $(( github.repository == 'streamlit/streamlit' && 'ubuntu-latest-8-cores' || 'ubuntu-latest' }}
 
     defaults:
       run:
@@ -56,6 +57,8 @@ jobs:
         run: |
           sudo apt install -y xvfb libgtk2.0-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 curl
       - name: Run make develop
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: make develop
       - name: Register Streamlit User & Mapbox Token
         run: |

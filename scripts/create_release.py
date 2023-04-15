@@ -24,11 +24,12 @@ def create_release():
 
     tag = os.getenv("GIT_TAG")
     access_token = os.getenv("GH_TOKEN")
+    repo = os.getenv("GH_REPO")
 
     if not tag:
         raise Exception("Unable to retrieve GIT_TAG environment variable")
 
-    url = "https://api.github.com/repos/streamlit/streamlit/releases"
+    url = f"https://api.github.com/repos/{repo}/releases"
     header = {"Authorization": f"token {access_token}"}
     payload = {"tag_name": tag, "name": tag}
 

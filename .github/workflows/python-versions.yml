@@ -107,6 +107,8 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Run Linters
         run: |
           PRE_COMMIT_NO_CONCURRENCY=true pre-commit run --show-diff-on-failure --color=always --all-files
@@ -131,7 +133,12 @@ jobs:
         if: ${{ always() }}
         run: |
           CONSTRAINT_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${CONSTRAINTS_BRANCH}/constraints-${PYTHON_VERSION}.txt"
-          diff -y <(echo "Old"; curl -s "${CONSTRAINT_URL}") <(echo "New"; cat "${CONSTRAINTS_FILE}") || true
+          echo "CONSTRAINT_URL=${CONSTRAINT_URL}"
+          diff -y \
+            <(echo "Old"; curl -s "${CONSTRAINT_URL}" --header "Authorization: Bearer $GH_TOKEN") \
+            <(echo "New"; cat "${CONSTRAINTS_FILE}") || true
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Upload constraints file
         uses: actions/upload-artifact@v3
         with:
@@ -228,6 +235,8 @@ jobs:
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Run make develop
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: make develop
       - name: Run Type Checkers
         run: scripts/mypy --report

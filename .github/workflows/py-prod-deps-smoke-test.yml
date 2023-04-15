@@ -46,6 +46,8 @@ jobs:
         with:
           use_cached_venv: "false"
       - name: Run make develop
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: make develop
       - name: Run CLI smoke tests
         run: make cli-smoke-tests

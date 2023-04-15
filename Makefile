@@ -101,7 +101,14 @@ python-init-test-only: lib/test-requirements.txt
 python-init:
 	pip_args=("install" "--editable" "lib[snowflake]");\
 	if [ "${USE_CONSTRAINT_FILE}" = "true" ] ; then\
-		pip_args+=(--constraint "${CONSTRAINTS_URL}"); \
+		if [ -n "$${GH_TOKEN}" ] ; then \
+			constraint_file="$$(mktemp)";\
+			echo "Downloading file ${CONSTRAINTS_URL} to $${constraint_file}";\
+			curl -s "${CONSTRAINTS_URL}" --header "Authorization: Bearer $${GH_TOKEN}" > "$${constraint_file}";\
+			pip_args+=(--constraint "$${constraint_file}"); \
+		else\
+			pip_args+=(--constraint "${CONSTRAINTS_URL}"); \
+		fi;\
 	fi;\
 	if [ "${INSTALL_DEV_REQS}" = "true" ] ; then\
 		pip_args+=("--requirement" "lib/dev-requirements.txt"); \
