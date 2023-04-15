@@ -68,6 +68,21 @@ class SQLConnectionTest(unittest.TestCase):
             == "postgres+psycopg2://AzureDiamond:hunter2@localhost:5432/postgres"
         )
 
+    @patch(
+        "streamlit.connections.sql_connection.SQL._secrets",
+        PropertyMock(return_value=AttrDict(DB_SECRETS)),
+    )
+    @patch("sqlalchemy.create_engine")
+    def test_kwargs_overwrite_secrets_values(self, patched_create_engine):
+        SQL("my_sql_connection", port=2345, username="DnomaidEruza")
+
+        patched_create_engine.assert_called_once()
+        args, _ = patched_create_engine.call_args_list[0]
+        assert (
+            str(args[0])
+            == "postgres+psycopg2://DnomaidEruza:hunter2@localhost:2345/postgres"
+        )
+
     @parameterized.expand([("dialect",), ("username",), ("host",)])
     def test_error_if_missing_required_param(self, missing_param):
         secrets = deepcopy(DB_SECRETS)
