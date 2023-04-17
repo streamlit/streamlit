@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from abc import ABC
 from dataclasses import dataclass, field
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
 from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
@@ -1037,6 +1037,7 @@ class TimeInput(Element, Widget):
     type: str
     id: str
     label: str
+    step: int
     help: str
     form_id: str
     disabled: bool
@@ -1052,6 +1053,7 @@ class TimeInput(Element, Widget):
         self.type = "time_input"
         self.id = proto.id
         self.label = proto.label
+        self.step = proto.step
         self.help = proto.help
         self.form_id = proto.form_id
         self.disabled = proto.disabled
@@ -1079,6 +1081,14 @@ class TimeInput(Element, Widget):
             state = self.root.session_state
             assert state
             return state[self.id]  # type: ignore
+
+    def increment(self) -> TimeInput:
+        dt = datetime.combine(date.today(), self.value) + timedelta(seconds=self.step)
+        return self.set_value(dt.time())
+
+    def decrement(self) -> TimeInput:
+        dt = datetime.combine(date.today(), self.value) - timedelta(seconds=self.step)
+        return self.set_value(dt.time())
 
 
 @dataclass(init=False, repr=False)
@@ -1207,6 +1217,14 @@ class Block:
 
     @overload
     def get(self, element_type: Literal["number_input"]) -> Sequence[NumberInput]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["date_input"]) -> Sequence[DateInput]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["time_input"]) -> Sequence[TimeInput]:
         ...
 
     def get(self, element_type: str) -> Sequence[Node]:
@@ -1368,6 +1386,10 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Code(elt.code, root=root)
             elif elt.WhichOneof("type") == "color_picker":
                 new_node = ColorPicker(elt.color_picker, root=root)
+            elif elt.WhichOneof("type") == "date_input":
+                new_node = DateInput(elt.date_input, root=root)
+            elif elt.WhichOneof("type") == "time_input":
+                new_node = TimeInput(elt.time_input, root=root)
             else:
                 new_node = Element(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":

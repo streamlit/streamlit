@@ -530,3 +530,40 @@ class ColorPickerTest(InteractiveScriptTests):
 
         sr2 = sr.get("color_picker")[0].pick("#123456").run()
         assert sr2.get("color_picker")[0].value == "#123456"
+
+
+class DateInputTest(InteractiveScriptTests):
+    def test_value(self):
+        ...
+
+
+class TimeInputTest(InteractiveScriptTests):
+    def test_value(self):
+        script = self.script_from_string(
+            "time_input.py",
+            """
+            import streamlit as st
+            import datetime
+
+            st.time_input("time", value=datetime.time(8, 30))
+            st.time_input("datetime", value=datetime.datetime(2000,1,1, hour=17), step=3600)
+            st.time_input("timedelta step", value=datetime.time(2), step=datetime.timedelta(minutes=1))
+            """,
+        )
+        sr = script.run()
+        assert not sr.get("exception")
+        assert [t.value for t in sr.get("time_input")] == [
+            time(8, 30),
+            time(17),
+            time(2),
+        ]
+        tis = sr.get("time_input")
+        tis[0].increment()
+        tis[1].decrement()
+        tis[2].increment()
+        sr2 = sr.run()
+        assert [t.value for t in sr2.get("time_input")] == [
+            time(8, 45),
+            time(16),
+            time(2, 1),
+        ]
