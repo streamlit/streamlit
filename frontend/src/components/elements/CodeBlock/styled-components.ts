@@ -135,6 +135,15 @@ export const StyledCopyButtonContainer = styled.div(({ theme }) => ({
   height: "100%",
   backgroundColor: theme.colors.transparent,
   zIndex: theme.zIndices.sidebar + 1,
+
+  "&:hover": {
+    [`${StyledCopyButton}`]: {
+      opacity: 1,
+      transform: "scale(1)",
+      outline: "none",
+      transition: "none",
+    },
+  },
 }))
 
 export const StyledCodeBlock = styled.div(({ theme }) => ({
