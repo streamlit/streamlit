@@ -49,7 +49,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     MsgData,
     replay_cached_messages,
 )
-from streamlit.runtime.caching.hashing import update_hash
+from streamlit.runtime.caching.hashing import HashFuncsDict, update_hash
 
 _LOGGER = get_logger(__name__)
 
@@ -154,10 +154,12 @@ class CachedFuncInfo:
         func: types.FunctionType,
         show_spinner: bool | str,
         allow_widgets: bool,
+        hash_funcs: HashFuncsDict | None,
     ):
         self.func = func
         self.show_spinner = show_spinner
         self.allow_widgets = allow_widgets
+        self.hash_funcs = hash_funcs
 
     @property
     def cache_type(self) -> CacheType:
@@ -239,6 +241,7 @@ class CachedFunc:
             func=self._info.func,
             func_args=func_args,
             func_kwargs=func_kwargs,
+            hash_funcs=self._info.hash_funcs,
         )
 
         try:
@@ -336,6 +339,7 @@ def _make_value_key(
     func: types.FunctionType,
     func_args: tuple[Any, ...],
     func_kwargs: dict[str, Any],
+    hash_funcs: HashFuncsDict | None,
 ) -> str:
     """Create the key for a value within a cache.
 
@@ -376,6 +380,7 @@ def _make_value_key(
                 (arg_name, arg_value),
                 hasher=args_hasher,
                 cache_type=cache_type,
+                hash_funcs=hash_funcs,
             )
         except UnhashableTypeError as exc:
             raise UnhashableParamError(cache_type, func, arg_name, arg_value, exc)

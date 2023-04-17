@@ -44,6 +44,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     MsgData,
     MultiCacheResults,
 )
+from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.caching.storage import (
     CacheStorage,
     CacheStorageContext,
@@ -80,11 +81,13 @@ class CachedDataFuncInfo(CachedFuncInfo):
         max_entries: int | None,
         ttl: float | timedelta | None,
         allow_widgets: bool,
+        hash_funcs: HashFuncsDict | None = None,
     ):
         super().__init__(
             func,
             show_spinner=show_spinner,
             allow_widgets=allow_widgets,
+            hash_funcs=hash_funcs,
         )
         self.persist = persist
         self.max_entries = max_entries
@@ -365,6 +368,7 @@ class CacheDataAPI:
         show_spinner: bool | str = True,
         persist: CachePersistType | bool = None,
         experimental_allow_widgets: bool = False,
+        hash_funcs: HashFuncsDict | None = None,
     ):
         return self._decorator(
             func,
@@ -373,6 +377,7 @@ class CacheDataAPI:
             persist=persist,
             show_spinner=show_spinner,
             experimental_allow_widgets=experimental_allow_widgets,
+            hash_funcs=hash_funcs,
         )
 
     def _decorator(
@@ -384,6 +389,7 @@ class CacheDataAPI:
         show_spinner: bool | str,
         persist: CachePersistType | bool,
         experimental_allow_widgets: bool,
+        hash_funcs: HashFuncsDict | None = None,
     ):
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
 
@@ -521,6 +527,7 @@ class CacheDataAPI:
                     max_entries=max_entries,
                     ttl=ttl,
                     allow_widgets=experimental_allow_widgets,
+                    hash_funcs=hash_funcs,
                 )
             )
 
@@ -535,6 +542,7 @@ class CacheDataAPI:
                 max_entries=max_entries,
                 ttl=ttl,
                 allow_widgets=experimental_allow_widgets,
+                hash_funcs=hash_funcs,
             )
         )
 

@@ -28,7 +28,7 @@ import unittest.mock
 import uuid
 import weakref
 from enum import Enum
-from typing import Any, Dict, List, Optional, Pattern
+from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
 
 from streamlit import type_util, util
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
@@ -43,17 +43,24 @@ _PANDAS_SAMPLE_SIZE = 10000
 _NP_SIZE_LARGE = 1000000
 _NP_SAMPLE_SIZE = 100000
 
+HashFuncsDict = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
+
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
 _CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
 
 
-def update_hash(val: Any, hasher, cache_type: CacheType) -> None:
+def update_hash(
+    val: Any,
+    hasher,
+    cache_type: CacheType,
+    hash_funcs: Optional[HashFuncsDict] = None,
+) -> None:
     """Updates a hashlib hasher with the hash of val.
 
     This is the main entrypoint to hashing.py.
     """
-    ch = _CacheFuncHasher(cache_type)
+    ch = _CacheFuncHasher(cache_type, hash_funcs)
     ch.update(hasher, val)
 
 
@@ -161,7 +168,24 @@ def _key(obj: Optional[Any]) -> Any:
 class _CacheFuncHasher:
     """A hasher that can hash objects with cycles."""
 
-    def __init__(self, cache_type: CacheType):
+    def __init__(
+        self, cache_type: CacheType, hash_funcs: Optional[HashFuncsDict] = None
+    ):
+        # Can't use types as the keys in the internal _hash_funcs because
+        # we always remove user-written modules from memory when rerunning a
+        # script in order to reload it and grab the latest code changes.
+        # (See LocalSourcesWatcher.py:on_file_changed) This causes
+        # the type object to refer to different underlying class instances each run,
+        # so type-based comparisons fail. To solve this, we use the types converted
+        # to fully-qualified strings as keys in our internal dict.
+        self._hash_funcs: HashFuncsDict
+        if hash_funcs:
+            self._hash_funcs = {
+                k if isinstance(k, str) else type_util.get_fqn(k): v
+                for k, v in hash_funcs.items()
+            }
+        else:
+            self._hash_funcs = {}
         self._hashes: Dict[Any, bytes] = {}
 
         # The number of the bytes in the hash.
@@ -225,6 +249,15 @@ class _CacheFuncHasher:
 
         elif isinstance(obj, bytes) or isinstance(obj, bytearray):
             return obj
+
+        elif type_util.get_fqn_type(obj) in self._hash_funcs:
+            # Escape hatch for unsupported objects
+            hash_func = self._hash_funcs[type_util.get_fqn_type(obj)]
+            try:
+                output = hash_func(obj)
+            except Exception as ex:
+                raise UnhashableTypeError("AAAAAAAAA") from ex
+            return self.to_bytes(output)
 
         elif isinstance(obj, str):
             return obj.encode()

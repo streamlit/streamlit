@@ -408,7 +408,7 @@ class CacheTest(DeltaGeneratorTestCase):
         def foo(string_arg):
             return []
 
-        # If our str hash_func is called multiple times, it's probably because
+        # If our str hash_funcs is called multiple times, it's probably because
         # it's being used to compute the function's cache_key (as opposed to
         # the value_key). It should only be used to compute the value_key!
         foo("ahoy")
