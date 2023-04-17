@@ -89,6 +89,7 @@ GITHUB_EVENT_NAME = GITHUB_CONTEXT["event_name"]
 class GithubEvent(enum.Enum):
     PULL_REQUEST = "pull_request"
     PUSH = "push"
+    SCHEDULE = "schedule"
 
 
 def get_changed_files() -> List[str]:
@@ -182,6 +183,8 @@ def is_canary_build() -> bool:
     For push event, we return true when the default branch is checked. In other case,
     we return false.
 
+    For scheduled event, we always return true.
+
     For other events, we return false
     """
     if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
@@ -208,8 +211,15 @@ def is_canary_build() -> bool:
             )
             return True
         return False
+    elif GITHUB_EVENT_NAME == GithubEvent.SCHEDULE.value:
+        print(
+            "Current build is canary, "
+            f"because current github event name is {GITHUB_EVENT_NAME!r}"
+        )
+        return True
+
     print(
-        "Current build is canary, "
+        "Current build is NOT canary, "
         f"because current github event name is {GITHUB_EVENT_NAME!r}"
     )
     return False
