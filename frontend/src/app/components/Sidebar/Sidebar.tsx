@@ -34,7 +34,7 @@ import {
   StyledSidebarUserContent,
   StyledResizeHandle,
 } from "./styled-components"
-import IsSidebarContext from "./IsSidebarContext"
+import IsSidebarContext from "src/lib/components/core/IsSidebarContext"
 import SidebarNav from "./SidebarNav"
 
 export interface SidebarProps {

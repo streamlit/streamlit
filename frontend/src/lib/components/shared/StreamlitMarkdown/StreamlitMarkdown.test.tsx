@@ -19,7 +19,7 @@ import "@testing-library/jest-dom"
 import ReactMarkdown from "react-markdown"
 import { mount, render } from "src/lib/test_util"
 import { cleanup } from "@testing-library/react"
-import IsSidebarContext from "src/app/components/Sidebar/IsSidebarContext"
+import IsSidebarContext from "src/lib/components/core/IsSidebarContext"
 import { Heading as HeadingProto } from "src/autogen/proto"
 import { colors } from "src/lib/theme/primitives/colors"
 import StreamlitMarkdown, {
