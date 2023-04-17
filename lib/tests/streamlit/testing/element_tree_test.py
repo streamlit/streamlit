@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime, time
+from datetime import date, datetime, time
 
 import pytest
 
@@ -534,7 +534,35 @@ class ColorPickerTest(InteractiveScriptTests):
 
 class DateInputTest(InteractiveScriptTests):
     def test_value(self):
-        ...
+        script = self.script_from_string(
+            "date_input.py",
+            """
+            import streamlit as st
+            import datetime
+
+            st.date_input("date", value=datetime.date(2023, 4, 17))
+            st.date_input("datetime", value=datetime.datetime(2023, 4, 17, 11))
+            st.date_input("range", value=(datetime.date(2020, 1, 1), datetime.date(2030, 1, 1)))
+            """,
+        )
+        sr = script.run()
+        assert not sr.get("exception")
+        assert [d.value for d in sr.get("date_input")] == [
+            date(2023, 4, 17),
+            datetime(2023, 4, 17).date(),
+            (date(2020, 1, 1), date(2030, 1, 1)),
+        ]
+        ds = sr.get("date_input")
+        ds[0].set_value(date(2023, 5, 1))
+        ds[1].set_value(datetime(2023, 1, 1))
+        ds[2].set_value((date(2023, 1, 1), date(2024, 1, 1)))
+
+        sr2 = sr.run()
+        assert [d.value for d in sr2.get("date_input")] == [
+            date(2023, 5, 1),
+            date(2023, 1, 1),
+            (date(2023, 1, 1), date(2024, 1, 1)),
+        ]
 
 
 class TimeInputTest(InteractiveScriptTests):
