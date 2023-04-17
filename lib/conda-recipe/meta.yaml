@@ -71,6 +71,6 @@ test:
 
 about:
   home: https://streamlit.io
-  summary: The fastest way to build data apps in Python
+  summary: A faster way to build and share data apps
   license: Apache-2.0
   license_file: LICENSE
