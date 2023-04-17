@@ -79,10 +79,18 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
         with self._lock:
             super().__init__(connection_name, **kwargs)
 
-    # TODO(vdonato): Teach the .connect() method how to automagically connect in a SiS
-    # runtime environment.
     def _connect(self, **kwargs) -> "Session":
+        from snowflake.snowpark.context import get_active_session
+        from snowflake.snowpark.exceptions import SnowparkSessionException
         from snowflake.snowpark.session import Session
+
+        # If we're in a runtime environment where there's already an active session
+        # available, we just use that one. Otherwise, we fall back to attempting to
+        # create a new one from whatever credentials we have available.
+        try:
+            return get_active_session()
+        except SnowparkSessionException:
+            pass
 
         conn_params = ChainMap(
             kwargs,
