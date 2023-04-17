@@ -8,11 +8,11 @@ name: "Set PREVIEW_BRANCH & BRANCH env variables"
 
 inputs:
   pull_request_number:
-    description: 'Pull request number'
+    description: "Pull request number"
   ref_type:
-    description: 'The type of Git ref object created in the repository. Can be either branch or tag'
+    description: "The type of Git ref object created in the repository. Can be either branch or tag"
   branch:
-    description: 'Name of the branch'
+    description: "Name of the branch"
 
 runs:
   using: composite
