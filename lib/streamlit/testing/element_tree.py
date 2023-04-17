@@ -1012,7 +1012,7 @@ class DateInput(Element, Widget):
         ws = WidgetState()
         ws.id = self.id
 
-        serde = DateInputSerde(None)
+        serde = DateInputSerde(None)  # type: ignore
         ws.string_array_value.data[:] = serde.serialize(self.value)
         return ws
 
@@ -1020,7 +1020,7 @@ class DateInput(Element, Widget):
     def value(self) -> DateWidgetReturn:
         if self._value is not None:
             parsed, _ = _parse_date_value(self._value)
-            return tuple(parsed)
+            return tuple(parsed)  # type: ignore
         else:
             state = self.root.session_state
             assert state
@@ -1067,7 +1067,7 @@ class TimeInput(Element, Widget):
         ws = WidgetState()
         ws.id = self.id
 
-        serde = TimeInputSerde(None)
+        serde = TimeInputSerde(None)  # type: ignore
         ws.string_value = serde.serialize(self.value)
         return ws
 
