@@ -3,8 +3,8 @@ name: Cypress
 on:
   push:
     branches:
-      - 'develop'
-      - 'feature/**'
+      - "develop"
+      - "feature/**"
   pull_request:
     types: [opened, synchronize, reopened]
   # Allows workflow to be called from other workflows
@@ -33,6 +33,7 @@ jobs:
         # In case of number of workers would change, update TOTAL_WORKERS env variable in "Cypress Tests" step.
         # Be aware that specs should be sequential integers starting from 1 without gaps
         # based on logic in "Cypress Tests" step.
+        # prettier-ignore
         specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
 
     steps:
@@ -41,7 +42,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-          submodules: 'recursive'
+          submodules: "recursive"
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info

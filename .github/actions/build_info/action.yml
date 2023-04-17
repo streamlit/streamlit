@@ -18,7 +18,6 @@ outputs:
     description: Whether to use a constraint file to install Python dependencies
     value: ${{ steps.build_info.outputs.USE_CONSTRAINT_FILE }}
 
-
 runs:
   using: composite
   steps:

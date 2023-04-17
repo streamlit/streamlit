@@ -2,8 +2,8 @@ name: "Setup Virtual Env"
 
 inputs:
   use_cached_venv:
-    description: 'Use Cached Virtual Env'
-    default: 'true'
+    description: "Use Cached Virtual Env"
+    default: "true"
 
 runs:
   using: composite
@@ -22,9 +22,9 @@ runs:
     - name: Setup Node
       uses: actions/setup-node@v3
       with:
-        node-version-file: '.nvmrc'
-        cache: 'yarn'
-        cache-dependency-path: '**/yarn.lock'
+        node-version-file: ".nvmrc"
+        cache: "yarn"
+        cache-dependency-path: "**/yarn.lock"
     - name: Initialize React
       run: |
         # Create the cache directory if it does not exist.
