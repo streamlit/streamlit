@@ -18,6 +18,10 @@ import React, { ReactElement, useEffect, useCallback } from "react"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { BokehChart as BokehChartProto } from "src/autogen/proto"
 
+// bokeh doesn't play well with babel / cra (https://github.com/bokeh/bokeh/issues/10658)
+// have consumers provide their own bokeh minified implementation
+import "./bokeh-2.4.3.min.js"
+
 export interface BokehChartProps {
   width: number
   element: BokehChartProto
