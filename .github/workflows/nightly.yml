@@ -102,13 +102,11 @@ jobs:
     # By default, jobs listed in needs must all complete successfully for the dependent job to run. always() conditional
     # added as we'd like this job to run whether or not tests pass & slack us regarding failing tests.
     needs:
-      [
-        create-nightly-tag,
-        run-python-tests,
-        run-javascript-tests,
-        run-py-prod-deps-smoke-test,
-        run-cypress-tests,
-      ]
+      - create-nightly-tag
+      - run-python-tests
+      - run-javascript-tests
+      - run-py-prod-deps-smoke-test
+      - run-cypress-tests
 
     env:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
@@ -135,13 +133,11 @@ jobs:
 
     # Tag creation & tests must all complete successfully for nightly build job to run.
     needs:
-      [
-        create-nightly-tag,
-        run-python-tests,
-        run-javascript-tests,
-        run-py-prod-deps-smoke-test,
-        run-cypress-tests,
-      ]
+      - create-nightly-tag
+      - run-python-tests
+      - run-javascript-tests
+      - run-py-prod-deps-smoke-test
+      - run-cypress-tests
 
     defaults:
       run:
