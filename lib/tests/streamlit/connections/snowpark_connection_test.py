@@ -25,11 +25,11 @@ from streamlit.runtime.secrets import AttrDict
 from tests.testutil import create_mock_script_run_ctx
 
 
+@pytest.mark.require_snowflake
 class SnowparkConnectionTest(unittest.TestCase):
     def tearDown(self) -> None:
         st.cache_data.clear()
 
-    @pytest.mark.require_snowflake
     @patch(
         "snowflake.snowpark.context.get_active_session",
         MagicMock(return_value="some active session"),
@@ -38,7 +38,6 @@ class SnowparkConnectionTest(unittest.TestCase):
         conn = Snowpark("my_snowpark_connection")
         assert conn._instance == "some active session"
 
-    @pytest.mark.require_snowflake
     @patch(
         "streamlit.connections.snowpark_connection._load_from_snowsql_config_file",
         MagicMock(
