@@ -32,7 +32,7 @@
     "sourceType": "module"
   },
   // Ignore our auto-generated code
-  "ignorePatterns": ["src/autogen/*", "src/**/bokeh-*.min.js"],
+  "ignorePatterns": ["src/autogen/*", "**/vendor/*"],
   "plugins": ["no-relative-import-paths"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
