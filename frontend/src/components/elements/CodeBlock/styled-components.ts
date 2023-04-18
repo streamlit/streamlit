@@ -127,7 +127,7 @@ export const StyledCodeBlock = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.none,
   marginRight: theme.spacing.none,
   marginTop: theme.spacing.none,
-  marginBottom: theme.spacing.lg,
+  marginBottom: theme.spacing.none,
   "&:hover": {
     [`${StyledCopyButtonContainer}`]: {
       opacity: 1,
