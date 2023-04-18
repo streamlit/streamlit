@@ -118,12 +118,21 @@ class SQL(ExperimentalBaseConnection["Engine"]):
         """
 
         from sqlalchemy import text
-        from tenacity import retry, stop_after_attempt, wait_fixed
+        from sqlalchemy.exc import DatabaseError, InternalError, OperationalError
+        from tenacity import (
+            retry,
+            retry_if_exception_type,
+            stop_after_attempt,
+            wait_fixed,
+        )
 
         @retry(
             after=lambda _: self.reset(),
             stop=stop_after_attempt(3),
             reraise=True,
+            retry=retry_if_exception_type(
+                (DatabaseError, InternalError, OperationalError)
+            ),
             wait=wait_fixed(1),
         )
         @cache_data(ttl=ttl)
