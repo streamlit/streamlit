@@ -18,5 +18,9 @@
     "strict": true,
     "target": "es5"
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "node_modules",
+    "**/bokeh-*.min.js"
+  ]
 }
