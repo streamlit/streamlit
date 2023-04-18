@@ -47,7 +47,7 @@ export default function StreamlitSyntaxHighlighter({
           {children}
         </SyntaxHighlighter>
       </StyledPre>
-      {typeof children === "string" && (
+      {typeof children === "string" && children.trim() !== "" && (
         <StyledCopyButtonContainer>
           <CopyButton text={children} />
         </StyledCopyButtonContainer>
