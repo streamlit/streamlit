@@ -105,45 +105,21 @@ export const StyledPre = styled.pre(({ theme }) => ({
   },
 }))
 
-export const StyledCopyButton = styled.button(({ theme }) => ({
-  opacity: 0,
-  height: "2.5rem",
-  padding: 0,
-  width: "2.5rem",
-  transition: "opacity 300ms 150ms, transform 300ms 150ms",
-  border: "none",
-  backgroundColor: theme.colors.transparent,
-  color: theme.colors.fadedText60,
-  borderRadius: theme.radii.xl,
-  transform: "scale(0)",
-
-  "&:active, &:focus, &:hover": {
-    opacity: 1,
-    transform: "scale(1)",
-    outline: "none",
-    color: theme.colors.bodyText,
-    transition: "none",
-  },
-}))
-
 export const StyledCopyButtonContainer = styled.div(({ theme }) => ({
+  opacity: 0,
   padding: `${theme.spacing.sm} ${theme.spacing.sm} 0 0`,
   top: 0,
   right: 0,
   position: "absolute",
-  width: "2.75rem",
+  width: "100%",
   height: "100%",
   backgroundColor: theme.colors.transparent,
   zIndex: theme.zIndices.sidebar + 1,
-
-  "&:hover": {
-    [`${StyledCopyButton}`]: {
-      opacity: 1,
-      transform: "scale(1)",
-      outline: "none",
-      transition: "none",
-    },
-  },
+  display: "flex",
+  justifyContent: "flex-end",
+  alignItems: "flex-start",
+  transition: "opacity 300ms 150ms",
+  pointerEvents: "none",
 }))
 
 export const StyledCodeBlock = styled.div(({ theme }) => ({
@@ -153,11 +129,36 @@ export const StyledCodeBlock = styled.div(({ theme }) => ({
   marginTop: theme.spacing.none,
   marginBottom: theme.spacing.lg,
   "&:hover": {
-    [StyledCopyButton as any]: {
+    [`${StyledCopyButtonContainer}`]: {
       opacity: 1,
-      transform: "scale(1)",
-      outline: "none",
-      transition: "none",
     },
+  },
+}))
+
+export const StyledCopyButton = styled.button(({ theme }) => ({
+  pointerEvents: "auto",
+  height: "2.5rem",
+  padding: 0,
+  width: "2.5rem",
+  border: "none",
+  backgroundColor: theme.colors.transparent,
+  color: theme.colors.fadedText60,
+  borderRadius: theme.radii.xl,
+  transform: "scale(0)",
+
+  [`${StyledCodeBlock}:hover &`]: {
+    opacity: 1,
+    transform: "scale(1)",
+    outline: "none",
+    transition: "none",
+    color: theme.colors.bodyText,
+  },
+
+  "&:active, &:focus, &:hover": {
+    opacity: 1,
+    transform: "scale(1)",
+    outline: "none",
+    color: theme.colors.bodyText,
+    transition: "none",
   },
 }))

@@ -73,7 +73,6 @@ import { ComponentInstance } from "src/components/widgets/CustomComponent/"
 import { Kind } from "src/components/shared/AlertContainer"
 import { VegaLiteChartElement } from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 import { getAlertKind } from "src/components/elements/Alert/Alert"
-import { StyledCopyButtonContainer } from "src/components/elements/CodeBlock/styled-components"
 
 import Maybe from "src/components/core/Maybe/"
 import { FormSubmitContent } from "src/components/widgets/Form"
@@ -158,9 +157,6 @@ const NumberInput = React.lazy(
 )
 const StreamlitSyntaxHighlighter = React.lazy(
   () => import("src/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
-)
-const CopyButton = React.lazy(
-  () => import("src/components/elements/CodeBlock/CopyButton")
 )
 
 export interface ElementNodeRendererProps extends BaseBlockProps {
@@ -641,19 +637,12 @@ const RawElementNodeRenderer = (
     case "code": {
       const codeProto = node.element.code as CodeProto
       return (
-        <>
-          {codeProto.codeText && (
-            <StyledCopyButtonContainer>
-              <CopyButton text={codeProto.codeText} />
-            </StyledCopyButtonContainer>
-          )}
-          <StreamlitSyntaxHighlighter
-            language={codeProto.language}
-            showLineNumbers={codeProto.showLineNumbers}
-          >
-            {codeProto.codeText}
-          </StreamlitSyntaxHighlighter>
-        </>
+        <StreamlitSyntaxHighlighter
+          language={codeProto.language}
+          showLineNumbers={codeProto.showLineNumbers}
+        >
+          {codeProto.codeText}
+        </StreamlitSyntaxHighlighter>
       )
     }
     default:
