@@ -1334,10 +1334,11 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
         delta = msg.delta
         if delta.WhichOneof("type") == "new_element":
             elt = delta.new_element
+            ty = elt.WhichOneof("type")
             new_node: Node
-            if elt.WhichOneof("type") == "text":
+            if ty == "text":
                 new_node = Text(elt.text, root=root)
-            elif elt.WhichOneof("type") == "markdown":
+            elif ty == "markdown":
                 if elt.markdown.element_type == MarkdownProto.Type.NATIVE:
                     new_node = Markdown(elt.markdown, root=root)
                 elif elt.markdown.element_type == MarkdownProto.Type.CAPTION:
@@ -1350,7 +1351,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     raise ValueError(
                         f"Unknown markdown type {elt.markdown.element_type}"
                     )
-            elif elt.WhichOneof("type") == "heading":
+            elif ty == "heading":
                 if elt.heading.tag == HeadingProtoTag.TITLE_TAG.value:
                     new_node = Title(elt.heading, root=root)
                 elif elt.heading.tag == HeadingProtoTag.HEADER_TAG.value:
@@ -1359,38 +1360,38 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     new_node = Subheader(elt.heading, root=root)
                 else:
                     raise ValueError(f"Unknown heading type with tag {elt.heading.tag}")
-            elif elt.WhichOneof("type") == "exception":
+            elif ty == "exception":
                 new_node = Exception(elt.exception, root=root)
-            elif elt.WhichOneof("type") == "radio":
+            elif ty == "radio":
                 new_node = Radio(elt.radio, root=root)
-            elif elt.WhichOneof("type") == "checkbox":
+            elif ty == "checkbox":
                 new_node = Checkbox(elt.checkbox, root=root)
-            elif elt.WhichOneof("type") == "multiselect":
+            elif ty == "multiselect":
                 new_node = Multiselect(elt.multiselect, root=root)
-            elif elt.WhichOneof("type") == "selectbox":
+            elif ty == "selectbox":
                 new_node = Selectbox(elt.selectbox, root=root)
-            elif elt.WhichOneof("type") == "slider":
+            elif ty == "slider":
                 if elt.slider.type == SliderProto.Type.SLIDER:
                     new_node = Slider(elt.slider, root=root)
                 elif elt.slider.type == SliderProto.Type.SELECT_SLIDER:
                     new_node = SelectSlider(elt.slider, root=root)
                 else:
                     raise ValueError(f"Slider with unknown type {elt.slider}")
-            elif elt.WhichOneof("type") == "button":
+            elif ty == "button":
                 new_node = Button(elt.button, root=root)
-            elif elt.WhichOneof("type") == "text_input":
+            elif ty == "text_input":
                 new_node = TextInput(elt.text_input, root=root)
-            elif elt.WhichOneof("type") == "text_area":
+            elif ty == "text_area":
                 new_node = TextArea(elt.text_area, root=root)
-            elif elt.WhichOneof("type") == "number_input":
+            elif ty == "number_input":
                 new_node = NumberInput(elt.number_input, root=root)
-            elif elt.WhichOneof("type") == "code":
+            elif ty == "code":
                 new_node = Code(elt.code, root=root)
-            elif elt.WhichOneof("type") == "color_picker":
+            elif ty == "color_picker":
                 new_node = ColorPicker(elt.color_picker, root=root)
-            elif elt.WhichOneof("type") == "date_input":
+            elif ty == "date_input":
                 new_node = DateInput(elt.date_input, root=root)
-            elif elt.WhichOneof("type") == "time_input":
+            elif ty == "time_input":
                 new_node = TimeInput(elt.time_input, root=root)
             else:
                 new_node = Element(elt, root=root)
