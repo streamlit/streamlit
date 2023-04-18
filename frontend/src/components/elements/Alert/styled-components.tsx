@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 import { StyledEmojiIcon } from "src/components/shared/Icon/styled-components"
 
 export const StyledIconAlertContent = styled.div(({ theme }) => ({
-  display: "flex",
+  display: "block",
   gap: theme.spacing.sm,
 
   [StyledEmojiIcon as any]: {
