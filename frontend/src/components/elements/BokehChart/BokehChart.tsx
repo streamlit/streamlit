@@ -21,6 +21,11 @@ import { BokehChart as BokehChartProto } from "src/autogen/proto"
 // bokeh doesn't play well with babel / cra (https://github.com/bokeh/bokeh/issues/10658)
 // have consumers provide their own bokeh minified implementation
 import "./bokeh-2.4.3.min.js"
+import "./bokeh-api-2.4.3.min.js"
+import "./bokeh-gl-2.4.3.min.js"
+import "./bokeh-mathjax-2.4.3.min.js"
+import "./bokeh-tables-2.4.3.min.js"
+import "./bokeh-widgets-2.4.3.min.js"
 
 export interface BokehChartProps {
   width: number

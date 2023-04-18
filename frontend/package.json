@@ -3,7 +3,6 @@
   "version": "1.21.0",
   "private": true,
   "homepage": "./",
-  "sideEffects": ["src/components/elements/BokehChart/bokeh-2.4.3.min.js"],
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "./scripts/preload-bokeh.sh && env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",
