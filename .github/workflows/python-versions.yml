@@ -64,7 +64,6 @@ jobs:
       PYTHON_VERSIONS: ${{ steps.build_info.outputs.PYTHON_VERSIONS }}
       PYTHON_MIN_VERSION: ${{ steps.build_info.outputs.PYTHON_MIN_VERSION }}
       PYTHON_MAX_VERSION: ${{ steps.build_info.outputs.PYTHON_MAX_VERSION }}
-      CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch }}
       USE_CONSTRAINT_FILE: ${{ steps.build_info.outputs.USE_CONSTRAINT_FILE }}
 
   py_version:
@@ -90,6 +89,7 @@ jobs:
           )
         }}
       USE_CONSTRAINT_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINT_FILE )}}"
+      CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch }}
 
     steps:
       - name: Checkout Streamlit code
@@ -130,7 +130,7 @@ jobs:
       - name: Diff constraint file
         if: ${{ always() }}
         run: |
-          CONSTRAINT_URL="https://raw.githubusercontent.com/streamlit/streamlit/constraints-develop/constraints-${PYTHON_VERSION}.txt"
+          CONSTRAINT_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${CONSTRAINTS_BRANCH}/constraints-${PYTHON_VERSION}.txt"
           diff -y <(echo "Old"; curl -s "${CONSTRAINT_URL}") <(echo "New"; cat "${CONSTRAINTS_FILE}") || true
       - name: Upload constraints file
         uses: actions/upload-artifact@v3
