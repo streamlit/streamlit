@@ -297,6 +297,7 @@ frontend-fast:
 .PHONY: jslint
 # Lint the JS code
 jslint:
+	./scripts/validate_frontend_lib_imports.py frontend/src/lib
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
 ifndef CIRCLECI
 	cd frontend; \
