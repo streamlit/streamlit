@@ -40,6 +40,10 @@ jobs:
       run:
         shell: bash --login -eo pipefail {0}
 
+    env:
+      # We don't want to use constraints files because they might not exist yet.
+      USE_CONSTRAINT_FILE: "false"
+
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3

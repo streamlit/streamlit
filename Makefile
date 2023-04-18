@@ -22,7 +22,9 @@ TENSORFLOW_SUPPORTED ?= $(shell python scripts/should_install_tensorflow.py)
 INSTALL_TENSORFLOW ?= $(shell python scripts/should_install_tensorflow.py)
 USE_CONSTRAINT_FILE ?= true
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
-CONSTRAINTS_URL ?= https://raw.githubusercontent.com/streamlit/streamlit/constraints-develop/constraints-${PYTHON_VERSION}.txt
+GITHUB_REPOSITORY ?= streamlit/streamlit
+CONSTRAINTS_BRANCH ?= constraints-develop
+CONSTRAINTS_URL ?= https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${CONSTRAINTS_BRANCH}/constraints-${PYTHON_VERSION}.txt
 
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
