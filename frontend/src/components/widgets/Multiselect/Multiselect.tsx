@@ -37,12 +37,12 @@ import { Placement } from "src/components/shared/Tooltip"
 import { VirtualDropdown } from "src/components/shared/Dropdown"
 import { fuzzyFilterSelectOptions } from "src/components/shared/Dropdown/Selectbox"
 import { labelVisibilityProtoValueToEnum } from "src/lib/utils"
-import { Theme } from "src/theme"
+import { EmotionTheme } from "src/theme"
 
 export interface Props {
   disabled: boolean
   element: MultiSelectProto
-  theme: Theme
+  theme: EmotionTheme
   widgetMgr: WidgetStateManager
   width: number
 }
@@ -272,7 +272,7 @@ class Multiselect extends React.PureComponent<Props, State> {
             overrides={{
               IconsContainer: {
                 style: () => ({
-                  paddingRight: ".5rem",
+                  paddingRight: theme.spacing.sm,
                 }),
               },
               ControlContainer: {
@@ -301,7 +301,7 @@ class Multiselect extends React.PureComponent<Props, State> {
                     Issue related: https://github.com/streamlit/streamlit/issues/590
                   */
                   minHeight: "38.4px",
-                  paddingLeft: ".5rem",
+                  paddingLeft: theme.spacing.sm,
                   paddingTop: 0,
                   paddingBottom: 0,
                   paddingRight: 0,
@@ -313,6 +313,15 @@ class Multiselect extends React.PureComponent<Props, State> {
                     Svg: {
                       style: {
                         color: theme.colors.darkGray,
+                        // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
+                        // Let's use a scale transform effect to make it bigger.
+                        // The width property only enlarges its bounding box, so it's easier to click.
+                        transform: "scale(1.5)",
+                        width: theme.spacing.twoXL,
+
+                        ":hover": {
+                          fill: theme.colors.bodyText,
+                        },
                       },
                     },
                   },

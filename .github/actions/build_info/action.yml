@@ -1,6 +1,14 @@
 name: Build info
 description: Sets common builds variables that are needed for other build steps
 
+inputs:
+  force-canary:
+    description: |
+      Forces the current build to be canary.
+      Canary builds test all Python versions and do not use constraints.
+    required: false
+    default: "false"
+
 outputs:
   PYTHON_VERSIONS:
     description: |
@@ -14,6 +22,9 @@ outputs:
   PYTHON_MAX_VERSION:
     description: Latest version of Python supported by Streamlit
     value: ${{ steps.build_info.outputs.PYTHON_MAX_VERSION }}
+  USE_CONSTRAINT_FILE:
+    description: Whether to use a constraint file to install Python dependencies
+    value: ${{ steps.build_info.outputs.USE_CONSTRAINT_FILE }}
 
 runs:
   using: composite
@@ -23,4 +34,5 @@ runs:
       run: ./.github/scripts/build_info.py
       env:
         GITHUB_CONTEXT: ${{ toJson(github) }}
+        GITHUB_INPUTS: ${{ toJson(inputs) }}
       shell: bash --login -eo pipefail {0}

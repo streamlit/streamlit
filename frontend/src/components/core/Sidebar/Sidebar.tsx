@@ -22,7 +22,7 @@ import { Resizable } from "re-resizable"
 import Icon from "src/components/shared/Icon"
 import Button, { Kind } from "src/components/shared/Button"
 import { IAppPage, PageConfig } from "src/autogen/proto"
-import { Theme } from "src/theme"
+import { EmotionTheme } from "src/theme"
 import { localStorageAvailable } from "src/lib/storageUtils"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
@@ -42,7 +42,7 @@ export interface SidebarProps {
   chevronDownshift: number
   children?: ReactElement
   initialSidebarState?: PageConfig.SidebarState
-  theme: Theme
+  theme: EmotionTheme
   hasElements: boolean
   appPages: IAppPage[]
   onPageChange: (pageName: string) => void

@@ -17,7 +17,7 @@
 import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
-import { Theme } from "src/theme"
+import { EmotionTheme } from "src/theme"
 
 export enum Kind {
   PRIMARY = "primary",
@@ -51,7 +51,7 @@ export interface ButtonProps {
 
 type RequiredButtonProps = Required<ButtonProps>
 
-function getSizeStyle(size: Size, theme: Theme): CSSObject {
+function getSizeStyle(size: Size, theme: EmotionTheme): CSSObject {
   switch (size) {
     case Size.XSMALL:
       return {
@@ -87,8 +87,10 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
     width: fluidWidth ? "100%" : "auto",
     userSelect: "none",
     "&:focus": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
       outline: "none",
+    },
+    "&:focus-visible": {
+      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
     },
     ...getSizeStyle(size, theme),
   })
@@ -195,7 +197,7 @@ export const StyledMinimalButton = styled(
   border: "none",
   boxShadow: "none",
   padding: 0,
-  "&:hover, &:active, &:focus": {
+  "&:hover, &:active, &:focus-visible": {
     color: theme.colors.primary,
   },
 }))

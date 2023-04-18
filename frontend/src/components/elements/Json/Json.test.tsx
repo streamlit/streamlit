@@ -17,8 +17,7 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 import { Json as JsonProto } from "src/autogen/proto"
-import ThemeProvider from "src/components/core/ThemeProvider"
-import { darkTheme, darkBaseUITheme } from "src/theme"
+import * as themeUtils from "src/theme/utils"
 import Json, { JsonProps } from "./Json"
 
 const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({
@@ -33,6 +32,10 @@ const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({
 })
 
 describe("JSON element", () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
   it("renders json as expected", () => {
     const props = getProps()
     const wrapper = mount(<Json {...props} />)
@@ -56,6 +59,10 @@ describe("JSON element", () => {
   })
 
   it("picks a reasonable theme when the background is light", () => {
+    // <Json> uses `hasLightBackgroundColor` to test whether our theme
+    // is "light" or "dark". Mock the return value for the test.
+    jest.spyOn(themeUtils, "hasLightBackgroundColor").mockReturnValue(true)
+
     const props = getProps()
     const wrapper = mount(<Json {...props} />)
 
@@ -64,12 +71,12 @@ describe("JSON element", () => {
   })
 
   it("picks a reasonable theme when the background is dark", () => {
+    // <Json> uses `hasLightBackgroundColor` to test whether our theme
+    // is "light" or "dark". Mock the return value for the test.
+    jest.spyOn(themeUtils, "hasLightBackgroundColor").mockReturnValue(false)
+
     const props = getProps()
-    const wrapper = mount(
-      <ThemeProvider theme={darkTheme.emotion} baseuiTheme={darkBaseUITheme}>
-        <Json {...props} />
-      </ThemeProvider>
-    )
+    const wrapper = mount(<Json {...props} />)
 
     expect(wrapper.find('[theme="rjv-default"]').exists()).toBeFalsy()
     expect(wrapper.find('[theme="monokai"]').exists()).toBeTruthy()

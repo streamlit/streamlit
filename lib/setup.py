@@ -100,7 +100,7 @@ else:
 setuptools.setup(
     name=NAME,
     version=VERSION,
-    description="The fastest way to build data apps in Python",
+    description="A faster way to build and share data apps",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://streamlit.io",

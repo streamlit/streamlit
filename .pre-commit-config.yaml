@@ -58,6 +58,12 @@ repos:
         exclude: /vendor/
         language: node
         pass_filenames: true
+      - id: prettier-yaml
+        name: Prettier-yaml
+        entry: ./scripts/run_in_subdirectory.py frontend yarn prettier ../.github --write
+        files: ^.github/.*\.(yml|yaml)$
+        language: node
+        pass_filenames: false
       # Typecheck will be run on CI using --hook-stage manual flag,
       # check out .github/workflows/js-tests.yml "Run linters" step for details.
       - id: typecheck

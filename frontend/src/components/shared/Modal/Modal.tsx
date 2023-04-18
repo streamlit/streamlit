@@ -25,7 +25,7 @@ import {
 } from "baseui/modal"
 import Button, { ButtonProps } from "src/components/shared/Button"
 import merge from "lodash/merge"
-import { Theme } from "src/theme"
+import { EmotionTheme } from "src/theme"
 import { StyledModalButton } from "./styled-components"
 
 export interface ModalHeaderProps {
@@ -33,7 +33,7 @@ export interface ModalHeaderProps {
 }
 
 function ModalHeader({ children }: ModalHeaderProps): ReactElement {
-  const { colors, genericFonts, fontSizes, spacing }: Theme = useTheme()
+  const { colors, genericFonts, fontSizes, spacing }: EmotionTheme = useTheme()
 
   return (
     <UIModalHeader
@@ -69,7 +69,7 @@ export interface ModalBodyProps {
 }
 
 function ModalBody({ children }: ModalBodyProps): ReactElement {
-  const { colors, fontSizes, spacing }: Theme = useTheme()
+  const { colors, fontSizes, spacing }: EmotionTheme = useTheme()
 
   return (
     <UIModalBody
@@ -97,7 +97,7 @@ export interface ModalFooterProps {
 }
 
 function ModalFooter({ children }: ModalFooterProps): ReactElement {
-  const { colors, spacing }: Theme = useTheme()
+  const { colors, spacing }: EmotionTheme = useTheme()
 
   return (
     <UIModalFooter
@@ -125,7 +125,7 @@ const ModalButton: FunctionComponent<ButtonProps> = buttonProps => (
 )
 
 function Modal(props: ModalProps): ReactElement {
-  const { spacing, colors, radii }: Theme = useTheme()
+  const { spacing, colors, radii }: EmotionTheme = useTheme()
   const defaultOverrides = {
     DialogContainer: {
       style: {

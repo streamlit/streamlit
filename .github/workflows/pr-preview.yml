@@ -3,8 +3,8 @@ name: PR Preview
 on:
   push:
     branches:
-      - 'develop'
-      - 'feature/**'
+      - "develop"
+      - "feature/**"
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           persist-credentials: false
-          submodules: 'recursive'
+          submodules: "recursive"
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
@@ -131,6 +131,9 @@ jobs:
           # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo.
           # Accessing streamlit/core-previews repo requires a separate auth token.
           token: ${{ secrets.CORE_PREVIEWS_REPO_TOKEN }}
+          # Save the access token to the local git config, so
+          # later git commands can work.
+          persist-credentials: true
       - name: Setup preview repo
         env:
           PREVIEW_BRANCH: ${{ needs.upload-whl.outputs.preview-branch }}

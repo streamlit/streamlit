@@ -15,23 +15,22 @@
  */
 
 import React from "react"
-import { screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 
 import { mount, render } from "src/lib/test_util"
 import { IMenuItem } from "src/hocs/withHostCommunication/types"
 
-import { GitInfo, IGitInfo } from "src/autogen/proto"
+import { Config, GitInfo, IGitInfo } from "src/autogen/proto"
 import { IDeployErrorDialog } from "src/components/core/StreamlitDialog/DeployErrorDialogs/types"
 import {
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs"
-import { getMetricsManagerForTest } from "src/lib/MetricsManagerTestUtils"
 
 import MainMenu, { Props } from "./MainMenu"
 import { waitFor } from "@testing-library/dom"
+import { fireEvent, RenderResult } from "@testing-library/react"
+import { MockMetricsManager } from "src/lib/mocks/mocks"
 
 const { GitStates } = GitInfo
 
@@ -52,13 +51,37 @@ const getProps = (extend?: Partial<Props>): Props => ({
   closeDialog: jest.fn(),
   canDeploy: true,
   menuItems: {},
-  hostIsOwner: false,
+  developmentMode: true,
   gitInfo: null,
-  metricsMgr: getMetricsManagerForTest(),
+  metricsMgr: new MockMetricsManager(),
+  toolbarMode: Config.ToolbarMode.AUTO,
   ...extend,
 })
 
-describe("App", () => {
+async function openMenu(wrapper: RenderResult): Promise<void> {
+  fireEvent.click(wrapper.getByRole("button"))
+  await waitFor(() => expect(wrapper.findByRole("listbox")).toBeDefined())
+}
+
+function getMenuStructure(
+  renderResult: RenderResult
+): ({ type: "separator" } | { type: "option"; label: string })[][] {
+  return Array.from(
+    renderResult.baseElement.querySelectorAll('[role="listbox"]')
+  ).map(listBoxElement => {
+    return Array.from(
+      listBoxElement.querySelectorAll(
+        '[role=option] span:first-of-type, [data-testid="main-menu-divider"]'
+      )
+    ).map(d =>
+      d.getAttribute("data-testid") == "main-menu-divider"
+        ? { type: "separator" }
+        : { type: "option", label: d.textContent as string }
+    )
+  })
+}
+
+describe("MainMenu", () => {
   it("renders without crashing", () => {
     const props = getProps()
     const wrapper = mount(<MainMenu {...props} />)
@@ -67,7 +90,6 @@ describe("App", () => {
   })
 
   it("should render host menu items", async () => {
-    const user = userEvent.setup()
     const items: IMenuItem[] = [
       {
         type: "separator",
@@ -90,7 +112,7 @@ describe("App", () => {
       hostMenuItems: items,
     })
     const wrapper = render(<MainMenu {...props} />)
-    await user.click(screen.getByRole("button"))
+    await openMenu(wrapper)
 
     await waitFor(() =>
       expect(
@@ -112,10 +134,9 @@ describe("App", () => {
   })
 
   it("should render core set of menu elements", async () => {
-    const user = userEvent.setup()
     const props = getProps()
     const wrapper = render(<MainMenu {...props} />)
-    await user.click(screen.getByRole("button"))
+    await openMenu(wrapper)
 
     await waitFor(() =>
       expect(
@@ -136,10 +157,9 @@ describe("App", () => {
   })
 
   it("should render deploy app menu item", async () => {
-    const user = userEvent.setup()
     const props = getProps({ gitInfo: {} })
     const wrapper = render(<MainMenu {...props} />)
-    await user.click(screen.getByRole("button"))
+    await openMenu(wrapper)
 
     await waitFor(() =>
       expect(
@@ -256,7 +276,6 @@ describe("App", () => {
   })
 
   it("should not render report a bug in core menu", async () => {
-    const user = userEvent.setup()
     const menuItems = {
       getHelpUrl: "testing",
       hideGetHelp: false,
@@ -265,7 +284,7 @@ describe("App", () => {
     }
     const props = getProps({ menuItems })
     const wrapper = render(<MainMenu {...props} />)
-    await user.click(screen.getByRole("button"))
+    await openMenu(wrapper)
 
     await waitFor(() =>
       expect(
@@ -275,7 +294,6 @@ describe("App", () => {
   })
 
   it("should render report a bug in core menu", async () => {
-    const user = userEvent.setup()
     const menuItems = {
       reportABugUrl: "testing",
       hideGetHelp: false,
@@ -284,7 +302,7 @@ describe("App", () => {
     }
     const props = getProps({ menuItems })
     const wrapper = render(<MainMenu {...props} />)
-    await user.click(screen.getByRole("button"))
+    await openMenu(wrapper)
 
     await waitFor(() =>
       expect(
@@ -293,17 +311,8 @@ describe("App", () => {
     )
   })
 
-  it("should not render dev menu when hostIsOwner is false and not on localhost", () => {
-    // set isLocalhost to false by deleting window.location.
-    // Source: https://www.benmvp.com/blog/mocking-window-location-methods-jest-jsdom/
-    // @ts-expect-error
-    delete window.location
-
-    // @ts-expect-error
-    window.location = {
-      assign: jest.fn(),
-    }
-    const props = getProps()
+  it("should not render dev menu when developmentMode is false", () => {
+    const props = getProps({ developmentMode: false })
     const wrapper = mount(<MainMenu {...props} />)
     const popoverContent = wrapper.find("StatefulPopover").prop("content")
     // @ts-expect-error
@@ -322,6 +331,182 @@ describe("App", () => {
       "Print",
       "Record a screencast",
       "About",
+    ])
+  })
+
+  it.each([
+    [Config.ToolbarMode.AUTO],
+    [Config.ToolbarMode.DEVELOPER],
+    [Config.ToolbarMode.VIEWER],
+    [Config.ToolbarMode.MINIMAL],
+  ])("should render host menu items if available[%s]", async toolbarMode => {
+    const props = getProps({
+      toolbarMode,
+      hostMenuItems: [
+        { label: "Host menu item", key: "host-item", type: "text" },
+      ],
+    })
+    const wrapper = render(<MainMenu {...props} />)
+    await openMenu(wrapper)
+
+    const menuStructure = getMenuStructure(wrapper)
+    expect(menuStructure[0]).toContainEqual({
+      type: "option",
+      label: "Host menu item",
+    })
+  })
+
+  it("should hide hamburger when toolbarMode is Minimal and no host items", async () => {
+    const props = getProps({
+      developmentMode: false,
+      toolbarMode: Config.ToolbarMode.MINIMAL,
+      hostMenuItems: [],
+    })
+
+    const wrapper = render(<MainMenu {...props} />)
+
+    expect(wrapper.queryByRole("button")).toBeNull()
+  })
+
+  it("should skip divider from host menu items if it is at the beginning and end", async () => {
+    const props = getProps({
+      developmentMode: false,
+      toolbarMode: Config.ToolbarMode.MINIMAL,
+      hostMenuItems: [
+        { type: "separator" },
+        { type: "text", label: "View all apps", key: "viewAllApps" },
+        { type: "separator" },
+        { type: "text", label: "About Streamlit Cloud", key: "about" },
+        { type: "separator" },
+      ],
+    })
+    const wrapper = render(<MainMenu {...props} />)
+    await openMenu(wrapper)
+
+    const menuStructure = getMenuStructure(wrapper)
+    expect(menuStructure).toEqual([
+      [{ type: "option", label: "View all apps" }],
+    ])
+  })
+
+  it.each([
+    [
+      ["getHelpUrl", "reportABugUrl", "aboutSectionMd"],
+      [
+        {
+          label: "Report a bug",
+          type: "option",
+        },
+        {
+          label: "Get help",
+          type: "option",
+        },
+        {
+          type: "separator",
+        },
+        {
+          label: "About",
+          type: "option",
+        },
+      ],
+    ],
+    [
+      ["getHelpUrl"],
+      [
+        {
+          label: "Get help",
+          type: "option",
+        },
+      ],
+    ],
+    [
+      ["reportABugUrl"],
+      [
+        {
+          label: "Report a bug",
+          type: "option",
+        },
+      ],
+    ],
+    [
+      ["aboutSectionMd"],
+      [
+        {
+          label: "About",
+          type: "option",
+        },
+      ],
+    ],
+  ])(
+    "should render custom items in minimal mode[%s]",
+    async (menuItems, expectedMenuItems) => {
+      const allMenuItems = {
+        getHelpUrl: "https://www.extremelycoolapp.com/help",
+        reportABugUrl: "https://www.extremelycoolapp.com/bug",
+        aboutSectionMd: "# This is a header. This is an *extremely* cool app!",
+      }
+      const props = getProps({
+        developmentMode: false,
+        toolbarMode: Config.ToolbarMode.MINIMAL,
+        menuItems: Object.fromEntries(
+          Object.entries(allMenuItems).filter(d => menuItems.includes(d[0]))
+        ),
+      })
+
+      const wrapper = render(<MainMenu {...props} />)
+      await openMenu(wrapper)
+
+      const menuStructure = getMenuStructure(wrapper)
+      expect(menuStructure).toEqual([expectedMenuItems])
+    }
+  )
+
+  it("should render host menu items and custom items in minimal mode", async () => {
+    const props = getProps({
+      developmentMode: false,
+      toolbarMode: Config.ToolbarMode.MINIMAL,
+      hostMenuItems: [
+        { type: "separator" },
+        { type: "text", label: "View all apps", key: "viewAllApps" },
+        { type: "separator" },
+        { type: "text", label: "About Streamlit Cloud", key: "about" },
+        { type: "separator" },
+      ],
+      menuItems: {
+        getHelpUrl: "https://www.extremelycoolapp.com/help",
+        reportABugUrl: "https://www.extremelycoolapp.com/bug",
+        aboutSectionMd: "# This is a header. This is an *extremely* cool app!",
+      },
+    })
+    const wrapper = render(<MainMenu {...props} />)
+    await openMenu(wrapper)
+
+    const menuStructure = getMenuStructure(wrapper)
+    expect(menuStructure).toEqual([
+      [
+        {
+          label: "Report a bug",
+          type: "option",
+        },
+        {
+          label: "Get help",
+          type: "option",
+        },
+        {
+          type: "separator",
+        },
+        {
+          label: "View all apps",
+          type: "option",
+        },
+        {
+          type: "separator",
+        },
+        {
+          label: "About",
+          type: "option",
+        },
+      ],
     ])
   })
 })
