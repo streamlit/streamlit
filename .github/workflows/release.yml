@@ -30,23 +30,43 @@ jobs:
   build-release:
     runs-on: ubuntu-latest
 
-    needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+    needs:
+      - run-python-tests
+      - run-javascript-tests
+      - run-py-prod-deps-smoke-test
+      - run-cypress-tests
 
     defaults:
       run:
         shell: bash --login -eo pipefail {0}
 
     permissions:
-    # Additional permission needed to generate release
+      # Additional permission needed to generate release
       contents: write
+
+    env:
+      # Name of the tag
+      GIT_TAG: ${{ github.ref_name }}
+      # The owner and repository name
+      GH_REPO: ${{ github.repository }}
+      # A branch with constraints files on the basis of which
+      # the tag will be created.
+      CONSTRAINTS_BRANCH: constraints-release
+      # The name of the tag that contains the constraints files
+      # for the current release
+      CONSTRAINTS_TAG: constraints/${{ github.ref_name }}
+      # We don't want to use constraints files because they might not exist yet.
+      USE_CONSTRAINT_FILE: "false"
 
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref_name }}
-          persist-credentials: false
-          submodules: 'recursive'
+          # Save the access token to the local git config, so
+          # later git commands can work.
+          persist-credentials: true
+          submodules: "recursive"
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
@@ -54,12 +74,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
-      # Uses action to safely process user input (branch name) to prevent script injection attacks
-      - name: Set GIT_TAG & GH_REPO env variables
-        uses: ./.github/actions/tag_and_repo
-        with:
-          tag_name: ${{ github.ref_name }}
-          repo: ${{ github.repository }}
       - name: Look up the related GitHub PR branch name
         # Need GH Token to use gh api
         env:
@@ -127,6 +141,41 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/create_release.py
+
+      - name: Checkout branch "${{ env.CONSTRAINTS_BRANCH }}"
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ env.CONSTRAINTS_BRANCH }}
+          # Save the access token to the local git config, so
+          # later git commands can work.
+          persist-credentials: true
+          path: constraints
+      - uses: actions/download-artifact@v3
+        with:
+          name: constraints
+          path: constraints
+      - name: Commit and push constraint files as tag
+        run: |
+          cd constraints;
+          git add .
+          git config --local user.email "core+streamlitbot-github@streamlit.io"
+          git config --local user.name "Streamlit Bot"
+          if ! git diff --cached --color --exit-code --ignore-matching-lines="^#.*"
+          then
+            git commit --all --message "Updating constraints. Github run id:${GITHUB_RUN_ID}
+
+            This update in constraints is automatically committed by the CI based on
+            '${GITHUB_REF}' in the '${GITHUB_REPOSITORY}' repository with commit sha ${GITHUB_SHA}.
+
+            The action that build those constraints can be found at https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/
+            "
+          else
+            echo "No changes"
+          fi
+          git tag "${CONSTRAINTS_TAG}"
+          git push origin "${CONSTRAINTS_TAG}";
+          git push origin "${CONSTRAINTS_BRANCH}";
+
       - name: Successful Release Slack Message
         if: ${{ success() }}
         env:
