@@ -80,8 +80,10 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
             super().__init__(connection_name, **kwargs)
 
     def _connect(self, **kwargs) -> "Session":
-        from snowflake.snowpark.context import get_active_session
-        from snowflake.snowpark.exceptions import SnowparkSessionException
+        from snowflake.snowpark.context import get_active_session  # type: ignore
+        from snowflake.snowpark.exceptions import (  # type: ignore
+            SnowparkSessionException,
+        )
         from snowflake.snowpark.session import Session
 
         # If we're in a runtime environment where there's already an active session
