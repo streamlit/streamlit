@@ -64,7 +64,7 @@ from streamlit.runtime.state.session_state import SessionState
 # WidgetState and provide higher level interaction interfaces, and other elements
 # have enough variation in how to get their values that most will need their
 # own classes too.
-@dataclass(init=False)
+@dataclass
 class Element:
     type: str
     proto: Any = field(repr=False)
@@ -103,7 +103,7 @@ class Element:
         return util.repr_(self)
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Text(Element):
     proto: TextProto
 
@@ -121,7 +121,7 @@ class Text(Element):
         return self.proto.body
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class HeadingBase(Element, ABC):
     proto: HeadingProto
 
@@ -146,25 +146,25 @@ class HeadingBase(Element, ABC):
         return self.proto.body
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Title(HeadingBase):
     def __init__(self, proto: HeadingProto, root: ElementTree):
         super().__init__(proto, root, "title")
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Header(HeadingBase):
     def __init__(self, proto: HeadingProto, root: ElementTree):
         super().__init__(proto, root, "header")
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Subheader(HeadingBase):
     def __init__(self, proto: HeadingProto, root: ElementTree):
         super().__init__(proto, root, "subheader")
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Markdown(Element):
     proto: MarkdownProto
 
@@ -187,21 +187,21 @@ class Markdown(Element):
         return self.proto.body
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Caption(Markdown):
     def __init__(self, proto: MarkdownProto, root: ElementTree):
         super().__init__(proto, root)
         self.type = "caption"
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Latex(Markdown):
     def __init__(self, proto: MarkdownProto, root: ElementTree):
         super().__init__(proto, root)
         self.type = "latex"
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Code(Element):
     proto: CodeProto
 
@@ -248,7 +248,7 @@ class Exception(Element):
         return self.message
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Divider(Markdown):
     def __init__(self, proto: MarkdownProto, root: ElementTree):
         super().__init__(proto, root)
@@ -325,7 +325,7 @@ class ColorPicker(Element, Widget):
         return self.set_value(v)
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Radio(Element, Widget, Generic[T]):
     _value: T | None
 
@@ -386,7 +386,7 @@ class Radio(Element, Widget, Generic[T]):
         return ws
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Checkbox(Element, Widget):
     _value: bool | None
 
@@ -440,7 +440,7 @@ class Checkbox(Element, Widget):
         return self.set_value(False)
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Multiselect(Element, Widget, Generic[T]):
     _value: list[T] | None
 
@@ -529,7 +529,7 @@ class Multiselect(Element, Widget, Generic[T]):
             return self
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Selectbox(Element, Widget, Generic[T]):
     _value: T | None
 
@@ -602,7 +602,7 @@ class Selectbox(Element, Widget, Generic[T]):
         return ws
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Button(Element, Widget):
     _value: bool
 
@@ -653,7 +653,7 @@ class Button(Element, Widget):
         return self.set_value(True)
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Slider(Element, Widget, Generic[SliderScalarT]):
     _value: SliderScalarT | Sequence[SliderScalarT] | None
 
@@ -722,7 +722,7 @@ class Slider(Element, Widget, Generic[SliderScalarT]):
         return self.set_value([lower, upper])
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class SelectSlider(Element, Widget, Generic[T]):
     _value: T | Sequence[T] | None
 
@@ -1093,7 +1093,7 @@ class TimeInput(Element, Widget):
         return self.set_value(dt.time())
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class Block:
     type: str
     children: dict[int, Node]
@@ -1252,7 +1252,7 @@ class Block:
 Node: TypeAlias = Union[Element, Block]
 
 
-@dataclass(init=False, repr=False)
+@dataclass(repr=False)
 class ElementTree(Block):
     """A tree of the elements produced by running a streamlit script.
 
