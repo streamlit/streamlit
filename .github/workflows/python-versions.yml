@@ -13,6 +13,16 @@ on:
       ref:
         required: true
         type: string
+      force-canary:
+        description: |
+          Forces the current build to be canary.
+          Canary builds test all Python versions and do not use constraints.
+        default: false
+        type: boolean
+      constraints-branch:
+        description: "The name of the branch from which the constraints files will be downloaded or compared with."
+        default: "constraints-develop"
+        type: string
     secrets:
       PARAMETER_PASSWORD:
         description: "Token passed from caller workflows for snowflake integration tests"
@@ -47,6 +57,8 @@ jobs:
       - name: Set Python version vars
         id: build_info
         uses: ./.github/actions/build_info
+        with:
+          force-canary: ${{ inputs.force-canary || false }}
 
     outputs:
       PYTHON_VERSIONS: ${{ steps.build_info.outputs.PYTHON_VERSIONS }}
@@ -77,6 +89,7 @@ jobs:
           )
         }}
       USE_CONSTRAINT_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINT_FILE )}}"
+      CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch || 'constraints-develop' }}
 
     steps:
       - name: Checkout Streamlit code
@@ -117,7 +130,7 @@ jobs:
       - name: Diff constraint file
         if: ${{ always() }}
         run: |
-          CONSTRAINT_URL="https://raw.githubusercontent.com/streamlit/streamlit/constraints-develop/constraints-${PYTHON_VERSION}.txt"
+          CONSTRAINT_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${CONSTRAINTS_BRANCH}/constraints-${PYTHON_VERSION}.txt"
           diff -y <(echo "Old"; curl -s "${CONSTRAINT_URL}") <(echo "New"; cat "${CONSTRAINTS_FILE}") || true
       - name: Upload constraints file
         uses: actions/upload-artifact@v3

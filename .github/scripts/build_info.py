@@ -39,7 +39,7 @@ import json
 import os
 import subprocess
 import sys
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 if __name__ not in ("__main__", "__mp_main__"):
     raise SystemExit(
@@ -48,11 +48,17 @@ if __name__ not in ("__main__", "__mp_main__"):
     )
 
 GITHUB_CONTEXT_ENV_VAR = "GITHUB_CONTEXT"
+GITHUB_INPUTS_ENV_VAR = "GITHUB_INPUTS"
 GITHUB_OUTPUT_ENV_VAR = "GITHUB_OUTPUT"
 GITHUB_ENV_ENV_VAR = "GITHUB_ENV"
 
 REQUIRED_ENV_VAR = (
-    [GITHUB_CONTEXT_ENV_VAR, GITHUB_OUTPUT_ENV_VAR, GITHUB_ENV_ENV_VAR]
+    [
+        GITHUB_CONTEXT_ENV_VAR,
+        GITHUB_INPUTS_ENV_VAR,
+        GITHUB_OUTPUT_ENV_VAR,
+        GITHUB_ENV_ENV_VAR,
+    ]
     if "CI" in os.environ
     else [GITHUB_CONTEXT_ENV_VAR]
 )
@@ -153,7 +159,7 @@ def get_changed_python_dependencies_files() -> List[str]:
     return changed_dependencies_files
 
 
-def check_if_pr_has_label(label: str, action: str):
+def check_if_pr_has_label(label: str, action: str) -> bool:
     """
     Checks if the PR has the given label.
 
@@ -169,10 +175,26 @@ def check_if_pr_has_label(label: str, action: str):
     return False
 
 
+def get_github_input(input_key: str) -> Optional[str]:
+    """
+    Get additional data that the script expects to use during runtime.
+
+    For details, see: https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions#inputs
+    """
+    if GITHUB_INPUTS_ENV_VAR not in os.environ:
+        return None
+    inputs = json.loads(os.environ[GITHUB_INPUTS_ENV_VAR]) or {}
+    input_value = inputs.get(input_key)
+    return input_value
+
+
 def is_canary_build() -> bool:
     """
-    Checks whether tests should be run for all supported Python versions, or whether
-    it is enough to check the oldest and latest versions.
+    Checks whether current build is canary.
+
+    Canary builds are tested on all Python versions and do not use constraints.
+    Non-canary builds are tested by default on the oldest and latest Python versions
+    and use constraints files by default.
 
     The behavior depends on what event triggered the current GitHub Action build to run.
 
@@ -183,7 +205,14 @@ def is_canary_build() -> bool:
     we return false.
 
     For other events, we return false
+
+    Build canary can be enforced by workflow inputs parameter e.g. all "Build Release"
+    workflows trigger canary builds.
     """
+    force_canary_input = get_github_input("force-canary") or "false"
+    if force_canary_input.lower() == "true":
+        print("Current build is canary, because it is enforced by input")
+        return True
     if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
         changed_dependencies_files = get_changed_python_dependencies_files()
         if changed_dependencies_files:
@@ -209,7 +238,7 @@ def is_canary_build() -> bool:
             return True
         return False
     print(
-        "Current build is canary, "
+        "Current build is NOT canary, "
         f"because current github event name is {GITHUB_EVENT_NAME!r}"
     )
     return False
