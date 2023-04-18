@@ -204,7 +204,8 @@
     "timezone-mock": "^1.3.6",
     "typescript": "^4.9.5",
     "util": "^0.12.5",
-    "webpack": "5.76.0"
+    "webpack": "5.76.0",
+    "webpack-bundle-analyzer": "^4.8.0"
   },
   "resolutions": {
     "@types/html-minifier-terser": "^7.0.0",

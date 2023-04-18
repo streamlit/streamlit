@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+
 module.exports = {
   devServer: {
     static: {
@@ -63,6 +65,8 @@ module.exports = {
       const terserPluginIndex = minimizerPlugins.findIndex(
         item => item.constructor.name === "TerserPlugin"
       )
+
+      webpackConfig.plugins.push(new BundleAnalyzerPlugin())
 
       if (process.env.BUILD_AS_FAST_AS_POSSIBLE) {
         // remove terser

@@ -17,21 +17,17 @@
 import React, { ReactElement, useEffect, useCallback } from "react"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { BokehChart as BokehChartProto } from "src/autogen/proto"
+import Bokeh from "./vendor/bokeh.esm"
+import "./vendor/bokeh-api-2.4.3.esm.min"
+import "./vendor/bokeh-gl-2.4.3.esm.min"
+import "./vendor/bokeh-mathjax-2.4.3.esm.min"
+import "./vendor/bokeh-tables-2.4.3.esm.min"
+import "./vendor/bokeh-widgets-2.4.3.esm.min"
 
 export interface BokehChartProps {
   width: number
   element: BokehChartProto
   height?: number
-}
-
-declare global {
-  interface Window {
-    Bokeh: {
-      embed: {
-        embed_item: (data: any, chartId: string) => void
-      }
-    }
-  }
 }
 
 interface Dimensions {
@@ -77,7 +73,6 @@ export function BokehChart({
   }
 
   const updateChart = (data: any): void => {
-    const { Bokeh } = window
     const chart = document.getElementById(chartId)
 
     /**

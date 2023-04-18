@@ -22,12 +22,12 @@ set -o pipefail
 bokeh_version="2.4.3"
 bokeh_release_url="https://cdn.bokeh.org/bokeh/release"
 bokeh_files=(
-  "bokeh-${bokeh_version}.min.js"
-  "bokeh-widgets-${bokeh_version}.min.js"
-  "bokeh-tables-${bokeh_version}.min.js"
-  "bokeh-api-${bokeh_version}.min.js"
-  "bokeh-gl-${bokeh_version}.min.js"
-  "bokeh-mathjax-${bokeh_version}.min.js"
+  "bokeh-${bokeh_version}.esm.min.js"
+  "bokeh-widgets-${bokeh_version}.esm.min.js"
+  "bokeh-tables-${bokeh_version}.esm.min.js"
+  "bokeh-api-${bokeh_version}.esm.min.js"
+  "bokeh-gl-${bokeh_version}.esm.min.js"
+  "bokeh-mathjax-${bokeh_version}.esm.min.js"
 )
 
 mkdir -p public/vendor/bokeh
