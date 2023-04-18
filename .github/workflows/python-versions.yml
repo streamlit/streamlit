@@ -89,7 +89,7 @@ jobs:
           )
         }}
       USE_CONSTRAINT_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINT_FILE )}}"
-      CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch }}
+      CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch || 'constraints-develop' }}
 
     steps:
       - name: Checkout Streamlit code
