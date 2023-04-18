@@ -45,7 +45,6 @@ module.exports = {
   },
   webpack: {
     configure: webpackConfig => {
-      // webpackConfig.resolve.modules.concat(['public'])
       webpackConfig.resolve.mainFields = ["module", "main"]
       // Webpack 5 requires polyfills. We don't need them, so resolve to an empty module
       webpackConfig.resolve.fallback ||= {}
