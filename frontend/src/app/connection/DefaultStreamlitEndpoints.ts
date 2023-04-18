@@ -22,7 +22,7 @@ import {
   xssSanitizeSvg,
 } from "src/lib/util/UriUtil"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
-import { IAppPage } from "src/autogen/proto"
+import { IAppPage } from "src/lib/proto"
 import { getCookie } from "src/lib/util/utils"
 
 interface Props {

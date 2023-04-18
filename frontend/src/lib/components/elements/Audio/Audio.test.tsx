@@ -17,7 +17,7 @@
 import React from "react"
 import { mount, shallow } from "src/lib/test_util"
 
-import { Audio as AudioProto } from "src/autogen/proto"
+import { Audio as AudioProto } from "src/lib/proto"
 import { mockEndpoints } from "src/lib/mocks/mocks"
 import Audio, { AudioProps } from "./Audio"
 

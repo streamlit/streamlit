@@ -86,7 +86,7 @@ import {
   SessionEvent,
   SessionStatus,
   WidgetStates,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import { concat, noop, without } from "lodash"
 
 import {

@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { TextArea as TextAreaProto } from "src/autogen/proto"
+import { TextArea as TextAreaProto } from "src/lib/proto"
 import { FormClearHelper } from "src/lib/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 

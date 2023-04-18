@@ -17,7 +17,7 @@
 import React from "react"
 import { shallow } from "src/lib/test_util"
 
-import { ImageList as ImageListProto } from "src/autogen/proto"
+import { ImageList as ImageListProto } from "src/lib/proto"
 import { mockEndpoints } from "src/lib/mocks/mocks"
 import { ImageList, ImageListProps } from "./ImageList"
 

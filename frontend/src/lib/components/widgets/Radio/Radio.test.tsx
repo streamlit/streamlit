@@ -19,7 +19,7 @@ import { mount } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
-import { Radio as RadioProto } from "src/autogen/proto"
+import { Radio as RadioProto } from "src/lib/proto"
 import Radio, { Props } from "./Radio"
 
 const getProps = (elementProps: Partial<RadioProto> = {}): Props => ({

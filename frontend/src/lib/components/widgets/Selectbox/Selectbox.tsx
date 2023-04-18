@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { Selectbox as SelectboxProto } from "src/autogen/proto"
+import { Selectbox as SelectboxProto } from "src/lib/proto"
 import { FormClearHelper } from "src/lib/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import UISelectbox from "src/lib/components/shared/Dropdown"

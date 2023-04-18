@@ -19,7 +19,7 @@ import { select } from "d3"
 import { graphviz } from "d3-graphviz"
 import { logError } from "src/lib/util/log"
 import withFullScreenWrapper from "src/lib/hocs/withFullScreenWrapper"
-import { GraphVizChart as GraphVizChartProto } from "src/autogen/proto"
+import { GraphVizChart as GraphVizChartProto } from "src/lib/proto"
 import { StyledGraphVizChart } from "./styled-components"
 
 export interface GraphVizChartProps {

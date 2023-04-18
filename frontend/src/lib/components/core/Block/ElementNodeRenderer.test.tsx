@@ -19,7 +19,7 @@ import {
   Balloons as BalloonsProto,
   ForwardMsgMetadata,
   Snow as SnowProto,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import { render } from "src/lib/test_util"
 import { ElementNode } from "src/lib/AppNode"
 import { ScriptRunState } from "src/lib/ScriptRunState"

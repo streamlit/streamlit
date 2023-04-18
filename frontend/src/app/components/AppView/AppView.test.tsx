@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { Block as BlockProto, ForwardMsgMetadata } from "src/autogen/proto"
+import { Block as BlockProto, ForwardMsgMetadata } from "src/lib/proto"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { BlockNode, ElementNode, AppRoot } from "src/lib/AppNode"
 import { FileUploadClient } from "src/lib/FileUploadClient"

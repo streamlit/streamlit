@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { DownloadButton as DownloadButtonProto } from "src/autogen/proto"
+import { DownloadButton as DownloadButtonProto } from "src/lib/proto"
 import UIButton, {
   ButtonTooltip,
   Kind,

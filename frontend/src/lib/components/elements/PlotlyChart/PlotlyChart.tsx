@@ -25,7 +25,7 @@ import { EmotionTheme } from "src/lib/theme"
 import {
   Figure as FigureProto,
   PlotlyChart as PlotlyChartProto,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import withFullScreenWrapper from "src/lib/hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
 import {

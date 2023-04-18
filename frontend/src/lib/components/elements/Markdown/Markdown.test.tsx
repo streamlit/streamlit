@@ -16,7 +16,7 @@
 
 import React from "react"
 import { shallow, mount } from "src/lib/test_util"
-import { Markdown as MarkdownProto } from "src/autogen/proto"
+import { Markdown as MarkdownProto } from "src/lib/proto"
 import Markdown, { MarkdownProps } from "./Markdown"
 import {
   InlineTooltipIcon,

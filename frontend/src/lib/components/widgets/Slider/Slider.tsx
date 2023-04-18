@@ -21,7 +21,7 @@ import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
 import { FormClearHelper } from "src/lib/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
-import { Slider as SliderProto } from "src/autogen/proto"
+import { Slider as SliderProto } from "src/lib/proto"
 import { debounce, labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
 import moment from "moment"
 import {

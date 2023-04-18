@@ -18,7 +18,7 @@ import React from "react"
 
 import { shallow } from "src/lib/test_util"
 import { Kind } from "src/lib/components/shared/AlertContainer"
-import { Alert as AlertProto } from "src/autogen/proto"
+import { Alert as AlertProto } from "src/lib/proto"
 import Alert, { AlertProps, getAlertKind } from "./Alert"
 
 const getProps = (elementProps: Partial<AlertProps> = {}): AlertProps => ({

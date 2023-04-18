@@ -19,7 +19,7 @@ import userEvent from "@testing-library/user-event"
 import { enableAllPlugins } from "immer"
 import React from "react"
 
-import { Button as ButtonProto } from "src/autogen/proto"
+import { Button as ButtonProto } from "src/lib/proto"
 
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 import UIButton from "src/lib/components/shared/Button"

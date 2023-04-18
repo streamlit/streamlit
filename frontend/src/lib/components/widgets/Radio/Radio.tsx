@@ -16,7 +16,7 @@
 
 import React from "react"
 import UIRadio from "src/lib/components/shared/Radio"
-import { Radio as RadioProto } from "src/autogen/proto"
+import { Radio as RadioProto } from "src/lib/proto"
 import { FormClearHelper } from "src/lib/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"

@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, useEffect } from "react"
-import { Button as ButtonProto } from "src/autogen/proto"
+import { Button as ButtonProto } from "src/lib/proto"
 import UIButton, {
   ButtonTooltip,
   Kind,

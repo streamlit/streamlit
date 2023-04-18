@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { ColorPicker as ColorPickerProto } from "src/autogen/proto"
+import { ColorPicker as ColorPickerProto } from "src/lib/proto"
 import { FormClearHelper } from "src/lib/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import UIColorPicker from "src/lib/components/shared/ColorPicker"

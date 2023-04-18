@@ -21,7 +21,7 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import UIButton from "src/lib/components/shared/Button"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 
-import { DownloadButton as DownloadButtonProto } from "src/autogen/proto"
+import { DownloadButton as DownloadButtonProto } from "src/lib/proto"
 import { mockEndpoints } from "src/lib/mocks/mocks"
 import DownloadButton, { Props } from "./DownloadButton"
 

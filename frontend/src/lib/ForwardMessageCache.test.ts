@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ForwardMsg } from "src/autogen/proto"
+import { ForwardMsg } from "src/lib/proto"
 import { ForwardMsgCache } from "src/lib/ForwardMessageCache"
 
 interface MockCache {

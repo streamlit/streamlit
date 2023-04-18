@@ -17,7 +17,7 @@
 import React, { PureComponent, ReactElement } from "react"
 import { act } from "react-dom/test-utils"
 
-import { ICustomThemeConfig } from "src/autogen/proto"
+import { ICustomThemeConfig } from "src/lib/proto"
 
 import { mount, shallow } from "src/lib/test_util"
 

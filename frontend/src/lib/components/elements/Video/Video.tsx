@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, useEffect, useRef } from "react"
-import { Video as VideoProto } from "src/autogen/proto"
+import { Video as VideoProto } from "src/lib/proto"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 const DEFAULT_HEIGHT = 528

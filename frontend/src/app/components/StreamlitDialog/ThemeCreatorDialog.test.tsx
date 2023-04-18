@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { CustomThemeConfig } from "src/autogen/proto"
+import { CustomThemeConfig } from "src/lib/proto"
 import { shallow } from "src/lib/test_util"
 import ColorPicker from "src/lib/components/shared/ColorPicker"
 import UISelectbox from "src/lib/components/shared/Dropdown"

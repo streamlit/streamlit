@@ -17,7 +17,7 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 import { BlockNode } from "src/lib/AppNode"
-import { Block as BlockProto } from "src/autogen/proto"
+import { Block as BlockProto } from "src/lib/proto"
 
 import { Tabs as UITabs } from "baseui/tabs-motion"
 import Tabs, { Props } from "./Tabs"

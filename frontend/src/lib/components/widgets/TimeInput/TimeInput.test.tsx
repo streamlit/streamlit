@@ -23,7 +23,7 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TimeInput as TimeInputProto,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import TimeInput, { Props } from "./TimeInput"
 
 const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({

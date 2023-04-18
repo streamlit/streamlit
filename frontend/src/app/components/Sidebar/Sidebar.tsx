@@ -21,7 +21,7 @@ import { Resizable } from "re-resizable"
 
 import Icon from "src/lib/components/shared/Icon"
 import Button, { Kind } from "src/lib/components/shared/Button"
-import { IAppPage, PageConfig } from "src/autogen/proto"
+import { IAppPage, PageConfig } from "src/lib/proto"
 import { EmotionTheme } from "src/lib/theme"
 import { localStorageAvailable } from "src/lib/util/storageUtils"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"

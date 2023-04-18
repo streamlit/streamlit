@@ -19,7 +19,7 @@ import moment from "moment"
 import { withTheme } from "@emotion/react"
 import { Datepicker as UIDatePicker, DENSITY } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
-import { DateInput as DateInputProto } from "src/autogen/proto"
+import { DateInput as DateInputProto } from "src/lib/proto"
 import { FormClearHelper } from "src/lib/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import {

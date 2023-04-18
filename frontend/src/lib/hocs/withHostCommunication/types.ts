@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ICustomThemeConfig, IAppPage } from "src/autogen/proto"
+import { ICustomThemeConfig, IAppPage } from "src/lib/proto"
 import { ExportedTheme } from "src/lib/theme"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 

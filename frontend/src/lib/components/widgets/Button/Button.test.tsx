@@ -21,7 +21,7 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import UIButton from "src/lib/components/shared/Button"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 
-import { Button as ButtonProto } from "src/autogen/proto"
+import { Button as ButtonProto } from "src/lib/proto"
 import Button, { Props } from "./Button"
 
 jest.mock("src/lib/WidgetStateManager")

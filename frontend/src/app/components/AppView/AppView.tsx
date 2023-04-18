@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { IAppPage } from "src/autogen/proto"
+import { IAppPage } from "src/lib/proto"
 
 import VerticalBlock from "src/lib/components/core/Block"
 import { ThemedSidebar } from "src/app/components/Sidebar"

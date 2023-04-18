@@ -16,7 +16,7 @@
 
 import React from "react"
 import { mount, shallow } from "src/lib/test_util"
-import { Video as VideoProto } from "src/autogen/proto"
+import { Video as VideoProto } from "src/lib/proto"
 import { mockEndpoints } from "src/lib/mocks/mocks"
 
 import Video, { VideoProps } from "./Video"

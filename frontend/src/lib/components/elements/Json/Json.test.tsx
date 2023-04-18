@@ -16,7 +16,7 @@
 
 import React from "react"
 import { mount } from "src/lib/test_util"
-import { Json as JsonProto } from "src/autogen/proto"
+import { Json as JsonProto } from "src/lib/proto"
 import * as themeUtils from "src/lib/theme/utils"
 import Json, { JsonProps } from "./Json"
 

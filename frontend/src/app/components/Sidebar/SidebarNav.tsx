@@ -20,7 +20,7 @@ import React, { ReactElement, useCallback, useRef, useState } from "react"
 import * as reactDeviceDetect from "react-device-detect"
 import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
-import { IAppPage } from "src/autogen/proto"
+import { IAppPage } from "src/lib/proto"
 import Icon, { EmojiIcon } from "src/lib/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/util/Hooks"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"

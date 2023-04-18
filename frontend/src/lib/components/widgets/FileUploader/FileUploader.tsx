@@ -23,7 +23,7 @@ import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import { FormClearHelper } from "src/lib/components/widgets/Form"
 
 import {

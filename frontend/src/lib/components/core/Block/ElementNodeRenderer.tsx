@@ -51,7 +51,7 @@ import {
   Text as TextProto,
   Video as VideoProto,
   Heading as HeadingProto,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 
 import React, { ReactElement, Suspense } from "react"
 import debounceRender from "react-debounce-render"

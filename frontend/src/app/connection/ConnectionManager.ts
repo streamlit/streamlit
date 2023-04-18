@@ -15,7 +15,7 @@
  */
 import { ReactNode } from "react"
 
-import { BackMsg, ForwardMsg } from "src/autogen/proto"
+import { BackMsg, ForwardMsg } from "src/lib/proto"
 import { IAllowedMessageOriginsResponse } from "src/lib/hocs/withHostCommunication/types"
 import { BaseUriParts, getPossibleBaseUris } from "src/lib/util/UriUtil"
 

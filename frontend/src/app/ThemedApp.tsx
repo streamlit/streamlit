@@ -18,7 +18,7 @@ import React from "react"
 import { BaseProvider } from "baseui"
 import { Global } from "@emotion/react"
 
-import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
+import { CustomThemeConfig, ICustomThemeConfig } from "src/lib/proto"
 
 import FontFaceDeclaration from "src/app/components/FontFaceDeclaration"
 import ThemeProvider from "src/lib/components/core/ThemeProvider"

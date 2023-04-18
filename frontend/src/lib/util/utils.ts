@@ -18,7 +18,7 @@ import {
   Alert as AlertProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Element,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import _ from "lodash"
 import xxhash from "xxhashjs"
 

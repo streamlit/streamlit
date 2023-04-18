@@ -15,7 +15,7 @@
  */
 
 import { Signal } from "typed-signals"
-import { SessionEvent } from "src/autogen/proto"
+import { SessionEvent } from "src/lib/proto"
 
 /** Redispatches SessionEvent messages received from the server. */
 export class SessionEventDispatcher {

@@ -19,7 +19,7 @@ import { shallow, mount } from "src/lib/test_util"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
-import { SessionEvent } from "src/autogen/proto"
+import { SessionEvent } from "src/lib/proto"
 import { mockTheme } from "src/lib/mocks/mockTheme"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"

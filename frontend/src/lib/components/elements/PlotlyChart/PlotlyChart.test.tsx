@@ -19,7 +19,7 @@ import { mount } from "src/lib/test_util"
 import Plot from "react-plotly.js"
 
 import ThemeProvider from "src/lib/components/core/ThemeProvider"
-import { PlotlyChart as PlotlyChartProto } from "src/autogen/proto"
+import { PlotlyChart as PlotlyChartProto } from "src/lib/proto"
 import { mockTheme } from "src/lib/mocks/mockTheme"
 import mock from "./mock"
 import { DEFAULT_HEIGHT, PlotlyChartProps } from "./PlotlyChart"

@@ -20,7 +20,7 @@ import without from "lodash/without"
 import { withTheme } from "@emotion/react"
 import { FormClearHelper } from "src/lib/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
-import { MultiSelect as MultiSelectProto } from "src/autogen/proto"
+import { MultiSelect as MultiSelectProto } from "src/lib/proto"
 import {
   TYPE,
   Select as UISelect,

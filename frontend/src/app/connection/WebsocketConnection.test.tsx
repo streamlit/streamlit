@@ -19,7 +19,7 @@ import { WS } from "jest-websocket-mock"
 import { zip } from "lodash"
 import React, { Fragment } from "react"
 
-import { BackMsg } from "src/autogen/proto"
+import { BackMsg } from "src/lib/proto"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { SessionInfo } from "src/lib/SessionInfo"
 import {

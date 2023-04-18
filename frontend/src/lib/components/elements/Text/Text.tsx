@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { Text as TextProto } from "src/autogen/proto"
+import { Text as TextProto } from "src/lib/proto"
 import {
   InlineTooltipIcon,
   StyledLabelHelpWrapper,

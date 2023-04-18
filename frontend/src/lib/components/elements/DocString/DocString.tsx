@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { DocString as DocStringProto, IMember } from "src/autogen/proto"
+import { DocString as DocStringProto, IMember } from "src/lib/proto"
 import {
   StyledDocContainer,
   StyledDocHeader,

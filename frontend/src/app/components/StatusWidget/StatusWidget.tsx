@@ -26,7 +26,7 @@ import Tooltip, { Placement } from "src/lib/components/shared/Tooltip"
 import { SignalConnection } from "typed-signals"
 
 import { ConnectionState } from "src/app/connection/ConnectionState"
-import { SessionEvent } from "src/autogen/proto"
+import { SessionEvent } from "src/lib/proto"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { Timer } from "src/lib/util/Timer"

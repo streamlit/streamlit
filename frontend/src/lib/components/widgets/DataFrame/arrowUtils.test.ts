@@ -15,7 +15,7 @@
  */
 
 import { Quiver, Type as ArrowType } from "src/lib/dataframes/Quiver"
-import { Arrow as ArrowProto } from "src/autogen/proto"
+import { Arrow as ArrowProto } from "src/lib/proto"
 import {
   UNICODE,
   MULTI,

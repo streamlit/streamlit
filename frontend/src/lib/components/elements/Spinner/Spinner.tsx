@@ -17,7 +17,7 @@
 import React, { ReactElement } from "react"
 import { useTheme } from "@emotion/react"
 import { EmotionTheme, isPresetTheme } from "src/lib/theme"
-import { Spinner as SpinnerProto } from "src/autogen/proto"
+import { Spinner as SpinnerProto } from "src/lib/proto"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 import { AppContext } from "src/lib/components/core/AppContext"
 import {

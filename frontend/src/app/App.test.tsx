@@ -32,7 +32,7 @@ import {
   PageInfo,
   PageNotFound,
   PagesChanged,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import { HostCommunicationHOC } from "src/lib/hocs/withHostCommunication"
 import {
   HostCommunicationState,

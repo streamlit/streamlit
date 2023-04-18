@@ -16,7 +16,7 @@
 
 import React, { ReactElement, useEffect, useCallback } from "react"
 import withFullScreenWrapper from "src/lib/hocs/withFullScreenWrapper"
-import { BokehChart as BokehChartProto } from "src/autogen/proto"
+import { BokehChart as BokehChartProto } from "src/lib/proto"
 
 export interface BokehChartProps {
   width: number

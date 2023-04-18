@@ -23,7 +23,7 @@ import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import {
   CameraInput as CameraInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import { WidgetLabel } from "src/lib/components/widgets/BaseWidget"
 import CameraInput, { Props, State } from "./CameraInput"
 import { FacingMode } from "./SwitchFacingModeButton"

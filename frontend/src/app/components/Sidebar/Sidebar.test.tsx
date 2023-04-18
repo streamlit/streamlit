@@ -18,7 +18,7 @@ import { matchers } from "@emotion/jest"
 import React from "react"
 import { ReactWrapper } from "enzyme"
 
-import { PageConfig } from "src/autogen/proto"
+import { PageConfig } from "src/lib/proto"
 import { mount } from "src/lib/test_util"
 import { spacing } from "src/lib/theme/primitives/spacing"
 import emotionLightTheme from "src/lib/theme/emotionLightTheme"

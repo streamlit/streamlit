@@ -17,7 +17,7 @@
 import styled from "@emotion/styled"
 import axios from "axios"
 
-import { BackMsg, ForwardMsg, IBackMsg } from "src/autogen/proto"
+import { BackMsg, ForwardMsg, IBackMsg } from "src/lib/proto"
 import { IAllowedMessageOriginsResponse } from "src/lib/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ForwardMsgCache } from "src/lib/ForwardMessageCache"

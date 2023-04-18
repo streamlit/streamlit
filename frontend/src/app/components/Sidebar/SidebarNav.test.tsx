@@ -26,7 +26,7 @@ import Icon from "src/lib/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/util/Hooks"
 import { mount, shallow } from "src/lib/test_util"
 import { mockEndpoints } from "src/lib/mocks/mocks"
-import { IAppPage } from "src/autogen/proto"
+import { IAppPage } from "src/lib/proto"
 
 import SidebarNav, { Props } from "./SidebarNav"
 import {

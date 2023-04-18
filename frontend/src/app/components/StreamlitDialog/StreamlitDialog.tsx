@@ -28,7 +28,7 @@ import {
   ScriptChangedDialog,
   Props as ScriptChangedDialogProps,
 } from "src/app/components/StreamlitDialog/ScriptChangedDialog"
-import { IException } from "src/autogen/proto"
+import { IException } from "src/lib/proto"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { STREAMLIT_HOME_URL } from "src/urls"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"

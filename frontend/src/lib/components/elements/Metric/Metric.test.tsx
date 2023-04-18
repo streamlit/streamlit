@@ -22,7 +22,7 @@ import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 import {
   Metric as MetricProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import Metric, { MetricProps } from "./Metric"
 
 const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({

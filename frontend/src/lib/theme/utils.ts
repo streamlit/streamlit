@@ -25,7 +25,7 @@ import decamelize from "decamelize"
 import cloneDeep from "lodash/cloneDeep"
 import merge from "lodash/merge"
 
-import { CustomThemeConfig, ICustomThemeConfig } from "src/autogen/proto"
+import { CustomThemeConfig, ICustomThemeConfig } from "src/lib/proto"
 import { logError } from "src/lib/util/log"
 import { LocalStore, localStorageAvailable } from "src/lib/util/storageUtils"
 import {

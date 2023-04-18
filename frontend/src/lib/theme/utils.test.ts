@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { CustomThemeConfig } from "src/autogen/proto"
+import { CustomThemeConfig } from "src/lib/proto"
 import { LocalStore } from "src/lib/util/storageUtils"
 import {
   baseTheme,

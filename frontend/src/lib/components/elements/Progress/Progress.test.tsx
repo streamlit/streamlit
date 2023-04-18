@@ -17,7 +17,7 @@
 import React from "react"
 import { shallow } from "src/lib/test_util"
 
-import { Progress as ProgressProto } from "src/autogen/proto"
+import { Progress as ProgressProto } from "src/lib/proto"
 import Progress, { ProgressProps } from "./Progress"
 
 const getProps = (
