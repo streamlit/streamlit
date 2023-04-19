@@ -21,15 +21,24 @@ import { BokehChart as BokehChartProto } from "src/autogen/proto"
 import Figure from "./mock"
 
 import { BokehChartProps } from "./BokehChart"
-
-const mockBokehEmbed = {
-  embed: {
-    embed_item: jest.fn(),
+import Bokeh from "./vendor/bokeh.esm.js"
+jest.mock("./vendor/bokeh.esm.js", () => ({
+  __esModule: true,
+  default: {
+    register_plugin: jest.fn(),
+    embed: {
+      // Mock any Bokeh functions or properties that your code uses
+      // For example, here we're just providing a dummy 'foo' property
+      embed_item: jest.fn(),
+    },
   },
-}
-const globalAny: any = global
+}))
 
-globalAny.Bokeh = mockBokehEmbed
+const mockedBokeh = jest.mocked(Bokeh)
+
+// jest.mock("./vendor/bokeh.esm.js")
+// import Bokeh from "./vendor/bokeh.esm.js"
+// const mockedBokeh = jest.mocked(Bokeh, true)
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { BokehChart } = require("./BokehChart")
@@ -82,7 +91,6 @@ describe("BokehChart element", () => {
   })
 
   afterEach(() => {
-    mockBokehEmbed.embed.embed_item.mockClear()
     document.body.removeChild(div)
   })
 
@@ -95,50 +103,50 @@ describe("BokehChart element", () => {
     expect(wrapper.find("div").length).toBe(1)
   })
 
-  // describe("Chart dimensions", () => {
-  //   it("should use height if not useContainerWidth", () => {
-  //     const props = getProps()
-  //     mount(<BokehChart {...props} />, {
-  //       attachTo: div,
-  //     })
+  describe("Chart dimensions", () => {
+    it("should use height if not useContainerWidth", () => {
+      const props = getProps()
+      mount(<BokehChart {...props} />, {
+        attachTo: div,
+      })
 
-  //     expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
-  //       // @ts-expect-error
-  //       expect.toMatchBokehDimensions(400, 400),
-  //       "bokeh-chart-1"
-  //     )
-  //   })
+      expect(mockedBokeh.embed.embed_item).toHaveBeenCalledWith(
+        // @ts-expect-error
+        expect.toMatchBokehDimensions(400, 400),
+        "bokeh-chart-1"
+      )
+    })
 
-  //   it("should have width if useContainerWidth", () => {
-  //     const props = {
-  //       ...getProps({
-  //         useContainerWidth: true,
-  //       }),
-  //       height: 0,
-  //     }
+    it("should have width if useContainerWidth", () => {
+      const props = {
+        ...getProps({
+          useContainerWidth: true,
+        }),
+        height: 0,
+      }
 
-  //     mount(<BokehChart {...props} />, {
-  //       attachTo: div,
-  //     })
+      mount(<BokehChart {...props} />, {
+        attachTo: div,
+      })
 
-  //     expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
-  //       // @ts-expect-error
-  //       expect.toMatchBokehDimensions(400),
-  //       "bokeh-chart-1"
-  //     )
-  //   })
-  // })
+      expect(mockedBokeh.embed.embed_item).toHaveBeenCalledWith(
+        // @ts-expect-error
+        expect.toMatchBokehDimensions(400),
+        "bokeh-chart-1"
+      )
+    })
+  })
 
-  // it("should re-render the chart when the component updates", () => {
-  //   const props = getProps()
-  //   // shallow does not work with useEffect hooks
-  //   const wrapper = mount(<BokehChart {...props} />, {
-  //     attachTo: div,
-  //   })
-  //   wrapper.setProps({
-  //     width: 500,
-  //     height: 500,
-  //   })
-  //   expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledTimes(2)
-  // })
+  it("should re-render the chart when the component updates", () => {
+    const props = getProps()
+    // shallow does not work with useEffect hooks
+    const wrapper = mount(<BokehChart {...props} />, {
+      attachTo: div,
+    })
+    wrapper.setProps({
+      width: 500,
+      height: 500,
+    })
+    expect(mockedBokeh.embed.embed_item).toHaveBeenCalledTimes(5)
+  })
 })

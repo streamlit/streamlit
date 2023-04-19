@@ -20,3 +20,8 @@ import { configure } from "enzyme"
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17"
 
 configure({ adapter: new Adapter() })
+
+// needed for BokehChart.test.tsx as we import bokeh scripts that use message channel
+// https://github.com/jsdom/jsdom/issues/2448
+// need to add --experimental-worker in node options craco test cli command
+window.MessageChannel = require("worker_threads").MessageChannel
