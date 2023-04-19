@@ -21,15 +21,21 @@ import { BokehChart as BokehChartProto } from "src/autogen/proto"
 import Figure from "./mock"
 
 import { BokehChartProps } from "./BokehChart"
-
-const mockBokehEmbed = {
-  embed: {
-    embed_item: jest.fn(),
+import Bokeh from "src/vendor/bokeh/bokeh.esm.js"
+jest.mock("src/vendor/bokeh/bokeh.esm.js", () => ({
+  // needed to parse correctly
+  __esModule: true,
+  default: {
+    // the js source code has main.register_plugin so we need to mock it
+    register_plugin: jest.fn(),
+    // actual function that we need to mock and check
+    embed: {
+      embed_item: jest.fn(),
+    },
   },
-}
-const globalAny: any = global
+}))
 
-globalAny.Bokeh = mockBokehEmbed
+const mockBokehEmbed = jest.mocked(Bokeh)
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { BokehChart } = require("./BokehChart")
@@ -82,7 +88,8 @@ describe("BokehChart element", () => {
   })
 
   afterEach(() => {
-    mockBokehEmbed.embed.embed_item.mockClear()
+    // @ts-expect-error
+    mockBokehEmbed.embed.embed_item.mockClear() // clear so embed item calls don't add up
     document.body.removeChild(div)
   })
 
