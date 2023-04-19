@@ -515,6 +515,7 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
             self.does_script_run_without_error
         )
         server._runtime._eventloop = self.io_loop.asyncio_loop
+
         return server._create_app()
 
     def test_endpoint(self):
