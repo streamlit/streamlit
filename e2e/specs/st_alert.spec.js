@@ -19,7 +19,7 @@ describe("st.error and friends", () => {
     cy.loadApp("http://localhost:3000/");
 
     // Wait for the "Please, wait" alert to disappear.
-    cy.get(".element-container .stAlert").should("have.length", 10);
+    cy.get(".element-container .stAlert").should("have.length", 11);
   });
 
   it("displays an error message correctly", () => {
@@ -44,6 +44,12 @@ describe("st.error and friends", () => {
     cy.getIndexed(".element-container .stAlert", 3)
       .get("[data-testid='stMarkdownContainer']")
       .contains("This is a success message");
+  });
+
+  it("displays code blocks with long lines correctly", () => {
+    cy.getIndexed(".element-container .stAlert", 9)
+      .get("[data-testid='stMarkdownContainer']")
+      .contains("Here is some code:")
   });
 
   it("matches snapshots", () => {
