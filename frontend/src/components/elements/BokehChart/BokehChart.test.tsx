@@ -32,7 +32,7 @@ jest.mock("./vendor/bokeh.esm.js", () => ({
   },
 }))
 
-const mockedBokehEmbed = jest.mocked(Bokeh)
+const mockBokehEmbed = jest.mocked(Bokeh)
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { BokehChart } = require("./BokehChart")
@@ -104,7 +104,7 @@ describe("BokehChart element", () => {
         attachTo: div,
       })
 
-      expect(mockedBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
+      expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
         // @ts-expect-error
         expect.toMatchBokehDimensions(400, 400),
         "bokeh-chart-1"
@@ -123,7 +123,7 @@ describe("BokehChart element", () => {
         attachTo: div,
       })
 
-      expect(mockedBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
+      expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
         // @ts-expect-error
         expect.toMatchBokehDimensions(400),
         "bokeh-chart-1"
@@ -141,6 +141,6 @@ describe("BokehChart element", () => {
       width: 500,
       height: 500,
     })
-    expect(mockedBokehEmbed.embed.embed_item).toHaveBeenCalledTimes(5)
+    expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledTimes(5)
   })
 })
