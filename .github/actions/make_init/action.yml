@@ -33,7 +33,6 @@ runs:
       shell: bash --login -eo pipefail {0}
     - name: Install system dependencies
       run: |
-        echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
         sudo apt update
         # protobuf, pyodbc, dot, & graphviz dependencies
