@@ -29,7 +29,6 @@ export function mockSessionInfoProps(
     pythonVersion: "mockPythonVersion",
     installationId: "mockInstallationId",
     installationIdV3: "mockInstallationIdV3",
-    authorEmail: "mockAuthorEmail",
     maxCachedMessageAge: 123,
     commandLine: "mockCommandLine",
     userMapboxToken: "mockUserMapboxToken",
