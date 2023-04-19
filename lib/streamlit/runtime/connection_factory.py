@@ -150,7 +150,7 @@ def connection_factory(
 @overload
 def connection_factory(
     name: str,
-    type: str | None,
+    type: str | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,
