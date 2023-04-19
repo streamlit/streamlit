@@ -1083,10 +1083,12 @@ class TimeInput(Element, Widget):
             return state[self.id]  # type: ignore
 
     def increment(self) -> TimeInput:
+        """Select the next available time."""
         dt = datetime.combine(date.today(), self.value) + timedelta(seconds=self.step)
         return self.set_value(dt.time())
 
     def decrement(self) -> TimeInput:
+        """Select the previous available time."""
         dt = datetime.combine(date.today(), self.value) - timedelta(seconds=self.step)
         return self.set_value(dt.time())
 
