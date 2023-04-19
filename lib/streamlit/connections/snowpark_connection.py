@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # NOTE: We won't always be able to import from snowflake.snowpark.session so need the
-# `type:ignore` comment below, but that comment will explode if `warn-unused-ignores` is
+# `type: ignore` comment below, but that comment will explode if `warn-unused-ignores` is
 # turned on when the package is available. Unfortunately, mypy doesn't provide a good
 # way to configure this at a per-line level :(
 # mypy: no-warn-unused-ignores
@@ -117,12 +117,21 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
         identical to that of using @st.cache_data) as well as simple error handling/retries.
         Note that queries that are run without a specified ttl are cached indefinitely.
         """
-        from tenacity import retry, stop_after_attempt, wait_fixed
+        from snowflake.snowpark.exceptions import (  # type: ignore
+            SnowparkServerException,
+        )
+        from tenacity import (
+            retry,
+            retry_if_exception_type,
+            stop_after_attempt,
+            wait_fixed,
+        )
 
         @retry(
             after=lambda _: self.reset(),
             stop=stop_after_attempt(3),
             reraise=True,
+            retry=retry_if_exception_type(SnowparkServerException),
             wait=wait_fixed(1),
         )
         @cache_data(ttl=ttl)
