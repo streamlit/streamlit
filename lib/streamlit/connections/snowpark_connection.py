@@ -80,6 +80,7 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
             super().__init__(connection_name, **kwargs)
 
     def _connect(self, **kwargs) -> "Session":
+        import tenacity  # Import tenacity so we get a ModuleNotFoundError if it's not installed
         from snowflake.snowpark.context import get_active_session  # type: ignore
         from snowflake.snowpark.exceptions import (  # type: ignore
             SnowparkSessionException,
