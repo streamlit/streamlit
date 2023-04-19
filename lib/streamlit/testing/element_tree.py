@@ -1136,11 +1136,7 @@ class Block:
         return None
 
     @overload
-    def get(self, element_type: Literal["text"]) -> Sequence[Text]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["markdown"]) -> Sequence[Markdown]:
+    def get(self, element_type: Literal["button"]) -> Sequence[Button]:
         ...
 
     @overload
@@ -1148,7 +1144,7 @@ class Block:
         ...
 
     @overload
-    def get(self, element_type: Literal["latex"]) -> Sequence[Latex]:
+    def get(self, element_type: Literal["checkbox"]) -> Sequence[Checkbox]:
         ...
 
     @overload
@@ -1156,19 +1152,15 @@ class Block:
         ...
 
     @overload
+    def get(self, element_type: Literal["color_picker"]) -> Sequence[ColorPicker]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["date_input"]) -> Sequence[DateInput]:
+        ...
+
+    @overload
     def get(self, element_type: Literal["divider"]) -> Sequence[Divider]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["title"]) -> Sequence[Title]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["header"]) -> Sequence[Header]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["subheader"]) -> Sequence[Subheader]:
         ...
 
     @overload
@@ -1176,15 +1168,33 @@ class Block:
         ...
 
     @overload
-    def get(self, element_type: Literal["radio"]) -> Sequence[Radio[Any]]:
+    def get(self, element_type: Literal["header"]) -> Sequence[Header]:
         ...
 
     @overload
-    def get(self, element_type: Literal["checkbox"]) -> Sequence[Checkbox]:
+    def get(self, element_type: Literal["latex"]) -> Sequence[Latex]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["markdown"]) -> Sequence[Markdown]:
         ...
 
     @overload
     def get(self, element_type: Literal["multiselect"]) -> Sequence[Multiselect[Any]]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["number_input"]) -> Sequence[NumberInput]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["radio"]) -> Sequence[Radio[Any]]:
+        ...
+
+    @overload
+    def get(
+        self, element_type: Literal["select_slider"]
+    ) -> Sequence[SelectSlider[Any]]:
         ...
 
     @overload
@@ -1196,17 +1206,11 @@ class Block:
         ...
 
     @overload
-    def get(
-        self, element_type: Literal["select_slider"]
-    ) -> Sequence[SelectSlider[Any]]:
+    def get(self, element_type: Literal["subheader"]) -> Sequence[Subheader]:
         ...
 
     @overload
-    def get(self, element_type: Literal["button"]) -> Sequence[Button]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["text_input"]) -> Sequence[TextInput]:
+    def get(self, element_type: Literal["text"]) -> Sequence[Text]:
         ...
 
     @overload
@@ -1214,19 +1218,15 @@ class Block:
         ...
 
     @overload
-    def get(self, element_type: Literal["color_picker"]) -> Sequence[ColorPicker]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["number_input"]) -> Sequence[NumberInput]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["date_input"]) -> Sequence[DateInput]:
+    def get(self, element_type: Literal["text_input"]) -> Sequence[TextInput]:
         ...
 
     @overload
     def get(self, element_type: Literal["time_input"]) -> Sequence[TimeInput]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["title"]) -> Sequence[Title]:
         ...
 
     def get(self, element_type: str) -> Sequence[Node]:
