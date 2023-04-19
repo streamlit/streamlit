@@ -39,7 +39,7 @@ INSTALL_REQUIRES = [
     "packaging>=14.1",
     "pandas<2,>=0.25",
     "pillow>=6.2.0",
-    "protobuf<5",
+    "protobuf>=4.21.12,<5",
     "pyarrow>=4.0",
     "pympler>=0.9",
     "python-dateutil",
