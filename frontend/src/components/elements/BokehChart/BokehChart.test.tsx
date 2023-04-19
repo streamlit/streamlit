@@ -22,11 +22,13 @@ import Figure from "./mock"
 
 import { BokehChartProps } from "./BokehChart"
 import Bokeh from "src/vendor/bokeh/bokeh.esm.js"
-// mock the Bokeh file
 jest.mock("src/vendor/bokeh/bokeh.esm.js", () => ({
+  // needed to parse correctly
   __esModule: true,
   default: {
+    // the js source code has main.register_plugin so we need to mock it
     register_plugin: jest.fn(),
+    // actual function that we need to mock and check
     embed: {
       embed_item: jest.fn(),
     },
@@ -87,7 +89,7 @@ describe("BokehChart element", () => {
 
   afterEach(() => {
     // @ts-expect-error
-    mockBokehEmbed.embed.embed_item.mockClear()
+    mockBokehEmbed.embed.embed_item.mockClear() // clear so embed item calls don't add up
     document.body.removeChild(div)
   })
 

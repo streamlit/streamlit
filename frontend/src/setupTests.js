@@ -22,7 +22,6 @@ import Adapter from "@wojtekmaj/enzyme-adapter-react-17"
 configure({ adapter: new Adapter() })
 
 /* eslint @typescript-eslint/no-var-requires: "off" */
-// needed for BokehChart.test.tsx as we import bokeh scripts that use message channel
-// https://github.com/jsdom/jsdom/issues/2448
-// need to add --experimental-worker in node options craco test cli command
+// We need MessageChannel for BokehChart.test.tsx as we import bokeh scripts that use MessageChannel and jsdom doesn't define it (https://github.com/jsdom/jsdom/issues/2448)
+// Additionally: the test command in package.json now uses the --experimental-worker node option in order to define the message channel
 window.MessageChannel = require("worker_threads").MessageChannel

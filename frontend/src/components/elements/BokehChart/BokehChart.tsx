@@ -18,9 +18,10 @@ import React, { ReactElement, useEffect, useCallback } from "react"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { BokehChart as BokehChartProto } from "src/autogen/proto"
 
-// bokeh doesn't play well with babel / cra (https://github.com/bokeh/bokeh/issues/10658)
-// have consumers provide their own bokeh minified implementation
-// bokeh.esm is renamed because has "import main from “./bokeh.esm.js"
+// We import Bokeh from a vendored source file, because it doesn't play well with Babel (https://github.com/bokeh/bokeh/issues/10658)
+// We use a side effect import here so we dont have to load it from script tags in index.html
+// Consumers of this component will have to provide these js files
+// bokeh.esm is renamed from bokeh-2.4.3.esm.min.js because addon bokeh scripts have hardcoded path to bokeh main script ("import main from “./bokeh.esm.js")
 import Bokeh from "src/vendor/bokeh/bokeh.esm"
 import "src/vendor/bokeh/bokeh-api-2.4.3.esm.min"
 import "src/vendor/bokeh/bokeh-gl-2.4.3.esm.min"

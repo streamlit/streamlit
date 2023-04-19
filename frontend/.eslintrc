@@ -31,7 +31,7 @@
     // Allows for the use of imports
     "sourceType": "module"
   },
-  // Ignore our auto-generated code
+  // Ignore our auto-generated and vendored code
   "ignorePatterns": ["src/autogen/*", "**/vendor/*"],
   "plugins": ["no-relative-import-paths"],
   // Place to specify ESLint rules.
