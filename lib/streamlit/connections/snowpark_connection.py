@@ -135,7 +135,10 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
             retry=retry_if_exception_type(SnowparkServerException),
             wait=wait_fixed(1),
         )
-        @cache_data(ttl=ttl)
+        @cache_data(
+            show_spinner="Running `Snowpark.query(...)`.",
+            ttl=ttl,
+        )
         def _query(sql: str) -> pd.DataFrame:
             with self._lock:
                 return self._instance.sql(sql).to_pandas()
