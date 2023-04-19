@@ -2,4 +2,4 @@ paths:
   - lib/streamlit
   - frontend/src
 paths-ignore:
-  - "vendor/**"
+  - "frontend/src/vendor/**"
