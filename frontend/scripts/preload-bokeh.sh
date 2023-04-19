@@ -30,8 +30,7 @@ bokeh_files=(
   "bokeh-mathjax-${bokeh_version}.min.js"
 )
 
-mkdir -p public/vendor/bokeh
-cd public/vendor/bokeh
+cd src/vendor/bokeh
 
 for filename in "${bokeh_files[@]}"
 do
