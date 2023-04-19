@@ -21,12 +21,12 @@ import { BokehChart as BokehChartProto } from "src/autogen/proto"
 // bokeh doesn't play well with babel / cra (https://github.com/bokeh/bokeh/issues/10658)
 // have consumers provide their own bokeh minified implementation
 // bokeh.esm is renamed because has "import main from “./bokeh.esm.js"
-import Bokeh from "./vendor/bokeh.esm"
-import "./vendor/bokeh-api-2.4.3.esm.min"
-import "./vendor/bokeh-gl-2.4.3.esm.min"
-import "./vendor/bokeh-mathjax-2.4.3.esm.min"
-import "./vendor/bokeh-tables-2.4.3.esm.min"
-import "./vendor/bokeh-widgets-2.4.3.esm.min"
+import Bokeh from "src/vendor/bokeh/bokeh.esm"
+import "src/vendor/bokeh/bokeh-api-2.4.3.esm.min"
+import "src/vendor/bokeh/bokeh-gl-2.4.3.esm.min"
+import "src/vendor/bokeh/bokeh-mathjax-2.4.3.esm.min"
+import "src/vendor/bokeh/bokeh-tables-2.4.3.esm.min"
+import "src/vendor/bokeh/bokeh-widgets-2.4.3.esm.min"
 
 export interface BokehChartProps {
   width: number

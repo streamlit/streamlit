@@ -21,8 +21,9 @@ import { BokehChart as BokehChartProto } from "src/autogen/proto"
 import Figure from "./mock"
 
 import { BokehChartProps } from "./BokehChart"
-import Bokeh from "./vendor/bokeh.esm.js"
-jest.mock("./vendor/bokeh.esm.js", () => ({
+import Bokeh from "src/vendor/bokeh/bokeh.esm.js"
+// mock the Bokeh file
+jest.mock("src/vendor/bokeh/bokeh.esm.js", () => ({
   __esModule: true,
   default: {
     register_plugin: jest.fn(),
