@@ -14,12 +14,13 @@
 
 import threading
 import unittest
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, mock_open, patch
 
 import pytest
 
 import streamlit as st
 from streamlit.connections import Snowpark
+from streamlit.connections.snowpark_connection import _load_from_snowsql_config_file
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.secrets import AttrDict
 from tests.testutil import create_mock_script_run_ctx
@@ -29,6 +30,53 @@ from tests.testutil import create_mock_script_run_ctx
 class SnowparkConnectionTest(unittest.TestCase):
     def tearDown(self) -> None:
         st.cache_data.clear()
+
+    def test_load_from_snowsql_config_file_no_file(self):
+        assert _load_from_snowsql_config_file("my_snowpark_connection") == {}
+
+    @patch(
+        "streamlit.connections.snowpark_connection.os.path.exists",
+        MagicMock(return_value=True),
+    )
+    def test_load_from_snowsql_config_file_no_section(self):
+        with patch("builtins.open", new_callable=mock_open, read_data=""):
+            assert _load_from_snowsql_config_file("my_snowpark_connection") == {}
+
+    @patch(
+        "streamlit.connections.snowpark_connection.os.path.exists",
+        MagicMock(return_value=True),
+    )
+    def test_load_from_snowsql_config_file_named_section(self):
+        config_data = """
+[connections.my_snowpark_connection]
+accountname = "hello"
+dbname = notPostgres
+
+[connections]
+accountname = "i get overwritten"
+schemaname = public
+"""
+        with patch("builtins.open", new_callable=mock_open, read_data=config_data):
+            assert _load_from_snowsql_config_file("my_snowpark_connection") == {
+                "account": "hello",
+                "database": "notPostgres",
+            }
+
+    @patch(
+        "streamlit.connections.snowpark_connection.os.path.exists",
+        MagicMock(return_value=True),
+    )
+    def test_load_from_snowsql_config_file_default_section(self):
+        config_data = """
+[connections]
+accountname = "not overwritten"
+schemaname = public
+"""
+        with patch("builtins.open", new_callable=mock_open, read_data=config_data):
+            assert _load_from_snowsql_config_file("my_snowpark_connection") == {
+                "account": "not overwritten",
+                "schema": "public",
+            }
 
     @patch(
         "snowflake.snowpark.context.get_active_session",
@@ -41,9 +89,7 @@ class SnowparkConnectionTest(unittest.TestCase):
     @patch(
         "streamlit.connections.snowpark_connection._load_from_snowsql_config_file",
         MagicMock(
-            return_value=AttrDict(
-                {"account": "some_val_1", "password": "i get overwritten"}
-            )
+            return_value={"account": "some_val_1", "password": "i get overwritten"}
         ),
     )
     @patch(

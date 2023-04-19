@@ -40,7 +40,7 @@ _REQUIRED_CONNECTION_PARAMS = {"account", "user"}
 _DEFAULT_CONNECTION_FILE = "~/.snowsql/config"
 
 
-def _load_from_snowsql_config_file() -> Dict[str, Any]:
+def _load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
     """Loads the dictionary from snowsql config file."""
     snowsql_config_file = os.path.expanduser(_DEFAULT_CONNECTION_FILE)
     if not os.path.exists(snowsql_config_file):
@@ -49,11 +49,21 @@ def _load_from_snowsql_config_file() -> Dict[str, Any]:
     config = configparser.ConfigParser(inline_comment_prefixes="#")
     config.read(snowsql_config_file)
 
-    conn_params = config["connections"]
-    conn_params = {k.replace("name", ""): v.strip('"') for k, v in conn_params.items()}
+    if f"connections.{connection_name}" in config:
+        raw_conn_params = config[f"connections.{connection_name}"]
+    elif "connections" in config:
+        raw_conn_params = config["connections"]
+    else:
+        return {}
+
+    conn_params = {
+        k.replace("name", ""): v.strip('"') for k, v in raw_conn_params.items()
+    }
+
     if "db" in conn_params:
         conn_params["database"] = conn_params["db"]
         del conn_params["db"]
+
     return conn_params
 
 
@@ -98,7 +108,7 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
         conn_params = ChainMap(
             kwargs,
             self._secrets.to_dict(),
-            _load_from_snowsql_config_file(),
+            _load_from_snowsql_config_file(self._connection_name),
         )
 
         for p in _REQUIRED_CONNECTION_PARAMS:
