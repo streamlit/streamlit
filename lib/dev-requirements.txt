@@ -5,7 +5,7 @@ mypy>=0.981
 mypy-protobuf>=3.2
 parameterized
 # Lower protobuf versions cause mypy issues during development builds
-protobuf>=3.19, <4
+protobuf>=4.21, <5
 pytest
 pytest-cov
 requests-mock
