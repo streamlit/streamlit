@@ -85,6 +85,7 @@ describe("BokehChart element", () => {
   })
 
   afterEach(() => {
+    mockBokehEmbed.embed.embed_item.mockClear()
     document.body.removeChild(div)
   })
 
@@ -141,6 +142,6 @@ describe("BokehChart element", () => {
       width: 500,
       height: 500,
     })
-    expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledTimes(5)
+    expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledTimes(2)
   })
 })
