@@ -62,6 +62,12 @@ class SQL(ExperimentalBaseConnection["Engine"]):
         conn_param_kwargs = extract_from_dict(_ALL_CONNECTION_PARAMS, kwargs)
         conn_params = ChainMap(conn_param_kwargs, self._secrets.to_dict())
 
+        if not len(conn_params):
+            raise StreamlitAPIException(
+                f"Missing SQL DB connection configuration. "
+                "Did you forget to set this in `secrets.toml` or as kwargs to `st.experimental_connection`?"
+            )
+
         if "url" in conn_params:
             url = sqlalchemy.engine.make_url(conn_params["url"])
         else:
