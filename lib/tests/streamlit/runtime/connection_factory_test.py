@@ -180,6 +180,8 @@ type="snowpark"
 
     @parameterized.expand(
         [
+            ("MySQLdb", "mysql-connector-python"),
+            ("psycopg2", "psycopg2-binary"),
             ("sqlalchemy", "sqlalchemy"),
             ("snowflake", "snowflake-snowpark-python"),
             ("snowflake.snowpark", "snowflake-snowpark-python"),
