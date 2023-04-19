@@ -81,7 +81,10 @@ class SQL(ExperimentalBaseConnection["Engine"]):
                 database=conn_params.get("database"),
             )
 
-        eng = sqlalchemy.create_engine(url, **kwargs)
+        create_engine_kwargs = ChainMap(
+            kwargs, self._secrets.get("create_engine_kwargs", {})
+        )
+        eng = sqlalchemy.create_engine(url, **create_engine_kwargs)
 
         if autocommit:
             return cast("Engine", eng.execution_options(isolation_level="AUTOCOMMIT"))

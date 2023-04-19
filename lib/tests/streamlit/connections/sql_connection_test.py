@@ -97,6 +97,26 @@ class SQLConnectionTest(unittest.TestCase):
 
             assert str(e.value) == f"Missing SQL DB connection param: {missing_param}"
 
+    @patch(
+        "streamlit.connections.sql_connection.SQL._secrets",
+        PropertyMock(
+            return_value=AttrDict(
+                {
+                    **DB_SECRETS,
+                    "create_engine_kwargs": {"foo": "bar", "baz": "i get overwritten"},
+                }
+            )
+        ),
+    )
+    @patch("sqlalchemy.create_engine")
+    def test_create_engine_kwargs_secrets_section(self, patched_create_engine):
+        SQL("my_sql_connection", baz="qux")
+
+        patched_create_engine.assert_called_once()
+        _, kwargs = patched_create_engine.call_args_list[0]
+
+        assert kwargs == {"foo": "bar", "baz": "qux"}
+
     @patch("streamlit.connections.sql_connection.SQL._connect", MagicMock())
     @patch("streamlit.connections.sql_connection.pd.read_sql")
     def test_query_caches_value(self, patched_read_sql):
