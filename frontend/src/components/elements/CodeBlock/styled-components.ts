@@ -138,6 +138,7 @@ export const StyledCopyButtonContainer = styled.div(({ theme }) => ({
 }))
 
 export const StyledCodeBlock = styled.div(({ theme }) => ({
+  display: "grid",
   position: "relative",
   marginLeft: theme.spacing.none,
   marginRight: theme.spacing.none,
