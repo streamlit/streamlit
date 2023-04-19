@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    "checkJs": false,
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "esModuleInterop": true,
