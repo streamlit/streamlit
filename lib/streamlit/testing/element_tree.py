@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
-from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
+from typing_extensions import Literal, Self, TypeAlias
 
 from streamlit import util
 from streamlit.elements.heading import HeadingProtoTag
@@ -105,25 +105,26 @@ class Element:
         return util.repr_(self)
 
 
-@runtime_checkable
-class Widget(Protocol):
-    id: str
-    key: str | None
-
-    def set_value(self, v: Any):
-        ...
-
-
 @dataclass(repr=False)
-class Button(Element, Widget):
-    _value: bool
-
-    proto: ButtonProto
+class Widget(ABC, Element):
     id: str
     label: str
     help: str
     form_id: str
     disabled: bool
+    key: str | None
+    _value: Any
+
+    def set_value(self, v: Any) -> Self:
+        self._value = v
+        return self
+
+
+@dataclass(repr=False)
+class Button(Widget):
+    _value: bool
+
+    proto: ButtonProto
 
     def __init__(self, proto: ButtonProto, root: ElementTree):
         self.proto = proto
@@ -162,15 +163,10 @@ class Button(Element, Widget):
 
 
 @dataclass(repr=False)
-class Checkbox(Element, Widget):
+class Checkbox(Widget):
     _value: bool | None
 
     proto: CheckboxProto
-    id: str
-    label: str
-    help: str
-    form_id: str
-    disabled: bool
 
     def __init__(self, proto: CheckboxProto, root: ElementTree):
         self.proto = proto
@@ -233,15 +229,10 @@ class Code(Element):
 
 
 @dataclass(repr=False)
-class ColorPicker(Element, Widget):
+class ColorPicker(Widget):
     _value: str | None
 
     proto: ColorPickerProto
-    id: str
-    label: str
-    help: str
-    form_id: str
-    disabled: bool
 
     def __init__(self, proto: ColorPickerProto, root: ElementTree):
         self.proto = proto
@@ -291,17 +282,12 @@ DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
 
 
 @dataclass(repr=False)
-class DateInput(Element, Widget):
+class DateInput(Widget):
     _value: DateValue | None
     proto: DateInputProto
-    id: str
-    label: str
     min: date
     max: date
     is_range: bool
-    help: str
-    form_id: str
-    disabled: bool
 
     def __init__(self, proto: DateInputProto, root: ElementTree):
         self.proto = proto
@@ -449,16 +435,11 @@ class Latex(Markdown):
 
 
 @dataclass(repr=False)
-class Multiselect(Element, Widget, Generic[T]):
+class Multiselect(Widget, Generic[T]):
     _value: list[T] | None
 
     proto: MultiSelectProto
-    id: str
-    label: str
     options: list[str]
-    help: str
-    form_id: str
-    disabled: bool
     max_selections: int
 
     def __init__(self, proto: MultiSelectProto, root: ElementTree):
@@ -537,18 +518,13 @@ Number = Union[int, float]
 
 
 @dataclass(repr=False)
-class NumberInput(Element, Widget):
+class NumberInput(Widget):
     _value: Number | None
     proto: NumberInputProto
-    id: str
-    label: str
     min_value: Number
     max_value: Number
     step: Number
-    help: str
-    form_id: str
     placeholder: str
-    disabled: bool
 
     def __init__(self, proto: NumberInputProto, root: ElementTree):
         self.proto = proto
@@ -596,16 +572,11 @@ class NumberInput(Element, Widget):
 
 
 @dataclass(repr=False)
-class Radio(Element, Widget, Generic[T]):
+class Radio(Widget, Generic[T]):
     _value: T | None
 
     proto: RadioProto
-    type: str
-    label: str
     options: list[str]
-    help: str
-    form_id: str
-    disabled: bool
     horizontal: bool
 
     def __init__(self, proto: RadioProto, root: ElementTree):
@@ -653,16 +624,11 @@ class Radio(Element, Widget, Generic[T]):
 
 
 @dataclass(repr=False)
-class Selectbox(Element, Widget, Generic[T]):
+class Selectbox(Widget, Generic[T]):
     _value: T | None
 
     proto: SelectboxProto = field(repr=False)
-    id: str
-    label: str
     options: list[str]
-    help: str
-    form_id: str
-    disabled: bool
 
     def __init__(self, proto: SelectboxProto, root: ElementTree):
         self.proto = proto
@@ -722,17 +688,12 @@ class Selectbox(Element, Widget, Generic[T]):
 
 
 @dataclass(repr=False)
-class SelectSlider(Element, Widget, Generic[T]):
+class SelectSlider(Widget, Generic[T]):
     _value: T | Sequence[T] | None
 
     proto: SliderProto
     data_type: SliderProto.DataType.ValueType
-    id: str
-    label: str
     options: list[str]
-    help: str
-    form_id: str
-    disabled: bool
 
     def __init__(self, proto: SliderProto, root: ElementTree):
         self.proto = proto
@@ -778,19 +739,14 @@ class SelectSlider(Element, Widget, Generic[T]):
 
 
 @dataclass(repr=False)
-class Slider(Element, Widget, Generic[SliderScalarT]):
+class Slider(Widget, Generic[SliderScalarT]):
     _value: SliderScalarT | Sequence[SliderScalarT] | None
 
     proto: SliderProto
     data_type: SliderProto.DataType.ValueType
-    id: str
-    label: str
     min_value: SliderScalar
     max_value: SliderScalar
     step: Step
-    help: str
-    form_id: str
-    disabled: bool
 
     def __init__(self, proto: SliderProto, root: ElementTree):
         self.proto = proto
@@ -859,17 +815,12 @@ class Text(Element):
 
 
 @dataclass(repr=False)
-class TextArea(Element, Widget):
+class TextArea(Widget):
     _value: str | None
 
     proto: TextAreaProto
-    id: str
-    label: str
     max_chars: int
-    help: str
-    form_id: str
     placeholder: str
-    disabled: bool
 
     def __init__(self, proto: TextAreaProto, root: ElementTree):
         self.proto = proto
@@ -914,17 +865,12 @@ class TextArea(Element, Widget):
 
 
 @dataclass(repr=False)
-class TextInput(Element, Widget):
+class TextInput(Widget):
     _value: str | None
     proto: TextInputProto
-    id: str
-    label: str
     max_chars: int
-    help: str
-    form_id: str
     autocomplete: str
     placeholder: str
-    disabled: bool
 
     def __init__(self, proto: TextInputProto, root: ElementTree):
         self.proto = proto
@@ -973,15 +919,10 @@ TimeValue: TypeAlias = Union[time, datetime]
 
 
 @dataclass(repr=False)
-class TimeInput(Element, Widget):
+class TimeInput(Widget):
     _value: TimeValue | None
     proto: TimeInputProto
-    id: str
-    label: str
     step: int
-    help: str
-    form_id: str
-    disabled: bool
 
     def __init__(self, proto: TimeInputProto, root: ElementTree):
         self.proto = proto
