@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from abc import ABC
 from dataclasses import dataclass, field
+from datetime import date, datetime, time, timedelta
 from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
 from typing_extensions import Literal, Protocol, TypeAlias, runtime_checkable
@@ -23,11 +24,18 @@ from streamlit import util
 from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.select_slider import SelectSliderSerde
 from streamlit.elements.slider import SliderScalar, SliderScalarT, SliderSerde, Step
+from streamlit.elements.time_widgets import (
+    DateInputSerde,
+    DateWidgetReturn,
+    TimeInputSerde,
+    _parse_date_value,
+)
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
+from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -41,6 +49,7 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
+from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import user_key_from_widget_id
 from streamlit.runtime.state.session_state import SessionState
@@ -774,7 +783,7 @@ class SelectSlider(Element, Widget, Generic[T]):
 
 
 @dataclass(repr=False)
-class TextInput(Element):
+class TextInput(Element, Widget):
     _value: str | None
     proto: TextInputProto
     type: str
@@ -834,7 +843,7 @@ class TextInput(Element):
 
 
 @dataclass(repr=False)
-class TextArea(Element):
+class TextArea(Element, Widget):
     _value: str | None
 
     proto: TextAreaProto
@@ -956,6 +965,132 @@ class NumberInput(Element, Widget):
     def decrement(self) -> NumberInput:
         v = max(self.value - self.step, self.min_value)
         return self.set_value(v)
+
+
+SingleDateValue: TypeAlias = Union[date, datetime]
+DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
+
+
+@dataclass(repr=False)
+class DateInput(Element, Widget):
+    _value: DateValue | None
+    proto: DateInputProto
+    type: str
+    id: str
+    label: str
+    min: date
+    max: date
+    is_range: bool
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: DateInputProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "date_input"
+        self.id = proto.id
+        self.label = proto.label
+        self.min = datetime.strptime(proto.min, "%Y/%m/%d").date()
+        self.max = datetime.strptime(proto.max, "%Y/%m/%d").date()
+        self.is_range = proto.is_range
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def set_value(self, v: DateValue) -> DateInput:
+        self._value = v
+        return self
+
+    def widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+
+        serde = DateInputSerde(None)  # type: ignore
+        ws.string_array_value.data[:] = serde.serialize(self.value)
+        return ws
+
+    @property
+    def value(self) -> DateWidgetReturn:
+        if self._value is not None:
+            parsed, _ = _parse_date_value(self._value)
+            return tuple(parsed)  # type: ignore
+        else:
+            state = self.root.session_state
+            assert state
+            return state[self.id]  # type: ignore
+
+
+TimeValue: TypeAlias = Union[time, datetime]
+
+
+@dataclass(repr=False)
+class TimeInput(Element, Widget):
+    _value: TimeValue | None
+    proto: TimeInputProto
+    type: str
+    id: str
+    label: str
+    step: int
+    help: str
+    form_id: str
+    disabled: bool
+    key: str | None
+
+    root: ElementTree = field(repr=False)
+
+    def __init__(self, proto: TimeInputProto, root: ElementTree):
+        self.proto = proto
+        self.root = root
+        self._value = None
+
+        self.type = "time_input"
+        self.id = proto.id
+        self.label = proto.label
+        self.step = proto.step
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+
+    def set_value(self, v: TimeValue) -> TimeInput:
+        self._value = v
+        return self
+
+    def widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+
+        serde = TimeInputSerde(None)  # type: ignore
+        ws.string_value = serde.serialize(self.value)
+        return ws
+
+    @property
+    def value(self) -> time:
+        if self._value is not None:
+            v = self._value
+            v = v.time() if isinstance(v, datetime) else v
+            return v
+        else:
+            state = self.root.session_state
+            assert state
+            return state[self.id]  # type: ignore
+
+    def increment(self) -> TimeInput:
+        """Select the next available time."""
+        dt = datetime.combine(date.today(), self.value) + timedelta(seconds=self.step)
+        return self.set_value(dt.time())
+
+    def decrement(self) -> TimeInput:
+        """Select the previous available time."""
+        dt = datetime.combine(date.today(), self.value) - timedelta(seconds=self.step)
+        return self.set_value(dt.time())
 
 
 @dataclass(init=False, repr=False)
@@ -1084,6 +1219,14 @@ class Block:
 
     @overload
     def get(self, element_type: Literal["number_input"]) -> Sequence[NumberInput]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["date_input"]) -> Sequence[DateInput]:
+        ...
+
+    @overload
+    def get(self, element_type: Literal["time_input"]) -> Sequence[TimeInput]:
         ...
 
     def get(self, element_type: str) -> Sequence[Node]:
@@ -1245,6 +1388,10 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Code(elt.code, root=root)
             elif elt.WhichOneof("type") == "color_picker":
                 new_node = ColorPicker(elt.color_picker, root=root)
+            elif elt.WhichOneof("type") == "date_input":
+                new_node = DateInput(elt.date_input, root=root)
+            elif elt.WhichOneof("type") == "time_input":
+                new_node = TimeInput(elt.time_input, root=root)
             else:
                 new_node = Element(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":
