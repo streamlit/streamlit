@@ -117,7 +117,7 @@ tzdata==2023.3
 tzlocal==4.3
 urllib3==1.26.15
 validators==0.20.0
-virtualenv==20.21.0
+virtualenv==20.21.1
 watchdog==3.0.0
 webencodings==0.5.1
 zipp==3.15.0
