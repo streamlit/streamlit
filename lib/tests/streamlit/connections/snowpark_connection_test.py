@@ -84,14 +84,18 @@ class SnowparkConnectionTest(unittest.TestCase):
 
     @patch("streamlit.connections.snowpark_connection.Snowpark._connect", MagicMock())
     def test_retry_behavior(self):
+        from snowflake.snowpark.exceptions import SnowparkServerException
+
         mock_sql_return = MagicMock()
-        mock_sql_return.to_pandas = MagicMock(side_effect=Exception("oh noes :("))
+        mock_sql_return.to_pandas = MagicMock(
+            side_effect=SnowparkServerException("oh noes :(")
+        )
 
         conn = Snowpark("my_snowpark_connection")
         conn._instance.sql.return_value = mock_sql_return
 
         with patch.object(conn, "reset", wraps=conn.reset) as wrapped_reset:
-            with pytest.raises(Exception):
+            with pytest.raises(SnowparkServerException):
                 conn.query("SELECT 1;")
 
             # Our connection should have been reset after each failed attempt to call
@@ -102,3 +106,20 @@ class SnowparkConnectionTest(unittest.TestCase):
         # connection, then once each after the second and third attempts to call
         # query.
         assert conn._connect.call_count == 3
+
+    @patch("streamlit.connections.snowpark_connection.Snowpark._connect", MagicMock())
+    def test_retry_fails_fast_for_most_errors(self):
+        from snowflake.snowpark.exceptions import SnowparkServerException
+
+        mock_sql_return = MagicMock()
+        mock_sql_return.to_pandas = MagicMock(side_effect=Exception("oh noes :("))
+
+        conn = Snowpark("my_snowpark_connection")
+        conn._instance.sql.return_value = mock_sql_return
+
+        with pytest.raises(Exception):
+            conn.query("SELECT 1;")
+
+        # conn._connect should have just been called once when first creating the
+        # connection.
+        assert conn._connect.call_count == 1

@@ -19,6 +19,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from parameterized import parameterized
+from sqlalchemy.exc import DatabaseError, InternalError, OperationalError
 
 import streamlit as st
 from streamlit.connections import SQL
@@ -161,15 +162,16 @@ class SQLConnectionTest(unittest.TestCase):
         assert "Dialect: `postgres`" in repr_
         assert "Configured from `[connections.my_sql_connection]`" in repr_
 
+    @parameterized.expand([(DatabaseError,), (InternalError,), (OperationalError,)])
     @patch("streamlit.connections.sql_connection.SQL._connect", MagicMock())
     @patch("streamlit.connections.sql_connection.pd.read_sql")
-    def test_retry_behavior(self, patched_read_sql):
-        patched_read_sql.side_effect = Exception("kaboom")
+    def test_retry_behavior(self, error_class, patched_read_sql):
+        patched_read_sql.side_effect = error_class("kaboom", params=None, orig=None)
 
         conn = SQL("my_sql_connection")
 
         with patch.object(conn, "reset", wraps=conn.reset) as wrapped_reset:
-            with pytest.raises(Exception):
+            with pytest.raises(error_class):
                 conn.query("SELECT 1;")
 
             # Our connection should have been reset after each failed attempt to call
@@ -180,3 +182,19 @@ class SQLConnectionTest(unittest.TestCase):
         # connection, then once each after the second and third attempts to call
         # query.
         assert conn._connect.call_count == 3
+        conn._connect.reset_mock()
+
+    @patch("streamlit.connections.sql_connection.SQL._connect", MagicMock())
+    @patch("streamlit.connections.sql_connection.pd.read_sql")
+    def test_retry_behavior_fails_fast_for_most_errors(self, patched_read_sql):
+        patched_read_sql.side_effect = Exception("kaboom")
+
+        conn = SQL("my_sql_connection")
+
+        with pytest.raises(Exception):
+            conn.query("SELECT 1;")
+
+        # conn._connect should have just been called once when first creating the
+        # connection.
+        assert conn._connect.call_count == 1
+        conn._connect.reset_mock()
