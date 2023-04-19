@@ -20,3 +20,8 @@ import { configure } from "enzyme"
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17"
 
 configure({ adapter: new Adapter() })
+
+/* eslint @typescript-eslint/no-var-requires: "off" */
+// We need MessageChannel for BokehChart.test.tsx as we import bokeh scripts that use MessageChannel and jsdom doesn't define it (https://github.com/jsdom/jsdom/issues/2448)
+// Additionally: the test command in package.json now uses the --experimental-worker node option in order to define the message channel
+window.MessageChannel = require("worker_threads").MessageChannel

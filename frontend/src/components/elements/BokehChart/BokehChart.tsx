@@ -18,20 +18,21 @@ import React, { ReactElement, useEffect, useCallback } from "react"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { BokehChart as BokehChartProto } from "src/autogen/proto"
 
+// We import Bokeh from a vendored source file, because it doesn't play well with Babel (https://github.com/bokeh/bokeh/issues/10658)
+// Importing these files will cause global Bokeh to be mutated
+// Consumers of this component will have to provide these js files
+// bokeh.esm is renamed from bokeh-2.4.3.esm.min.js because addon bokeh scripts have hardcoded path to bokeh main script ("import main from “./bokeh.esm.js")
+import Bokeh from "src/vendor/bokeh/bokeh.esm"
+import "src/vendor/bokeh/bokeh-api-2.4.3.esm.min"
+import "src/vendor/bokeh/bokeh-gl-2.4.3.esm.min"
+import "src/vendor/bokeh/bokeh-mathjax-2.4.3.esm.min"
+import "src/vendor/bokeh/bokeh-tables-2.4.3.esm.min"
+import "src/vendor/bokeh/bokeh-widgets-2.4.3.esm.min"
+
 export interface BokehChartProps {
   width: number
   element: BokehChartProto
   height?: number
-}
-
-declare global {
-  interface Window {
-    Bokeh: {
-      embed: {
-        embed_item: (data: any, chartId: string) => void
-      }
-    }
-  }
 }
 
 interface Dimensions {
@@ -77,7 +78,6 @@ export function BokehChart({
   }
 
   const updateChart = (data: any): void => {
-    const { Bokeh } = window
     const chart = document.getElementById(chartId)
 
     /**
