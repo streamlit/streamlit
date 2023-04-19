@@ -27,18 +27,12 @@ jest.mock("./vendor/bokeh.esm.js", () => ({
   default: {
     register_plugin: jest.fn(),
     embed: {
-      // Mock any Bokeh functions or properties that your code uses
-      // For example, here we're just providing a dummy 'foo' property
       embed_item: jest.fn(),
     },
   },
 }))
 
-const mockedBokeh = jest.mocked(Bokeh)
-
-// jest.mock("./vendor/bokeh.esm.js")
-// import Bokeh from "./vendor/bokeh.esm.js"
-// const mockedBokeh = jest.mocked(Bokeh, true)
+const mockedBokehEmbed = jest.mocked(Bokeh)
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { BokehChart } = require("./BokehChart")
@@ -110,7 +104,7 @@ describe("BokehChart element", () => {
         attachTo: div,
       })
 
-      expect(mockedBokeh.embed.embed_item).toHaveBeenCalledWith(
+      expect(mockedBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
         // @ts-expect-error
         expect.toMatchBokehDimensions(400, 400),
         "bokeh-chart-1"
@@ -129,7 +123,7 @@ describe("BokehChart element", () => {
         attachTo: div,
       })
 
-      expect(mockedBokeh.embed.embed_item).toHaveBeenCalledWith(
+      expect(mockedBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
         // @ts-expect-error
         expect.toMatchBokehDimensions(400),
         "bokeh-chart-1"
@@ -147,6 +141,6 @@ describe("BokehChart element", () => {
       width: 500,
       height: 500,
     })
-    expect(mockedBokeh.embed.embed_item).toHaveBeenCalledTimes(5)
+    expect(mockedBokehEmbed.embed.embed_item).toHaveBeenCalledTimes(5)
   })
 })
