@@ -15,10 +15,6 @@ eggs/
 *.egg
 .prerelease-version
 
-# Preloaded, minified js (downloaded via script due to dependencies having
-# issues with babel transpilation).
-frontend/public/vendor/bokeh/
-
 # Unit test / coverage reports
 .coverage
 .coverage\.*
