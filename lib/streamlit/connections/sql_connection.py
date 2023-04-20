@@ -13,10 +13,9 @@
 # limitations under the License.
 
 from collections import ChainMap
-from contextlib import contextmanager
 from copy import deepcopy
 from datetime import timedelta
-from typing import TYPE_CHECKING, Iterator, List, Optional, Union, cast
+from typing import TYPE_CHECKING, List, Optional, Union, cast
 
 import pandas as pd
 
@@ -170,14 +169,8 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
             **kwargs,
         )
 
-    @contextmanager
-    def session(self) -> Iterator["Session"]:
-        """A thin wrapper around SQLAlchemy Session context management.
-
-        This allows us to write
-            `with conn.session() as session:`
-        instead of importing the sqlalchemy.orm.Session object and writing
-            `with Session(conn._instance) as session:`
+    def session(self) -> "Session":
+        """Return a SQLAlchemy Session.
 
         Users of this connection should use the contextmanager pattern for writes,
         transactions, and anything more complex than simple read queries.
@@ -196,8 +189,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         """
         from sqlalchemy.orm import Session
 
-        with Session(self._instance) as s:
-            yield s
+        return Session(self._instance)
 
     # NOTE: This more or less duplicates the default implementation in
     # ExperimentalBaseConnection so that we can add another bullet point between the
