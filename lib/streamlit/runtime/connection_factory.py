@@ -182,6 +182,31 @@ def connection_factory(
       * An app's `secrets.toml` files.
       * The kwargs passed to this function.
 
+    Parameters
+    ----------
+    name : str
+        The connection name, used for secrets lookup in `[connections.<name>]`.
+        Type will be inferred from passing `"sql"` or `"snowpark"`.
+    type : str or connection class
+        The type of connection to create. It can be a keyword (`"sql"` or `"snowpark"`),
+        a path to an importable class, or an imported class reference. All classes
+        must extend `st.connections.ExperimentalBaseConnection` and implement the
+        `_connect()` method.
+    max_entries : int or None
+            The maximum number of connections to keep in the cache, or None
+            for an unbounded cache. (When a new entry is added to a full cache,
+            the oldest cached entry will be removed.) The default is None.
+    ttl : float or timedelta or None
+        The maximum number of seconds to keep results in the cache, or
+        None if cached results should not expire. The default is None.
+    **kwargs : Additional connection specific kwargs, that are passed to the Connection's
+        `_connect()` method. Learn more from the specific Connection's documentation.
+
+    Returns
+    -------
+    Connection object
+        An initialized Connection object of the specified type.
+
     Examples
     --------
     The easiest way to create a first-party (SQL or Snowpark) connection is to use their
