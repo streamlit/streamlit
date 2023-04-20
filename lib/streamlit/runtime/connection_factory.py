@@ -73,7 +73,11 @@ def _create_connection(
       * Allow the user to specify ttl and max_entries when calling st.experimental_connection.
     """
 
-    @cache_resource(ttl=ttl, max_entries=max_entries)
+    @cache_resource(
+        max_entries=max_entries,
+        show_spinner="Running `st.experimental_connection(...)`.",
+        ttl=ttl,
+    )
     def __create_connection(
         name: str, connection_class: Type[ConnectionClass], **kwargs
     ) -> ConnectionClass:
