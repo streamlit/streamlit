@@ -143,7 +143,7 @@ class SQL(ExperimentalBaseConnection["Engine"]):
             wait=wait_fixed(1),
         )
         @cache_data(
-            show_spinner="Running `SQL.query(...)`.",
+            show_spinner="Running `sql.query(...)`.",
             ttl=ttl,
         )
         def _query(

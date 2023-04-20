@@ -153,7 +153,7 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
             wait=wait_fixed(1),
         )
         @cache_data(
-            show_spinner="Running `Snowpark.query(...)`.",
+            show_spinner="Running `snowpark.query(...)`.",
             ttl=ttl,
         )
         def _query(sql: str) -> pd.DataFrame:
