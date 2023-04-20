@@ -84,6 +84,16 @@ class SQLConnectionTest(unittest.TestCase):
             == "postgres+psycopg2://DnomaidEruza:hunter2@localhost:2345/postgres"
         )
 
+    def test_error_if_no_config(self):
+        with patch(
+            "streamlit.connections.sql_connection.SQL._secrets",
+            PropertyMock(return_value=AttrDict({})),
+        ):
+            with pytest.raises(StreamlitAPIException) as e:
+                SQL("my_sql_connection")
+
+            assert "Missing SQL DB connection configuration." in str(e.value)
+
     @parameterized.expand([("dialect",), ("username",), ("host",)])
     def test_error_if_missing_required_param(self, missing_param):
         secrets = deepcopy(DB_SECRETS)
