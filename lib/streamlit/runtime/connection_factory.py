@@ -39,6 +39,8 @@ FIRST_PARTY_CONNECTIONS = {
 }
 MODULE_EXTRACTION_REGEX = re.compile(r"No module named \'(.+)\'")
 MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
+    "MySQLdb": "mysqlclient",
+    "psycopg2": "psycopg2-binary",
     "sqlalchemy": "sqlalchemy",
     "snowflake": "snowflake-snowpark-python",
     "snowflake.snowpark": "snowflake-snowpark-python",
@@ -150,7 +152,7 @@ def connection_factory(
 @overload
 def connection_factory(
     name: str,
-    type: str | None,
+    type: str | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,

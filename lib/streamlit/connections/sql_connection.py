@@ -56,10 +56,17 @@ class SQL(ExperimentalBaseConnection["Engine"]):
 
     def _connect(self, autocommit: bool = False, **kwargs) -> "Engine":
         import sqlalchemy
+        import tenacity  # Import tenacity so we get a ModuleNotFoundError if it's not installed
 
         kwargs = deepcopy(kwargs)
         conn_param_kwargs = extract_from_dict(_ALL_CONNECTION_PARAMS, kwargs)
         conn_params = ChainMap(conn_param_kwargs, self._secrets.to_dict())
+
+        if not len(conn_params):
+            raise StreamlitAPIException(
+                "Missing SQL DB connection configuration. "
+                "Did you forget to set this in `secrets.toml` or as kwargs to `st.experimental_connection`?"
+            )
 
         if "url" in conn_params:
             url = sqlalchemy.engine.make_url(conn_params["url"])
@@ -135,7 +142,10 @@ class SQL(ExperimentalBaseConnection["Engine"]):
             ),
             wait=wait_fixed(1),
         )
-        @cache_data(ttl=ttl)
+        @cache_data(
+            show_spinner="Running `sql.query(...)`.",
+            ttl=ttl,
+        )
         def _query(
             sql: str,
             index_col=None,
