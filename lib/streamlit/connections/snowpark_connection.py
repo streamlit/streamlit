@@ -111,6 +111,13 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
             _load_from_snowsql_config_file(self._connection_name),
         )
 
+        if not len(conn_params):
+            raise StreamlitAPIException(
+                "Missing Snowpark connection configuration. "
+                f"Did you forget to set this in `secrets.toml`, `{_DEFAULT_CONNECTION_FILE}`, "
+                "or as kwargs to `st.experimental_connection`?"
+            )
+
         for p in _REQUIRED_CONNECTION_PARAMS:
             if p not in conn_params:
                 raise StreamlitAPIException(f"Missing Snowpark connection param: {p}")

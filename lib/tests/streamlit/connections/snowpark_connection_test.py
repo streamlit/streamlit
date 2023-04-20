@@ -21,6 +21,7 @@ import pytest
 import streamlit as st
 from streamlit.connections import Snowpark
 from streamlit.connections.snowpark_connection import _load_from_snowsql_config_file
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.secrets import AttrDict
 from tests.testutil import create_mock_script_run_ctx
@@ -112,6 +113,16 @@ schemaname = public
                 "password": "hunter2",
             }
         )
+
+    def test_error_if_no_conn_params(self):
+        with pytest.raises(StreamlitAPIException) as e:
+            Snowpark("my_snowpark_connection")
+        assert "Missing Snowpark connection configuration." in str(e.value)
+
+    def test_error_if_missing_required_conn_params(self):
+        with pytest.raises(StreamlitAPIException) as e:
+            Snowpark("my_snowpark_connection", account="my_account")
+        assert "Missing Snowpark connection param: user" == str(e.value)
 
     @patch("streamlit.connections.snowpark_connection.Snowpark._connect", MagicMock())
     def test_query_caches_value(self):
