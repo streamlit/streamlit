@@ -64,7 +64,7 @@ class SQL(ExperimentalBaseConnection["Engine"]):
 
         if not len(conn_params):
             raise StreamlitAPIException(
-                f"Missing SQL DB connection configuration. "
+                "Missing SQL DB connection configuration. "
                 "Did you forget to set this in `secrets.toml` or as kwargs to `st.experimental_connection`?"
             )
 
