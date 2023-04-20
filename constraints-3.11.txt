@@ -26,7 +26,7 @@ gitdb==4.0.10
 GitPython==3.1.31
 graphviz==0.20.1
 greenlet==2.0.2
-hypothesis==6.72.0
+hypothesis==6.72.1
 identify==2.5.22
 idna==3.4
 importlib-metadata==6.5.0
@@ -115,7 +115,7 @@ tzdata==2023.3
 tzlocal==4.3
 urllib3==1.26.15
 validators==0.20.0
-virtualenv==20.21.0
+virtualenv==20.22.0
 watchdog==3.0.0
 webencodings==0.5.1
 zipp==3.15.0
