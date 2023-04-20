@@ -54,7 +54,7 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
         ----------
         connection_name : str
             The name of this connection. This corresponds to the
-            `[connections.<connection_name]` config section in `st.secrets`.
+            `[connections.<connection_name>]` config section in `st.secrets`.
         kwargs : dict
             Any other kwargs to pass to this connection class' `_connect` method.
 
@@ -135,10 +135,24 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
         return connections_section.get(self._connection_name, AttrDict({}))
 
     def reset(self) -> None:
-        """Reset this connection so that it gets reinstantiated the next time it's used.
+        """Reset this connection so that it gets reinitialized the next time it's used.
 
-        This method is one that we expect app developers to use when working with
-        concrete connection class instances, particularly in error handling code.
+        App developers can use this method when working with concrete connection class
+        instances, particularly in error handling code.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> conn = st.experimental_connection("my_conn")
+        >>>
+        >>> # Reset the connection before using it if it isn't healthy
+        >>> # Note: `is_healthy()` is just shown for example here
+        >>> if not conn.is_healthy():
+        ...     conn.reset()
+        ...
+        >>> cursor = conn.query("...")
+        >>> # ...
         """
         self._raw_instance = None
 

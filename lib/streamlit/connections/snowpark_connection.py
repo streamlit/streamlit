@@ -68,12 +68,12 @@ def _load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
 
 
 class SnowparkConnection(ExperimentalBaseConnection["Session"]):
-    """A thin wrapper around snowflake.snowpark.session.Session that makes it play
-    nicely with st.experimental_connection.
+    """A connection to Snowpark using snowflake.snowpark.session.Session. Initialize using
+    `st.experimental_connection("<name>", type="snowpark")`.
 
-    SnowparkConnection additionally ensures the underlying Snowpark Session can
-    only be accessed by a single thread at a time as Session object usage is *not* thread
-    safe.
+    In addition to the Snowpark Session, this connection supports direct SQL querying using
+    `query("...")` and thread safe access using `with conn.safe_session():`. See methods
+    below for more information.
 
     NOTE: We don't expect this iteration of SnowparkConnection to be able to scale
     well in apps with many concurrent users due to the lock contention that will occur
@@ -128,6 +128,27 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         This method implements both query result caching (with caching behavior
         identical to that of using @st.cache_data) as well as simple error handling/retries.
         Note that queries that are run without a specified ttl are cached indefinitely.
+
+        Parameters
+        ----------
+        sql : str
+            The read-only SQL query to execute.
+        ttl : float or timedelta or None
+            The maximum number of seconds to keep results in the cache, or
+            None if cached results should not expire. The default is None.
+
+        Returns
+        -------
+        pd.DataFrame
+            The query result, returned as a ``pd.DataFrame``.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> conn = st.experimental_connection("snowpark")
+        >>> df = conn.query("select * from pet_owners")
+        >>> st.dataframe(df)
         """
         from snowflake.snowpark.exceptions import (  # type: ignore
             SnowparkServerException,
@@ -182,6 +203,16 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
 
         Information on how to use Snowpark sessions can be found in the
         [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> conn = st.experimental_connection("snowpark")
+        >>> with conn.session() as session:
+        ...     df = session.table("mytable").limit(10).to_pandas()
+        ...
+        >>> st.dataframe(df)
         """
         with self._lock:
             yield self.session
