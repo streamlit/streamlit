@@ -67,15 +67,15 @@ def _load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
     return conn_params
 
 
-class Snowpark(ExperimentalBaseConnection["Session"]):
+class SnowparkConnection(ExperimentalBaseConnection["Session"]):
     """A thin wrapper around snowflake.snowpark.session.Session that makes it play
     nicely with st.experimental_connection.
 
-    The Snowpark connection additionally ensures the underlying Snowpark Session can
+    SnowparkConnection additionally ensures the underlying Snowpark Session can
     only be accessed by a single thread at a time as Session object usage is *not* thread
     safe.
 
-    NOTE: We don't expect this iteration of the Snowpark connection to be able to scale
+    NOTE: We don't expect this iteration of SnowparkConnection to be able to scale
     well in apps with many concurrent users due to the lock contention that will occur
     over the single underlying Session object under high load.
     """
@@ -158,7 +158,7 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
 
     @contextmanager
     def session(self) -> Iterator["Session"]:
-        """Grab the Snowpark session in a thread-safe manner.
+        """Grab the underlying Snowpark session in a thread-safe manner.
 
         As operations on a Snowpark session are *not* thread safe, we need to take care
         when using a session in the context of a Streamlit app where each script run

@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, PropertyMock, mock_open, patch
 import pytest
 
 import streamlit as st
-from streamlit.connections import Snowpark
+from streamlit.connections import SnowparkConnection
 from streamlit.connections.snowpark_connection import _load_from_snowsql_config_file
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import add_script_run_ctx
@@ -84,7 +84,7 @@ schemaname = public
         MagicMock(return_value="some active session"),
     )
     def test_just_uses_current_active_session_if_available(self):
-        conn = Snowpark("my_snowpark_connection")
+        conn = SnowparkConnection("my_snowpark_connection")
         assert conn._instance == "some active session"
 
     @patch(
@@ -94,7 +94,7 @@ schemaname = public
         ),
     )
     @patch(
-        "streamlit.connections.snowpark_connection.Snowpark._secrets",
+        "streamlit.connections.snowpark_connection.SnowparkConnection._secrets",
         PropertyMock(
             return_value=AttrDict(
                 {"user": "some_val_2", "some_key": "i get overwritten"}
@@ -103,7 +103,9 @@ schemaname = public
     )
     @patch("snowflake.snowpark.session.Session")
     def test_merges_params_from_all_config_sources(self, patched_session):
-        Snowpark("my_snowpark_connection", some_key="some_val_3", password="hunter2")
+        SnowparkConnection(
+            "my_snowpark_connection", some_key="some_val_3", password="hunter2"
+        )
 
         patched_session.builder.configs.assert_called_with(
             {
@@ -116,15 +118,18 @@ schemaname = public
 
     def test_error_if_no_conn_params(self):
         with pytest.raises(StreamlitAPIException) as e:
-            Snowpark("my_snowpark_connection")
+            SnowparkConnection("my_snowpark_connection")
         assert "Missing Snowpark connection configuration." in str(e.value)
 
     def test_error_if_missing_required_conn_params(self):
         with pytest.raises(StreamlitAPIException) as e:
-            Snowpark("my_snowpark_connection", user="my_user")
+            SnowparkConnection("my_snowpark_connection", user="my_user")
         assert "Missing Snowpark connection param: account" == str(e.value)
 
-    @patch("streamlit.connections.snowpark_connection.Snowpark._connect", MagicMock())
+    @patch(
+        "streamlit.connections.snowpark_connection.SnowparkConnection._connect",
+        MagicMock(),
+    )
     def test_query_caches_value(self):
         # Caching functions rely on an active script run ctx
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
@@ -132,14 +137,17 @@ schemaname = public
         mock_sql_return = MagicMock()
         mock_sql_return.to_pandas = MagicMock(return_value="i am a dataframe")
 
-        conn = Snowpark("my_snowpark_connection")
+        conn = SnowparkConnection("my_snowpark_connection")
         conn._instance.sql.return_value = mock_sql_return
 
         assert conn.query("SELECT 1;") == "i am a dataframe"
         assert conn.query("SELECT 1;") == "i am a dataframe"
         conn._instance.sql.assert_called_once()
 
-    @patch("streamlit.connections.snowpark_connection.Snowpark._connect", MagicMock())
+    @patch(
+        "streamlit.connections.snowpark_connection.SnowparkConnection._connect",
+        MagicMock(),
+    )
     def test_retry_behavior(self):
         from snowflake.snowpark.exceptions import SnowparkServerException
 
@@ -148,7 +156,7 @@ schemaname = public
             side_effect=SnowparkServerException("oh noes :(")
         )
 
-        conn = Snowpark("my_snowpark_connection")
+        conn = SnowparkConnection("my_snowpark_connection")
         conn._instance.sql.return_value = mock_sql_return
 
         with patch.object(conn, "reset", wraps=conn.reset) as wrapped_reset:
@@ -164,14 +172,17 @@ schemaname = public
         # query.
         assert conn._connect.call_count == 3
 
-    @patch("streamlit.connections.snowpark_connection.Snowpark._connect", MagicMock())
+    @patch(
+        "streamlit.connections.snowpark_connection.SnowparkConnection._connect",
+        MagicMock(),
+    )
     def test_retry_fails_fast_for_most_errors(self):
         from snowflake.snowpark.exceptions import SnowparkServerException
 
         mock_sql_return = MagicMock()
         mock_sql_return.to_pandas = MagicMock(side_effect=Exception("oh noes :("))
 
-        conn = Snowpark("my_snowpark_connection")
+        conn = SnowparkConnection("my_snowpark_connection")
         conn._instance.sql.return_value = mock_sql_return
 
         with pytest.raises(Exception):

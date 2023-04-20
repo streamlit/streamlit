@@ -21,7 +21,11 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 from parameterized import parameterized
 
-from streamlit.connections import ExperimentalBaseConnection, Snowpark, SQLConnection
+from streamlit.connections import (
+    ExperimentalBaseConnection,
+    SnowparkConnection,
+    SQLConnection,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching.cache_resource_api import _resource_caches
 from streamlit.runtime.connection_factory import (
@@ -72,7 +76,7 @@ class ConnectionFactoryTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("snowpark", Snowpark),
+            ("snowpark", SnowparkConnection),
             ("sql", SQLConnection),
         ]
     )
@@ -166,7 +170,7 @@ type="snowpark"
             connection_factory("my_connection")
 
         patched_create_connection.assert_called_once_with(
-            "my_connection", Snowpark, max_entries=None, ttl=None
+            "my_connection", SnowparkConnection, max_entries=None, ttl=None
         )
 
     def test_can_pass_class_directly_to_factory_func(self):

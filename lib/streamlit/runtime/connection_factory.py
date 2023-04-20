@@ -22,7 +22,11 @@ from typing import Any, Dict, Type, TypeVar, overload
 
 from typing_extensions import Final, Literal
 
-from streamlit.connections import ExperimentalBaseConnection, Snowpark, SQLConnection
+from streamlit.connections import (
+    ExperimentalBaseConnection,
+    SnowparkConnection,
+    SQLConnection,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
@@ -34,7 +38,7 @@ from streamlit.runtime.secrets import secrets_singleton
 #      only the connection name is specified and another when both name and type are).
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
 FIRST_PARTY_CONNECTIONS = {
-    "snowpark": Snowpark,
+    "snowpark": SnowparkConnection,
     "sql": SQLConnection,
 }
 MODULE_EXTRACTION_REGEX = re.compile(r"No module named \'(.+)\'")
@@ -122,7 +126,7 @@ def connection_factory(
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,
-) -> Snowpark:
+) -> SnowparkConnection:
     pass
 
 
@@ -133,7 +137,7 @@ def connection_factory(
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,
-) -> Snowpark:
+) -> SnowparkConnection:
     pass
 
 
