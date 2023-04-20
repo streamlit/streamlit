@@ -185,7 +185,6 @@ type="snowpark"
             ("sqlalchemy", "sqlalchemy"),
             ("snowflake", "snowflake-snowpark-python"),
             ("snowflake.snowpark", "snowflake-snowpark-python"),
-            ("tenacity", "tenacity"),
         ]
     )
     @patch("streamlit.runtime.connection_factory._create_connection")

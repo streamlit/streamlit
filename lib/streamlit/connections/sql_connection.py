@@ -56,7 +56,6 @@ class SQL(ExperimentalBaseConnection["Engine"]):
 
     def _connect(self, autocommit: bool = False, **kwargs) -> "Engine":
         import sqlalchemy
-        import tenacity  # Import tenacity so we get a ModuleNotFoundError if it's not installed
 
         kwargs = deepcopy(kwargs)
         conn_param_kwargs = extract_from_dict(_ALL_CONNECTION_PARAMS, kwargs)
