@@ -43,14 +43,31 @@ _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
 class SQLConnection(ExperimentalBaseConnection["Engine"]):
-    """A thin wrapper around SQLALchemy that makes it play nicely with
-    st.experimental_connection.
+    """A connection to a SQL database using a SQLAlchemy Engine. Initialize using
+    `st.experimental_connection("<name>", type="sql")`.
 
-    The SQLConnection connection also provides the `query` convenience method, which can be used to
+    The SQL connection provides the `query()` convenience method, which can be used to
     run simple read-only queries with both caching and simple error handling/retries.
 
     More complex DB interactions can be performed by using the .session() contextmanager
     pattern to receive a regular SQLAlchemy Session.
+
+    SQL connections will typically use connection parameters specified via st.secrets or **kwargs.
+    Particular parameters that may be frequently used:
+    - `url` or arguments for [sqlalchemy.engine.URL.create()](https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.URL.create).
+      Most commonly it includes a dialect, host, database, username and password.
+    - `create_engine_kwargs` can be passed via `st.secrets`, such as for [snowflake-sqlalchemy](https://github.com/snowflakedb/snowflake-sqlalchemy#key-pair-authentication-support) or
+      [Google BigQuery](https://github.com/googleapis/python-bigquery-sqlalchemy#authentication).
+      These can also be passed directly as **kwargs to experimental_connection().
+    - `autocommit=True` to run with isolation level `AUTOCOMMIT` (default is False).
+
+    Example
+    -------
+    >>> import streamlit as st
+    >>>
+    >>> conn = st.experimental_connection("sql")
+    >>> df = conn.query("select * from pet_owners")
+    >>> st.dataframe(df)
     """
 
     def _connect(self, autocommit: bool = False, **kwargs) -> "Engine":
@@ -116,10 +133,36 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         to [pd.read_sql](https://pandas.pydata.org/docs/reference/api/pandas.read_sql.html).
         and have the behavior described in the pandas documentation.
 
+        Parameters
+        ----------
+        sql : str
+            The read-only SQL query to execute.
+        ttl : float or timedelta or None
+            The maximum number of seconds to keep results in the cache, or
+            None if cached results should not expire. The default is None.
+        index_col : str or list of str or None
+            Column(s) to set as index(MultiIndex). Default is None.
+        chunksize : int or None
+            If specified, return an iterator where chunksize is the number of
+            rows to include in each chunk. Default is None.
+        params : list or tuple or dict or None
+            List of parameters to pass to execute method. The syntax used to pass
+            parameters is database driver dependent. Check your database driver
+            documentation for which of the five syntax styles, described in PEP 249
+            paramstyle, is supported. Default is None.
+
         Returns
         -------
         pd.DataFrame
             The result of running the query, formatted as a pandas DataFrame.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> conn = st.experimental_connection("sql")
+        >>> df = conn.query("select * from pet_owners where owner = :owner", ttl=3600, params={"owner":"barbara"})
+        >>> st.dataframe(df)
         """
 
         from sqlalchemy import text

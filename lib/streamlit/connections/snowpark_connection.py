@@ -140,7 +140,7 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         Returns
         -------
         pd.DataFrame
-            The query result, returned as a ``pd.DataFrame``.
+            The result of running the query, formatted as a pandas DataFrame.
 
         Example
         -------
