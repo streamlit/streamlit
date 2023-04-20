@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from snowflake.snowpark.session import Session  # type: ignore
 
 
-_REQUIRED_CONNECTION_PARAMS = {"account", "user"}
+_REQUIRED_CONNECTION_PARAMS = {"account"}
 _DEFAULT_CONNECTION_FILE = "~/.snowsql/config"
 
 

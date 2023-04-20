@@ -121,8 +121,8 @@ schemaname = public
 
     def test_error_if_missing_required_conn_params(self):
         with pytest.raises(StreamlitAPIException) as e:
-            Snowpark("my_snowpark_connection", account="my_account")
-        assert "Missing Snowpark connection param: user" == str(e.value)
+            Snowpark("my_snowpark_connection", user="my_user")
+        assert "Missing Snowpark connection param: account" == str(e.value)
 
     @patch("streamlit.connections.snowpark_connection.Snowpark._connect", MagicMock())
     def test_query_caches_value(self):
