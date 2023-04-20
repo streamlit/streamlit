@@ -156,11 +156,24 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
 
         return _query(sql)
 
+    def session(self) -> "Session":
+        """Return the underlying Snowpark session.
+
+        NOTE: Snowpark sessions are *not* thread safe. Users of this method are
+        responsible for ensuring that access to the session returned by this method is
+        done in a thread-safe manner. For most users, we recommend using the thread-safe
+        safe_session() method and a `with` block.
+
+        Information on how to use Snowpark sessions can be found in the
+        [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
+        """
+        return self._instance
+
     @contextmanager
-    def session(self) -> Iterator["Session"]:
+    def safe_session(self) -> Iterator["Session"]:
         """Grab the underlying Snowpark session in a thread-safe manner.
 
-        As operations on a Snowpark session are *not* thread safe, we need to take care
+        As operations on a Snowpark session are not thread safe, we need to take care
         when using a session in the context of a Streamlit app where each script run
         occurs in its own thread. Using the contextmanager pattern to do this ensures
         that access on this connection's underlying Session is done in a thread-safe
@@ -170,4 +183,4 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
         """
         with self._lock:
-            yield self._instance
+            yield self.session()
