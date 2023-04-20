@@ -45,6 +45,7 @@ INSTALL_REQUIRES = [
     "python-dateutil",
     "requests>=2.4",
     "rich>=10.11.0",
+    "tenacity>=8.0.0",
     "toml",
     "typing-extensions>=3.10.0.0",
     "tzlocal>=1.1",
