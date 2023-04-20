@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 from parameterized import parameterized
 
-from streamlit.connections import SQL, ExperimentalBaseConnection, Snowpark
+from streamlit.connections import ExperimentalBaseConnection, Snowpark, SQLConnection
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching.cache_resource_api import _resource_caches
 from streamlit.runtime.connection_factory import (
@@ -73,7 +73,7 @@ class ConnectionFactoryTest(unittest.TestCase):
     @parameterized.expand(
         [
             ("snowpark", Snowpark),
-            ("sql", SQL),
+            ("sql", SQLConnection),
         ]
     )
     def test_get_first_party_connection_helper(
@@ -127,10 +127,10 @@ class ConnectionFactoryTest(unittest.TestCase):
     def test_can_specify_class_with_full_name_in_kwargs(
         self, patched_create_connection
     ):
-        connection_factory("my_connection", type="streamlit.connections.SQL")
+        connection_factory("my_connection", type="streamlit.connections.SQLConnection")
 
         patched_create_connection.assert_called_once_with(
-            "my_connection", SQL, max_entries=None, ttl=None
+            "my_connection", SQLConnection, max_entries=None, ttl=None
         )
 
     @patch("streamlit.runtime.connection_factory._create_connection")
@@ -138,7 +138,7 @@ class ConnectionFactoryTest(unittest.TestCase):
         connection_factory("my_connection", type="sql")
 
         patched_create_connection.assert_called_once_with(
-            "my_connection", SQL, max_entries=None, ttl=None
+            "my_connection", SQLConnection, max_entries=None, ttl=None
         )
 
     @patch("streamlit.runtime.connection_factory._create_connection")
@@ -147,13 +147,13 @@ class ConnectionFactoryTest(unittest.TestCase):
     ):
         mock_toml = """
 [connections.my_connection]
-type="streamlit.connections.SQL"
+type="streamlit.connections.SQLConnection"
 """
         with patch("builtins.open", new_callable=mock_open, read_data=mock_toml):
             connection_factory("my_connection")
 
         patched_create_connection.assert_called_once_with(
-            "my_connection", SQL, max_entries=None, ttl=None
+            "my_connection", SQLConnection, max_entries=None, ttl=None
         )
 
     @patch("streamlit.runtime.connection_factory._create_connection")
@@ -251,5 +251,5 @@ type="snowpark"
         connection_factory("sql")
 
         patched_create_connection.assert_called_once_with(
-            "sql", SQL, max_entries=None, ttl=None
+            "sql", SQLConnection, max_entries=None, ttl=None
         )

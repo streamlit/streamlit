@@ -43,11 +43,11 @@ _ALL_CONNECTION_PARAMS = {
 _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
-class SQL(ExperimentalBaseConnection["Engine"]):
+class SQLConnection(ExperimentalBaseConnection["Engine"]):
     """A thin wrapper around SQLALchemy that makes it play nicely with
     st.experimental_connection.
 
-    The SQL connection also provides the `query` convenience method, which can be used to
+    The SQLConnection connection also provides the `query` convenience method, which can be used to
     run simple read-only queries with both caching and simple error handling/retries.
 
     More complex DB interactions can be performed by using the .session() contextmanager

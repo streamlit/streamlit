@@ -18,4 +18,4 @@ from streamlit.connections.base_connection import (
     ExperimentalBaseConnection as ExperimentalBaseConnection,
 )
 from streamlit.connections.snowpark_connection import Snowpark as Snowpark
-from streamlit.connections.sql_connection import SQL as SQL
+from streamlit.connections.sql_connection import SQLConnection as SQLConnection
