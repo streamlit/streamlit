@@ -147,7 +147,11 @@ jobs:
       contents: write
 
     runs-on: ubuntu-latest
-    if: github.repository == 'streamlit/streamlit' && github.event_name == 'push' && github.ref_name == 'develop'
+    if: |
+      github.repository == 'streamlit/streamlit' && (
+      (github.event_name == 'push' && github.ref_name == 'develop') ||
+      (github.event_name == 'schedule')
+      )
 
     name: Upload constraints
 
