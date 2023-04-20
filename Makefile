@@ -399,7 +399,6 @@ ifndef CIRCLECI
 		--build-arg GID=$$(id -g) \
 		--build-arg OSTYPE=$$(uname) \
 		--build-arg NODE_VERSION=$$(node --version) \
-		--network=host \
 		-t streamlit_e2e_tests \
 		-f e2e/Dockerfile \
 		.
