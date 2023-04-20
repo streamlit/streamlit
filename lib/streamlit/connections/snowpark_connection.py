@@ -156,8 +156,9 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
 
         return _query(sql)
 
+    @property
     def session(self) -> "Session":
-        """Return the underlying Snowpark session.
+        """Access the underlying Snowpark session.
 
         NOTE: Snowpark sessions are *not* thread safe. Users of this method are
         responsible for ensuring that access to the session returned by this method is
@@ -183,4 +184,4 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
         """
         with self._lock:
-            yield self.session()
+            yield self.session
