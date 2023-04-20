@@ -82,12 +82,7 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
 
     def __init__(self, connection_name: str, **kwargs) -> None:
         self._lock = threading.RLock()
-
-        # Grab the lock before calling ExperimentalBaseConnection.__init__() so that we
-        # can guarantee thread safety when the parent class' constructor initializes our
-        # connection.
-        with self._lock:
-            super().__init__(connection_name, **kwargs)
+        super().__init__(connection_name, **kwargs)
 
     def _connect(self, **kwargs) -> "Session":
         import tenacity  # Import tenacity so we get a ModuleNotFoundError if it's not installed
