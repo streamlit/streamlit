@@ -1,6 +1,3 @@
-#!/bin/bash
-
-
 # Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,28 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o errexit
-set -o nounset
-set -o pipefail
+import streamlit as st
+from streamlit.proto.Empty_pb2 import Empty as EmptyProto
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
-bokeh_version="2.4.3"
-bokeh_release_url="https://cdn.bokeh.org/bokeh/release"
-bokeh_files=(
-  "bokeh-${bokeh_version}.min.js"
-  "bokeh-widgets-${bokeh_version}.min.js"
-  "bokeh-tables-${bokeh_version}.min.js"
-  "bokeh-api-${bokeh_version}.min.js"
-  "bokeh-gl-${bokeh_version}.min.js"
-  "bokeh-mathjax-${bokeh_version}.min.js"
-)
 
-mkdir -p public/vendor/bokeh
-cd public/vendor/bokeh
+class StEmmptyAPITest(DeltaGeneratorTestCase):
+    """Test Public Streamlit Public APIs."""
 
-for filename in "${bokeh_files[@]}"
-do
-  if [ ! -f $filename ]
-  then
-    curl "${bokeh_release_url}/${filename}" -O
-  fi
-done
+    def test_st_empty(self):
+        """Test st.empty."""
+        st.empty()
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.empty, EmptyProto())

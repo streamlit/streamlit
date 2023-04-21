@@ -39,7 +39,7 @@ import json
 import os
 import subprocess
 import sys
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 if __name__ not in ("__main__", "__mp_main__"):
     raise SystemExit(
@@ -48,11 +48,17 @@ if __name__ not in ("__main__", "__mp_main__"):
     )
 
 GITHUB_CONTEXT_ENV_VAR = "GITHUB_CONTEXT"
+GITHUB_INPUTS_ENV_VAR = "GITHUB_INPUTS"
 GITHUB_OUTPUT_ENV_VAR = "GITHUB_OUTPUT"
 GITHUB_ENV_ENV_VAR = "GITHUB_ENV"
 
 REQUIRED_ENV_VAR = (
-    [GITHUB_CONTEXT_ENV_VAR, GITHUB_OUTPUT_ENV_VAR, GITHUB_ENV_ENV_VAR]
+    [
+        GITHUB_CONTEXT_ENV_VAR,
+        GITHUB_INPUTS_ENV_VAR,
+        GITHUB_OUTPUT_ENV_VAR,
+        GITHUB_ENV_ENV_VAR,
+    ]
     if "CI" in os.environ
     else [GITHUB_CONTEXT_ENV_VAR]
 )
@@ -79,6 +85,7 @@ ALL_PYTHON_VERSIONS[0] = "min"
 ALL_PYTHON_VERSIONS[-1] = "max"
 
 LABEL_FULL_MATRIX = "dev:full-matrix"
+LABEL_UPGRADE_DEPENDENCIES = "dev:upgrade-dependencies"
 
 GITHUB_CONTEXT = json.loads(os.environ[GITHUB_CONTEXT_ENV_VAR])
 GITHUB_EVENT = GITHUB_CONTEXT["event"]
@@ -88,6 +95,7 @@ GITHUB_EVENT_NAME = GITHUB_CONTEXT["event_name"]
 class GithubEvent(enum.Enum):
     PULL_REQUEST = "pull_request"
     PUSH = "push"
+    SCHEDULE = "schedule"
 
 
 def get_changed_files() -> List[str]:
@@ -126,7 +134,8 @@ def get_changed_files() -> List[str]:
 def get_current_pr_labels() -> List[str]:
     """
     Returns a list of all tags associated with the current PR.
-    Note that this function works only when the current event is pull_request.
+
+    Note that this function works only when the current event is `pull_request`.
     """
     if GITHUB_EVENT_NAME != GithubEvent.PULL_REQUEST.value:
         raise Exception(
@@ -151,39 +160,69 @@ def get_changed_python_dependencies_files() -> List[str]:
     return changed_dependencies_files
 
 
-def should_test_all_python_versions() -> bool:
+def check_if_pr_has_label(label: str, action: str) -> bool:
     """
-    Checks whether tests should be run for all supported Python versions, or whether
-    it is enough to check the oldest and latest versions.
+    Checks if the PR has the given label.
+
+    The function works for all GitHub events, but returns false
+    for any event that is not a PR.
+    """
+    if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
+        pr_labels = get_current_pr_labels()
+        if label in pr_labels:
+            print(f"PR has the following labels: {pr_labels}")
+            print(f"{action}, because PR has {label !r} label.")
+            return True
+    return False
+
+
+def get_github_input(input_key: str) -> Optional[str]:
+    """
+    Get additional data that the script expects to use during runtime.
+
+    For details, see: https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions#inputs
+    """
+    if GITHUB_INPUTS_ENV_VAR not in os.environ:
+        return None
+    inputs = json.loads(os.environ[GITHUB_INPUTS_ENV_VAR]) or {}
+    input_value = inputs.get(input_key)
+    return input_value
+
+
+def is_canary_build() -> bool:
+    """
+    Checks whether current build is canary.
+
+    Canary builds are tested on all Python versions and do not use constraints.
+    Non-canary builds are tested by default on the oldest and latest Python versions
+    and use constraints files by default.
 
     The behavior depends on what event triggered the current GitHub Action build to run.
 
-    For pull_request event, we return true when at least one of the conditions is met:
-    - PR has "dev:full-matrix" label
-    - Python dependencies have been modified
+    For pull_request event, we return true when Python dependencies have been modified
     In other case, we return false.
 
     For push event, we return true when the default branch is checked. In other case,
     we return false.
 
+    For scheduled event, we always return true.
+
     For other events, we return false
+
+    Build canary can be enforced by workflow inputs parameter e.g. all "Build Release"
+    workflows trigger canary builds.
     """
-    print(f"Current github event name: {GITHUB_EVENT_NAME!r}")
+    force_canary_input = get_github_input("force-canary") or "false"
+    if force_canary_input.lower() == "true":
+        print("Current build is canary, because it is enforced by input")
+        return True
     if GITHUB_EVENT_NAME == GithubEvent.PULL_REQUEST.value:
-        pr_labels = get_current_pr_labels()
-        if LABEL_FULL_MATRIX in pr_labels:
-            print(f"PR has the following labels: {pr_labels}")
-            print(
-                f"All Python versions will be tested, "
-                f"because PR has {LABEL_FULL_MATRIX!r} label."
-            )
-            return True
         changed_dependencies_files = get_changed_python_dependencies_files()
         if changed_dependencies_files:
             print(f"{len(changed_dependencies_files)} files changed in this build.")
             print(
-                "All Python versions will be tested, because "
-                "the following files have been modified:"
+                "Current build is canary, "
+                "because the following files have been modified:"
             )
             print("- " + "- ".join(changed_dependencies_files))
             return True
@@ -196,30 +235,49 @@ def should_test_all_python_versions() -> bool:
         )
         if is_default_branch:
             print(
-                f"All Python versions will be tested, because "
-                f"the default branch ({default_branch!r}) is checked."
+                "Current build is canary, "
+                f"because the default branch ({default_branch!r}) is checked."
             )
             return True
         return False
+    elif GITHUB_EVENT_NAME == GithubEvent.SCHEDULE.value:
+        print(
+            "Current build is canary, "
+            f"because current github event name is {GITHUB_EVENT_NAME!r}"
+        )
+        return True
+
     print(
-        f"All Python versions will be tested, "
+        "Current build is NOT canary, "
         f"because current github event name is {GITHUB_EVENT_NAME!r}"
     )
-    return True
+    return False
 
 
 def get_output_variables() -> Dict[str, str]:
     """
     Compute build variables.
     """
+    canary_build = is_canary_build()
+    python_versions = (
+        ALL_PYTHON_VERSIONS
+        if canary_build
+        or check_if_pr_has_label(
+            LABEL_FULL_MATRIX, "All Python versions will be tested"
+        )
+        else [ALL_PYTHON_VERSIONS[0], ALL_PYTHON_VERSIONS[-1]]
+    )
+    use_constraint_file = not (
+        canary_build
+        or check_if_pr_has_label(
+            LABEL_UPGRADE_DEPENDENCIES, "Latest dependencies will be used"
+        )
+    )
     return {
         "PYTHON_MIN_VERSION": PYTHON_MIN_VERSION,
         "PYTHON_MAX_VERSION": PYTHON_MAX_VERSION,
-        "PYTHON_VERSIONS": json.dumps(
-            ALL_PYTHON_VERSIONS
-            if should_test_all_python_versions()
-            else [ALL_PYTHON_VERSIONS[0], ALL_PYTHON_VERSIONS[-1]]
-        ),
+        "PYTHON_VERSIONS": json.dumps(python_versions),
+        "USE_CONSTRAINT_FILE": str(use_constraint_file).lower(),
     }
 
 
@@ -240,6 +298,7 @@ def save_output_variables(variables: Dict[str, str]) -> None:
 
 
 def main() -> None:
+    print(f"Current github event name: {GITHUB_EVENT_NAME!r}")
     output_variables = get_output_variables()
     save_output_variables(output_variables)
 

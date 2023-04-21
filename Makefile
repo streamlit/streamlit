@@ -20,6 +20,11 @@ INSTALL_DEV_REQS ?= true
 INSTALL_TEST_REQS ?= true
 TENSORFLOW_SUPPORTED ?= $(shell python scripts/should_install_tensorflow.py)
 INSTALL_TENSORFLOW ?= $(shell python scripts/should_install_tensorflow.py)
+USE_CONSTRAINT_FILE ?= true
+PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
+GITHUB_REPOSITORY ?= streamlit/streamlit
+CONSTRAINTS_BRANCH ?= constraints-develop
+CONSTRAINTS_URL ?= https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${CONSTRAINTS_BRANCH}/constraints-${PYTHON_VERSION}.txt
 
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
@@ -95,6 +100,9 @@ python-init-test-only: lib/test-requirements.txt
 .PHONY: python-init
 python-init:
 	pip_args=("install" "--editable" "lib[snowflake]");\
+	if [ "${USE_CONSTRAINT_FILE}" = "true" ] ; then\
+		pip_args+=(--constraint "${CONSTRAINTS_URL}"); \
+	fi;\
 	if [ "${INSTALL_DEV_REQS}" = "true" ] ; then\
 		pip_args+=("--requirement" "lib/dev-requirements.txt"); \
 	fi;\
@@ -361,7 +369,7 @@ notices:
 	./scripts/append_license.sh frontend/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
-	./scripts/append_license.sh frontend/public/vendor/bokeh/bokeh-LICENSE.txt
+	./scripts/append_license.sh frontend/src/vendor/bokeh/bokeh-LICENSE.txt
 	./scripts/append_license.sh frontend/public/vendor/viz/viz.js-LICENSE.txt
 	./scripts/append_license.sh frontend/src/vendor/twemoji-LICENSE.txt
 	./scripts/append_license.sh frontend/src/vendor/Segment-LICENSE.txt

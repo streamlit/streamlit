@@ -19,7 +19,7 @@ import { mount } from "src/lib/test_util"
 
 import { Radio as UIRadio, RadioGroup, ALIGN } from "baseui/radio"
 import { LabelVisibilityOptions } from "src/lib/utils"
-import { lightTheme } from "src/theme"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 import Radio, { Props } from "./Radio"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
@@ -30,7 +30,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   onChange: () => {},
   options: ["a", "b", "c"],
   label: "Label",
-  theme: lightTheme.emotion,
+  theme: mockTheme.emotion,
   ...props,
 })
 

@@ -27,7 +27,7 @@ import { StatefulMenu } from "baseui/menu"
 import { Menu } from "@emotion-icons/material-outlined"
 
 import { useTheme } from "@emotion/react"
-import { Theme } from "src/theme"
+import { EmotionTheme } from "src/theme"
 import Button, { Kind } from "src/components/shared/Button"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import {
@@ -40,17 +40,17 @@ import {
   IGuestToHostMessage,
   IMenuItem,
 } from "src/hocs/withHostCommunication/types"
-import { GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
+import { Config, GitInfo, IGitInfo, PageConfig } from "src/autogen/proto"
 import { MetricsManager } from "src/lib/MetricsManager"
 import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/urls"
 import {
+  StyledCoreItem,
+  StyledDevItem,
   StyledMenuDivider,
   StyledMenuItem,
   StyledMenuItemLabel,
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
-  StyledCoreItem,
-  StyledDevItem,
   StyledUl,
 } from "./styled-components"
 
@@ -108,7 +108,9 @@ export interface Props {
 
   menuItems?: PageConfig.IMenuItems | null
 
-  hostIsOwner?: boolean
+  developmentMode: boolean
+
+  toolbarMode: Config.ToolbarMode
 
   metricsMgr: MetricsManager
 }
@@ -217,7 +219,9 @@ function buildMenuItemComponent(
 
       return (
         <>
-          {hasDividerAbove && <StyledMenuDivider />}
+          {hasDividerAbove && (
+            <StyledMenuDivider data-testid="main-menu-divider" />
+          )}
           <StyledMenuItem
             ref={ref}
             role="option"
@@ -244,7 +248,7 @@ function buildMenuItemComponent(
 }
 
 const SubMenu = (props: SubMenuProps): ReactElement => {
-  const { colors }: Theme = useTheme()
+  const { colors }: EmotionTheme = useTheme()
   const StyledMenuItemType = props.isDevMenu ? StyledDevItem : StyledCoreItem
   return (
     <StatefulMenu
@@ -271,6 +275,93 @@ const SubMenu = (props: SubMenuProps): ReactElement => {
       }}
     />
   )
+}
+
+function getDevMenuItems(
+  coreDevMenuItems: Record<string, any>,
+  showDeploy: boolean
+): any[] {
+  const devMenuItems = []
+  const preferredDevMenuOrder: any[] = [
+    coreDevMenuItems.developerOptions,
+    coreDevMenuItems.clearCache,
+    showDeploy && coreDevMenuItems.deployApp,
+  ]
+
+  let devLastMenuItem = null
+
+  for (const devMenuItem of preferredDevMenuOrder) {
+    if (devMenuItem) {
+      if (devMenuItem !== coreDevMenuItems.DIVIDER) {
+        if (devLastMenuItem === coreDevMenuItems.DIVIDER) {
+          devMenuItems.push({ ...devMenuItem, hasDividerAbove: true })
+        } else {
+          devMenuItems.push(devMenuItem)
+        }
+      }
+
+      devLastMenuItem = devMenuItem
+    }
+  }
+
+  if (devLastMenuItem != null) {
+    devLastMenuItem.styleProps = {
+      margin: "0 0 -.5rem 0",
+      padding: ".25rem 0 .25rem 1.5rem",
+    }
+  }
+  return devMenuItems
+}
+
+function getPreferredMenuOrder(
+  props: Props,
+  hostMenuItems: any[],
+  coreMenuItems: Record<string, any>
+): any[] {
+  let preferredMenuOrder: any[]
+  if (props.toolbarMode == Config.ToolbarMode.MINIMAL) {
+    // If toolbar mode == minimal then show only host menu items if any.
+    preferredMenuOrder = [
+      coreMenuItems.report,
+      coreMenuItems.community,
+      coreMenuItems.DIVIDER,
+      ...(hostMenuItems.length > 0 ? hostMenuItems : [coreMenuItems.DIVIDER]),
+      coreMenuItems.about,
+    ]
+
+    preferredMenuOrder = preferredMenuOrder.filter(d => d)
+    // If the first or last item is a divider, delete it, because
+    // we don't want to start/end the menu with it.
+    // TODO(sfc-gh-kbregula): We should use Array#at when supported by
+    //  browsers/cypress or transpilers.
+    //  See: https://github.com/tc39/proposal-relative-indexing-method
+    while (
+      preferredMenuOrder.length > 0 &&
+      preferredMenuOrder[0] == coreMenuItems.DIVIDER
+    ) {
+      preferredMenuOrder.shift()
+    }
+    while (
+      preferredMenuOrder.length > 0 &&
+      preferredMenuOrder.at(preferredMenuOrder.length - 1) ==
+        coreMenuItems.DIVIDER
+    ) {
+      preferredMenuOrder.pop()
+    }
+    return preferredMenuOrder
+  }
+  return [
+    coreMenuItems.rerun,
+    coreMenuItems.settings,
+    coreMenuItems.DIVIDER,
+    coreMenuItems.print,
+    coreMenuItems.recordScreencast,
+    coreMenuItems.DIVIDER,
+    coreMenuItems.report,
+    coreMenuItems.community,
+    ...(hostMenuItems.length > 0 ? hostMenuItems : [coreMenuItems.DIVIDER]),
+    coreMenuItems.about,
+  ]
 }
 
 function MainMenu(props: Props): ReactElement {
@@ -336,6 +427,12 @@ function MainMenu(props: Props): ReactElement {
 
     onClickDeployApp()
   }, [props.gitInfo, props.isDeployErrorModalOpen, onClickDeployApp])
+
+  const showAboutMenu =
+    props.toolbarMode != Config.ToolbarMode.MINIMAL ||
+    (props.toolbarMode == Config.ToolbarMode.MINIMAL &&
+      props.menuItems?.aboutSectionMd)
+
   const coreMenuItems = {
     DIVIDER: { isDivider: true },
     rerun: {
@@ -370,7 +467,9 @@ function MainMenu(props: Props): ReactElement {
         },
       }),
     settings: { onClick: props.settingsCallback, label: "Settings" },
-    about: { onClick: props.aboutCallback, label: "About" },
+    ...(showAboutMenu && {
+      about: { onClick: props.aboutCallback, label: "About" },
+    }),
   }
 
   const coreDevMenuItems = {
@@ -396,11 +495,6 @@ function MainMenu(props: Props): ReactElement {
       label: "Clear cache",
       shortcut: "c",
     },
-  }
-
-  const lastDevMenuItemStyleProps = {
-    margin: "0 0 -.5rem 0",
-    padding: ".25rem 0 .25rem 1.5rem",
   }
 
   const hostMenuItems = props.hostMenuItems.map(item => {
@@ -432,24 +526,11 @@ function MainMenu(props: Props): ReactElement {
 
   const shouldShowHostMenu = !!hostMenuItems.length
   const showDeploy = isLocalhost() && !shouldShowHostMenu && props.canDeploy
-  const preferredMenuOrder: any[] = [
-    coreMenuItems.rerun,
-    coreMenuItems.settings,
-    coreMenuItems.DIVIDER,
-    coreMenuItems.print,
-    coreMenuItems.recordScreencast,
-    coreMenuItems.DIVIDER,
-    coreMenuItems.report,
-    coreMenuItems.community,
-    ...(shouldShowHostMenu ? hostMenuItems : [coreMenuItems.DIVIDER]),
-    coreMenuItems.about,
-  ]
-
-  const preferredDevMenuOrder: any[] = [
-    coreDevMenuItems.developerOptions,
-    coreDevMenuItems.clearCache,
-    showDeploy && coreDevMenuItems.deployApp,
-  ]
+  const preferredMenuOrder = getPreferredMenuOrder(
+    props,
+    hostMenuItems,
+    coreMenuItems
+  )
 
   // Remove empty entries, and add dividers into menu options as needed.
   const menuItems: any[] = []
@@ -468,27 +549,14 @@ function MainMenu(props: Props): ReactElement {
     }
   }
 
-  const devMenuItems: any[] = []
-  let devLastMenuItem = null
-  for (const devMenuItem of preferredDevMenuOrder) {
-    if (devMenuItem) {
-      if (devMenuItem !== coreDevMenuItems.DIVIDER) {
-        if (devLastMenuItem === coreDevMenuItems.DIVIDER) {
-          devMenuItems.push({ ...devMenuItem, hasDividerAbove: true })
-        } else {
-          devMenuItems.push(devMenuItem)
-        }
-      }
+  const devMenuItems: any[] = props.developmentMode
+    ? getDevMenuItems(coreDevMenuItems, showDeploy)
+    : []
 
-      devLastMenuItem = devMenuItem
-    }
+  if (menuItems.length == 0 && devMenuItems.length == 0) {
+    // Don't show an empty menu.
+    return <></>
   }
-
-  if (devLastMenuItem != null) {
-    devLastMenuItem.styleProps = lastDevMenuItemStyleProps
-  }
-
-  const { hostIsOwner } = props
 
   return (
     <StatefulPopover
@@ -501,13 +569,15 @@ function MainMenu(props: Props): ReactElement {
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <>
-          <SubMenu
-            menuItems={menuItems}
-            closeMenu={close}
-            isDevMenu={false}
-            metricsMgr={props.metricsMgr}
-          />
-          {(hostIsOwner || isLocalhost()) && (
+          {menuItems.length != 0 && (
+            <SubMenu
+              menuItems={menuItems}
+              closeMenu={close}
+              isDevMenu={false}
+              metricsMgr={props.metricsMgr}
+            />
+          )}
+          {devMenuItems.length != 0 && (
             <StyledUl>
               <SubMenu
                 menuItems={devMenuItems}

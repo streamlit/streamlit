@@ -21,7 +21,7 @@ import ReactJson from "react-json-view"
 import ErrorElement from "src/components/shared/ErrorElement"
 
 import { Json as JsonProto } from "src/autogen/proto"
-import { hasLightBackgroundColor, Theme } from "src/theme"
+import { hasLightBackgroundColor, EmotionTheme } from "src/theme"
 import { ensureError } from "src/lib/ErrorHandling"
 
 export interface JsonProps {
@@ -34,7 +34,7 @@ export interface JsonProps {
  */
 export default function Json({ width, element }: JsonProps): ReactElement {
   const styleProp = { width }
-  const theme: Theme = useTheme()
+  const theme: EmotionTheme = useTheme()
 
   let bodyObject
   try {
