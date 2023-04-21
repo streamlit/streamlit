@@ -17,7 +17,6 @@ import re
 from typing import TYPE_CHECKING, Optional, Tuple, Union, cast
 
 from typing_extensions import Final, TypeAlias
-from validators import url
 
 import streamlit as st
 from streamlit import runtime, type_util
@@ -407,6 +406,7 @@ def marshall_audio(
     sample_rate: int or None
         Optional param to provide sample_rate in case of numpy array
     """
+    from validators import url
 
     proto.start_time = start_time
 
