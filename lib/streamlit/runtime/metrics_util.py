@@ -61,6 +61,9 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "streamlit_extras",
     "streamlit_pydantic",
     "plost",
+    "openai",
+    "langchain",
+    "llama_index",
 ]
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
