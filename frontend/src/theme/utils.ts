@@ -479,11 +479,13 @@ export const createEmotionTheme = (
     genericColors: newGenericColors,
     genericFonts: {
       ...genericFonts,
-      bodyFont: themeInput.bodyFont ? themeInput.bodyFont : parsedFont,
-      headingFont: themeInput.bodyFont ? themeInput.bodyFont : parsedFont,
-      codeFont: themeInput.codeFont
-        ? themeInput.codeFont
-        : genericFonts.codeFont,
+      ...(parsedFont && {
+        bodyFont: themeInput.bodyFont ? themeInput.bodyFont : parsedFont,
+        headingFont: themeInput.bodyFont ? themeInput.bodyFont : parsedFont,
+        codeFont: themeInput.codeFont
+          ? themeInput.codeFont
+          : genericFonts.codeFont,
+      }),
     },
     ...conditionalOverrides,
   }
