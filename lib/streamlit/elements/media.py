@@ -282,6 +282,7 @@ def marshall_video(
     start_time : int
         The time from which this element should start playing. (default: 0)
     """
+    from validators import url
 
     proto.start_time = start_time
 
