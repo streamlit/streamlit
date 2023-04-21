@@ -170,6 +170,7 @@ message UserInfo {
 
   // DEPRECATED:
   // string email = 2;
+  reserved 2;
 }
 
 // Data that identifies the Streamlit app's environment.
