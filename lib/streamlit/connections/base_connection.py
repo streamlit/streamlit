@@ -36,7 +36,7 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
     NOTE: While providing an implementation of `_connect` is technically all that's
     required to define a valid connection, connections should also provide the user with
     context-specific ways of interacting with the underlying connection object. For
-    example, the first-party SQL connection provides a `query()` method for reads and a
+    example, the first-party SQLConnection provides a `query()` method for reads and a
     `session()` contextmanager for more complex operations.
     """
 

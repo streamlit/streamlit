@@ -13,10 +13,9 @@
 # limitations under the License.
 
 from collections import ChainMap
-from contextlib import contextmanager
 from copy import deepcopy
 from datetime import timedelta
-from typing import TYPE_CHECKING, Iterator, List, Optional, Union, cast
+from typing import TYPE_CHECKING, List, Optional, Union, cast
 
 import pandas as pd
 
@@ -43,11 +42,11 @@ _ALL_CONNECTION_PARAMS = {
 _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
-class SQL(ExperimentalBaseConnection["Engine"]):
+class SQLConnection(ExperimentalBaseConnection["Engine"]):
     """A thin wrapper around SQLALchemy that makes it play nicely with
     st.experimental_connection.
 
-    The SQL connection also provides the `query` convenience method, which can be used to
+    The SQLConnection connection also provides the `query` convenience method, which can be used to
     run simple read-only queries with both caching and simple error handling/retries.
 
     More complex DB interactions can be performed by using the .session() contextmanager
@@ -56,7 +55,6 @@ class SQL(ExperimentalBaseConnection["Engine"]):
 
     def _connect(self, autocommit: bool = False, **kwargs) -> "Engine":
         import sqlalchemy
-        import tenacity  # Import tenacity so we get a ModuleNotFoundError if it's not installed
 
         kwargs = deepcopy(kwargs)
         conn_param_kwargs = extract_from_dict(_ALL_CONNECTION_PARAMS, kwargs)
@@ -171,14 +169,9 @@ class SQL(ExperimentalBaseConnection["Engine"]):
             **kwargs,
         )
 
-    @contextmanager
-    def session(self) -> Iterator["Session"]:
-        """A thin wrapper around SQLAlchemy Session context management.
-
-        This allows us to write
-            `with conn.session() as session:`
-        instead of importing the sqlalchemy.orm.Session object and writing
-            `with Session(conn._instance) as session:`
+    @property
+    def session(self) -> "Session":
+        """Return a SQLAlchemy Session.
 
         Users of this connection should use the contextmanager pattern for writes,
         transactions, and anything more complex than simple read queries.
@@ -197,8 +190,7 @@ class SQL(ExperimentalBaseConnection["Engine"]):
         """
         from sqlalchemy.orm import Session
 
-        with Session(self._instance) as s:
-            yield s
+        return Session(self._instance)
 
     # NOTE: This more or less duplicates the default implementation in
     # ExperimentalBaseConnection so that we can add another bullet point between the
@@ -213,7 +205,7 @@ class SQL(ExperimentalBaseConnection["Engine"]):
             else ""
         )
 
-        with self.session() as s:
+        with self.session as s:
             dialect = s.bind.dialect.name if s.bind is not None else "unknown"
 
         return f"""

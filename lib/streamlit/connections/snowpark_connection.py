@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from snowflake.snowpark.session import Session  # type: ignore
 
 
-_REQUIRED_CONNECTION_PARAMS = {"account", "user"}
+_REQUIRED_CONNECTION_PARAMS = {"account"}
 _DEFAULT_CONNECTION_FILE = "~/.snowsql/config"
 
 
@@ -67,30 +67,24 @@ def _load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
     return conn_params
 
 
-class Snowpark(ExperimentalBaseConnection["Session"]):
+class SnowparkConnection(ExperimentalBaseConnection["Session"]):
     """A thin wrapper around snowflake.snowpark.session.Session that makes it play
     nicely with st.experimental_connection.
 
-    The Snowpark connection additionally ensures the underlying Snowpark Session can
+    SnowparkConnection additionally ensures the underlying Snowpark Session can
     only be accessed by a single thread at a time as Session object usage is *not* thread
     safe.
 
-    NOTE: We don't expect this iteration of the Snowpark connection to be able to scale
+    NOTE: We don't expect this iteration of SnowparkConnection to be able to scale
     well in apps with many concurrent users due to the lock contention that will occur
     over the single underlying Session object under high load.
     """
 
     def __init__(self, connection_name: str, **kwargs) -> None:
         self._lock = threading.RLock()
-
-        # Grab the lock before calling ExperimentalBaseConnection.__init__() so that we
-        # can guarantee thread safety when the parent class' constructor initializes our
-        # connection.
-        with self._lock:
-            super().__init__(connection_name, **kwargs)
+        super().__init__(connection_name, **kwargs)
 
     def _connect(self, **kwargs) -> "Session":
-        import tenacity  # Import tenacity so we get a ModuleNotFoundError if it's not installed
         from snowflake.snowpark.context import get_active_session  # type: ignore
         from snowflake.snowpark.exceptions import (  # type: ignore
             SnowparkSessionException,
@@ -162,11 +156,25 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
 
         return _query(sql)
 
-    @contextmanager
-    def session(self) -> Iterator["Session"]:
-        """Grab the Snowpark session in a thread-safe manner.
+    @property
+    def session(self) -> "Session":
+        """Access the underlying Snowpark session.
 
-        As operations on a Snowpark session are *not* thread safe, we need to take care
+        NOTE: Snowpark sessions are *not* thread safe. Users of this method are
+        responsible for ensuring that access to the session returned by this method is
+        done in a thread-safe manner. For most users, we recommend using the thread-safe
+        safe_session() method and a `with` block.
+
+        Information on how to use Snowpark sessions can be found in the
+        [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
+        """
+        return self._instance
+
+    @contextmanager
+    def safe_session(self) -> Iterator["Session"]:
+        """Grab the underlying Snowpark session in a thread-safe manner.
+
+        As operations on a Snowpark session are not thread safe, we need to take care
         when using a session in the context of a Streamlit app where each script run
         occurs in its own thread. Using the contextmanager pattern to do this ensures
         that access on this connection's underlying Session is done in a thread-safe
@@ -176,4 +184,4 @@ class Snowpark(ExperimentalBaseConnection["Session"]):
         [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
         """
         with self._lock:
-            yield self._instance
+            yield self.session
