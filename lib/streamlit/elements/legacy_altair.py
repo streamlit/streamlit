@@ -20,7 +20,6 @@ a nice JSON schema for expressing graphs and charts.
 from datetime import date
 from typing import TYPE_CHECKING, Hashable, cast
 
-import altair as alt
 import pandas as pd
 import pyarrow as pa
 
@@ -298,6 +297,8 @@ def _is_date_column(df: pd.DataFrame, name: Hashable) -> bool:
 
 
 def generate_chart(chart_type, data, width: int = 0, height: int = 0):
+    import altair as alt
+
     if data is None:
         # Use an empty-ish dict because if we use None the x axis labels rotate
         # 90 degrees. No idea why. Need to debug.

@@ -31,7 +31,6 @@ from typing import (
     cast,
 )
 
-import altair as alt
 import pandas as pd
 from altair.vegalite.v4.api import Chart
 from pandas.api.types import infer_dtype, is_integer_dtype
@@ -49,15 +48,6 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
-# Create and enable streamlit theme
-STREAMLIT_THEME = {"embedOptions": {"theme": "streamlit"}}
-
-# This allows to use alt.themes.enable("streamlit") to activate Streamlit theme.
-alt.themes.register("streamlit", lambda: {"usermeta": STREAMLIT_THEME})
-
-# no theme applied to charts
-alt.themes.enable("none")
 
 
 class ChartType(Enum):
@@ -500,6 +490,7 @@ def _generate_chart(
     height: int = 0,
 ) -> Chart:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
+    import altair as alt
 
     if data is None:
         # Use an empty-ish dict because if we use None the x axis labels rotate
