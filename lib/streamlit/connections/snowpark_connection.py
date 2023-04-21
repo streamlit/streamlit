@@ -72,12 +72,13 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
     `st.experimental_connection("<name>", type="snowpark")`.
 
     In addition to the Snowpark Session, this connection supports direct SQL querying using
-    `query("...")` and thread safe access using `with conn.safe_session():`. See methods
+    ``query("...")`` and thread safe access using ``with conn.safe_session():``. See methods
     below for more information.
 
-    NOTE: We don't expect this iteration of SnowparkConnection to be able to scale
-    well in apps with many concurrent users due to the lock contention that will occur
-    over the single underlying Session object under high load.
+    .. note::
+        We don't expect this iteration of SnowparkConnection to be able to scale
+        well in apps with many concurrent users due to the lock contention that will occur
+        over the single underlying Session object under high load.
     """
 
     def __init__(self, connection_name: str, **kwargs) -> None:
@@ -127,13 +128,15 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
 
         This method implements both query result caching (with caching behavior
         identical to that of using @st.cache_data) as well as simple error handling/retries.
-        Note that queries that are run without a specified ttl are cached indefinitely.
+
+        .. note::
+            Queries that are run without a specified ttl are cached indefinitely.
 
         Parameters
         ----------
         sql : str
             The read-only SQL query to execute.
-        ttl : float or timedelta or None
+        ttl : float, int, timedelta or None
             The maximum number of seconds to keep results in the cache, or
             None if cached results should not expire. The default is None.
 
@@ -181,6 +184,7 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
     def session(self) -> "Session":
         """Access the underlying Snowpark session.
 
+<<<<<<< HEAD
         NOTE: Snowpark sessions are *not* thread safe. Users of this method are
         responsible for ensuring that access to the session returned by this method is
         done in a thread-safe manner. For most users, we recommend using the thread-safe
@@ -196,13 +200,16 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         """Grab the underlying Snowpark session in a thread-safe manner.
 
         As operations on a Snowpark session are not thread safe, we need to take care
+=======
+        As operations on a Snowpark session are **not** thread safe, we need to take care
+>>>>>>> d324ba685 (Fix reStructuredText issues in Snowpark docstrings)
         when using a session in the context of a Streamlit app where each script run
         occurs in its own thread. Using the contextmanager pattern to do this ensures
         that access on this connection's underlying Session is done in a thread-safe
         manner.
 
         Information on how to use Snowpark sessions can be found in the
-        [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
+        `Snowpark documentation <https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes>`_.
 
         Example
         -------
