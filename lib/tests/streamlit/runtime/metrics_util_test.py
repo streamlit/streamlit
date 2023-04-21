@@ -245,6 +245,10 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         """All commands of the public API should be tracked with the correct name."""
         # Some commands are currently not tracked for various reasons:
         ignored_commands = {
+            # We need to ignore `experimental_connection` because the `@gather_metrics`
+            # decorator is attached to a helper function rather than the
+            # publicly-exported function, which causes it not to be executed before an
+            # Exception is raised due to a lack of required arguments.
             "experimental_connection",
             "experimental_rerun",
             "stop",
