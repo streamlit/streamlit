@@ -28,5 +28,6 @@ describe("st.code", () => {
 
   it("highlights syntax correctly", () => {
     cy.get(".block-container").matchThemedSnapshots("syntax_highlighting");
+    cy.get(".element-container:first-child pre").realHover().matchThemedSnapshots("syntax_highlighting-hover");
   });
 });

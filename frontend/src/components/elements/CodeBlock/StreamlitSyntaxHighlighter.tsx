@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-import { StyledPre } from "./styled-components"
+import {
+  StyledPre,
+  StyledCopyButtonContainer,
+  StyledCodeBlock,
+} from "./styled-components"
+import CopyButton from "./CopyButton"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import React, { ReactElement } from "react"
-
 export interface StreamlitSyntaxHighlighterProps {
   children: string | string[]
   language?: string | undefined
@@ -30,17 +34,24 @@ export default function StreamlitSyntaxHighlighter({
   children,
 }: StreamlitSyntaxHighlighterProps): ReactElement {
   return (
-    <StyledPre>
-      <SyntaxHighlighter
-        language={language}
-        PreTag="div"
-        customStyle={{ backgroundColor: "transparent" }}
-        style={{}}
-        lineNumberStyle={{}}
-        showLineNumbers={showLineNumbers}
-      >
-        {children}
-      </SyntaxHighlighter>
-    </StyledPre>
+    <StyledCodeBlock>
+      <StyledPre>
+        <SyntaxHighlighter
+          language={language}
+          PreTag="div"
+          customStyle={{ backgroundColor: "transparent" }}
+          style={{}}
+          lineNumberStyle={{}}
+          showLineNumbers={showLineNumbers}
+        >
+          {children}
+        </SyntaxHighlighter>
+      </StyledPre>
+      {typeof children === "string" && children.trim() !== "" && (
+        <StyledCopyButtonContainer>
+          <CopyButton text={children} />
+        </StyledCopyButtonContainer>
+      )}
+    </StyledCodeBlock>
   )
 }
