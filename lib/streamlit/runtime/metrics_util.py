@@ -59,6 +59,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "langchain",
     "llama_index",
     "anthropic",
+    "transformers",
     "snowflake",
     "torch",
     "tensorflow",
