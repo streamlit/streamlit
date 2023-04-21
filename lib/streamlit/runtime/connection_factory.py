@@ -22,7 +22,11 @@ from typing import Any, Dict, Type, TypeVar, overload
 
 from typing_extensions import Final, Literal
 
-from streamlit.connections import SQL, ExperimentalBaseConnection, Snowpark
+from streamlit.connections import (
+    ExperimentalBaseConnection,
+    SnowparkConnection,
+    SQLConnection,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
@@ -34,8 +38,8 @@ from streamlit.runtime.secrets import secrets_singleton
 #      only the connection name is specified and another when both name and type are).
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
 FIRST_PARTY_CONNECTIONS = {
-    "snowpark": Snowpark,
-    "sql": SQL,
+    "snowpark": SnowparkConnection,
+    "sql": SQLConnection,
 }
 MODULE_EXTRACTION_REGEX = re.compile(r"No module named \'(.+)\'")
 MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
@@ -44,7 +48,6 @@ MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
     "sqlalchemy": "sqlalchemy",
     "snowflake": "snowflake-snowpark-python",
     "snowflake.snowpark": "snowflake-snowpark-python",
-    "tenacity": "tenacity",
 }
 
 # The ExperimentalBaseConnection bound is parameterized to `Any` below as subclasses of
@@ -70,7 +73,11 @@ def _create_connection(
       * Allow the user to specify ttl and max_entries when calling st.experimental_connection.
     """
 
-    @cache_resource(ttl=ttl, max_entries=max_entries)
+    @cache_resource(
+        max_entries=max_entries,
+        show_spinner="Running `st.experimental_connection(...)`.",
+        ttl=ttl,
+    )
     def __create_connection(
         name: str, connection_class: Type[ConnectionClass], **kwargs
     ) -> ConnectionClass:
@@ -101,7 +108,7 @@ def connection_factory(
     ttl: float | timedelta | None = None,
     autocommit: bool = False,
     **kwargs,
-) -> SQL:
+) -> SQLConnection:
     pass
 
 
@@ -113,7 +120,7 @@ def connection_factory(
     ttl: float | timedelta | None = None,
     autocommit: bool = False,
     **kwargs,
-) -> SQL:
+) -> SQLConnection:
     pass
 
 
@@ -123,7 +130,7 @@ def connection_factory(
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,
-) -> Snowpark:
+) -> SnowparkConnection:
     pass
 
 
@@ -134,7 +141,7 @@ def connection_factory(
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,
-) -> Snowpark:
+) -> SnowparkConnection:
     pass
 
 
@@ -183,7 +190,7 @@ def connection_factory(
     >>> import streamlit as st
     >>> conn = st.connection("sql")  # Config section defined in [connections.sql] in secrets.toml.
 
-    Creating a SQL connection with a custom name requires you to explicitly specify the
+    Creating a SQLConnection with a custom name requires you to explicitly specify the
     type. If type is not passed in as a kwarg, we try to infer it from the contents of
     your secrets.toml.
 
@@ -195,13 +202,13 @@ def connection_factory(
     useful, especially when working with a custom connection:
 
     >>> import streamlit as st
-    >>> conn = st.connection("my_sql_connection", type="streamlit.connections.SQL")
+    >>> conn = st.connection("my_sql_connection", type="streamlit.connections.SQLConnection")
 
     Finally, you can even pass the connection class to use directly to this function.
 
     >>> import streamlit as st
-    >>> from streamlit.connections import SQL
-    >>> conn = st.connection("my_sql_connection", type=SQL)
+    >>> from streamlit.connections import SQLConnection
+    >>> conn = st.connection("my_sql_connection", type=SQLConnection)
     """
     USE_ENV_PREFIX = "env:"
 
@@ -252,7 +259,6 @@ def connection_factory(
         err_string = str(e)
         missing_module = re.search(MODULE_EXTRACTION_REGEX, err_string)
 
-        # TODO(vdonato): Finalize these error messages.
         extra_info = "You may be missing a dependency required to use this connection."
         if missing_module:
             pypi_package = MODULES_TO_PYPI_PACKAGES.get(missing_module.group(1))

@@ -14,7 +14,6 @@ rich>=11.2.0
 scipy>=1.7.3
 seaborn>=0.11.2
 setuptools>=65.5.1
-tenacity>=8.2.2
 watchdog>=2.1.5
 
 # These requirements exist only for `@st.cache` tests. st.cache is deprecated, and
