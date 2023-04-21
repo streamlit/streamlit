@@ -149,19 +149,11 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
   borderRadius: theme.radii.xl,
   transform: "scale(0)",
 
-  [`${StyledCodeBlock}:hover &`]: {
+  [`${StyledCodeBlock}:hover &, &:active, &:focus, &:hover`]: {
     opacity: 1,
     transform: "scale(1)",
     outline: "none",
     transition: "none",
     color: theme.colors.bodyText,
-  },
-
-  "&:active, &:focus, &:hover": {
-    opacity: 1,
-    transform: "scale(1)",
-    outline: "none",
-    color: theme.colors.bodyText,
-    transition: "none",
   },
 }))
