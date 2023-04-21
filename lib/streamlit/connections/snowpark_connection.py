@@ -69,7 +69,7 @@ def _load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
 
 class SnowparkConnection(ExperimentalBaseConnection["Session"]):
     """A connection to Snowpark using snowflake.snowpark.session.Session. Initialize using
-    `st.experimental_connection("<name>", type="snowpark")`.
+    ``st.experimental_connection("<name>", type="snowpark")``.
 
     In addition to accessing the Snowpark Session, SnowparkConnection supports direct SQL querying using
     ``query("...")`` and thread safe access using ``with conn.safe_session():``. See methods
@@ -128,7 +128,7 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         """Run a read-only SQL query.
 
         This method implements both query result caching (with caching behavior
-        identical to that of using @st.cache_data) as well as simple error handling/retries.
+        identical to that of using ``@st.cache_data``) as well as simple error handling/retries.
 
         .. note::
             Queries that are run without a specified ttl are cached indefinitely.
@@ -186,10 +186,10 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         """Access the underlying Snowpark session.
 
         .. note::
-            Snowpark sessions are *not* thread safe. Users of this method are
+            Snowpark sessions are **not** thread safe. Users of this method are
             responsible for ensuring that access to the session returned by this method is
             done in a thread-safe manner. For most users, we recommend using the thread-safe
-            safe_session() method and a `with` block.
+            safe_session() method and a ``with`` block.
 
         Information on how to use Snowpark sessions can be found in the
         [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
