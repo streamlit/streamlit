@@ -42,15 +42,9 @@ _ALL_CONNECTION_PARAMS = {
 _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
-<<<<<<< HEAD
 class SQLConnection(ExperimentalBaseConnection["Engine"]):
-    """A connection to a SQL database using a SQLAlchemy Engine. Initialize using
-    `st.experimental_connection("<name>", type="sql")`.
-=======
-class SQL(ExperimentalBaseConnection["Engine"]):
     """A connection to a SQL database using a SQLAlchemy Engine.
     Initialize using ``st.experimental_connection("<name>", type="sql")``.
->>>>>>> 761cea32f (Fix reStructuredText issues in SQL docstrings)
 
     The SQL connection provides the ``query()`` convenience method, which can be used to
     run simple read-only queries with both caching and simple error handling/retries.
@@ -231,23 +225,9 @@ class SQL(ExperimentalBaseConnection["Engine"]):
             **kwargs,
         )
 
-<<<<<<< HEAD
     @property
     def session(self) -> "Session":
         """Return a SQLAlchemy Session.
-=======
-    @contextmanager
-    def session(self) -> Iterator["Session"]:
-        """A thin wrapper around SQLAlchemy Session context management.
-
-        This allows us to write:
-
-        ``with conn.session() as session:``
-
-        instead of importing the ``sqlalchemy.orm.Session`` object and writing:
-
-        ``with Session(conn._instance) as session:``
->>>>>>> 761cea32f (Fix reStructuredText issues in SQL docstrings)
 
         Users of this connection should use the contextmanager pattern for writes,
         transactions, and anything more complex than simple read queries.
@@ -260,10 +240,9 @@ class SQL(ExperimentalBaseConnection["Engine"]):
         Example
         -------
         >>> import streamlit as st
-        >>> conn = st.experimental_connection("sql")
         >>> n = st.slider("Pick a number")
         >>> if st.button("Add the number!"):
-        ...     with conn.session as session:
+        ...     with conn.session() as session:
         ...         session.execute("INSERT INTO numbers (val) VALUES (:n);", {"n": n})
         ...         session.commit()
         """

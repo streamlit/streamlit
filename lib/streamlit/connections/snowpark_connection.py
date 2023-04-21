@@ -71,7 +71,7 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
     """A connection to Snowpark using snowflake.snowpark.session.Session. Initialize using
     `st.experimental_connection("<name>", type="snowpark")`.
 
-    In addition to the Snowpark Session, this connection supports direct SQL querying using
+    In addition to accessing the Snowpark Session, SnowparkConnection supports direct SQL querying using
     ``query("...")`` and thread safe access using ``with conn.safe_session():``. See methods
     below for more information.
 
@@ -184,7 +184,6 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
     def session(self) -> "Session":
         """Access the underlying Snowpark session.
 
-<<<<<<< HEAD
         NOTE: Snowpark sessions are *not* thread safe. Users of this method are
         responsible for ensuring that access to the session returned by this method is
         done in a thread-safe manner. For most users, we recommend using the thread-safe
@@ -200,9 +199,6 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         """Grab the underlying Snowpark session in a thread-safe manner.
 
         As operations on a Snowpark session are not thread safe, we need to take care
-=======
-        As operations on a Snowpark session are **not** thread safe, we need to take care
->>>>>>> d324ba685 (Fix reStructuredText issues in Snowpark docstrings)
         when using a session in the context of a Streamlit app where each script run
         occurs in its own thread. Using the contextmanager pattern to do this ensures
         that access on this connection's underlying Session is done in a thread-safe
@@ -216,7 +212,7 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         >>> import streamlit as st
         >>>
         >>> conn = st.experimental_connection("snowpark")
-        >>> with conn.session() as session:
+        >>> with conn.safe_session() as session:
         ...     df = session.table("mytable").limit(10).to_pandas()
         ...
         >>> st.dataframe(df)

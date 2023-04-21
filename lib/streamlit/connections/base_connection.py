@@ -38,7 +38,7 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
         required to define a valid connection, connections should also provide the user
         with context-specific ways of interacting with the underlying connection object.
         For example, the first-party SQLConnection provides a ``query()`` method for
-        reads and a ``session()`` contextmanager for more complex operations.
+        reads and a ``session`` property for more complex operations.
     """
 
     def __init__(self, connection_name: str, **kwargs) -> None:

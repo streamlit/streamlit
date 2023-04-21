@@ -180,7 +180,7 @@ def connection_factory(
     sources:
 
     - Any connection-specific configuration files.
-    -  An app's ``secrets.toml`` files.
+    - An app's ``secrets.toml`` files.
     - The kwargs passed to this function.
 
     Parameters
