@@ -16,6 +16,8 @@
 import os
 import unittest
 
+from parameterized import parameterized
+
 import streamlit as st
 from streamlit import errors
 from streamlit.elements import exception
@@ -25,6 +27,8 @@ from streamlit.elements.exception import (
 )
 from streamlit.errors import StreamlitAPIException, UncaughtAppException
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+from tests import testutil
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class ExceptionProtoTest(unittest.TestCase):
@@ -99,3 +103,26 @@ SyntaxError: invalid syntax
 
         assert proto.message == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
         assert proto.type == "AttributeError"
+
+
+class StExceptionAPITest(DeltaGeneratorTestCase):
+    """Test Public Streamlit Public APIs."""
+
+    @parameterized.expand([(True,), (False,)])
+    def test_st_exception(self, show_error_details: bool):
+        """Test st.exception."""
+        # client.showErrorDetails has no effect on code that calls
+        # st.exception directly. This test should have the same result
+        # regardless fo the config option.
+        with testutil.patch_config_options(
+            {"client.showErrorDetails": show_error_details}
+        ):
+            e = RuntimeError("Test Exception")
+            st.exception(e)
+
+            el = self.get_delta_from_queue().new_element
+            self.assertEqual(el.exception.type, "RuntimeError")
+            self.assertEqual(el.exception.message, "Test Exception")
+            # We will test stack_trace when testing
+            # streamlit.elements.exception_element
+            self.assertEqual(el.exception.stack_trace, [])

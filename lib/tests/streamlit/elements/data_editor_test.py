@@ -420,7 +420,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         self.assertIsInstance(return_df, pd.DataFrame)
 
     @unittest.skipIf(
-        is_pandas_version_less_than("2.0.0rc1") is False,
+        is_pandas_version_less_than("2.0.0") is False,
         "This test only runs if pandas is < 2.0.0",
     )
     def test_with_old_supported_index(self):
