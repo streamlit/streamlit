@@ -259,7 +259,6 @@ def connection_factory(
         err_string = str(e)
         missing_module = re.search(MODULE_EXTRACTION_REGEX, err_string)
 
-        # TODO(vdonato): Finalize these error messages.
         extra_info = "You may be missing a dependency required to use this connection."
         if missing_module:
             pypi_package = MODULES_TO_PYPI_PACKAGES.get(missing_module.group(1))
