@@ -174,13 +174,40 @@ def connection_factory(
     ttl=None,
     **kwargs,
 ):
-    """Create a new connection or return an existing one.
+    """Create a new connection to a data store or API, or return an existing one.
 
     Config options, credentials, secrets, etc. for connections are sourced from various
     sources:
-      * Any connection-specific configuration files.
-      * An app's `secrets.toml` files.
-      * The kwargs passed to this function.
+
+    - Any connection-specific configuration files.
+    - An app's ``secrets.toml`` files.
+    - The kwargs passed to this function.
+
+    Parameters
+    ----------
+    name : str
+        The connection name used for secrets lookup in ``[connections.<name>]``.
+        Type will be inferred from passing ``"sql"`` or ``"snowpark"``.
+    type : str or connection class
+        The type of connection to create. It can be a keyword (``"sql"`` or ``"snowpark"``),
+        a path to an importable class, or an imported class reference. All classes
+        must extend ``st.connections.ExperimentalBaseConnection`` and implement the
+        ``_connect()`` method.
+    max_entries : int or None
+        The maximum number of connections to keep in the cache, or None
+        for an unbounded cache. (When a new entry is added to a full cache,
+        the oldest cached entry will be removed.) The default is None.
+    ttl : float or timedelta or None
+        The maximum number of seconds to keep results in the cache, or
+        None if cached results should not expire. The default is None.
+    **kwargs : any
+        Additional connection specific kwargs that are passed to the Connection's
+        ``_connect()`` method. Learn more from the specific Connection's documentation.
+
+    Returns
+    -------
+    Connection object
+        An initialized Connection object of the specified type.
 
     Examples
     --------
@@ -188,15 +215,15 @@ def connection_factory(
     default names and define corresponding sections in your config.toml file.
 
     >>> import streamlit as st
-    >>> conn = st.connection("sql")  # Config section defined in [connections.sql] in secrets.toml.
+    >>> conn = st.connection("sql") # Config section defined in [connections.sql] in secrets.toml.
 
     Creating a SQLConnection with a custom name requires you to explicitly specify the
     type. If type is not passed in as a kwarg, we try to infer it from the contents of
     your secrets.toml.
 
     >>> import streamlit as st
-    >>> conn1 = st.connection("my_sql_connection", type="sql")  # Config section defined in [connections.my_sql_connection].
-    >>> conn2 = st.connection("my_other_sql_connection")  # Type is inferred from [connections.my_other_sql_connection].
+    >>> conn1 = st.connection("my_sql_connection", type="sql") # Config section defined in [connections.my_sql_connection].
+    >>> conn2 = st.connection("my_other_sql_connection") # Type is inferred from [connections.my_other_sql_connection].
 
     Passing the full module path to the connection class that you want to use can be
     useful, especially when working with a custom connection:

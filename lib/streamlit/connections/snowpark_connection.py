@@ -68,16 +68,18 @@ def _load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
 
 
 class SnowparkConnection(ExperimentalBaseConnection["Session"]):
-    """A thin wrapper around snowflake.snowpark.session.Session that makes it play
-    nicely with st.experimental_connection.
+    """A connection to Snowpark using snowflake.snowpark.session.Session. Initialize using
+    ``st.experimental_connection("<name>", type="snowpark")``.
 
-    SnowparkConnection additionally ensures the underlying Snowpark Session can
-    only be accessed by a single thread at a time as Session object usage is *not* thread
-    safe.
+    In addition to accessing the Snowpark Session, SnowparkConnection supports direct SQL querying using
+    ``query("...")`` and thread safe access using ``with conn.safe_session():``. See methods
+    below for more information. SnowparkConnections should always be created using
+    ``st.experimental_connection()``, **not** initialized directly.
 
-    NOTE: We don't expect this iteration of SnowparkConnection to be able to scale
-    well in apps with many concurrent users due to the lock contention that will occur
-    over the single underlying Session object under high load.
+    .. note::
+        We don't expect this iteration of SnowparkConnection to be able to scale
+        well in apps with many concurrent users due to the lock contention that will occur
+        over the single underlying Session object under high load.
     """
 
     def __init__(self, connection_name: str, **kwargs) -> None:
@@ -126,8 +128,31 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         """Run a read-only SQL query.
 
         This method implements both query result caching (with caching behavior
-        identical to that of using @st.cache_data) as well as simple error handling/retries.
-        Note that queries that are run without a specified ttl are cached indefinitely.
+        identical to that of using ``@st.cache_data``) as well as simple error handling/retries.
+
+        .. note::
+            Queries that are run without a specified ttl are cached indefinitely.
+
+        Parameters
+        ----------
+        sql : str
+            The read-only SQL query to execute.
+        ttl : float, int, timedelta or None
+            The maximum number of seconds to keep results in the cache, or
+            None if cached results should not expire. The default is None.
+
+        Returns
+        -------
+        pd.DataFrame
+            The result of running the query, formatted as a pandas DataFrame.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> conn = st.experimental_connection("snowpark")
+        >>> df = conn.query("select * from pet_owners")
+        >>> st.dataframe(df)
         """
         from snowflake.snowpark.exceptions import (  # type: ignore
             SnowparkServerException,
@@ -160,13 +185,22 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
     def session(self) -> "Session":
         """Access the underlying Snowpark session.
 
-        NOTE: Snowpark sessions are *not* thread safe. Users of this method are
-        responsible for ensuring that access to the session returned by this method is
-        done in a thread-safe manner. For most users, we recommend using the thread-safe
-        safe_session() method and a `with` block.
+        .. note::
+            Snowpark sessions are **not** thread safe. Users of this method are
+            responsible for ensuring that access to the session returned by this method is
+            done in a thread-safe manner. For most users, we recommend using the thread-safe
+            safe_session() method and a ``with`` block.
 
         Information on how to use Snowpark sessions can be found in the
         [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> session = st.experimental_connection("snowpark").session
+        >>> df = session.table("mytable").limit(10).to_pandas()
+        >>> st.dataframe(df)
         """
         return self._instance
 
@@ -181,7 +215,17 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         manner.
 
         Information on how to use Snowpark sessions can be found in the
-        [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
+        `Snowpark documentation <https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes>`_.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> conn = st.experimental_connection("snowpark")
+        >>> with conn.safe_session() as session:
+        ...     df = session.table("mytable").limit(10).to_pandas()
+        ...
+        >>> st.dataframe(df)
         """
         with self._lock:
             yield self.session
