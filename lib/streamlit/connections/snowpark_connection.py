@@ -73,7 +73,8 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
 
     In addition to accessing the Snowpark Session, SnowparkConnection supports direct SQL querying using
     ``query("...")`` and thread safe access using ``with conn.safe_session():``. See methods
-    below for more information.
+    below for more information. SnowparkConnections should always be created using
+    ``st.experimental_connection()``, **not** initialized directly.
 
     .. note::
         We don't expect this iteration of SnowparkConnection to be able to scale

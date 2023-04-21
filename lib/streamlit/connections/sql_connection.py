@@ -52,8 +52,9 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
     More complex DB interactions can be performed by using the ``.session`` property
     to receive a regular SQLAlchemy Session.
 
-    SQL connections will typically use connection parameters specified via
-    ``st.secrets`` or ``**kwargs``.
+    SQLConnections will typically use connection parameters specified via
+    ``st.secrets`` or ``**kwargs``. SQLConnections should always be created using
+    ``st.experimental_connection()``, **not** initialized directly.
 
     Particular parameters that may be frequently used:
 
