@@ -46,11 +46,11 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
     """A connection to a SQL database using a SQLAlchemy Engine.
     Initialize using ``st.experimental_connection("<name>", type="sql")``.
 
-    The SQL connection provides the ``query()`` convenience method, which can be used to
+    SQLConnection provides the ``query()`` convenience method, which can be used to
     run simple read-only queries with both caching and simple error handling/retries.
 
-    More complex DB interactions can be performed by using the ``.session()`` contextmanager
-    pattern to receive a regular SQLAlchemy Session.
+    More complex DB interactions can be performed by using the ``.session`` property
+    to receive a regular SQLAlchemy Session.
 
     SQL connections will typically use connection parameters specified via
     ``st.secrets`` or ``**kwargs``.
@@ -240,9 +240,10 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         Example
         -------
         >>> import streamlit as st
+        >>> conn = st.experimental_connection("sql")
         >>> n = st.slider("Pick a number")
         >>> if st.button("Add the number!"):
-        ...     with conn.session() as session:
+        ...     with conn.session as session:
         ...         session.execute("INSERT INTO numbers (val) VALUES (:n);", {"n": n})
         ...         session.commit()
         """
