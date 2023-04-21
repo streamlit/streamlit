@@ -55,15 +55,15 @@ _OBJECT_NAME_MAPPING: Final = {
 
 # A list of dependencies to check for attribution
 _ATTRIBUTIONS_TO_CHECK: Final = [
+    "openai",
+    "langchain",
+    "llama_index",
     "snowflake",
     "torch",
     "tensorflow",
     "streamlit_extras",
     "streamlit_pydantic",
     "plost",
-    "openai",
-    "langchain",
-    "llama_index",
 ]
 
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
