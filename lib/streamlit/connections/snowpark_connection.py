@@ -185,13 +185,22 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
     def session(self) -> "Session":
         """Access the underlying Snowpark session.
 
-        NOTE: Snowpark sessions are *not* thread safe. Users of this method are
-        responsible for ensuring that access to the session returned by this method is
-        done in a thread-safe manner. For most users, we recommend using the thread-safe
-        safe_session() method and a `with` block.
+        .. note::
+            Snowpark sessions are *not* thread safe. Users of this method are
+            responsible for ensuring that access to the session returned by this method is
+            done in a thread-safe manner. For most users, we recommend using the thread-safe
+            safe_session() method and a `with` block.
 
         Information on how to use Snowpark sessions can be found in the
         [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> session = st.experimental_connection("snowpark").session
+        >>> df = session.table("mytable").limit(10).to_pandas()
+        >>> st.dataframe(df)
         """
         return self._instance
 
