@@ -28,16 +28,19 @@ from typing import (
 import pyarrow as pa
 from numpy import ndarray
 from pandas import DataFrame
-from pandas.io.formats.style import Styler
 
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from pandas.io.formats.style import Styler
+
     from streamlit.delta_generator import DeltaGenerator
 
-Data = Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]], None]
+Data = Union[
+    DataFrame, "Styler", pa.Table, ndarray, Iterable, Dict[str, List[Any]], None
+]
 
 
 class ArrowMixin:
@@ -197,7 +200,7 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
         proto.data = type_util.data_frame_to_bytes(df)
 
 
-def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
+def marshall_styler(proto: ArrowProto, styler: "Styler", default_uuid: str) -> None:
     """Marshall pandas.Styler into an Arrow proto.
 
     Parameters
@@ -232,7 +235,7 @@ def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> Non
     _marshall_display_values(proto, styler.data, pandas_styles)
 
 
-def _marshall_uuid(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
+def _marshall_uuid(proto: ArrowProto, styler: "Styler", default_uuid: str) -> None:
     """Marshall pandas.Styler uuid into an Arrow proto.
 
     Parameters
@@ -253,7 +256,7 @@ def _marshall_uuid(proto: ArrowProto, styler: Styler, default_uuid: str) -> None
     proto.styler.uuid = str(styler.uuid)
 
 
-def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
+def _marshall_caption(proto: ArrowProto, styler: "Styler") -> None:
     """Marshall pandas.Styler caption into an Arrow proto.
 
     Parameters
@@ -270,7 +273,7 @@ def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
 
 
 def _marshall_styles(
-    proto: ArrowProto, styler: Styler, styles: Mapping[str, Any]
+    proto: ArrowProto, styler: "Styler", styles: Mapping[str, Any]
 ) -> None:
     """Marshall pandas.Styler styles into an Arrow proto.
 

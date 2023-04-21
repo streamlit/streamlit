@@ -35,7 +35,6 @@ from typing import (
 import pandas as pd
 import pyarrow as pa
 from pandas.api.types import is_datetime64_any_dtype, is_float_dtype, is_integer_dtype
-from pandas.io.formats.style import Styler
 from typing_extensions import Final, Literal, TypeAlias, TypedDict
 
 from streamlit import type_util
@@ -55,6 +54,7 @@ from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type,
 
 if TYPE_CHECKING:
     import numpy as np
+    from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -81,7 +81,7 @@ EditableData = TypeVar(
 DataTypes: TypeAlias = Union[
     pd.DataFrame,
     pd.Index,
-    Styler,
+    "Styler",
     pa.Table,
     "np.ndarray[Any, np.dtype[np.float64]]",
     Tuple[Any],
