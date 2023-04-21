@@ -55,15 +55,24 @@ _OBJECT_NAME_MAPPING: Final = {
 
 # A list of dependencies to check for attribution
 _ATTRIBUTIONS_TO_CHECK: Final = [
+    # LLM Tools:
     "openai",
     "langchain",
     "llama_index",
+    "llama_cpp",
     "anthropic",
-    "pinecone",
-    "chromadb",
-    "nomic",
+    "pyllamacpp",
     "cohere",
     "transformers",
+    "nomic",
+    "pinecone",
+    "chromadb",
+    "weaviate",
+    "qdrant_client",
+    "huggingface_hub",
+    "diffusers",
+    "datasets",
+    # Others:
     "snowflake",
     "torch",
     "tensorflow",
