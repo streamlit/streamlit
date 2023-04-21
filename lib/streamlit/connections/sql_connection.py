@@ -169,6 +169,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
             **kwargs,
         )
 
+    @property
     def session(self) -> "Session":
         """Return a SQLAlchemy Session.
 
@@ -204,7 +205,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
             else ""
         )
 
-        with self.session() as s:
+        with self.session as s:
             dialect = s.bind.dialect.name if s.bind is not None else "unknown"
 
         return f"""

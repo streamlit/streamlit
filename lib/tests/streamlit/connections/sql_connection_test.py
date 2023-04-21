@@ -144,7 +144,7 @@ class SQLConnectionTest(unittest.TestCase):
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     def test_repr_html_(self):
         conn = SQLConnection("my_sql_connection")
-        with conn.session() as s:
+        with conn.session as s:
             s.bind.dialect.name = "postgres"
         repr_ = conn._repr_html_()
 
@@ -161,7 +161,7 @@ class SQLConnectionTest(unittest.TestCase):
     )
     def test_repr_html_with_secrets(self):
         conn = SQLConnection("my_sql_connection")
-        with conn.session() as s:
+        with conn.session as s:
             s.bind.dialect.name = "postgres"
         repr_ = conn._repr_html_()
 
