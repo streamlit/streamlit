@@ -199,7 +199,7 @@ test("clears deltas automatically on read", () => {
 })
 
 test("ip address is overwritten", () => {
-  const mm = getMetricsManagerForTest()
+  const mm = getSegmentMetricsManager()
   mm.initialize({ gatherUsageStats: true })
 
   mm.enqueue("ev1", { data1: 11 })
