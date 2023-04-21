@@ -174,7 +174,7 @@ def connection_factory(
     ttl=None,
     **kwargs,
 ):
-    """Create a new connection or return an existing one.
+    """Create a new connection to a data store or API, or return an existing one.
 
     Config options, credentials, secrets, etc. for connections are sourced from various
     sources:
