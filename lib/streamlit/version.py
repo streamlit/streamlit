@@ -16,7 +16,6 @@
 import random
 
 import packaging.version
-import requests
 from importlib_metadata import version as _version
 from typing_extensions import Final
 
@@ -68,6 +67,8 @@ def _get_latest_streamlit_version(timeout=None):
         on PyPI.
 
     """
+    import requests
+
     rsp = requests.get(PYPI_STREAMLIT_URL, timeout=timeout)
     try:
         version_str = rsp.json()["info"]["version"]

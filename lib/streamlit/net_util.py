@@ -15,7 +15,6 @@
 import socket
 from typing import Optional
 
-import requests
 from typing_extensions import Final
 
 from streamlit import util
@@ -89,6 +88,8 @@ def get_internal_ip() -> Optional[str]:
 
 
 def _make_blocking_http_get(url: str, timeout: float = 5) -> Optional[str]:
+    import requests
+
     try:
         text = requests.get(url, timeout=timeout).text
         if isinstance(text, str):
