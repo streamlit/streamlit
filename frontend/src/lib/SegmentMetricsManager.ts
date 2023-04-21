@@ -190,6 +190,9 @@ export class SegmentMetricsManager implements MetricsManager {
     } else {
       this.track(evName, data, {
         context: {
+          // Segment automatically attaches the IP address. But we don't use, process,
+          // or store IP addresses for our telemetry. To make this more explicit, we
+          // are overwriting this here so that it is never even sent to Segment.
           ip: "0.0.0.0",
         },
       })
