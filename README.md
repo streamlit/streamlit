@@ -2,12 +2,11 @@
 
 <img src="https://user-images.githubusercontent.com/7164864/217935870-c0bc60a3-6fc0-4047-b011-7b4c59488c91.png" alt="Streamlit logo" style="margin-top:50px"></img>
 
-# Welcome to Streamlit 👋
+# Welcome to Streamlit! 👋
 
 **A faster way to build and share data apps.**
 
 Streamlit lets you turn data scripts into shareable web apps in minutes, not weeks. It’s all Python, open-source, and free! And once you’ve created an app you can use our [Community Cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app.
-
 
 ## Installation
 
@@ -29,6 +28,7 @@ The app features a bunch of examples of what you can do with Streamlit. Jump to 
 ### A little example
 
 Create a new file `streamlit_app.py` with the following code:
+
 ```python
 import streamlit as st
 x = st.slider("Select a value")
@@ -36,6 +36,7 @@ st.write(x, "squared is", x * x)
 ```
 
 Now run it to open the app!
+
 ```
 $ streamlit run streamlit_app.py
 ```
@@ -45,7 +46,6 @@ $ streamlit run streamlit_app.py
 ### Give me more!
 
 Streamlit comes in with [a ton of additional powerful elements](https://docs.streamlit.io/library/api-reference) to spice up your data apps and delight your viewers. Some examples:
-
 
 <table border="0">
    <tr>
@@ -72,6 +72,7 @@ Our vibrant creators community also extends Streamlit capabilities using  🧩 
 ## Get inspired
 
 There's so much you can build with Streamlit:
+
 - 🧬  [Science & technology apps](https://streamlit.io/gallery?category=science-technology)
 - 💬  [NLP & language apps](https://streamlit.io/gallery?category=nlp-language)
 - 👀  [Computer vision apps](https://streamlit.io/gallery?category=computer-vision-images)
@@ -91,9 +92,11 @@ Deploy, manage and share your apps for free using our [Community Cloud](https://
 - Streamlit [docs](https://docs.streamlit.io), [community forum](https://discuss.streamlit.io) and [blog](https://blog.streamlit.io).
 - Extend Streamlit's capabilities by installing or creating your own [Streamlit Components](http://components.streamlit.app/).
 - Help others find and play with your app by using the Streamlit GitHub badge in your repository:
+
 ```markdown
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](URL_TO_YOUR_APP)
 ```
+
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/streamlit/roadmap)
 
 ## License

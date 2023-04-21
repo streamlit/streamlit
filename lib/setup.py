@@ -23,6 +23,7 @@ THIS_DIRECTORY = Path(__file__).parent
 
 VERSION = "1.21.0"  # PEP-440
 
+# Some random change
 NAME = "streamlit"
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
