@@ -140,7 +140,7 @@ tomli==2.0.1
 toolz==0.12.0
 torch==1.8.1
 torchvision==0.9.1
-tornado==6.3.1
+tornado==6.3
 twine==4.0.2
 types-click==7.1.8
 types-protobuf==4.22.0.2
