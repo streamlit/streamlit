@@ -16,6 +16,7 @@
 
 import { range } from "lodash"
 import React, { ReactElement } from "react"
+import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { Quiver } from "src/lib/Quiver"
@@ -149,7 +150,7 @@ function generateTableCell(
     case "data": {
       return (
         <StyledTableCell key={columnIndex} id={cssId} style={style}>
-          {formattedContent}
+          <StreamlitMarkdown source={formattedContent} allowHTML={false} />
         </StyledTableCell>
       )
     }
