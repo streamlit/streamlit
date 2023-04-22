@@ -93,35 +93,32 @@ RUN set +x  \
 ENV NODE_PATH $NVM_DIR/$NODE_VERSION/lib/node_modules
 ENV PATH $NVM_DIR/versions/node/$NODE_VERSION/bin:$PATH
 
-# copy makefile and related script
-COPY --chown=$USER Makefile .
-COPY --chown=$USER scripts/should_install_tensorflow.py scripts/
-
 # install virtual env
 RUN python -m venv venv \
-    && source venv/bin/activate \
-    && make setup
+    && source venv/bin/activate
 
 # python path
 ENV PATH $APP/venv/bin:$PATH
-# pipenv detects if the virtual environment is active based on this variable. Its settings prevent creating multiple virtual environments in the image.
 ENV VIRTUAL_ENV=$APP/venv
 
-# copy package.json
-COPY --chown=$USER frontend/package.json frontend/yarn.lock ./frontend/
+# Copy files required to install NodeJS and Python dependencies
+COPY --chown=$USER Makefile .
+COPY --chown=$USER scripts/should_install_tensorflow.py scripts/
 
 # install node modules
+COPY --chown=$USER frontend/package.json frontend/yarn.lock ./frontend/
 RUN make react-init
 
-# copy Pipfile and test-requirements.txt
-COPY --chown=$USER lib/Pipfile ./lib/
-COPY --chown=$USER lib/test-requirements.txt ./lib/
+# install python dependencies
 COPY --chown=$USER lib/setup.py ./lib/
+COPY --chown=$USER lib/bin/streamlit.cmd ./lib/bin/
+COPY --chown=$USER lib/dev-requirements.txt ./lib/
+COPY --chown=$USER lib/test-requirements.txt ./lib/
 
-# install python modules
-# This would be `make pipenv-install`, but lockfile creation somehow breaks it
-RUN IS_DOCKER=true CIRCLECI=true cd ./lib/ && pipenv install --dev --skip-lock && cd -
-RUN IS_DOCKER=true CIRCLECI=true make py-test-install
+ARG INSTALL_DEV_REQS="true"
+ARG INSTALL_TEST_REQS="false"
+
+RUN IS_DOCKER=true make python-init
 
 # copy streamlit code
 COPY --chown=$USER . .

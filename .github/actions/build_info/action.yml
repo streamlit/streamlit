@@ -1,6 +1,14 @@
 name: Build info
 description: Sets common builds variables that are needed for other build steps
 
+inputs:
+  force-canary:
+    description: |
+      Forces the current build to be canary.
+      Canary builds test all Python versions and do not use constraints.
+    required: false
+    default: "false"
+
 outputs:
   PYTHON_VERSIONS:
     description: |
@@ -18,7 +26,6 @@ outputs:
     description: Whether to use a constraint file to install Python dependencies
     value: ${{ steps.build_info.outputs.USE_CONSTRAINT_FILE }}
 
-
 runs:
   using: composite
   steps:
@@ -27,4 +34,5 @@ runs:
       run: ./.github/scripts/build_info.py
       env:
         GITHUB_CONTEXT: ${{ toJson(github) }}
+        GITHUB_INPUTS: ${{ toJson(inputs) }}
       shell: bash --login -eo pipefail {0}

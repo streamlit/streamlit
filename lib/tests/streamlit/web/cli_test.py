@@ -173,6 +173,18 @@ class CliTest(unittest.TestCase):
         self.assertEqual(kwargs["flag_options"]["server_port"], 8502)
         self.assertEqual(0, result.exit_code)
 
+    @parameterized.expand(["mapbox.token", "server.cookieSecret"])
+    def test_run_command_with_sensitive_options_as_flag(self, sensitive_option):
+        with patch("validators.url", return_value=False), patch(
+            "streamlit.web.cli._main_run"
+        ), patch("os.path.exists", return_value=True):
+            result = self.runner.invoke(
+                cli, ["run", "file_name.py", f"--{sensitive_option}=TESTSECRET"]
+            )
+
+        self.assertIn("option using the CLI flag is not allowed", result.output)
+        self.assertEqual(1, result.exit_code)
+
     def test_get_command_line(self):
         """Test that _get_command_line_as_string correctly concatenates values
         from click.

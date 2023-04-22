@@ -89,18 +89,6 @@ export class SegmentMetricsManager implements MetricsManager {
     if (this.actuallySendMetrics) {
       // Segment will not initialize if this is rendered with SSR
       initializeSegment()
-
-      const userTraits: any = {
-        ...this.getInstallationData(),
-        ...this.getHostTrackingData(),
-      }
-
-      // Only record the user's email if they entered a non-empty one.
-      if (this.sessionInfo.current.authorEmail !== "") {
-        userTraits.authoremail = this.sessionInfo.current.authorEmail
-      }
-
-      this.identify(this.sessionInfo.current.installationId, userTraits)
       this.sendPendingEvents()
     }
 
@@ -188,7 +176,14 @@ export class SegmentMetricsManager implements MetricsManager {
     if (IS_DEV_ENV) {
       logAlways("[Dev mode] Not tracking stat datapoint: ", evName, data)
     } else {
-      this.track(evName, data)
+      this.track(evName, data, {
+        context: {
+          // Segment automatically attaches the IP address. But we don't use, process,
+          // or store IP addresses for our telemetry. To make this more explicit, we
+          // are overwriting this here so that it is never even sent to Segment.
+          ip: "0.0.0.0",
+        },
+      })
     }
   }
 
@@ -199,19 +194,13 @@ export class SegmentMetricsManager implements MetricsManager {
     this.pendingEvents = []
   }
 
-  // Wrap analytics methods for mocking:
   // eslint-disable-next-line class-methods-use-this
-  private identify(id: string, data: Record<string, unknown>): void {
-    if (IS_DEV_ENV) {
-      logAlways("[Dev mode] Not sending id: ", id, data)
-    } else {
-      analytics.identify(id, data)
-    }
-  }
-
-  // eslint-disable-next-line class-methods-use-this
-  private track(evName: string, data: Record<string, unknown>): void {
-    analytics.track(evName, data)
+  private track(
+    evName: string,
+    data: Record<string, unknown>,
+    context: Record<string, unknown>
+  ): void {
+    analytics.track(evName, data, context)
   }
 
   // Get the installation IDs from the session
