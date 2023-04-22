@@ -370,7 +370,6 @@ notices:
 	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
 	./scripts/append_license.sh frontend/src/vendor/bokeh/bokeh-LICENSE.txt
-	./scripts/append_license.sh frontend/public/vendor/viz/viz.js-LICENSE.txt
 	./scripts/append_license.sh frontend/src/vendor/twemoji-LICENSE.txt
 	./scripts/append_license.sh frontend/src/vendor/Segment-LICENSE.txt
 	./scripts/append_license.sh frontend/src/vendor/react-bootstrap-LICENSE.txt
