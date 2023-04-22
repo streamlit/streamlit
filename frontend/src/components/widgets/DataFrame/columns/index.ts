@@ -26,7 +26,8 @@ import UrlColumn from "./UrlColumn"
 import ImageColumn from "./ImageColumn"
 import RangeColumn from "./RangeColumn"
 
-import DatePickerCell from "./cells/DatePickerCell"
+import { DatePickerCellRenderer } from "./cells/DatePickerCell"
+export { ImageCellEditor } from "./cells/ImageCellEditor"
 
 import { ColumnCreator } from "./utils"
 
@@ -54,7 +55,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
   })
 )
 
-export const CustomCells = [DatePickerCell]
+export const CustomCells = [DatePickerCellRenderer]
 
 export {
   ObjectColumn,

@@ -21,6 +21,7 @@ import UrlColumn from "./UrlColumn"
 
 const MOCK_URL_COLUMN_PROPS = {
   id: "1",
+  name: "url_column",
   title: "URL column",
   indexNumber: 0,
   isEditable: false,

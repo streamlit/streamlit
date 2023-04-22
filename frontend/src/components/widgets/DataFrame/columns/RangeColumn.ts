@@ -34,8 +34,6 @@ import {
   formatNumber,
   toSafeNumber,
   countDecimals,
-  truncateDecimals,
-  adaptToStep,
 } from "./utils"
 
 export interface RangeColumnParams {
@@ -152,11 +150,8 @@ function RangeColumn(props: BaseColumnProps): BaseColumn {
           )
         }
       } else if (notNullOrUndefined(fixedDecimals)) {
-        displayValue = formatNumber(
-          adaptToStep(cellData, parameters.step),
-          fixedDecimals,
-          true
-        )
+        // TODO (lukasmasuch): Adapt number to step size?
+        displayValue = formatNumber(cellData, fixedDecimals, true)
       } else {
         displayValue = formatNumber(cellData)
       }

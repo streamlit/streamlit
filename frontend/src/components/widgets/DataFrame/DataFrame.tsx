@@ -24,6 +24,10 @@ import {
   drawTextCell,
   DrawCustomCellCallback,
   GridCell,
+  SpriteMap,
+  EditableGridCell,
+  Item,
+  ValidatedGridCell,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
 import { Resizable } from "re-resizable"
@@ -34,7 +38,7 @@ import { Quiver } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import { WidgetInfo, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { debounce, isNullOrUndefined } from "src/lib/utils"
-
+import Tooltip from "./Tooltip"
 import EditingState from "./EditingState"
 import {
   useCustomTheme,
@@ -44,6 +48,7 @@ import {
   useColumnSizer,
   useColumnSort,
   useColumnLoader,
+  useTooltips,
 } from "./hooks"
 import {
   BaseColumn,
@@ -51,6 +56,7 @@ import {
   isMissingValueCell,
   getTextCell,
   CustomCells,
+  ImageCellEditor,
 } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 
@@ -87,6 +93,8 @@ export interface DataFrameProps {
  */
 const drawMissingCells: DrawCustomCellCallback = args => {
   const { cell, theme } = args
+  //, ctx, rect
+
   if (isMissingValueCell(cell)) {
     drawTextCell(
       {
@@ -104,6 +112,16 @@ const drawMissingCells: DrawCustomCellCallback = args => {
       NULL_VALUE_TOKEN,
       cell.contentAlign
     )
+
+    // TODO: Draw red triangle for required cells (and error cells?)
+    // ctx.save()
+    // ctx.beginPath()
+    // ctx.moveTo(rect.x + rect.width - 8, rect.y + 1)
+    // ctx.lineTo(rect.x + rect.width, rect.y + 1)
+    // ctx.lineTo(rect.x + rect.width, rect.y + 1 + 8)
+    // ctx.fillStyle = theme.accentColor
+    // ctx.fill()
+    // ctx.restore()
     return true
   }
 
@@ -138,14 +156,31 @@ function DataFrame({
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
 
+  const isTouchDevice = React.useMemo<boolean>(
+    () => window.matchMedia("(pointer: coarse)").matches,
+    []
+  )
+
   const [gridSelection, setGridSelection] = React.useState<GridSelection>({
     columns: CompactSelection.empty(),
     rows: CompactSelection.empty(),
     current: undefined,
   })
 
+  const headerIcons = React.useMemo<SpriteMap>(() => {
+    return {
+      readonly: p => `
+        <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 96 960 960" width="48" fill="${p.bgColor}"><path d="M796 980 500 684 248 936H120V808l252-252L76 260l42-42 720 720-42 42ZM436 620l-22-22 22 22 22 22-22-22Zm148-20-42-42 125-125-44-44-125 125-42-42 168-168 128 128-168 168Zm210-210L666 262l42-42q17-17 42.5-16.5T793 221l43 43q17 17 17.5 41.5T836 348l-42 42ZM520 536ZM180 876h44l234-234-44-44-234 234v44Z"/></svg>`,
+      readonly2: p => `
+      <svg xmlns="http://www.w3.org/2000/svg" height="40" viewBox="0 96 960 960" width="40" fill="${p.bgColor}"><path d="M258.461 936q-23.91 0-41.186-17.275Q200 901.449 200 877.539V516.41q0-24.308 17.275-41.385 17.276-17.076 41.186-17.076h64.616v-85.026q0-65.57 45.707-111.247Q414.492 216 480.105 216t111.216 45.676q45.602 45.677 45.602 111.247v85.026h64.616q23.91 0 41.186 17.076Q760 492.102 760 516.41v361.129q0 23.91-17.275 41.186Q725.449 936 701.539 936H258.461Zm0-33.846h443.078q10.769 0 17.692-6.923t6.923-17.692V516.41q0-10.769-6.923-17.692t-17.692-6.923H258.461q-10.769 0-17.692 6.923t-6.923 17.692v361.129q0 10.769 6.923 17.692t17.692 6.923ZM480.112 756q24.529 0 41.721-17.136 17.193-17.136 17.193-41.582 0-23.82-17.305-41.577-17.304-17.756-41.833-17.756t-41.721 17.756q-17.193 17.757-17.193 41.91 0 24.154 17.305 41.27Q455.583 756 480.112 756ZM356.923 457.949h246.154v-85.026q0-51.282-35.866-87.18-35.866-35.897-87.102-35.897-51.237 0-87.212 35.897-35.974 35.898-35.974 87.18v85.026ZM233.846 902.154V491.795 902.154Z"/></svg>`,
+      editable: p => `
+      <svg xmlns="http://www.w3.org/2000/svg" height="40" viewBox="0 96 960 960" width="40" fill="${p.bgColor}"><path d="m800.641 679.743-64.384-64.384 29-29q7.156-6.948 17.642-6.948 10.485 0 17.742 6.948l29 29q6.948 7.464 6.948 17.95 0 10.486-6.948 17.434l-29 29Zm-310.64 246.256v-64.383l210.82-210.821 64.384 64.384-210.821 210.82h-64.383Zm-360-204.872v-50.254h289.743v50.254H130.001Zm0-162.564v-50.255h454.615v50.255H130.001Zm0-162.307v-50.255h454.615v50.255H130.001Z"/></svg>`,
+    }
+  }, [])
+
   // This callback is used to clear all selections (row/column/cell)
   const clearSelection = React.useCallback(() => {
+    console.log("clearSelection")
     setGridSelection({
       columns: CompactSelection.empty(),
       rows: CompactSelection.empty(),
@@ -294,6 +329,11 @@ function DataFrame({
     applyEdits
   )
 
+  const { tooltip, clearTooltip, onItemHovered } = useTooltips(
+    columns,
+    getCellContent
+  )
+
   const { columns: glideColumns, onColumnResize } = useColumnSizer(
     columns.map(column => toGlideColumn(column))
   )
@@ -332,6 +372,23 @@ function DataFrame({
     [columns, theme.textLight]
   )
 
+  const getStyledCellContent = React.useCallback(
+    ([col, row]: readonly [number, number]): GridCell => {
+      const gridCell = getCellContent([col, row])
+      if (isMissingValueCell(gridCell)) {
+        return {
+          ...gridCell,
+          themeOverride: {
+            // bgCell: theme.accentColor,
+            borderColor: theme.accentColor,
+          },
+        }
+      }
+      return gridCell
+    },
+    [getCellContent, theme.accentColor]
+  )
+
   // This is required for the form clearing functionality:
   React.useEffect(() => {
     const formClearHelper = new FormClearHelper()
@@ -350,8 +407,10 @@ function DataFrame({
     <StyledResizableContainer
       className="stDataFrame"
       onBlur={() => {
-        // If the container loses focus, clear the current selection
-        if (!isFocused) {
+        // If the container loses focus, clear the current selection.
+        // Touch screen devices have issues with this, so we don't clear
+        // the selection on those devices.
+        if (!isFocused && !isTouchDevice) {
           clearSelection()
         }
       }}
@@ -405,7 +464,9 @@ function DataFrame({
           maxColumnAutoWidth={MAX_COLUMN_AUTO_WIDTH}
           rowHeight={rowHeight}
           headerHeight={rowHeight}
-          getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
+          getCellContent={
+            isEmptyTable ? getEmptyStateContent : getStyledCellContent
+          }
           onColumnResize={onColumnResize}
           // Freeze all index columns:
           freezeColumns={
@@ -429,9 +490,10 @@ function DataFrame({
           // Deactivate row markers and numbers:
           rowMarkers={"none"}
           // Deactivate selections:
-          rangeSelect={"rect"}
+          rangeSelect={!isTouchDevice ? "rect" : "none"}
           columnSelect={"none"}
           rowSelect={"none"}
+          onItemHovered={onItemHovered}
           // Activate search:
           keybindings={{ search: true, downFill: true }}
           // Header click is used for column sorting:
@@ -440,7 +502,20 @@ function DataFrame({
             isEmptyTable || isLargeTable ? undefined : sortColumn
           }
           gridSelection={gridSelection}
-          onGridSelectionChange={setGridSelection}
+          onGridSelectionChange={(newSelection: GridSelection) => {
+            if (isFocused || isTouchDevice) {
+              // Only allow selection changes if the grid is focused.
+              // This is mainly done because there is a bug when overlay click actions
+              // are outside of the bounds of the table (e.g. select dropdown or date picker).
+              // This results in the first cell being selected for a short period of time
+              // But for touch devices, preventing this can cause issues to select cells.
+              // So we allow selection changes for touch devices even when it is not focused.
+              setGridSelection(newSelection)
+              if (tooltip !== undefined) {
+                clearTooltip()
+              }
+            }
+          }}
           // Apply different styling to missing cells:
           drawCell={drawMissingCells}
           theme={theme}
@@ -461,14 +536,35 @@ function DataFrame({
           }}
           // Add support for additional cells:
           customRenderers={[...extraCellArgs.customRenderers, ...CustomCells]}
+          // Custom single image renderer:
+          imageEditorOverride={ImageCellEditor}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
+          headerIcons={headerIcons}
+          validateCell={(cell: Item, newValue: EditableGridCell) => {
+            const col = cell[0]
+            if (col >= columns.length) {
+              return true
+            }
+
+            const column = columns[col]
+            if (column.validateInput) {
+              const validationResult = column.validateInput(
+                column.getCellValue(newValue)
+              )
+              if (validationResult === true || validationResult === false) {
+                return validationResult
+              }
+              return column.getCell(validationResult) as ValidatedGridCell
+            }
+            return true
+          }}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&
             element.editingMode !== READ_ONLY &&
             !disabled && {
               // Support fill handle for bulk editing:
-              fillHandle: true,
+              fillHandle: !isTouchDevice ? true : false,
               // Support editing:
               onCellEdited,
               // Support pasting data for bulk editing:
@@ -498,6 +594,13 @@ function DataFrame({
             })}
         />
       </Resizable>
+      {tooltip && tooltip.content && (
+        <Tooltip
+          top={tooltip.top}
+          left={tooltip.left}
+          content={tooltip.content}
+        ></Tooltip>
+      )}
     </StyledResizableContainer>
   )
 }

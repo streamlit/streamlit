@@ -211,8 +211,9 @@ export function getIndexFromArrow(
 
   return {
     id: `index-${indexPosition}`,
-    isEditable,
+    name: title,
     title,
+    isEditable,
     arrowType,
     isIndex: true,
     isHidden: false,
@@ -256,8 +257,9 @@ export function getColumnFromArrow(
 
   return {
     id: `column-${title}-${columnPosition}`,
-    isEditable: true,
+    name: title,
     title,
+    isEditable: true,
     arrowType,
     columnTypeOptions: columnTypeMetadata,
     isIndex: false,

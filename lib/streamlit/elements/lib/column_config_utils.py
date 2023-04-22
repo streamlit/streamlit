@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime
 import json
 from enum import Enum
 from typing import Any, Dict, Final, List, Optional, Union
@@ -54,25 +53,27 @@ class ColumnDataKind(str, Enum):
     DECIMAL = "decimal"
     COMPLEX = "complex"
     LIST = "list"
+    EMPTY = "empty"
     UNKNOWN = "unknown"
 
 
 # This mapping contains all editable column types mapped to the data kinds
 # that the column type is compatible for editing.
 _EDITING_COMPATIBILITY_MAPPING: Final = {
-    "text": [ColumnDataKind.STRING],
-    "number": [ColumnDataKind.INTEGER, ColumnDataKind.FLOAT],
-    "checkbox": [ColumnDataKind.BOOLEAN],
+    "text": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
+    "number": [ColumnDataKind.INTEGER, ColumnDataKind.FLOAT, ColumnDataKind.EMPTY],
+    "checkbox": [ColumnDataKind.BOOLEAN, ColumnDataKind.EMPTY],
     "select": [
         ColumnDataKind.STRING,
         ColumnDataKind.BOOLEAN,
         ColumnDataKind.INTEGER,
         ColumnDataKind.FLOAT,
+        ColumnDataKind.EMPTY,
     ],
-    "date": [ColumnDataKind.DATE, ColumnDataKind.DATETIME],
-    "time": [ColumnDataKind.TIME, ColumnDataKind.DATETIME],
-    "datetime": [ColumnDataKind.DATETIME, ColumnDataKind.DATE],
-    "url": [ColumnDataKind.STRING],
+    "date": [ColumnDataKind.DATE, ColumnDataKind.DATETIME, ColumnDataKind.EMPTY],
+    "time": [ColumnDataKind.TIME, ColumnDataKind.DATETIME, ColumnDataKind.EMPTY],
+    "datetime": [ColumnDataKind.DATETIME, ColumnDataKind.DATE, ColumnDataKind.EMPTY],
+    "url": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
 }
 
 
@@ -147,6 +148,9 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
     if pa.types.is_decimal(field.type):
         return ColumnDataKind.DECIMAL
 
+    if pa.types.is_null(field.type):
+        return ColumnDataKind.EMPTY
+
     return ColumnDataKind.UNKNOWN
 
 
@@ -165,7 +169,6 @@ def _determine_data_kind_via_pandas_dtype(
     ColumnDataKind
         The data kind of the column.
     """
-
     if pd.api.types.is_bool_dtype(column.dtype):
         return ColumnDataKind.BOOLEAN
 
@@ -250,6 +253,9 @@ def _determine_data_kind_via_inferred_type(
     if inferred_type == "period":
         return ColumnDataKind.PERIOD
 
+    if inferred_type == "empty":
+        return ColumnDataKind.EMPTY
+
     # mixed, unknown-array, categorical, mixed-integer
     return ColumnDataKind.UNKNOWN
 
@@ -326,7 +332,7 @@ def determine_dataframe_schema(
 
 
 class ColumnConfig(TypedDict, total=False):
-    """Configuration for a `st.dataframe` and `st.data_editor` column.
+    """Configuration options for columns in `st.dataframe` and `st.data_editor`.
 
     Parameters
     ----------
@@ -367,6 +373,9 @@ class ColumnConfig(TypedDict, total=False):
 
 # A mapping of column names/IDs to column configs.
 ColumnConfigMapping: TypeAlias = Dict[Union[IndexIdentifierType, str], ColumnConfig]
+ColumnConfigMappingInput: TypeAlias = Dict[
+    Union[IndexIdentifierType, str], Union[ColumnConfig, None, str]
+]
 
 
 def marshall_column_config(
@@ -398,444 +407,4 @@ def marshall_column_config(
             (f"col:{str(k)}" if isinstance(k, int) else k): v
             for (k, v) in remove_none_values(column_config_mapping).items()
         }
-    )
-
-
-def NumberColumn(
-    *,
-    title: Optional[str] = None,
-    width: Optional[ColumnWidth] = None,
-    hidden: Optional[bool] = None,
-    help: Optional[str] = None,
-    disabled: Optional[bool] = None,
-    required: Optional[bool] = None,
-    default: int | float | None = None,
-    min_value: int | float | None = None,
-    max_value: int | float | None = None,
-    format: Optional[str] = None,
-    step: int | float | None = None,
-) -> ColumnConfig:
-    """Display a numeric input widget.
-
-    Parameters
-    ----------
-
-    title: str
-        The title of the column, shown at the top in the column header.
-        If None, the column name is used.
-    width: "small" or "medium" or "large" or None
-        The display width of the column.
-        If None, the column will be sized to fit its contents.
-    help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
-    hidden: bool or None
-        An optional boolean, which hides the column if set to True.
-    disabled: bool or None
-       An optional boolean, which disables the editing if set to True.
-    required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
-    default: int or float or None
-        The default value in a cell when the user adds a new row.
-        Defaults to None.
-    min_value : int or float or None
-        The minimum value that can be entered by the user.
-        If None, there will be no minimum.
-    max_value : int or float or None
-        The maximum value that can be entered by the user.
-        If None, there will be no maximum.
-    format : str or None
-        A printf-style format string controlling how the cell value is displayed.
-    step : int or None
-        TODO
-    """
-
-    return ColumnConfig(
-        title=title,
-        width=width,
-        hidden=hidden,
-        help=help,
-        disabled=disabled,
-        required=required,
-        type="number",
-        default=default,
-        type_options={
-            "min_value": min_value,
-            "max_value": max_value,
-            "format": format,
-            "step": step,
-        },
-    )
-
-
-def TextColumn(
-    *,
-    title: Optional[str] = None,
-    width: Optional[ColumnWidth] = None,
-    hidden: Optional[bool] = None,
-    help: Optional[str] = None,
-    disabled: Optional[bool] = None,
-    required: Optional[bool] = None,
-    default: Optional[str] = None,
-    max_length: Optional[int] = None,
-    validate: Optional[str] = None,
-) -> ColumnConfig:
-    """Display a text input widget.
-
-    Parameters
-    ----------
-
-    title: str
-        The title of the column, shown at the top in the column header.
-        If None, the column name is used.
-    width: "small" or "medium" or "large" or None
-        The display width of the column.
-        If None, the column will be sized to fit its contents.
-    help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
-    hidden: bool or None
-        An optional boolean, which hides the column if set to True.
-    disabled: bool or None
-       An optional boolean, which disables the editing if set to True.
-    required: bool or None
-        An optional boolean, which hides the column if set to True.
-        If True, a cell can only be submitted by the user if it has a value.
-    default: str or None
-        The default value in a cell when the user adds a new row.
-        Defaults to None.
-    max_chars: int or None
-        The maximum number of characters that can be entered by the user.
-        If None, there will be no maximum.
-    validate: str or None
-        A regular expression that edited values should be validated against.
-        If the input is invalid, it will not be submitted by the user.
-    """
-
-    return ColumnConfig(
-        title=title,
-        width=width,
-        hidden=hidden,
-        help=help,
-        disabled=disabled,
-        required=required,
-        default=default,
-        type="text",
-        type_options={
-            "max_length": max_length,
-            "validate": validate,
-        },
-    )
-
-
-def CheckboxColumn(
-    *,
-    title: Optional[str] = None,
-    width: Optional[ColumnWidth] = None,
-    hidden: Optional[bool] = None,
-    help: Optional[str] = None,
-    disabled: Optional[bool] = None,
-    required: Optional[bool] = None,
-    default: Optional[bool] = None,
-) -> ColumnConfig:
-    """Display a text input widget.
-
-    Parameters
-    ----------
-
-    title: str
-        The title of the column, shown at the top in the column header.
-        If None, the column name is used.
-    width: "small" or "medium" or "large" or None
-        The display width of the column.
-        If None, the column will be sized to fit its contents.
-    help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
-    hidden: bool or None
-        An optional boolean, which hides the column if set to True.
-    disabled: bool or None
-       An optional boolean, which disables the editing if set to True.
-    required: bool or None
-        An optional boolean, which hides the column if set to True.
-        If True, a cell can only be submitted by the user if it has a value.
-    default: bool or None
-        The default value in a cell when the user adds a new row.
-        Defaults to None.
-    """
-
-    return ColumnConfig(
-        title=title,
-        width=width,
-        hidden=hidden,
-        help=help,
-        disabled=disabled,
-        required=required,
-        default=default,
-        type="checkbox",
-    )
-
-
-def SelectColumn(
-    *,
-    title: Optional[str] = None,
-    width: Optional[ColumnWidth] = None,
-    hidden: Optional[bool] = None,
-    help: Optional[str] = None,
-    disabled: Optional[bool] = None,
-    required: Optional[bool] = None,
-    default: Optional[str] = None,
-    options: List[str] = [],
-) -> ColumnConfig:
-    """Display a select widget.
-
-    Parameters
-    ----------
-
-    title: str
-        The title of the column, shown at the top in the column header.
-        If None, the column name is used.
-    width: "small" or "medium" or "large" or None
-        The display width of the column.
-        If None, the column will be sized to fit its contents.
-    help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
-    hidden: bool or None
-        An optional boolean, which hides the column if set to True.
-    disabled: bool or None
-       An optional boolean, which disables the editing if set to True.
-    required: bool or None
-        An optional boolean, which hides the column if set to True.
-        If True, a cell can only be submitted by the user if it has a value.
-    default: str or None
-        The default value in a cell when the user adds a new row.
-        Defaults to None.
-    options: list of str
-        A list of options to choose from.
-    """
-
-    return ColumnConfig(
-        title=title,
-        width=width,
-        hidden=hidden,
-        help=help,
-        disabled=disabled,
-        required=required,
-        default=default,
-        type="select",
-        type_options={
-            "options": options,
-        },
-    )
-
-
-def BarChartColumn(
-    *,
-    title: Optional[str] = None,
-    width: Optional[ColumnWidth] = None,
-    hidden: Optional[bool] = None,
-    help: Optional[str] = None,
-    y_min: int | float | None = None,
-    y_max: int | float | None = None,
-) -> ColumnConfig:
-    """Display a bar chart.
-
-    Parameters
-    ----------
-
-    title: str
-        The title of the column, shown at the top in the column header.
-        If None, the column name is used.
-    width: "small" or "medium" or "large" or None
-        The display width of the column.
-        If None, the column will be sized to fit its contents.
-    help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
-    hidden: bool or None
-        An optional boolean, which hides the column if set to True.
-    y_min: int or float or None
-        The minimum value of the y-axis of the chart.
-        If None, the scales will be normalized individually for each column.
-    y_max: int or float or None
-        The maximum value of the y-axis of the chart.
-        If None, the scales will be normalized individually for each column.
-    """
-
-    return ColumnConfig(
-        title=title,
-        width=width,
-        hidden=hidden,
-        help=help,
-        type="bar_chart",
-        type_options={
-            "y_min": y_min,
-            "y_max": y_max,
-        },
-    )
-
-
-def ImageColumn(
-    *,
-    title: Optional[str] = None,
-    width: Optional[ColumnWidth] = None,
-    hidden: Optional[bool] = None,
-    help: Optional[str] = None,
-):
-    """Display an image.
-
-    Parameters
-    ----------
-
-    title: str
-        The title of the column, shown at the top in the column header.
-        If None, the column name is used.
-    width: "small" or "medium" or "large" or None
-        The display width of the column.
-        If None, the column will be sized to fit its contents.
-    help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
-    hidden: bool or None
-        An optional boolean, which hides the column if set to True.
-    """
-    return ColumnConfig(
-        title=title,
-        width=width,
-        hidden=hidden,
-        help=help,
-        type="image",
-    )
-
-
-def DateTimeColumn(
-    *,
-    title: Optional[str] = None,
-    width: Optional[ColumnWidth] = None,
-    hidden: Optional[bool] = None,
-    help: Optional[str] = None,
-    disabled: Optional[bool] = None,
-    required: Optional[bool] = None,
-    default: Optional[datetime.datetime] = None,
-    min_value: Optional[datetime.datetime] = None,
-    max_value: Optional[datetime.datetime] = None,
-    step: Optional[int] = None,
-    timezone: Optional[str] = None,
-) -> ColumnConfig:
-    """Display a date and time picker widget.
-
-    Parameters
-    ----------
-
-    title: str
-        The title of the column, shown at the top in the column header.
-        If None, the column name is used.
-    width: "small" or "medium" or "large" or None
-        The display width of the column.
-        If None, the column will be sized to fit its contents.
-    help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
-    hidden: bool or None
-        An optional boolean, which hides the column if set to True.
-    disabled: bool or None
-       An optional boolean, which disables the editing if set to True.
-    required: bool or None
-        An optional boolean, which hides the column if set to True.
-        If True, a cell can only be submitted by the user if it has a value.
-    default: datetime.date or None
-        The default value in a cell when the user adds a new row.
-        Defaults to None.
-    min_value: datetime.date or None
-        The minimum date that can be entered by the user.
-        If None, there will be no minimum.
-    max_value: datetime.date or None
-        The maximum date that can be entered by the user.
-        If None, there will be no maximum.
-    timezone: str or None
-        The timezone of this column.
-    step: int or None
-        TODO
-    """
-
-    # TODO: Check if this code is correct:
-    def _format_datetime(value: datetime.datetime | None) -> str | None:
-        return None if value is None else value.isoformat()
-
-    return ColumnConfig(
-        title=title,
-        width=width,
-        hidden=hidden,
-        help=help,
-        disabled=disabled,
-        required=required,
-        default=_format_datetime(default),
-        type="datetime",
-        type_options={
-            "min_value": _format_datetime(min_value),
-            "max_value": _format_datetime(max_value),
-            "step": step,
-            "timezone": timezone,
-        },
-    )
-
-
-def RangeColumn(
-    *,
-    title: Optional[str] = None,
-    width: Optional[ColumnWidth] = None,
-    hidden: Optional[bool] = None,
-    help: Optional[str] = None,
-    disabled: Optional[bool] = None,
-    required: Optional[bool] = None,
-    default: int | float | None = None,
-    min_value: int | float | None = None,
-    max_value: int | float | None = None,
-    format: Optional[str] = None,
-    step: int | float | None = None,
-) -> ColumnConfig:
-    """Display a numeric input widget.
-
-    Parameters
-    ----------
-
-    title: str
-        The title of the column, shown at the top in the column header.
-        If None, the column name is used.
-    width: "small" or "medium" or "large" or None
-        The display width of the column.
-        If None, the column will be sized to fit its contents.
-    help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
-    hidden: bool or None
-        An optional boolean, which hides the column if set to True.
-    disabled: bool or None
-       An optional boolean, which disables the editing if set to True.
-    required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
-    default: int or float or None
-        The default value in a cell when the user adds a new row.
-        Defaults to None.
-    min_value : int or float or None
-        The minimum value of the range bar.
-        Defaults to 0.
-    max_value : int or float or None
-        The maximum value of the range bar.
-        Defaults to 1.
-    format : str or None
-        A printf-style format string controlling how the number next to
-        the range bar should be formatted.
-    step: int or None
-        TODO
-    """
-
-    return ColumnConfig(
-        title=title,
-        width=width,
-        hidden=hidden,
-        help=help,
-        disabled=disabled,
-        required=required,
-        type="range",
-        default=default,
-        type_options={
-            "min_value": min_value,
-            "max_value": max_value,
-            "format": format,
-            "step": step,
-        },
     )

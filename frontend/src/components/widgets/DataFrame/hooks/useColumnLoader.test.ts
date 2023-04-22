@@ -43,6 +43,7 @@ import useColumnLoader, {
 const MOCK_COLUMNS: BaseColumn[] = [
   NumberColumn({
     id: "index_col",
+    name: "",
     title: "",
     indexNumber: 0,
     arrowType: {
@@ -56,6 +57,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
   }),
   NumberColumn({
     id: "column_1",
+    name: "column_1",
     title: "column_1",
     indexNumber: 1,
     arrowType: {
@@ -69,6 +71,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
   }),
   TextColumn({
     id: "column_2",
+    name: "column_2",
     title: "column_2",
     indexNumber: 2,
     arrowType: {
@@ -218,6 +221,7 @@ describe("getColumnType", () => {
     (typeName: string, columnCreator: ColumnCreator) => {
       const columnType = getColumnType({
         id: "column_1",
+        name: "column_1",
         title: "column_1",
         indexNumber: 1,
         arrowType: {

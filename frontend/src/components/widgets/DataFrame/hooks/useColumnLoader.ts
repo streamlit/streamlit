@@ -81,9 +81,9 @@ export function applyColumnConfig(
   }
 
   let columnConfig
-  if (columnConfigMapping.has(columnProps.title)) {
+  if (columnConfigMapping.has(columnProps.name)) {
     // Config is configured based on the column name
-    columnConfig = columnConfigMapping.get(columnProps.title)
+    columnConfig = columnConfigMapping.get(columnProps.name)
   } else if (
     columnConfigMapping.has(
       `${COLUMN_POSITION_PREFIX}${columnProps.indexNumber}`
@@ -201,7 +201,7 @@ function useColumnLoader(
     (notNullOrUndefined(element.width) && element.width > 0)
 
   // Converts the columns from Arrow into columns compatible with glide-data-grid
-  const configuredColumns: BaseColumn[] = getAllColumnsFromArrow(data)
+  let configuredColumns: BaseColumn[] = getAllColumnsFromArrow(data)
     .map(column => {
       // Apply column configurations
       let updatedColumn = {
@@ -225,12 +225,47 @@ function useColumnLoader(
         }
       }
 
+      if (
+        element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+        updatedColumn.isEditable == true
+      ) {
+        // Add editable icon to editable columns:
+        updatedColumn = {
+          ...updatedColumn,
+          icon: "editable",
+        }
+      }
+
       return ColumnType(updatedColumn)
     })
     .filter(column => {
       // Filter out all columns that are hidden
       return !column.isHidden
     })
+
+  // Reorder columns based on the user configuration:
+  if (element.columnOrder && element.columnOrder.length > 0) {
+    const orderedColumns: BaseColumn[] = []
+
+    // Add all index columns to the beginning of the list:
+    configuredColumns.forEach(column => {
+      if (column.isIndex) {
+        orderedColumns.push(column)
+      }
+    })
+
+    // Reorder non-index columns based on the configured column order:
+    element.columnOrder.forEach(columnName => {
+      const column = configuredColumns.find(
+        column => column.name === columnName
+      )
+      if (column && !column.isIndex) {
+        orderedColumns.push(column)
+      }
+    })
+
+    configuredColumns = orderedColumns
+  }
 
   // If all columns got filtered out, we add an empty index column
   // to prevent errors from glide-data-grid.

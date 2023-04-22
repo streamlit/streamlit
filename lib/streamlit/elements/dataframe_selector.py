@@ -45,6 +45,7 @@ class DataFrameSelectorMixin:
         height: Optional[int] = None,
         *,
         use_container_width: bool = False,
+        **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -114,7 +115,11 @@ class DataFrameSelectorMixin:
         """
         if _use_arrow():
             return self.dg._arrow_dataframe(
-                data, width, height, use_container_width=use_container_width
+                data,
+                width,
+                height,
+                use_container_width=use_container_width,
+                **kwargs,
             )
         else:
             return self.dg._legacy_dataframe(data, width, height)

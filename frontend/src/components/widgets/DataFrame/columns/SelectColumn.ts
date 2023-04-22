@@ -74,7 +74,8 @@ function SelectColumn(props: BaseColumnProps): BaseColumn {
     data: {
       kind: "dropdown-cell",
       allowedValues: [
-        "", // Enforce the empty option
+        // Add empty option if the column is not configured as required:
+        ...(props.isRequired !== true ? [""] : []),
         ...parameters.options
           .filter(opt => opt !== "") // ignore empty option if it exists
           .map(opt => toSafeString(opt)), // convert everything to string
@@ -88,14 +89,14 @@ function SelectColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "select",
     sortMode: "default",
-    getCell(data?: any): GridCell {
+    getCell(data?: any, validate?: boolean): GridCell {
       // Empty string refers to a missing value
       let cellData = ""
       if (notNullOrUndefined(data)) {
         cellData = toSafeString(data)
       }
 
-      if (!cellTemplate.data.allowedValues.includes(cellData)) {
+      if (validate && !cellTemplate.data.allowedValues.includes(cellData)) {
         return getErrorCell(
           toSafeString(cellData),
           `The value is not part of the allowed options.`

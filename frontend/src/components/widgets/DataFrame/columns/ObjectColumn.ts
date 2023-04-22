@@ -22,7 +22,6 @@ import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
-  ColumnCreator,
   toSafeString,
 } from "./utils"
 

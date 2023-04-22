@@ -19,7 +19,6 @@ from __future__ import annotations
 import contextlib
 import re
 import types
-from datetime import date, datetime, time
 from enum import Enum, auto
 from typing import (
     TYPE_CHECKING,
@@ -450,7 +449,7 @@ def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
     return all(type(n).__name__ == "str" for n in f)
 
 
-def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
+def is_pandas_styler(obj: object) -> TypeGuard["Styler"]:
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
@@ -860,7 +859,7 @@ def convert_df_to_data_format(
     DataFrame,
     Series,
     Index,
-    Styler,
+    "Styler",
     pa.Table,
     np.ndarray[Any, np.dtype[Any]],
     Tuple[Any],

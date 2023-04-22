@@ -30,7 +30,6 @@ import {
   formatNumber,
   countDecimals,
   truncateDecimals,
-  adaptToStep,
 } from "./utils"
 
 export interface NumberColumnParams {
@@ -90,11 +89,62 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     fixedDecimals,
   } as NumberCell
 
+  const validateInput = (data?: any): boolean | number => {
+    const cellData: number | null = toSafeNumber(data)
+
+    if (isNullOrUndefined(cellData)) {
+      if (props.isRequired) {
+        return false
+      }
+      return true
+    }
+
+    if (Number.isNaN(cellData)) {
+      return false
+    }
+
+    // Apply min_value configuration option:
+    if (
+      notNullOrUndefined(parameters.min_value) &&
+      cellData < parameters.min_value
+    ) {
+      // Only return false, since correcting it negatively impacts
+      // the user experience.
+      return false
+    }
+
+    // Apply min_value configuration option:
+    if (
+      notNullOrUndefined(parameters.max_value) &&
+      cellData > parameters.max_value
+    ) {
+      return parameters.max_value
+    }
+
+    // TODO: validate step size
+    // if (notNullOrUndefined(parameters.step) && parameters.step !== 1)
+
+    return true
+  }
+
   return {
     ...props,
     kind: "number",
     sortMode: "smart",
-    getCell(data?: any): GridCell {
+    validateInput,
+    getCell(data?: any, validate?: boolean): GridCell {
+      if (validate === true) {
+        const validationResult = validateInput(data)
+        if (validationResult === false) {
+          // The input is invalid, we return an error cell which will
+          // prevent this cell to be inserted into the table.
+          return getErrorCell(toSafeString(data), "Invalid input.")
+        } else if (typeof validationResult === "number") {
+          // Apply corrections:
+          data = validationResult
+        }
+      }
+
       let cellData: number | null = toSafeNumber(data)
       let displayData: string | undefined
 
@@ -105,27 +155,10 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
             "The value cannot be interpreted as a number."
           )
         }
-        // Apply step configuration option:
-        if (notNullOrUndefined(parameters.step) && parameters.step !== 1) {
-          // TODO: Only apply this if it is actually a new submitted value?
-          cellData = adaptToStep(cellData, parameters.step)
-        }
 
         // Cut decimals:
         if (notNullOrUndefined(fixedDecimals)) {
           cellData = truncateDecimals(cellData, fixedDecimals)
-        }
-
-        // Apply min_value configuration option:
-        if (notNullOrUndefined(parameters.min_value)) {
-          // TODO: Only apply this if it is actually a new submitted value?
-          cellData = Math.max(cellData, parameters.min_value)
-        }
-
-        // Apply max_value configuration option:
-        if (notNullOrUndefined(parameters.max_value)) {
-          // TODO: Only apply this if it is actually a new submitted value?
-          cellData = Math.min(cellData, parameters.max_value)
         }
 
         if (Number.isInteger(cellData) && !Number.isSafeInteger(cellData)) {

@@ -29,6 +29,7 @@ import {
   isErrorCell,
 } from "src/components/widgets/DataFrame/columns"
 import EditingState from "src/components/widgets/DataFrame/EditingState"
+import { notNullOrUndefined } from "src/lib/utils"
 
 /**
  * Create return type for useDataLoader hook based on the DataEditorProps.
@@ -90,7 +91,7 @@ function useDataEditor(
         return
       }
 
-      const newCell = column.getCell(newValue)
+      const newCell = column.getCell(newValue, true)
       // Only update the cell if the new cell is not causing any errors:
       if (!isErrorCell(newCell)) {
         editingState.current.setCell(originalCol, originalRow, {
@@ -116,6 +117,8 @@ function useDataEditor(
 
     const newRow: Map<number, GridCell> = new Map()
     columns.forEach(column => {
+      // For the default value, we trust the developer to make a valid choice,
+      // so we do not validate the value here.
       newRow.set(column.indexNumber, column.getCell(column.defaultValue))
     })
     editingState.current.addRow(newRow)
@@ -156,7 +159,8 @@ function useDataEditor(
             col++
           ) {
             const column = columns[col]
-            if (column.isEditable) {
+            // Only allow deletion if the column is editable and not configured as required
+            if (column.isEditable === true && column.isRequired !== true) {
               updatedCells.push({
                 cell: [col, row],
               })
@@ -218,9 +222,9 @@ function useDataEditor(
           const column = columns[colIndex]
           // Only add to columns that are editable:
           if (column.isEditable) {
-            const newCell = column.getCell(pasteDataValue)
+            const newCell = column.getCell(pasteDataValue, true)
             // We are not editing cells if the pasted value leads to an error:
-            if (!isErrorCell(newCell)) {
+            if (notNullOrUndefined(newCell) && !isErrorCell(newCell)) {
               const originalCol = column.indexNumber
               const originalRow = editingState.current.getOriginalRowIndex(
                 getOriginalIndex(rowIndex)

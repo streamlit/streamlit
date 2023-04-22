@@ -18,13 +18,27 @@ import { GridCell, UriCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
-import { BaseColumn, BaseColumnProps, toSafeString } from "./utils"
+import {
+  BaseColumn,
+  BaseColumnProps,
+  toSafeString,
+  getErrorCell,
+} from "./utils"
+
+export interface UrlColumnParams {
+  // The maximum number of characters the user can enter into the text input.
+  readonly max_chars?: number
+  // Regular expression that the input's value must match for the value to pass
+  readonly validate?: string
+}
 
 /**
  * The URL column is a special column that interprets the cell content as a URL
  * and allows the user to click on it.
  */
 function UrlColumn(props: BaseColumnProps): BaseColumn {
+  const parameters = (props.columnTypeOptions as UrlColumnParams) || {}
+
   const cellTemplate = {
     kind: GridCellKind.Uri,
     data: "",
@@ -33,12 +47,68 @@ function UrlColumn(props: BaseColumnProps): BaseColumn {
     contentAlign: props.contentAlignment,
     style: props.isIndex ? "faded" : "normal",
   } as UriCell
+  let validateRegex: RegExp | string | undefined = undefined
+
+  if (parameters.validate) {
+    // Prepare the validation regex:
+    try {
+      // u flag allows unicode characters
+      // s flag allows . to match newlines
+      validateRegex = new RegExp(parameters.validate, "us")
+    } catch (error) {
+      // Put error message in validateRegex so we can display it in the cell
+      validateRegex = `Invalid validate regex: ${parameters.validate}.\nError: ${error}`
+    }
+  }
+
+  const validateInput = (data?: any): boolean | string => {
+    if (isNullOrUndefined(data)) {
+      if (props.isRequired) {
+        return false
+      }
+      return true
+    }
+
+    const cellData = toSafeString(data)
+
+    if (
+      validateRegex instanceof RegExp &&
+      validateRegex.test(cellData) === false
+    ) {
+      return false
+    }
+
+    if (parameters.max_chars) {
+      if (cellData.length > parameters.max_chars) {
+        // Return corrected value
+        return cellData.slice(0, parameters.max_chars)
+      }
+    }
+    return true
+  }
 
   return {
     ...props,
     kind: "url",
     sortMode: "default",
-    getCell(data?: any): GridCell {
+    validateInput,
+    getCell(data?: any, validate?: boolean): GridCell {
+      if (typeof validateRegex === "string") {
+        // The regex is invalid, we return an error to indicate this
+        // to the developer:
+        return getErrorCell(toSafeString(data), validateRegex)
+      }
+
+      if (validate === true) {
+        const validationResult = validateInput(data)
+        if (validationResult === false) {
+          return getErrorCell(toSafeString(data), "Invalid input.")
+        } else if (typeof validationResult === "string") {
+          // Apply corrections:
+          data = validationResult
+        }
+      }
+
       return {
         ...cellTemplate,
         data: notNullOrUndefined(data) ? toSafeString(data) : null,

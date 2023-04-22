@@ -26,6 +26,7 @@ import {
 
 const CHART_COLUMN_TEMPLATE = {
   id: "1",
+  name: "chart_column",
   title: "Chart column",
   indexNumber: 0,
   isEditable: false,

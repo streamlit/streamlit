@@ -1,4 +1,4 @@
-from typing import Any, List, Mapping, TypeVar
+from typing import TYPE_CHECKING, Any, List, Mapping, TypeVar
 
 from pandas import DataFrame
 from pandas.io.formats.style import Styler
@@ -6,8 +6,11 @@ from pandas.io.formats.style import Styler
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
+if TYPE_CHECKING:
+    from pandas.io.formats.style import Styler
 
-def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
+
+def marshall_styler(proto: ArrowProto, styler: "Styler", default_uuid: str) -> None:
     """Marshall pandas.Styler into an Arrow proto.
 
     Parameters
@@ -42,7 +45,7 @@ def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> Non
     _marshall_display_values(proto, styler.data, pandas_styles)
 
 
-def _marshall_uuid(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
+def _marshall_uuid(proto: ArrowProto, styler: "Styler", default_uuid: str) -> None:
     """Marshall pandas.Styler uuid into an Arrow proto.
 
     Parameters
@@ -63,7 +66,7 @@ def _marshall_uuid(proto: ArrowProto, styler: Styler, default_uuid: str) -> None
     proto.styler.uuid = str(styler.uuid)
 
 
-def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
+def _marshall_caption(proto: ArrowProto, styler: "Styler") -> None:
     """Marshall pandas.Styler caption into an Arrow proto.
 
     Parameters
@@ -80,7 +83,7 @@ def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
 
 
 def _marshall_styles(
-    proto: ArrowProto, styler: Styler, styles: Mapping[str, Any]
+    proto: ArrowProto, styler: "Styler", styles: Mapping[str, Any]
 ) -> None:
     """Marshall pandas.Styler styles into an Arrow proto.
 

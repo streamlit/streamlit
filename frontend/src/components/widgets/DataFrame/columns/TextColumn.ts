@@ -25,10 +25,18 @@ import {
   toSafeString,
 } from "./utils"
 
+export interface TextColumnParams {
+  // The maximum number of characters the user can enter into the text input.
+  readonly max_chars?: number
+  // Regular expression that the input's value must match for the value to pass
+  readonly validate?: string
+}
+
 /**
  * A column that supports rendering & editing of text values.
  */
 function TextColumn(props: BaseColumnProps): BaseColumn {
+  const parameters = (props.columnTypeOptions as TextColumnParams) || {}
   const cellTemplate = {
     kind: GridCellKind.Text,
     data: "",
@@ -38,12 +46,70 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
     readonly: !props.isEditable,
     style: props.isIndex ? "faded" : "normal",
   } as TextCell
+  let validateRegex: RegExp | string | undefined = undefined
+
+  if (parameters.validate) {
+    // Prepare the validation regex:
+    try {
+      // u flag allows unicode characters
+      // s flag allows . to match newlines
+      validateRegex = new RegExp(parameters.validate, "us")
+    } catch (error) {
+      // Put error message in validateRegex so we can display it in the cell
+      validateRegex = `Invalid validate regex: ${parameters.validate}.\nError: ${error}`
+    }
+  }
+
+  const validateInput = (data?: any): boolean | string => {
+    if (isNullOrUndefined(data)) {
+      if (props.isRequired) {
+        return false
+      }
+      return true
+    }
+
+    const cellData = toSafeString(data)
+
+    if (
+      validateRegex instanceof RegExp &&
+      validateRegex.test(cellData) === false
+    ) {
+      return false
+    }
+
+    if (parameters.max_chars) {
+      if (cellData.length > parameters.max_chars) {
+        // Return corrected value
+        return cellData.slice(0, parameters.max_chars)
+      }
+    }
+    return true
+  }
 
   return {
     ...props,
     kind: "text",
     sortMode: "default",
-    getCell(data?: any): GridCell {
+    validateInput,
+    getCell(data?: any, validate?: boolean): GridCell {
+      if (typeof validateRegex === "string") {
+        // The regex is invalid, we return an error to indicate this
+        // to the developer:
+        return getErrorCell(toSafeString(data), validateRegex)
+      }
+
+      if (validate === true) {
+        const validationResult = validateInput(data)
+        if (validationResult === false) {
+          // The input is invalid, we return an error cell which will
+          // prevent this cell to be inserted into the table.
+          return getErrorCell(toSafeString(data), "Invalid input.")
+        } else if (typeof validationResult === "string") {
+          // Apply corrections:
+          data = validationResult
+        }
+      }
+
       try {
         const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
         const displayData = notNullOrUndefined(cellData) ? cellData : ""

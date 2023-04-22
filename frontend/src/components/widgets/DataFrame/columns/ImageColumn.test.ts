@@ -20,6 +20,7 @@ import ImageColumn from "./ImageColumn"
 
 const MOCK_IMAGE_COLUMN_PROPS = {
   id: "1",
+  name: "image_column",
   title: "Image column",
   indexNumber: 0,
   isEditable: false,

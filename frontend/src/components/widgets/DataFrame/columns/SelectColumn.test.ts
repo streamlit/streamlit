@@ -33,6 +33,7 @@ const MOCK_BOOLEAN_ARROW_TYPE: ArrowType = {
 
 const SELECT_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
   id: "1",
+  name: "select_column",
   title: "Select column",
   indexNumber: 0,
   isEditable: false,

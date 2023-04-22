@@ -20,6 +20,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    Iterable,
     List,
     Mapping,
     Optional,
@@ -33,7 +34,6 @@ from typing import (
 
 import pandas as pd
 import pyarrow as pa
-from pandas.io.formats.style import Styler
 from typing_extensions import Literal, TypeAlias, TypedDict
 
 from streamlit import logger as _logger
@@ -41,13 +41,18 @@ from streamlit import type_util
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
+    ColumnConfig,
     ColumnConfigMapping,
+    ColumnConfigMappingInput,
     ColumnDataKind,
+    ColumnType,
+    ColumnWidth,
     DataframeSchema,
     determine_dataframe_schema,
     is_type_compatible,
     marshall_column_config,
 )
+from streamlit.elements.lib.column_types_v2 import BaseColumn, process_config_options
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
@@ -63,6 +68,7 @@ from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type,
 
 if TYPE_CHECKING:
     import numpy as np
+    from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -89,7 +95,7 @@ EditableData = TypeVar(
 DataTypes: TypeAlias = Union[
     pd.DataFrame,
     pd.Index,
-    Styler,
+    "Styler",
     pa.Table,
     "np.ndarray[Any, np.dtype[np.float64]]",
     Tuple[Any],
@@ -490,6 +496,29 @@ def _check_type_compatibilities(
                 )
 
 
+def _process_config_mapping(
+    column_config: ColumnConfigMappingInput | None = None,
+) -> ColumnConfigMapping:
+    if column_config is None:
+        return {}
+
+    transformed_column_config: ColumnConfigMapping = {}
+    for column, config in column_config.items():
+        if config is None:
+            transformed_column_config[column] = ColumnConfig(hidden=True)
+        elif isinstance(config, str):
+            # TODO: or type? type=config
+            transformed_column_config[column] = ColumnConfig(title=config)
+        elif isinstance(config, dict):
+            transformed_column_config[column] = config
+        else:
+            raise StreamlitAPIException(
+                f"Invalid column config for column `{column}`. "
+                f"Expected `None`, `str` or `dict`, but got `{type(config)}`."
+            )
+    return transformed_column_config
+
+
 class DataEditorMixin:
     @overload
     def experimental_data_editor(
@@ -499,13 +528,27 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool = False,
+        disabled: bool | Iterable[str] = False,
         key: Optional[Key] = None,
-        columns: Optional[ColumnConfigMapping] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        titles: List[str | None] | Dict[str, str] | None = None,
+        types: List[ColumnType | BaseColumn | None]
+        | Dict[str, ColumnType | BaseColumn]
+        | None = None,
+        hidden: Literal["index"] | str | Iterable[str] | None = None,
+        widths: List[ColumnWidth | None] | Dict[str, ColumnWidth] | None = None,
+        help: List[str | None] | Dict[str, str] | None = None,
+        required: Literal["index"] | str | Iterable[str] | None = None,
+        locked: Literal["index"] | str | Iterable[str] | None = None,
+        default: List[str | int | float | bool | None]
+        | Dict[str, str | int | float | bool | None]
+        | None = None,
+        column_order: Iterable[str] | None = None,
     ) -> EditableData:
         pass
 
@@ -517,17 +560,31 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool = False,
+        disabled: bool | Iterable[str] = False,
         key: Optional[Key] = None,
-        columns: Optional[ColumnConfigMapping] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        titles: List[str | None] | Dict[str, str] | None = None,
+        types: List[ColumnType | BaseColumn | None]
+        | Dict[str, ColumnType | BaseColumn]
+        | None = None,
+        hidden: Literal["index"] | str | Iterable[str] | None = None,
+        widths: List[ColumnWidth | None] | Dict[str, ColumnWidth] | None = None,
+        help: List[str | None] | Dict[str, str] | None = None,
+        required: Literal["index"] | str | Iterable[str] | None = None,
+        locked: Literal["index"] | str | Iterable[str] | None = None,
+        default: List[str | int | float | bool | None]
+        | Dict[str, str | int | float | bool | None]
+        | None = None,
+        column_order: Iterable[str] | None = None,
     ) -> pd.DataFrame:
         pass
 
-    @gather_metrics("experimental_data_editor")
+    # TODO: @gather_metrics("experimental_data_editor")
     def experimental_data_editor(
         self,
         data: DataTypes,
@@ -535,16 +592,27 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool = False,
+        disabled: bool | Iterable[str] = False,
         key: Optional[Key] = None,
-        columns: Optional[ColumnConfigMapping] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        # titles: Optional[Union[List[str], Dict[str, str]]] = None,
-        # hidden: Optional[Union[Literal["index"], str, List[str]]] = None,
-        # types: Optional[Union[List[str], Dict[str, Union[str, ]]]] = None,
+        titles: List[str | None] | Dict[str, str] | None = None,
+        types: List[ColumnType | BaseColumn | None]
+        | Dict[str, ColumnType | BaseColumn]
+        | None = None,
+        hidden: Literal["index"] | str | Iterable[str] | None = None,
+        widths: List[ColumnWidth | None] | Dict[str, ColumnWidth] | None = None,
+        help: List[str | None] | Dict[str, str] | None = None,
+        required: Literal["index"] | str | Iterable[str] | None = None,
+        locked: Literal["index"] | str | Iterable[str] | None = None,
+        default: List[str | int | float | bool | None]
+        | Dict[str, str | int | float | bool | None]
+        | None = None,
+        column_order: Iterable[str] | None = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -584,14 +652,6 @@ class DataEditorMixin:
             content. Multiple widgets of the same type may not share the same
             key.
 
-        columns : dict
-           An optional dict that allows to apply various configuration options to individual
-            columns of the data editor (e.g., change title, column type, editability, etc.).
-            To configure a column, you need to use the column name as a key and provide
-            the configuration option either as a dict or by using one of the available
-            column types in the `st.column_types` module. You can find more information
-            on how to configure columns and all available column types [here](TODO).
-
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
 
@@ -600,6 +660,13 @@ class DataEditorMixin:
 
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+
+        column_order : iterable of str or None
+            Defines the display order of all non-index columns. This will also influence
+            which columns are visible to the user. For example: (“col2”, ”col1”) will
+            show col2 in the first place followed by col1 and all other non-index
+            columns in the data will be hidden. If None, the order is inherited from the
+            original data structure.
 
         Returns
         -------
@@ -652,8 +719,6 @@ class DataEditorMixin:
 
         """
 
-        column_config_mapping: ColumnConfigMapping = columns or {}
-
         data_format = type_util.determine_data_format(data)
         if data_format == DataFormat.UNKNOWN:
             raise StreamlitAPIException(
@@ -671,7 +736,9 @@ class DataEditorMixin:
                 "yet supported by the data editor."
             )
 
-        _apply_data_specific_configs(column_config_mapping, data_df, data_format)
+        column_config_mapping: ColumnConfigMapping = _process_config_mapping(
+            column_config
+        )
 
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.
@@ -679,6 +746,32 @@ class DataEditorMixin:
             if INDEX_IDENTIFIER not in column_config_mapping:
                 column_config_mapping[INDEX_IDENTIFIER] = {}
             column_config_mapping[INDEX_IDENTIFIER]["hidden"] = True
+
+        _apply_data_specific_configs(column_config_mapping, data_df, data_format)
+
+        if hide_index is not None:
+            if INDEX_IDENTIFIER not in column_config_mapping:
+                column_config_mapping[INDEX_IDENTIFIER] = {}
+            column_config_mapping[INDEX_IDENTIFIER]["hidden"] = hide_index
+
+        process_config_options(
+            column_config_mapping,
+            data_df,
+            titles=titles,
+            types=types,
+            hidden=hidden,
+            widths=widths,
+            locked=locked,
+            required=required,
+            help=help,
+            default=default,
+        )
+
+        if not isinstance(disabled, bool):
+            for column in disabled:
+                if column not in column_config_mapping:
+                    column_config_mapping[column] = {}
+                column_config_mapping[column]["disabled"] = True
 
         # Convert the dataframe to an arrow table which is used as the main
         # serialization format for sending the data to the frontend.
@@ -696,12 +789,18 @@ class DataEditorMixin:
         proto = ArrowProto()
 
         proto.use_container_width = use_container_width
+
         if width:
             proto.width = width
         if height:
             proto.height = height
 
-        proto.disabled = disabled
+        if isinstance(disabled, bool):
+            proto.disabled = disabled
+
+        if column_order:
+            proto.column_order[:] = column_order
+
         proto.editing_mode = (
             ArrowProto.EditingMode.DYNAMIC
             if num_rows == "dynamic"

@@ -11,28 +11,41 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union, cast
 
 import pyarrow as pa
 from numpy import ndarray
 from pandas import DataFrame
-from pandas.io.formats.style import Styler
 
 from streamlit import type_util
+from streamlit.elements.lib.column_config_utils import (
+    INDEX_IDENTIFIER,
+    ColumnConfigMapping,
+    ColumnConfigMappingInput,
+    ColumnType,
+    ColumnWidth,
+    marshall_column_config,
+)
+from streamlit.elements.lib.column_types_v2 import BaseColumn, process_config_options
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from pandas.io.formats.style import Styler
+
     from streamlit.delta_generator import DeltaGenerator
 
-Data = Union[DataFrame, Styler, pa.Table, ndarray, Iterable, Dict[str, List[Any]], None]
+Data = Union[
+    DataFrame, "Styler", pa.Table, ndarray, Iterable, Dict[str, List[Any]], None
+]
 
 
 class ArrowMixin:
-    @gather_metrics("_arrow_dataframe")
+    # TODO: @gather_metrics("_arrow_dataframe")
     def _arrow_dataframe(
         self,
         data: Data = None,
@@ -40,6 +53,16 @@ class ArrowMixin:
         height: Optional[int] = None,
         *,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        titles: List[str | None] | Dict[str, str] | None = None,
+        types: List[ColumnType | BaseColumn | None]
+        | Dict[str, ColumnType | BaseColumn]
+        | None = None,
+        hidden: Literal["index"] | str | Iterable[str] | None = None,
+        widths: List[ColumnWidth | None] | Dict[str, ColumnWidth] | None = None,
+        help: List[str | None] | Dict[str, str] | None = None,
+        column_order: Iterable[str] | None = None,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -63,6 +86,13 @@ class ArrowMixin:
             If True, set the dataframe width to the width of the parent container.
             This takes precedence over the width argument.
             This argument can only be supplied by keyword.
+
+        column_order : iterable of str or None
+            Defines the display order of all non-index columns. This will also influence
+            which columns are visible to the user. For example: (“col2”, ”col1”) will
+            show col2 in the first place followed by col1 and all other non-index
+            columns in the data will be hidden. If None, the order is inherited from the
+            original data structure.
 
         Examples
         --------
@@ -89,6 +119,25 @@ class ArrowMixin:
 
         """
 
+        column_config_mapping: ColumnConfigMapping = column_config or {}
+
+        data = type_util.convert_anything_to_df(data)
+
+        if hide_index is not None:
+            if INDEX_IDENTIFIER not in column_config_mapping:
+                column_config_mapping[INDEX_IDENTIFIER] = {}
+            column_config_mapping[INDEX_IDENTIFIER]["hidden"] = hide_index
+
+        process_config_options(
+            column_config_mapping,
+            data,
+            titles=titles,
+            types=types,
+            hidden=hidden,
+            widths=widths,
+            help=help,
+        )
+
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
         # when the position of the element is changed.
@@ -101,9 +150,14 @@ class ArrowMixin:
             proto.width = width
         if height:
             proto.height = height
+
+        if column_order:
+            proto.column_order[:] = column_order
+
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
         marshall(proto, data, default_uuid)
+        marshall_column_config(proto, column_config_mapping)
 
         return self.dg._enqueue("arrow_data_frame", proto)
 

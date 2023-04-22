@@ -22,6 +22,7 @@ import RangeColumn, { RangeColumnParams } from "./RangeColumn"
 
 const RANGE_COLUMN_TEMPLATE = {
   id: "1",
+  name: "range_column",
   title: "Range column",
   indexNumber: 0,
   isEditable: false,

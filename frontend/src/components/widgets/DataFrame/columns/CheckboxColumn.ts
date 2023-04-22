@@ -24,7 +24,6 @@ import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
-  ColumnCreator,
   toSafeString,
   toSafeBoolean,
 } from "./utils"

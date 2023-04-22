@@ -21,6 +21,7 @@ import CheckboxColumn from "./CheckboxColumn"
 
 const MOCK_CHECKBOX_COLUMN_PROPS = {
   id: "1",
+  name: "checkbox_column",
   title: "Checkbox column",
   indexNumber: 0,
   isEditable: false,

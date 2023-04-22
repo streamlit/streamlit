@@ -52,6 +52,7 @@ import {
 
 const MOCK_TEXT_COLUMN = TextColumn({
   id: "1",
+  name: "text_column",
   title: "Text column",
   indexNumber: 0,
   isEditable: false,
@@ -66,6 +67,7 @@ const MOCK_TEXT_COLUMN = TextColumn({
 
 const MOCK_NUMBER_COLUMN = NumberColumn({
   id: "1",
+  name: "number_column",
   title: "Number column",
   indexNumber: 0,
   isEditable: false,
@@ -445,6 +447,7 @@ describe("getCellFromArrow", () => {
   it("uses quiver formatting for object cells", () => {
     const objectColumn = ObjectColumn({
       id: "1",
+      name: "object_column",
       title: "Object column",
       indexNumber: 0,
       isEditable: false,

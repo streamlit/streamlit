@@ -19,21 +19,30 @@ __all__ = [
     "NumberColumn",
     "BarChartColumn",
     "CheckboxColumn",
-    "ColumnConfig",
     "DateTimeColumn",
     "ImageColumn",
     "SelectColumn",
     "RangeColumn",
+    "LinkColumn",
+    "LineChartColumn",
+    "ListColumn",
+    "DateColumn",
+    "TimeColumn",
 ]
 
-from streamlit.elements.lib.column_config_utils import (
+
+from streamlit.elements.lib.column_types_v2 import (
     BarChartColumn,
     CheckboxColumn,
-    ColumnConfig,
+    DateColumn,
     DateTimeColumn,
     ImageColumn,
+    LineChartColumn,
+    LinkColumn,
+    ListColumn,
     NumberColumn,
     RangeColumn,
     SelectColumn,
     TextColumn,
+    TimeColumn,
 )

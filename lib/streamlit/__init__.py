@@ -81,7 +81,6 @@ from streamlit.commands.execution_control import (
     stop as stop,
     rerun as _rerun,
 )
-from streamlit import column_types as column_types
 
 # We add the metrics tracking for caching here,
 # since the actual cache function calls itself recursively
@@ -213,3 +212,10 @@ experimental_set_query_params = _set_query_params
 experimental_show = _show
 experimental_rerun = _rerun
 experimental_data_editor = _main.experimental_data_editor
+
+from streamlit import v3a as v3a
+from streamlit import v3b as v3b
+from streamlit import v3c as v3c
+from streamlit import v4a as v4a
+from streamlit import v4b as v4b
+from streamlit import v5 as v5

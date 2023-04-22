@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind, TextCell } from "@glideapps/glide-data-grid"
 import moment, { Moment } from "moment"
 
 import {
@@ -47,6 +47,10 @@ export interface DateTimeColumnParams {
   readonly step?: string
   // A timezone identifier, e.g. "America/New_York", "+05:00", or "UTC"
   readonly timezone?: string
+  // The minimum allowed value for editing. This needs to be an ISO formatted datetime/date/time string (UTC).
+  readonly min_value?: string
+  // The maximum allowed value for editing. This needs to be an ISO formatted datetime/date/time string (UTC).
+  readonly max_value?: string
 }
 
 function BaseDateTimeColumn(
@@ -81,6 +85,16 @@ function BaseDateTimeColumn(
     }
   }
 
+  let minDate: Date | undefined = undefined
+  if (notNullOrUndefined(parameters.min_value)) {
+    minDate = toSafeDate(parameters.min_value) || undefined
+  }
+
+  let maxDate: Date | undefined = undefined
+  if (notNullOrUndefined(parameters.max_value)) {
+    maxDate = toSafeDate(parameters.max_value) || undefined
+  }
+
   const cellTemplate = {
     kind: GridCellKind.Custom,
     allowOverlay: true,
@@ -94,20 +108,72 @@ function BaseDateTimeColumn(
       displayDate: "",
       step: parameters.step,
       format: inputType,
+      min: minDate,
+      max: maxDate,
     },
   } as DatePickerCell
+
+  const validateInput = (data?: any): boolean | Date => {
+    const cellData: Date | null | undefined = toSafeDate(data)
+    if (cellData === null) {
+      if (props.isRequired) {
+        return false
+      }
+      return true
+    }
+
+    if (cellData === undefined) {
+      // Input cannot be interpreted as a date
+      return false
+    }
+
+    // TODO: should we auto correct min/max values?
+
+    // Apply min_value configuration option:
+    if (
+      notNullOrUndefined(minDate) &&
+      // We compare on a string level so that it also works correctly for time and date values
+      toISOString(cellData) < toISOString(minDate)
+    ) {
+      return false
+    }
+
+    // Apply min_value configuration option:
+    if (
+      notNullOrUndefined(maxDate) &&
+      toISOString(cellData) > toISOString(maxDate)
+    ) {
+      return false
+    }
+
+    // TODO: validate step size
+
+    return true
+  }
 
   return {
     ...props,
     kind,
     sortMode: "default",
-    isEditable: true,
-    getCell(data?: any): GridCell {
+    validateInput,
+    getCell(data?: any, validate?: boolean): GridCell {
+      if (validate === true) {
+        const validationResult = validateInput(data)
+        if (validationResult === false) {
+          // The input is invalid, we return an error cell which will
+          // prevent this cell to be inserted into the table.
+          return getErrorCell(toSafeString(data), "Invalid input.")
+        } else if (validationResult instanceof Date) {
+          // Apply corrections:
+          data = validationResult
+        }
+      }
+
       const cellData = toSafeDate(data)
 
       let copyData = ""
       let displayDate = ""
-      // Initilize with default offset base on today's date
+      // Initialize with default offset base on today's date
       let timezoneOffset = defaultTimezoneOffset
 
       if (cellData === undefined) {
@@ -154,6 +220,25 @@ function BaseDateTimeColumn(
         copyData = momentDate.format(defaultFormat)
       }
 
+      if (!props.isEditable) {
+        // TODO (lukasmasuch): This is a temporary workaround until this PR is merged:
+        // https://github.com/glideapps/glide-data-grid/pull/656
+        // The issue is that measuring custom cells is not supported yet.
+        // This results in datetime columns not correctly adapting the width to the content.
+        // Therefore, we use a text cell here so that we are not affecting the current
+        // behaviour for read-only cells.
+
+        return {
+          kind: GridCellKind.Text,
+          data: copyData !== "" ? copyData : null,
+          displayData: displayDate,
+          allowOverlay: true,
+          contentAlignment: props.contentAlignment,
+          readonly: true,
+          style: props.isIndex ? "faded" : "normal",
+        } as TextCell
+      }
+
       return {
         ...cellTemplate,
         copyData,
@@ -166,7 +251,10 @@ function BaseDateTimeColumn(
         },
       } as DatePickerCell
     },
-    getCellValue(cell: DatePickerCell): string | null {
+    getCellValue(cell: DatePickerCell | TextCell): string | null {
+      if (cell.kind === GridCellKind.Text) {
+        return cell.data === undefined ? null : cell.data
+      }
       return isNullOrUndefined(cell?.data?.date)
         ? null
         : toISOString(cell.data.date)
