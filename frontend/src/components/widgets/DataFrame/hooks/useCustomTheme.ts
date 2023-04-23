@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import React from "react"
 
 import { transparentize } from "color2k"
-import { Theme as GlideTheme } from "@glideapps/glide-data-grid"
+import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
 import { useTheme } from "@emotion/react"
 
 import { EmotionTheme } from "src/theme"
@@ -27,8 +28,16 @@ import { EmotionTheme } from "src/theme"
  */
 function useCustomTheme(): Partial<GlideTheme> & {
   tableBorderRadius: string
+  headerIcons: SpriteMap
 } {
   const theme: EmotionTheme = useTheme()
+
+  const headerIcons = React.useMemo<SpriteMap>(() => {
+    return {
+      editable: p => `
+      <svg xmlns="http://www.w3.org/2000/svg" height="40" viewBox="0 96 960 960" width="40" fill="${p.bgColor}"><path d="m800.641 679.743-64.384-64.384 29-29q7.156-6.948 17.642-6.948 10.485 0 17.742 6.948l29 29q6.948 7.464 6.948 17.95 0 10.486-6.948 17.434l-29 29Zm-310.64 246.256v-64.383l210.82-210.821 64.384 64.384-210.821 210.82h-64.383Zm-360-204.872v-50.254h289.743v50.254H130.001Zm0-162.564v-50.255h454.615v50.255H130.001Zm0-162.307v-50.255h454.615v50.255H130.001Z"/></svg>`,
+    }
+  }, [])
 
   return {
     // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
@@ -69,6 +78,8 @@ function useCustomTheme(): Partial<GlideTheme> & {
     // lineHeight
     // Custom settings
     tableBorderRadius: theme.radii.md,
+    // Configure custom SVG icons used in the column header:
+    headerIcons,
   }
 }
 
