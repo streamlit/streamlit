@@ -137,6 +137,7 @@ function DataFrame({
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
 
+  // Determine if the device is primary using touch as input:
   const isTouchDevice = React.useMemo<boolean>(
     () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
     []
