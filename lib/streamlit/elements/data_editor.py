@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import json
 from dataclasses import dataclass
 from typing import (
@@ -34,13 +33,21 @@ from typing import (
 
 import pandas as pd
 import pyarrow as pa
-from pandas.api.types import is_datetime64_any_dtype, is_float_dtype, is_integer_dtype
-from pandas.io.formats.style import Styler
-from typing_extensions import Final, Literal, TypeAlias, TypedDict
+from typing_extensions import Literal, TypeAlias, TypedDict
 
+from streamlit import logger as _logger
 from streamlit import type_util
 from streamlit.elements.arrow import marshall_styler
 from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.column_config_utils import (
+    INDEX_IDENTIFIER,
+    ColumnConfigMapping,
+    ColumnDataKind,
+    DataframeSchema,
+    determine_dataframe_schema,
+    is_type_compatible,
+    marshall_column_config,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -55,10 +62,11 @@ from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type,
 
 if TYPE_CHECKING:
     import numpy as np
+    from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
 
-_INDEX_IDENTIFIER: Final = "index"
+_LOGGER = _logger.get_logger("root")
 
 # All formats that support direct editing, meaning that these
 # formats will be returned with the same type when used with data_editor.
@@ -81,7 +89,7 @@ EditableData = TypeVar(
 DataTypes: TypeAlias = Union[
     pd.DataFrame,
     pd.Index,
-    Styler,
+    "Styler",
     pa.Table,
     "np.ndarray[Any, np.dtype[np.float64]]",
     Tuple[Any],
@@ -89,25 +97,6 @@ DataTypes: TypeAlias = Union[
     Set[Any],
     Dict[str, Any],
 ]
-
-
-class ColumnConfig(TypedDict, total=False):
-    width: Optional[int]
-    title: Optional[str]
-    type: Optional[
-        Literal[
-            "text",
-            "number",
-            "boolean",
-            "list",
-            "categorical",
-        ]
-    ]
-    hidden: Optional[bool]
-    editable: Optional[bool]
-    alignment: Optional[Literal["left", "center", "right"]]
-    metadata: Optional[Dict[str, Any]]
-    column: Optional[Union[str, int]]
 
 
 class EditingState(TypedDict, total=False):
@@ -133,44 +122,6 @@ class EditingState(TypedDict, total=False):
     deleted_rows: List[int]
 
 
-# A mapping of column names/IDs to column configs.
-ColumnConfigMapping: TypeAlias = Dict[Union[int, str], ColumnConfig]
-
-
-def _marshall_column_config(
-    proto: ArrowProto, columns: Optional[Dict[Union[int, str], ColumnConfig]] = None
-) -> None:
-    """Marshall the column config into the proto.
-
-    Parameters
-    ----------
-    proto : ArrowProto
-        The proto to marshall into.
-
-    columns : Optional[ColumnConfigMapping]
-        The column config to marshall.
-    """
-    if columns is None:
-        columns = {}
-
-    # Ignore all None values and prefix columns specified by index
-    def remove_none_values(input_dict: Dict[Any, Any]) -> Dict[Any, Any]:
-        new_dict = {}
-        for key, val in input_dict.items():
-            if isinstance(val, dict):
-                val = remove_none_values(val)
-            if val is not None:
-                new_dict[key] = val
-        return new_dict
-
-    proto.columns = json.dumps(
-        {
-            (f"col:{str(k)}" if isinstance(k, int) else k): v
-            for (k, v) in remove_none_values(columns).items()
-        }
-    )
-
-
 @dataclass
 class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
@@ -190,16 +141,16 @@ class DataEditorSerde:
         return json.dumps(editing_state, default=str)
 
 
-def _parse_value(value: Union[str, int, float, bool, None], dtype) -> Any:
+def _parse_value(
+    value: str | int | float | bool | None,
+    column_data_kind: ColumnDataKind,
+) -> Any:
     """Convert a value to the correct type.
 
     Parameters
     ----------
     value : str | int | float | bool | None
         The value to convert.
-
-    dtype
-        The type of the value.
 
     Returns
     -------
@@ -208,23 +159,53 @@ def _parse_value(value: Union[str, int, float, bool, None], dtype) -> Any:
     if value is None:
         return None
 
-    # TODO(lukasmasuch): how to deal with date & time columns?
+    try:
+        if column_data_kind == ColumnDataKind.STRING:
+            return str(value)
 
-    # Datetime values try to parse the value to datetime:
-    # The value is expected to be a ISO 8601 string
-    if is_datetime64_any_dtype(dtype):
-        return pd.to_datetime(value, errors="ignore")
-    elif is_integer_dtype(dtype):
-        with contextlib.suppress(ValueError):
+        if column_data_kind == ColumnDataKind.INTEGER:
             return int(value)
-    elif is_float_dtype(dtype):
-        with contextlib.suppress(ValueError):
+
+        if column_data_kind == ColumnDataKind.FLOAT:
             return float(value)
+
+        if column_data_kind == ColumnDataKind.BOOLEAN:
+            return bool(value)
+
+        if column_data_kind in [
+            ColumnDataKind.DATETIME,
+            ColumnDataKind.DATE,
+            ColumnDataKind.TIME,
+        ]:
+            datetime_value = pd.to_datetime(value, utc=False)
+
+            if datetime_value is pd.NaT:
+                return None
+
+            if isinstance(datetime_value, pd.Timestamp):
+                datetime_value = datetime_value.to_pydatetime()
+
+            if column_data_kind == ColumnDataKind.DATETIME:
+                return datetime_value
+
+            if column_data_kind == ColumnDataKind.DATE:
+                return datetime_value.date()
+
+            if column_data_kind == ColumnDataKind.TIME:
+                return datetime_value.time()
+
+    except (ValueError, pd.errors.ParserError) as ex:
+        _LOGGER.warning(
+            "Failed to parse value %s as %s. Exception: %s", value, column_data_kind, ex
+        )
+        return None
     return value
 
 
 def _apply_cell_edits(
-    df: pd.DataFrame, edited_cells: Mapping[str, str | int | float | bool | None]
+    df: pd.DataFrame,
+    edited_cells: Mapping[str, str | int | float | bool | None],
+    dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply cell edits to the provided dataframe (inplace).
 
@@ -237,6 +218,8 @@ def _apply_cell_edits(
         A dictionary of cell edits. The keys are the cell ids in the format
         "row:column" and the values are the new cell values.
 
+    dataframe_schema: DataframeSchema
+        The schema of the dataframe.
     """
     index_count = df.index.nlevels or 0
 
@@ -247,17 +230,21 @@ def _apply_cell_edits(
             # The edited cell is part of the index
             # To support multi-index in the future: use a tuple of values here
             # instead of a single value
-            df.index.values[row_pos] = _parse_value(value, df.index.dtype)
+            df.index.values[row_pos] = _parse_value(value, dataframe_schema[col_pos])
         else:
             # We need to subtract the number of index levels from col_pos
             # to get the correct column position for Pandas DataFrames
             mapped_column = col_pos - index_count
             df.iat[row_pos, mapped_column] = _parse_value(
-                value, df.iloc[:, mapped_column].dtype
+                value, dataframe_schema[col_pos]
             )
 
 
-def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> None:
+def _apply_row_additions(
+    df: pd.DataFrame,
+    added_rows: List[Dict[str, Any]],
+    dataframe_schema: DataframeSchema,
+) -> None:
     """Apply row additions to the provided dataframe (inplace).
 
     Parameters
@@ -268,6 +255,9 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
     added_rows : List[Dict[str, Any]]
         A list of row additions. Each row addition is a dictionary with the
         column position as key and the new cell value as value.
+
+    dataframe_schema: DataframeSchema
+        The schema of the dataframe.
     """
     if not added_rows:
         return
@@ -279,7 +269,7 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
     # combination with loc. As a workaround, we manually track the values here:
     range_index_stop = None
     range_index_step = None
-    if type(df.index) == pd.RangeIndex:
+    if isinstance(df.index, pd.RangeIndex):
         range_index_stop = df.index.stop
         range_index_step = df.index.step
 
@@ -292,14 +282,12 @@ def _apply_row_additions(df: pd.DataFrame, added_rows: List[Dict[str, Any]]) -> 
             if col_pos < index_count:
                 # To support multi-index in the future: use a tuple of values here
                 # instead of a single value
-                index_value = _parse_value(value, df.index.dtype)
+                index_value = _parse_value(value, dataframe_schema[col_pos])
             else:
                 # We need to subtract the number of index levels from the col_pos
                 # to get the correct column position for Pandas DataFrames
                 mapped_column = col_pos - index_count
-                new_row[mapped_column] = _parse_value(
-                    value, df.iloc[:, mapped_column].dtype
-                )
+                new_row[mapped_column] = _parse_value(value, dataframe_schema[col_pos])
         # Append the new row to the dataframe
         if range_index_stop is not None:
             df.loc[range_index_stop, :] = new_row
@@ -329,7 +317,11 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: List[int]) -> None:
     df.drop(df.index[deleted_rows], inplace=True)
 
 
-def _apply_dataframe_edits(df: pd.DataFrame, data_editor_state: EditingState) -> None:
+def _apply_dataframe_edits(
+    df: pd.DataFrame,
+    data_editor_state: EditingState,
+    dataframe_schema: DataframeSchema,
+) -> None:
     """Apply edits to the provided dataframe (inplace).
 
     This includes cell edits, row additions and row deletions.
@@ -341,12 +333,15 @@ def _apply_dataframe_edits(df: pd.DataFrame, data_editor_state: EditingState) ->
 
     data_editor_state : EditingState
         The editing state of the data editor component.
+
+    dataframe_schema: DataframeSchema
+        The schema of the dataframe.
     """
     if data_editor_state.get("edited_cells"):
-        _apply_cell_edits(df, data_editor_state["edited_cells"])
+        _apply_cell_edits(df, data_editor_state["edited_cells"], dataframe_schema)
 
     if data_editor_state.get("added_rows"):
-        _apply_row_additions(df, data_editor_state["added_rows"])
+        _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
 
     if data_editor_state.get("deleted_rows"):
         _apply_row_deletions(df, data_editor_state["deleted_rows"])
@@ -376,7 +371,7 @@ def _apply_data_specific_configs(
         if type_util.is_colum_type_arrow_incompatible(column_data):
             if column_name not in columns_config:
                 columns_config[column_name] = {}
-            columns_config[column_name]["editable"] = False
+            columns_config[column_name]["disabled"] = True
             # Convert incompatible type to string
             data_df[column_name] = column_data.astype(str)
 
@@ -393,9 +388,9 @@ def _apply_data_specific_configs(
         DataFormat.LIST_OF_ROWS,
         DataFormat.COLUMN_VALUE_MAPPING,
     ]:
-        if _INDEX_IDENTIFIER not in columns_config:
-            columns_config[_INDEX_IDENTIFIER] = {}
-        columns_config[_INDEX_IDENTIFIER]["hidden"] = True
+        if INDEX_IDENTIFIER not in columns_config:
+            columns_config[INDEX_IDENTIFIER] = {}
+        columns_config[INDEX_IDENTIFIER]["hidden"] = True
 
     # Rename the first column to "value" for some of the data formats
     if data_format in [
@@ -408,6 +403,91 @@ def _apply_data_specific_configs(
         # Pandas automatically names the first column "0"
         # We rename it to "value" in selected cases to make it more descriptive
         data_df.rename(columns={0: "value"}, inplace=True)
+
+
+def _is_supported_index(df_index: pd.Index) -> bool:
+    """Check if the index is supported by the data editor component.
+
+    Parameters
+    ----------
+    df_index : pd.Index
+        The index to check.
+
+    Returns
+    -------
+    bool
+        True if the index is supported, False otherwise.
+    """
+
+    return (
+        type(df_index)
+        in [
+            pd.RangeIndex,
+            pd.Index,
+        ]
+        # We need to check these index types without importing, since they are deprecated
+        # and planned to be removed soon.
+        or is_type(df_index, "pandas.core.indexes.numeric.Int64Index")
+        or is_type(df_index, "pandas.core.indexes.numeric.Float64Index")
+        or is_type(df_index, "pandas.core.indexes.numeric.UInt64Index")
+    )
+
+
+def _check_type_compatibilities(
+    data_df: pd.DataFrame,
+    columns_config: ColumnConfigMapping,
+    dataframe_schema: DataframeSchema,
+):
+    """Check column type to data type compatibility.
+
+    Iterates the index and all columns of the dataframe to check if
+    the configured column types are compatible with the underlying data types.
+
+    Parameters
+    ----------
+    data_df : pd.DataFrame
+        The dataframe to check the type compatibilities for.
+
+    columns_config : ColumnConfigMapping
+        A mapping of column to column configurations.
+
+    dataframe_schema : DataframeSchema
+        The schema of the dataframe.
+
+    Raises
+    ------
+    StreamlitAPIException
+        If a configured column type is editable and not compatible with the
+        underlying data type.
+    """
+    for i, column in enumerate(
+        [(INDEX_IDENTIFIER, data_df.index)] + list(data_df.items())
+    ):
+        column_name, _ = column
+        column_data_kind = dataframe_schema[i]
+
+        # TODO: support column config by numerical index
+        if column_name in columns_config:
+            column_config = columns_config[column_name]
+            if column_config.get("disabled") is True:
+                # Disabled columns are not checked for compatibility.
+                # This might change in the future.
+                continue
+
+            configured_column_type = column_config.get("type")
+
+            if configured_column_type is None:
+                continue
+
+            if is_type_compatible(configured_column_type, column_data_kind) is False:
+                # TODO: Put on top as constant?
+                raise StreamlitAPIException(
+                    f"The configured column type `{configured_column_type}` for column "
+                    f"`{column_name}` is not compatible for editing the underlying "
+                    f"data type `{column_data_kind}`.\n\nYou have following options to "
+                    f"fix this: 1) choose a compatible type 2) disable the column "
+                    f"3) convert the column into a compatible data type."
+                )
 
 
 class DataEditorMixin:
@@ -571,19 +651,7 @@ class DataEditorMixin:
         # since we will apply edits directly to it.
         data_df = type_util.convert_anything_to_df(data, ensure_copy=True)
 
-        # Check if the index is supported.
-        if not (
-            type(data_df.index)
-            in [
-                pd.RangeIndex,
-                pd.Index,
-            ]
-            # We need to check these index types without importing, since they are deprecated
-            # and planned to be removed soon.
-            or is_type(data_df.index, "pandas.core.indexes.numeric.Int64Index")
-            or is_type(data_df.index, "pandas.core.indexes.numeric.Float64Index")
-            or is_type(data_df.index, "pandas.core.indexes.numeric.UInt64Index")
-        ):
+        if not _is_supported_index(data_df.index):
             raise StreamlitAPIException(
                 f"The type of the dataframe index - {type(data_df.index).__name__} - is not "
                 "yet supported by the data editor."
@@ -593,13 +661,28 @@ class DataEditorMixin:
 
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.
-        if type(data_df.index) is pd.RangeIndex and num_rows == "dynamic":
-            if _INDEX_IDENTIFIER not in columns_config:
-                columns_config[_INDEX_IDENTIFIER] = {}
-            columns_config[_INDEX_IDENTIFIER]["hidden"] = True
+        if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
+            if INDEX_IDENTIFIER not in columns_config:
+                columns_config[INDEX_IDENTIFIER] = {}
+            columns_config[INDEX_IDENTIFIER]["hidden"] = True
+
+        # Convert the dataframe to an arrow table which is used as the main
+        # serialization format for sending the data to the frontend.
+        # We also utilize the arrow schema to determine the data kinds of every column.
+        arrow_table = pa.Table.from_pandas(data_df)
+
+        # Determine the dataframe schema which is required for parsing edited values
+        # and for checking type compatibilities.
+        dataframe_schema = determine_dataframe_schema(data_df, arrow_table.schema)
+
+        # Check if all configured column types are compatible with the underlying data.
+        # Throws an exception if any of the configured types are incompatible.
+        _check_type_compatibilities(data_df, columns_config, dataframe_schema)
 
         proto = ArrowProto()
+
         proto.use_container_width = use_container_width
+
         if width:
             proto.width = width
         if height:
@@ -618,10 +701,9 @@ class DataEditorMixin:
             default_uuid = str(hash(delta_path))
             marshall_styler(proto, data, default_uuid)
 
-        table = pa.Table.from_pandas(data_df)
-        proto.data = type_util.pyarrow_table_to_bytes(table)
+        proto.data = type_util.pyarrow_table_to_bytes(arrow_table)
 
-        _marshall_column_config(proto, columns_config)
+        marshall_column_config(proto, columns_config)
 
         serde = DataEditorSerde()
 
@@ -637,7 +719,7 @@ class DataEditorMixin:
             ctx=get_script_run_ctx(),
         )
 
-        _apply_dataframe_edits(data_df, widget_state.value)
+        _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
         self.dg._enqueue("arrow_data_frame", proto)
         return type_util.convert_df_to_data_format(data_df, data_format)
 
