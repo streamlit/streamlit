@@ -114,6 +114,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
           cellData = Math.min(cellData, parameters.max)
         }
 
+        // Check if the value is larger than the maximum supported value:
         if (Number.isInteger(cellData) && !Number.isSafeInteger(cellData)) {
           return getErrorCell(
             toSafeString(data),
