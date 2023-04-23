@@ -193,14 +193,19 @@ describe("NumberColumn", () => {
     }
   )
 
-  it.each([[[]], ["foo"], [[1, 2]], ["123.124.123"], ["--123"], ["2,,2"]])(
-    "%p results in error cell",
-    (input: any) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
-      const cell = mockColumn.getCell(input)
-      expect(isErrorCell(cell)).toEqual(true)
-    }
-  )
+  it.each([
+    [[]],
+    ["foo"],
+    [[1, 2]],
+    ["123.124.123"],
+    ["--123"],
+    ["2,,2"],
+    ["12345678987654321"],
+  ])("%p results in error cell", (input: any) => {
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
+    const cell = mockColumn.getCell(input)
+    expect(isErrorCell(cell)).toEqual(true)
+  })
 
   it("shows an error cell if the numeric value is too large", () => {
     const mockColumn = getNumberColumn(MOCK_INT_ARROW_TYPE)
