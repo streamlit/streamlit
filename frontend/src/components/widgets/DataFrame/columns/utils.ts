@@ -55,8 +55,6 @@ export interface BaseColumnProps {
   readonly isRequired?: boolean
   // The initial width of the column:
   readonly width?: number
-  // A help text that is displayed on hovering the column header.
-  readonly help?: string
   // Column type selected via column config:
   readonly customType?: string
   // Additional metadata related to the column type:
