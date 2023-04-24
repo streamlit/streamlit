@@ -1169,6 +1169,12 @@ class ElementTree(Block):
         self.type = "root"
 
     @property
+    def sidebar(self) -> Block:
+        s = self[1]
+        assert isinstance(s, Block)
+        return s
+
+    @property
     def session_state(self) -> SessionState:
         assert self._session_state is not None
         return self._session_state
