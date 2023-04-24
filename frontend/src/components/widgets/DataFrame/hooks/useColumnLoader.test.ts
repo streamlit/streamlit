@@ -130,6 +130,8 @@ describe("applyColumnConfig", () => {
       ...MOCK_COLUMNS[2],
       isHidden: true,
       contentAlignment: "center",
+      defaultValue: "this is the default",
+      isRequired: true,
     })
   })
 
