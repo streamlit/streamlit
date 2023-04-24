@@ -533,8 +533,8 @@ dtype: object""",
             )
 
     def test_convert_df_with_missing_values(self):
-        """Test that `convert_df_to_data_format` raises a ValueError when
-        passed an unknown data format.
+        """Test that `convert_df_to_data_format` correctly converts
+        all types of missing values to None.
         """
 
         # Add dataframe with different missing values:
