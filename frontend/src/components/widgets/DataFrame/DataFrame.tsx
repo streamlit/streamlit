@@ -478,6 +478,8 @@ function DataFrame({
           }}
           // Add support for additional cells:
           customRenderers={extraCellArgs.customRenderers}
+          // Add our custom SVG header icons:
+          headerIcons={theme.headerIcons}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
           // If element is editable, enable editing features:
