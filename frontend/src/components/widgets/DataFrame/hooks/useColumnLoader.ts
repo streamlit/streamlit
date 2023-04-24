@@ -49,6 +49,7 @@ export interface ColumnConfigProps {
   editable?: boolean
   metadata?: Record<string, unknown>
   alignment?: string
+  help?: string
 }
 
 /**
@@ -106,6 +107,7 @@ export function applyColumnConfig(
       isHidden: columnConfig.hidden,
       columnTypeMetadata: columnConfig.metadata,
       contentAlignment: columnConfig.alignment,
+      help: columnConfig.help,
     }
   ) as BaseColumnProps
 }

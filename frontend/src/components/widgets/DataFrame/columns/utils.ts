@@ -21,6 +21,7 @@ import {
   GridCellKind,
   LoadingCell,
   GridColumn,
+  BaseGridCell,
 } from "@glideapps/glide-data-grid"
 import { toString, merge, isArray } from "lodash"
 import numbro from "numbro"
@@ -51,6 +52,8 @@ export interface BaseColumnProps {
   readonly isStretched: boolean
   // The initial width of the column:
   readonly width?: number
+  // A help text that is displayed on hovering the column header.
+  readonly help?: string
   // Column type selected via column config:
   readonly customType?: string
   // Additional metadata related to the column type:
@@ -127,10 +130,22 @@ export function isErrorCell(cell: GridCell): cell is ErrorCell {
   return cell.hasOwnProperty("isError") && (cell as ErrorCell).isError
 }
 
+interface CellWithTooltip extends BaseGridCell {
+  readonly tooltip: string
+}
+
+/**
+ * Returns `true` if the given cell has a tooltip
+ */
+export function hasTooltip(cell: BaseGridCell): cell is CellWithTooltip {
+  return (
+    cell.hasOwnProperty("tooltip") && (cell as CellWithTooltip).tooltip !== ""
+  )
+}
 /**
  * Interface used for indicating if a cell contains no value.
  */
-interface MissingValueCell extends TextCell {
+interface MissingValueCell extends BaseGridCell {
   readonly isMissingValue: true
 }
 
@@ -138,7 +153,9 @@ interface MissingValueCell extends TextCell {
  * Returns `true` if the given cell contains no value (-> missing value).
  * For example, a number cell that contains null is interpreted as a missing value.
  */
-export function isMissingValueCell(cell: GridCell): cell is MissingValueCell {
+export function isMissingValueCell(
+  cell: BaseGridCell
+): cell is MissingValueCell {
   return (
     cell.hasOwnProperty("isMissingValue") &&
     (cell as MissingValueCell).isMissingValue
