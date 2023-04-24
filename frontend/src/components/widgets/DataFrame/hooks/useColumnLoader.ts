@@ -53,7 +53,6 @@ export const COLUMN_WIDTH_MAPPING = {
 export interface ColumnConfigProps {
   title?: string
   width?: "small" | "medium" | "large"
-  help?: string
   hidden?: boolean
   disabled?: boolean
   required?: boolean
@@ -124,7 +123,6 @@ export function applyColumnConfig(
     isRequired: columnConfig.required,
     columnTypeOptions: columnConfig.type_options,
     contentAlignment: columnConfig.alignment,
-    help: columnConfig.help,
     defaultValue: columnConfig.default,
   } as BaseColumnProps) as BaseColumnProps
 }
