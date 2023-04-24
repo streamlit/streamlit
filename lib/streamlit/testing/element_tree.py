@@ -1014,6 +1014,98 @@ class Block:
     def key(self) -> str | None:
         return None
 
+    @property
+    def button(self) -> Sequence[Button]:
+        return self.get("button")
+
+    @property
+    def caption(self) -> Sequence[Caption]:
+        return self.get("caption")
+
+    @property
+    def checkbox(self) -> Sequence[Checkbox]:
+        return self.get("checkbox")
+
+    @property
+    def code(self) -> Sequence[Code]:
+        return self.get("code")
+
+    @property
+    def color_picker(self) -> Sequence[ColorPicker]:
+        return self.get("color_picker")
+
+    @property
+    def date_input(self) -> Sequence[DateInput]:
+        return self.get("date_input")
+
+    @property
+    def divider(self) -> Sequence[Divider]:
+        return self.get("divider")
+
+    @property
+    def exception(self) -> Sequence[Exception]:
+        return self.get("exception")
+
+    @property
+    def header(self) -> Sequence[Header]:
+        return self.get("header")
+
+    @property
+    def latex(self) -> Sequence[Latex]:
+        return self.get("latex")
+
+    @property
+    def markdown(self) -> Sequence[Markdown]:
+        return self.get("markdown")
+
+    @property
+    def multiselect(self) -> Sequence[Multiselect]:
+        return self.get("multiselect")
+
+    @property
+    def number_input(self) -> Sequence[NumberInput]:
+        return self.get("number_input")
+
+    @property
+    def radio(self) -> Sequence[Radio]:
+        return self.get("radio")
+
+    @property
+    def select_slider(self) -> Sequence[SelectSlider]:
+        return self.get("select_slider")
+
+    @property
+    def selectbox(self) -> Sequence[Selectbox]:
+        return self.get("selectbox")
+
+    @property
+    def slider(self) -> Sequence[Slider]:
+        return self.get("slider")
+
+    @property
+    def subheader(self) -> Sequence[Subheader]:
+        return self.get("subheader")
+
+    @property
+    def text(self) -> Sequence[Text]:
+        return self.get("text")
+
+    @property
+    def text_area(self) -> Sequence[TextArea]:
+        return self.get("text_area")
+
+    @property
+    def text_input(self) -> Sequence[TextInput]:
+        return self.get("text_input")
+
+    @property
+    def time_input(self) -> Sequence[TimeInput]:
+        return self.get("time_input")
+
+    @property
+    def title(self) -> Sequence[Title]:
+        return self.get("title")
+
     @overload
     def get(self, element_type: Literal["button"]) -> Sequence[Button]:
         ...
