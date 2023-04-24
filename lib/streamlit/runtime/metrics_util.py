@@ -55,6 +55,19 @@ _OBJECT_NAME_MAPPING: Final = {
 
 # A list of dependencies to check for attribution
 _ATTRIBUTIONS_TO_CHECK: Final = [
+    # DB Clients:
+    "pymysql",
+    "pymongo",
+    "ibis",
+    "boto3",
+    "psycopg2",
+    "sqlalchemy",
+    "elasticsearch",
+    "pyodbc",
+    "azure",
+    "google",
+    "redis",
+    "opensearch-py",
     # LLM Tools:
     "openai",
     "langchain",
