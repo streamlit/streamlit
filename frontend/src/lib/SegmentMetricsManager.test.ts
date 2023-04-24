@@ -197,3 +197,16 @@ test("clears deltas automatically on read", () => {
   expect(Object.keys(counter1).length).toBe(2)
   expect(Object.keys(counter2).length).toBe(0)
 })
+
+test("ip address is overwritten", () => {
+  const mm = getSegmentMetricsManager()
+  mm.initialize({ gatherUsageStats: true })
+
+  mm.enqueue("ev1", { data1: 11 })
+
+  expect(mm.track.mock.calls[0][2]).toMatchObject({
+    context: {
+      ip: "0.0.0.0",
+    },
+  })
+})

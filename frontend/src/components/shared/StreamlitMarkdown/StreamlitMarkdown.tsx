@@ -66,8 +66,6 @@ import {
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
-import { StyledCopyButtonContainer } from "src/components/elements/CodeBlock/styled-components"
-import CopyButton from "src/components/elements/CodeBlock/CopyButton"
 import StreamlitSyntaxHighlighter from "src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 
 enum Tags {
@@ -264,16 +262,9 @@ export const CustomCodeTag: FunctionComponent<CustomCodeTagProps> = ({
 
   const language = (match && match[1]) || ""
   return !inline ? (
-    <>
-      {codeText && (
-        <StyledCopyButtonContainer>
-          <CopyButton text={codeText} />
-        </StyledCopyButtonContainer>
-      )}
-      <StreamlitSyntaxHighlighter language={language} showLineNumbers={false}>
-        {codeText}
-      </StreamlitSyntaxHighlighter>
-    </>
+    <StreamlitSyntaxHighlighter language={language} showLineNumbers={false}>
+      {codeText}
+    </StreamlitSyntaxHighlighter>
   ) : (
     <code className={className} {...omit(props, "node")}>
       {children}

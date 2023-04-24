@@ -147,7 +147,11 @@ jobs:
       contents: write
 
     runs-on: ubuntu-latest
-    if: github.repository == 'streamlit/streamlit' && github.event_name == 'push' && github.ref_name == 'develop'
+    if: |
+      github.repository == 'streamlit/streamlit' && (
+      (github.event_name == 'push' && github.ref_name == 'develop') ||
+      (github.event_name == 'schedule')
+      )
 
     name: Upload constraints
 
@@ -225,5 +229,7 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
+      - name: Run Type Checkers
+        run: scripts/mypy --report
       - name: Run Python Tests for Snowflake
         run: make pytest-snowflake
