@@ -852,7 +852,7 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
     """Unify all missing values in a DataFrame to None.
 
     Pandas uses a variety of values to represent missing values, including np.nan,
-    NaT, None, and pd.NA. This function replaces all of these values with  None,
+    NaT, None, and pd.NA. This function replaces all of these values with None,
     which is the only missing value type that is supported by all data
     """
 
