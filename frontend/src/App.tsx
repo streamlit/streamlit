@@ -1123,6 +1123,9 @@ export class App extends PureComponent<Props, State> {
       metadataMsg
     )
 
+    // Update metrics
+    this.metricsMgr.handleDeltaMessage(deltaMsg, metadataMsg)
+
     if (!this.pendingElementsTimerRunning) {
       this.pendingElementsTimerRunning = true
 

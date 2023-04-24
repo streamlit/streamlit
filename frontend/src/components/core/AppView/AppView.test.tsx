@@ -41,7 +41,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 
   return {
     endpoints: endpoints,
-    elements: AppRoot.empty(new MockMetricsManager()),
+    elements: AppRoot.empty(),
     sendMessageToHost: jest.fn(),
     sessionInfo: sessionInfo,
     scriptRunId: "script run 123",
@@ -101,10 +101,7 @@ describe("AppView element", () => {
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const props = getProps({
-      elements: new AppRoot(
-        new MockMetricsManager(),
-        new BlockNode([main, sidebar])
-      ),
+      elements: new AppRoot(new BlockNode([main, sidebar])),
     })
     const wrapper = shallow(<AppView {...props} />)
 
@@ -147,10 +144,7 @@ describe("AppView element", () => {
       { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const props = getProps({
-      elements: new AppRoot(
-        new MockMetricsManager(),
-        new BlockNode([main, sidebar])
-      ),
+      elements: new AppRoot(new BlockNode([main, sidebar])),
       appPages,
     })
     const wrapper = shallow(<AppView {...props} />)
