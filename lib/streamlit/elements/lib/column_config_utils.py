@@ -28,7 +28,10 @@ from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 IndexIdentifierType = Literal["index"]
 INDEX_IDENTIFIER: IndexIdentifierType = "index"
 
-_NUMERICAL_INDEX_PREFIX: IndexIdentifierType = "col:"
+# This is used as prefix for columns that are configured via the numerical position.
+# The integer value is converted into a string key with this prefix.
+# This needs to match with the prefix configured in the frontend.
+_NUMERICAL_POSITION_PREFIX = "col:"
 
 ColumnWidth = Literal["small", "medium", "large"]
 
@@ -407,7 +410,7 @@ def marshall_column_config(
 
     proto.columns = json.dumps(
         {
-            (f"{_NUMERICAL_INDEX_PREFIX}{str(k)}" if isinstance(k, int) else k): v
+            (f"{_NUMERICAL_POSITION_PREFIX}{str(k)}" if isinstance(k, int) else k): v
             for (k, v) in remove_none_values(column_config_mapping).items()
         }
     )
