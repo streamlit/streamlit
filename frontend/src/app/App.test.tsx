@@ -557,7 +557,6 @@ describe("App.handleNewSession", () => {
       userInfo: {
         installationId: "installationId",
         installationIdV3: "installationIdV3",
-        email: "email",
       },
       environmentInfo: {
         streamlitVersion: "streamlitVersion",
@@ -1217,7 +1216,6 @@ describe("App.onHistoryChange", () => {
       userInfo: {
         installationId: "installationId",
         installationIdV3: "installationIdV3",
-        email: "email",
       },
       environmentInfo: {
         streamlitVersion: "streamlitVersion",

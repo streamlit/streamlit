@@ -482,7 +482,9 @@ export const createEmotionTheme = (
       ...(parsedFont && {
         bodyFont: themeInput.bodyFont ? themeInput.bodyFont : parsedFont,
         headingFont: themeInput.bodyFont ? themeInput.bodyFont : parsedFont,
-        codeFont: themeInput.codeFont ? themeInput.codeFont : parsedFont,
+        codeFont: themeInput.codeFont
+          ? themeInput.codeFont
+          : genericFonts.codeFont,
       }),
     },
     ...conditionalOverrides,
