@@ -107,11 +107,11 @@ describe("applyColumnConfig", () => {
 
     const column1 = applyColumnConfig(MOCK_COLUMNS[1], columnConfig)
     expect(column1.isEditable).toBe(true)
-    expect(column1.width).toBe(COLUMN_WIDTH_MAPPING["small"])
+    expect(column1.width).toBe(COLUMN_WIDTH_MAPPING.small)
     expect(column1.customType).toBe("text")
     expect(column1).toEqual({
       ...MOCK_COLUMNS[1],
-      width: COLUMN_WIDTH_MAPPING["small"],
+      width: COLUMN_WIDTH_MAPPING.small,
       isEditable: true,
       customType: "text",
     })
@@ -139,7 +139,7 @@ describe("applyColumnConfig", () => {
     ])
 
     const column1 = applyColumnConfig(MOCK_COLUMNS[0], columnConfig)
-    expect(column1.width).toBe(COLUMN_WIDTH_MAPPING["small"])
+    expect(column1.width).toBe(COLUMN_WIDTH_MAPPING.small)
     expect(column1.isIndex).toBe(true)
 
     const column2 = applyColumnConfig(MOCK_COLUMNS[1], columnConfig)
@@ -158,7 +158,7 @@ describe("applyColumnConfig", () => {
     ])
 
     const column1 = applyColumnConfig(MOCK_COLUMNS[0], columnConfig)
-    expect(column1.width).toBe(COLUMN_WIDTH_MAPPING["small"])
+    expect(column1.width).toBe(COLUMN_WIDTH_MAPPING.small)
   })
 
   it("works with empty column configs", () => {
