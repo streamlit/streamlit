@@ -83,7 +83,7 @@ def ttl_to_seconds(
     if isinstance(ttl, str):
         import pandas as pd
 
-        return pd.Timedelta(ttl).to_pytimedelta().total_seconds()
+        return pd.Timedelta(ttl).total_seconds()
 
     return ttl
 
