@@ -102,6 +102,8 @@ describe("applyColumnConfig", () => {
           disabled: true,
           hidden: true,
           alignment: "center",
+          required: true,
+          default: "this is the default",
         } as ColumnConfigProps,
       ],
     ])
@@ -122,6 +124,8 @@ describe("applyColumnConfig", () => {
     expect(column2.width).toBe(undefined)
     expect(column2.contentAlignment).toBe("center")
     expect(column2.isHidden).toBe(true)
+    expect(column2.isRequired).toBe(true)
+    expect(column2.defaultValue).toBe("this is the default")
     expect(column2).toEqual({
       ...MOCK_COLUMNS[2],
       isHidden: true,
