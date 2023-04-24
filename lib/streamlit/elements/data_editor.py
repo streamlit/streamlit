@@ -35,12 +35,11 @@ from typing import (
 import pandas as pd
 import pyarrow as pa
 from pandas.api.types import is_datetime64_any_dtype, is_float_dtype, is_integer_dtype
-from pandas.io.formats.style import Styler
 from typing_extensions import Final, Literal, TypeAlias, TypedDict
 
 from streamlit import type_util
-from streamlit.elements.arrow import marshall_styler
 from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -55,6 +54,7 @@ from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type,
 
 if TYPE_CHECKING:
     import numpy as np
+    from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -81,7 +81,7 @@ EditableData = TypeVar(
 DataTypes: TypeAlias = Union[
     pd.DataFrame,
     pd.Index,
-    Styler,
+    "Styler",
     pa.Table,
     "np.ndarray[Any, np.dtype[np.float64]]",
     Tuple[Any],
@@ -614,6 +614,7 @@ class DataEditorMixin:
         proto.form_id = current_form_id(self.dg)
 
         if type_util.is_pandas_styler(data):
+            # Pandas styler will only work for non-editable/disabled columns.
             delta_path = self.dg._get_delta_path_str()
             default_uuid = str(hash(delta_path))
             marshall_styler(proto, data, default_uuid)
