@@ -128,6 +128,9 @@ describe("CategoricalColumn", () => {
       "foo",
       "bar",
     ])
+
+    const errorCell = mockColumn.getCell(undefined)
+    expect(isErrorCell(errorCell)).toEqual(true)
   })
 
   it("creates error cell if value is not in options", () => {
