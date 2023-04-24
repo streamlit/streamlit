@@ -72,7 +72,7 @@ opencv-python==4.7.0.72
 opt-einsum==3.3.0
 oscrypto==1.3.0
 packaging==23.1
-pandas==2.0.0
+pandas==2.0.1
 parameterized==0.9.0
 pathspec==0.11.1
 Pillow==9.5.0
@@ -122,7 +122,7 @@ semver==2.13.0
 six==1.16.0
 smmap==5.0.0
 snowflake-connector-python==3.0.3
-snowflake-snowpark-python==1.3.0
+snowflake-snowpark-python==1.4.0
 sortedcontainers==2.4.0
 SQLAlchemy==1.4.47
 sqlalchemy2-stubs==0.0.2a34
