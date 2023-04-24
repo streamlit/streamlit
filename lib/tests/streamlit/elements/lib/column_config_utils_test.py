@@ -23,14 +23,12 @@ import pyarrow as pa
 from parameterized import parameterized
 
 from streamlit.elements.lib.column_config_utils import (
-    _EDITING_COMPATIBILITY_MAPPING,
     ColumnDataKind,
     _determine_data_kind,
     _determine_data_kind_via_arrow,
     _determine_data_kind_via_inferred_type,
     _determine_data_kind_via_pandas_dtype,
     determine_dataframe_schema,
-    is_type_compatible,
 )
 
 
@@ -329,25 +327,3 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                 ColumnDataKind.EMPTY,
             ],
         )
-
-    def test_is_type_compatible(self):
-        """Test that the is_type_compatible function correctly checks for compatibility
-        based on the _EDITING_COMPATIBILITY_MAPPING.
-        """
-        for column_type, data_kinds in _EDITING_COMPATIBILITY_MAPPING.items():
-            for data_kind in data_kinds:
-                self.assertTrue(
-                    is_type_compatible(column_type, data_kind),
-                    f"Expected {column_type} to be compatible with {data_kind}",
-                )
-            self.assertFalse(
-                is_type_compatible(column_type, ColumnDataKind.UNKNOWN),
-                f"Expected {column_type} to not be compatible with {data_kind}",
-            )
-
-        # Check that non-editable column types are compatible to all data kinds:
-        for data_kind in ColumnDataKind:
-            self.assertTrue(
-                is_type_compatible("list", data_kind),
-                f"Expected list to be compatible with {data_kind}",
-            )

@@ -45,7 +45,6 @@ from streamlit.elements.lib.column_config_utils import (
     ColumnDataKind,
     DataframeSchema,
     determine_dataframe_schema,
-    is_type_compatible,
     marshall_column_config,
 )
 from streamlit.errors import StreamlitAPIException
@@ -433,63 +432,6 @@ def _is_supported_index(df_index: pd.Index) -> bool:
     )
 
 
-def _check_type_compatibilities(
-    data_df: pd.DataFrame,
-    columns_config: ColumnConfigMapping,
-    dataframe_schema: DataframeSchema,
-):
-    """Check column type to data type compatibility.
-
-    Iterates the index and all columns of the dataframe to check if
-    the configured column types are compatible with the underlying data types.
-
-    Parameters
-    ----------
-    data_df : pd.DataFrame
-        The dataframe to check the type compatibilities for.
-
-    columns_config : ColumnConfigMapping
-        A mapping of column to column configurations.
-
-    dataframe_schema : DataframeSchema
-        The schema of the dataframe.
-
-    Raises
-    ------
-    StreamlitAPIException
-        If a configured column type is editable and not compatible with the
-        underlying data type.
-    """
-    for i, column in enumerate(
-        [(INDEX_IDENTIFIER, data_df.index)] + list(data_df.items())
-    ):
-        column_name, _ = column
-        column_data_kind = dataframe_schema[i]
-
-        # TODO: support column config by numerical index
-        if column_name in columns_config:
-            column_config = columns_config[column_name]
-            if column_config.get("disabled") is True:
-                # Disabled columns are not checked for compatibility.
-                # This might change in the future.
-                continue
-
-            configured_column_type = column_config.get("type")
-
-            if configured_column_type is None:
-                continue
-
-            if is_type_compatible(configured_column_type, column_data_kind) is False:
-                # TODO: Put on top as constant?
-                raise StreamlitAPIException(
-                    f"The configured column type `{configured_column_type}` for column "
-                    f"`{column_name}` is not compatible for editing the underlying "
-                    f"data type `{column_data_kind}`.\n\nYou have following options to "
-                    f"fix this: 1) choose a compatible type 2) disable the column "
-                    f"3) convert the column into a compatible data type."
-                )
-
-
 class DataEditorMixin:
     @overload
     def experimental_data_editor(
@@ -674,10 +616,6 @@ class DataEditorMixin:
         # Determine the dataframe schema which is required for parsing edited values
         # and for checking type compatibilities.
         dataframe_schema = determine_dataframe_schema(data_df, arrow_table.schema)
-
-        # Check if all configured column types are compatible with the underlying data.
-        # Throws an exception if any of the configured types are incompatible.
-        _check_type_compatibilities(data_df, columns_config, dataframe_schema)
 
         proto = ArrowProto()
 

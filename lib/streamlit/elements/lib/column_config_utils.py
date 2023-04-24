@@ -68,48 +68,6 @@ class ColumnDataKind(str, Enum):
 # The index column(s) are attached at the beginning of the list.
 DataframeSchema: TypeAlias = List[ColumnDataKind]
 
-# This mapping contains all editable column types mapped to the data kinds
-# that the column type is compatible for editing.
-_EDITING_COMPATIBILITY_MAPPING: Final[Dict[ColumnType, List[ColumnDataKind]]] = {
-    "text": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
-    "number": [ColumnDataKind.INTEGER, ColumnDataKind.FLOAT, ColumnDataKind.EMPTY],
-    "checkbox": [ColumnDataKind.BOOLEAN, ColumnDataKind.EMPTY],
-    "selectbox": [
-        ColumnDataKind.STRING,
-        ColumnDataKind.BOOLEAN,
-        ColumnDataKind.INTEGER,
-        ColumnDataKind.FLOAT,
-        ColumnDataKind.EMPTY,
-    ],
-}
-
-
-def is_type_compatible(column_type: ColumnType, data_kind: ColumnDataKind) -> bool:
-    """Check if the column type is compatible with the underlying data kind.
-
-    This check only applies to editable column types (e.g. number or text).
-    Non-editable column types (e.g. bar_chart or image) can be configured for
-    all data kinds (this might change in the future).
-
-    Parameters
-    ----------
-    column_type : ColumnType
-        The column type to check.
-
-    data_kind : ColumnDataKind
-        The data kind to check.
-
-    Returns
-    -------
-    bool
-        True if the column type is compatible with the data kind, False otherwise.
-    """
-
-    if column_type not in _EDITING_COMPATIBILITY_MAPPING:
-        return True
-
-    return data_kind in _EDITING_COMPATIBILITY_MAPPING[column_type]
-
 
 def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
     """Determine the data kind via the arrow type information.
