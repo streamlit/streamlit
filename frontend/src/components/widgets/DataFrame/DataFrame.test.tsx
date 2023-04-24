@@ -29,18 +29,22 @@ import { StyledResizableContainer } from "./styled-components"
 
 const getProps = (
   data: Quiver,
-  useContainerWidth = false
+  useContainerWidth = false,
+  editingMode: ArrowProto.EditingMode = ArrowProto.EditingMode.READ_ONLY
 ): DataFrameProps => ({
   element: ArrowProto.create({
     data: new Uint8Array(),
     useContainerWidth,
     width: 400,
     height: 400,
+    editingMode,
   }),
   data,
   width: 700,
   disabled: false,
-  widgetMgr: {} as any,
+  widgetMgr: {
+    getStringValue: jest.fn(),
+  } as any,
 })
 
 const { ResizeObserver } = window
@@ -91,5 +95,25 @@ describe("DataFrame widget", () => {
     const dataFrameContainer = wrapper.find(Resizable).props() as any
     expect(dataFrameContainer.size.width).toBe(400)
     expect(dataFrameContainer.size.height).toBe(400)
+  })
+
+  it("Touch detection correctly deactivates some features", () => {
+    // Set window.matchMedia to simulate a touch device
+    window.matchMedia = jest.fn().mockImplementation(() => ({
+      matches: true,
+    }))
+
+    const wrapper = mount(
+      <DataFrame
+        {...getProps(
+          new Quiver({ data: TEN_BY_TEN }),
+          true,
+          ArrowProto.EditingMode.FIXED
+        )}
+      />
+    )
+    const glideDataEditorProps = wrapper.find(GlideDataEditor).props()
+    expect(glideDataEditorProps.rangeSelect).toBe("none")
+    expect(glideDataEditorProps.fillHandle).toBe(false)
   })
 })
