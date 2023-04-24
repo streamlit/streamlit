@@ -38,11 +38,7 @@ ColumnWidth = Literal["small", "medium", "large"]
 # Type alias that represents all available column types
 # which are configurable by the user.
 ColumnType: TypeAlias = Literal[
-    "object",
-    "text",
-    "number",
-    "checkbox",
-    "selectbox",
+    "object", "text", "number", "checkbox", "selectbox", "list"
 ]
 
 
@@ -62,6 +58,7 @@ class ColumnDataKind(str, Enum):
     DECIMAL = "decimal"
     COMPLEX = "complex"
     LIST = "list"
+    DICT = "dict"
     EMPTY = "empty"
     UNKNOWN = "unknown"
 
@@ -73,7 +70,7 @@ DataframeSchema: TypeAlias = List[ColumnDataKind]
 
 # This mapping contains all editable column types mapped to the data kinds
 # that the column type is compatible for editing.
-_EDITING_COMPATIBILITY_MAPPING: Final = {
+_EDITING_COMPATIBILITY_MAPPING: Final[Dict[ColumnType, List[ColumnDataKind]]] = {
     "text": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
     "number": [ColumnDataKind.INTEGER, ColumnDataKind.FLOAT, ColumnDataKind.EMPTY],
     "checkbox": [ColumnDataKind.BOOLEAN, ColumnDataKind.EMPTY],
@@ -128,38 +125,49 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
     ColumnDataKind
         The data kind of the field.
     """
-    if pa.types.is_integer(field.type):
+    field_type = field.type
+    if pa.types.is_integer(field_type):
         return ColumnDataKind.INTEGER
 
-    if pa.types.is_floating(field.type):
+    if pa.types.is_floating(field_type):
         return ColumnDataKind.FLOAT
 
-    if pa.types.is_boolean(field.type):
+    if pa.types.is_boolean(field_type):
         return ColumnDataKind.BOOLEAN
 
-    if pa.types.is_string(field.type):
+    if pa.types.is_string(field_type):
         return ColumnDataKind.STRING
 
-    if pa.types.is_date(field.type):
+    if pa.types.is_date(field_type):
         return ColumnDataKind.DATE
 
-    if pa.types.is_time(field.type):
+    if pa.types.is_time(field_type):
         return ColumnDataKind.TIME
 
-    if pa.types.is_timestamp(field.type):
+    if pa.types.is_timestamp(field_type):
         return ColumnDataKind.DATETIME
 
-    if pa.types.is_duration(field.type):
+    if pa.types.is_duration(field_type):
         return ColumnDataKind.TIMEDELTA
 
-    if pa.types.is_list(field.type):
+    if pa.types.is_list(field_type):
         return ColumnDataKind.LIST
 
-    if pa.types.is_decimal(field.type):
+    if pa.types.is_decimal(field_type):
         return ColumnDataKind.DECIMAL
 
-    if pa.types.is_null(field.type):
+    if pa.types.is_null(field_type):
         return ColumnDataKind.EMPTY
+
+    # Interval does not seem to work correctly:
+    # if pa.types.is_interval(field_type):
+    #     return ColumnDataKind.INTERVAL
+
+    if pa.types.is_binary(field_type):
+        return ColumnDataKind.BYTES
+
+    if pa.types.is_struct(field_type):
+        return ColumnDataKind.DICT
 
     return ColumnDataKind.UNKNOWN
 
@@ -179,31 +187,35 @@ def _determine_data_kind_via_pandas_dtype(
     ColumnDataKind
         The data kind of the column.
     """
-    if pd.api.types.is_bool_dtype(column.dtype):
+    column_dtype = column.dtype
+    if pd.api.types.is_bool_dtype(column_dtype):
         return ColumnDataKind.BOOLEAN
 
-    if pd.api.types.is_integer_dtype(column.dtype):
+    if pd.api.types.is_integer_dtype(column_dtype):
         return ColumnDataKind.INTEGER
 
-    if pd.api.types.is_float_dtype(column.dtype):
+    if pd.api.types.is_float_dtype(column_dtype):
         return ColumnDataKind.FLOAT
 
-    if pd.api.types.is_datetime64_any_dtype(column.dtype):
+    if pd.api.types.is_datetime64_any_dtype(column_dtype):
         return ColumnDataKind.DATETIME
 
-    if pd.api.types.is_timedelta64_dtype(column.dtype):
+    if pd.api.types.is_timedelta64_dtype(column_dtype):
         return ColumnDataKind.TIMEDELTA
 
-    if pd.api.types.is_period_dtype(column.dtype):
+    if pd.api.types.is_period_dtype(column_dtype):
         return ColumnDataKind.PERIOD
 
-    if pd.api.types.is_interval_dtype(column.dtype):
+    if pd.api.types.is_interval_dtype(column_dtype):
         return ColumnDataKind.INTERVAL
 
-    if pd.api.types.is_complex_dtype(column.dtype):
+    if pd.api.types.is_complex_dtype(column_dtype):
         return ColumnDataKind.COMPLEX
 
-    if pd.api.types.is_string_dtype(column.dtype):
+    if pd.api.types.is_object_dtype(
+        column_dtype
+    ) is False and pd.api.types.is_string_dtype(column_dtype):
+        # The is_string_dtype
         return ColumnDataKind.STRING
 
     return ColumnDataKind.UNKNOWN
@@ -254,7 +266,7 @@ def _determine_data_kind_via_inferred_type(
     if inferred_type == "date":
         return ColumnDataKind.DATE
 
-    if inferred_type == ["timedelta64", "timedelta"]:
+    if inferred_type in ["timedelta64", "timedelta"]:
         return ColumnDataKind.TIMEDELTA
 
     if inferred_type == "time":
@@ -262,6 +274,9 @@ def _determine_data_kind_via_inferred_type(
 
     if inferred_type == "period":
         return ColumnDataKind.PERIOD
+
+    if inferred_type == "interval":
+        return ColumnDataKind.INTERVAL
 
     if inferred_type == "empty":
         return ColumnDataKind.EMPTY
@@ -291,7 +306,7 @@ def _determine_data_kind(
     if pd.api.types.is_categorical_dtype(column.dtype):
         # Categorical columns can have different underlying data kinds
         # depending on the categories.
-        return _determine_data_kind_via_pandas_dtype(column.dtype.categories)
+        return _determine_data_kind_via_inferred_type(column.dtype.categories)
 
     if field is not None:
         data_kind = _determine_data_kind_via_arrow(field)

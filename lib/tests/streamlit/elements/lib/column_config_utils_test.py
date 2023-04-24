@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import datetime
 import unittest
@@ -18,36 +19,131 @@ from decimal import Decimal
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 from parameterized import parameterized
 
 from streamlit.elements.lib.column_config_utils import (
+    _EDITING_COMPATIBILITY_MAPPING,
     ColumnDataKind,
+    ColumnType,
     _determine_data_kind,
+    _determine_data_kind_via_arrow,
+    _determine_data_kind_via_inferred_type,
+    _determine_data_kind_via_pandas_dtype,
+    determine_dataframe_schema,
+    is_type_compatible,
 )
-from tests.streamlit.data_mocks import TestObject
+
+
+class TestObject(object):
+    def __str__(self):
+        return "TestObject"
+
+
+def _get_arrow_schema_field(column: pd.Series) -> pa.Field | None:
+    """Get the Arrow schema field for a pandas Series."""
+    try:
+        arrow_schema = pa.Table.from_pandas(column.to_frame()).schema
+        return arrow_schema.field(0)
+    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError):
+        return None
+
+
+SHARED_DATA_KIND_TEST_CASES = [
+    (pd.Series(["a", "b", "c"], dtype=pd.StringDtype()), ColumnDataKind.STRING),
+    # We need to use Int64 here, otherwise it gets converted to float if a None is added:
+    (pd.Series([1, 2, 3], dtype="Int64"), ColumnDataKind.INTEGER),
+    (pd.Series([1.1, 2.2, 3.3]), ColumnDataKind.FLOAT),
+    (pd.Series([1, 2.2, 3]), ColumnDataKind.FLOAT),  # mixed-integer-float
+    (
+        pd.Series([pd.Timestamp("2000-01-01"), pd.Timestamp("2000-01-02")]),
+        ColumnDataKind.DATETIME,
+    ),
+    (
+        pd.Series(
+            [
+                pd.Timestamp("2000-01-01", tz="US/Central"),
+                pd.Timestamp("2000-01-02", tz="US/Central"),
+            ]
+        ),
+        ColumnDataKind.DATETIME,
+    ),
+    (pd.Series([True, False]), ColumnDataKind.BOOLEAN),
+    (
+        pd.Series([pd.Timedelta("1 day"), pd.Timedelta("2 days")]),
+        ColumnDataKind.TIMEDELTA,
+    ),
+    (
+        pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]),
+        ColumnDataKind.TIMEDELTA,
+    ),
+]
 
 
 class ColumnConfigUtilsTest(unittest.TestCase):
     @parameterized.expand(
-        [
-            (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
+        SHARED_DATA_KIND_TEST_CASES
+        + [
             (pd.Series([b"a", b"b", b"c"]), ColumnDataKind.BYTES),
-            (pd.Series([1, 2, 3], dtype="Int64"), ColumnDataKind.INTEGER),
-            (pd.Series([1.1, 2.2, 3.3]), ColumnDataKind.FLOAT),
-            (pd.Series([1, 2.2, 3]), ColumnDataKind.FLOAT),  # mixed-integer-float
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),
+            (pd.Series([]), ColumnDataKind.EMPTY),
+            (pd.Series([None, None]), ColumnDataKind.EMPTY),
+            (pd.Series([pd.NA, pd.NA]), ColumnDataKind.EMPTY),
+            #
+            (pd.Series([1 + 2j, 2 + 3j]), ColumnDataKind.COMPLEX),
             (
-                pd.Series([pd.Timestamp("2000-01-01"), pd.Timestamp("2000-01-02")]),
-                ColumnDataKind.DATETIME,
+                pd.Series([pd.Period("2000Q1"), pd.Period("2000Q2")]),
+                ColumnDataKind.PERIOD,
             ),
+            (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
+            (pd.Series(["a", "b", "c"], dtype="category"), ColumnDataKind.STRING),
+            (pd.Series([1, 2, 3], dtype="category"), ColumnDataKind.INTEGER),
+            (pd.Series([True, False], dtype="category"), ColumnDataKind.BOOLEAN),
             (
-                pd.Series(
-                    [
-                        pd.Timestamp("2000-01-01", tz="US/Central"),
-                        pd.Timestamp("2000-01-02", tz="US/Central"),
-                    ]
-                ),
-                ColumnDataKind.DATETIME,
+                pd.Series([pd.Interval(0, 1), pd.Interval(1, 2)]),
+                ColumnDataKind.INTERVAL,
             ),
+            (pd.Series([{"a": 1}, {"b": 2}]), ColumnDataKind.DICT),
+            (pd.Series([[1, 2], [3, 4]]), ColumnDataKind.LIST),
+            (pd.Series([["a", "b"], ["c", "d", "e"]]), ColumnDataKind.LIST),
+            # Unsupported types:
+            (pd.Series([pd.Timestamp("2000-01-01"), "a"]), ColumnDataKind.UNKNOWN),
+            (pd.Series([1, "a"]), ColumnDataKind.UNKNOWN),
+            (pd.Series([TestObject(), TestObject()]), ColumnDataKind.UNKNOWN),
+        ]
+    )
+    def test_determine_data_kind(
+        self, column: pd.Series, expected_data_kind: ColumnDataKind
+    ):
+        """Test that _determine_data_kind() returns the expected data kind for a given column."""
+        # Create copy to not interfere with other tests:
+        column = column.copy()
+
+        self.assertEqual(
+            _determine_data_kind(column, _get_arrow_schema_field(column)),
+            expected_data_kind,
+            f"Expected {column} to be determined as {expected_data_kind} data kind.",
+        )
+
+        # Attach a missing value to the end of the column and re-test.
+        column.loc[column.index.max() + 1] = None
+        self.assertEqual(
+            _determine_data_kind(column, _get_arrow_schema_field(column)),
+            expected_data_kind,
+            f"Expected {column} with missing value to be determined as {expected_data_kind} data kind.",
+        )
+
+    @parameterized.expand(
+        SHARED_DATA_KIND_TEST_CASES
+        + [
+            (pd.Series([b"a", b"b", b"c"]), ColumnDataKind.BYTES),
+            (pd.Series([1, 2, 3]), ColumnDataKind.INTEGER),
+            (pd.Series([1 + 2j, 2 + 3j]), ColumnDataKind.COMPLEX),
+            (
+                pd.Series([pd.Period("2000Q1"), pd.Period("2000Q2")]),
+                ColumnDataKind.PERIOD,
+            ),
+            (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
             (
                 pd.Series([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
                 ColumnDataKind.DATE,
@@ -57,49 +153,156 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                 ColumnDataKind.TIME,
             ),
             (
-                pd.Series([pd.Timedelta("1 day"), pd.Timedelta("2 days")]),
-                ColumnDataKind.TIMEDELTA,
-            ),
-            (
-                pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]),
-                ColumnDataKind.TIMEDELTA,
-            ),
-            (
-                pd.Series([pd.Period("2000Q1"), pd.Period("2000Q2")]),
-                ColumnDataKind.PERIOD,
-            ),
-            (pd.Series([True, False]), ColumnDataKind.BOOLEAN),
-            (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),
-            (pd.Series(["a", "b", "c", "a"], dtype="category"), ColumnDataKind.STRING),
-            (pd.Series([1, 2, 3], dtype="category"), ColumnDataKind.INTEGER),
-            (pd.Series([True, False], dtype="category"), ColumnDataKind.BOOLEAN),
-            (pd.Series([]), ColumnDataKind.EMPTY),
-            # TODO: (pd.Series([[1, 2], [3, 4]]), ColumnDataKind.LIST),
-            (pd.Series([1 + 2j, 2 + 3j]), ColumnDataKind.COMPLEX),
-            (
                 pd.Series([pd.Interval(0, 1), pd.Interval(1, 2)]),
                 ColumnDataKind.INTERVAL,
             ),
+            (pd.Series([]), ColumnDataKind.EMPTY),
+            (pd.Series([None, None]), ColumnDataKind.EMPTY),
+            (pd.Series([pd.NA, pd.NA]), ColumnDataKind.EMPTY),
+            (pd.Series([[1, 2], [3, 4]]), ColumnDataKind.UNKNOWN),
+            (pd.Series([["a", "b"], ["c", "d", "e"]]), ColumnDataKind.UNKNOWN),
             (pd.Series([{"a": 1}, {"b": 2}]), ColumnDataKind.UNKNOWN),
             (pd.Series([pd.Timestamp("2000-01-01"), "a"]), ColumnDataKind.UNKNOWN),
             (pd.Series([1, "a"]), ColumnDataKind.UNKNOWN),
-            (pd.Series([pd.Categorical(["a", "b", "c"])]), ColumnDataKind.UNKNOWN),
             (pd.Series([TestObject(), TestObject()]), ColumnDataKind.UNKNOWN),
         ]
     )
     def test_determine_data_kind_via_inferred_type(
         self, column: pd.Series, expected_data_kind: ColumnDataKind
     ):
+        """Test the data kind determination via the inferred type of the column."""
+        # Create copy to not interfere with other tests:
+        column = column.copy()
         self.assertEqual(
-            _determine_data_kind(column),
+            _determine_data_kind_via_inferred_type(column),
             expected_data_kind,
             f"Expected {column} to be determined as {expected_data_kind} data kind.",
         )
 
-        # Attach a missing value to the end of the column and re-test.
-        column.loc[column.index.max() + 1] = None
+    @parameterized.expand(
+        SHARED_DATA_KIND_TEST_CASES
+        + [
+            (pd.Series([1, 2, 3]), ColumnDataKind.INTEGER),
+            (pd.Series([1 + 2j, 2 + 3j]), ColumnDataKind.COMPLEX),
+            (
+                pd.Series([pd.Period("2000Q1"), pd.Period("2000Q2")]),
+                ColumnDataKind.PERIOD,
+            ),
+            (
+                pd.Series([pd.Interval(0, 1), pd.Interval(1, 2)]),
+                ColumnDataKind.INTERVAL,
+            ),
+            (pd.Series([[1, 2], [3, 4]]), ColumnDataKind.UNKNOWN),
+            (pd.Series([["a", "b"], ["c", "d", "e"]]), ColumnDataKind.UNKNOWN),
+            (pd.Series([{"a": 1}, {"b": 2}]), ColumnDataKind.UNKNOWN),
+            (pd.Series([pd.Timestamp("2000-01-01"), "a"]), ColumnDataKind.UNKNOWN),
+            (pd.Series([1, "a"]), ColumnDataKind.UNKNOWN),
+            (pd.Series([TestObject(), TestObject()]), ColumnDataKind.UNKNOWN),
+        ]
+    )
+    def test_determine_data_kind_via_pandas_dtype(
+        self, column: pd.Series, expected_data_kind: ColumnDataKind
+    ):
+        """Test that the data kind is correctly determined via the pandas dtype."""
+        # Create copy to not interfere with other tests:
+        column = column.copy()
         self.assertEqual(
-            _determine_data_kind(column),
+            _determine_data_kind_via_pandas_dtype(column),
             expected_data_kind,
-            f"Expected {column} with missing value to be determined as {expected_data_kind} data kind.",
+            f"Expected {column} to be determined as {expected_data_kind} data kind.",
         )
+
+    @parameterized.expand(
+        SHARED_DATA_KIND_TEST_CASES
+        + [
+            (pd.Series([1, 2, 3]), ColumnDataKind.INTEGER),
+            (pd.Series([b"a", b"b", b"c"]), ColumnDataKind.BYTES),
+            (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
+            (
+                pd.Series([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
+                ColumnDataKind.DATE,
+            ),
+            (
+                pd.Series([datetime.time(12, 0), datetime.time(13, 0)]),
+                ColumnDataKind.TIME,
+            ),
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),
+            (pd.Series([[1, 2], [3, 4]]), ColumnDataKind.LIST),
+            (pd.Series([["a", "b"], ["c", "d", "e"]]), ColumnDataKind.LIST),
+            (pd.Series([{"a": 1}, {"b": 2}]), ColumnDataKind.DICT),
+            (pd.Series([]), ColumnDataKind.EMPTY),
+            (pd.Series([None, None]), ColumnDataKind.EMPTY),
+            (pd.Series([pd.NA, pd.NA]), ColumnDataKind.EMPTY),
+        ]
+    )
+    def test_determine_data_kind_via_arrow(
+        self, column: pd.Series, expected_data_kind: ColumnDataKind
+    ):
+        """Test that the _determine_data_kind_via_arrow function correctly determines
+        the data kind of a column based on the Arrow schema field.
+        """
+        # Create copy to not interfere with other tests:
+        column = column.copy()
+        arrow_field = _get_arrow_schema_field(column)
+
+        self.assertIsNotNone(
+            arrow_field,
+            f"Expected Arrow field to be detected for {column} ({expected_data_kind}).",
+        )
+
+        self.assertEqual(
+            _determine_data_kind_via_arrow(arrow_field),
+            expected_data_kind,
+            f"Expected {column} to be determined as {expected_data_kind} data kind.",
+        )
+
+    def test_determine_dataframe_schema(self):
+        """Test that the determine_dataframe_schema function correctly determines the
+        schema of a dataframe.
+        """
+
+        df = pd.DataFrame(
+            {
+                "int": [1, 2, 3],
+                "float": [1.1, 2.2, 3.3],
+                "bool": [True, False, True],
+                "str": ["a", "b", "c"],
+                "empty": [None, None, None],
+            }
+        )
+
+        arrow_schema = pa.Table.from_pandas(df).schema
+
+        self.assertEqual(
+            determine_dataframe_schema(df, arrow_schema),
+            [
+                ColumnDataKind.INTEGER,  # This is the type of the index
+                ColumnDataKind.INTEGER,
+                ColumnDataKind.FLOAT,
+                ColumnDataKind.BOOLEAN,
+                ColumnDataKind.STRING,
+                ColumnDataKind.EMPTY,
+            ],
+        )
+
+    def test_is_type_compatible(self):
+        """Test that the is_type_compatible function correctly checks for compatibility
+        based on the _EDITING_COMPATIBILITY_MAPPING.
+        """
+        for column_type, data_kinds in _EDITING_COMPATIBILITY_MAPPING.items():
+            for data_kind in data_kinds:
+                self.assertTrue(
+                    is_type_compatible(column_type, data_kind),
+                    f"Expected {column_type} to be compatible with {data_kind}",
+                )
+            self.assertFalse(
+                is_type_compatible(column_type, ColumnDataKind.UNKNOWN),
+                f"Expected {column_type} to not be compatible with {data_kind}",
+            )
+
+        # Check that non-editable column types are compatible to all data kinds:
+        for data_kind in ColumnDataKind:
+            self.assertTrue(
+                is_type_compatible("list", data_kind),
+                f"Expected list to be compatible with {data_kind}",
+            )
