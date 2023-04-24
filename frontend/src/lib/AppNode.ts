@@ -36,7 +36,6 @@ import { Quiver } from "src/lib/Quiver"
 import { addRows } from "./dataFrameProto"
 import { ensureError } from "./ErrorHandling"
 import { toImmutableProto } from "./immutableProto"
-import { MetricsManager } from "./MetricsManager"
 import {
   makeElementWithInfoText,
   makeElementWithErrorText,
@@ -443,15 +442,10 @@ export class BlockNode implements AppNode {
 export class AppRoot {
   private readonly root: BlockNode
 
-  private readonly metricsMgr: MetricsManager
-
   /**
    * Create an empty AppRoot with an optional placeholder element.
    */
-  public static empty(
-    metricsMgr: MetricsManager,
-    placeholderText?: string
-  ): AppRoot {
+  public static empty(placeholderText?: string): AppRoot {
     let mainNodes: AppNode[]
     if (placeholderText != null) {
       const waitNode = new ElementNode(
@@ -476,12 +470,11 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
-    return new AppRoot(metricsMgr, new BlockNode([main, sidebar]))
+    return new AppRoot(new BlockNode([main, sidebar]))
   }
 
-  public constructor(metricsMgr: MetricsManager, root: BlockNode) {
+  public constructor(root: BlockNode) {
     this.root = root
-    this.metricsMgr = metricsMgr
 
     // Verify that our root node has exactly 2 children: a 'main' block and
     // a 'sidebar' block.
@@ -584,7 +577,6 @@ export class AppRoot {
       this.sidebar.clearStaleNodes(currentScriptRunId) || new BlockNode()
 
     return new AppRoot(
-      this.metricsMgr,
       new BlockNode(
         [main, sidebar],
         new BlockProto({ allowEmpty: true }),
@@ -608,10 +600,7 @@ export class AppRoot {
     metadata: ForwardMsgMetadata
   ): AppRoot {
     const elementNode = new ElementNode(element, metadata, scriptRunId)
-    return new AppRoot(
-      this.metricsMgr,
-      this.root.setIn(deltaPath, elementNode, scriptRunId)
-    )
+    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 
   private addBlock(
@@ -628,10 +617,7 @@ export class AppRoot {
       existingNode instanceof BlockNode ? existingNode.children : []
 
     const blockNode = new BlockNode(children, block, scriptRunId)
-    return new AppRoot(
-      this.metricsMgr,
-      this.root.setIn(deltaPath, blockNode, scriptRunId)
-    )
+    return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
   }
 
   private addRows(
@@ -645,10 +631,7 @@ export class AppRoot {
     }
 
     const elementNode = existingNode.addRows(namedDataSet, scriptRunId)
-    return new AppRoot(
-      this.metricsMgr,
-      this.root.setIn(deltaPath, elementNode, scriptRunId)
-    )
+    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 
   private arrowAddRows(
@@ -662,10 +645,7 @@ export class AppRoot {
     }
 
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
-    return new AppRoot(
-      this.metricsMgr,
-      this.root.setIn(deltaPath, elementNode, scriptRunId)
-    )
+    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 }
 
