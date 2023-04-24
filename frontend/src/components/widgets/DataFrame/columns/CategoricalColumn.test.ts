@@ -129,7 +129,7 @@ describe("CategoricalColumn", () => {
       "bar",
     ])
 
-    const errorCell = mockColumn.getCell(undefined)
+    const errorCell = mockColumn.getCell(null)
     expect(isErrorCell(errorCell)).toEqual(true)
   })
 
