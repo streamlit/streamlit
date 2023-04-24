@@ -36,14 +36,13 @@ _NUMERICAL_POSITION_PREFIX = "col:"
 ColumnWidth = Literal["small", "medium", "large"]
 
 # Type alias that represents all available column types
-# that are configurable by the user.
+# which are configurable by the user.
 ColumnType: TypeAlias = Literal[
     "object",
     "text",
     "number",
     "checkbox",
-    "select",
-    "date",
+    "selectbox",
 ]
 
 
@@ -67,13 +66,18 @@ class ColumnDataKind(str, Enum):
     UNKNOWN = "unknown"
 
 
+# The dataframe schema is just a list of column data kinds
+# based on the order of the columns in the underlying dataframe.
+# The index column(s) are attached at the beginning of the list.
+DataframeSchema: TypeAlias = List[ColumnDataKind]
+
 # This mapping contains all editable column types mapped to the data kinds
 # that the column type is compatible for editing.
 _EDITING_COMPATIBILITY_MAPPING: Final = {
     "text": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
     "number": [ColumnDataKind.INTEGER, ColumnDataKind.FLOAT, ColumnDataKind.EMPTY],
     "checkbox": [ColumnDataKind.BOOLEAN, ColumnDataKind.EMPTY],
-    "select": [
+    "selectbox": [
         ColumnDataKind.STRING,
         ColumnDataKind.BOOLEAN,
         ColumnDataKind.INTEGER,
@@ -262,7 +266,7 @@ def _determine_data_kind_via_inferred_type(
     if inferred_type == "empty":
         return ColumnDataKind.EMPTY
 
-    # mixed, unknown-array, categorical, mixed-integer
+    # TODO(lukasmasuch): Unused types: mixed, unknown-array, categorical, mixed-integer
     return ColumnDataKind.UNKNOWN
 
 
@@ -298,9 +302,6 @@ def _determine_data_kind(
         # If dtype is object, we need to infer the type from the column
         return _determine_data_kind_via_inferred_type(column)
     return _determine_data_kind_via_pandas_dtype(column)
-
-
-DataframeSchema: TypeAlias = List[ColumnDataKind]
 
 
 def determine_dataframe_schema(
@@ -379,9 +380,6 @@ class ColumnConfig(TypedDict, total=False):
 
 # A mapping of column names/IDs to column configs.
 ColumnConfigMapping: TypeAlias = Dict[Union[IndexIdentifierType, str], ColumnConfig]
-ColumnConfigMappingInput: TypeAlias = Dict[
-    Union[IndexIdentifierType, str], Union[ColumnConfig, None, str]
-]
 
 
 def marshall_column_config(
