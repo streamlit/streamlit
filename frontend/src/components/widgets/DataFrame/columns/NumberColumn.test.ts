@@ -214,6 +214,10 @@ describe("NumberColumn", () => {
     expect((unsafeCell as TextCell)?.data).toEqual(
       "⚠️ 1234567898765432123\n\nThe value is larger than the maximum supported integer values in number columns (2^53).\n"
     )
+  })
+
+  it("doesn't show an error for large integers with a size up to 2^53", () => {
+    const mockColumn = getNumberColumn(MOCK_INT_ARROW_TYPE)
 
     const safeCell = mockColumn.getCell("1234567898765432")
     expect(isErrorCell(safeCell)).toEqual(false)
