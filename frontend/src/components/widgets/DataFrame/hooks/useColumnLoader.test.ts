@@ -99,6 +99,7 @@ describe("applyColumnConfig", () => {
       [
         "column_2",
         {
+          disabled: true,
           hidden: true,
           alignment: "center",
         } as ColumnConfigProps,
