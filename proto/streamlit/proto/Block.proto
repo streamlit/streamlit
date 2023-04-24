@@ -49,6 +49,11 @@ message Block {
   message Form {
     string form_id = 1;
     bool clear_on_submit = 2;
+    bool is_dialog = 3;
+    string title = 4;
+    bool close_on_submit = 5;
+    bool clear_on_close = 6;
+    bool dismissible = 7;
   }
 
   message TabContainer {

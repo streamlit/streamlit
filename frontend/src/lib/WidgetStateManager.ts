@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import React from "react"
 import produce, { Draft } from "immer"
 import { Long, util } from "protobufjs"
 
@@ -27,7 +27,7 @@ import {
   WidgetStates,
 } from "src/autogen/proto"
 import { Signal, SignalConnection } from "typed-signals"
-import { isValidFormId } from "./utils"
+import { isValidFormId, closeDialog, clearDialogParams } from "./utils"
 
 export interface Source {
   fromUi: boolean
@@ -138,8 +138,17 @@ export class WidgetStateDict {
 class FormState {
   public readonly widgetStates = new WidgetStateDict()
 
+  /** True if the dialog form is opened. */
+  public setIsOpen?: React.Dispatch<boolean>
+
   /** True if the form was created with the clear_on_submit flag. */
   public clearOnSubmit = false
+
+  /** True if the form was created with close_on_submit flag. */
+  public closeOnSubmit = false
+
+  /** True if the form was created with clear_on_close flag. */
+  public clearOnClose = false
 
   /** Signal emitted when the form is cleared. */
   public readonly formCleared = new Signal()
@@ -201,6 +210,24 @@ export class WidgetStateManager {
   }
 
   /**
+   * Register a Form, and assign its state values.
+   * The `Dialog` element calls this when it's first mounted.
+   */
+  public setFormState(
+    formId: string,
+    clearOnSubmit: boolean,
+    closeOnSubmit: boolean,
+    clearOnClose: boolean,
+    setIsOpen: React.Dispatch<boolean>
+  ): void {
+    const formState = this.getOrCreateFormState(formId)
+    formState.clearOnSubmit = clearOnSubmit
+    formState.closeOnSubmit = closeOnSubmit
+    formState.clearOnClose = clearOnClose
+    formState.setIsOpen = setIsOpen
+  }
+
+  /**
    * Commit pending changes for widgets that belong to the given form,
    * and send a rerunBackMsg to the server.
    */
@@ -238,7 +265,29 @@ export class WidgetStateManager {
     // none of these value submissions will trigger re-run requests.)
     if (form.clearOnSubmit) {
       form.formCleared.emit()
+    } else if (form.closeOnSubmit && form.clearOnClose) {
+      form.formCleared.emit()
     }
+
+    if (form.closeOnSubmit && form.setIsOpen) {
+      closeDialog(formId)
+      form.setIsOpen(false)
+      clearDialogParams(formId)
+    }
+  }
+
+  public clearForm(formId: string): void {
+    if (!isValidFormId(formId)) {
+      // This should never get thrown - only Dialog calls this
+      // function.
+      throw new Error(`invalid formID '${formId}'`)
+    }
+    const form = this.getOrCreateFormState(formId)
+    form.widgetStates.clear()
+    form.formCleared.emit()
+    this.widgetStates.copyFrom(form.widgetStates)
+    this.sendUpdateWidgetsMessage()
+    this.syncFormsWithPendingChanges()
   }
 
   /**
@@ -559,7 +608,7 @@ export class WidgetStateManager {
   }
 
   /** Return the FormState for the given form. Create it if it doesn't exist. */
-  private getOrCreateFormState(formId: string): FormState {
+  public getOrCreateFormState(formId: string): FormState {
     let form = this.forms.get(formId)
     if (form != null) {
       return form

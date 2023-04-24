@@ -253,6 +253,19 @@ class Runtime:
             return None
         return session_info.client
 
+    def get_app_session(self, session_id: str) -> Optional[AppSession]:
+        """Get the AppSession for the given session_id, or None
+        if no such session exists.
+
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread.
+        """
+        session_info = self._session_mgr.get_active_session_info(session_id)
+        if session_info is None:
+            return None
+        return session_info.session
+
     def _on_files_updated(self, session_id: str) -> None:
         """Event handler for UploadedFileManager.on_file_added.
         Ensures that uploaded files from stale sessions get deleted.

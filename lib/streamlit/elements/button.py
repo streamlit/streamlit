@@ -344,7 +344,7 @@ class ButtonMixin:
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         if is_in_form(self.dg):
             raise StreamlitAPIException(
-                f"`st.download_button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
+                f"`st.download_button()` can't be used in an `st.form()` or `st.dialog()`.{FORM_DOCS_INFO}"
             )
 
         download_button_proto = DownloadButtonProto()
@@ -407,11 +407,11 @@ class ButtonMixin:
         if runtime.exists():
             if is_in_form(self.dg) and not is_form_submitter:
                 raise StreamlitAPIException(
-                    f"`st.button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
+                    f"`st.button()` can't be used in an `st.form() or `st.dialog()`.{FORM_DOCS_INFO}"
                 )
             elif not is_in_form(self.dg) and is_form_submitter:
                 raise StreamlitAPIException(
-                    f"`st.form_submit_button()` must be used inside an `st.form()`.{FORM_DOCS_INFO}"
+                    f"`st.form_submit_button()` must be used inside an `st.form() or `st.dialog()`.{FORM_DOCS_INFO}"
                 )
 
         button_proto = ButtonProto()

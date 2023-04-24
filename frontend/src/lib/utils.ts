@@ -448,20 +448,85 @@ export function extractPageNameFromPathName(
   )
 }
 
-export const TESTING_QUERY_PARAM_KEY = "_stcore_testing"
-export function isTesting(): boolean {
+export function isQueryParam(key: string): boolean {
   const urlParams = new URLSearchParams(window.location.search)
-  let isTesting = false
+  let isQueryParam = false
   urlParams.forEach((paramValue, paramKey) => {
     paramKey = paramKey.toString().toLowerCase()
     paramValue = paramValue.toString().toLowerCase()
-    if (
-      paramKey === TESTING_QUERY_PARAM_KEY.toLowerCase() &&
-      paramValue === "true"
-    ) {
-      isTesting = true
-      return isTesting
+    if (paramKey === key.toLowerCase() && paramValue.length > 0) {
+      isQueryParam = true
+      return isQueryParam
     }
   })
-  return isTesting
+  return isQueryParam
+}
+
+export function getQueryParam(key: string): string {
+  const urlParams = new URLSearchParams(window.location.search)
+  let result = ""
+  urlParams.forEach((paramValue, paramKey) => {
+    paramKey = paramKey.toString().toLowerCase()
+    paramValue = paramValue.toString().toLowerCase()
+    if (paramKey === key.toLowerCase() && paramValue === "true") {
+      result = paramValue
+    }
+  })
+  return result
+}
+
+export const TESTING_QUERY_PARAM_KEY = "_stcore_testing"
+export function isTesting(): boolean {
+  return isQueryParam(TESTING_QUERY_PARAM_KEY)
+}
+
+export const OPEN_DIALOG_QUERY_PARAM_KEY = "_stcore_open_dialog"
+export const CLOSE_DIALOG_QUERY_PARAM_KEY = "_stcore_close_dialog"
+export function shouldDialogBeOpened(formId: string): string {
+  return getQueryParam(
+    `${OPEN_DIALOG_QUERY_PARAM_KEY}_${formId}`.trim().toLowerCase()
+  )
+}
+export function shouldDialogBeClosed(formId: string): string {
+  return getQueryParam(
+    `${CLOSE_DIALOG_QUERY_PARAM_KEY}_${formId}`.trim().toLowerCase()
+  )
+}
+export function clearDialogParams(formId: string): void {
+  const openKey = `${OPEN_DIALOG_QUERY_PARAM_KEY}_${formId}`
+    .trim()
+    .toLowerCase()
+  const closeKey = `${CLOSE_DIALOG_QUERY_PARAM_KEY}_${formId}`
+    .trim()
+    .toLowerCase()
+  const urlParams = new URLSearchParams(window.location.search)
+  urlParams.delete(openKey)
+  urlParams.delete(closeKey)
+  let params = urlParams.toString()
+  if (params.length > 0) {
+    params = `?${params}`
+  }
+  const newUrl = window.location.origin + window.location.pathname + params
+  window.history.replaceState({ path: newUrl }, "", newUrl)
+  try {
+    if (window.parent && window.parent.history && window.parent.location) {
+      const parentURLParams = new URLSearchParams(
+        window.parent.location.search
+      )
+      parentURLParams.delete(openKey)
+      parentURLParams.delete(closeKey)
+      let params = urlParams.toString()
+      if (params.length > 0) {
+        params = `?${params}`
+      }
+      const newUrl = window.location.origin + window.location.pathname + params
+      window.parent.history.replaceState({ path: newUrl }, "", newUrl)
+    }
+  } catch (err) {}
+}
+export function clearShouldDialogBeOpened(formId: string): void {
+  clearDialogParams(formId)
+}
+export function closeDialog(formId: string): void {
+  clearDialogParams(formId)
 }

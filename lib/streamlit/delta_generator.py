@@ -52,6 +52,7 @@ from streamlit.elements.color_picker import ColorPickerMixin
 from streamlit.elements.data_editor import DataEditorMixin
 from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
+from streamlit.elements.dialog import DialogMixin
 from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.exception import ExceptionMixin
@@ -163,6 +164,7 @@ class DeltaGenerator(
     ExceptionMixin,
     FileUploaderMixin,
     FormMixin,
+    DialogMixin,
     GraphvizMixin,
     HeadingMixin,
     HelpMixin,

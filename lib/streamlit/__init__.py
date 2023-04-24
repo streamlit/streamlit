@@ -134,6 +134,7 @@ error = _main.error
 exception = _main.exception
 file_uploader = _main.file_uploader
 form = _main.form
+dialog = _main.dialog
 form_submit_button = _main.form_submit_button
 graphviz_chart = _main.graphviz_chart
 header = _main.header

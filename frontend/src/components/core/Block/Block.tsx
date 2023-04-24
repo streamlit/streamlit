@@ -22,6 +22,8 @@ import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/utils"
 import withExpandable from "src/hocs/withExpandable"
 import { Form } from "src/components/widgets/Form"
+import { Dialog } from "src/components/widgets/Dialog"
+
 import Tabs from "src/components/elements/Tabs"
 
 import {
@@ -83,10 +85,35 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   )
 
   if (node.deltaBlock.type === "form") {
-    const { formId, clearOnSubmit } = node.deltaBlock.form as BlockProto.Form
+    const {
+      formId,
+      clearOnSubmit,
+      isDialog,
+      title,
+      closeOnSubmit,
+      clearOnClose,
+      dismissible,
+    } = node.deltaBlock.form as BlockProto.Form
     const submitButtonCount = props.formsData.submitButtonCount.get(formId)
     const hasSubmitButton =
       submitButtonCount !== undefined && submitButtonCount > 0
+    if (isDialog) {
+      return (
+        <Dialog
+          formId={formId}
+          clearOnSubmit={clearOnSubmit}
+          hasSubmitButton={hasSubmitButton}
+          scriptRunState={props.scriptRunState}
+          widgetMgr={props.widgetMgr}
+          title={title}
+          closeOnSubmit={closeOnSubmit}
+          clearOnClose={clearOnClose}
+          dismissible={dismissible}
+        >
+          {child}
+        </Dialog>
+      )
+    }
     return (
       <Form
         formId={formId}

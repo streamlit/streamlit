@@ -85,6 +85,7 @@ function ModalBody({ children }: ModalBodyProps): ReactElement {
         color: colors.bodyText,
         fontSize: fontSizes.md,
         overflowY: "auto",
+        overflowX: "hidden",
       }}
     >
       {children}
