@@ -59,6 +59,8 @@ export interface BaseColumnProps {
   readonly contentAlignment?: "left" | "center" | "right"
   // Theme overrides for this column:
   readonly themeOverride?: Partial<GlideTheme>
+  // A custom icon to be displayed in the column header:
+  readonly icon?: string
 }
 
 /**
@@ -184,6 +186,7 @@ export function toGlideColumn(column: BaseColumn): GridColumn {
     title: column.title,
     hasMenu: false,
     themeOverride: column.themeOverride,
+    icon: column.icon,
     ...(column.isStretched && {
       grow: column.isIndex ? 1 : 3,
     }),

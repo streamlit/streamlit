@@ -207,6 +207,17 @@ function useColumnLoader(
         }
       }
 
+      if (
+        element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+        updatedColumn.isEditable == true
+      ) {
+        // Set editable icon for all editable columns:
+        updatedColumn = {
+          ...updatedColumn,
+          icon: "editable",
+        }
+      }
+
       return ColumnType(updatedColumn)
     })
     .filter(column => {

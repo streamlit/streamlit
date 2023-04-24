@@ -275,4 +275,40 @@ describe("useColumnLoader hook", () => {
       expect(column.isStretched).toBe(true)
     }
   })
+
+  it("configures the editable icon for editable columns", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+      useContainerWidth: true,
+      editingMode: ArrowProto.EditingMode.FIXED,
+    })
+
+    const data = new Quiver(element)
+
+    const { result } = renderHook(() => {
+      return useColumnLoader(element, data, false)
+    })
+
+    for (const column of result.current.columns) {
+      expect(column.icon).toBe("editable")
+    }
+  })
+
+  it("doesn't configure any icon for non-editable columns", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+      useContainerWidth: true,
+      editingMode: ArrowProto.EditingMode.READ_ONLY,
+    })
+
+    const data = new Quiver(element)
+
+    const { result } = renderHook(() => {
+      return useColumnLoader(element, data, false)
+    })
+
+    for (const column of result.current.columns) {
+      expect(column.icon).toBe(undefined)
+    }
+  })
 })
