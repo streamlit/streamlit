@@ -264,8 +264,8 @@ class DataEditorUtilTest(unittest.TestCase):
         )
         self.assertNotIn("a", columns_config)
         self.assertNotIn("b", columns_config)
-        self.assertTrue(columns_config["c"]["disabled"])
-        self.assertTrue(columns_config["d"]["disabled"])
+        self.assertFalse(columns_config["c"]["editable"])
+        self.assertFalse(columns_config["d"]["editable"])
 
 
 class DataEditorTest(DeltaGeneratorTestCase):
