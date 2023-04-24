@@ -151,6 +151,9 @@ def _parse_value(
     value : str | int | float | bool | None
         The value to convert.
 
+    column_data_kind : ColumnDataKind
+        The determined data kind of the column.
+
     Returns
     -------
     The converted value.
@@ -370,7 +373,7 @@ def _apply_data_specific_configs(
         if type_util.is_colum_type_arrow_incompatible(column_data):
             if column_name not in columns_config:
                 columns_config[column_name] = {}
-            columns_config[column_name]["disabled"] = True
+            columns_config[column_name]["editable"] = False
             # Convert incompatible type to string
             data_df[column_name] = column_data.astype(str)
 
