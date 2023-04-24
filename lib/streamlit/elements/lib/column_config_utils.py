@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from enum import Enum
-from typing import Any, Dict, Final, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 import pyarrow as pa
