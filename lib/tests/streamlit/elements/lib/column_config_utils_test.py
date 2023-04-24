@@ -25,7 +25,6 @@ from parameterized import parameterized
 from streamlit.elements.lib.column_config_utils import (
     _EDITING_COMPATIBILITY_MAPPING,
     ColumnDataKind,
-    ColumnType,
     _determine_data_kind,
     _determine_data_kind_via_arrow,
     _determine_data_kind_via_inferred_type,
@@ -57,6 +56,10 @@ SHARED_DATA_KIND_TEST_CASES = [
     (pd.Series([1, 2.2, 3]), ColumnDataKind.FLOAT),  # mixed-integer-float
     (
         pd.Series([pd.Timestamp("2000-01-01"), pd.Timestamp("2000-01-02")]),
+        ColumnDataKind.DATETIME,
+    ),
+    (
+        pd.Series([datetime.datetime(2000, 1, 1), datetime.datetime(2000, 1, 2)]),
         ColumnDataKind.DATETIME,
     ),
     (
@@ -131,6 +134,48 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             _determine_data_kind(column, _get_arrow_schema_field(column)),
             expected_data_kind,
             f"Expected {column} with missing value to be determined as {expected_data_kind} data kind.",
+        )
+
+    @parameterized.expand(
+        [
+            (pd.Index(["a", "b", "c"]), ColumnDataKind.STRING),
+            (pd.Index([1, 2, 3]), ColumnDataKind.INTEGER),
+            (pd.Index([1.1, 2.2, 3.3]), ColumnDataKind.FLOAT),
+            (pd.Index([1, 2.2, 3]), ColumnDataKind.FLOAT),  # mixed-integer-float
+            (
+                pd.Index([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
+                ColumnDataKind.DATE,
+            ),
+            (
+                pd.Index([datetime.time(0, 0, 0), datetime.time(0, 0, 1)]),
+                ColumnDataKind.TIME,
+            ),
+            (pd.RangeIndex(0, 3), ColumnDataKind.INTEGER),
+            (pd.TimedeltaIndex(["1 day", "2 days"]), ColumnDataKind.TIMEDELTA),
+            (
+                pd.DatetimeIndex(
+                    [datetime.datetime(2000, 1, 1), datetime.datetime(2000, 1, 2)]
+                ),
+                ColumnDataKind.DATETIME,
+            ),
+            (
+                pd.PeriodIndex([pd.Period("2000Q1"), pd.Period("2000Q2")]),
+                ColumnDataKind.PERIOD,
+            ),
+            (pd.IntervalIndex.from_breaks([0, 1, 2]), ColumnDataKind.INTERVAL),
+            (pd.CategoricalIndex(["a", "b", "c"]), ColumnDataKind.STRING),
+            (pd.CategoricalIndex([1, 2, 3]), ColumnDataKind.INTEGER),
+            (pd.CategoricalIndex([1.1, 2.2, 3.3]), ColumnDataKind.FLOAT),
+        ]
+    )
+    def test_determine_data_kind_with_index(
+        self, index: pd.Index, expected_data_kind: ColumnDataKind
+    ):
+        """Test that _determine_data_kind() returns the expected data kind for a given index."""
+        self.assertEqual(
+            _determine_data_kind(index, None),
+            expected_data_kind,
+            f"Expected {index} to be determined as {expected_data_kind} data kind.",
         )
 
     @parameterized.expand(
