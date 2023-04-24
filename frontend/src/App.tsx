@@ -234,7 +234,7 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty(this.metricsMgr, "Please wait..."),
+      elements: AppRoot.empty("Please wait..."),
       isFullScreen: false,
       scriptName: "",
       scriptRunId: "<null>",
@@ -1068,7 +1068,7 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(this.metricsMgr),
+        elements: AppRoot.empty(),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
