@@ -531,3 +531,60 @@ dtype: object""",
             type_util.convert_df_to_data_format(
                 pd.DataFrame({"a": [1, 2, 3]}), DataFormat.UNKNOWN
             )
+
+    def test_convert_df_with_missing_values(self):
+        """Test that `convert_df_to_data_format` correctly converts
+        all types of missing values to None.
+        """
+
+        # Add dataframe with different missing values:
+        df = pd.DataFrame(
+            {
+                "missing": [None, pd.NA, np.nan, pd.NaT],
+            }
+        )
+
+        self.assertEqual(
+            type_util.convert_df_to_data_format(df, DataFormat.LIST_OF_VALUES),
+            [None, None, None, None],
+        )
+        self.assertEqual(
+            type_util.convert_df_to_data_format(df, DataFormat.TUPLE_OF_VALUES),
+            (None, None, None, None),
+        )
+        self.assertEqual(
+            type_util.convert_df_to_data_format(df, DataFormat.SET_OF_VALUES),
+            {None},
+        )
+        self.assertEqual(
+            type_util.convert_df_to_data_format(df, DataFormat.LIST_OF_ROWS),
+            [
+                [None],
+                [None],
+                [None],
+                [None],
+            ],
+        )
+        self.assertEqual(
+            type_util.convert_df_to_data_format(df, DataFormat.LIST_OF_RECORDS),
+            [
+                {"missing": None},
+                {"missing": None},
+                {"missing": None},
+                {"missing": None},
+            ],
+        )
+        self.assertEqual(
+            type_util.convert_df_to_data_format(df, DataFormat.COLUMN_VALUE_MAPPING),
+            {
+                "missing": [None, None, None, None],
+            },
+        )
+        self.assertEqual(
+            type_util.convert_df_to_data_format(df, DataFormat.COLUMN_INDEX_MAPPING),
+            {"missing": {0: None, 1: None, 2: None, 3: None}},
+        )
+        self.assertEqual(
+            type_util.convert_df_to_data_format(df, DataFormat.KEY_VALUE_DICT),
+            {0: None, 1: None, 2: None, 3: None},
+        )
