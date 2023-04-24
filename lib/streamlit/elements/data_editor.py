@@ -404,34 +404,6 @@ def _apply_data_specific_configs(
         data_df.rename(columns={0: "value"}, inplace=True)
 
 
-def _is_supported_index(df_index: pd.Index) -> bool:
-    """Check if the index is supported by the data editor component.
-
-    Parameters
-    ----------
-    df_index : pd.Index
-        The index to check.
-
-    Returns
-    -------
-    bool
-        True if the index is supported, False otherwise.
-    """
-
-    return (
-        type(df_index)
-        in [
-            pd.RangeIndex,
-            pd.Index,
-        ]
-        # We need to check these index types without importing, since they are deprecated
-        # and planned to be removed soon.
-        or is_type(df_index, "pandas.core.indexes.numeric.Int64Index")
-        or is_type(df_index, "pandas.core.indexes.numeric.Float64Index")
-        or is_type(df_index, "pandas.core.indexes.numeric.UInt64Index")
-    )
-
-
 class DataEditorMixin:
     @overload
     def experimental_data_editor(
@@ -593,7 +565,19 @@ class DataEditorMixin:
         # since we will apply edits directly to it.
         data_df = type_util.convert_anything_to_df(data, ensure_copy=True)
 
-        if not _is_supported_index(data_df.index):
+        # Check if the index is supported.
+        if not (
+            type(data_df.index)
+            in [
+                pd.RangeIndex,
+                pd.Index,
+            ]
+            # We need to check these index types without importing, since they are deprecated
+            # and planned to be removed soon.
+            or is_type(data_df.index, "pandas.core.indexes.numeric.Int64Index")
+            or is_type(data_df.index, "pandas.core.indexes.numeric.Float64Index")
+            or is_type(data_df.index, "pandas.core.indexes.numeric.UInt64Index")
+        ):
             raise StreamlitAPIException(
                 f"The type of the dataframe index - {type(data_df.index).__name__} - is not "
                 "yet supported by the data editor."
