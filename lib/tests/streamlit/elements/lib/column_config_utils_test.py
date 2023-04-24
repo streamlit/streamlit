@@ -87,7 +87,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         + [
             (pd.Series([b"a", b"b", b"c"]), ColumnDataKind.BYTES),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),
-            (pd.Series([]), ColumnDataKind.EMPTY),
+            (pd.Series([], dtype="object"), ColumnDataKind.EMPTY),
             (pd.Series([None, None]), ColumnDataKind.EMPTY),
             (pd.Series([pd.NA, pd.NA]), ColumnDataKind.EMPTY),
             #
@@ -199,7 +199,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                 pd.Series([pd.Interval(0, 1), pd.Interval(1, 2)]),
                 ColumnDataKind.INTERVAL,
             ),
-            (pd.Series([]), ColumnDataKind.EMPTY),
+            (pd.Series([], dtype="object"), ColumnDataKind.EMPTY),
             (pd.Series([None, None]), ColumnDataKind.EMPTY),
             (pd.Series([pd.NA, pd.NA]), ColumnDataKind.EMPTY),
             (pd.Series([[1, 2], [3, 4]]), ColumnDataKind.UNKNOWN),
@@ -273,7 +273,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (pd.Series([[1, 2], [3, 4]]), ColumnDataKind.LIST),
             (pd.Series([["a", "b"], ["c", "d", "e"]]), ColumnDataKind.LIST),
             (pd.Series([{"a": 1}, {"b": 2}]), ColumnDataKind.DICT),
-            (pd.Series([]), ColumnDataKind.EMPTY),
+            (pd.Series([], dtype="object"), ColumnDataKind.EMPTY),
             (pd.Series([None, None]), ColumnDataKind.EMPTY),
             (pd.Series([pd.NA, pd.NA]), ColumnDataKind.EMPTY),
         ]
