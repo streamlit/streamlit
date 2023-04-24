@@ -28,6 +28,8 @@ from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 IndexIdentifierType = Literal["index"]
 INDEX_IDENTIFIER: IndexIdentifierType = "index"
 
+_NUMERICAL_INDEX_PREFIX: IndexIdentifierType = "col:"
+
 ColumnWidth = Literal["small", "medium", "large"]
 
 # Type alias that represents all available column types
@@ -39,14 +41,6 @@ ColumnType: TypeAlias = Literal[
     "checkbox",
     "select",
     "date",
-    "time",
-    "datetime",
-    "url",
-    "list",
-    "image",
-    "range",
-    "bar_chart",
-    "line_chart",
 ]
 
 
@@ -83,10 +77,6 @@ _EDITING_COMPATIBILITY_MAPPING: Final = {
         ColumnDataKind.FLOAT,
         ColumnDataKind.EMPTY,
     ],
-    "date": [ColumnDataKind.DATE, ColumnDataKind.DATETIME, ColumnDataKind.EMPTY],
-    "time": [ColumnDataKind.TIME, ColumnDataKind.DATETIME, ColumnDataKind.EMPTY],
-    "datetime": [ColumnDataKind.DATETIME, ColumnDataKind.DATE, ColumnDataKind.EMPTY],
-    "url": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
 }
 
 
@@ -417,7 +407,7 @@ def marshall_column_config(
 
     proto.columns = json.dumps(
         {
-            (f"col:{str(k)}" if isinstance(k, int) else k): v
+            (f"{_NUMERICAL_INDEX_PREFIX}{str(k)}" if isinstance(k, int) else k): v
             for (k, v) in remove_none_values(column_config_mapping).items()
         }
     )
