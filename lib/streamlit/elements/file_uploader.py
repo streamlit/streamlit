@@ -390,11 +390,19 @@ class FileUploaderMixin:
                 for file_type in type
             ]
 
-            if ".jpg" in type and ".jpeg" not in type:
-                type.append(".jpeg")
+            type_pairs = [
+                (".jpg", ".jpeg"),
+                (".mpg", ".mpeg"),
+                (".mp4", ".mpeg4"),
+                (".tif", ".tiff"),
+                (".htm", ".html"),
+            ]
 
-            if ".jpeg" in type and ".jpg" not in type:
-                type.append(".jpg")
+            for x, y in type_pairs:
+                if x in type and y not in type:
+                    type.append(y)
+                if y in type and x not in type:
+                    type.append(x)
 
         file_uploader_proto = FileUploaderProto()
         file_uploader_proto.label = label
