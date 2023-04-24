@@ -78,7 +78,7 @@ class CachedDataFuncInfo(CachedFuncInfo):
         show_spinner: bool | str,
         persist: CachePersistType,
         max_entries: int | None,
-        ttl: float | timedelta | None,
+        ttl: float | timedelta | str | None,
         allow_widgets: bool,
     ):
         super().__init__(
@@ -348,7 +348,7 @@ class CacheDataAPI:
     def __call__(
         self,
         *,
-        ttl: float | timedelta | None = None,
+        ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
         persist: CachePersistType | bool = None,
@@ -360,7 +360,7 @@ class CacheDataAPI:
         self,
         func: F | None = None,
         *,
-        ttl: float | timedelta | None = None,
+        ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
         persist: CachePersistType | bool = None,
@@ -379,7 +379,7 @@ class CacheDataAPI:
         self,
         func: F | None = None,
         *,
-        ttl: float | timedelta | None,
+        ttl: float | timedelta | str | None,
         max_entries: int | None,
         show_spinner: bool | str,
         persist: CachePersistType | bool,
@@ -402,11 +402,16 @@ class CacheDataAPI:
         func : callable
             The function to cache. Streamlit hashes the function's source code.
 
-        ttl : float or timedelta or None
-            The maximum number of seconds to keep an entry in the cache, or
-            None if cache entries should not expire. The default is None.
-            Note that ttl is incompatible with ``persist="disk"`` - ``ttl`` will be
-            ignored if ``persist`` is specified.
+        ttl : float or timedelta or str or None
+            The maximum time to keep an entry in the cache, or None if cache
+            entries should not expire. The default is None. Note that ttl is
+            incompatible with ``persist="disk"`` - ``ttl`` will be ignored if
+            ``persist`` is specified.
+
+            If ttl is a str, then it should be formatted as pairs of numbers
+            and units. For the units, use `w` for _weeks_, `d` for _days_, `h`
+            for _hours_, `m` for _minutes_, and `s` for _seconds_. Examples of
+            valid strings are: `"1d"`, `"1.5d"`, and `"1h23s"`.
 
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None

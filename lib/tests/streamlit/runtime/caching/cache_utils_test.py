@@ -21,12 +21,20 @@ from parameterized import parameterized
 
 from streamlit.runtime.caching.cache_utils import ttl_to_seconds
 
+NORMAL_PARAMS = [
+    ("float", 3.5, 3.5),
+    ("timedelta", timedelta(minutes=3), 60 * 3),
+    ("str 1 arg", "1d", 24 * 60 * 60),
+    ("str 2 args", "1d23h", 24 * 60 * 60 + 23 * 60 * 60),
+    ("str 3 args", "1d23h45m", 24 * 60 * 60 + 23 * 60 * 60 + 45 * 60),
+    ("str 2 args with float", "1.5d23.5h", 1.5 * 24 * 60 * 60 + 23.5 * 60 * 60),
+]
+
 
 class CacheUtilsTest(unittest.TestCase):
     @parameterized.expand(
         [
-            ("float", 3.5, 3.5),
-            ("timedelta", timedelta(minutes=3), 60 * 3),
+            *NORMAL_PARAMS,
             ("None", None, math.inf),
         ]
     )
@@ -36,8 +44,7 @@ class CacheUtilsTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("float", 3.5, 3.5),
-            ("timedelta", timedelta(minutes=3), 60 * 3),
+            *NORMAL_PARAMS,
             ("None", None, None),
         ]
     )

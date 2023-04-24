@@ -174,3 +174,9 @@ class UnevaluatedDataFrameError(StreamlitAPIException):
     """Used to display a message about uncollected dataframe being used"""
 
     pass
+
+
+class BadTTLStringError(StreamlitAPIException):
+    """Raised when a bad ttl= argument string is passed."""
+
+    pass
