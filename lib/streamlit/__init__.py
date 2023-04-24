@@ -201,11 +201,6 @@ session_state = _SessionStateProxy()
 cache_data = _cache_data
 cache_resource = _cache_resource
 
-# Beta APIs
-beta_container = _gather_metrics("beta_container", _main.beta_container)
-beta_expander = _gather_metrics("beta_expander", _main.beta_expander)
-beta_columns = _gather_metrics("beta_columns", _main.beta_columns)
-
 # Experimental APIs
 experimental_user = _UserInfoProxy()
 experimental_singleton = _experimental_singleton
