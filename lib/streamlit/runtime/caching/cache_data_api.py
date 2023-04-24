@@ -408,10 +408,9 @@ class CacheDataAPI:
             incompatible with ``persist="disk"`` - ``ttl`` will be ignored if
             ``persist`` is specified.
 
-            If ttl is a str, then it should be formatted as pairs of numbers
-            and units. For the units, use `w` for _weeks_, `d` for _days_, `h`
-            for _hours_, `m` for _minutes_, and `s` for _seconds_. Examples of
-            valid strings are: `"1d"`, `"1.5d"`, and `"1h23s"`.
+            If ttl is a str, then it should be in a format supported by [Pandas's
+            Timedelta constructor](https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html).
+            Examples of valid strings are: "1d", "1.5 days", and "1h23s".
 
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None

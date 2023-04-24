@@ -20,7 +20,6 @@ import functools
 import hashlib
 import inspect
 import math
-import re
 import threading
 import time
 import types
@@ -35,7 +34,6 @@ from streamlit import type_util
 from streamlit.elements.spinner import spinner
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import (
-    BadTTLStringError,
     CacheError,
     CacheKeyNotFoundError,
     UnevaluatedDataFrameError,
@@ -58,21 +56,6 @@ _LOGGER = get_logger(__name__)
 # The timer function we use with TTLCache. This is the default timer func, but
 # is exposed here as a constant so that it can be patched in unit tests.
 TTLCACHE_TIMER = time.monotonic
-
-_TIMEDELTA_STR_RE = re.compile(
-    "^"
-    + "".join(
-        r"((?P<{name}>[\.\d]+?){letter})?".format(letter=k, name=v)
-        for k, v in [
-            ("w", "weeks"),
-            ("d", "days"),
-            ("h", "hours"),
-            ("m", "minutes"),
-            ("s", "seconds"),
-        ]
-    )
-    + "$"
-)
 
 
 @overload
@@ -98,14 +81,9 @@ def ttl_to_seconds(
     if isinstance(ttl, timedelta):
         return ttl.total_seconds()
     if isinstance(ttl, str):
-        parts = _TIMEDELTA_STR_RE.match(ttl)
-        if parts is None:
-            raise BadTTLStringError(
-                "TTL string doesn't look right. It should be formatted as `'1d2h34m'`, "
-                f"for example. Got: {ttl}"
-            )
-        time_params = {k: float(v) for k, v in parts.groupdict().items() if k}
-        return timedelta(**time_params).total_seconds()
+        import pandas as pd
+
+        return pd.Timedelta(ttl).to_pytimedelta().total_seconds()
 
     return ttl
 

@@ -26,7 +26,11 @@ NORMAL_PARAMS = [
     ("timedelta", timedelta(minutes=3), 60 * 3),
     ("str 1 arg", "1d", 24 * 60 * 60),
     ("str 2 args", "1d23h", 24 * 60 * 60 + 23 * 60 * 60),
-    ("str 3 args", "1d23h45m", 24 * 60 * 60 + 23 * 60 * 60 + 45 * 60),
+    (
+        "complex str 3 args",
+        "1 day 23hr 45minutes",
+        24 * 60 * 60 + 23 * 60 * 60 + 45 * 60,
+    ),
     ("str 2 args with float", "1.5d23.5h", 1.5 * 24 * 60 * 60 + 23.5 * 60 * 60),
 ]
 
