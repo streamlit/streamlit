@@ -151,10 +151,6 @@ export class SegmentMetricsManager implements MetricsManager {
       case "arrowAddRows":
         this.incrementDeltaCounter("arrow add rows")
         break
-
-      default: {
-        throw new Error(`Unrecognized deltaType: '${delta.type}'`)
-      }
     }
   }
 
