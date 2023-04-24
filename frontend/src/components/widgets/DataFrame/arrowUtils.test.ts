@@ -246,6 +246,7 @@ describe("getIndexFromArrow", () => {
     expect(indexColumn).toEqual({
       id: `index-0`,
       isEditable: true,
+      name: "",
       title: "",
       arrowType: {
         meta: null,
@@ -267,6 +268,7 @@ describe("getIndexFromArrow", () => {
     expect(indexColumn1).toEqual({
       id: `index-0`,
       isEditable: true,
+      name: "number",
       title: "number",
       arrowType: {
         meta: null,
@@ -281,6 +283,7 @@ describe("getIndexFromArrow", () => {
     expect(indexColumn2).toEqual({
       id: `index-1`,
       isEditable: true,
+      name: "color",
       title: "color",
       arrowType: {
         meta: null,
@@ -303,6 +306,7 @@ describe("getColumnFromArrow", () => {
     const column = getColumnFromArrow(data, 0)
     expect(column).toEqual({
       id: "column-c1-0",
+      name: "c1",
       title: "c1",
       isEditable: true,
       arrowType: {
@@ -324,6 +328,7 @@ describe("getColumnFromArrow", () => {
     const column = getColumnFromArrow(data, 0)
     expect(column).toEqual({
       id: "column-c1-0",
+      name: "c1",
       title: "c1",
       isEditable: true,
       arrowType: {
@@ -362,6 +367,7 @@ describe("getAllColumnsFromArrow", () => {
         isEditable: true,
         isHidden: false,
         isIndex: true,
+        name: "",
         title: "",
       },
       {
@@ -376,6 +382,7 @@ describe("getAllColumnsFromArrow", () => {
         isEditable: true,
         isHidden: false,
         isIndex: false,
+        name: "c1",
         title: "c1",
       },
       {
@@ -390,6 +397,7 @@ describe("getAllColumnsFromArrow", () => {
         isEditable: true,
         isHidden: false,
         isIndex: false,
+        name: "c2",
         title: "c2",
       },
     ])
@@ -415,6 +423,7 @@ describe("getAllColumnsFromArrow", () => {
         isEditable: true,
         isHidden: false,
         isIndex: true,
+        name: "",
         title: "",
       },
     ])
