@@ -23,17 +23,21 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.data_editor import (
-    _INDEX_IDENTIFIER,
-    ColumnConfigMapping,
     _apply_cell_edits,
     _apply_data_specific_configs,
     _apply_dataframe_edits,
     _apply_row_additions,
     _apply_row_deletions,
+)
+from streamlit.elements.lib.column_config_utils import (
+    INDEX_IDENTIFIER,
+    ColumnConfigMapping,
+    determine_dataframe_schema,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
@@ -44,6 +48,11 @@ from streamlit.type_util import (
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
+
+
+def _get_arrow_schema(df: pd.DataFrame) -> pa.Schema:
+    """Get the Arrow schema for a DataFrame."""
+    return pa.Table.from_pandas(df).schema
 
 
 class DataEditorUtilTest(unittest.TestCase):
@@ -74,7 +83,9 @@ class DataEditorUtilTest(unittest.TestCase):
             # TODO: "3:1": "2020-03-20T14:28:23",
         }
 
-        _apply_cell_edits(df, edited_cells)
+        _apply_cell_edits(
+            df, edited_cells, determine_dataframe_schema(df, _get_arrow_schema(df))
+        )
 
         self.assertEqual(df.iat[0, 0], 10)
         self.assertEqual(df.iat[0, 1], "foo")
@@ -98,7 +109,9 @@ class DataEditorUtilTest(unittest.TestCase):
             {"1": 11, "2": "bar", "3": True},
         ]
 
-        _apply_row_additions(df, added_rows)
+        _apply_row_additions(
+            df, added_rows, determine_dataframe_schema(df, _get_arrow_schema(df))
+        )
 
         self.assertEqual(len(df), 5)
 
@@ -145,6 +158,7 @@ class DataEditorUtilTest(unittest.TestCase):
                 "added_rows": added_rows,
                 "edited_cells": edited_cells,
             },
+            determine_dataframe_schema(df, _get_arrow_schema(df)),
         )
 
         self.assertEqual(
@@ -187,12 +201,12 @@ class DataEditorUtilTest(unittest.TestCase):
 
         if hidden:
             self.assertEqual(
-                columns_config[_INDEX_IDENTIFIER]["hidden"],
+                columns_config[INDEX_IDENTIFIER]["hidden"],
                 hidden,
                 f"Data of type {data_format} should be hidden.",
             )
         else:
-            self.assertNotIn(_INDEX_IDENTIFIER, columns_config)
+            self.assertNotIn(INDEX_IDENTIFIER, columns_config)
 
     @parameterized.expand(
         [
@@ -250,8 +264,8 @@ class DataEditorUtilTest(unittest.TestCase):
         )
         self.assertNotIn("a", columns_config)
         self.assertNotIn("b", columns_config)
-        self.assertFalse(columns_config["c"]["editable"])
-        self.assertFalse(columns_config["d"]["editable"])
+        self.assertTrue(columns_config["c"]["disabled"])
+        self.assertTrue(columns_config["d"]["disabled"])
 
 
 class DataEditorTest(DeltaGeneratorTestCase):
