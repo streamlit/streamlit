@@ -142,7 +142,7 @@ class DataCaches(CacheStatsProvider):
         key: str,
         persist: CachePersistType,
         max_entries: int | None,
-        ttl: int | float | timedelta | None,
+        ttl: int | float | timedelta | str | None,
         display_name: str,
         allow_widgets: bool,
     ) -> DataCache:
@@ -240,7 +240,7 @@ class DataCaches(CacheStatsProvider):
         function_name: str,
         persist: CachePersistType,
         max_entries: int | None,
-        ttl: int | float | timedelta | None,
+        ttl: int | float | timedelta | str | None,
     ) -> None:
         """Validate that the cache params are valid for given storage.
 
