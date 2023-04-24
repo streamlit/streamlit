@@ -154,6 +154,7 @@ class StreamlitTest(unittest.TestCase):
                 "get_option",
                 "set_option",
                 "connection",
+                "dialog",
             },
         )
 

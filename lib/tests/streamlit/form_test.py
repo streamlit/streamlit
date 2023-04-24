@@ -199,7 +199,8 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
             st.form(key="foo")
 
         self.assertIn(
-            "There are multiple identical forms with `key='foo'`", str(ctx.exception)
+            "There are multiple identical dialogs/forms with `key='foo'`",
+            str(ctx.exception),
         )
 
     def test_multiple_forms_same_labels_different_keys(self):
@@ -230,7 +231,8 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
                 st.button("foo")
 
         self.assertIn(
-            "`st.button()` can't be used in an `st.form()`", str(ctx.exception)
+            "`st.button()` can't be used in an `st.form() or `st.dialog()`",
+            str(ctx.exception),
         )
 
     def test_form_block_data(self):
@@ -260,7 +262,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
             st.form_submit_button()
 
         self.assertIn(
-            "`st.form_submit_button()` must be used inside an `st.form()`",
+            "`st.form_submit_button()` must be used inside an `st.form() or `st.dialog()",
             str(ctx.exception),
         )
 

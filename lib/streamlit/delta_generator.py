@@ -45,6 +45,7 @@ from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
+from streamlit.elements.dialog import DialogMixin
 from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.exception import ExceptionMixin
@@ -161,6 +162,7 @@ class DeltaGenerator(
     ExceptionMixin,
     FileUploaderMixin,
     FormMixin,
+    DialogMixin,
     GraphvizMixin,
     HeadingMixin,
     HelpMixin,

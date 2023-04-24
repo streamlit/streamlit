@@ -22,6 +22,7 @@ import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import { getElementWidgetID } from "@streamlit/lib/src/util/utils"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
+import { Dialog } from "src/components/widgets/Dialog"
 import Tabs, { TabProps } from "@streamlit/lib/src/components/elements/Tabs"
 import ChatMessage from "@streamlit/lib/src/components/elements/ChatMessage"
 import Expander from "@streamlit/lib/src/components/elements/Expander"
@@ -84,10 +85,38 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   }
 
   if (node.deltaBlock.type === "form") {
-    const { formId, clearOnSubmit } = node.deltaBlock.form as BlockProto.Form
+    const {
+      formId,
+      clearOnSubmit,
+      isDialog,
+      title,
+      closeOnSubmit,
+      clearOnClose,
+      dismissible,
+    } = node.deltaBlock.form as BlockProto.Form
     const submitButtons = props.formsData.submitButtons.get(formId)
     const hasSubmitButton =
       submitButtons !== undefined && submitButtons.length > 0
+    const submitButtonCount = props.formsData.submitButtonCount.get(formId)
+    const hasSubmitButton =
+      submitButtonCount !== undefined && submitButtonCount > 0
+    if (isDialog) {
+      return (
+        <Dialog
+          formId={formId}
+          clearOnSubmit={clearOnSubmit}
+          hasSubmitButton={hasSubmitButton}
+          scriptRunState={props.scriptRunState}
+          widgetMgr={props.widgetMgr}
+          title={title}
+          closeOnSubmit={closeOnSubmit}
+          clearOnClose={clearOnClose}
+          dismissible={dismissible}
+        >
+          {child}
+        </Dialog>
+      )
+    }
     return (
       <Form
         formId={formId}
