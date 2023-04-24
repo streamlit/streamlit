@@ -49,6 +49,7 @@ import {
 
 const MOCK_TEXT_COLUMN = TextColumn({
   id: "1",
+  name: "text_column",
   title: "Text column",
   indexNumber: 0,
   isEditable: false,
@@ -63,6 +64,7 @@ const MOCK_TEXT_COLUMN = TextColumn({
 
 const MOCK_NUMBER_COLUMN = NumberColumn({
   id: "1",
+  name: "number_column",
   title: "Number column",
   indexNumber: 0,
   isEditable: false,
@@ -334,7 +336,7 @@ describe("getColumnFromArrow", () => {
       },
       isIndex: false,
       isHidden: false,
-      columnTypeMetadata: {
+      columnTypeOptions: {
         options: ["bar", "foo"],
       },
     })
@@ -368,7 +370,7 @@ describe("getAllColumnsFromArrow", () => {
           numpy_type: "object",
           pandas_type: "unicode",
         },
-        columnTypeMetadata: undefined,
+        columnTypeOptions: undefined,
         id: "column-c1-0",
         indexNumber: 1,
         isEditable: true,
@@ -382,7 +384,7 @@ describe("getAllColumnsFromArrow", () => {
           numpy_type: "object",
           pandas_type: "unicode",
         },
-        columnTypeMetadata: undefined,
+        columnTypeOptions: undefined,
         id: "column-c2-1",
         indexNumber: 2,
         isEditable: true,
@@ -442,6 +444,7 @@ describe("getCellFromArrow", () => {
   it("uses quiver formatting for object cells", () => {
     const objectColumn = ObjectColumn({
       id: "1",
+      name: "object_column",
       title: "Object column",
       indexNumber: 0,
       isEditable: false,

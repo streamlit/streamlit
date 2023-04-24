@@ -37,11 +37,13 @@ import useColumnLoader, {
   getColumnType,
   INDEX_IDENTIFIER,
   COLUMN_POSITION_PREFIX,
+  COLUMN_WIDTH_MAPPING,
 } from "./useColumnLoader"
 
 const MOCK_COLUMNS: BaseColumn[] = [
   NumberColumn({
     id: "index_col",
+    name: "",
     title: "",
     indexNumber: 0,
     arrowType: {
@@ -55,6 +57,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
   }),
   NumberColumn({
     id: "column_1",
+    name: "column_1",
     title: "column_1",
     indexNumber: 1,
     arrowType: {
@@ -68,6 +71,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
   }),
   TextColumn({
     id: "column_2",
+    name: "column_2",
     title: "column_2",
     indexNumber: 2,
     arrowType: {
@@ -87,27 +91,27 @@ describe("applyColumnConfig", () => {
       [
         "column_1",
         {
-          width: 100,
-          editable: true,
+          width: "small",
+          disabled: false,
           type: "text",
-        },
+        } as ColumnConfigProps,
       ],
       [
         "column_2",
         {
           hidden: true,
           alignment: "center",
-        },
+        } as ColumnConfigProps,
       ],
     ])
 
     const column1 = applyColumnConfig(MOCK_COLUMNS[1], columnConfig)
     expect(column1.isEditable).toBe(true)
-    expect(column1.width).toBe(100)
+    expect(column1.width).toBe(COLUMN_WIDTH_MAPPING["small"])
     expect(column1.customType).toBe("text")
     expect(column1).toEqual({
       ...MOCK_COLUMNS[1],
-      width: 100,
+      width: COLUMN_WIDTH_MAPPING["small"],
       isEditable: true,
       customType: "text",
     })
@@ -129,13 +133,13 @@ describe("applyColumnConfig", () => {
       [
         INDEX_IDENTIFIER,
         {
-          width: 123,
+          width: "small",
         },
       ],
     ])
 
     const column1 = applyColumnConfig(MOCK_COLUMNS[0], columnConfig)
-    expect(column1.width).toBe(123)
+    expect(column1.width).toBe(COLUMN_WIDTH_MAPPING["small"])
     expect(column1.isIndex).toBe(true)
 
     const column2 = applyColumnConfig(MOCK_COLUMNS[1], columnConfig)
@@ -148,13 +152,13 @@ describe("applyColumnConfig", () => {
       [
         `${COLUMN_POSITION_PREFIX}0`,
         {
-          width: 123,
+          width: "small",
         },
       ],
     ])
 
     const column1 = applyColumnConfig(MOCK_COLUMNS[0], columnConfig)
-    expect(column1.width).toBe(123)
+    expect(column1.width).toBe(COLUMN_WIDTH_MAPPING["small"])
   })
 
   it("works with empty column configs", () => {
@@ -173,11 +177,11 @@ describe("getColumnConfig", () => {
       data: UNICODE,
       columns: JSON.stringify({
         c1: {
-          width: 100,
+          width: "small",
           hidden: true,
         },
         c2: {
-          width: 123,
+          width: "medium",
           alignment: "center",
         },
       }),
@@ -186,11 +190,11 @@ describe("getColumnConfig", () => {
     const columnConfig = getColumnConfig(element)
     expect(columnConfig.size).toBe(2)
     expect(columnConfig.get("c1")).toEqual({
-      width: 100,
+      width: "small",
       hidden: true,
     })
     expect(columnConfig.get("c2")).toEqual({
-      width: 123,
+      width: "medium",
       alignment: "center",
     })
   })
@@ -217,6 +221,7 @@ describe("getColumnType", () => {
     (typeName: string, columnCreator: ColumnCreator) => {
       const columnType = getColumnType({
         id: "column_1",
+        name: "column_1",
         title: "column_1",
         indexNumber: 1,
         arrowType: {

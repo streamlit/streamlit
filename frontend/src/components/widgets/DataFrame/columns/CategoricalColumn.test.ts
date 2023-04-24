@@ -35,6 +35,7 @@ const MOCK_BOOLEAN_ARROW_TYPE: ArrowType = {
 
 const CATEGORICAL_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
   id: "1",
+  name: "categorical_column",
   title: "Categorical column",
   indexNumber: 0,
   isEditable: false,
@@ -50,7 +51,7 @@ function getCategoricalColumn(
   return CategoricalColumn({
     ...CATEGORICAL_COLUMN_TEMPLATE,
     arrowType,
-    columnTypeMetadata: params,
+    columnTypeOptions: params,
   } as BaseColumnProps)
 }
 
