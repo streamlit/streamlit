@@ -25,11 +25,7 @@ import {
 } from "src/lib/WidgetStateManager"
 import { makeElementWithInfoText } from "src/lib/utils"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import {
-  MockMetricsManager,
-  mockEndpoints,
-  mockSessionInfo,
-} from "src/lib/mocks/mocks"
+import { mockEndpoints, mockSessionInfo } from "src/lib/mocks/mocks"
 import { render, shallow } from "src/lib/test_util"
 import AppView, { AppViewProps } from "./AppView"
 
