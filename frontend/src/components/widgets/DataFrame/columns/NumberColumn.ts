@@ -113,6 +113,14 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         if (notNullOrUndefined(parameters.max)) {
           cellData = Math.min(cellData, parameters.max)
         }
+
+        // Check if the value is larger than the maximum supported value:
+        if (Number.isInteger(cellData) && !Number.isSafeInteger(cellData)) {
+          return getErrorCell(
+            toSafeString(data),
+            "The value is larger than the maximum supported integer values in number columns (2^53)."
+          )
+        }
       }
 
       return {
