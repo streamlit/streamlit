@@ -1530,7 +1530,7 @@ describe("App.handleDeltaMessage", () => {
     const metadata = ForwardMsgMetadata.create({ deltaPath: [0, 1] })
     instance.handleDeltaMsg(delta, metadata)
 
-    expect(mockHandleDeltaMessage).toHaveBeenCalledWith(delta, metadata)
+    expect(mockHandleDeltaMessage).toHaveBeenCalledWith(delta)
   })
 })
 
