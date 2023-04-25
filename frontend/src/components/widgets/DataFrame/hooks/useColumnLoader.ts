@@ -48,7 +48,7 @@ export const COLUMN_WIDTH_MAPPING = {
  * Options to configure columns.
  *
  * This needs to be kept in sync with the ColumnConfig TypeDict in the backend.
- * This will eventually replaced with a proto message.
+ * This will be eventually replaced with a proto message.
  */
 export interface ColumnConfigProps {
   title?: string
