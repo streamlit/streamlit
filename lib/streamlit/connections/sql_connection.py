@@ -43,31 +43,30 @@ _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
 class SQLConnection(ExperimentalBaseConnection["Engine"]):
-    """A connection to a SQL database using a SQLAlchemy Engine.
-    Initialize using ``st.experimental_connection("<name>", type="sql")``.
+    """A connection to a SQL database using a SQLAlchemy Engine. Initialize using ``st.experimental_connection("<name>", type="sql")``.
+
+    .. note::
+        SQLConnections should always be created using ``st.experimental_connection()``,
+        **not** initialized directly.
 
     SQLConnection provides the ``query()`` convenience method, which can be used to
     run simple read-only queries with both caching and simple error handling/retries.
-
     More complex DB interactions can be performed by using the ``.session`` property
     to receive a regular SQLAlchemy Session.
 
-    SQLConnections will typically use connection parameters specified via
-    ``st.secrets`` or ``**kwargs``. SQLConnections should always be created using
-    ``st.experimental_connection()``, **not** initialized directly.
+    SQLConnections commonly specify connection parameters using either ``st.secrets``
+    or ``**kwargs``. Some frequently used parameters include:
 
-    Particular parameters that may be frequently used:
+    - **url** or arguments for `sqlalchemy.engine.URL.create()
+      <https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.URL.create>`_.
+      Most commonly it includes a dialect, host, database, username and password.
 
-    **url** or arguments for `sqlalchemy.engine.URL.create()
-    <https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.URL.create>`_.
-    Most commonly it includes a dialect, host, database, username and password.
+    - **create_engine_kwargs** can be passed via ``st.secrets``, such as for
+      `snowflake-sqlalchemy <https://github.com/snowflakedb/snowflake-sqlalchemy#key-pair-authentication-support>`_
+      or `Google BigQuery <https://github.com/googleapis/python-bigquery-sqlalchemy#authentication>`_.
+      These can also be passed directly as ``**kwargs`` to experimental_connection().
 
-    **create_engine_kwargs** can be passed via ``st.secrets``, such as for
-    `snowflake-sqlalchemy <https://github.com/snowflakedb/snowflake-sqlalchemy#key-pair-authentication-support>`_
-    or `Google BigQuery <https://github.com/googleapis/python-bigquery-sqlalchemy#authentication>`_.
-    These can also be passed directly as ``**kwargs`` to experimental_connection().
-
-    **autocommit=True** to run with isolation level ``AUTOCOMMIT``. Default is False.
+    - **autocommit=True** to run with isolation level ``AUTOCOMMIT``. Default is False.
 
     Example
     -------
