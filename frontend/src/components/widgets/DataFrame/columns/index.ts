@@ -28,6 +28,8 @@ export * from "./utils"
 
 /**
  * All available column types need to be registered here.
+ *
+ * These names must match the column names used in the backend.
  */
 export const ColumnTypes = new Map<string, ColumnCreator>(
   Object.entries({
