@@ -890,10 +890,6 @@ export class App extends PureComponent<Props, State> {
       gatherUsageStats: config.gatherUsageStats,
     })
 
-    this.metricsMgr.enqueue("createReport", {
-      pythonVersion: this.sessionInfo.current.pythonVersion,
-    })
-
     this.handleSessionStatusChanged(initialize.sessionStatus)
   }
 
