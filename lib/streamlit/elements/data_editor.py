@@ -102,9 +102,9 @@ class ColumnConfig(TypedDict, total=False):
         Literal[
             "text",
             "number",
-            "boolean",
+            "checkbox",
+            "selectbox",
             "list",
-            "categorical",
         ]
     ]
     type_options: Optional[Dict[str, Any]]
