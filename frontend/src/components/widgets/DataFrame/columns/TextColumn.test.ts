@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
+/* eslint-disable  @typescript-eslint/no-non-null-assertion */
+
 import { GridCellKind, TextCell } from "@glideapps/glide-data-grid"
 
+import { isErrorCell } from "./utils"
 import TextColumn from "./TextColumn"
 
 const MOCK_TEXT_COLUMN_PROPS = {
@@ -75,4 +78,73 @@ describe("TextColumn", () => {
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
   )
+
+  it("validates input based on max_chars", () => {
+    const mockColumn = TextColumn({
+      ...MOCK_TEXT_COLUMN_PROPS,
+      columnTypeOptions: { max_chars: 5 },
+    })
+
+    expect(mockColumn.validateInput!("12345")).toBe(true)
+    expect(mockColumn.validateInput!("123456")).toBe("12345")
+    expect(mockColumn.validateInput!("1234567890")).toBe("12345")
+  })
+
+  it("validates input based on validate regex", () => {
+    const mockColumn = TextColumn({
+      ...MOCK_TEXT_COLUMN_PROPS,
+      columnTypeOptions: { validate: "^[a-zA-Z]+$" },
+    })
+
+    expect(mockColumn.validateInput!("abcde")).toBe(true)
+    expect(mockColumn.validateInput!("12345")).toBe(false)
+    expect(mockColumn.validateInput!("abc123")).toBe(false)
+  })
+
+  it("validates input based on max_chars and validate regex", () => {
+    const mockColumn = TextColumn({
+      ...MOCK_TEXT_COLUMN_PROPS,
+      columnTypeOptions: { max_chars: 5, validate: "^[a-zA-Z]+$" },
+    })
+
+    expect(mockColumn.validateInput!("abcde")).toBe(true)
+    expect(mockColumn.validateInput!("abcdef")).toBe("abcde")
+    expect(mockColumn.validateInput!("12345")).toBe(false)
+    expect(mockColumn.validateInput!("abc123")).toBe(false)
+  })
+
+  it("applies input validation in the getCell call based on max_chars and validate regex", () => {
+    const mockColumn = TextColumn({
+      ...MOCK_TEXT_COLUMN_PROPS,
+      columnTypeOptions: { max_chars: 5, validate: "^[a-zA-Z]+$" },
+    })
+
+    expect(isErrorCell(mockColumn.getCell("abcde", true))).toBe(false)
+    expect(isErrorCell(mockColumn.getCell("12345", true))).toBe(true)
+    // A too long input is fine since it can be auto fixed
+    expect(isErrorCell(mockColumn.getCell("abcdef", true))).toBe(false)
+    // Applies the max chars limit
+    expect((mockColumn.getCell("abcdef", true) as TextCell).data).toBe("abcde")
+  })
+
+  it("handles invalid validate regex", () => {
+    const mockColumn = TextColumn({
+      ...MOCK_TEXT_COLUMN_PROPS,
+      columnTypeOptions: { validate: "[" }, // Invalid regex
+    })
+
+    const cell = mockColumn.getCell("test", true)
+    expect(isErrorCell(cell)).toEqual(true)
+    expect((cell as TextCell).data).toContain("Invalid validate regex")
+  })
+
+  it("ignores empty validate", () => {
+    const mockColumn = TextColumn({
+      ...MOCK_TEXT_COLUMN_PROPS,
+      columnTypeOptions: { validate: "" },
+    })
+
+    const cell = mockColumn.getCell("test", true)
+    expect(isErrorCell(cell)).toEqual(false)
+  })
 })
