@@ -152,7 +152,8 @@ def _parse_value(
         The value to convert.
 
     column_data_kind : ColumnDataKind
-        The determined data kind of the column.
+        The determined data kind of the column. The column data kind refers to the
+        shared data type of the values in the column (e.g. integer, float, string).
 
     Returns
     -------

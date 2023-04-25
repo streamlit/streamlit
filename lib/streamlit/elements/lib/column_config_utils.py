@@ -72,6 +72,9 @@ DataframeSchema: TypeAlias = List[ColumnDataKind]
 def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
     """Determine the data kind via the arrow type information.
 
+    The column data kind refers to the shared data type of the values
+    in the column (e.g. integer, float, string, bool).
+
     Parameters
     ----------
 
@@ -135,6 +138,9 @@ def _determine_data_kind_via_pandas_dtype(
 ) -> ColumnDataKind:
     """Determine the data kind by using the pandas dtype.
 
+    The column data kind refers to the shared data type of the values
+    in the column (e.g. integer, float, string, bool).
+
     Parameters
     ----------
     column : pd.Series, pd.Index
@@ -183,6 +189,9 @@ def _determine_data_kind_via_inferred_type(
     column: pd.Series | pd.Index,
 ) -> ColumnDataKind:
     """Determine the data kind by inferring it from the underlying data.
+
+    The column data kind refers to the shared data type of the values
+    in the column (e.g. integer, float, string, bool).
 
     Parameters
     ----------
@@ -247,6 +256,9 @@ def _determine_data_kind(
     column: pd.Series | pd.Index, field: Optional[pa.Field] = None
 ) -> ColumnDataKind:
     """Determine the data kind of a column.
+
+    The column data kind refers to the shared data type of the values
+    in the column (e.g. integer, float, string, bool).
 
     Parameters
     ----------
