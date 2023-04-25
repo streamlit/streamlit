@@ -51,8 +51,9 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
     to receive a regular SQLAlchemy Session.
 
     SQLConnections should always be created using ``st.experimental_connection()``,
-    **not** initialized directly. SQLConnections commonly specify connection parameters
-    using either ``st.secrets`` or ``**kwargs``. Some frequently used parameters include:
+    **not** initialized directly. Connection parameters for a SQLConnection can be
+    specified using either ``st.secrets`` or ``**kwargs``. Some frequently used
+    parameters include:
 
     - **url** or arguments for `sqlalchemy.engine.URL.create()
       <https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.URL.create>`_.
