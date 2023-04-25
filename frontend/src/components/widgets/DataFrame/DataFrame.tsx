@@ -481,7 +481,7 @@ function DataFrame({
           customRenderers={extraCellArgs.customRenderers}
           // Add our custom SVG header icons:
           headerIcons={theme.headerIcons}
-          // Add support for input validation:
+          // Add support for user input validation:
           validateCell={validateCell}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
