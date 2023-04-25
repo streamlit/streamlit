@@ -84,6 +84,7 @@ describe("useTooltips hook", () => {
     })
 
     act(() => {
+      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
       result.current.onItemHovered!({
         kind: "header",
         location: [0, -1],
@@ -106,6 +107,7 @@ describe("useTooltips hook", () => {
     })
 
     act(() => {
+      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
       result.current.onItemHovered!({
         kind: "cell",
         location: [0, 1],
@@ -128,6 +130,7 @@ describe("useTooltips hook", () => {
     })
 
     act(() => {
+      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
       result.current.onItemHovered!({
         kind: "header",
         location: [0, 0],
