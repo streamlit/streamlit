@@ -33,16 +33,16 @@ class ButtonTest(InteractiveScriptTests):
             """,
         )
         sr = script.run()
-        assert sr.get("button")[0].value == False
-        assert sr.get("button")[1].value == False
+        assert sr.button[0].value == False
+        assert sr.button[1].value == False
 
-        sr2 = sr.get("button")[0].click().run()
-        assert sr2.get("button")[0].value == True
-        assert sr2.get("button")[1].value == False
+        sr2 = sr.button[0].click().run()
+        assert sr2.button[0].value == True
+        assert sr2.button[1].value == False
 
         sr3 = sr2.run()
-        assert sr3.get("button")[0].value == False
-        assert sr3.get("button")[1].value == False
+        assert sr3.button[0].value == False
+        assert sr3.button[1].value == False
 
 
 class CheckboxTest(InteractiveScriptTests):
@@ -57,17 +57,17 @@ class CheckboxTest(InteractiveScriptTests):
             """,
         )
         sr = script.run()
-        assert sr.get("checkbox")
-        assert sr.get("checkbox")[0].value == False
-        assert sr.get("checkbox")[1].value == True
+        assert sr.checkbox
+        assert sr.checkbox[0].value == False
+        assert sr.checkbox[1].value == True
 
-        sr2 = sr.get("checkbox")[0].check().run()
-        assert sr2.get("checkbox")[0].value == True
-        assert sr2.get("checkbox")[1].value == True
+        sr2 = sr.checkbox[0].check().run()
+        assert sr2.checkbox[0].value == True
+        assert sr2.checkbox[1].value == True
 
-        sr3 = sr2.get("checkbox")[1].uncheck().run()
-        assert sr3.get("checkbox")[0].value == True
-        assert sr3.get("checkbox")[1].value == False
+        sr3 = sr2.checkbox[1].uncheck().run()
+        assert sr3.checkbox[0].value == True
+        assert sr3.checkbox[1].value == False
 
 
 class ColorPickerTest(InteractiveScriptTests):
@@ -83,12 +83,12 @@ class ColorPickerTest(InteractiveScriptTests):
             """,
         )
         sr = script.run()
-        assert len(sr.get("color_picker")) == 2
-        assert [c.value for c in sr.get("color_picker")] == ["#000000", "#ABC"]
-        assert "blue" in sr.get("exception")[0].value
+        assert len(sr.color_picker) == 2
+        assert [c.value for c in sr.color_picker] == ["#000000", "#ABC"]
+        assert "blue" in sr.exception[0].value
 
-        sr2 = sr.get("color_picker")[0].pick("#123456").run()
-        assert sr2.get("color_picker")[0].value == "#123456"
+        sr2 = sr.color_picker[0].pick("#123456").run()
+        assert sr2.color_picker[0].value == "#123456"
 
 
 class DateInputTest(InteractiveScriptTests):
@@ -105,19 +105,19 @@ class DateInputTest(InteractiveScriptTests):
             """,
         )
         sr = script.run()
-        assert not sr.get("exception")
-        assert [d.value for d in sr.get("date_input")] == [
+        assert not sr.exception
+        assert [d.value for d in sr.date_input] == [
             date(2023, 4, 17),
             datetime(2023, 4, 17).date(),
             (date(2020, 1, 1), date(2030, 1, 1)),
         ]
-        ds = sr.get("date_input")
+        ds = sr.date_input
         ds[0].set_value(date(2023, 5, 1))
         ds[1].set_value(datetime(2023, 1, 1))
         ds[2].set_value((date(2023, 1, 1), date(2024, 1, 1)))
 
         sr2 = sr.run()
-        assert [d.value for d in sr2.get("date_input")] == [
+        assert [d.value for d in sr2.date_input] == [
             date(2023, 5, 1),
             date(2023, 1, 1),
             (date(2023, 1, 1), date(2024, 1, 1)),
@@ -136,7 +136,7 @@ class ExceptionTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert sr.get("exception")[0].value == "foo"
+        assert sr.exception[0].value == "foo"
 
     def test_markdown(self):
         script = self.script_from_string(
@@ -149,7 +149,7 @@ class ExceptionTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert sr.get("exception")[0].is_markdown
+        assert sr.exception[0].is_markdown
 
 
 class HeadingTest(InteractiveScriptTests):
@@ -166,11 +166,11 @@ class HeadingTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert len(sr.get("title")) == 3
-        assert sr.get("title")[1].tag == "h1"
-        assert sr.get("title")[1].anchor == "anchor text"
-        assert sr.get("title")[1].value == "This is a title with anchor"
-        assert sr.get("title")[2].hide_anchor
+        assert len(sr.title) == 3
+        assert sr.title[1].tag == "h1"
+        assert sr.title[1].anchor == "anchor text"
+        assert sr.title[1].value == "This is a title with anchor"
+        assert sr.title[2].hide_anchor
 
     def test_header(self):
         script = self.script_from_string(
@@ -185,11 +185,11 @@ class HeadingTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert len(sr.get("header")) == 3
-        assert sr.get("header")[1].tag == "h2"
-        assert sr.get("header")[1].anchor == "header anchor text"
-        assert sr.get("header")[1].value == "This is a header with anchor"
-        assert sr.get("header")[2].hide_anchor
+        assert len(sr.header) == 3
+        assert sr.header[1].tag == "h2"
+        assert sr.header[1].anchor == "header anchor text"
+        assert sr.header[1].value == "This is a header with anchor"
+        assert sr.header[2].hide_anchor
 
     def test_subheader(self):
         script = self.script_from_string(
@@ -207,11 +207,11 @@ class HeadingTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert len(sr.get("subheader")) == 3
-        assert sr.get("subheader")[1].tag == "h3"
-        assert sr.get("subheader")[1].anchor == "subheader anchor text"
-        assert sr.get("subheader")[1].value == "This is a subheader with anchor"
-        assert sr.get("subheader")[2].hide_anchor
+        assert len(sr.subheader) == 3
+        assert sr.subheader[1].tag == "h3"
+        assert sr.subheader[1].anchor == "subheader anchor text"
+        assert sr.subheader[1].value == "This is a subheader with anchor"
+        assert sr.subheader[2].hide_anchor
 
     def test_heading_elements_by_type(self):
         script = self.script_from_string(
@@ -230,9 +230,9 @@ class HeadingTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert len(sr.get("title")) == 2
-        assert len(sr.get("header")) == 2
-        assert len(sr.get("subheader")) == 2
+        assert len(sr.title) == 2
+        assert len(sr.header) == 2
+        assert len(sr.subheader) == 2
 
 
 class MarkdownTest(InteractiveScriptTests):
@@ -247,9 +247,9 @@ class MarkdownTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert sr.get("markdown")
-        assert sr.get("markdown")[0].type == "markdown"
-        assert sr.get("markdown")[0].value == "**This is a markdown**"
+        assert sr.markdown
+        assert sr.markdown[0].type == "markdown"
+        assert sr.markdown[0].value == "**This is a markdown**"
 
     def test_caption(self):
         script = self.script_from_string(
@@ -262,10 +262,10 @@ class MarkdownTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert sr.get("caption")
-        assert sr.get("caption")[0].type == "caption"
-        assert sr.get("caption")[0].value == "This is a caption"
-        assert sr.get("caption")[0].is_caption
+        assert sr.caption
+        assert sr.caption[0].type == "caption"
+        assert sr.caption[0].value == "This is a caption"
+        assert sr.caption[0].is_caption
 
     def test_code(self):
         script = self.script_from_string(
@@ -278,9 +278,9 @@ class MarkdownTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert sr.get("code")
-        assert sr.get("code")[0].type == "code"
-        assert sr.get("code")[0].value == "import streamlit as st"
+        assert sr.code
+        assert sr.code[0].type == "code"
+        assert sr.code[0].value == "import streamlit as st"
 
     def test_latex(self):
         script = self.script_from_string(
@@ -293,9 +293,9 @@ class MarkdownTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert sr.get("latex")
-        assert sr.get("latex")[0].type == "latex"
-        assert sr.get("latex")[0].value == "$$\nE=mc^2\n$$"
+        assert sr.latex
+        assert sr.latex[0].type == "latex"
+        assert sr.latex[0].value == "$$\nE=mc^2\n$$"
 
     def test_divider(self):
         script = self.script_from_string(
@@ -308,9 +308,9 @@ class MarkdownTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert sr.get("divider")
-        assert sr.get("divider")[0].type == "divider"
-        assert sr.get("divider")[0].value == MARKDOWN_HORIZONTAL_RULE_EXPRESSION
+        assert sr.divider
+        assert sr.divider[0].type == "divider"
+        assert sr.divider[0].value == MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 
     def test_markdown_elements_by_type(self):
         script = self.script_from_string(
@@ -331,10 +331,10 @@ class MarkdownTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert len(sr.get("markdown")) == 2
-        assert len(sr.get("caption")) == 2
-        assert len(sr.get("code")) == 2
-        assert len(sr.get("latex")) == 2
+        assert len(sr.markdown) == 2
+        assert len(sr.caption) == 2
+        assert len(sr.code) == 2
+        assert len(sr.latex) == 2
 
 
 class MultiselectTest(InteractiveScriptTests):
@@ -349,20 +349,20 @@ class MultiselectTest(InteractiveScriptTests):
             """,
         )
         sr = script.run()
-        assert sr.get("multiselect")[0].value == []
-        assert sr.get("multiselect")[1].value == ["two"]
+        assert sr.multiselect[0].value == []
+        assert sr.multiselect[1].value == ["two"]
 
-        sr2 = sr.get("multiselect")[0].select("b").run()
-        assert sr2.get("multiselect")[0].value == ["b"]
-        assert sr2.get("multiselect")[1].value == ["two"]
+        sr2 = sr.multiselect[0].select("b").run()
+        assert sr2.multiselect[0].value == ["b"]
+        assert sr2.multiselect[1].value == ["two"]
 
-        sr3 = sr2.get("multiselect")[1].select("zero").select("one").run()
-        assert sr3.get("multiselect")[0].value == ["b"]
-        assert set(sr3.get("multiselect")[1].value) == set(["zero", "one", "two"])
+        sr3 = sr2.multiselect[1].select("zero").select("one").run()
+        assert sr3.multiselect[0].value == ["b"]
+        assert set(sr3.multiselect[1].value) == set(["zero", "one", "two"])
 
-        sr4 = sr3.get("multiselect")[0].unselect("b").run()
-        assert sr4.get("multiselect")[0].value == []
-        assert set(sr3.get("multiselect")[1].value) == set(["zero", "one", "two"])
+        sr4 = sr3.multiselect[0].unselect("b").run()
+        assert sr4.multiselect[0].value == []
+        assert set(sr3.multiselect[1].value) == set(["zero", "one", "two"])
 
 
 class NumberInputTest(InteractiveScriptTests):
@@ -377,41 +377,20 @@ class NumberInputTest(InteractiveScriptTests):
             """,
         )
         sr = script.run()
-        assert sr.get("number_input")[0].value == -10
-        assert sr.get("number_input")[1].value == -1.0
+        assert sr.number_input[0].value == -10
+        assert sr.number_input[1].value == -1.0
 
-        sr2 = (
-            sr.get("number_input")[0]
-            .increment()
-            .run()
-            .get("number_input")[1]
-            .increment()
-            .run()
-        )
-        assert sr2.get("number_input")[0].value == -9
-        assert sr2.get("number_input")[1].value == -0.99
+        sr2 = sr.number_input[0].increment().run().number_input[1].increment().run()
+        assert sr2.number_input[0].value == -9
+        assert sr2.number_input[1].value == -0.99
 
-        sr3 = (
-            sr2.get("number_input")[0]
-            .decrement()
-            .run()
-            .get("number_input")[1]
-            .decrement()
-            .run()
-        )
-        assert sr3.get("number_input")[0].value == -10
-        assert sr3.get("number_input")[1].value == -1.0
+        sr3 = sr2.number_input[0].decrement().run().number_input[1].decrement().run()
+        assert sr3.number_input[0].value == -10
+        assert sr3.number_input[1].value == -1.0
 
-        sr4 = (
-            sr3.get("number_input")[0]
-            .decrement()
-            .run()
-            .get("number_input")[1]
-            .decrement()
-            .run()
-        )
-        assert sr4.get("number_input")[0].value == -10
-        assert sr4.get("number_input")[1].value == -1.0
+        sr4 = sr3.number_input[0].decrement().run().number_input[1].decrement().run()
+        assert sr4.number_input[0].value == -10
+        assert sr4.number_input[1].value == -1.0
 
 
 class SelectboxTest(InteractiveScriptTests):
@@ -433,30 +412,30 @@ class SelectboxTest(InteractiveScriptTests):
             """,
         )
         sr = script.run()
-        assert sr.get("selectbox")[0].value == "female"
-        assert sr.get("selectbox")[1].value == "male"
-        assert sr.get("selectbox")[2].value is None
-        assert sr.get("selectbox")[3].value == "Python"
+        assert sr.selectbox[0].value == "female"
+        assert sr.selectbox[1].value == "male"
+        assert sr.selectbox[2].value is None
+        assert sr.selectbox[3].value == "Python"
 
-        sr2 = sr.get("selectbox")[0].select("female").run()
-        sr3 = sr2.get("selectbox")[1].select("female").run()
-        sr4 = sr3.get("selectbox")[3].select("JavaScript").run()
+        sr2 = sr.selectbox[0].select("female").run()
+        sr3 = sr2.selectbox[1].select("female").run()
+        sr4 = sr3.selectbox[3].select("JavaScript").run()
 
-        assert sr4.get("selectbox")[0].value == "female"
-        assert sr4.get("selectbox")[1].value == "female"
-        assert sr4.get("selectbox")[2].value is None
-        assert sr4.get("selectbox")[3].value == "JavaScript"
+        assert sr4.selectbox[0].value == "female"
+        assert sr4.selectbox[1].value == "female"
+        assert sr4.selectbox[2].value is None
+        assert sr4.selectbox[3].value == "JavaScript"
 
-        sr5 = sr4.get("selectbox")[0].select_index(0).run()
-        sr6 = sr5.get("selectbox")[3].select_index(5).run()
-        assert sr6.get("selectbox")[0].value == "male"
-        assert sr6.get("selectbox")[3].value == "Lisp"
+        sr5 = sr4.selectbox[0].select_index(0).run()
+        sr6 = sr5.selectbox[3].select_index(5).run()
+        assert sr6.selectbox[0].value == "male"
+        assert sr6.selectbox[3].value == "Lisp"
 
         with pytest.raises(ValueError):
-            sr6.get("selectbox")[0].select("invalid").run()
+            sr6.selectbox[0].select("invalid").run()
 
         with pytest.raises(IndexError):
-            sr6.get("selectbox")[0].select_index(42).run()
+            sr6.selectbox[0].select_index(42).run()
 
 
 class SelectSliderTest(InteractiveScriptTests):
@@ -472,13 +451,13 @@ class SelectSliderTest(InteractiveScriptTests):
             """,
         )
         sr = script.run()
-        assert sr.get("select_slider")[0].value == "green"
-        assert sr.get("select_slider")[1].value == ("red", "blue")
+        assert sr.select_slider[0].value == "green"
+        assert sr.select_slider[1].value == ("red", "blue")
 
-        sr2 = sr.get("select_slider")[0].set_value("violet").run()
-        sr3 = sr2.get("select_slider")[1].set_range("yellow", "orange").run()
-        assert sr3.get("select_slider")[0].value == "violet"
-        assert sr3.get("select_slider")[1].value == ("orange", "yellow")
+        sr2 = sr.select_slider[0].set_value("violet").run()
+        sr3 = sr2.select_slider[1].set_range("yellow", "orange").run()
+        assert sr3.select_slider[0].value == "violet"
+        assert sr3.select_slider[1].value == ("orange", "yellow")
 
 
 class SliderTest(InteractiveScriptTests):
@@ -497,18 +476,18 @@ class SliderTest(InteractiveScriptTests):
             """,
         )
         sr = script.run()
-        s = sr.get("slider")
+        s = sr.slider
         assert s[0].value == 0
         assert s[1].value == 10
         assert s[2].value == (time(11, 30), time(12, 45))
         assert s[3].value == datetime(2020, 1, 1, 9, 30)
         assert s[4].value == 0.0
 
-        sr2 = sr.get("slider")[1].set_value(50).run()
-        sr3 = sr2.get("slider")[2].set_range(time(12, 0), time(12, 15)).run()
-        sr4 = sr3.get("slider")[3].set_value(datetime(2020, 1, 10, 8, 0)).run()
-        sr5 = sr4.get("slider")[4].set_value(0.1).run()
-        s = sr5.get("slider")
+        sr2 = sr.slider[1].set_value(50).run()
+        sr3 = sr2.slider[2].set_range(time(12, 0), time(12, 15)).run()
+        sr4 = sr3.slider[3].set_value(datetime(2020, 1, 10, 8, 0)).run()
+        sr5 = sr4.slider[4].set_value(0.1).run()
+        s = sr5.slider
         assert s[0].value == 0
         assert s[1].value == 50
         assert s[2].value == (time(12, 0), time(12, 15))
@@ -529,15 +508,15 @@ class TextAreaTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert sr.get("text_area")[0].value == ""
-        assert sr.get("text_area")[1].value == "default"
+        assert sr.text_area[0].value == ""
+        assert sr.text_area[1].value == "default"
 
         long_string = "".join(["this is a long string fragment."] * 10)
-        sr.get("text_area")[0].input(long_string)
-        sr2 = sr.get("text_area")[1].input(long_string).run()
+        sr.text_area[0].input(long_string)
+        sr2 = sr.text_area[1].input(long_string).run()
 
-        assert sr2.get("text_area")[0].value == long_string
-        assert sr2.get("text_area")[1].value == "default"
+        assert sr2.text_area[0].value == long_string
+        assert sr2.text_area[1].value == "default"
 
 
 class TextInputTest(InteractiveScriptTests):
@@ -553,16 +532,16 @@ class TextInputTest(InteractiveScriptTests):
         )
         sr = script.run()
 
-        assert sr.get("text_input")[0].value == ""
-        assert sr.get("text_input")[1].value == "default"
+        assert sr.text_input[0].value == ""
+        assert sr.text_input[1].value == "default"
 
         long_string = "".join(["this is a long string fragment."] * 10)
-        sr.get("text_input")[0].input(long_string)
-        sr2 = sr.get("text_input")[1].input(long_string).run()
+        sr.text_input[0].input(long_string)
+        sr2 = sr.text_input[1].input(long_string).run()
 
-        assert sr2.get("text_input")[0].value == long_string
-        assert sr2.get("text_input")[1].value == "default"
-        # assert sr2.get("text_input")[1].value == long_string[:20]
+        assert sr2.text_input[0].value == long_string
+        assert sr2.text_input[1].value == "default"
+        # assert sr2.text_input[1].value == long_string[:20]
 
 
 class TimeInputTest(InteractiveScriptTests):
@@ -579,18 +558,18 @@ class TimeInputTest(InteractiveScriptTests):
             """,
         )
         sr = script.run()
-        assert not sr.get("exception")
-        assert [t.value for t in sr.get("time_input")] == [
+        assert not sr.exception
+        assert [t.value for t in sr.time_input] == [
             time(8, 30),
             time(17),
             time(2),
         ]
-        tis = sr.get("time_input")
+        tis = sr.time_input
         tis[0].increment()
         tis[1].decrement()
         tis[2].increment()
         sr2 = sr.run()
-        assert [t.value for t in sr2.get("time_input")] == [
+        assert [t.value for t in sr2.time_input] == [
             time(8, 45),
             time(16),
             time(2, 1),
