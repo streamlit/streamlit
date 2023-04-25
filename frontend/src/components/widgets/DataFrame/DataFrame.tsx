@@ -24,6 +24,9 @@ import {
   drawTextCell,
   DrawCustomCellCallback,
   GridCell,
+  Item,
+  EditableGridCell,
+  ValidatedGridCell,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
 import { Resizable } from "re-resizable"
@@ -480,6 +483,25 @@ function DataFrame({
           customRenderers={extraCellArgs.customRenderers}
           // Add our custom SVG header icons:
           headerIcons={theme.headerIcons}
+          // Add support for input validation:
+          validateCell={(cell: Item, newValue: EditableGridCell) => {
+            const col = cell[0]
+            if (col >= columns.length) {
+              return true
+            }
+
+            const column = columns[col]
+            if (column.validateInput) {
+              const validationResult = column.validateInput(
+                column.getCellValue(newValue)
+              )
+              if (validationResult === true || validationResult === false) {
+                return validationResult
+              }
+              return column.getCell(validationResult) as ValidatedGridCell
+            }
+            return true
+          }}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
           // If element is editable, enable editing features:
