@@ -30,7 +30,7 @@ import {
   getTextCell,
   ColumnCreator,
   ObjectColumn,
-  BooleanColumn,
+  CheckboxColumn,
   NumberColumn,
   TextColumn,
   CategoricalColumn,
@@ -625,14 +625,14 @@ describe("getColumnTypeFromArrow", () => {
         pandas_type: "bool",
         numpy_type: "bool",
       },
-      BooleanColumn,
+      CheckboxColumn,
     ],
     [
       {
         pandas_type: "bool",
         numpy_type: "boolean",
       },
-      BooleanColumn,
+      CheckboxColumn,
     ],
     [
       {

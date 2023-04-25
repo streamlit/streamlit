@@ -30,7 +30,7 @@ import {
   BaseColumnProps,
   ColumnCreator,
   ObjectColumn,
-  BooleanColumn,
+  CheckboxColumn,
   NumberColumn,
   TextColumn,
   CategoricalColumn,
@@ -154,7 +154,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
     return ObjectColumn
   }
   if (["bool"].includes(typeName)) {
-    return BooleanColumn
+    return CheckboxColumn
   }
   if (
     [

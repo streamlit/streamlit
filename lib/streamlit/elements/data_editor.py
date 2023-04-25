@@ -102,7 +102,7 @@ class ColumnConfig(TypedDict, total=False):
         Literal[
             "text",
             "number",
-            "boolean",
+            "checkbox",
             "list",
             "categorical",
         ]

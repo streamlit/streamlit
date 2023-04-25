@@ -16,7 +16,7 @@
 
 import ObjectColumn from "./ObjectColumn"
 import TextColumn from "./TextColumn"
-import BooleanColumn from "./BooleanColumn"
+import CheckboxColumn from "./CheckboxColumn"
 import CategoricalColumn from "./CategoricalColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
@@ -32,7 +32,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
   Object.entries({
     object: ObjectColumn,
     text: TextColumn,
-    boolean: BooleanColumn,
+    checkbox: CheckboxColumn,
     categorical: CategoricalColumn,
     list: ListColumn,
     number: NumberColumn,
@@ -42,7 +42,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
 export {
   ObjectColumn,
   TextColumn,
-  BooleanColumn,
+  CheckboxColumn,
   CategoricalColumn,
   ListColumn,
   NumberColumn,
