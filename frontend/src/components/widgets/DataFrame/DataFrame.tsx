@@ -24,9 +24,6 @@ import {
   drawTextCell,
   DrawCustomCellCallback,
   GridCell,
-  Item,
-  EditableGridCell,
-  ValidatedGridCell,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
 import { Resizable } from "re-resizable"
