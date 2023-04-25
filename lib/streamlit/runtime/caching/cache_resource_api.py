@@ -288,8 +288,8 @@ class CacheResourceAPI:
             The maximum time to keep an entry in the cache, or None if cache
             entries should not expire. The default is None.
 
-            If ttl is a str, then it should be in a format supported by [Pandas's
-            Timedelta constructor](https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html).
+            If ttl is a str, then it should be in a format supported by `Pandas's
+            Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_.
             Examples of valid strings are: "1d", "1.5 days", and "1h23s".
 
         max_entries : int or None
