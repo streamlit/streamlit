@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Delta, ForwardMsgMetadata } from "src/autogen/proto"
+import { Delta, ForwardMsgMetadata } from "src/lib/proto"
 
 /**
  * A mapping of [delta type] -> [count] which is used to upload delta stats

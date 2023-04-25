@@ -19,7 +19,7 @@ import {
   ArrowTable as ArrowTableProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import {
   createFormsData,
   FormsData,

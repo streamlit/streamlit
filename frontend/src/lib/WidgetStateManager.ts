@@ -25,9 +25,9 @@ import {
   StringArray,
   WidgetState,
   WidgetStates,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import { Signal, SignalConnection } from "typed-signals"
-import { isValidFormId } from "./utils"
+import { isValidFormId } from "./util/utils"
 
 export interface Source {
   fromUi: boolean

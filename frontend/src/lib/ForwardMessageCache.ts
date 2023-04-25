@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { ForwardMsg } from "src/autogen/proto"
-import { logMessage } from "src/lib/log"
-import { ensureError } from "./ErrorHandling"
+import { ForwardMsg } from "src/lib/proto"
+import { logMessage } from "src/lib/util/log"
+import { ensureError } from "./util/ErrorHandling"
 import { StreamlitEndpoints } from "./StreamlitEndpoints"
 
 class CacheEntry {
