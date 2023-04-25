@@ -573,12 +573,6 @@ export class App extends PureComponent<Props, State> {
     const { title, favicon, layout, initialSidebarState, menuItems } =
       pageConfig
 
-    this.metricsMgr.enqueue("pageConfigChanged", {
-      favicon,
-      layout,
-      initialSidebarState,
-    })
-
     if (title) {
       this.props.hostCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
