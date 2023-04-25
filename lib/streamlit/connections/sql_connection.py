@@ -45,17 +45,14 @@ _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 class SQLConnection(ExperimentalBaseConnection["Engine"]):
     """A connection to a SQL database using a SQLAlchemy Engine. Initialize using ``st.experimental_connection("<name>", type="sql")``.
 
-    .. note::
-        SQLConnections should always be created using ``st.experimental_connection()``,
-        **not** initialized directly.
-
     SQLConnection provides the ``query()`` convenience method, which can be used to
     run simple read-only queries with both caching and simple error handling/retries.
     More complex DB interactions can be performed by using the ``.session`` property
     to receive a regular SQLAlchemy Session.
 
-    SQLConnections commonly specify connection parameters using either ``st.secrets``
-    or ``**kwargs``. Some frequently used parameters include:
+    SQLConnections should always be created using ``st.experimental_connection()``,
+    **not** initialized directly. SQLConnections commonly specify connection parameters
+    using either ``st.secrets`` or ``**kwargs``. Some frequently used parameters include:
 
     - **url** or arguments for `sqlalchemy.engine.URL.create()
       <https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.URL.create>`_.
