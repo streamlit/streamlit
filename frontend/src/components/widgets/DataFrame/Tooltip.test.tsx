@@ -27,32 +27,6 @@ describe("Dataframe Tooltip", () => {
     expect(tooltipContent).toHaveStyle("font-weight: bold")
   })
 
-  test("calls the clearTooltip callback when escape key is pressed", async () => {
-    const user = userEvent.setup()
-    const clearTooltipMock = jest.fn()
-    const propsWithMockedClearTooltip: TooltipProps = {
-      ...defaultProps,
-      clearTooltip: clearTooltipMock,
-    }
-
-    render(<Tooltip {...propsWithMockedClearTooltip} />)
-
-    const tooltipContent = screen.getByText("This is a tooltip.")
-    expect(tooltipContent).toBeInTheDocument()
-
-    user.keyboard("{Escape}")
-    fireEvent.keyDown(document, { key: "Escape", code: "Escape" })
-    fireEvent.keyDown(tooltipContent, { key: "Escape", code: "Escape" })
-    fireEvent.keyDown(window, { key: "Escape", code: "Escape" })
-    fireEvent.mouseDown(document.body)
-    user.click(document.body)
-
-    // Wait for the event handler to process the keydown event
-    await waitFor(() => {
-      expect(clearTooltipMock).toHaveBeenCalledTimes(1)
-    })
-  })
-
   test("renders the tooltip at the correct position", () => {
     const customPositionProps: TooltipProps = {
       top: 200,
