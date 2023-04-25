@@ -296,7 +296,7 @@ function useDataEditor(
       // If no validation is implemented, we accept the value:
       return true
     },
-    []
+    [columns]
   )
 
   return {
