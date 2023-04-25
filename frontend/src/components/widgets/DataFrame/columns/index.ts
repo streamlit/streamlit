@@ -20,6 +20,7 @@ import CheckboxColumn from "./CheckboxColumn"
 import SelectboxColumn from "./SelectboxColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
+import { DateTimeColumn, DateColumn, TimeColumn } from "./DateTimeColumn"
 
 import { ColumnCreator } from "./utils"
 
@@ -36,6 +37,9 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     selectbox: SelectboxColumn,
     list: ListColumn,
     number: NumberColumn,
+    datetime: DateTimeColumn,
+    date: DateColumn,
+    time: TimeColumn,
   })
 )
 
@@ -46,4 +50,7 @@ export {
   SelectboxColumn,
   ListColumn,
   NumberColumn,
+  DateTimeColumn,
+  DateColumn,
+  TimeColumn,
 }

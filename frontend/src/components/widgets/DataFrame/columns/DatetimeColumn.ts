@@ -221,12 +221,12 @@ function BaseDateTimeColumn(
       }
 
       if (!props.isEditable) {
-        // TODO (lukasmasuch): This is a temporary workaround until this PR is merged:
+        // TODO (lukasmasuch): This is a temporary workaround until the following PR is merged:
         // https://github.com/glideapps/glide-data-grid/pull/656
         // The issue is that measuring custom cells is not supported yet.
         // This results in datetime columns not correctly adapting the width to the content.
         // Therefore, we use a text cell here so that we are not affecting the current
-        // behaviour for read-only cells.
+        // behavior for read-only cells.
 
         return {
           kind: GridCellKind.Text,
