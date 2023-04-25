@@ -61,8 +61,8 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.type, [".png", ".svg", ".foo"])
 
-    def test_jpg_replacement(self):
-        """Test that it can be called using an array for type parameter."""
+    def test_jpg_expansion(self):
+        """Test that it adds jpg when passing in just jpeg (and vice versa)."""
         st.file_uploader("the label", type=["png", ".jpg"])
 
         c = self.get_delta_from_queue().new_element.file_uploader
@@ -72,6 +72,13 @@ class FileUploaderTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.type, [".png", ".jpeg", ".jpg"])
+
+    def test_uppercase_expansion(self):
+        """Test that it can expand jpg to jpeg even when uppercase."""
+        st.file_uploader("the label", type=["png", ".JpG"])
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        self.assertEqual(c.type, [".png", ".jpg", ".jpeg"])
 
     @patch("streamlit.elements.file_uploader._get_file_recs")
     def test_multiple_files(self, get_file_recs_patch):
