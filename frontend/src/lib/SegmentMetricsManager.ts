@@ -21,7 +21,6 @@ import { DeployedAppMetadata } from "src/hocs/withHostCommunication/types"
 import { Delta, Element } from "src/autogen/proto"
 import { IS_DEV_ENV } from "./baseconsts"
 import { logAlways } from "./log"
-import { CustomComponentCounter, MetricsManager } from "./MetricsManager"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -32,7 +31,15 @@ declare const analytics: any
 
 type Event = [string, Record<string, unknown>]
 
-export class SegmentMetricsManager implements MetricsManager {
+/**
+ * A mapping of [component instance name] -> [count] which is used to upload
+ * custom component stats when the app is idle.
+ */
+export interface CustomComponentCounter {
+  [name: string]: number
+}
+
+export class SegmentMetricsManager {
   /** The app's SessionInfo instance. */
   private readonly sessionInfo: SessionInfo
 
