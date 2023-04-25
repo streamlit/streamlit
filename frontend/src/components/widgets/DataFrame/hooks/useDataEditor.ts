@@ -153,7 +153,7 @@ function useDataEditor(
           ) {
             const column = columns[col]
             // Only allow deletion if the column is editable and not configured as required
-            if (column.isEditable === true && column.isRequired !== true) {
+            if (column.isEditable && !column.isRequired) {
               updatedCells.push({
                 cell: [col, row],
               })
