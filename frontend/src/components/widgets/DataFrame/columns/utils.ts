@@ -23,6 +23,7 @@ import {
   GridColumn,
 } from "@glideapps/glide-data-grid"
 import { toString, merge, isArray } from "lodash"
+import moment from "moment"
 import numbro from "numbro"
 
 import { Type as ArrowType } from "src/lib/Quiver"
@@ -408,4 +409,68 @@ export function formatNumber(
     )
   }
   return ""
+}
+
+/**
+ * Converts the given value of unknown type to a date without
+ * the risks of any exceptions.
+ *
+ * @param value - The value to convert to a date.
+ *
+ * @returns The converted date or null if the value cannot be interpreted as a date.
+ */
+export function toSafeDate(value: any): Date | null | undefined {
+  if (isNullOrUndefined(value)) {
+    return null
+  }
+
+  // Return the value as-is if it is already a date
+  if (value instanceof Date) {
+    if (!isNaN(value.getTime())) {
+      return value
+    }
+    return undefined
+  }
+
+  if (typeof value === "string" && value.trim().length === 0) {
+    // Empty string should return null
+    return null
+  }
+
+  try {
+    if (typeof value === "bigint") {
+      // bigint is used by Arrow for time values in microseconds,
+      // but JS & Moment uses milliseconds for Date objects
+      return new Date(Number(value) / 1000)
+    }
+
+    const parsedTimestamp = Number(value)
+    if (!isNaN(parsedTimestamp)) {
+      // It was parsed as a valid number (unix timestamp)
+      return new Date(parsedTimestamp)
+    }
+
+    if (typeof value === "string") {
+      // Try to parse string via momentJS:
+      const parsedMomentDate = moment.utc(value)
+      if (parsedMomentDate.isValid()) {
+        return parsedMomentDate.toDate()
+      }
+      // The pasted value was not a valid date string
+      // Try to interpret value as time string instead (HH:mm:ss)
+      const parsedMomentTime = moment.utc(value, [
+        moment.HTML5_FMT.TIME_MS, // HH:mm:ss.SSS
+        moment.HTML5_FMT.TIME_SECONDS, // HH:mm:ss
+        moment.HTML5_FMT.TIME, // HH:mm
+      ])
+      if (parsedMomentTime.isValid()) {
+        return parsedMomentTime.toDate()
+      }
+    }
+  } catch (error) {
+    return undefined
+  }
+
+  // Unable to interpret this value as a date:
+  return undefined
 }

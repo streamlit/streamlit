@@ -29,6 +29,7 @@ import {
   BaseColumnProps,
   toSafeBoolean,
   toGlideColumn,
+  toSafeDate,
 } from "./utils"
 import { TextColumn } from "."
 
@@ -309,5 +310,60 @@ describe("toGlideColumn", () => {
     })
 
     expect(toGlideColumn(indexColumn).grow).toEqual(1)
+  })
+})
+
+describe("toSafeDate", () => {
+  it.each([
+    // valid date object
+    [new Date("2023-04-25"), new Date("2023-04-25")],
+    // undefined value
+    [undefined, null],
+    // null value
+    [null, null],
+    // empty string
+    ["", null],
+    // invalid number
+    [NaN, undefined],
+    // invalid string
+    ["foo", undefined],
+    // valid date string
+    ["2023-04-25", new Date("2023-04-25")],
+    // valid time string
+    ["10:30", new Date("2023-04-25T10:30:00.000Z")],
+    // valid unix timestamp
+    [1671951600000, new Date("2022-12-25T07:00:00.000Z")],
+    // valid bigint
+    [BigInt(1671951600000000), new Date("2022-12-25T07:00:00.000Z")],
+    // other date formats:
+    ["04/25/2023", new Date("2023-04-25T00:00:00.000Z")],
+    // invalid string
+    ["invalid date", undefined],
+    // valid ISO date string
+    ["2023-04-25T10:30:00.000Z", new Date("2023-04-25T10:30:00.000Z")],
+    // valid date string with time
+    ["2023-04-25 10:30", new Date("2023-04-25T10:30:00.000Z")],
+    // valid date string with timezone
+    ["2023-04-25T10:30:00.000+02:00", new Date("2023-04-25T08:30:00.000Z")],
+    // valid time string with milliseconds
+    ["10:30:25.123", new Date("2023-04-25T10:30:25.123Z")],
+    // valid time string with seconds
+    ["10:30:25", new Date("2023-04-25T10:30:25.000Z")],
+    // valid month string
+    ["Jan 2023", new Date("2023-01-01T00:00:00.000Z")],
+    // valid month string with day
+    ["Jan 15, 2023", new Date("2023-01-15T00:00:00.000Z")],
+    // valid date string with day and month names
+    ["25 April 2023", new Date("2023-04-25T00:00:00.000Z")],
+    // valid date string with day and short month names
+    ["25 Apr 2023", new Date("2023-04-25T00:00:00.000Z")],
+    // valid date string with short day and month names
+    ["Tue, 25 Apr 2023", new Date("2023-04-25T00:00:00.000Z")],
+    // valid date string with time and AM/PM
+    ["2023-04-25 10:30 AM", new Date("2023-04-25T10:30:00.000Z")],
+    // valid Unix timestamp in milliseconds as a string
+    ["1671951600000", new Date("2022-12-25T07:00:00.000Z")],
+  ])("converts input %p to the correct date %p", (input, expectedOutput) => {
+    expect(toSafeDate(input)).toEqual(expectedOutput)
   })
 })
