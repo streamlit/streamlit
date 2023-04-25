@@ -66,15 +66,11 @@ export function mockEndpoints(
 export class MockMetricsManager implements MetricsManager {
   public enqueue = jest.fn()
 
-  public incrementDeltaCounter = jest.fn()
+  public handleDeltaMessage = jest.fn()
 
   public getAndResetDeltaCounter = jest.fn()
 
   public clearDeltaCounter = jest.fn()
 
-  public incrementCustomComponentCounter = jest.fn()
-
   public getAndResetCustomComponentCounter = jest.fn()
-
-  public clearCustomComponentCounter = jest.fn()
 }

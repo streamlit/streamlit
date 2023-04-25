@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { Delta, ForwardMsgMetadata } from "src/autogen/proto"
+
 /**
  * A mapping of [delta type] -> [count] which is used to upload delta stats
  * when the app is idle.
@@ -38,14 +40,8 @@ export interface MetricsManager {
   /** Record a new event with the manager. */
   enqueue(evName: string, evData: Record<string, any>): void
 
-  /**
-   * Increment a counter that tracks the number of times a Delta message
-   * of the given type has been processed by the frontend.
-   *
-   * No event is recorded for this. Instead, call `getAndResetDeltaCounter`
-   * periodically, and enqueue an event with the result.
-   */
-  incrementDeltaCounter(deltaType: string): void
+  /** Record all appropriate events for a delta message. */
+  handleDeltaMessage(delta: Delta, metadata: ForwardMsgMetadata): void
 
   /**
    * Get a copy of the pending DeltaCounter object, and reset it, and
@@ -57,20 +53,8 @@ export interface MetricsManager {
   clearDeltaCounter(): void
 
   /**
-   * Increment a counter that tracks the number of times a CustomComponent
-   * of the given type has been used by the frontend.
-   *
-   * No event is recorded for this. Instead, call `getAndResetCustomComponentCounter`
-   * periodically, and enqueue an event with the result.
-   */
-  incrementCustomComponentCounter(customInstanceName: string): void
-
-  /**
    * Get a copy of the pending CustomComponentCounter object, and reset it, and
    * clear the manager's copy.
    */
   getAndResetCustomComponentCounter(): CustomComponentCounter
-
-  /** Clear the manager's pending CustomComponentCounter object. */
-  clearCustomComponentCounter(): void
 }
