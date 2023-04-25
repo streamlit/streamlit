@@ -104,7 +104,6 @@ import { handleFavicon } from "src/components/elements/Favicon"
 
 import {
   createAutoTheme,
-  createPresetThemes,
   createTheme,
   CUSTOM_THEME_NAME,
   getCachedTheme,
@@ -706,14 +705,6 @@ export class App extends PureComponent<Props, State> {
         // if we don't have a pending rerun request, and we don't have
         // a script compilation failure
         scriptRunState = ScriptRunState.NOT_RUNNING
-
-        const { availableThemes, activeTheme } = this.props.theme
-        const customThemeDefined =
-          availableThemes.length > createPresetThemes().length
-        this.metricsMgr.enqueue("themeStats", {
-          activeThemeName: activeTheme.name,
-          customThemeDefined,
-        })
 
         const customComponentCounter =
           this.metricsMgr.getAndResetCustomComponentCounter()
