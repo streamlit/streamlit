@@ -1,0 +1,27 @@
+{
+    "name": "@streamlit/st-lib",
+    "version": "1.21.0",
+    "private": true,
+    "license": "Apache-2.0",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "sideEffects": false,
+    "scripts": {
+        "build": "yarn build:src && yarn build:lib-type",
+        "build:lib-type": "tsc -P tsconfig.json && tsc-alias -p tsconfig.json",
+        "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src"
+    },
+    "dependencies": {
+        "typescript": "^4.9.5"
+    },
+    "browserslist": [
+        ">0.2%",
+        "not dead",
+        "not ie <= 11",
+        "not op_mini all"
+    ],
+    "devDependencies": {
+        "babel-cli": "^6.26.0",
+        "tsc-alias": "^1.8.5"
+    }
+}

@@ -88,7 +88,7 @@ import {
   WidgetStates,
 } from "src/lib/proto"
 import { concat, noop, without } from "lodash"
-
+import { x } from "@streamlit/st-lib"
 import {
   RERUN_PROMPT_MODAL_DIALOG,
   SHOW_DEPLOY_BUTTON,
@@ -167,6 +167,7 @@ interface State {
   currentPageScriptHash: string
   latestRunTime: number
 }
+console.log(x)
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 
