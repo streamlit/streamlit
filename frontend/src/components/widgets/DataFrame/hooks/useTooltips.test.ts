@@ -64,7 +64,7 @@ const getCellContentMock = jest
     return column.getCell("foo")
   })
 
-describe("useTooltip hook", () => {
+describe("useTooltips hook", () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
