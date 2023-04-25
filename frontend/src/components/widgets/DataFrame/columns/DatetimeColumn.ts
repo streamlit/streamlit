@@ -27,7 +27,7 @@ import {
 } from "src/components/widgets/DataFrame/columns/utils"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
-import { DatePickerCell } from "./cells/DatePickerCell"
+import { DateTimeCell } from "./cells/DateTimeCell"
 
 // TODO: Investigate time: https://github.com/streamlit/streamlit/blob/0880740f482abd6a8f755192e3a94843a000f14c/frontend/src/lib/Quiver.ts#L779
 // https://github.com/streamlit/streamlit/blob/0880740f482abd6a8f755192e3a94843a000f14c/frontend/src/lib/Quiver.ts#L825
@@ -111,7 +111,7 @@ function BaseDateTimeColumn(
       min: minDate,
       max: maxDate,
     },
-  } as DatePickerCell
+  } as DateTimeCell
 
   const validateInput = (data?: any): boolean | Date => {
     const cellData: Date | null | undefined = toSafeDate(data)
@@ -249,9 +249,9 @@ function BaseDateTimeColumn(
           displayDate,
           timezoneOffset,
         },
-      } as DatePickerCell
+      } as DateTimeCell
     },
-    getCellValue(cell: DatePickerCell | TextCell): string | null {
+    getCellValue(cell: DateTimeCell | TextCell): string | null {
       if (cell.kind === GridCellKind.Text) {
         return cell.data === undefined ? null : cell.data
       }

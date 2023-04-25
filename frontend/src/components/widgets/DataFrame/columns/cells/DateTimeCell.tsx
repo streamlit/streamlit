@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import React from "react"
 
 import styled from "@emotion/styled"
@@ -39,7 +40,7 @@ export const StyledInputBox = styled.input`
   }
 `
 
-export interface DatePickerCellProps {
+export interface DateTimeCellProps {
   readonly kind: "date-time-cell"
   /* The current value of the datetime cell. */
   readonly date: Date | undefined | null
@@ -83,9 +84,9 @@ export const formatValueForHTMLInput = (
   }
 }
 
-export type DatePickerCell = CustomCell<DatePickerCellProps>
+export type DateTimeCell = CustomCell<DateTimeCellProps>
 
-const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
+const Editor: ReturnType<ProvideEditorCallback<DateTimeCell>> = cell => {
   const cellData = cell.value.data
   const { format, displayDate } = cellData
 
@@ -128,7 +129,7 @@ const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
 
   return (
     <StyledInputBox
-      data-testid={"date-picker-cell"}
+      data-testid={"date-time-cell"}
       required
       type={format}
       defaultValue={value}
@@ -162,9 +163,9 @@ const Editor: ReturnType<ProvideEditorCallback<DatePickerCell>> = cell => {
   )
 }
 
-export const DatePickerCellRenderer: CustomRenderer<DatePickerCell> = {
+export const DateTimeCellRenderer: CustomRenderer<DateTimeCell> = {
   kind: GridCellKind.Custom,
-  isMatch: (cell: CustomCell): cell is DatePickerCell =>
+  isMatch: (cell: CustomCell): cell is DateTimeCell =>
     (cell.data as any).kind === "date-time-cell",
   draw: (args, cell) => {
     const { displayDate } = cell.data
