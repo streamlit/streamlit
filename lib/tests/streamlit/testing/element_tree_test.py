@@ -460,6 +460,23 @@ class SelectSliderTest(InteractiveScriptTests):
         assert sr3.select_slider[1].value == ("orange", "yellow")
 
 
+class SidebarTest(InteractiveScriptTests):
+    def test_access(self):
+        script = self.script_from_string(
+            "sidebar.py",
+            """
+            import streamlit as st
+
+            st.sidebar.radio("foo", options=["a", "b", "c"])
+            st.radio("bar", options=[1, 2, 3])
+            """,
+        )
+        sr = script.run()
+        assert len(sr.radio) == 2
+        assert sr.sidebar.radio[0].value == "a"
+        assert sr.main.radio[0].value == 1
+
+
 class SliderTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
