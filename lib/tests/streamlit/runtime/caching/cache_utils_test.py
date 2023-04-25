@@ -19,6 +19,7 @@ from typing import Any
 
 from parameterized import parameterized
 
+from streamlit.runtime.caching.cache_errors import BadTTLStringError
 from streamlit.runtime.caching.cache_utils import ttl_to_seconds
 
 NORMAL_PARAMS = [
@@ -59,3 +60,11 @@ class CacheUtilsTest(unittest.TestCase):
         self.assertEqual(
             expected_seconds, ttl_to_seconds(input_value, coerce_none_to_inf=False)
         )
+
+    def test_ttl_str_exception(self):
+        """Test that a badly-formatted TTL string raises an exception."""
+        with self.assertRaises(BadTTLStringError):
+            ttl_to_seconds("")
+
+        with self.assertRaises(BadTTLStringError):
+            ttl_to_seconds("1 flecond")

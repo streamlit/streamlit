@@ -24,4 +24,3 @@ types-requests
 types-setuptools
 types-toml
 types-typed-ast
-pandas-stubs

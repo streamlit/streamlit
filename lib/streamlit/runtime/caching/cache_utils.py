@@ -34,6 +34,7 @@ from streamlit import type_util
 from streamlit.elements.spinner import spinner
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import (
+    BadTTLStringError,
     CacheError,
     CacheKeyNotFoundError,
     UnevaluatedDataFrameError,
@@ -81,9 +82,18 @@ def ttl_to_seconds(
     if isinstance(ttl, timedelta):
         return ttl.total_seconds()
     if isinstance(ttl, str):
+        import numpy as np
         import pandas as pd
 
-        return pd.Timedelta(ttl).total_seconds()
+        try:
+            out = pd.Timedelta(ttl).total_seconds()
+        except ValueError as ex:
+            raise BadTTLStringError(ttl) from ex
+
+        if np.isnan(out):
+            raise BadTTLStringError(ttl)
+
+        return out
 
     return ttl
 
