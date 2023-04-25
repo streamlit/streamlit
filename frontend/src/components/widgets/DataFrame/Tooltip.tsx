@@ -31,6 +31,8 @@ export interface TooltipProps {
   left: number
   // The markdown content of the tooltip.
   content: string
+  // Callback from useTooltips hook to clear the tooltip
+  clearTooltip: () => void
 }
 
 /**
@@ -48,10 +50,20 @@ export interface TooltipProps {
  * @param content The markdown content of the tooltip.
  * @returns The tooltip react element.
  */
-function Tooltip({ top, left, content }: TooltipProps): ReactElement {
+function Tooltip({
+  top,
+  left,
+  content,
+  clearTooltip,
+}: TooltipProps): ReactElement {
   const [open, setOpen] = React.useState(true)
   const theme: EmotionTheme = useTheme()
   const { colors, fontSizes, radii } = theme
+
+  const closeTooltip = React.useCallback((): void => {
+    setOpen(false)
+    clearTooltip()
+  }, [clearTooltip, setOpen])
 
   return (
     <Popover
@@ -68,8 +80,8 @@ function Tooltip({ top, left, content }: TooltipProps): ReactElement {
       accessibilityType={ACCESSIBILITY_TYPE.tooltip}
       showArrow={false}
       popoverMargin={5}
-      onClickOutside={() => setOpen(false)}
-      onEsc={() => setOpen(false)}
+      onClickOutside={closeTooltip}
+      onEsc={closeTooltip}
       overrides={{
         Body: {
           style: {
