@@ -466,6 +466,7 @@ function DataFrame({
               // So we allow selection changes for touch devices even when it is not focused.
               setGridSelection(newSelection)
               if (tooltip !== undefined) {
+                // Remove the tooltip on every grid selection change:
                 clearTooltip()
               }
             }
