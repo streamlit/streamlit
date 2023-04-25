@@ -23,6 +23,7 @@ import {
   Item,
 } from "@glideapps/glide-data-grid"
 
+import { notNullOrUndefined } from "src/lib/util/utils"
 import {
   BaseColumn,
   isErrorCell,
@@ -109,7 +110,9 @@ function useDataEditor(
 
     const newRow: Map<number, GridCell> = new Map()
     columns.forEach(column => {
-      newRow.set(column.indexNumber, column.getCell(undefined))
+      // For the default value, we trust the developer to make a valid choice,
+      // so we do not validate the value here.
+      newRow.set(column.indexNumber, column.getCell(column.defaultValue))
     })
     editingState.current.addRow(newRow)
     applyEdits(false, false)
@@ -149,7 +152,8 @@ function useDataEditor(
             col++
           ) {
             const column = columns[col]
-            if (column.isEditable) {
+            // Only allow deletion if the column is editable and not configured as required
+            if (column.isEditable && !column.isRequired) {
               updatedCells.push({
                 cell: [col, row],
               })
@@ -213,7 +217,7 @@ function useDataEditor(
           if (column.isEditable) {
             const newCell = column.getCell(pasteDataValue)
             // We are not editing cells if the pasted value leads to an error:
-            if (!isErrorCell(newCell)) {
+            if (notNullOrUndefined(newCell) && !isErrorCell(newCell)) {
               const originalCol = column.indexNumber
               const originalRow = editingState.current.getOriginalRowIndex(
                 getOriginalIndex(rowIndex)

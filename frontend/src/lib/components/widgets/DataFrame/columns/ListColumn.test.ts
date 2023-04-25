@@ -20,6 +20,7 @@ import ListColumn from "./ListColumn"
 
 const MOCK_LIST_COLUMN_PROPS = {
   id: "1",
+  name: "list_column",
   title: "List column",
   indexNumber: 0,
   isEditable: false,

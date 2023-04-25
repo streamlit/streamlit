@@ -213,8 +213,9 @@ export function getIndexFromArrow(
 
   return {
     id: `index-${indexPosition}`,
-    isEditable,
+    name: title,
     title,
+    isEditable,
     arrowType,
     isIndex: true,
     isHidden: false,
@@ -245,12 +246,12 @@ export function getColumnFromArrow(
     } as ArrowType
   }
 
-  let columnTypeMetadata
+  let columnTypeOptions
   if (Quiver.getTypeName(arrowType) === "categorical") {
     // Get the available categories and use it in column type metadata
     const options = data.getCategoricalOptions(columnPosition)
     if (notNullOrUndefined(options)) {
-      columnTypeMetadata = {
+      columnTypeOptions = {
         options,
       }
     }
@@ -258,10 +259,11 @@ export function getColumnFromArrow(
 
   return {
     id: `column-${title}-${columnPosition}`,
-    isEditable: true,
+    name: title,
     title,
+    isEditable: true,
     arrowType,
-    columnTypeMetadata,
+    columnTypeOptions,
     isIndex: false,
     isHidden: false,
   } as BaseColumnProps

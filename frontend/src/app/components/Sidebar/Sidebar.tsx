@@ -37,6 +37,8 @@ import {
 import IsSidebarContext from "src/lib/components/core/IsSidebarContext"
 import SidebarNav from "./SidebarNav"
 
+import { isEmbed, isColoredLineDisplayed } from "src/lib/util/utils"
+
 export interface SidebarProps {
   endpoints: StreamlitEndpoints
   chevronDownshift: number
@@ -248,6 +250,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           // Props part of StyledSidebar, but not Resizable component
           // @ts-expect-error
           isCollapsed={collapsedSidebar}
+          isEmbed={isEmbed() && !isColoredLineDisplayed()}
           sidebarWidth={sidebarWidth}
         >
           <StyledSidebarContent

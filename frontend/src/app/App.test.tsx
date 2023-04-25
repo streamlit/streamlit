@@ -24,7 +24,9 @@ import { shallow, mount, mockWindowLocation } from "src/lib/test_util"
 import {
   Config,
   CustomThemeConfig,
+  Delta,
   ForwardMsg,
+  ForwardMsgMetadata,
   ICustomThemeConfig,
   INewSession,
   NewSession,
@@ -1515,6 +1517,23 @@ describe("App.handlePageNotFound", () => {
       currentPageName: "",
       currentPageScriptHash: "page_hash",
     })
+  })
+})
+
+describe("App.handleDeltaMessage", () => {
+  it("calls MetricsManager", () => {
+    const mockHandleDeltaMessage = jest.fn()
+
+    const wrapper = shallow(<App {...getProps()} />)
+    const instance = wrapper.instance() as App
+    // @ts-expect-error
+    instance.metricsMgr.handleDeltaMessage = mockHandleDeltaMessage
+
+    const delta = Delta.create({ newElement: {} })
+    const metadata = ForwardMsgMetadata.create({ deltaPath: [0, 1] })
+    instance.handleDeltaMsg(delta, metadata)
+
+    expect(mockHandleDeltaMessage).toHaveBeenCalledWith(delta, metadata)
   })
 })
 

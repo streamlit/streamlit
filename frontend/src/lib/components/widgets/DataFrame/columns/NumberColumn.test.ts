@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
+import { GridCellKind, NumberCell, TextCell } from "@glideapps/glide-data-grid"
 
 import { DataType, Type as ArrowType } from "src/lib/dataframes/Quiver"
 
@@ -38,6 +38,7 @@ const MOCK_UINT_ARROW_TYPE: ArrowType = {
 
 const NUMBER_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
   id: "1",
+  name: "number_column",
   title: "Number column",
   indexNumber: 0,
   isEditable: false,
@@ -53,7 +54,7 @@ function getNumberColumn(
   return NumberColumn({
     ...NUMBER_COLUMN_TEMPLATE,
     arrowType,
-    columnTypeMetadata: params,
+    columnTypeOptions: params,
   } as BaseColumnProps)
 }
 
@@ -193,12 +194,33 @@ describe("NumberColumn", () => {
     }
   )
 
-  it.each([[[]], ["foo"], [[1, 2]], ["123.124.123"], ["--123"], ["2,,2"]])(
-    "%p results in error cell",
-    (input: any) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
-      const cell = mockColumn.getCell(input)
-      expect(isErrorCell(cell)).toEqual(true)
-    }
-  )
+  it.each([
+    [[]],
+    ["foo"],
+    [[1, 2]],
+    ["123.124.123"],
+    ["--123"],
+    ["2,,2"],
+    ["12345678987654321"],
+  ])("%p results in error cell", (input: any) => {
+    const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
+    const cell = mockColumn.getCell(input)
+    expect(isErrorCell(cell)).toEqual(true)
+  })
+
+  it("shows an error cell if the numeric value is too large", () => {
+    const mockColumn = getNumberColumn(MOCK_INT_ARROW_TYPE)
+    const unsafeCell = mockColumn.getCell("1234567898765432123")
+    expect(isErrorCell(unsafeCell)).toEqual(true)
+    expect((unsafeCell as TextCell)?.data).toEqual(
+      "⚠️ 1234567898765432123\n\nThe value is larger than the maximum supported integer values in number columns (2^53).\n"
+    )
+  })
+
+  it("doesn't show an error for large integers with a size up to 2^53", () => {
+    const mockColumn = getNumberColumn(MOCK_INT_ARROW_TYPE)
+
+    const safeCell = mockColumn.getCell("1234567898765432")
+    expect(isErrorCell(safeCell)).toEqual(false)
+  })
 })

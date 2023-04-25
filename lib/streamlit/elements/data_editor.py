@@ -35,12 +35,11 @@ from typing import (
 import pandas as pd
 import pyarrow as pa
 from pandas.api.types import is_datetime64_any_dtype, is_float_dtype, is_integer_dtype
-from pandas.io.formats.style import Styler
 from typing_extensions import Final, Literal, TypeAlias, TypedDict
 
 from streamlit import type_util
-from streamlit.elements.arrow import marshall_styler
 from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -55,6 +54,7 @@ from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type,
 
 if TYPE_CHECKING:
     import numpy as np
+    from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -81,7 +81,7 @@ EditableData = TypeVar(
 DataTypes: TypeAlias = Union[
     pd.DataFrame,
     pd.Index,
-    Styler,
+    "Styler",
     pa.Table,
     "np.ndarray[Any, np.dtype[np.float64]]",
     Tuple[Any],
@@ -92,8 +92,12 @@ DataTypes: TypeAlias = Union[
 
 
 class ColumnConfig(TypedDict, total=False):
-    width: Optional[int]
     title: Optional[str]
+    width: Optional[Literal["small", "medium", "large"]]
+    hidden: Optional[bool]
+    disabled: Optional[bool]
+    required: Optional[bool]
+    alignment: Optional[Literal["left", "center", "right"]]
     type: Optional[
         Literal[
             "text",
@@ -103,11 +107,7 @@ class ColumnConfig(TypedDict, total=False):
             "categorical",
         ]
     ]
-    hidden: Optional[bool]
-    editable: Optional[bool]
-    alignment: Optional[Literal["left", "center", "right"]]
-    metadata: Optional[Dict[str, Any]]
-    column: Optional[Union[str, int]]
+    type_options: Optional[Dict[str, Any]]
 
 
 class EditingState(TypedDict, total=False):
@@ -376,7 +376,7 @@ def _apply_data_specific_configs(
         if type_util.is_colum_type_arrow_incompatible(column_data):
             if column_name not in columns_config:
                 columns_config[column_name] = {}
-            columns_config[column_name]["editable"] = False
+            columns_config[column_name]["disabled"] = True
             # Convert incompatible type to string
             data_df[column_name] = column_data.astype(str)
 
@@ -614,6 +614,7 @@ class DataEditorMixin:
         proto.form_id = current_form_id(self.dg)
 
         if type_util.is_pandas_styler(data):
+            # Pandas styler will only work for non-editable/disabled columns.
             delta_path = self.dg._get_delta_path_str()
             default_uuid = str(hash(delta_path))
             marshall_styler(proto, data, default_uuid)
