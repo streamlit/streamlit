@@ -44,7 +44,8 @@ export interface SelectboxColumnParams {
  *
  */
 function SelectboxColumn(props: BaseColumnProps): BaseColumn {
-  // Select column can be either string, number or boolean type based on the options
+  // The selectbox column can be either string, number or boolean type
+  // based on the options type.
   let dataType: "number" | "boolean" | "string" = "string"
 
   const parameters = mergeColumnParameters(
