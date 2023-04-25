@@ -24,6 +24,7 @@ import { mockWindowLocation, mount, shallow } from "src/lib/test_util"
 import {
   Config,
   CustomThemeConfig,
+  Delta,
   ForwardMsg,
   ForwardMsgMetadata,
   ICustomThemeConfig,
@@ -33,7 +34,6 @@ import {
   PageInfo,
   PageNotFound,
   PagesChanged,
-  Delta,
 } from "src/autogen/proto"
 import { HostCommunicationHOC } from "src/hocs/withHostCommunication"
 import {
