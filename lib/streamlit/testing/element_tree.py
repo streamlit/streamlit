@@ -1014,6 +1014,8 @@ class Block:
     def key(self) -> str | None:
         return None
 
+    # We could implement these using __getattr__ but that would have
+    # much worse type information.
     @property
     def button(self) -> Sequence[Button]:
         return self.get("button")
@@ -1106,6 +1108,7 @@ class Block:
     def title(self) -> Sequence[Title]:
         return self.get("title")
 
+    # These overloads improve type information for code calling `get`
     @overload
     def get(self, element_type: Literal["button"]) -> Sequence[Button]:
         ...
