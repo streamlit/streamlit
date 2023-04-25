@@ -60,7 +60,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       min: arrowTypeName.startsWith("uint") ? 0 : undefined,
     },
     // User parameters:
-    props.columnTypeMetadata
+    props.columnTypeOptions
   ) as NumberColumnParams
 
   const allowNegative = isNullOrUndefined(parameters.min) || parameters.min < 0
@@ -112,6 +112,14 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         // Apply max parameter
         if (notNullOrUndefined(parameters.max)) {
           cellData = Math.min(cellData, parameters.max)
+        }
+
+        // Check if the value is larger than the maximum supported value:
+        if (Number.isInteger(cellData) && !Number.isSafeInteger(cellData)) {
+          return getErrorCell(
+            toSafeString(data),
+            "The value is larger than the maximum supported integer values in number columns (2^53)."
+          )
         }
       }
 

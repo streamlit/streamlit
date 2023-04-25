@@ -20,6 +20,7 @@ import TextColumn from "./TextColumn"
 
 const MOCK_TEXT_COLUMN_PROPS = {
   id: "1",
+  name: "text_column",
   title: "Text column",
   indexNumber: 0,
   isEditable: false,
