@@ -534,6 +534,7 @@ function DataFrame({
           top={tooltip.top}
           left={tooltip.left}
           content={tooltip.content}
+          clearTooltip={clearTooltip}
         ></Tooltip>
       )}
     </StyledResizableContainer>
