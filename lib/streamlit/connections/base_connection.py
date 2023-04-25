@@ -45,8 +45,7 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
         """Create an ExperimentalBaseConnection.
 
         This constructor is called by the connection factory machinery when a user
-        script calls ``st.experimental_connection()`` and when reconnecting after a
-        connection is reset.
+        script calls ``st.experimental_connection()``.
 
         Subclasses of ExperimentalBaseConnection that want to overwrite this method
         should take care to also call the base class' implementation.
@@ -107,7 +106,7 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
     def _on_secrets_changed(self, _) -> None:
         """Reset the raw connection object when this connection's secrets change.
 
-        We don't expect either user scripts of connection authors to have to use or
+        We don't expect either user scripts or connection authors to have to use or
         overwrite this method.
         """
         new_hash = calc_md5(json.dumps(self._secrets.to_dict()))
@@ -172,7 +171,8 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
         """Create an instance of an underlying connection object.
 
         This abstract method is the one method that we require subclasses of
-        ExperimentalBaseConnection to provide an implementation for.
+        ExperimentalBaseConnection to provide an implementation for. It is called when
+        first creating a connection and when reconnecting after a connection is reset.
 
         Parameters
         ----------
