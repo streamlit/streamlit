@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-import { renderHook } from "@testing-library/react-hooks"
-
+import { renderHook, act } from "@testing-library/react-hooks"
 import {
   BaseColumn,
   TextColumn,
   NumberColumn,
 } from "src/components/widgets/DataFrame/columns"
 
-import useTooltips from "./useTooltips"
+import useTooltips, { DEBOUNCE_TIME_MS } from "./useTooltips"
+import { GridMouseEventArgs } from "@glideapps/glide-data-grid"
 
+const TOOLTIP_CONTENT = "This is a **number** column."
 const MOCK_COLUMNS: BaseColumn[] = [
   NumberColumn({
     id: "column_1",
@@ -61,20 +62,91 @@ const getCellContentMock = jest
   .mockImplementation(([col]: readonly [number]) => {
     const column = MOCK_COLUMNS[col]
     if (column.kind === "number") {
-      return column.getCell(123)
+      return { ...column.getCell(123), tooltip: "Cell tooltip 1" }
     }
-    return column.getCell("foo")
+    return { ...column.getCell("foo"), tooltip: "Cell tooltip 2" }
   })
 
 describe("useTooltips hook", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    jest.useFakeTimers()
   })
-  it("renders a tooltip on hovering the header column", () => {
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers()
+    jest.useRealTimers()
+  })
+
+  it("renders a tooltip on hovering the header column with a tooltip", () => {
     const { result } = renderHook(() => {
       return useTooltips(MOCK_COLUMNS, getCellContentMock)
     })
 
-    // TODO: implement
+    act(() => {
+      result.current.onItemHovered!({
+        kind: "header",
+        location: [0, -1],
+        bounds: { x: 0, y: 0, width: 100, height: 30 },
+      } as object as GridMouseEventArgs)
+
+      jest.advanceTimersByTime(DEBOUNCE_TIME_MS)
+    })
+
+    expect(result.current.tooltip).toMatchObject({
+      content: TOOLTIP_CONTENT,
+      left: 50,
+      top: 0,
+    })
+  })
+
+  it("renders a tooltip on hovering a cell with a tooltip", () => {
+    const { result } = renderHook(() => {
+      return useTooltips(MOCK_COLUMNS, getCellContentMock)
+    })
+
+    act(() => {
+      result.current.onItemHovered!({
+        kind: "cell",
+        location: [0, 1],
+        bounds: { x: 0, y: 30, width: 100, height: 30 },
+      } as object as GridMouseEventArgs)
+
+      jest.advanceTimersByTime(DEBOUNCE_TIME_MS)
+    })
+
+    expect(result.current.tooltip).toMatchObject({
+      content: "Cell tooltip 1",
+      left: 50,
+      top: 30,
+    })
+  })
+
+  it("clears the tooltip when calling the clearTooltip function", () => {
+    const { result } = renderHook(() => {
+      return useTooltips(MOCK_COLUMNS, getCellContentMock)
+    })
+
+    act(() => {
+      result.current.onItemHovered!({
+        kind: "header",
+        location: [0, 0],
+        bounds: { x: 0, y: 0, width: 100, height: 30 },
+      } as object as GridMouseEventArgs)
+
+      jest.advanceTimersByTime(DEBOUNCE_TIME_MS)
+    })
+
+    expect(result.current.tooltip).toMatchObject({
+      content: TOOLTIP_CONTENT,
+      left: 50,
+      top: 0,
+    })
+
+    act(() => {
+      result.current.clearTooltip()
+    })
+
+    expect(result.current.tooltip).toBeUndefined()
   })
 })

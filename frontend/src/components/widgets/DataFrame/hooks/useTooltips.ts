@@ -29,7 +29,7 @@ import {
 } from "src/components/widgets/DataFrame/columns"
 
 // Debounce time for triggering the tooltip on hover.
-const DEBOUNCE_TIME_MS = 600
+export const DEBOUNCE_TIME_MS = 600
 
 export type TooltipsReturn = {
   // The tooltip to show (if any):
