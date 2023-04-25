@@ -408,8 +408,8 @@ class CacheDataAPI:
             incompatible with ``persist="disk"`` - ``ttl`` will be ignored if
             ``persist`` is specified.
 
-            If ttl is a str, then it should be in a format supported by [Pandas's
-            Timedelta constructor](https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html).
+            If ttl is a str, then it should be in a format supported by `Pandas's
+            Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_.
             Examples of valid strings are: "1d", "1.5 days", and "1h23s".
 
         max_entries : int or None
