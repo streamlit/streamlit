@@ -79,9 +79,13 @@ export interface BaseColumn extends BaseColumnProps {
   // smart: Detects if value is a number or a string and sorts accordingly.
   // raw: Sorts based on the actual type of the cell data value.
   readonly sortMode: "default" | "raw" | "smart"
+  // Validate the input data for compatibility with the column type:
+  // Either returns a boolean indicating if the data is valid or not, or
+  // returns the corrected value.
+  validateInput?(data?: any): boolean | any
   // Get a cell with the provided data for the column type:
-  getCell(data?: any): GridCell
-  // Get the raw cell of a provided cell:
+  getCell(data?: any, validate?: boolean): GridCell
+  // Get the raw value of the given cell:
   getCellValue(cell: GridCell): any | null
 }
 
