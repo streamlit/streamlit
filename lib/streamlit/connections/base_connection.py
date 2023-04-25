@@ -138,8 +138,10 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
     def reset(self) -> None:
         """Reset this connection so that it gets reinitialized the next time it's used.
 
-        App developers can use this method when working with concrete connection class
-        instances, particularly in error handling code.
+        This method can be useful when a connection has become stale, an auth token has
+        expired, or in similar scenarios where a broken connection might be fixed by
+        reinitializing it. Note that some connection methods may already use ``reset()``
+        in their error handling code.
 
         Example
         -------
@@ -148,12 +150,11 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
         >>> conn = st.experimental_connection("my_conn")
         >>>
         >>> # Reset the connection before using it if it isn't healthy
-        >>> # Note: is_healthy() is just shown for example here
+        >>> # Note: is_healthy() isn't a real method and is just shown for example here.
         >>> if not conn.is_healthy():
         ...     conn.reset()
         ...
-        >>> cursor = conn.query("...")
-        >>> # ...
+        >>> # Do stuff with conn...
         """
         self._raw_instance = None
 
