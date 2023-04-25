@@ -92,8 +92,12 @@ DataTypes: TypeAlias = Union[
 
 
 class ColumnConfig(TypedDict, total=False):
-    width: Optional[int]
     title: Optional[str]
+    width: Optional[Literal["small", "medium", "large"]]
+    hidden: Optional[bool]
+    disabled: Optional[bool]
+    required: Optional[bool]
+    alignment: Optional[Literal["left", "center", "right"]]
     type: Optional[
         Literal[
             "text",
@@ -103,11 +107,7 @@ class ColumnConfig(TypedDict, total=False):
             "categorical",
         ]
     ]
-    hidden: Optional[bool]
-    editable: Optional[bool]
-    alignment: Optional[Literal["left", "center", "right"]]
-    metadata: Optional[Dict[str, Any]]
-    column: Optional[Union[str, int]]
+    type_options: Optional[Dict[str, Any]]
 
 
 class EditingState(TypedDict, total=False):
@@ -376,7 +376,7 @@ def _apply_data_specific_configs(
         if type_util.is_colum_type_arrow_incompatible(column_data):
             if column_name not in columns_config:
                 columns_config[column_name] = {}
-            columns_config[column_name]["editable"] = False
+            columns_config[column_name]["disabled"] = True
             # Convert incompatible type to string
             data_df[column_name] = column_data.astype(str)
 

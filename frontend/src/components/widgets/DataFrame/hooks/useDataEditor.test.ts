@@ -34,6 +34,7 @@ import useDataEditor from "./useDataEditor"
 const MOCK_COLUMNS: BaseColumn[] = [
   NumberColumn({
     id: "column_1",
+    name: "column_1",
     title: "column_1",
     indexNumber: 0,
     arrowType: {
@@ -47,6 +48,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
   }),
   TextColumn({
     id: "column_2",
+    name: "column_2",
     title: "column_2",
     indexNumber: 1,
     arrowType: {
@@ -57,6 +59,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isHidden: false,
     isIndex: false,
     isStretched: false,
+    defaultValue: "foo",
   }),
 ]
 
@@ -277,6 +280,34 @@ describe("useDataEditor hook", () => {
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS + 1)
 
     expect(applyEditsMock).toHaveBeenCalledWith(false, false)
+  })
+
+  it("uses default values for new rows in onRowAppended", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+    const { result } = renderHook(() => {
+      return useDataEditor(
+        MOCK_COLUMNS,
+        false, // activates addition & deletion of rows
+        editingState,
+        getCellContentMock,
+        getOriginalIndexMock,
+        refreshCellsMock,
+        applyEditsMock
+      )
+    })
+
+    if (typeof result.current.onRowAppended !== "function") {
+      throw new Error("onRowAppended is expected to be a function")
+    }
+
+    result.current.onRowAppended()
+
+    // Check with full editing state:
+    expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
+      `{"edited_cells":{},"added_rows":[{"1":"foo"}],"deleted_rows":[]}`
+    )
   })
 
   it("doesn't allow to add new rows via onRowAppended if fix num rows", () => {

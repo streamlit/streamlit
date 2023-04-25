@@ -34,6 +34,7 @@ import { TextColumn } from "."
 
 const MOCK_TEXT_COLUMN_PROPS = {
   id: "column_1",
+  name: "column_1",
   title: "column_1",
   indexNumber: 0,
   arrowType: {

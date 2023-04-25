@@ -60,7 +60,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       min: arrowTypeName.startsWith("uint") ? 0 : undefined,
     },
     // User parameters:
-    props.columnTypeMetadata
+    props.columnTypeOptions
   ) as NumberColumnParams
 
   const allowNegative = isNullOrUndefined(parameters.min) || parameters.min < 0

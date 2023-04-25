@@ -15,6 +15,7 @@
  */
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
+import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 
 import { Type as ArrowType } from "src/lib/Quiver"
 
@@ -35,6 +36,7 @@ const MOCK_BOOLEAN_ARROW_TYPE: ArrowType = {
 
 const CATEGORICAL_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
   id: "1",
+  name: "categorical_column",
   title: "Categorical column",
   indexNumber: 0,
   isEditable: false,
@@ -45,12 +47,14 @@ const CATEGORICAL_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
 
 function getCategoricalColumn(
   arrowType: ArrowType,
-  params?: CategoricalColumnParams
+  params?: CategoricalColumnParams,
+  column_props_overwrites?: Partial<BaseColumnProps>
 ): ReturnType<typeof CategoricalColumn> {
   return CategoricalColumn({
     ...CATEGORICAL_COLUMN_TEMPLATE,
+    ...column_props_overwrites,
     arrowType,
-    columnTypeMetadata: params,
+    columnTypeOptions: params,
   } as BaseColumnProps)
 }
 
@@ -67,6 +71,12 @@ describe("CategoricalColumn", () => {
     const mockCell = mockColumn.getCell("foo")
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
     expect(mockColumn.getCellValue(mockCell)).toEqual("foo")
+
+    expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
+      "",
+      "foo",
+      "bar",
+    ])
   })
 
   it("creates a valid column instance number values", () => {
@@ -81,6 +91,13 @@ describe("CategoricalColumn", () => {
     const mockCell = mockColumn.getCell(1)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
     expect(mockColumn.getCellValue(mockCell)).toEqual(1)
+
+    expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
+      "",
+      "1",
+      "2",
+      "3",
+    ])
   })
 
   it("creates a valid column instance from boolean type", () => {
@@ -91,6 +108,29 @@ describe("CategoricalColumn", () => {
     const mockCell = mockColumn.getCell(true)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
     expect(mockColumn.getCellValue(mockCell)).toEqual(true)
+    expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
+      "",
+      "true",
+      "false",
+    ])
+  })
+
+  it("creates a required column that does not add the empty value", () => {
+    const mockColumn = getCategoricalColumn(
+      MOCK_CATEGORICAL_TYPE,
+      {
+        options: ["foo", "bar"],
+      },
+      { isRequired: true }
+    )
+    const mockCell = mockColumn.getCell("foo")
+    expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
+      "foo",
+      "bar",
+    ])
+
+    const errorCell = mockColumn.getCell(null)
+    expect(isErrorCell(errorCell)).toEqual(true)
   })
 
   it("creates error cell if value is not in options", () => {

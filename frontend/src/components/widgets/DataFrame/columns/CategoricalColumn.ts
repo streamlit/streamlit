@@ -54,7 +54,7 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
         Quiver.getTypeName(props.arrowType) === "bool" ? [true, false] : [],
     },
     // User parameters:
-    props.columnTypeMetadata
+    props.columnTypeOptions
   ) as CategoricalColumnParams
 
   const uniqueTypes = new Set(parameters.options.map(x => typeof x))
@@ -75,7 +75,7 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
     data: {
       kind: "dropdown-cell",
       allowedValues: [
-        "", // Enforce the empty option
+        ...(props.isRequired !== true ? [""] : []),
         ...parameters.options
           .filter(opt => opt !== "") // ignore empty option if it exists
           .map(opt => toSafeString(opt)), // convert everything to string
