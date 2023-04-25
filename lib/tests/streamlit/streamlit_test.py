@@ -132,10 +132,6 @@ class StreamlitTest(unittest.TestCase):
                 "session_state",
                 "cache_data",
                 "cache_resource",
-                # Beta APIs:
-                "beta_container",
-                "beta_expander",
-                "beta_columns",
                 # Experimental APIs:
                 "experimental_user",
                 "experimental_singleton",
@@ -143,7 +139,6 @@ class StreamlitTest(unittest.TestCase):
                 "experimental_get_query_params",
                 "experimental_set_query_params",
                 "experimental_rerun",
-                "experimental_show",
                 "experimental_data_editor",
                 "experimental_connection",
                 "get_option",
