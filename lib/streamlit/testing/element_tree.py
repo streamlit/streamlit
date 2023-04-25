@@ -1061,7 +1061,7 @@ class Block:
         return self.get("markdown")
 
     @property
-    def multiselect(self) -> Sequence[Multiselect]:
+    def multiselect(self) -> Sequence[Multiselect[Any]]:
         return self.get("multiselect")
 
     @property
@@ -1069,19 +1069,19 @@ class Block:
         return self.get("number_input")
 
     @property
-    def radio(self) -> Sequence[Radio]:
+    def radio(self) -> Sequence[Radio[Any]]:
         return self.get("radio")
 
     @property
-    def select_slider(self) -> Sequence[SelectSlider]:
+    def select_slider(self) -> Sequence[SelectSlider[Any]]:
         return self.get("select_slider")
 
     @property
-    def selectbox(self) -> Sequence[Selectbox]:
+    def selectbox(self) -> Sequence[Selectbox[Any]]:
         return self.get("selectbox")
 
     @property
-    def slider(self) -> Sequence[Slider]:
+    def slider(self) -> Sequence[Slider[Any]]:
         return self.get("slider")
 
     @property
