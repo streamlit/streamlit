@@ -36,6 +36,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
   TextColumn({
     arrowType: { meta: null, numpy_type: "object", pandas_type: "unicode" },
     id: "index-0",
+    name: "",
     indexNumber: 0,
     isEditable: true,
     isHidden: false,
@@ -46,6 +47,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
   TextColumn({
     arrowType: { meta: null, numpy_type: "object", pandas_type: "unicode" },
     id: "column-c1-0",
+    name: "c1",
     indexNumber: 1,
     isEditable: true,
     isHidden: false,
@@ -55,8 +57,9 @@ const MOCK_COLUMNS: BaseColumn[] = [
   }),
   TextColumn({
     arrowType: { meta: null, numpy_type: "object", pandas_type: "unicode" },
-    columnTypeMetadata: undefined,
+    columnTypeOptions: undefined,
     id: "column-c2-1",
+    name: "c2",
     indexNumber: 2,
     isEditable: true,
     isHidden: false,

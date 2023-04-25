@@ -20,6 +20,7 @@ import ObjectColumn from "./ObjectColumn"
 
 const MOCK_OBJECT_COLUMN_PROPS = {
   id: "1",
+  name: "object_column",
   title: "Object column",
   indexNumber: 0,
   isEditable: false,

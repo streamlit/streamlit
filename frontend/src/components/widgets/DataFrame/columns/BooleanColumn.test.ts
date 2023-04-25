@@ -21,6 +21,7 @@ import BooleanColumn from "./BooleanColumn"
 
 const MOCK_BOOLEAN_COLUMN_PROPS = {
   id: "1",
+  name: "boolean_column",
   title: "Boolean column",
   indexNumber: 0,
   isEditable: false,

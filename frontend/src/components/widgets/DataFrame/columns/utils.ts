@@ -35,7 +35,9 @@ import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 export interface BaseColumnProps {
   // The id of the column:
   readonly id: string
-  // The title of the column:
+  // The name of the column from the original data:
+  readonly name: string
+  // The display title of the column:
   readonly title: string
   // The index number of the column:
   readonly indexNumber: number
@@ -49,14 +51,18 @@ export interface BaseColumnProps {
   readonly isIndex: boolean
   // If `True`, the column is a stretched:
   readonly isStretched: boolean
+  // If `True`, a value is required before the cell or row can be submitted:
+  readonly isRequired?: boolean
   // The initial width of the column:
   readonly width?: number
   // Column type selected via column config:
   readonly customType?: string
   // Additional metadata related to the column type:
-  readonly columnTypeMetadata?: Record<string, any>
+  readonly columnTypeOptions?: Record<string, any>
   // The content alignment of the column:
   readonly contentAlignment?: "left" | "center" | "right"
+  // The default value of the column used when adding a new row:
+  readonly defaultValue?: string | number | boolean
   // Theme overrides for this column:
   readonly themeOverride?: Partial<GlideTheme>
   // A custom icon to be displayed in the column header:
@@ -392,7 +398,7 @@ export function formatNumber(
 ): string {
   if (!Number.isNaN(value) && Number.isFinite(value)) {
     if (maxPrecision === 0) {
-      // Numbro is unable to format the numb with 0 decimals.
+      // Numbro is unable to format the number with 0 decimals.
       value = Math.round(value)
     }
     return numbro(value).format(
