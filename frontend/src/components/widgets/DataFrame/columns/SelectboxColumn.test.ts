@@ -56,7 +56,7 @@ function getSelectboxColumn(
   } as BaseColumnProps)
 }
 
-describe("SelectColumn", () => {
+describe("SelectboxColumn", () => {
   it("creates a valid column instance with string values", () => {
     const mockColumn = getSelectboxColumn(MOCK_CATEGORICAL_TYPE, {
       options: ["foo", "bar"],
@@ -81,7 +81,7 @@ describe("SelectColumn", () => {
     const mockColumn = getSelectboxColumn(MOCK_CATEGORICAL_TYPE, {
       options: [1, 2, 3],
     })
-    expect(mockColumn.kind).toEqual("select")
+    expect(mockColumn.kind).toEqual("selectbox")
     expect(mockColumn.title).toEqual(SELECTBOX_COLUMN_TEMPLATE.title)
     expect(mockColumn.id).toEqual(SELECTBOX_COLUMN_TEMPLATE.id)
     expect(mockColumn.sortMode).toEqual("default")
@@ -100,7 +100,7 @@ describe("SelectColumn", () => {
 
   it("creates a valid column instance from boolean type", () => {
     const mockColumn = getSelectboxColumn(MOCK_BOOLEAN_ARROW_TYPE)
-    expect(mockColumn.kind).toEqual("select")
+    expect(mockColumn.kind).toEqual("selectbox")
     expect(mockColumn.title).toEqual(SELECTBOX_COLUMN_TEMPLATE.title)
 
     const mockCell = mockColumn.getCell(true)
