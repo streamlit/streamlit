@@ -33,7 +33,7 @@ import {
   CheckboxColumn,
   NumberColumn,
   TextColumn,
-  CategoricalColumn,
+  SelectboxColumn,
   ListColumn,
 } from "./columns"
 import {
@@ -639,7 +639,7 @@ describe("getColumnTypeFromArrow", () => {
         pandas_type: "categorical",
         numpy_type: "int8",
       },
-      CategoricalColumn,
+      SelectboxColumn,
     ],
     [
       {

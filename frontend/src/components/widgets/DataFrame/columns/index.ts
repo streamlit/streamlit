@@ -17,7 +17,7 @@
 import ObjectColumn from "./ObjectColumn"
 import TextColumn from "./TextColumn"
 import CheckboxColumn from "./CheckboxColumn"
-import CategoricalColumn from "./CategoricalColumn"
+import SelectboxColumn from "./SelectboxColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
 
@@ -33,7 +33,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     object: ObjectColumn,
     text: TextColumn,
     checkbox: CheckboxColumn,
-    categorical: CategoricalColumn,
+    selectbox: SelectboxColumn,
     list: ListColumn,
     number: NumberColumn,
   })
@@ -43,7 +43,7 @@ export {
   ObjectColumn,
   TextColumn,
   CheckboxColumn,
-  CategoricalColumn,
+  SelectboxColumn,
   ListColumn,
   NumberColumn,
 }
