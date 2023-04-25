@@ -21,6 +21,7 @@ import {
   GridCellKind,
   LoadingCell,
   GridColumn,
+  BaseGridCell,
 } from "@glideapps/glide-data-grid"
 import { toString, merge, isArray } from "lodash"
 import numbro from "numbro"
@@ -35,7 +36,9 @@ import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 export interface BaseColumnProps {
   // The id of the column:
   readonly id: string
-  // The title of the column:
+  // The name of the column from the original data:
+  readonly name: string
+  // The display title of the column:
   readonly title: string
   // The index number of the column:
   readonly indexNumber: number
@@ -49,16 +52,24 @@ export interface BaseColumnProps {
   readonly isIndex: boolean
   // If `True`, the column is a stretched:
   readonly isStretched: boolean
+  // If `True`, a value is required before the cell or row can be submitted:
+  readonly isRequired?: boolean
   // The initial width of the column:
   readonly width?: number
+  // A help text that is displayed on hovering the column header.
+  readonly help?: string
   // Column type selected via column config:
   readonly customType?: string
   // Additional metadata related to the column type:
-  readonly columnTypeMetadata?: Record<string, any>
+  readonly columnTypeOptions?: Record<string, any>
   // The content alignment of the column:
   readonly contentAlignment?: "left" | "center" | "right"
+  // The default value of the column used when adding a new row:
+  readonly defaultValue?: string | number | boolean
   // Theme overrides for this column:
   readonly themeOverride?: Partial<GlideTheme>
+  // A custom icon to be displayed in the column header:
+  readonly icon?: string
 }
 
 /**
@@ -71,9 +82,13 @@ export interface BaseColumn extends BaseColumnProps {
   // smart: Detects if value is a number or a string and sorts accordingly.
   // raw: Sorts based on the actual type of the cell data value.
   readonly sortMode: "default" | "raw" | "smart"
+  // Validate the input data for compatibility with the column type:
+  // Either returns a boolean indicating if the data is valid or not, or
+  // returns the corrected value.
+  validateInput?(data?: any): boolean | any
   // Get a cell with the provided data for the column type:
-  getCell(data?: any): GridCell
-  // Get the raw cell of a provided cell:
+  getCell(data?: any, validate?: boolean): GridCell
+  // Get the raw value of the given cell:
   getCellValue(cell: GridCell): any | null
 }
 
@@ -127,10 +142,22 @@ export function isErrorCell(cell: GridCell): cell is ErrorCell {
   return cell.hasOwnProperty("isError") && (cell as ErrorCell).isError
 }
 
+interface CellWithTooltip extends BaseGridCell {
+  readonly tooltip: string
+}
+
+/**
+ * Returns `true` if the given cell has a tooltip
+ */
+export function hasTooltip(cell: BaseGridCell): cell is CellWithTooltip {
+  return (
+    cell.hasOwnProperty("tooltip") && (cell as CellWithTooltip).tooltip !== ""
+  )
+}
 /**
  * Interface used for indicating if a cell contains no value.
  */
-interface MissingValueCell extends TextCell {
+interface MissingValueCell extends BaseGridCell {
   readonly isMissingValue: true
 }
 
@@ -138,7 +165,9 @@ interface MissingValueCell extends TextCell {
  * Returns `true` if the given cell contains no value (-> missing value).
  * For example, a number cell that contains null is interpreted as a missing value.
  */
-export function isMissingValueCell(cell: GridCell): cell is MissingValueCell {
+export function isMissingValueCell(
+  cell: BaseGridCell
+): cell is MissingValueCell {
   return (
     cell.hasOwnProperty("isMissingValue") &&
     (cell as MissingValueCell).isMissingValue
@@ -184,6 +213,7 @@ export function toGlideColumn(column: BaseColumn): GridColumn {
     title: column.title,
     hasMenu: false,
     themeOverride: column.themeOverride,
+    icon: column.icon,
     ...(column.isStretched && {
       grow: column.isIndex ? 1 : 3,
     }),
@@ -389,7 +419,7 @@ export function formatNumber(
 ): string {
   if (!Number.isNaN(value) && Number.isFinite(value)) {
     if (maxPrecision === 0) {
-      // Numbro is unable to format the numb with 0 decimals.
+      // Numbro is unable to format the number with 0 decimals.
       value = Math.round(value)
     }
     return numbro(value).format(

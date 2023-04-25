@@ -37,7 +37,6 @@ from typing_extensions import Literal, TypeAlias, TypedDict
 
 from streamlit import logger as _logger
 from streamlit import type_util
-from streamlit.elements.arrow import marshall_styler
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
@@ -47,6 +46,7 @@ from streamlit.elements.lib.column_config_utils import (
     determine_dataframe_schema,
     marshall_column_config,
 )
+from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -373,7 +373,7 @@ def _apply_data_specific_configs(
         if type_util.is_colum_type_arrow_incompatible(column_data):
             if column_name not in columns_config:
                 columns_config[column_name] = {}
-            columns_config[column_name]["editable"] = False
+            columns_config[column_name]["disabled"] = True
             # Convert incompatible type to string
             data_df[column_name] = column_data.astype(str)
 
@@ -622,6 +622,7 @@ class DataEditorMixin:
         proto.form_id = current_form_id(self.dg)
 
         if type_util.is_pandas_styler(data):
+            # Pandas styler will only work for non-editable/disabled columns.
             delta_path = self.dg._get_delta_path_str()
             default_uuid = str(hash(delta_path))
             marshall_styler(proto, data, default_uuid)

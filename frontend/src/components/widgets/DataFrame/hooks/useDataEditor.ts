@@ -21,8 +21,11 @@ import {
   DataEditorProps,
   GridSelection,
   Item,
+  ValidatedGridCell,
 } from "@glideapps/glide-data-grid"
 
+import { logWarning } from "src/lib/log"
+import { notNullOrUndefined } from "src/lib/utils"
 import {
   BaseColumn,
   isErrorCell,
@@ -34,7 +37,7 @@ import EditingState from "src/components/widgets/DataFrame/EditingState"
  */
 type DataEditorReturn = Pick<
   DataEditorProps,
-  "onCellEdited" | "onPaste" | "onRowAppended" | "onDelete"
+  "onCellEdited" | "onPaste" | "onRowAppended" | "onDelete" | "validateCell"
 >
 
 /**
@@ -89,14 +92,20 @@ function useDataEditor(
         return
       }
 
-      const newCell = column.getCell(newValue)
+      const newCell = column.getCell(newValue, true)
+      // Only update the cell if the new cell is not causing any errors:
+      if (!isErrorCell(newCell)) {
+        editingState.current.setCell(originalCol, originalRow, {
+          ...newCell,
+          lastUpdated: performance.now(),
+        })
 
-      editingState.current.setCell(originalCol, originalRow, {
-        ...newCell,
-        lastUpdated: performance.now(),
-      })
-
-      applyEdits()
+        applyEdits()
+      } else {
+        logWarning(
+          `Not applying the cell edit since it causes this error:\n ${newCell.data}`
+        )
+      }
     },
     [columns, editingState, getOriginalIndex, getCellContent, applyEdits]
   )
@@ -109,7 +118,9 @@ function useDataEditor(
 
     const newRow: Map<number, GridCell> = new Map()
     columns.forEach(column => {
-      newRow.set(column.indexNumber, column.getCell(undefined))
+      // For the default value, we trust the developer to make a valid choice,
+      // so we do not validate the value here.
+      newRow.set(column.indexNumber, column.getCell(column.defaultValue))
     })
     editingState.current.addRow(newRow)
     applyEdits(false, false)
@@ -149,7 +160,8 @@ function useDataEditor(
             col++
           ) {
             const column = columns[col]
-            if (column.isEditable) {
+            // Only allow deletion if the column is editable and not configured as required
+            if (column.isEditable && !column.isRequired) {
               updatedCells.push({
                 cell: [col, row],
               })
@@ -211,9 +223,9 @@ function useDataEditor(
           const column = columns[colIndex]
           // Only add to columns that are editable:
           if (column.isEditable) {
-            const newCell = column.getCell(pasteDataValue)
+            const newCell = column.getCell(pasteDataValue, true)
             // We are not editing cells if the pasted value leads to an error:
-            if (!isErrorCell(newCell)) {
+            if (notNullOrUndefined(newCell) && !isErrorCell(newCell)) {
               const originalCol = column.indexNumber
               const originalRow = editingState.current.getOriginalRowIndex(
                 getOriginalIndex(rowIndex)
@@ -257,11 +269,42 @@ function useDataEditor(
     ]
   )
 
+  const validateCell = React.useCallback(
+    (cell: Item, newValue: EditableGridCell) => {
+      const col = cell[0]
+      if (col >= columns.length) {
+        // This should never happen.
+        // But we return true (default) to avoid any unknown issues.
+        return true
+      }
+
+      const column = columns[col]
+      if (column.validateInput) {
+        // We get the actual raw value of the new cell and
+        // validate it based on the column validateInput implementation:
+        const validationResult = column.validateInput(
+          column.getCellValue(newValue)
+        )
+        if (validationResult === true || validationResult === false) {
+          // Only return if the validation result is a valid boolean value (true or false)
+          // validationResult can also be other values, so we need to check this specifically.
+          return validationResult
+        }
+        // If it is any other value, we return it as a corrected cell:
+        return column.getCell(validationResult) as ValidatedGridCell
+      }
+      // If no validation is implemented, we accept the value:
+      return true
+    },
+    [columns]
+  )
+
   return {
     onCellEdited,
     onPaste,
     onRowAppended,
     onDelete,
+    validateCell,
   }
 }
 

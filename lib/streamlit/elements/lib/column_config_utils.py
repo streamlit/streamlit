@@ -312,14 +312,15 @@ def determine_dataframe_schema(
 
 
 class ColumnConfig(TypedDict, total=False):
-    width: Optional[int]
     title: Optional[str]
-    type: Optional[ColumnType]
+    width: Optional[Literal["small", "medium", "large"]]
     hidden: Optional[bool]
-    editable: Optional[bool]
+    disabled: Optional[bool]
+    required: Optional[bool]
     alignment: Optional[Literal["left", "center", "right"]]
-    metadata: Optional[Dict[str, Any]]
-    column: Optional[Union[str, int]]
+    help: Optional[str]
+    type: Optional[ColumnType]
+    type_options: Optional[Dict[str, Any]]
 
 
 # A mapping of column names/IDs to column configs.

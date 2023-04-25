@@ -31,8 +31,8 @@ import {
   toSafeBoolean,
 } from "./utils"
 
-export interface CategoricalColumnParams {
-  /** A list of options available in the dropdown.
+export interface SelectboxColumnParams {
+  /** A list of options available in the selectbox.
    * Every value in the column needs to match one of the options.
    */
   readonly options: (string | number | boolean)[]
@@ -40,11 +40,12 @@ export interface CategoricalColumnParams {
 
 /**
  * A column type that supports optimized rendering and editing for categorical values
- * by using a dropdown. This is automatically used by categorical columns (Pandas).
+ * by using a selectbox. This is automatically used by categorical columns (Pandas).
  *
  */
-function CategoricalColumn(props: BaseColumnProps): BaseColumn {
-  // Categorical column can be either string, number or boolean type based on the options
+function SelectboxColumn(props: BaseColumnProps): BaseColumn {
+  // The selectbox column can be either string, number or boolean type
+  // based on the options type.
   let dataType: "number" | "boolean" | "string" = "string"
 
   const parameters = mergeColumnParameters(
@@ -54,8 +55,8 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
         Quiver.getTypeName(props.arrowType) === "bool" ? [true, false] : [],
     },
     // User parameters:
-    props.columnTypeMetadata
-  ) as CategoricalColumnParams
+    props.columnTypeOptions
+  ) as SelectboxColumnParams
 
   const uniqueTypes = new Set(parameters.options.map(x => typeof x))
   if (uniqueTypes.size === 1) {
@@ -75,7 +76,8 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
     data: {
       kind: "dropdown-cell",
       allowedValues: [
-        "", // Enforce the empty option
+        // Add empty option if the column is not configured as required:
+        ...(props.isRequired !== true ? [""] : []),
         ...parameters.options
           .filter(opt => opt !== "") // ignore empty option if it exists
           .map(opt => toSafeString(opt)), // convert everything to string
@@ -87,16 +89,16 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
 
   return {
     ...props,
-    kind: "categorical",
+    kind: "selectbox",
     sortMode: "default",
-    getCell(data?: any): GridCell {
+    getCell(data?: any, validate?: boolean): GridCell {
       // Empty string refers to a missing value
       let cellData = ""
       if (notNullOrUndefined(data)) {
         cellData = toSafeString(data)
       }
 
-      if (!cellTemplate.data.allowedValues.includes(cellData)) {
+      if (validate && !cellTemplate.data.allowedValues.includes(cellData)) {
         return getErrorCell(
           toSafeString(cellData),
           `The value is not part of the allowed options.`
@@ -126,6 +128,6 @@ function CategoricalColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-CategoricalColumn.isEditableType = true
+SelectboxColumn.isEditableType = true
 
-export default CategoricalColumn as ColumnCreator
+export default SelectboxColumn as ColumnCreator

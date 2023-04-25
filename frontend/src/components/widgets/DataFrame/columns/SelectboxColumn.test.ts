@@ -15,13 +15,12 @@
  */
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
+import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 
 import { Type as ArrowType } from "src/lib/Quiver"
 
 import { BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
-import CategoricalColumn, {
-  CategoricalColumnParams,
-} from "./CategoricalColumn"
+import SelectboxColumn, { SelectboxColumnParams } from "./SelectboxColumn"
 
 const MOCK_CATEGORICAL_TYPE: ArrowType = {
   pandas_type: "int8",
@@ -33,9 +32,10 @@ const MOCK_BOOLEAN_ARROW_TYPE: ArrowType = {
   numpy_type: "bool",
 }
 
-const CATEGORICAL_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
+const SELECTBOX_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
   id: "1",
-  title: "Categorical column",
+  name: "selectbox_column",
+  title: "Selectbox column",
   indexNumber: 0,
   isEditable: false,
   isHidden: false,
@@ -43,68 +43,107 @@ const CATEGORICAL_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
   isStretched: false,
 }
 
-function getCategoricalColumn(
+function getSelectboxColumn(
   arrowType: ArrowType,
-  params?: CategoricalColumnParams
-): ReturnType<typeof CategoricalColumn> {
-  return CategoricalColumn({
-    ...CATEGORICAL_COLUMN_TEMPLATE,
+  params?: SelectboxColumnParams,
+  column_props_overwrites?: Partial<BaseColumnProps>
+): ReturnType<typeof SelectboxColumn> {
+  return SelectboxColumn({
+    ...SELECTBOX_COLUMN_TEMPLATE,
+    ...column_props_overwrites,
     arrowType,
-    columnTypeMetadata: params,
+    columnTypeOptions: params,
   } as BaseColumnProps)
 }
 
-describe("CategoricalColumn", () => {
+describe("SelectboxColumn", () => {
   it("creates a valid column instance with string values", () => {
-    const mockColumn = getCategoricalColumn(MOCK_CATEGORICAL_TYPE, {
+    const mockColumn = getSelectboxColumn(MOCK_CATEGORICAL_TYPE, {
       options: ["foo", "bar"],
     })
-    expect(mockColumn.kind).toEqual("categorical")
-    expect(mockColumn.title).toEqual(CATEGORICAL_COLUMN_TEMPLATE.title)
-    expect(mockColumn.id).toEqual(CATEGORICAL_COLUMN_TEMPLATE.id)
+    expect(mockColumn.kind).toEqual("selectbox")
+    expect(mockColumn.title).toEqual(SELECTBOX_COLUMN_TEMPLATE.title)
+    expect(mockColumn.id).toEqual(SELECTBOX_COLUMN_TEMPLATE.id)
     expect(mockColumn.sortMode).toEqual("default")
 
     const mockCell = mockColumn.getCell("foo")
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
     expect(mockColumn.getCellValue(mockCell)).toEqual("foo")
+
+    expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
+      "",
+      "foo",
+      "bar",
+    ])
   })
 
   it("creates a valid column instance number values", () => {
-    const mockColumn = getCategoricalColumn(MOCK_CATEGORICAL_TYPE, {
+    const mockColumn = getSelectboxColumn(MOCK_CATEGORICAL_TYPE, {
       options: [1, 2, 3],
     })
-    expect(mockColumn.kind).toEqual("categorical")
-    expect(mockColumn.title).toEqual(CATEGORICAL_COLUMN_TEMPLATE.title)
-    expect(mockColumn.id).toEqual(CATEGORICAL_COLUMN_TEMPLATE.id)
+    expect(mockColumn.kind).toEqual("selectbox")
+    expect(mockColumn.title).toEqual(SELECTBOX_COLUMN_TEMPLATE.title)
+    expect(mockColumn.id).toEqual(SELECTBOX_COLUMN_TEMPLATE.id)
     expect(mockColumn.sortMode).toEqual("default")
 
     const mockCell = mockColumn.getCell(1)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
     expect(mockColumn.getCellValue(mockCell)).toEqual(1)
+
+    expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
+      "",
+      "1",
+      "2",
+      "3",
+    ])
   })
 
   it("creates a valid column instance from boolean type", () => {
-    const mockColumn = getCategoricalColumn(MOCK_BOOLEAN_ARROW_TYPE)
-    expect(mockColumn.kind).toEqual("categorical")
-    expect(mockColumn.title).toEqual(CATEGORICAL_COLUMN_TEMPLATE.title)
+    const mockColumn = getSelectboxColumn(MOCK_BOOLEAN_ARROW_TYPE)
+    expect(mockColumn.kind).toEqual("selectbox")
+    expect(mockColumn.title).toEqual(SELECTBOX_COLUMN_TEMPLATE.title)
 
     const mockCell = mockColumn.getCell(true)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
     expect(mockColumn.getCellValue(mockCell)).toEqual(true)
+
+    expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
+      "",
+      "true",
+      "false",
+    ])
+  })
+
+  it("creates a required column that does not add the empty value", () => {
+    const mockColumn = getSelectboxColumn(
+      MOCK_CATEGORICAL_TYPE,
+      {
+        options: ["foo", "bar"],
+      },
+      { isRequired: true }
+    )
+    const mockCell = mockColumn.getCell("foo")
+    expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
+      "foo",
+      "bar",
+    ])
+
+    const errorCell = mockColumn.getCell(null, true)
+    expect(isErrorCell(errorCell)).toEqual(true)
   })
 
   it("creates error cell if value is not in options", () => {
-    const mockColumn = getCategoricalColumn(MOCK_CATEGORICAL_TYPE, {
+    const mockColumn = getSelectboxColumn(MOCK_CATEGORICAL_TYPE, {
       options: ["foo", "bar"],
     })
-    const mockCell = mockColumn.getCell("baz")
+    const mockCell = mockColumn.getCell("baz", true)
     expect(isErrorCell(mockCell)).toEqual(true)
   })
 
   it.each([[null], [undefined], [""]])(
     "%p is interpreted as missing value",
     (input: any) => {
-      const mockColumn = getCategoricalColumn(MOCK_CATEGORICAL_TYPE, {
+      const mockColumn = getSelectboxColumn(MOCK_CATEGORICAL_TYPE, {
         options: ["foo", "bar"],
       })
       const mockCell = mockColumn.getCell(input)

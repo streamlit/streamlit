@@ -17,6 +17,7 @@
 // Disable Typescript checking, since mm.track has private scope
 // @ts-nocheck
 
+import { Alert, Delta, ForwardMsgMetadata, Element } from "src/autogen/proto"
 import { mockSessionInfo, mockSessionInfoProps } from "./mocks/mocks"
 import { SegmentMetricsManager } from "./SegmentMetricsManager"
 import { SessionInfo } from "./SessionInfo"
@@ -208,5 +209,94 @@ test("ip address is overwritten", () => {
     context: {
       ip: "0.0.0.0",
     },
+  })
+})
+
+describe("handleDeltaMessage", () => {
+  const mainContainerMetadata = new ForwardMsgMetadata({ deltaPath: [0, 1] })
+  const sidebarMetadata = new ForwardMsgMetadata({ deltaPath: [1, 1] })
+
+  it("increments root container deltaCounter", () => {
+    const mm = getSegmentMetricsManager()
+    mm.handleDeltaMessage(new Delta(), mainContainerMetadata)
+    expect(mm.getAndResetDeltaCounter()).toEqual({ main: 1 })
+    expect(mm.getAndResetCustomComponentCounter()).toEqual({})
+
+    mm.handleDeltaMessage(new Delta(), sidebarMetadata)
+    expect(mm.getAndResetDeltaCounter()).toEqual({ sidebar: 1 })
+    expect(mm.getAndResetCustomComponentCounter()).toEqual({})
+  })
+
+  it("handles newElement Delta messages", () => {
+    const mm = getSegmentMetricsManager()
+
+    const delta = Delta.create({
+      newElement: Element.create({
+        alert: {
+          body: "mockBody",
+          format: Alert.Format.INFO,
+          icon: "mockIcon",
+        },
+      }),
+    })
+
+    mm.handleDeltaMessage(delta, mainContainerMetadata)
+    expect(mm.getAndResetDeltaCounter()).toEqual({ main: 1, alert: 1 })
+    expect(mm.getAndResetCustomComponentCounter()).toEqual({})
+  })
+
+  it("handles componentInstance Delta messages", () => {
+    const mm = getSegmentMetricsManager()
+
+    const delta = Delta.create({
+      newElement: Element.create({
+        componentInstance: {
+          id: "mockId",
+          componentName: "mockComponentName",
+        },
+      }),
+    })
+
+    mm.handleDeltaMessage(delta, mainContainerMetadata)
+    expect(mm.getAndResetDeltaCounter()).toEqual({
+      main: 1,
+      componentInstance: 1,
+    })
+    expect(mm.getAndResetCustomComponentCounter()).toEqual({
+      mockComponentName: 1,
+    })
+  })
+
+  it("handles addBlock messages", () => {
+    const mm = getSegmentMetricsManager()
+
+    const delta = Delta.create({ addBlock: {} })
+
+    mm.handleDeltaMessage(delta, mainContainerMetadata)
+    expect(mm.getAndResetDeltaCounter()).toEqual({ main: 1, "new block": 1 })
+    expect(mm.getAndResetCustomComponentCounter()).toEqual({})
+  })
+
+  it("handles addRows messages", () => {
+    const mm = getSegmentMetricsManager()
+
+    const delta = Delta.create({ addRows: {} })
+
+    mm.handleDeltaMessage(delta, mainContainerMetadata)
+    expect(mm.getAndResetDeltaCounter()).toEqual({ main: 1, "add rows": 1 })
+    expect(mm.getAndResetCustomComponentCounter()).toEqual({})
+  })
+
+  it("handles arrowAddRows messages", () => {
+    const mm = getSegmentMetricsManager()
+
+    const delta = Delta.create({ arrowAddRows: {} })
+
+    mm.handleDeltaMessage(delta, mainContainerMetadata)
+    expect(mm.getAndResetDeltaCounter()).toEqual({
+      main: 1,
+      "arrow add rows": 1,
+    })
+    expect(mm.getAndResetCustomComponentCounter()).toEqual({})
   })
 })

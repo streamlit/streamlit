@@ -44,6 +44,7 @@ import {
   useColumnSizer,
   useColumnSort,
   useColumnLoader,
+  useTooltips,
 } from "./hooks"
 import {
   BaseColumn,
@@ -52,6 +53,7 @@ import {
   getTextCell,
 } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
+import Tooltip from "./Tooltip"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 
@@ -136,6 +138,12 @@ function DataFrame({
   const theme = useCustomTheme()
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
+
+  // Determine if the device is primary using touch as input:
+  const isTouchDevice = React.useMemo<boolean>(
+    () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
+    []
+  )
 
   const [gridSelection, setGridSelection] = React.useState<GridSelection>({
     columns: CompactSelection.empty(),
@@ -283,14 +291,20 @@ function DataFrame({
     [widgetMgr, element, numRows, clearSelection, columns]
   )
 
-  const { onCellEdited, onPaste, onRowAppended, onDelete } = useDataEditor(
+  const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
+    useDataEditor(
+      columns,
+      element.editingMode !== DYNAMIC,
+      editingState,
+      getCellContent,
+      getOriginalIndex,
+      refreshCells,
+      applyEdits
+    )
+
+  const { tooltip, clearTooltip, onItemHovered } = useTooltips(
     columns,
-    element.editingMode !== DYNAMIC,
-    editingState,
-    getCellContent,
-    getOriginalIndex,
-    refreshCells,
-    applyEdits
+    getCellContent
   )
 
   const { columns: glideColumns, onColumnResize } = useColumnSizer(
@@ -349,8 +363,10 @@ function DataFrame({
     <StyledResizableContainer
       className="stDataFrame"
       onBlur={() => {
-        // If the container loses focus, clear the current selection
-        if (!isFocused) {
+        // If the container loses focus, clear the current selection.
+        // Touch screen devices have issues with this, so we don't clear
+        // the selection on those devices.
+        if (!isFocused && !isTouchDevice) {
           clearSelection()
         }
       }}
@@ -428,9 +444,11 @@ function DataFrame({
           // Deactivate row markers and numbers:
           rowMarkers={"none"}
           // Deactivate selections:
-          rangeSelect={"rect"}
+          rangeSelect={!isTouchDevice ? "rect" : "none"}
           columnSelect={"none"}
           rowSelect={"none"}
+          // Enable tooltips on hover of a cell or column header:
+          onItemHovered={onItemHovered}
           // Activate search:
           keybindings={{ search: true, downFill: true }}
           // Header click is used for column sorting:
@@ -439,7 +457,21 @@ function DataFrame({
             isEmptyTable || isLargeTable ? undefined : sortColumn
           }
           gridSelection={gridSelection}
-          onGridSelectionChange={setGridSelection}
+          onGridSelectionChange={(newSelection: GridSelection) => {
+            if (isFocused || isTouchDevice) {
+              // Only allow selection changes if the grid is focused.
+              // This is mainly done because there is a bug when overlay click actions
+              // are outside of the bounds of the table (e.g. select dropdown or date picker).
+              // This results in the first cell being selected for a short period of time
+              // But for touch devices, preventing this can cause issues to select cells.
+              // So we allow selection changes for touch devices even when it is not focused.
+              setGridSelection(newSelection)
+              if (tooltip !== undefined) {
+                // Remove the tooltip on every grid selection change:
+                clearTooltip()
+              }
+            }
+          }}
           // Apply different styling to missing cells:
           drawCell={drawMissingCells}
           theme={theme}
@@ -460,6 +492,10 @@ function DataFrame({
           }}
           // Add support for additional cells:
           customRenderers={extraCellArgs.customRenderers}
+          // Add our custom SVG header icons:
+          headerIcons={theme.headerIcons}
+          // Add support for user input validation:
+          validateCell={validateCell}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
           // If element is editable, enable editing features:
@@ -467,7 +503,7 @@ function DataFrame({
             element.editingMode !== READ_ONLY &&
             !disabled && {
               // Support fill handle for bulk editing:
-              fillHandle: true,
+              fillHandle: !isTouchDevice ? true : false,
               // Support editing:
               onCellEdited,
               // Support pasting data for bulk editing:
@@ -497,6 +533,14 @@ function DataFrame({
             })}
         />
       </Resizable>
+      {tooltip && tooltip.content && (
+        <Tooltip
+          top={tooltip.top}
+          left={tooltip.left}
+          content={tooltip.content}
+          clearTooltip={clearTooltip}
+        ></Tooltip>
+      )}
     </StyledResizableContainer>
   )
 }

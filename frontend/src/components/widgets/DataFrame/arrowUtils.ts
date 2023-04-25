@@ -30,10 +30,10 @@ import {
   BaseColumnProps,
   ColumnCreator,
   ObjectColumn,
-  BooleanColumn,
+  CheckboxColumn,
   NumberColumn,
   TextColumn,
-  CategoricalColumn,
+  SelectboxColumn,
   ListColumn,
   isErrorCell,
 } from "./columns"
@@ -154,7 +154,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
     return ObjectColumn
   }
   if (["bool"].includes(typeName)) {
-    return BooleanColumn
+    return CheckboxColumn
   }
   if (
     [
@@ -177,7 +177,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
     return NumberColumn
   }
   if (typeName === "categorical") {
-    return CategoricalColumn
+    return SelectboxColumn
   }
   if (typeName.startsWith("list")) {
     return ListColumn
@@ -209,8 +209,9 @@ export function getIndexFromArrow(
 
   return {
     id: `index-${indexPosition}`,
-    isEditable,
+    name: title,
     title,
+    isEditable,
     arrowType,
     isIndex: true,
     isHidden: false,
@@ -241,12 +242,12 @@ export function getColumnFromArrow(
     } as ArrowType
   }
 
-  let columnTypeMetadata
+  let columnTypeOptions
   if (Quiver.getTypeName(arrowType) === "categorical") {
     // Get the available categories and use it in column type metadata
     const options = data.getCategoricalOptions(columnPosition)
     if (notNullOrUndefined(options)) {
-      columnTypeMetadata = {
+      columnTypeOptions = {
         options,
       }
     }
@@ -254,10 +255,11 @@ export function getColumnFromArrow(
 
   return {
     id: `column-${title}-${columnPosition}`,
-    isEditable: true,
+    name: title,
     title,
+    isEditable: true,
     arrowType,
-    columnTypeMetadata,
+    columnTypeOptions,
     isIndex: false,
     isHidden: false,
   } as BaseColumnProps

@@ -17,11 +17,12 @@
 import { BooleanCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { isErrorCell } from "./utils"
-import BooleanColumn from "./BooleanColumn"
+import CheckboxColumn from "./CheckboxColumn"
 
-const MOCK_BOOLEAN_COLUMN_PROPS = {
+const MOCK_CHECKBOX_COLUMN_PROPS = {
   id: "1",
-  title: "Boolean column",
+  name: "checkbox_column",
+  title: "Checkbox column",
   indexNumber: 0,
   isEditable: false,
   isHidden: false,
@@ -35,12 +36,12 @@ const MOCK_BOOLEAN_COLUMN_PROPS = {
   },
 }
 
-describe("BooleanColumn", () => {
+describe("CheckboxColumn", () => {
   it("creates a valid column instance", () => {
-    const mockColumn = BooleanColumn(MOCK_BOOLEAN_COLUMN_PROPS)
-    expect(mockColumn.kind).toEqual("boolean")
-    expect(mockColumn.title).toEqual(MOCK_BOOLEAN_COLUMN_PROPS.title)
-    expect(mockColumn.id).toEqual(MOCK_BOOLEAN_COLUMN_PROPS.id)
+    const mockColumn = CheckboxColumn(MOCK_CHECKBOX_COLUMN_PROPS)
+    expect(mockColumn.kind).toEqual("checkbox")
+    expect(mockColumn.title).toEqual(MOCK_CHECKBOX_COLUMN_PROPS.title)
+    expect(mockColumn.id).toEqual(MOCK_CHECKBOX_COLUMN_PROPS.id)
     expect(mockColumn.sortMode).toEqual("default")
 
     const mockCell = mockColumn.getCell(true)
@@ -72,7 +73,7 @@ describe("BooleanColumn", () => {
   ])(
     "supports boolean compatible value (%p parsed as %p)",
     (input: any, value: boolean | null) => {
-      const mockColumn = BooleanColumn(MOCK_BOOLEAN_COLUMN_PROPS)
+      const mockColumn = CheckboxColumn(MOCK_CHECKBOX_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
       expect(isErrorCell(cell)).toEqual(false)
@@ -82,7 +83,7 @@ describe("BooleanColumn", () => {
   it.each([["foo"], [12345], [0.1], [["foo", "bar"]]])(
     "%p results in error cell: %p",
     (input: any) => {
-      const mockColumn = BooleanColumn(MOCK_BOOLEAN_COLUMN_PROPS)
+      const mockColumn = CheckboxColumn(MOCK_CHECKBOX_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
       expect(isErrorCell(cell)).toEqual(true)
     }

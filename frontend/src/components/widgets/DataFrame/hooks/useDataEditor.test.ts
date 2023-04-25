@@ -34,6 +34,7 @@ import useDataEditor from "./useDataEditor"
 const MOCK_COLUMNS: BaseColumn[] = [
   NumberColumn({
     id: "column_1",
+    name: "column_1",
     title: "column_1",
     indexNumber: 0,
     arrowType: {
@@ -47,6 +48,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
   }),
   TextColumn({
     id: "column_2",
+    name: "column_2",
     title: "column_2",
     indexNumber: 1,
     arrowType: {
@@ -57,6 +59,11 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isHidden: false,
     isIndex: false,
     isStretched: false,
+    defaultValue: "foo",
+    columnTypeOptions: {
+      max_chars: 10,
+      validate: "^[a-zA-Z]+$",
+    },
   }),
 ]
 
@@ -279,6 +286,34 @@ describe("useDataEditor hook", () => {
     expect(applyEditsMock).toHaveBeenCalledWith(false, false)
   })
 
+  it("uses default values for new rows in onRowAppended", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+    const { result } = renderHook(() => {
+      return useDataEditor(
+        MOCK_COLUMNS,
+        false, // activates addition & deletion of rows
+        editingState,
+        getCellContentMock,
+        getOriginalIndexMock,
+        refreshCellsMock,
+        applyEditsMock
+      )
+    })
+
+    if (typeof result.current.onRowAppended !== "function") {
+      throw new Error("onRowAppended is expected to be a function")
+    }
+
+    result.current.onRowAppended()
+
+    // Check with full editing state:
+    expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
+      `{"edited_cells":{},"added_rows":[{"1":"foo"}],"deleted_rows":[]}`
+    )
+  })
+
   it("doesn't allow to add new rows via onRowAppended if fix num rows", () => {
     const editingState = {
       current: new EditingState(INITIAL_NUM_ROWS),
@@ -437,5 +472,101 @@ describe("useDataEditor hook", () => {
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
       `{"edited_cells":{},"added_rows":[],"deleted_rows":[]}`
     )
+  })
+
+  it("calls validateInput and returns false on invalid data.", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+
+    const { result } = renderHook(() => {
+      return useDataEditor(
+        MOCK_COLUMNS,
+        false,
+        editingState,
+        getCellContentMock,
+        getOriginalIndexMock,
+        refreshCellsMock,
+        applyEditsMock
+      )
+    })
+
+    if (typeof result.current.validateCell !== "function") {
+      throw new Error("validateCell is expected to be a function")
+    }
+
+    const columnToValidate = MOCK_COLUMNS[1]
+    const invalidValue = columnToValidate.getCell("12345") as TextCell
+    const validationResult = result.current.validateCell(
+      [1, 0],
+      invalidValue,
+      columnToValidate.getCell(undefined)
+    )
+
+    expect(validationResult).toEqual(false)
+  })
+
+  it("calls validateInput and corrects invalid input.", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+
+    const { result } = renderHook(() => {
+      return useDataEditor(
+        MOCK_COLUMNS,
+        false,
+        editingState,
+        getCellContentMock,
+        getOriginalIndexMock,
+        refreshCellsMock,
+        applyEditsMock
+      )
+    })
+
+    if (typeof result.current.validateCell !== "function") {
+      throw new Error("validateCell is expected to be a function")
+    }
+
+    const columnToValidate = MOCK_COLUMNS[1]
+    const invalidValue = columnToValidate.getCell("abcdefghijk") as TextCell
+    const validationResult = result.current.validateCell(
+      [1, 0],
+      invalidValue,
+      columnToValidate.getCell(undefined)
+    )
+    expect((validationResult as TextCell).data).toEqual("abcdefghij")
+  })
+
+  it("calls validateInput and returns true on valid data.", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+
+    const { result } = renderHook(() => {
+      return useDataEditor(
+        MOCK_COLUMNS,
+        false,
+        editingState,
+        getCellContentMock,
+        getOriginalIndexMock,
+        refreshCellsMock,
+        applyEditsMock
+      )
+    })
+
+    if (typeof result.current.validateCell !== "function") {
+      throw new Error("validateCell is expected to be a function")
+    }
+
+    const columnToValidate = MOCK_COLUMNS[1]
+
+    const validValue = columnToValidate.getCell("abcde") as TextCell
+    const validResult = result.current.validateCell(
+      [1, 0],
+      validValue,
+      columnToValidate.getCell(undefined)
+    )
+
+    expect(validResult).toEqual(true)
   })
 })
