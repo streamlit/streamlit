@@ -61,6 +61,7 @@ export interface ColumnConfigProps {
   // uses snake_case to match the property names in the backend:
   type_options?: Record<string, unknown>
   alignment?: "left" | "center" | "right"
+  help?: string
 }
 
 /**
@@ -124,6 +125,7 @@ export function applyColumnConfig(
     columnTypeOptions: columnConfig.type_options,
     contentAlignment: columnConfig.alignment,
     defaultValue: columnConfig.default,
+    help: columnConfig.help,
   } as BaseColumnProps) as BaseColumnProps
 }
 
