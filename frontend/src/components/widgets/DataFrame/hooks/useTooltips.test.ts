@@ -39,7 +39,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
     isHidden: false,
     isIndex: false,
     isStretched: false,
-    help: "This is a **number** column.",
+    help: TOOLTIP_CONTENT,
   }),
   TextColumn({
     id: "column_2",
