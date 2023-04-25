@@ -707,11 +707,6 @@ export class App extends PureComponent<Props, State> {
         // a script compilation failure
         scriptRunState = ScriptRunState.NOT_RUNNING
 
-        this.metricsMgr.enqueue(
-          "deltaStats",
-          this.metricsMgr.getAndResetDeltaCounter()
-        )
-
         const { availableThemes, activeTheme } = this.props.theme
         const customThemeDefined =
           availableThemes.length > createPresetThemes().length
@@ -877,7 +872,6 @@ export class App extends PureComponent<Props, State> {
       this.props.hostCommunication.currentState.deployedAppMetadata
     )
     this.metricsMgr.setAppHash(newSessionHash)
-    this.metricsMgr.clearDeltaCounter()
 
     this.metricsMgr.enqueue("updateReport", {
       numPages: newSessionProto.appPages.length,
@@ -1124,7 +1118,7 @@ export class App extends PureComponent<Props, State> {
     )
 
     // Update metrics
-    this.metricsMgr.handleDeltaMessage(deltaMsg, metadataMsg)
+    this.metricsMgr.handleDeltaMessage(deltaMsg)
 
     if (!this.pendingElementsTimerRunning) {
       this.pendingElementsTimerRunning = true

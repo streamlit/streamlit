@@ -14,15 +14,7 @@
  * limitations under the License.
  */
 
-import { Delta, ForwardMsgMetadata } from "src/autogen/proto"
-
-/**
- * A mapping of [delta type] -> [count] which is used to upload delta stats
- * when the app is idle.
- */
-export interface DeltaCounter {
-  [name: string]: number
-}
+import { Delta } from "src/autogen/proto"
 
 /**
  * A mapping of [component instance name] -> [count] which is used to upload
@@ -41,16 +33,7 @@ export interface MetricsManager {
   enqueue(evName: string, evData: Record<string, any>): void
 
   /** Record all appropriate events for a delta message. */
-  handleDeltaMessage(delta: Delta, metadata: ForwardMsgMetadata): void
-
-  /**
-   * Get a copy of the pending DeltaCounter object, and reset it, and
-   * clear the manager's copy.
-   */
-  getAndResetDeltaCounter(): DeltaCounter
-
-  /** Clear the manager's pending DeltaCounter object. */
-  clearDeltaCounter(): void
+  handleDeltaMessage(delta: Delta): void
 
   /**
    * Get a copy of the pending CustomComponentCounter object, and reset it, and

@@ -18,18 +18,10 @@ import { pick } from "lodash"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { initializeSegment } from "src/vendor/Segment"
 import { DeployedAppMetadata } from "src/hocs/withHostCommunication/types"
-import Protobuf, {
-  Delta,
-  Element,
-  ForwardMsgMetadata,
-} from "src/autogen/proto"
+import { Delta, Element } from "src/autogen/proto"
 import { IS_DEV_ENV } from "./baseconsts"
 import { logAlways } from "./log"
-import {
-  CustomComponentCounter,
-  DeltaCounter,
-  MetricsManager,
-} from "./MetricsManager"
+import { CustomComponentCounter, MetricsManager } from "./MetricsManager"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -56,12 +48,6 @@ export class SegmentMetricsManager implements MetricsManager {
    * initialized.
    */
   private pendingEvents: Event[] = []
-
-  /**
-   * Object used to count the number of delta types seen in a given script run.
-   * Maps type of delta (string) to count (number).
-   */
-  private pendingDeltaCounter: DeltaCounter = {}
 
   /**
    * Object used to count the number of custom instance names seen in a given
@@ -116,67 +102,17 @@ export class SegmentMetricsManager implements MetricsManager {
     this.send(evName, evData)
   }
 
-  public handleDeltaMessage(delta: Delta, metadata: ForwardMsgMetadata): void {
-    // The full path to the AppNode within the element tree.
-    // Used to find and update the element node specified by this Delta.
-    const deltaPath = metadata.deltaPath
-
-    this.incrementDeltaCounter(getRootContainerName(deltaPath))
-
-    switch (delta.type) {
-      case "newElement": {
-        const element = delta.newElement as Element
-        if (element.type != null) {
-          this.incrementDeltaCounter(element.type)
+  public handleDeltaMessage(delta: Delta): void {
+    if (delta.type === "newElement") {
+      const element = delta.newElement as Element
+      // Track component instance name.
+      if (element.type === "componentInstance") {
+        const componentName = element.componentInstance?.componentName
+        if (componentName != null) {
+          this.incrementCustomComponentCounter(componentName)
         }
-
-        // Track component instance name.
-        if (element.type === "componentInstance") {
-          const componentName = element.componentInstance?.componentName
-          if (componentName != null) {
-            this.incrementCustomComponentCounter(componentName)
-          }
-        }
-        break
       }
-
-      case "addBlock":
-        this.incrementDeltaCounter("new block")
-        break
-
-      case "addRows":
-        this.incrementDeltaCounter("add rows")
-        break
-
-      case "arrowAddRows":
-        this.incrementDeltaCounter("arrow add rows")
-        break
     }
-  }
-
-  public clearDeltaCounter(): void {
-    this.pendingDeltaCounter = {}
-  }
-
-  /**
-   * Increment a counter that tracks the number of times a Delta message
-   * of the given type has been processed by the frontend.
-   *
-   * No event is recorded for this. Instead, call `getAndResetDeltaCounter`
-   * periodically, and enqueue an event with the result.
-   */
-  public incrementDeltaCounter(deltaType: string): void {
-    if (this.pendingDeltaCounter[deltaType] == null) {
-      this.pendingDeltaCounter[deltaType] = 1
-    } else {
-      this.pendingDeltaCounter[deltaType]++
-    }
-  }
-
-  public getAndResetDeltaCounter(): DeltaCounter {
-    const deltaCounter = this.pendingDeltaCounter
-    this.clearDeltaCounter()
-    return deltaCounter
   }
 
   /**
@@ -285,19 +221,4 @@ export class SegmentMetricsManager implements MetricsManager {
     }
     return {}
   }
-}
-
-function getRootContainerName(deltaPath: number[]): string {
-  if (deltaPath.length > 0) {
-    switch (deltaPath[0]) {
-      case Protobuf.RootContainer.MAIN:
-        return "main"
-      case Protobuf.RootContainer.SIDEBAR:
-        return "sidebar"
-      default:
-        break
-    }
-  }
-
-  throw new Error(`Unrecognized RootContainer in deltaPath: ${deltaPath}`)
 }
