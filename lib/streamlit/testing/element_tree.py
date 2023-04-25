@@ -1264,6 +1264,12 @@ class ElementTree(Block):
         self.type = "root"
 
     @property
+    def main(self) -> Block:
+        m = self[0]
+        assert isinstance(m, Block)
+        return m
+
+    @property
     def sidebar(self) -> Block:
         s = self[1]
         assert isinstance(s, Block)
