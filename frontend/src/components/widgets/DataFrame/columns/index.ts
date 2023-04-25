@@ -22,6 +22,8 @@ import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
 import { DateTimeColumn, DateColumn, TimeColumn } from "./DateTimeColumn"
 
+import { DateTimeCellRenderer } from "./cells/DateTimeCell"
+
 import { ColumnCreator } from "./utils"
 
 export * from "./utils"
@@ -44,6 +46,8 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     time: TimeColumn,
   })
 )
+
+export const CustomCells = [DateTimeCellRenderer]
 
 export {
   ObjectColumn,
