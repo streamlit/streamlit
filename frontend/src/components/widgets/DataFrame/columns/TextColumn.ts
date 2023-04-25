@@ -101,11 +101,14 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
         return getErrorCell(toSafeString(data), validateRegex)
       }
 
-      if (validate === true) {
+      if (validate) {
         const validationResult = validateInput(data)
         if (validationResult === false) {
           // The input is invalid, we return an error cell which will
           // prevent this cell to be inserted into the table.
+          // This cell should never be actually displayed to the user.
+          // It's mostly used internally to prevent invalid input to be
+          // inserted into the table.
           return getErrorCell(toSafeString(data), "Invalid input.")
         } else if (typeof validationResult === "string") {
           // Apply corrections:
