@@ -20,18 +20,19 @@ import { transparentize } from "color2k"
 
 export interface StyledSidebarProps {
   isCollapsed: boolean
+  isEmbed: boolean
   sidebarWidth: string
 }
 
 export const StyledSidebar = styled.section<StyledSidebarProps>(
-  ({ theme, isCollapsed, sidebarWidth }) => {
+  ({ theme, isCollapsed, isEmbed, sidebarWidth }) => {
     const minWidth = isCollapsed ? 0 : Math.min(244, window.innerWidth)
     const maxWidth = isCollapsed ? 0 : Math.min(550, window.innerWidth * 0.9)
 
     return {
       // Nudge the sidebar by 2px so the header decoration doesn't go below it
       position: "relative",
-      top: "2px",
+      top: isEmbed ? "0px" : "2px",
       backgroundColor: theme.colors.bgColor,
       zIndex: theme.zIndices.header + 1,
 
