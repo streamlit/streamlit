@@ -128,7 +128,7 @@ describe("SelectboxColumn", () => {
       "bar",
     ])
 
-    const errorCell = mockColumn.getCell(null)
+    const errorCell = mockColumn.getCell(null, true)
     expect(isErrorCell(errorCell)).toEqual(true)
   })
 
@@ -136,7 +136,7 @@ describe("SelectboxColumn", () => {
     const mockColumn = getSelectboxColumn(MOCK_CATEGORICAL_TYPE, {
       options: ["foo", "bar"],
     })
-    const mockCell = mockColumn.getCell("baz")
+    const mockCell = mockColumn.getCell("baz", true)
     expect(isErrorCell(mockCell)).toEqual(true)
   })
 
