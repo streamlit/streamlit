@@ -86,7 +86,7 @@ def ttl_to_seconds(
         import pandas as pd
 
         try:
-            out = pd.Timedelta(ttl).total_seconds()
+            out: float = pd.Timedelta(ttl).total_seconds()
         except ValueError as ex:
             raise BadTTLStringError(ttl) from ex
 
