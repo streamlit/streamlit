@@ -27,6 +27,7 @@ import useTooltips from "./useTooltips"
 const MOCK_COLUMNS: BaseColumn[] = [
   NumberColumn({
     id: "column_1",
+    name: "column_1",
     title: "column_1",
     indexNumber: 0,
     arrowType: {
@@ -41,6 +42,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
   }),
   TextColumn({
     id: "column_2",
+    name: "column_2",
     title: "column_2",
     indexNumber: 1,
     arrowType: {

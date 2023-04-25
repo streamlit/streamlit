@@ -446,7 +446,7 @@ function DataFrame({
           rangeSelect={!isTouchDevice ? "rect" : "none"}
           columnSelect={"none"}
           rowSelect={"none"}
-          // Enable tooltips on cell or column header hover:
+          // Enable tooltips on hover of a cell or column header:
           onItemHovered={onItemHovered}
           // Activate search:
           keybindings={{ search: true, downFill: true }}
