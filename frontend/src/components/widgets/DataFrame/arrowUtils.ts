@@ -36,6 +36,9 @@ import {
   SelectboxColumn,
   ListColumn,
   isErrorCell,
+  DateTimeColumn,
+  TimeColumn,
+  DateColumn,
 } from "./columns"
 
 /**
@@ -140,17 +143,17 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
   if (["unicode", "empty"].includes(typeName)) {
     return TextColumn
   }
-  if (
-    [
-      "object",
-      "date",
-      "time",
-      "datetime",
-      "datetimetz",
-      "decimal",
-      "bytes",
-    ].includes(typeName)
-  ) {
+
+  if (["datetime", "datetimetz"].includes(typeName)) {
+    return DateTimeColumn
+  }
+  if (typeName === "time") {
+    return TimeColumn
+  }
+  if (typeName === "date") {
+    return DateColumn
+  }
+  if (["object", "decimal", "bytes"].includes(typeName)) {
     return ObjectColumn
   }
   if (["bool"].includes(typeName)) {
