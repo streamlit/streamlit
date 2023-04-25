@@ -44,6 +44,7 @@ import {
   useColumnSizer,
   useColumnSort,
   useColumnLoader,
+  useTooltips,
 } from "./hooks"
 import {
   BaseColumn,
@@ -52,6 +53,7 @@ import {
   getTextCell,
 } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
+import Tooltip from "./Tooltip"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 
@@ -299,6 +301,11 @@ function DataFrame({
     applyEdits
   )
 
+  const { tooltip, clearTooltip, onItemHovered } = useTooltips(
+    columns,
+    getCellContent
+  )
+
   const { columns: glideColumns, onColumnResize } = useColumnSizer(
     columns.map(column => toGlideColumn(column))
   )
@@ -439,6 +446,8 @@ function DataFrame({
           rangeSelect={!isTouchDevice ? "rect" : "none"}
           columnSelect={"none"}
           rowSelect={"none"}
+          // Enable tooltips on cell or column header hover:
+          onItemHovered={onItemHovered}
           // Activate search:
           keybindings={{ search: true, downFill: true }}
           // Header click is used for column sorting:
@@ -456,6 +465,9 @@ function DataFrame({
               // But for touch devices, preventing this can cause issues to select cells.
               // So we allow selection changes for touch devices even when it is not focused.
               setGridSelection(newSelection)
+              if (tooltip !== undefined) {
+                clearTooltip()
+              }
             }
           }}
           // Apply different styling to missing cells:
@@ -515,6 +527,13 @@ function DataFrame({
             })}
         />
       </Resizable>
+      {tooltip && tooltip.content && (
+        <Tooltip
+          top={tooltip.top}
+          left={tooltip.left}
+          content={tooltip.content}
+        ></Tooltip>
+      )}
     </StyledResizableContainer>
   )
 }
