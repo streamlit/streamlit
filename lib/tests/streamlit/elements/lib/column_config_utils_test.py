@@ -49,8 +49,8 @@ def _get_arrow_schema_field(column: pd.Series) -> pa.Field | None:
 SHARED_DATA_KIND_TEST_CASES = [
     (pd.Series(["a", "b", "c"], dtype=pd.StringDtype()), ColumnDataKind.STRING),
     # We need to use Int64 here, otherwise it gets converted to float if a None is added:
-    (pd.Series([1, 2, 3], dtype="Int64"), ColumnDataKind.INTEGER),
-    (pd.Series([1.1, 2.2, 3.3]), ColumnDataKind.FLOAT),
+    (pd.Series([1, 2, -3], dtype="Int64"), ColumnDataKind.INTEGER),
+    (pd.Series([1.1, 2.2, -3.3]), ColumnDataKind.FLOAT),
     (pd.Series([1, 2.2, 3]), ColumnDataKind.FLOAT),  # mixed-integer-float
     (
         pd.Series([pd.Timestamp("2000-01-01"), pd.Timestamp("2000-01-02")]),
