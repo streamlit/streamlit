@@ -26,11 +26,12 @@ import {
   ModuleIsNotAdded,
   NoRepositoryDetected,
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs"
+import { SegmentMetricsManager } from "src/lib/SegmentMetricsManager"
 
 import MainMenu, { Props } from "./MainMenu"
 import { waitFor } from "@testing-library/dom"
 import { fireEvent, RenderResult } from "@testing-library/react"
-import { MockMetricsManager } from "src/lib/mocks/mocks"
+import { mockSessionInfo } from "src/lib/mocks/mocks"
 
 const { GitStates } = GitInfo
 
@@ -53,7 +54,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   menuItems: {},
   developmentMode: true,
   gitInfo: null,
-  metricsMgr: new MockMetricsManager(),
+  metricsMgr: new SegmentMetricsManager(mockSessionInfo()),
   toolbarMode: Config.ToolbarMode.AUTO,
   ...extend,
 })
