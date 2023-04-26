@@ -18,11 +18,12 @@ import React from "react"
 import PropTypes from "prop-types"
 import { createPresetThemes, lightTheme, darkTheme } from "@streamlit/lib"
 import { shallow } from "@streamlit/lib"
-import { Props as ContextProps } from "src/lib/components/core/AppContext"
+import { Props as ContextProps } from "src/app/components/core/AppContext"
 import UISelectbox from "src/lib/components/shared/Dropdown"
+import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 
 import { SettingsDialog, Props } from "./SettingsDialog"
-import { MockMetricsManager } from "src/lib/mocks/mocks"
+import { mockSessionInfo } from "src/lib/mocks/mocks"
 
 const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()
@@ -56,7 +57,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   developerMode: true,
   animateModal: true,
   openThemeCreator: jest.fn(),
-  metricsMgr: new MockMetricsManager(),
+  metricsMgr: new SegmentMetricsManager(mockSessionInfo()),
   ...extend,
 })
 

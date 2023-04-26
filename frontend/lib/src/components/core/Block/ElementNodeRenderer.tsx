@@ -77,7 +77,7 @@ import { getAlertKind } from "src/components/elements/Alert/Alert"
 import Maybe from "src/components/core/Maybe"
 import { FormSubmitContent } from "src/components/widgets/Form"
 import { Heading } from "src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import { AppContext } from "src/components/core/AppContext"
+import { LibContext } from "src/lib/components/core/AppContext"
 
 import {
   BaseBlockProps,
@@ -89,9 +89,7 @@ import { StyledElementContainer } from "./styled-components"
 
 // Lazy-load elements.
 const Audio = React.lazy(() => import("src/components/elements/Audio"))
-const Balloons = React.lazy(
-  () => import("src/components/elements/Balloons")
-)
+const Balloons = React.lazy(() => import("src/components/elements/Balloons"))
 const Snow = React.lazy(() => import("src/components/elements/Snow"))
 const ArrowDataFrame = React.lazy(
   () => import("src/components/widgets/DataFrame")
@@ -108,9 +106,7 @@ const BokehChart = React.lazy(
 )
 const DebouncedBokehChart = debounceRender(BokehChart, 100)
 
-const DataFrame = React.lazy(
-  () => import("src/components/elements/DataFrame")
-)
+const DataFrame = React.lazy(() => import("src/components/elements/DataFrame"))
 const DeckGlJsonChart = React.lazy(
   () => import("src/components/elements/DeckGlJsonChart")
 )
@@ -118,9 +114,7 @@ const GraphVizChart = React.lazy(
   () => import("src/components/elements/GraphVizChart")
 )
 const IFrame = React.lazy(() => import("src/components/elements/IFrame"))
-const ImageList = React.lazy(
-  () => import("src/components/elements/ImageList")
-)
+const ImageList = React.lazy(() => import("src/components/elements/ImageList"))
 const PlotlyChart = React.lazy(
   () => import("src/components/elements/PlotlyChart")
 )
@@ -137,45 +131,30 @@ const DownloadButton = React.lazy(
 const CameraInput = React.lazy(
   () => import("src/components/widgets/CameraInput")
 )
-const Checkbox = React.lazy(
-  () => import("src/components/widgets/Checkbox")
-)
+const Checkbox = React.lazy(() => import("src/components/widgets/Checkbox"))
 const ColorPicker = React.lazy(
   () => import("src/components/widgets/ColorPicker")
 )
-const DateInput = React.lazy(
-  () => import("src/components/widgets/DateInput")
-)
+const DateInput = React.lazy(() => import("src/components/widgets/DateInput"))
 const Multiselect = React.lazy(
   () => import("src/components/widgets/Multiselect")
 )
-const Progress = React.lazy(
-  () => import("src/components/elements/Progress")
-)
+const Progress = React.lazy(() => import("src/components/elements/Progress"))
 const Spinner = React.lazy(() => import("src/components/elements/Spinner"))
 const Radio = React.lazy(() => import("src/components/widgets/Radio"))
-const Selectbox = React.lazy(
-  () => import("src/components/widgets/Selectbox")
-)
+const Selectbox = React.lazy(() => import("src/components/widgets/Selectbox"))
 const Slider = React.lazy(() => import("src/components/widgets/Slider"))
 const FileUploader = React.lazy(
   () => import("src/components/widgets/FileUploader")
 )
-const TextArea = React.lazy(
-  () => import("src/components/widgets/TextArea")
-)
-const TextInput = React.lazy(
-  () => import("src/components/widgets/TextInput")
-)
-const TimeInput = React.lazy(
-  () => import("src/components/widgets/TimeInput")
-)
+const TextArea = React.lazy(() => import("src/components/widgets/TextArea"))
+const TextInput = React.lazy(() => import("src/components/widgets/TextInput"))
+const TimeInput = React.lazy(() => import("src/components/widgets/TimeInput"))
 const NumberInput = React.lazy(
   () => import("src/components/widgets/NumberInput")
 )
 const StreamlitSyntaxHighlighter = React.lazy(
-  () =>
-    import("src/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+  () => import("src/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
 )
 
 export interface ElementNodeRendererProps extends BaseBlockProps {

@@ -36,13 +36,15 @@ import {
   NoRepositoryDetected,
 } from "src/app/components/StreamlitDialog/DeployErrorDialogs"
 import Icon from "src/lib/components/shared/Icon"
+import { IGuestToHostMessage, IMenuItem } from "@streamlit/lib"
 import {
-  IGuestToHostMessage,
-  IMenuItem,
-} from "@streamlit/lib"
-import { Config, GitInfo, IGitInfo, PageConfig } from "@streamlit/lib/dist/proto"
-import { MetricsManager } from "@streamlit/lib"
+  Config,
+  GitInfo,
+  IGitInfo,
+  PageConfig,
+} from "@streamlit/lib/dist/proto"
 import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/urls"
+import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import {
   StyledCoreItem,
   StyledDevItem,
@@ -112,7 +114,7 @@ export interface Props {
 
   toolbarMode: Config.ToolbarMode
 
-  metricsMgr: MetricsManager
+  metricsMgr: SegmentMetricsManager
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -156,7 +158,7 @@ export interface SubMenuProps {
   menuItems: any[]
   closeMenu: () => void
   isDevMenu: boolean
-  metricsMgr: MetricsManager
+  metricsMgr: SegmentMetricsManager
 }
 
 // BaseWeb provides a very basic list item (or option) for its dropdown
@@ -173,7 +175,7 @@ export interface SubMenuProps {
 //  * creating a forward ref to add properties to the DOM element.
 function buildMenuItemComponent(
   StyledMenuItemType: typeof StyledCoreItem | typeof StyledDevItem,
-  metricsMgr: MetricsManager
+  metricsMgr: SegmentMetricsManager
 ): any {
   const MenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
     (

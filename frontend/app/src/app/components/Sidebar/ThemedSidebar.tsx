@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { AppContext } from "src/lib/components/core/AppContext"
+import { AppContext } from "src/app/components/AppContext"
 import ThemeProvider from "@streamlit/lib"
 import { createTheme, ThemeConfig } from "@streamlit/lib"
 import Sidebar, { SidebarProps } from "./Sidebar"

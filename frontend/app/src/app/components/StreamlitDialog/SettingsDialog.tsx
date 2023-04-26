@@ -26,9 +26,9 @@ import { Modal, ModalHeader, ModalBody } from "@streamlit/lib"
 import {
   AppContext,
   Props as AppContextProps,
-} from "src/lib/components/core/AppContext"
-import UISelectbox from "src/lib/components/shared/Dropdown"
-import { MetricsManager } from "@streamlit/lib"
+} from "src/app/components/AppContext"
+import UISelectbox from "src/components/shared/Dropdown"
+import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 
 import {
   StyledCheckbox,
@@ -50,7 +50,7 @@ export interface Props {
   developerMode: boolean
   openThemeCreator: () => void
   animateModal: boolean
-  metricsMgr: MetricsManager
+  metricsMgr: SegmentMetricsManager
 }
 
 /**
