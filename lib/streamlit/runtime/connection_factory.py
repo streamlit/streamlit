@@ -213,7 +213,7 @@ def connection_factory(
     Examples
     --------
     The easiest way to create a first-party (SQL or Snowpark) connection is to use their
-    default names and define corresponding sections in your config.toml file.
+    default names and define corresponding sections in your ``secrets.toml`` file.
 
     >>> import streamlit as st
     >>> conn = st.experimental_connection("sql") # Config section defined in [connections.sql] in secrets.toml.
