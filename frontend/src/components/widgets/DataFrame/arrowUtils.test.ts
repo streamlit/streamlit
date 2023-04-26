@@ -530,7 +530,7 @@ describe("getCellFromArrow", () => {
     // Check if the timestamp is adjusted properly
     expect(MOCK_TIME_COLUMN.getCell).toHaveBeenCalledWith(
       new Date("2021-09-29T21:13:20.123Z")
-    ) // Corrected
+    )
   })
 
   it("parses numeric timestamps into correct dates datetime values", () => {
@@ -573,7 +573,7 @@ describe("getCellFromArrow", () => {
     // Check if the timestamp is adjusted properly
     expect(MOCK_TIME_COLUMN.getCell).toHaveBeenCalledWith(
       new Date("2021-09-29T21:13:20.123Z")
-    ) // Corrected
+    )
   })
 
   it("applies display content from arrow cell", () => {

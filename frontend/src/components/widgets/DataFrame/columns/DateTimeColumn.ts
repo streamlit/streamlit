@@ -254,6 +254,7 @@ function BaseDateTimeColumn(
 
         return {
           kind: GridCellKind.Text,
+          isMissingValue: isNullOrUndefined(cellData),
           data: copyData !== "" ? copyData : null,
           displayData: displayDate,
           allowOverlay: true,
