@@ -72,8 +72,9 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
     }
 
     let cellData = toSafeString(data)
-    // A flag to indicate if the cell data has been corrected.
+    // A flag to indicate whether the value has been auto-corrected.
     // This is used to decide if we should return the corrected value or true.
+    // But we still run all other validations on the corrected value below.
     let corrected = false
 
     if (parameters.max_chars) {
