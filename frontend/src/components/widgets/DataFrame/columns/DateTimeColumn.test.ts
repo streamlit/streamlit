@@ -561,4 +561,17 @@ describe("TimeColumn", () => {
     const cell = mockColumn.getCell(EXAMPLE_DATE)
     expect((cell as DateTimeCell).data.displayDate).toEqual("10:30")
   })
+
+  it("adapts default format based on step size", () => {
+    const MOCK_TIME_COLUMN_WITH_STEP: BaseColumnProps = {
+      ...MOCK_TIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        step: 60,
+      },
+    }
+
+    const mockColumn = TimeColumn(MOCK_TIME_COLUMN_WITH_STEP)
+    const newCell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((newCell as DateTimeCell).data.displayDate).toBe("10:30")
+  })
 })
