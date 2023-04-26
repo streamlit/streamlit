@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import React from "react"
 
 import { fireEvent, render } from "@testing-library/react"
 
@@ -68,6 +69,7 @@ describe("editor", () => {
   }
 
   it("renders into the dom with correct value", () => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const Editor = DateTimeCellRenderer.provideEditor(getMockDateCell()).editor
     if (Editor === undefined) {
@@ -81,6 +83,7 @@ describe("editor", () => {
     const input = result.getByTestId(TEST_ID)
     expect(input).not.toBeUndefined()
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     expect(result.value === "04:47:44.584")
   })
@@ -88,9 +91,11 @@ describe("editor", () => {
   it.each([["date"], ["time"], ["datetime-local"]])(
     "renders with correct format",
     (format: string) => {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       const Editor = DateTimeCellRenderer.provideEditor?.(
         getMockDateCell({ data: { format: format } } as DateTimeCell)
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
       ).editor
       if (Editor === undefined) {
@@ -102,16 +107,18 @@ describe("editor", () => {
       )
       const input = result.getByTestId(TEST_ID)
       expect(input).not.toBeUndefined()
-
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       expect(input.format === format)
     }
   )
 
   it("renders textarea when readonly is true", () => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const Editor = DateTimeCellRenderer.provideEditor?.(
       getMockDateCell({ readonly: true } as DateTimeCell)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
     ).editor
     if (Editor === undefined) {
@@ -138,10 +145,11 @@ describe("editor", () => {
         step,
       },
     }
-
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const Editor = DateTimeCellRenderer.provideEditor(
       getMockDateCell(extraProps as Partial<DateTimeCell>)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
     ).editor
     if (Editor === undefined) {
@@ -153,11 +161,13 @@ describe("editor", () => {
     )
     const input = result.getByTestId(TEST_ID)
     expect(input).not.toBeUndefined()
-
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     expect(input.min === min)
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     expect(input.max === max)
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     expect(input.step === step)
   })
@@ -165,6 +175,7 @@ describe("editor", () => {
   it('properly sets date when value is NOT ""', async () => {
     const valueAsNumber = 100
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const Editor = DateTimeCellRenderer.provideEditor(getMockDateCell()).editor
     if (Editor === undefined) {
@@ -203,6 +214,7 @@ describe("editor", () => {
   })
 
   it('properly sets new date to undefined when value is ""', async () => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const Editor = DateTimeCellRenderer.provideEditor(getMockDateCell()).editor
     if (Editor === undefined) {
@@ -249,6 +261,7 @@ describe("onPaste", () => {
   ])(
     "correctly interprets pasted value %p as %p",
     (input: string, expected: string) => {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       const { date } = DateTimeCellRenderer.onPaste(input, {})
       expect(date.toISOString()).toStrictEqual(expected)
@@ -266,6 +279,7 @@ describe("onPaste", () => {
   ])(
     "correctly returns no value when onPaste is called with invalid value: %p",
     (input: string | undefined | null) => {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       const { date } = DateTimeCellRenderer.onPaste(input, {})
       expect(date).toBe(undefined)
@@ -273,6 +287,7 @@ describe("onPaste", () => {
   )
 
   it("support time strings in onPaste", () => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const { date } = DateTimeCellRenderer.onPaste("01:02:03.400", {
       format: "time",
