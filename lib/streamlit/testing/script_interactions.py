@@ -38,6 +38,7 @@ class InteractiveScriptTests(unittest.TestCase):
         super().__init__(*args, **kwargs)
 
         m = importlib.import_module(self.__module__)
+        assert m.__file__
         self.dir_path = pathlib.Path(m.__file__).parent
 
     def setUp(self) -> None:
@@ -73,7 +74,7 @@ class InteractiveScriptTests(unittest.TestCase):
         string in the test itself, without having to create a separate file
         for it.
         """
-        hasher = hashlib.md5(bytes(script, "utf-8"), usedforsecurity=False)
+        hasher = hashlib.md5(bytes(script, "utf-8"))
         script_name = hasher.hexdigest()
 
         path = pathlib.Path(self.tmp_script_dir.name, script_name)
