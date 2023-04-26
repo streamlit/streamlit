@@ -43,8 +43,12 @@ function applyTimezone(momentDate: Moment, timezone: string): Moment {
 }
 
 export interface DateTimeColumnParams {
+  // A MomentJS formatting syntax to format the display value.
   readonly format?: string
-  readonly step?: string
+  // Specifies the granularity that the value must adhere.
+  // For time and datetime, this is the number of seconds between each allowed value.
+  // For date, this is the number of days between each allowed value.
+  readonly step?: number
   // A timezone identifier, e.g. "America/New_York", "+05:00", or "UTC"
   readonly timezone?: string
   // The minimum allowed value for editing. This needs to be an ISO formatted datetime/date/time string (UTC).
@@ -57,7 +61,7 @@ function BaseDateTimeColumn(
   kind: string,
   props: BaseColumnProps,
   defaultFormat: string, // used for rendering and copy data
-  defaultStep: string,
+  defaultStep: number,
   inputType: "datetime-local" | "time" | "date",
   toISOString: (date: Date) => string,
   timezone?: string
@@ -106,7 +110,7 @@ function BaseDateTimeColumn(
       kind: "date-time-cell",
       date: undefined,
       displayDate: "",
-      step: parameters.step,
+      step: parameters.step?.toString() || "1",
       format: inputType,
       min: minDate,
       max: maxDate,
@@ -272,7 +276,7 @@ export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
     notNullOrUndefined(timezone)
       ? "YYYY-MM-DD HH:mm:ssZ"
       : "YYYY-MM-DD HH:mm:ss",
-    "1",
+    1,
     "datetime-local",
     (date: Date): string => {
       if (notNullOrUndefined(timezone)) {
@@ -291,7 +295,7 @@ export function TimeColumn(props: BaseColumnProps): BaseColumn {
     "time",
     props,
     "HH:mm:ss.SSS",
-    "0.1",
+    0.1,
     "time",
     (date: Date): string => {
       // Only return the time part of the ISO string:
@@ -307,7 +311,7 @@ export function DateColumn(props: BaseColumnProps): BaseColumn {
     "date",
     props,
     "YYYY-MM-DD",
-    "1",
+    1,
     "date",
     (date: Date): string => {
       // Only return the date part of the ISO string:
