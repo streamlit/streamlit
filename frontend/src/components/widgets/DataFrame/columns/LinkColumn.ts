@@ -71,7 +71,18 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
       return true
     }
 
-    const cellData = toSafeString(data)
+    let cellData = toSafeString(data)
+    // A flag to indicate if the cell data has been corrected.
+    // This is used to decide if we should return the corrected value or true.
+    let corrected = false
+
+    if (parameters.max_chars) {
+      if (cellData.length > parameters.max_chars) {
+        // Correct the value
+        cellData = cellData.slice(0, parameters.max_chars)
+        corrected = true
+      }
+    }
 
     if (
       validateRegex instanceof RegExp &&
@@ -80,13 +91,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
       return false
     }
 
-    if (parameters.max_chars) {
-      if (cellData.length > parameters.max_chars) {
-        // Return corrected value
-        return cellData.slice(0, parameters.max_chars)
-      }
-    }
-    return true
+    return corrected ? cellData : true
   }
 
   return {
