@@ -102,9 +102,9 @@ describe("DateTimeColumn", () => {
     // valid date string
     ["2023-04-25", "2023-04-25T00:00:00.000"],
     // valid unix timestamp
-    [1671951600000, "2022-12-25T07:00:00.000"],
+    [1671951600, "2022-12-25T07:00:00.000"],
     // valid bigint
-    [BigInt(1671951600000000), "2022-12-25T07:00:00.000"],
+    [BigInt(1671951600), "2022-12-25T07:00:00.000"],
     // other date formats:
     ["04/25/2023", "2023-04-25T00:00:00.000"],
     // valid ISO date string
@@ -132,7 +132,7 @@ describe("DateTimeColumn", () => {
     // valid date string with time and AM/PM
     ["2023-04-25 10:30 AM", "2023-04-25T10:30:00.000"],
     // valid Unix timestamp in milliseconds as a string
-    ["1671951600000", "2022-12-25T07:00:00.000"],
+    ["1671951600", "2022-12-25T07:00:00.000"],
   ])(
     "supports datetime-compatible value (%p parsed as %p)",
     (input: any, value: string | null) => {
@@ -282,9 +282,9 @@ describe("DateColumn", () => {
     // valid date string
     ["2023-04-25", "2023-04-25"],
     // valid unix timestamp
-    [1671951600000, "2022-12-25"],
+    [1671951600, "2022-12-25"],
     // valid bigint
-    [BigInt(1671951600000000), "2022-12-25"],
+    [BigInt(1671951600), "2022-12-25"],
     // other date formats:
     ["04/25/2023", "2023-04-25"],
     // valid ISO date string
@@ -311,8 +311,8 @@ describe("DateColumn", () => {
     ["Tue, 25 Apr 2023", "2023-04-25"],
     // valid date string with time and AM/PM
     ["2023-04-25 10:30 AM", "2023-04-25"],
-    // valid Unix timestamp in milliseconds as a string
-    ["1671951600000", "2022-12-25"],
+    // valid Unix timestamp in seconds as a string
+    ["1671951600", "2022-12-25"],
   ])(
     "supports date-compatible value (%p parsed as %p)",
     (input: any, value: string | null) => {
@@ -436,9 +436,9 @@ describe("TimeColumn", () => {
     // valid date string
     ["2023-04-25", "00:00:00.000"],
     // valid unix timestamp
-    [1671951600000, "07:00:00.000"],
+    [1671951600, "07:00:00.000"],
     // valid bigint
-    [BigInt(1671951600000000), "07:00:00.000"],
+    [BigInt(1671951600), "07:00:00.000"],
     // other date formats:
     ["04/25/2023", "00:00:00.000"],
     // valid ISO date string
@@ -462,7 +462,7 @@ describe("TimeColumn", () => {
     // valid date string with time and AM/PM
     ["2023-04-25 10:30 AM", "10:30:00.000"],
     // valid Unix timestamp in milliseconds as a string
-    ["1671951600000", "07:00:00.000"],
+    ["1671951600", "07:00:00.000"],
   ])(
     "supports time-compatible value (%p parsed as %p)",
     (input: any, value: string | null) => {

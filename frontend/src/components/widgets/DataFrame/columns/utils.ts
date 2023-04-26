@@ -436,6 +436,8 @@ export function formatNumber(
  * Converts the given value of unknown type to a date without
  * the risks of any exceptions.
  *
+ * Note: Unix timestamps are only supported in seconds.
+ *
  * @param value - The value to convert to a date.
  *
  * @returns The converted date or null if the value cannot be interpreted as a date.
@@ -459,16 +461,13 @@ export function toSafeDate(value: any): Date | null | undefined {
   }
 
   try {
-    if (typeof value === "bigint") {
-      // bigint is used by Arrow for time values in microseconds,
-      // but JS & Moment uses milliseconds for Date objects
-      return new Date(Number(value) / 1000)
-    }
-
     const parsedTimestamp = Number(value)
     if (!isNaN(parsedTimestamp)) {
-      // It was parsed as a valid number (unix timestamp)
-      return new Date(parsedTimestamp)
+      // Parse it as a unix timestamp in seconds
+      const parsedMomentDate = moment.unix(parsedTimestamp).utc()
+      if (parsedMomentDate.isValid()) {
+        return parsedMomentDate.toDate()
+      }
     }
 
     if (typeof value === "string") {

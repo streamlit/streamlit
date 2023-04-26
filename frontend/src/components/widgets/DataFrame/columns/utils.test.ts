@@ -333,10 +333,10 @@ describe("toSafeDate", () => {
     ["foo", undefined],
     // valid date string
     ["2023-04-25", new Date("2023-04-25")],
-    // valid unix timestamp
-    [1671951600000, new Date("2022-12-25T07:00:00.000Z")],
-    // valid bigint
-    [BigInt(1671951600000000), new Date("2022-12-25T07:00:00.000Z")],
+    // valid unix timestamp in seconds
+    [1671951600, new Date("2022-12-25T07:00:00.000Z")],
+    // valid bigint timestamp in seconds
+    [BigInt(1671951600), new Date("2022-12-25T07:00:00.000Z")],
     // other date formats:
     ["04/25/2023", new Date("2023-04-25T00:00:00.000Z")],
     // invalid string
@@ -365,8 +365,8 @@ describe("toSafeDate", () => {
     ["Tue, 25 Apr 2023", new Date("2023-04-25T00:00:00.000Z")],
     // valid date string with time and AM/PM
     ["2023-04-25 10:30 AM", new Date("2023-04-25T10:30:00.000Z")],
-    // valid Unix timestamp in milliseconds as a string
-    ["1671951600000", new Date("2022-12-25T07:00:00.000Z")],
+    // valid Unix timestamp in seconds as a string
+    ["1671951600", new Date("2022-12-25T07:00:00.000Z")],
   ])("converts input %p to the correct date %p", (input, expectedOutput) => {
     expect(toSafeDate(input)).toEqual(expectedOutput)
   })
