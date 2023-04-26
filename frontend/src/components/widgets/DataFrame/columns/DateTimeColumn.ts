@@ -262,8 +262,8 @@ function BaseDateTimeColumn(
   }
 }
 
-export function DateTimeColumn(props: BaseColumnProps): BaseColumn {
-  // TODO: Support configurable timezone (from columnTypeMetadata)
+export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
+  // TODO: Support configurable timezone (from columnTypeOptions)
   const timezone: string | undefined = props.arrowType?.meta?.timezone
 
   return BaseDateTimeColumn(
@@ -317,5 +317,3 @@ export function DateColumn(props: BaseColumnProps): BaseColumn {
 }
 
 DateColumn.isEditableType = true
-
-export default DateTimeColumn

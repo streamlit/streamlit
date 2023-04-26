@@ -18,7 +18,7 @@ import { GridCellKind } from "@glideapps/glide-data-grid"
 
 import { DateTimeCell } from "./cells/DateTimeCell"
 import { BaseColumnProps, isErrorCell } from "./utils"
-import DateTimeColumn from "./DateTimeColumn"
+import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 
 const MOCK_DATETIME_COLUMN_TEMPLATE: BaseColumnProps = {
   id: "1",
@@ -37,11 +37,45 @@ const MOCK_DATETIME_COLUMN_TEMPLATE: BaseColumnProps = {
   },
 }
 
+const MOCK_DATE_COLUMN_TEMPLATE: BaseColumnProps = {
+  id: "1",
+  name: "date_column",
+  title: "date_column",
+  indexNumber: 0,
+  isEditable: true,
+  isHidden: false,
+  isIndex: false,
+  isStretched: false,
+  arrowType: {
+    // The arrow type of the underlying data is
+    // not used for anything inside the column.
+    pandas_type: "date",
+    numpy_type: "object",
+  },
+}
+
+const MOCK_TIME_COLUMN_TEMPLATE: BaseColumnProps = {
+  id: "1",
+  name: "time_column",
+  title: "time_column",
+  indexNumber: 0,
+  isEditable: true,
+  isHidden: false,
+  isIndex: false,
+  isStretched: false,
+  arrowType: {
+    // The arrow type of the underlying data is
+    // not used for anything inside the column.
+    pandas_type: "time",
+    numpy_type: "object",
+  },
+}
+
 function getTodayIsoDate(): string {
   return new Date().toISOString().split("T")[0]
 }
 
-const constantDate = new Date("05 October 2011 14:48")
+const constantDate = new Date("2023-04-25T10:30:00.000Z")
 
 describe("DateTimeColumn", () => {
   it("creates a valid column instance", () => {
@@ -110,6 +144,146 @@ describe("DateTimeColumn", () => {
 
   it.each([[NaN], ["foo"]])("%p results in error cell", (input: any) => {
     const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_TEMPLATE)
+    const cell = mockColumn.getCell(input)
+    expect(isErrorCell(cell)).toEqual(true)
+  })
+})
+
+describe("DateColumn", () => {
+  it("creates a valid column instance", () => {
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE)
+    expect(mockColumn.kind).toEqual("date")
+    expect(mockColumn.title).toEqual(MOCK_DATE_COLUMN_TEMPLATE.title)
+    expect(mockColumn.id).toEqual(MOCK_DATE_COLUMN_TEMPLATE.id)
+    expect(mockColumn.sortMode).toEqual("default")
+
+    const mockCell = mockColumn.getCell(constantDate)
+    expect(mockCell.kind).toEqual(GridCellKind.Custom)
+    expect((mockCell as DateTimeCell).copyData).toEqual("2023-04-25")
+  })
+
+  it.each([
+    // valid date object
+    [new Date("2023-04-25"), "2023-04-25"],
+    // undefined value
+    [undefined, null],
+    // null value
+    [null, null],
+    // empty string
+    ["", null],
+    // valid date string
+    ["2023-04-25", "2023-04-25"],
+    // valid unix timestamp
+    [1671951600000, "2022-12-25"],
+    // valid bigint
+    [BigInt(1671951600000000), "2022-12-25"],
+    // other date formats:
+    ["04/25/2023", "2023-04-25"],
+    // valid ISO date string
+    ["2023-04-25T10:30:00.000Z", "2023-04-25"],
+    // valid date string with time
+    ["2023-04-25 10:30", "2023-04-25"],
+    // valid date string with timezone
+    ["2023-04-25T10:30:00.000+02:00", "2023-04-25"],
+    // valid time string
+    ["10:30", getTodayIsoDate()],
+    // valid time string with milliseconds
+    ["10:30:25.123", getTodayIsoDate()],
+    // valid time string with seconds
+    ["10:30:25", getTodayIsoDate()],
+    // valid month string
+    ["Jan 2023", "2023-01-01"],
+    // valid month string with day
+    ["Jan 15, 2023", "2023-01-15"],
+    // valid date string with day and month names
+    ["25 April 2023", "2023-04-25"],
+    // valid date string with day and short month names
+    ["25 Apr 2023", "2023-04-25"],
+    // valid date string with short day and month names
+    ["Tue, 25 Apr 2023", "2023-04-25"],
+    // valid date string with time and AM/PM
+    ["2023-04-25 10:30 AM", "2023-04-25"],
+    // valid Unix timestamp in milliseconds as a string
+    ["1671951600000", "2022-12-25"],
+  ])(
+    "supports date-compatible value (%p parsed as %p)",
+    (input: any, value: string | null) => {
+      const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE)
+      const cell = mockColumn.getCell(input)
+      expect(mockColumn.getCellValue(cell)).toEqual(value)
+    }
+  )
+
+  it.each([[NaN], ["foo"]])("%p results in error cell", (input: any) => {
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE)
+    const cell = mockColumn.getCell(input)
+    expect(isErrorCell(cell)).toEqual(true)
+  })
+})
+
+describe("TimeColumn", () => {
+  it("creates a valid column instance", () => {
+    const mockColumn = TimeColumn(MOCK_TIME_COLUMN_TEMPLATE)
+    expect(mockColumn.kind).toEqual("time")
+    expect(mockColumn.title).toEqual(MOCK_TIME_COLUMN_TEMPLATE.title)
+    expect(mockColumn.id).toEqual(MOCK_TIME_COLUMN_TEMPLATE.id)
+    expect(mockColumn.sortMode).toEqual("default")
+
+    const mockCell = mockColumn.getCell(constantDate)
+    expect(mockCell.kind).toEqual(GridCellKind.Custom)
+    expect((mockCell as DateTimeCell).copyData).toEqual("10:30:00.000")
+  })
+
+  it.each([
+    // valid date object
+    [new Date("2023-04-25"), "00:00:00.000"],
+    // undefined value
+    [undefined, null],
+    // null value
+    [null, null],
+    // empty string
+    ["", null],
+    // valid date string
+    ["2023-04-25", "00:00:00.000"],
+    // valid unix timestamp
+    [1671951600000, "07:00:00.000"],
+    // valid bigint
+    [BigInt(1671951600000000), "07:00:00.000"],
+    // other date formats:
+    ["04/25/2023", "00:00:00.000"],
+    // valid ISO date string
+    ["2023-04-25T10:30:00.000Z", "10:30:00.000"],
+    // valid date string with time
+    ["2023-04-25 10:30", "10:30:00.000"],
+    // valid date string with timezone
+    ["2023-04-25T10:30:00.000+02:00", "08:30:00.000"],
+    // valid time string
+    ["10:30", "10:30:00.000"],
+    // valid time string with milliseconds
+    ["10:30:25.123", "10:30:25.123"],
+    // valid time string with seconds
+    ["10:30:25", "10:30:25.000"],
+    // valid month string
+    ["Jan 2023", "00:00:00.000"],
+    // valid date string with day and month names
+    ["25 April 2023", "00:00:00.000"],
+    // valid date string with short day and month names
+    ["Tue, 25 Apr 2023", "00:00:00.000"],
+    // valid date string with time and AM/PM
+    ["2023-04-25 10:30 AM", "10:30:00.000"],
+    // valid Unix timestamp in milliseconds as a string
+    ["1671951600000", "07:00:00.000"],
+  ])(
+    "supports time-compatible value (%p parsed as %p)",
+    (input: any, value: string | null) => {
+      const mockColumn = TimeColumn(MOCK_TIME_COLUMN_TEMPLATE)
+      const cell = mockColumn.getCell(input)
+      expect(mockColumn.getCellValue(cell)).toEqual(value)
+    }
+  )
+
+  it.each([[NaN], ["foo"]])("%p results in error cell", (input: any) => {
+    const mockColumn = TimeColumn(MOCK_TIME_COLUMN_TEMPLATE)
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)
   })
