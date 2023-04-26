@@ -29,8 +29,14 @@ import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 import { DateTimeCell } from "./cells/DateTimeCell"
 
-// TODO: Investigate time: https://github.com/streamlit/streamlit/blob/0880740f482abd6a8f755192e3a94843a000f14c/frontend/src/lib/Quiver.ts#L779
-// https://github.com/streamlit/streamlit/blob/0880740f482abd6a8f755192e3a94843a000f14c/frontend/src/lib/Quiver.ts#L825
+/**
+ * Apply a timezone to a MomentJS date.
+ *
+ * @param momentDate The date to apply the timezone to
+ * @param timezone The timezone to apply. This can be a timezone name
+ * (e.g. "America/New_York" or "UTC") or a UTC offset (e.g. "+05:00" or "-08:00")
+ * @returns The date with the timezone applied
+ */
 function applyTimezone(momentDate: Moment, timezone: string): Moment {
   if (timezone.startsWith("+") || timezone.startsWith("-")) {
     // Timezone is a UTC offset (e.g. "+05:00" or "-08:00")
@@ -57,6 +63,20 @@ export interface DateTimeColumnParams {
   readonly max_value?: string
 }
 
+/**
+ * Base class for datetime columns. This class is not meant to be used directly.
+ * Instead, use the DateColumn, TimeColumn, or DateTimeColumn classes.
+ *
+ * @param kind The kind of column. This should be one of "date", "time", or "datetime".
+ * @param props The column properties
+ * @param defaultFormat The default format to use for rendering and copy data
+ * @param defaultStep The default step to use, can be overridden by the user
+ * @param inputType The type of input to use for editing. This should be one of "datetime-local", "time", or "date".
+ * @param toISOString A function that converts a Date object to an ISO formatted string
+ * @param timezone The timezone to use to make the datetime values timezone aware.
+ *
+ * @returns A BaseColumn object
+ */
 function BaseDateTimeColumn(
   kind: string,
   props: BaseColumnProps,
@@ -268,6 +288,13 @@ function BaseDateTimeColumn(
   }
 }
 
+/**
+ * Creates a new datetime column.
+ * A datetime column supports optimized rendering and editing for datetime values.
+ *
+ * @param props The column properties.
+ * @returns The new column.
+ */
 export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
   const timezone: string | undefined = props.arrowType?.meta?.timezone
   const hasTimezone: boolean =
@@ -293,6 +320,13 @@ export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
 
 DateTimeColumn.isEditableType = true
 
+/**
+ * Creates a new time column.
+ * A time column supports optimized rendering and editing for time values.
+ *
+ * @param props The column properties.
+ * @returns The new column.
+ */
 export function TimeColumn(props: BaseColumnProps): BaseColumn {
   return BaseDateTimeColumn(
     "time",
@@ -309,6 +343,13 @@ export function TimeColumn(props: BaseColumnProps): BaseColumn {
 
 TimeColumn.isEditableType = true
 
+/**
+ * Creates a new date column.
+ * A date column supports optimized rendering and editing for date values.
+ *
+ * @param props The column properties.
+ * @returns The new column.
+ */
 export function DateColumn(props: BaseColumnProps): BaseColumn {
   return BaseDateTimeColumn(
     "date",
