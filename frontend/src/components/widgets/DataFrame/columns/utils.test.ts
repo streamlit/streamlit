@@ -313,6 +313,10 @@ describe("toGlideColumn", () => {
   })
 })
 
+function getTodayIsoDate(): string {
+  return new Date().toISOString().split("T")[0]
+}
+
 describe("toSafeDate", () => {
   it.each([
     // valid date object
@@ -329,8 +333,6 @@ describe("toSafeDate", () => {
     ["foo", undefined],
     // valid date string
     ["2023-04-25", new Date("2023-04-25")],
-    // valid time string
-    ["10:30", new Date("2023-04-25T10:30:00.000Z")],
     // valid unix timestamp
     [1671951600000, new Date("2022-12-25T07:00:00.000Z")],
     // valid bigint
@@ -345,10 +347,12 @@ describe("toSafeDate", () => {
     ["2023-04-25 10:30", new Date("2023-04-25T10:30:00.000Z")],
     // valid date string with timezone
     ["2023-04-25T10:30:00.000+02:00", new Date("2023-04-25T08:30:00.000Z")],
+    // valid time string
+    ["10:30", new Date(getTodayIsoDate() + "T10:30:00.000Z")],
     // valid time string with milliseconds
-    ["10:30:25.123", new Date("2023-04-25T10:30:25.123Z")],
+    ["10:30:25.123", new Date(getTodayIsoDate() + "T10:30:25.123Z")],
     // valid time string with seconds
-    ["10:30:25", new Date("2023-04-25T10:30:25.000Z")],
+    ["10:30:25", new Date(getTodayIsoDate() + "T10:30:25.000Z")],
     // valid month string
     ["Jan 2023", new Date("2023-01-01T00:00:00.000Z")],
     // valid month string with day
