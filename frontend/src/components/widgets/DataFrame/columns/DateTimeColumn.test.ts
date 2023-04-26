@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+/* eslint-disable  @typescript-eslint/no-non-null-assertion */
+
 import { GridCellKind } from "@glideapps/glide-data-grid"
 
 import { DateTimeCell } from "./cells/DateTimeCell"
