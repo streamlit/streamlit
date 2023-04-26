@@ -45,8 +45,7 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
         """Create an ExperimentalBaseConnection.
 
         This constructor is called by the connection factory machinery when a user
-        script calls ``st.experimental_connection()`` and when reconnecting after a
-        connection is reset.
+        script calls ``st.experimental_connection()``.
 
         Subclasses of ExperimentalBaseConnection that want to overwrite this method
         should take care to also call the base class' implementation.
@@ -107,7 +106,7 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
     def _on_secrets_changed(self, _) -> None:
         """Reset the raw connection object when this connection's secrets change.
 
-        We don't expect either user scripts of connection authors to have to use or
+        We don't expect either user scripts or connection authors to have to use or
         overwrite this method.
         """
         new_hash = calc_md5(json.dumps(self._secrets.to_dict()))
@@ -138,8 +137,10 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
     def reset(self) -> None:
         """Reset this connection so that it gets reinitialized the next time it's used.
 
-        App developers can use this method when working with concrete connection class
-        instances, particularly in error handling code.
+        This method can be useful when a connection has become stale, an auth token has
+        expired, or in similar scenarios where a broken connection might be fixed by
+        reinitializing it. Note that some connection methods may already use ``reset()``
+        in their error handling code.
 
         Example
         -------
@@ -148,12 +149,11 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
         >>> conn = st.experimental_connection("my_conn")
         >>>
         >>> # Reset the connection before using it if it isn't healthy
-        >>> # Note: is_healthy() is just shown for example here
+        >>> # Note: is_healthy() isn't a real method and is just shown for example here.
         >>> if not conn.is_healthy():
         ...     conn.reset()
         ...
-        >>> cursor = conn.query("...")
-        >>> # ...
+        >>> # Do stuff with conn...
         """
         self._raw_instance = None
 
@@ -171,7 +171,8 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
         """Create an instance of an underlying connection object.
 
         This abstract method is the one method that we require subclasses of
-        ExperimentalBaseConnection to provide an implementation for.
+        ExperimentalBaseConnection to provide an implementation for. It is called when
+        first creating a connection and when reconnecting after a connection is reset.
 
         Parameters
         ----------
