@@ -191,8 +191,8 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
             done in a thread-safe manner. For most users, we recommend using the thread-safe
             safe_session() method and a ``with`` block.
 
-        Information on how to use Snowpark sessions can be found in the
-        [Snowpark documentation](https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes).
+        Information on how to use Snowpark sessions can be found in the `Snowpark documentation
+        <https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes>`_.
 
         Example
         -------
@@ -214,8 +214,8 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         that access on this connection's underlying Session is done in a thread-safe
         manner.
 
-        Information on how to use Snowpark sessions can be found in the
-        `Snowpark documentation <https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes>`_.
+        Information on how to use Snowpark sessions can be found in the `Snowpark documentation
+        <https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes>`_.
 
         Example
         -------
