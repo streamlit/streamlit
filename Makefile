@@ -151,7 +151,19 @@ pytest:
 			-l tests/ \
 			$(PYTHON_MODULES)
 
+# Run Python backwards compat tests.
+.PHONY: pytest-backwards-compat
+pytest-backwards-compat:
+	cd lib; \
+		PYTHONPATH=. \
+		pytest -v \
+			--junitxml=test-reports/pytest/junit.xml \
+			--backwards-compat-tests \
+			-l tests/ \
+			$(PYTHON_MODULES)
+
 # Run Python integration tests for snowflake.
+.PHONY: pytest-snowflake
 pytest-snowflake:
 	cd lib; \
 		PYTHONPATH=. \
