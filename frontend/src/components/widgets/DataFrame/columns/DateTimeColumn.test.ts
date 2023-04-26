@@ -235,6 +235,26 @@ describe("DateTimeColumn", () => {
       "Apr 25th, 2023 - 10:30"
     )
   })
+
+  it("supports columns with timezone", () => {
+    const MOCK_DATETIME_COLUMN_TEMPLATE_WITH_TIMEZONE: BaseColumnProps = {
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      arrowType: {
+        ...MOCK_DATETIME_COLUMN_TEMPLATE.arrowType,
+        meta: { timezone: "+05:00" },
+      },
+    }
+
+    const mockColumn = DateTimeColumn(
+      MOCK_DATETIME_COLUMN_TEMPLATE_WITH_TIMEZONE
+    )
+    const mockCell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((mockCell as DateTimeCell).data.date).toEqual(EXAMPLE_DATE)
+    expect((mockCell as DateTimeCell).data.displayDate).toEqual(
+      "2023-04-25 15:30:00+05:00"
+    )
+    expect((mockCell as DateTimeCell).data.timezoneOffset).toEqual(300)
+  })
 })
 
 describe("DateColumn", () => {
