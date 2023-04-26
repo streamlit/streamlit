@@ -26,8 +26,8 @@ gitdb==4.0.10
 GitPython==3.1.31
 graphviz==0.20.1
 greenlet==2.0.2
-hypothesis==6.72.2
-identify==2.5.22
+hypothesis==6.72.4
+identify==2.5.23
 idna==3.4
 importlib-metadata==6.6.0
 iniconfig==2.0.0
@@ -56,7 +56,7 @@ parameterized==0.9.0
 pathspec==0.11.1
 Pillow==9.5.0
 pkginfo==1.9.6
-platformdirs==3.2.0
+platformdirs==3.3.0
 plotly==5.14.1
 pluggy==1.0.0
 pre-commit==3.2.2
