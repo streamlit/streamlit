@@ -66,7 +66,7 @@ class InteractiveScriptTests(unittest.TestCase):
         # set unconditionally for whole process, since we are just running tests
         config.set_option("runner.postScriptGC", False)
 
-    def script_from_string(self, script_name: str, script: str) -> LocalScriptRunner:
+    def script_from_string(self, script: str) -> LocalScriptRunner:
         """Create a runner for a script with the contents from a string.
 
         Useful for testing short scripts that fit comfortably as an inline

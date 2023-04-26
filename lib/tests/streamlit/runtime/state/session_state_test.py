@@ -324,7 +324,6 @@ class SessionStateInteractionTest(InteractiveScriptTests):
         """
         with patch_config_options({"runner.enforceSerializableSessionState": True}):
             script = self.script_from_string(
-                "unserializable.py",
                 """
                 import streamlit as st
 
@@ -344,7 +343,6 @@ class SessionStateInteractionTest(InteractiveScriptTests):
         """
         with patch_config_options({"runner.enforceSerializableSessionState": False}):
             script = self.script_from_string(
-                "unserializable.py",
                 """
                 import streamlit as st
 
