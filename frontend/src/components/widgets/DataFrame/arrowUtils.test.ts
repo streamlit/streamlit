@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Quiver, Type as ArrowType } from "src/lib/Quiver"
+import { Quiver, Type as ArrowType, DataFrameCell } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import {
   UNICODE,
@@ -49,7 +49,6 @@ import {
   getAllColumnsFromArrow,
   getCellFromArrow,
 } from "./arrowUtils"
-import { DataFrameCell } from "src/lib/Quiver"
 
 const MOCK_TEXT_COLUMN = TextColumn({
   id: "1",
@@ -489,7 +488,7 @@ describe("getCellFromArrow", () => {
     })
   })
 
-  it("adjusts the timestamp for time columns", () => {
+  it("uses correct date based on timestamp unit", () => {
     const MOCK_TIME_COLUMN = {
       ...TimeColumn({
         id: "1",
@@ -510,11 +509,13 @@ describe("getCellFromArrow", () => {
 
     // Create a mock arrowCell object with time data
     const arrowCell = {
-      content: BigInt(1632950000123), // Unix timestamp in milliseconds Wed Sep 29 2021 21:13:20
+      // Unix timestamp in milliseconds Wed Sep 29 2021 21:13:20
+      // The default unit is seconds, so it needs to be adjusted internally
+      content: BigInt(1632950000123),
       contentType: null,
       field: {
         type: {
-          unit: 2,
+          unit: 1, // Milliseconds
         },
       },
       displayContent: null,
@@ -527,7 +528,9 @@ describe("getCellFromArrow", () => {
     getCellFromArrow(MOCK_TIME_COLUMN, arrowCell)
 
     // Check if the timestamp is adjusted properly
-    expect(MOCK_TIME_COLUMN.getCell).toHaveBeenCalledWith(1632950.000123) // Unix timestamp in milliseconds
+    expect(MOCK_TIME_COLUMN.getCell).toHaveBeenCalledWith(
+      new Date("2021-09-29T21:13:20.123Z")
+    ) // Corrected
   })
 
   it("applies display content from arrow cell", () => {

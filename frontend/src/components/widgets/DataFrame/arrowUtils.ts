@@ -21,6 +21,7 @@ import {
   NumberCell,
   GridCellKind,
 } from "@glideapps/glide-data-grid"
+import moment from "moment"
 
 import { DataFrameCell, Quiver, Type as ArrowType } from "src/lib/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
@@ -364,9 +365,12 @@ export function getCellFromArrow(
     // This is a special case where we want to adjust the timestamp to seconds
     // based on the arrow field metadata. This is only required for time columns.
     // Our implementation only supports unix timestamps in seconds
-    cellTemplate = column.getCell(
-      Quiver.adjustTimestamp(arrowCell.content, arrowCell.field)
-    )
+
+    const adjustedValue = moment
+      .unix(Quiver.adjustTimestamp(arrowCell.content, arrowCell.field))
+      .utc()
+      .toDate()
+    cellTemplate = column.getCell(adjustedValue)
   } else {
     cellTemplate = column.getCell(arrowCell.content)
   }
