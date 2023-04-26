@@ -220,6 +220,21 @@ describe("DateTimeColumn", () => {
     const newCell = mockColumn.getCell(EXAMPLE_DATE)
     expect((newCell as DateTimeCell).data.step).toBe("60")
   })
+
+  it("formats according to the provided format config option", () => {
+    const MOCK_DATETIME_COLUMN_CUSTOM_FORMAT = {
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        format: "MMM Do, YYYY - HH:mm",
+      },
+    }
+
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_CUSTOM_FORMAT)
+    const cell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((cell as DateTimeCell).data.displayDate).toEqual(
+      "Apr 25th, 2023 - 10:30"
+    )
+  })
 })
 
 describe("DateColumn", () => {
@@ -361,6 +376,19 @@ describe("DateColumn", () => {
     const newCell = mockColumn.getCell(EXAMPLE_DATE)
     expect((newCell as DateTimeCell).data.step).toBe("2")
   })
+
+  it("formats according to the provided format config option", () => {
+    const MOCK_DATE_COLUMN_CUSTOM_FORMAT = {
+      ...MOCK_DATE_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        format: "MMM Do, YYYY",
+      },
+    }
+
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_CUSTOM_FORMAT)
+    const cell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((cell as DateTimeCell).data.displayDate).toEqual("Apr 25th, 2023")
+  })
 })
 
 describe("TimeColumn", () => {
@@ -497,5 +525,18 @@ describe("TimeColumn", () => {
     const mockColumn = TimeColumn(MOCK_TIME_COLUMN_WITH_STEP)
     const newCell = mockColumn.getCell(EXAMPLE_DATE)
     expect((newCell as DateTimeCell).data.step).toBe("60")
+  })
+
+  it("formats according to the provided format config option", () => {
+    const MOCK_TIME_COLUMN_CUSTOM_FORMAT = {
+      ...MOCK_TIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        format: "HH:mm",
+      },
+    }
+
+    const mockColumn = DateColumn(MOCK_TIME_COLUMN_CUSTOM_FORMAT)
+    const cell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((cell as DateTimeCell).data.displayDate).toEqual("10:30")
   })
 })
