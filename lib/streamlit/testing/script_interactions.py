@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import hashlib
 import importlib
 import pathlib
 import tempfile
@@ -72,6 +73,9 @@ class InteractiveScriptTests(unittest.TestCase):
         string in the test itself, without having to create a separate file
         for it.
         """
+        hasher = hashlib.md5(bytes(script, "utf-8"), usedforsecurity=False)
+        script_name = hasher.hexdigest()
+
         path = pathlib.Path(self.tmp_script_dir.name, script_name)
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
