@@ -488,7 +488,7 @@ describe("getCellFromArrow", () => {
     })
   })
 
-  it("uses correct date based on timestamp unit", () => {
+  it("parses numeric timestamps into correct dates time values", () => {
     const MOCK_TIME_COLUMN = {
       ...TimeColumn({
         id: "1",
@@ -509,15 +509,58 @@ describe("getCellFromArrow", () => {
 
     // Create a mock arrowCell object with time data
     const arrowCell = {
-      // Unix timestamp in milliseconds Wed Sep 29 2021 21:13:20
-      // The default unit is seconds, so it needs to be adjusted internally
-      content: BigInt(1632950000123),
+      // Unix timestamp in microseconds Wed Sep 29 2021 21:13:20
+      // Our default unit is seconds, so it needs to be adjusted internally
+      content: BigInt(1632950000123000),
       contentType: null,
       field: {
         type: {
-          unit: 1, // Milliseconds
+          unit: 2, // Microseconds
         },
       },
+      displayContent: null,
+      cssId: null,
+      cssClass: null,
+      type: "columns",
+    } as object as DataFrameCell
+
+    // Call the getCellFromArrow function
+    getCellFromArrow(MOCK_TIME_COLUMN, arrowCell)
+
+    // Check if the timestamp is adjusted properly
+    expect(MOCK_TIME_COLUMN.getCell).toHaveBeenCalledWith(
+      new Date("2021-09-29T21:13:20.123Z")
+    ) // Corrected
+  })
+
+  it("parses numeric timestamps into correct dates datetime values", () => {
+    const MOCK_TIME_COLUMN = {
+      ...TimeColumn({
+        id: "1",
+        name: "datetime_column",
+        title: "Datetime column",
+        indexNumber: 0,
+        isEditable: false,
+        isHidden: false,
+        isIndex: false,
+        isStretched: false,
+        arrowType: {
+          pandas_type: "datetime",
+          numpy_type: "datetime64[ns]",
+        },
+      }),
+      getCell: jest.fn().mockReturnValue(getTextCell(false, false)),
+    }
+
+    // Create a mock arrowCell object with time data
+    const arrowCell = {
+      // Unix timestamp in milliseconds (Wed Sep 29 2021 21:13:20)
+      // Milliseconds is the default unit that is used for all datetime values
+      // in arrow. So we don't need to adjust based on the unit here. It just
+      // needs conversion from milliseconds unix timestamp to Date object.
+      // Our internal parsing assumes seconds as default unit.
+      content: 1632950000123,
+      contentType: null,
       displayContent: null,
       cssId: null,
       cssClass: null,

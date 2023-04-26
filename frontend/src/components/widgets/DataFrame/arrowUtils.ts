@@ -359,18 +359,28 @@ export function getCellFromArrow(
     ["time", "date", "datetime"].includes(column.kind) &&
     notNullOrUndefined(arrowCell.content) &&
     (typeof arrowCell.content === "number" ||
-      typeof arrowCell.content === "bigint") &&
-    notNullOrUndefined(arrowCell.field?.type?.unit)
+      typeof arrowCell.content === "bigint")
   ) {
-    // This is a special case where we want to adjust the timestamp to seconds
-    // based on the arrow field metadata. This is only required for time columns.
-    // Our implementation only supports unix timestamps in seconds
+    // This is a special case where we want to already parse a numerical timestamp
+    // to a date object based on the arrow field metadata.
+    // Our implementation only supports unix timestamps in seconds, so we need to
+    // do some custom conversion here.
+    let parsedDate
+    if (
+      Quiver.getTypeName(column.arrowType) === "time" &&
+      notNullOrUndefined(arrowCell.field?.type?.unit)
+    ) {
+      // Time values needs to be adjusted to seconds based on the unit
+      parsedDate = moment
+        .unix(Quiver.adjustTimestamp(arrowCell.content, arrowCell.field))
+        .utc()
+        .toDate()
+    } else {
+      // All other datetime related values are assumed to be in milliseconds
+      parsedDate = moment.utc(Number(arrowCell.content)).toDate()
+    }
 
-    const adjustedValue = moment
-      .unix(Quiver.adjustTimestamp(arrowCell.content, arrowCell.field))
-      .utc()
-      .toDate()
-    cellTemplate = column.getCell(adjustedValue)
+    cellTemplate = column.getCell(parsedDate)
   } else {
     cellTemplate = column.getCell(arrowCell.content)
   }
