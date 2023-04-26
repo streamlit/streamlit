@@ -28,7 +28,7 @@ import {
   Props as AppContextProps,
 } from "src/components/core/AppContext"
 import UISelectbox from "src/components/shared/Dropdown"
-import { MetricsManager } from "src/lib/MetricsManager"
+import { SegmentMetricsManager } from "src/lib/SegmentMetricsManager"
 
 import {
   StyledCheckbox,
@@ -50,7 +50,7 @@ export interface Props {
   developerMode: boolean
   openThemeCreator: () => void
   animateModal: boolean
-  metricsMgr: MetricsManager
+  metricsMgr: SegmentMetricsManager
 }
 
 /**

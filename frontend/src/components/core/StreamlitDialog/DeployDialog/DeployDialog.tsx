@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement, ReactNode, useCallback } from "react"
+import { SegmentMetricsManager } from "src/lib/SegmentMetricsManager"
 import Modal from "./DeployModal"
 import Card from "./DeployCard"
 import ListElement from "./DeployListElement"
@@ -39,7 +40,6 @@ import {
 } from "src/components/core/StreamlitDialog/DeployErrorDialogs/index"
 import { getDeployAppUrl } from "src/components/core/MainMenu/MainMenu"
 import { GitInfo, IGitInfo } from "src/autogen/proto"
-import { MetricsManager } from "src/lib/MetricsManager"
 
 const { GitStates } = GitInfo
 
@@ -53,7 +53,7 @@ export interface DeployDialogProps {
   ) => void
   isDeployErrorModalOpen: boolean
   gitInfo: IGitInfo | null
-  metricsMgr: MetricsManager
+  metricsMgr: SegmentMetricsManager
 }
 
 export function DeployDialog(props: DeployDialogProps): ReactElement {
