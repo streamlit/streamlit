@@ -20,6 +20,7 @@ import CheckboxColumn from "./CheckboxColumn"
 import SelectboxColumn from "./SelectboxColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
+import LinkColumn from "./LinkColumn"
 
 import { ColumnCreator } from "./utils"
 
@@ -36,6 +37,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     selectbox: SelectboxColumn,
     list: ListColumn,
     number: NumberColumn,
+    link: LinkColumn,
   })
 )
 
@@ -46,4 +48,5 @@ export {
   SelectboxColumn,
   ListColumn,
   NumberColumn,
+  LinkColumn,
 }
