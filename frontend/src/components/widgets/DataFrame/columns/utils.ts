@@ -463,8 +463,29 @@ export function toSafeDate(value: any): Date | null | undefined {
   try {
     const parsedTimestamp = Number(value)
     if (!isNaN(parsedTimestamp)) {
+      // Unix timestamps can be have different units.
+      // As default, we handle the unit as second, but
+      // if it larger than a certain threshold, we assume
+      // a different unit. This is not 100% accurate, but
+      // should be good enough since it is unlikely that
+      // users are actually referring to years >= 5138.
+      let timestampInSeconds = parsedTimestamp
+      if (parsedTimestamp >= 10 ** 18) {
+        // Assume that the timestamp is in nanoseconds
+        // and adjust to seconds
+        timestampInSeconds = parsedTimestamp / 1000 ** 3
+      } else if (parsedTimestamp >= 10 ** 15) {
+        // Assume that the timestamp is in microseconds
+        // and adjust to seconds
+        timestampInSeconds = parsedTimestamp / 1000 ** 2
+      } else if (parsedTimestamp >= 10 ** 12) {
+        // Assume that the timestamp is in milliseconds
+        // and adjust to seconds
+        timestampInSeconds = parsedTimestamp / 1000
+      }
+
       // Parse it as a unix timestamp in seconds
-      const parsedMomentDate = moment.unix(parsedTimestamp).utc()
+      const parsedMomentDate = moment.unix(timestampInSeconds).utc()
       if (parsedMomentDate.isValid()) {
         return parsedMomentDate.toDate()
       }

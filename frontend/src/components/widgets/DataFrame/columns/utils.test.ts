@@ -337,6 +337,12 @@ describe("toSafeDate", () => {
     [1671951600, new Date("2022-12-25T07:00:00.000Z")],
     // valid bigint timestamp in seconds
     [BigInt(1671951600), new Date("2022-12-25T07:00:00.000Z")],
+    // valid unix timestamp in milliseconds
+    [1671951600000, new Date("2022-12-25T07:00:00.000Z")],
+    // valid unix timestamp in microseconds
+    [1671951600000000, new Date("2022-12-25T07:00:00.000Z")],
+    // valid unix timestamp in nanoseconds
+    [1671951600000000000, new Date("2022-12-25T07:00:00.000Z")],
     // other date formats:
     ["04/25/2023", new Date("2023-04-25T00:00:00.000Z")],
     // invalid string
