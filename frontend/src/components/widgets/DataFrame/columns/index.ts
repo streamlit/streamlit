@@ -20,7 +20,7 @@ import CheckboxColumn from "./CheckboxColumn"
 import SelectboxColumn from "./SelectboxColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
-import { DateTimeColumn, DateColumn, TimeColumn } from "./DateTimeColumn"
+import { DateTimeColumn, DateColumn, TimeColumn } from "./DateTimeColumn2"
 
 import { DateTimeCellRenderer } from "./cells/DateTimeCell"
 
