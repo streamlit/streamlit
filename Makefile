@@ -238,23 +238,13 @@ protobuf:
 	fi
 	protoc_version=$$(protoc --version | cut -d ' ' -f 2);
 	protobuf_version=$$(pip show protobuf | grep Version | cut -d " " -f 2-);
-ifndef CIRCLECI
-			if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
-				echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
-				echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
-				echo "protoc version: $${protoc_version}"; \
-				echo "protobuf version: $${protobuf_version}"; \
-				echo -n "Do you want to continue anyway? [y/N] " && read ans && [ $${ans:-N} = y ]; \
-			fi
-else
-		if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
-				echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
-				echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
-				echo "protoc version: $${protoc_version}"; \
-				echo "protobuf version: $${protobuf_version}"; \
-				echo "Since we're on CI we try to continue anyway..."; \
-		fi
-endif
+	if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
+		echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
+		echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
+		echo "protoc version: $${protoc_version}"; \
+		echo "protobuf version: $${protobuf_version}"; \
+		echo -n "Do you want to continue anyway? [y/N] " && read ans && [ $${ans:-N} = y ]; \
+	fi
 	protoc \
 		--proto_path=proto \
 		--python_out=lib \
@@ -300,17 +290,8 @@ frontend-fast:
 .PHONY: jslint
 # Lint the JS code
 jslint:
-	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
-ifndef CIRCLECI
 	cd frontend; \
 		yarn lint;
-else
-	cd frontend; \
-		yarn lint \
-			--format junit \
-			--output-file test-reports/eslint/eslint.xml \
-			./src
-endif #CIRCLECI
 
 .PHONY: tstypecheck
 # Type check the JS/TS code
@@ -385,7 +366,6 @@ build-test-env:
 		echo "Proto files not generated."; \
 		exit 1; \
 	fi
-ifndef CIRCLECI
 	docker build \
 		--build-arg UID=$$(id -u) \
 		--build-arg GID=$$(id -g) \
@@ -394,17 +374,6 @@ ifndef CIRCLECI
 		-t streamlit_e2e_tests \
 		-f e2e/Dockerfile \
 		.
-else
-	docker build \
-		--build-arg UID=$$(id -u) \
-		--build-arg GID=$$(id -g) \
-		--build-arg OSTYPE=$$(uname) \
-		--build-arg NODE_VERSION=$$(node --version) \
-		-t streamlit_e2e_tests \
-		-f e2e/Dockerfile \
-		--progress plain \
-		.
-endif #CIRCLECI
 
 .PHONY: run-test-env
 # Run test env image with volume mounts
