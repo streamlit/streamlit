@@ -289,7 +289,7 @@ class SessionStateTest(DeltaGeneratorTestCase):
 
 class SessionStateInteractionTest(InteractiveScriptTests):
     def test_updates(self):
-        script = self.script_from_filename(__file__, "linked_sliders.py")
+        script = self.script_from_filename("test_data/linked_sliders.py")
         sr = script.run()
         assert sr.get("slider")[0].value == -100.0
         assert sr.get("markdown")[0].value == "Celsius `-100.0`"

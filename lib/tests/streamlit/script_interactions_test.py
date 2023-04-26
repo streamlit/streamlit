@@ -18,7 +18,7 @@ from streamlit.testing.script_interactions import InteractiveScriptTests
 
 class InteractiveScriptTest(InteractiveScriptTests):
     def test_widgets_script(self):
-        script = self.script_from_filename(__file__, "widgets_script.py")
+        script = self.script_from_filename("test_data/widgets_script.py")
         sr = script.run()
 
         # main and sidebar
@@ -246,4 +246,4 @@ class InteractiveScriptTest(InteractiveScriptTests):
 
     def test_script_not_found(self):
         with pytest.raises(AssertionError):
-            self.script_from_filename(__file__, "doesntexist.py")
+            self.script_from_filename("doesntexist.py")

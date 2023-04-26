@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
-import os
+import importlib
 import pathlib
 import tempfile
 import textwrap
@@ -32,6 +32,12 @@ from streamlit.testing.local_script_runner import LocalScriptRunner
 
 class InteractiveScriptTests(unittest.TestCase):
     tmp_script_dir: tempfile.TemporaryDirectory[str]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        m = importlib.import_module(self.__module__)
+        self.dir_path = pathlib.Path(m.__file__).parent
 
     def setUp(self) -> None:
         super().setUp()
@@ -71,9 +77,6 @@ class InteractiveScriptTests(unittest.TestCase):
         path.write_text(aligned_script)
         return LocalScriptRunner(str(path))
 
-    def script_from_filename(
-        self, test_dir: str, script_name: str
-    ) -> LocalScriptRunner:
+    def script_from_filename(self, script_path: str) -> LocalScriptRunner:
         """Create a runner for the script with the given name, for testing."""
-        script_path = os.path.join(os.path.dirname(test_dir), "test_data", script_name)
-        return LocalScriptRunner(script_path)
+        return LocalScriptRunner(str(self.dir_path / script_path))
