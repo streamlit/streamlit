@@ -71,7 +71,13 @@ def pytest_addoption(parser: pytest.Parser):
     group.addoption(
         "--require-snowflake",
         action="store_true",
-        help="only run tests that requires snowflake. ",
+        help="only run tests that require snowflake.",
+    )
+
+    group.addoption(
+        "--backwards-compat-tests",
+        action="store_true",
+        help="only run tests marked as backwards compat tests.",
     )
 
 
@@ -80,6 +86,12 @@ def pytest_configure(config: pytest.Config):
         "markers",
         "require_snowflake(name): mark test to run only on "
         "when --require-snowflake option is passed to pytest",
+    )
+
+    config.addinivalue_line(
+        "markers",
+        "backwards_compat(id): mark test as a backwards compatibility test "
+        "to run when the --backwards-compat-tests option is passed to pytest",
     )
 
     is_require_snowflake = config.getoption("--require-snowflake", default=False)
@@ -106,12 +118,28 @@ def pytest_runtest_setup(item: pytest.Item):
 
     if is_require_snowflake and not has_require_snowflake_marker:
         pytest.skip(
-            f"The test is skipped because it has require_snowflake marker. "
-            f"This tests are only run when --require-snowflake flag is passed to pytest. "
+            "This test was skipped because it has the require_snowflake marker. "
+            "These tests are only run when the --require-snowflake flag is passed to pytest. "
             f"{item}"
         )
+        return
     if not is_require_snowflake and has_require_snowflake_marker:
         pytest.skip(
-            f"The test is skipped because it does not have the right marker. "
-            f"Only tests marked with pytest.mark.require_snowflake() are run. {item}"
+            "This test was skipped because it does not have the right marker. "
+            "Only tests marked with pytest.mark.require_snowflake() are run. "
+            f"{item}"
         )
+        return
+
+    only_backwards_compat_tests = item.config.getoption(
+        "--backwards-compat-tests", default=False
+    )
+    has_backwards_compat_marker = bool(list(item.iter_markers(name="backwards_compat")))
+
+    if only_backwards_compat_tests and not has_backwards_compat_marker:
+        pytest.skip(
+            "This test was skipped because pytest was run with the --backwards-compat-tests "
+            "flag. Only tests marked with pytest.mark.backwards_compat() are run. "
+            f"{item}"
+        )
+        return
