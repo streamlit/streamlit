@@ -174,6 +174,8 @@ export const DateTimeCellRenderer: CustomRenderer<DateTimeCell> = {
   },
   measure: (ctx, cell) => {
     const { displayDate } = cell.data
+    // 8 per side is the default padding of a cell in glide-data-grid
+    // used for measuring the width of the cell
     return ctx.measureText(displayDate).width + 16
   },
   provideEditor: () => ({
