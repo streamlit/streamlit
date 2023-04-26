@@ -488,7 +488,7 @@ describe("getCellFromArrow", () => {
     })
   })
 
-  it("parses numeric timestamps into correct dates time values", () => {
+  it("parses numeric timestamps for time columns into valid Date values", () => {
     const MOCK_TIME_COLUMN = {
       ...TimeColumn({
         id: "1",
@@ -533,7 +533,7 @@ describe("getCellFromArrow", () => {
     )
   })
 
-  it("parses numeric timestamps into correct dates datetime values", () => {
+  it("parses numeric timestamps for datetime columns into valid Date values", () => {
     const MOCK_TIME_COLUMN = {
       ...TimeColumn({
         id: "1",
