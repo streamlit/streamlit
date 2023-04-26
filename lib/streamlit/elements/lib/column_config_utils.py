@@ -38,7 +38,16 @@ ColumnWidth = Literal["small", "medium", "large"]
 # Type alias that represents all available column types
 # which are configurable by the user.
 ColumnType: TypeAlias = Literal[
-    "object", "text", "number", "checkbox", "selectbox", "list", "link"
+    "object",
+    "text",
+    "number",
+    "checkbox",
+    "selectbox",
+    "list",
+    "datetime",
+    "date",
+    "time",
+    "link",
 ]
 
 
