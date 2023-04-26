@@ -75,7 +75,7 @@ function getTodayIsoDate(): string {
   return new Date().toISOString().split("T")[0]
 }
 
-const constantDate = new Date("2023-04-25T10:30:00.000Z")
+const EXAMPLE_DATE = new Date("2023-04-25T10:30:00.000Z")
 
 describe("DateTimeColumn", () => {
   it("creates a valid column instance", () => {
@@ -85,9 +85,9 @@ describe("DateTimeColumn", () => {
     expect(mockColumn.id).toEqual(MOCK_DATETIME_COLUMN_TEMPLATE.id)
     expect(mockColumn.sortMode).toEqual("default")
 
-    const mockCell = mockColumn.getCell(constantDate)
+    const mockCell = mockColumn.getCell(EXAMPLE_DATE)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect((mockCell as DateTimeCell).data.date).toEqual(constantDate)
+    expect((mockCell as DateTimeCell).data.date).toEqual(EXAMPLE_DATE)
   })
 
   it.each([
@@ -207,6 +207,19 @@ describe("DateTimeColumn", () => {
     expect(mockColumn.validateInput!(aboveMaxValue)).toBeFalsy()
     expect(isErrorCell(aboveMaxCell)).toEqual(true)
   })
+
+  it("changes the step size based on the config option", () => {
+    const MOCK_DATETIME_COLUMN_WITH_STEP: BaseColumnProps = {
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        step: 60,
+      },
+    }
+
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_WITH_STEP)
+    const newCell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((newCell as DateTimeCell).data.step).toBe("60")
+  })
 })
 
 describe("DateColumn", () => {
@@ -217,7 +230,7 @@ describe("DateColumn", () => {
     expect(mockColumn.id).toEqual(MOCK_DATE_COLUMN_TEMPLATE.id)
     expect(mockColumn.sortMode).toEqual("default")
 
-    const mockCell = mockColumn.getCell(constantDate)
+    const mockCell = mockColumn.getCell(EXAMPLE_DATE)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
     expect((mockCell as DateTimeCell).copyData).toEqual("2023-04-25")
   })
@@ -335,6 +348,19 @@ describe("DateColumn", () => {
     expect(mockColumn.validateInput!(aboveMaxValue)).toBeFalsy()
     expect(isErrorCell(aboveMaxCell)).toEqual(true)
   })
+
+  it("changes the step size based on the config option", () => {
+    const MOCK_DATE_COLUMN_WITH_STEP: BaseColumnProps = {
+      ...MOCK_DATE_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        step: 2,
+      },
+    }
+
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_WITH_STEP)
+    const newCell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((newCell as DateTimeCell).data.step).toBe("2")
+  })
 })
 
 describe("TimeColumn", () => {
@@ -345,7 +371,7 @@ describe("TimeColumn", () => {
     expect(mockColumn.id).toEqual(MOCK_TIME_COLUMN_TEMPLATE.id)
     expect(mockColumn.sortMode).toEqual("default")
 
-    const mockCell = mockColumn.getCell(constantDate)
+    const mockCell = mockColumn.getCell(EXAMPLE_DATE)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
     expect((mockCell as DateTimeCell).copyData).toEqual("10:30:00.000")
   })
@@ -458,5 +484,18 @@ describe("TimeColumn", () => {
     const aboveMaxCell = mockColumn.getCell(aboveMaxValue, true)
     expect(mockColumn.validateInput!(aboveMaxValue)).toBeFalsy()
     expect(isErrorCell(aboveMaxCell)).toEqual(true)
+  })
+
+  it("changes the step size based on the config option", () => {
+    const MOCK_TIME_COLUMN_WITH_STEP: BaseColumnProps = {
+      ...MOCK_TIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        step: 60,
+      },
+    }
+
+    const mockColumn = TimeColumn(MOCK_TIME_COLUMN_WITH_STEP)
+    const newCell = mockColumn.getCell(EXAMPLE_DATE)
+    expect((newCell as DateTimeCell).data.step).toBe("60")
   })
 })
