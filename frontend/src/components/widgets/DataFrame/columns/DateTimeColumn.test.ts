@@ -147,6 +147,66 @@ describe("DateTimeColumn", () => {
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)
   })
+
+  it("respects min_value config option", () => {
+    const MOCK_DATETIME_COLUMN_WITH_MIN: BaseColumnProps = {
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        min_value: "2023-04-24T00:00:00",
+      },
+    }
+
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_WITH_MIN)
+    const minValue = new Date("2023-04-24T00:00:00.000Z")
+    const belowMinValue = new Date("2023-04-23T23:59:59.000Z")
+    const aboveMinValue = new Date("2023-04-25T23:59:59.000Z")
+
+    // Check valid values
+    const minCell = mockColumn.getCell(minValue, true)
+    expect(mockColumn.validateInput!(minValue)).toBeTruthy()
+    expect(mockColumn.getCellValue(minCell)).toEqual("2023-04-24T00:00:00.000")
+
+    const aboveMinValueCell = mockColumn.getCell(aboveMinValue, true)
+    expect(mockColumn.validateInput!(aboveMinValue)).toBeTruthy()
+    expect(mockColumn.getCellValue(aboveMinValueCell)).toEqual(
+      "2023-04-25T23:59:59.000"
+    )
+
+    // Check invalid values
+    const belowMinCell = mockColumn.getCell(belowMinValue, true)
+    expect(mockColumn.validateInput!(belowMinValue)).toBeFalsy()
+    expect(isErrorCell(belowMinCell)).toEqual(true)
+  })
+
+  it("respects max_value config option", () => {
+    const MOCK_DATETIME_COLUMN_WITH_MAX: BaseColumnProps = {
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        max_value: "2023-04-24T00:00:00",
+      },
+    }
+
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_WITH_MAX)
+    const maxValue = new Date("2023-04-24T00:00:00.000Z")
+    const belowMaxValue = new Date("2023-04-23T23:59:59.000Z")
+    const aboveMaxValue = new Date("2023-04-25T23:59:59.000Z")
+
+    // Check valid values
+    const maxCell = mockColumn.getCell(maxValue, true)
+    expect(mockColumn.validateInput!(maxValue)).toBeTruthy()
+    expect(mockColumn.getCellValue(maxCell)).toEqual("2023-04-24T00:00:00.000")
+
+    const belowMaxValueCell = mockColumn.getCell(belowMaxValue, true)
+    expect(mockColumn.validateInput!(belowMaxValue)).toBeTruthy()
+    expect(mockColumn.getCellValue(belowMaxValueCell)).toEqual(
+      "2023-04-23T23:59:59.000"
+    )
+
+    // Check invalid values
+    const aboveMaxCell = mockColumn.getCell(aboveMaxValue, true)
+    expect(mockColumn.validateInput!(aboveMaxValue)).toBeFalsy()
+    expect(isErrorCell(aboveMaxCell)).toEqual(true)
+  })
 })
 
 describe("DateColumn", () => {
@@ -219,6 +279,62 @@ describe("DateColumn", () => {
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)
   })
+
+  it("respects min_value config option", () => {
+    const MOCK_DATE_COLUMN_TEMPLATE_WITH_MIN: BaseColumnProps = {
+      ...MOCK_DATE_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        min_value: "2023-04-24",
+      },
+    }
+
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE_WITH_MIN)
+    const minValue = new Date("2023-04-24")
+    const belowMinValue = new Date("2023-04-23")
+    const aboveMinValue = new Date("2023-04-25")
+
+    // Check valid values
+    const minCell = mockColumn.getCell(minValue, true)
+    expect(mockColumn.validateInput!(minValue)).toBeTruthy()
+    expect(mockColumn.getCellValue(minCell)).toEqual("2023-04-24")
+
+    const aboveMinValueCell = mockColumn.getCell(aboveMinValue, true)
+    expect(mockColumn.validateInput!(aboveMinValue)).toBeTruthy()
+    expect(mockColumn.getCellValue(aboveMinValueCell)).toEqual("2023-04-25")
+
+    // Check invalid values
+    const belowMinCell = mockColumn.getCell(belowMinValue, true)
+    expect(mockColumn.validateInput!(belowMinValue)).toBeFalsy()
+    expect(isErrorCell(belowMinCell)).toEqual(true)
+  })
+
+  it("respects max_value config option", () => {
+    const MOCK_DATE_COLUMN_TEMPLATE_WITH_MAX: BaseColumnProps = {
+      ...MOCK_DATE_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        max_value: "2023-04-24",
+      },
+    }
+
+    const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE_WITH_MAX)
+    const maxValue = new Date("2023-04-24")
+    const belowMaxValue = new Date("2023-04-23")
+    const aboveMaxValue = new Date("2023-04-25")
+
+    // Check valid values
+    const maxCell = mockColumn.getCell(maxValue, true)
+    expect(mockColumn.validateInput!(maxValue)).toBeTruthy()
+    expect(mockColumn.getCellValue(maxCell)).toEqual("2023-04-24")
+
+    const belowMaxValueCell = mockColumn.getCell(belowMaxValue, true)
+    expect(mockColumn.validateInput!(belowMaxValue)).toBeTruthy()
+    expect(mockColumn.getCellValue(belowMaxValueCell)).toEqual("2023-04-23")
+
+    // Check invalid values
+    const aboveMaxCell = mockColumn.getCell(aboveMaxValue, true)
+    expect(mockColumn.validateInput!(aboveMaxValue)).toBeFalsy()
+    expect(isErrorCell(aboveMaxCell)).toEqual(true)
+  })
 })
 
 describe("TimeColumn", () => {
@@ -286,5 +402,61 @@ describe("TimeColumn", () => {
     const mockColumn = TimeColumn(MOCK_TIME_COLUMN_TEMPLATE)
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)
+  })
+
+  it("respects min_value config option", () => {
+    const MOCK_TIME_COLUMN_TEMPLATE_WITH_MIN: BaseColumnProps = {
+      ...MOCK_TIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        min_value: "10:59:59",
+      },
+    }
+
+    const mockColumn = TimeColumn(MOCK_TIME_COLUMN_TEMPLATE_WITH_MIN)
+    const minValue = "10:59:59.000"
+    const belowMinValue = "10:59:58.345"
+    const aboveMinValue = "11:00:00.123"
+
+    // Check valid values
+    const minCell = mockColumn.getCell(minValue, true)
+    expect(mockColumn.getCellValue(minCell)).toEqual("10:59:59.000")
+    expect(mockColumn.validateInput!(minValue)).toBeTruthy()
+
+    const aboveMinValueCell = mockColumn.getCell(aboveMinValue, true)
+    expect(mockColumn.getCellValue(aboveMinValueCell)).toEqual("11:00:00.123")
+    expect(mockColumn.validateInput!(aboveMinValue)).toBeTruthy()
+
+    // Check invalid values
+    const belowMinCell = mockColumn.getCell(belowMinValue, true)
+    expect(mockColumn.validateInput!(belowMinValue)).toBeFalsy()
+    expect(isErrorCell(belowMinCell)).toEqual(true)
+  })
+
+  it("respects max_value config option", () => {
+    const MOCK_TIME_COLUMN_TEMPLATE_WITH_MAX: BaseColumnProps = {
+      ...MOCK_TIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        max_value: "10:59:59",
+      },
+    }
+
+    const mockColumn = TimeColumn(MOCK_TIME_COLUMN_TEMPLATE_WITH_MAX)
+    const maxValue = "10:59:59.000"
+    const belowMaxValue = "10:59:58.345"
+    const aboveMaxValue = "11:00:00.123"
+
+    // Check valid values
+    const maxCell = mockColumn.getCell(maxValue, true)
+    expect(mockColumn.getCellValue(maxCell)).toEqual("10:59:59.000")
+    expect(mockColumn.validateInput!(maxValue)).toBeTruthy()
+
+    const belowMaxValueCell = mockColumn.getCell(belowMaxValue, true)
+    expect(mockColumn.validateInput!(belowMaxValue)).toBeTruthy()
+    expect(mockColumn.getCellValue(belowMaxValueCell)).toEqual("10:59:58.345")
+
+    // Check invalid values
+    const aboveMaxCell = mockColumn.getCell(aboveMaxValue, true)
+    expect(mockColumn.validateInput!(aboveMaxValue)).toBeFalsy()
+    expect(isErrorCell(aboveMaxCell)).toEqual(true)
   })
 })
