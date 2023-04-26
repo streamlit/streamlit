@@ -180,13 +180,10 @@ def _parse_value(
             ColumnDataKind.DATE,
             ColumnDataKind.TIME,
         ]:
-            datetime_value = pd.to_datetime(value, utc=False)
+            datetime_value = pd.Timestamp(value)
 
             if datetime_value is pd.NaT:
                 return None
-
-            if isinstance(datetime_value, pd.Timestamp):
-                datetime_value = datetime_value.to_pydatetime()
 
             if column_data_kind == ColumnDataKind.DATETIME:
                 return datetime_value

@@ -24,6 +24,7 @@ import {
   BaseGridCell,
 } from "@glideapps/glide-data-grid"
 import { toString, merge, isArray } from "lodash"
+import moment from "moment"
 import numbro from "numbro"
 
 import { Type as ArrowType } from "src/lib/Quiver"
@@ -429,4 +430,88 @@ export function formatNumber(
     )
   }
   return ""
+}
+
+/**
+ * Converts the given value of unknown type to a date without
+ * the risks of any exceptions.
+ *
+ * Note: Unix timestamps are only supported in seconds.
+ *
+ * @param value - The value to convert to a date.
+ *
+ * @returns The converted date or null if the value cannot be interpreted as a date.
+ */
+export function toSafeDate(value: any): Date | null | undefined {
+  if (isNullOrUndefined(value)) {
+    return null
+  }
+
+  // Return the value as-is if it is already a date
+  if (value instanceof Date) {
+    if (!isNaN(value.getTime())) {
+      return value
+    }
+    return undefined
+  }
+
+  if (typeof value === "string" && value.trim().length === 0) {
+    // Empty string should return null
+    return null
+  }
+
+  try {
+    const parsedTimestamp = Number(value)
+    if (!isNaN(parsedTimestamp)) {
+      // Unix timestamps can be have different units.
+      // As default, we handle the unit as second, but
+      // if it larger than a certain threshold, we assume
+      // a different unit. This is not 100% accurate, but
+      // should be good enough since it is unlikely that
+      // users are actually referring to years >= 5138.
+      let timestampInSeconds = parsedTimestamp
+      if (parsedTimestamp >= 10 ** 18) {
+        // Assume that the timestamp is in nanoseconds
+        // and adjust to seconds
+        timestampInSeconds = parsedTimestamp / 1000 ** 3
+      } else if (parsedTimestamp >= 10 ** 15) {
+        // Assume that the timestamp is in microseconds
+        // and adjust to seconds
+        timestampInSeconds = parsedTimestamp / 1000 ** 2
+      } else if (parsedTimestamp >= 10 ** 12) {
+        // Assume that the timestamp is in milliseconds
+        // and adjust to seconds
+        timestampInSeconds = parsedTimestamp / 1000
+      }
+
+      // Parse it as a unix timestamp in seconds
+      const parsedMomentDate = moment.unix(timestampInSeconds).utc()
+      if (parsedMomentDate.isValid()) {
+        return parsedMomentDate.toDate()
+      }
+    }
+
+    if (typeof value === "string") {
+      // Try to parse string via momentJS:
+      const parsedMomentDate = moment.utc(value)
+      if (parsedMomentDate.isValid()) {
+        return parsedMomentDate.toDate()
+      }
+      // The pasted value was not a valid date string
+      // Try to interpret value as time string instead (HH:mm:ss)
+      const parsedMomentTime = moment.utc(value, [
+        moment.HTML5_FMT.TIME_MS, // HH:mm:ss.SSS
+        moment.HTML5_FMT.TIME_SECONDS, // HH:mm:ss
+        moment.HTML5_FMT.TIME, // HH:mm
+      ])
+      if (parsedMomentTime.isValid()) {
+        return parsedMomentTime.toDate()
+      }
+    }
+  } catch (error) {
+    return undefined
+  }
+
+  // Unable to interpret this value as a date:
+  return undefined
 }

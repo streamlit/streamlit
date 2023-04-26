@@ -20,6 +20,9 @@ import CheckboxColumn from "./CheckboxColumn"
 import SelectboxColumn from "./SelectboxColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
+import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
+
+import { DateTimeCellRenderer } from "./cells/DateTimeCell"
 
 import { ColumnCreator } from "./utils"
 
@@ -27,6 +30,8 @@ export * from "./utils"
 
 /**
  * All available column types need to be registered here.
+ *
+ * These names must match the column names used in the backend.
  */
 export const ColumnTypes = new Map<string, ColumnCreator>(
   Object.entries({
@@ -36,8 +41,13 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     selectbox: SelectboxColumn,
     list: ListColumn,
     number: NumberColumn,
+    datetime: DateTimeColumn,
+    date: DateColumn,
+    time: TimeColumn,
   })
 )
+
+export const CustomCells = [DateTimeCellRenderer]
 
 export {
   ObjectColumn,
@@ -46,4 +56,7 @@ export {
   SelectboxColumn,
   ListColumn,
   NumberColumn,
+  DateTimeColumn,
+  DateColumn,
+  TimeColumn,
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Quiver, Type as ArrowType } from "src/lib/Quiver"
+import { Quiver, Type as ArrowType, DataFrameCell } from "src/lib/Quiver"
 import { Arrow as ArrowProto } from "src/autogen/proto"
 import {
   UNICODE,
@@ -35,6 +35,9 @@ import {
   TextColumn,
   SelectboxColumn,
   ListColumn,
+  DateTimeColumn,
+  DateColumn,
+  TimeColumn,
 } from "./columns"
 import {
   extractCssProperty,
@@ -485,6 +488,94 @@ describe("getCellFromArrow", () => {
     })
   })
 
+  it("parses numeric timestamps for time columns into valid Date values", () => {
+    const MOCK_TIME_COLUMN = {
+      ...TimeColumn({
+        id: "1",
+        name: "time_column",
+        title: "Time column",
+        indexNumber: 0,
+        isEditable: false,
+        isHidden: false,
+        isIndex: false,
+        isStretched: false,
+        arrowType: {
+          pandas_type: "time",
+          numpy_type: "object",
+        },
+      }),
+      getCell: jest.fn().mockReturnValue(getTextCell(false, false)),
+    }
+
+    // Create a mock arrowCell object with time data
+    const arrowCell = {
+      // Unix timestamp in microseconds Wed Sep 29 2021 21:13:20
+      // Our default unit is seconds, so it needs to be adjusted internally
+      content: BigInt(1632950000123000),
+      contentType: null,
+      field: {
+        type: {
+          unit: 2, // Microseconds
+        },
+      },
+      displayContent: null,
+      cssId: null,
+      cssClass: null,
+      type: "columns",
+    } as object as DataFrameCell
+
+    // Call the getCellFromArrow function
+    getCellFromArrow(MOCK_TIME_COLUMN, arrowCell)
+
+    // Check if the timestamp is adjusted properly
+    expect(MOCK_TIME_COLUMN.getCell).toHaveBeenCalledWith(
+      new Date("2021-09-29T21:13:20.123Z")
+    )
+  })
+
+  it("parses numeric timestamps for datetime columns into valid Date values", () => {
+    const MOCK_TIME_COLUMN = {
+      ...TimeColumn({
+        id: "1",
+        name: "datetime_column",
+        title: "Datetime column",
+        indexNumber: 0,
+        isEditable: false,
+        isHidden: false,
+        isIndex: false,
+        isStretched: false,
+        arrowType: {
+          pandas_type: "datetime",
+          numpy_type: "datetime64[ns]",
+        },
+      }),
+      getCell: jest.fn().mockReturnValue(getTextCell(false, false)),
+    }
+
+    // Create a mock arrowCell object with time data
+    const arrowCell = {
+      // Unix timestamp in milliseconds (Wed Sep 29 2021 21:13:20)
+      // Milliseconds is the default unit that is used for all datetime values
+      // in arrow. So we don't need to adjust based on the unit here. It just
+      // needs conversion from milliseconds unix timestamp to Date object.
+      // Our internal parsing assumes seconds as default unit.
+      content: 1632950000123,
+      contentType: null,
+      displayContent: null,
+      cssId: null,
+      cssClass: null,
+      type: "columns",
+    } as object as DataFrameCell
+
+    // Call the getCellFromArrow function
+    getCellFromArrow(MOCK_TIME_COLUMN, arrowCell)
+
+    // Check if the timestamp is adjusted properly
+    expect(MOCK_TIME_COLUMN.getCell).toHaveBeenCalledWith(
+      new Date("2021-09-29T21:13:20.123Z")
+    )
+  })
+
   it("applies display content from arrow cell", () => {
     const element = {
       data: STYLER,
@@ -667,35 +758,35 @@ describe("getColumnTypeFromArrow", () => {
         pandas_type: "empty",
         numpy_type: "object",
       },
-      TextColumn, // TODO: why not ObjectColumn?
+      TextColumn,
     ],
     [
       {
         pandas_type: "datetime",
         numpy_type: "datetime64[ns]",
       },
-      ObjectColumn,
+      DateTimeColumn,
     ],
     [
       {
         pandas_type: "datetimetz",
         numpy_type: "datetime64[ns]",
       },
-      ObjectColumn,
+      DateTimeColumn,
     ],
     [
       {
         pandas_type: "time",
         numpy_type: "object",
       },
-      ObjectColumn,
+      TimeColumn,
     ],
     [
       {
         pandas_type: "date",
         numpy_type: "object",
       },
-      ObjectColumn,
+      DateColumn,
     ],
     [
       {
