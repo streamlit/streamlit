@@ -49,6 +49,7 @@ import {
   getAllColumnsFromArrow,
   getCellFromArrow,
 } from "./arrowUtils"
+import { DataFrameCell } from "src/lib/Quiver"
 
 const MOCK_TEXT_COLUMN = TextColumn({
   id: "1",
@@ -486,6 +487,47 @@ describe("getCellFromArrow", () => {
       readonly: true,
       style: "normal",
     })
+  })
+
+  it("adjusts the timestamp for time columns", () => {
+    const MOCK_TIME_COLUMN = {
+      ...TimeColumn({
+        id: "1",
+        name: "time_column",
+        title: "Time column",
+        indexNumber: 0,
+        isEditable: false,
+        isHidden: false,
+        isIndex: false,
+        isStretched: false,
+        arrowType: {
+          pandas_type: "time",
+          numpy_type: "object",
+        },
+      }),
+      getCell: jest.fn().mockReturnValue(getTextCell(false, false)),
+    }
+
+    // Create a mock arrowCell object with time data
+    const arrowCell = {
+      content: BigInt(1632950000123), // Unix timestamp in milliseconds Wed Sep 29 2021 21:13:20
+      contentType: null,
+      field: {
+        type: {
+          unit: 2,
+        },
+      },
+      displayContent: null,
+      cssId: null,
+      cssClass: null,
+      type: "columns",
+    } as object as DataFrameCell
+
+    // Call the getCellFromArrow function
+    getCellFromArrow(MOCK_TIME_COLUMN, arrowCell)
+
+    // Check if the timestamp is adjusted properly
+    expect(MOCK_TIME_COLUMN.getCell).toHaveBeenCalledWith(1632950.000123) // Unix timestamp in milliseconds
   })
 
   it("applies display content from arrow cell", () => {

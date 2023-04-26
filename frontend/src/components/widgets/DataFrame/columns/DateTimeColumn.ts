@@ -153,8 +153,6 @@ function BaseDateTimeColumn(
       return false
     }
 
-    // TODO: should we auto correct min/max values?
-
     // Apply min_value configuration option:
     if (
       notNullOrUndefined(minDate) &&
