@@ -354,6 +354,19 @@ export function getCellFromArrow(
           )
         : null
     )
+  } else if (
+    ["time", "date", "datetime"].includes(column.kind) &&
+    notNullOrUndefined(arrowCell.content) &&
+    (typeof arrowCell.content === "number" ||
+      typeof arrowCell.content === "bigint") &&
+    notNullOrUndefined(arrowCell.field?.type?.unit)
+  ) {
+    // This is a special case where we want to adjust the timestamp to seconds
+    // based on the arrow field metadata. This is only required for time columns.
+    // Our implementation only supports unix timestamps in seconds
+    cellTemplate = column.getCell(
+      Quiver.adjustTimestamp(arrowCell.content, arrowCell.field)
+    )
   } else {
     cellTemplate = column.getCell(arrowCell.content)
   }
