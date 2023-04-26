@@ -18,7 +18,7 @@
 // @ts-nocheck
 
 import { Delta, Element } from "src/lib/proto"
-import { mockSessionInfo, mockSessionInfoProps } from "./mocks/mocks"
+import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
 import { SegmentMetricsManager } from "./SegmentMetricsManager"
 import { SessionInfo } from "src/lib/SessionInfo"
 
