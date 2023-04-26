@@ -104,7 +104,6 @@ import { handleFavicon } from "src/components/elements/Favicon"
 
 import {
   createAutoTheme,
-  createPresetThemes,
   createTheme,
   CUSTOM_THEME_NAME,
   getCachedTheme,
@@ -574,12 +573,6 @@ export class App extends PureComponent<Props, State> {
     const { title, favicon, layout, initialSidebarState, menuItems } =
       pageConfig
 
-    this.metricsMgr.enqueue("pageConfigChanged", {
-      favicon,
-      layout,
-      initialSidebarState,
-    })
-
     if (title) {
       this.props.hostCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
@@ -706,19 +699,6 @@ export class App extends PureComponent<Props, State> {
         // if we don't have a pending rerun request, and we don't have
         // a script compilation failure
         scriptRunState = ScriptRunState.NOT_RUNNING
-
-        this.metricsMgr.enqueue(
-          "deltaStats",
-          this.metricsMgr.getAndResetDeltaCounter()
-        )
-
-        const { availableThemes, activeTheme } = this.props.theme
-        const customThemeDefined =
-          availableThemes.length > createPresetThemes().length
-        this.metricsMgr.enqueue("themeStats", {
-          activeThemeName: activeTheme.name,
-          customThemeDefined,
-        })
 
         const customComponentCounter =
           this.metricsMgr.getAndResetCustomComponentCounter()
@@ -877,7 +857,6 @@ export class App extends PureComponent<Props, State> {
       this.props.hostCommunication.currentState.deployedAppMetadata
     )
     this.metricsMgr.setAppHash(newSessionHash)
-    this.metricsMgr.clearDeltaCounter()
 
     this.metricsMgr.enqueue("updateReport", {
       numPages: newSessionProto.appPages.length,
@@ -909,10 +888,6 @@ export class App extends PureComponent<Props, State> {
 
     this.metricsMgr.initialize({
       gatherUsageStats: config.gatherUsageStats,
-    })
-
-    this.metricsMgr.enqueue("createReport", {
-      pythonVersion: this.sessionInfo.current.pythonVersion,
     })
 
     this.handleSessionStatusChanged(initialize.sessionStatus)
@@ -1124,7 +1099,7 @@ export class App extends PureComponent<Props, State> {
     )
 
     // Update metrics
-    this.metricsMgr.handleDeltaMessage(deltaMsg, metadataMsg)
+    this.metricsMgr.handleDeltaMessage(deltaMsg)
 
     if (!this.pendingElementsTimerRunning) {
       this.pendingElementsTimerRunning = true
