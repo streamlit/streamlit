@@ -269,19 +269,20 @@ function BaseDateTimeColumn(
 }
 
 export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
-  // TODO: Support configurable timezone (from columnTypeOptions)
   const timezone: string | undefined = props.arrowType?.meta?.timezone
+  const hasTimezone: boolean =
+    notNullOrUndefined(timezone) ||
+    // Timezone can also be configure by the user:
+    notNullOrUndefined(props?.columnTypeOptions?.timezone)
 
   return BaseDateTimeColumn(
     "datetime",
     props,
-    notNullOrUndefined(timezone)
-      ? "YYYY-MM-DD HH:mm:ssZ"
-      : "YYYY-MM-DD HH:mm:ss",
+    hasTimezone ? "YYYY-MM-DD HH:mm:ssZ" : "YYYY-MM-DD HH:mm:ss",
     1,
     "datetime-local",
     (date: Date): string => {
-      if (notNullOrUndefined(timezone)) {
+      if (hasTimezone) {
         return date.toISOString()
       }
       return date.toISOString().replace("Z", "")
