@@ -43,6 +43,10 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     isEditable: false, // Image columns are always read-only
     getCell(data?: any): GridCell {
+      // The native image cell implementation in glide-data-grid expects an array
+      // of image URLs. For our usecase, we only support single images. We
+      // need to wrap the image URL in an array to have it compatible with the
+      // implementation in glide-data-grid.
       const imageUrls = notNullOrUndefined(data) ? [toSafeString(data)] : []
 
       return {
