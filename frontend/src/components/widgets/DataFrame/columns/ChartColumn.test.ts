@@ -161,6 +161,25 @@ describe("ChartColumn", () => {
     expect(isErrorCell(mockCell6)).toEqual(true)
   })
 
+  it("works with single values or only same values without running into division by zero", () => {
+    const mockColumn = getLineChartColumn({
+      y_min: 0,
+      y_max: 100,
+    })
+
+    const mockCell1 = mockColumn.getCell([101])
+    // The value should be normalized to 100:
+    expect((mockCell1 as SparklineCellType).data?.values).toEqual([100])
+
+    const mockCell2 = mockColumn.getCell([101, 101])
+    // All values should be normalized to 100:
+    expect((mockCell2 as SparklineCellType).data?.values).toEqual([100, 100])
+
+    const mockCell3 = mockColumn.getCell([-1, -1])
+    // All values should be normalized to 0:
+    expect((mockCell3 as SparklineCellType).data?.values).toEqual([0, 0])
+  })
+
   it.each([
     // Supports almost the same as toSafeArray
     [null, null],

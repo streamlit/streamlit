@@ -144,7 +144,9 @@ function BaseChartColumn(
         // Normalize values between the configured range
         normalizedChartData = convertedChartData.map(v =>
           maxValue - minValue === 0 // Prevent division by zero
-            ? parameters.y_min || 0
+            ? maxValue > (parameters.y_max || 1)
+              ? parameters.y_max || 1 // Use max value
+              : parameters.y_min || 0 // Use min value
             : ((parameters.y_max || 1) - (parameters.y_min || 0)) *
                 ((v - minValue) / (maxValue - minValue)) +
               (parameters.y_min || 0)
