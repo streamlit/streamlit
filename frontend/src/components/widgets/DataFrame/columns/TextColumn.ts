@@ -71,7 +71,19 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
       return true
     }
 
-    const cellData = toSafeString(data)
+    let cellData = toSafeString(data)
+    // A flag to indicate whether the value has been auto-corrected.
+    // This is used to decide if we should return the corrected value or true.
+    // But we still run all other validations on the corrected value below.
+    let corrected = false
+
+    if (parameters.max_chars) {
+      if (cellData.length > parameters.max_chars) {
+        // Correct the value
+        cellData = cellData.slice(0, parameters.max_chars)
+        corrected = true
+      }
+    }
 
     if (
       validateRegex instanceof RegExp &&
@@ -80,13 +92,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
       return false
     }
 
-    if (parameters.max_chars) {
-      if (cellData.length > parameters.max_chars) {
-        // Return corrected value
-        return cellData.slice(0, parameters.max_chars)
-      }
-    }
-    return true
+    return corrected ? cellData : true
   }
 
   return {
