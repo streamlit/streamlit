@@ -62,9 +62,9 @@ import ToolbarActions from "src/app/components/ToolbarActions"
 import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
 
 jest.mock("src/app/connection/ConnectionManager")
-jest.mock("src/lib/baseconsts", () => {
+jest.mock("@streamlit/lib/dist/baseconsts", () => {
   return {
-    ...jest.requireActual("src/lib/baseconsts"),
+    ...jest.requireActual("@streamlit/lib/dist/baseconsts"),
     SHOW_DEPLOY_BUTTON: true,
   }
 })

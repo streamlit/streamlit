@@ -1,1 +1,1 @@
-export { RERUN_PROMPT_MODAL_DIALOG, SHOW_DEPLOY_BUTTON } from "./baseconsts"
+export { IS_DEV_ENV, RERUN_PROMPT_MODAL_DIALOG, SHOW_DEPLOY_BUTTON } from "./baseconsts"
