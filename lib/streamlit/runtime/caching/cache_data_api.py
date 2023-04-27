@@ -78,7 +78,7 @@ class CachedDataFuncInfo(CachedFuncInfo):
         show_spinner: bool | str,
         persist: CachePersistType,
         max_entries: int | None,
-        ttl: float | timedelta | None,
+        ttl: float | timedelta | str | None,
         allow_widgets: bool,
     ):
         super().__init__(
@@ -142,7 +142,7 @@ class DataCaches(CacheStatsProvider):
         key: str,
         persist: CachePersistType,
         max_entries: int | None,
-        ttl: int | float | timedelta | None,
+        ttl: int | float | timedelta | str | None,
         display_name: str,
         allow_widgets: bool,
     ) -> DataCache:
@@ -240,7 +240,7 @@ class DataCaches(CacheStatsProvider):
         function_name: str,
         persist: CachePersistType,
         max_entries: int | None,
-        ttl: int | float | timedelta | None,
+        ttl: int | float | timedelta | str | None,
     ) -> None:
         """Validate that the cache params are valid for given storage.
 
@@ -348,7 +348,7 @@ class CacheDataAPI:
     def __call__(
         self,
         *,
-        ttl: float | timedelta | None = None,
+        ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
         persist: CachePersistType | bool = None,
@@ -360,7 +360,7 @@ class CacheDataAPI:
         self,
         func: F | None = None,
         *,
-        ttl: float | timedelta | None = None,
+        ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
         persist: CachePersistType | bool = None,
@@ -379,7 +379,7 @@ class CacheDataAPI:
         self,
         func: F | None = None,
         *,
-        ttl: float | timedelta | None,
+        ttl: float | timedelta | str | None,
         max_entries: int | None,
         show_spinner: bool | str,
         persist: CachePersistType | bool,
@@ -402,11 +402,15 @@ class CacheDataAPI:
         func : callable
             The function to cache. Streamlit hashes the function's source code.
 
-        ttl : float or timedelta or None
-            The maximum number of seconds to keep an entry in the cache, or
-            None if cache entries should not expire. The default is None.
-            Note that ttl is incompatible with ``persist="disk"`` - ``ttl`` will be
-            ignored if ``persist`` is specified.
+        ttl : float or timedelta or str or None
+            The maximum time to keep an entry in the cache, or None if cache
+            entries should not expire. The default is None. Note that ttl is
+            incompatible with ``persist="disk"`` - ``ttl`` will be ignored if
+            ``persist`` is specified.
+
+            If ttl is a str, then it should be in a format supported by `Pandas's
+            Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_.
+            Examples of valid strings are: "1d", "1.5 days", and "1h23s".
 
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None
