@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
 import { GridCellKind, NumberCell, TextCell } from "@glideapps/glide-data-grid"
 
@@ -223,6 +224,7 @@ describe("NumberColumn", () => {
     [10, "$%.2f", "$10.00"],
     [10.126, "$%.2f", "$10.13"],
     [10.123, "%.2f€", "10.12€"],
+    [10.126, "($%.2f)", "($10.13)"],
     [65, "%d years", "65 years"],
     [1234567898765432, "%d ⭐", "1234567898765432 ⭐"],
     [72.3, "%.1f%%", "72.3%"],
