@@ -3,6 +3,12 @@
     "version": "1.21.0",
     "private": true,
     "workspaces": ["app", "lib"],
+    "directories": {
+        "src": "app"
+    },
+    "scripts": {
+        "buildLib": "yarn workspace @streamlit/lib build"
+    },
     "browserslist": [
       ">0.2%",
       "not dead",
