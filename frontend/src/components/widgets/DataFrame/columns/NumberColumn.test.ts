@@ -155,13 +155,32 @@ describe("NumberColumn", () => {
     [0.001, 1.1, 1.1],
     [0.00000001, 1, 1],
   ])(
-    "converts value to precision from step %p (%p parsed to %p)",
+    "converts value to precision from step %p (%p converted to %p)",
     (step: number, input: DataType, value: number | null) => {
       const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
         step,
       })
       const mockCell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(mockCell)).toEqual(value)
+    }
+  )
+
+  it.each([
+    [0, 1.234567, "1"],
+    [0.1, 1.234567, "1.2"],
+    [0.01, 1.234567, "1.23"],
+    [0.001, 1.234567, "1.234"],
+    [0.0001, 1.234567, "1.2345"],
+    [0.001, 1.1, "1.100"],
+    [0.00000001, 1, "1.00000000"],
+  ])(
+    "correctly adapts default value to precision from step %p (%p displayed as %p)",
+    (step: number, input: DataType, displayValue: string) => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+        step,
+      })
+      const mockCell = mockColumn.getCell(input)
+      expect((mockCell as NumberCell).displayData).toEqual(displayValue)
     }
   )
 
