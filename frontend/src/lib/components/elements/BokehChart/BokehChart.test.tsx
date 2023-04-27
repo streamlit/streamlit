@@ -22,7 +22,8 @@ import Figure from "./mock"
 
 import { BokehChartProps } from "./BokehChart"
 import Bokeh from "src/lib/vendor/bokeh/bokeh.esm.js"
-jest.mock("src/vendor/bokeh/bokeh.esm.js", () => ({
+
+jest.mock("src/lib/vendor/bokeh/bokeh.esm.js", () => ({
   // needed to parse correctly
   __esModule: true,
   default: {
