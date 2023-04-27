@@ -123,23 +123,15 @@ describe("NumberColumn", () => {
   )
 
   it.each([
-    [100, 100],
-    [-100, 0],
-    ["4", 4],
-    ["4.12", 4],
-    ["4.61", 4],
-    ["-4.12", 0],
-    [1.3122, 1],
-    [-1.3122, 0],
-    ["1,212", 1212],
-    ["1,212,123,312", 1212123312],
-    [null, null],
+    [100, true],
+    [-100, false],
+    ["4", true],
+    ["-4.12", false],
   ])(
-    "supports unsigned integer value (%p parsed as %p)",
-    (input: DataType | null, value: number | null) => {
+    "supports unsigned integer validation (%p validates to %p)",
+    (input: DataType | null, valid: boolean) => {
       const mockColumn = getNumberColumn(MOCK_UINT_ARROW_TYPE)
-      const cell = mockColumn.getCell(input, true)
-      expect(mockColumn.getCellValue(cell)).toEqual(value)
+      expect(mockColumn.validateInput!(input)).toEqual(valid)
     }
   )
 
@@ -163,34 +155,32 @@ describe("NumberColumn", () => {
   )
 
   it.each([
-    [10, 10, 10],
-    [10, 100, 100],
-    [10, 5, 10],
-    [10, -5, 10],
+    [10, 10, true],
+    [10, 100, true],
+    [10, 5, false],
+    [10, -5, false],
   ])(
-    "supports minimal value %p (%p parsed to %p)",
-    (min_value: number, input: DataType, value: number | null) => {
+    "supports minimal value configuration %p (%p validates to %p)",
+    (min_value: number, input: DataType, valid: boolean) => {
       const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
         min_value,
       })
-      const mockCell = mockColumn.getCell(input)
-      expect(mockColumn.getCellValue(mockCell)).toEqual(value)
+      expect(mockColumn.validateInput!(input)).toEqual(valid)
     }
   )
 
   it.each([
-    [10, 10, 10],
+    [10, 10, true],
     [10, 100, 10],
-    [10, 5, 5],
-    [10, -5, -5],
+    [10, 5, true],
+    [10, -5, true],
   ])(
-    "supports maximal value %p (%p parsed to %p)",
-    (max_value: number, input: DataType, value: number | null) => {
+    "supports maximal value configuration %p (%p validates to %p)",
+    (max_value: number, input: DataType, validation: number | boolean) => {
       const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
         max_value,
       })
-      const mockCell = mockColumn.getCell(input)
-      expect(mockColumn.getCellValue(mockCell)).toEqual(value)
+      expect(mockColumn.validateInput!(input)).toEqual(validation)
     }
   )
 
@@ -223,4 +213,80 @@ describe("NumberColumn", () => {
     const safeCell = mockColumn.getCell("1234567898765432")
     expect(isErrorCell(safeCell)).toEqual(false)
   })
+
+  it.each([
+    [10.123, "%d", "10"],
+    [10.123, "%i", "10"],
+    [10.123, "%u", "10"],
+    [10.123, "%f", "10.123"],
+    [10.123, "%g", "10.123"],
+    [10, "$%.2f", "$10.00"],
+    [10.126, "$%.2f", "$10.13"],
+    [10.123, "%.2f€", "10.12€"],
+    [65, "%d years", "65 years"],
+    [1234567898765432, "%d ⭐", "1234567898765432 ⭐"],
+    [72.3, "%.1f%%", "72.3%"],
+    [-5.678, "%.1f", "-5.7"],
+    [0.123456, "%.4f", "0.1235"],
+    [0.123456, "%.4g", "0.1235"],
+    // Test boolean formatting:
+    [1, "%t", "true"],
+    [0, "%t", "false"],
+    // Test zero-padding for integers
+    [42, "%05d", "00042"],
+    // Test scientific notations:
+    [1234.5678, "%.2e", "1.23e+3"],
+    [0.000123456, "%.2e", "1.23e-4"],
+    // Test hexadecimal representation:
+    [255, "%x", "ff"],
+    [255, "%X", "FF"],
+    [4096, "%X", "1000"],
+    // Test octal representation:
+    [8, "%o", "10"],
+    [64, "%o", "100"],
+    // Test fixed width formatting:
+    [12345, "%8d", "   12345"],
+    [12.34, "%8.2f", "   12.34"],
+    [12345, "%'_8d", "___12345"],
+    // Test left-justified formatting:
+    [12345, "%-8d", "12345   "],
+    [12.34, "%-8.2f", "12.34   "],
+    // Test prefixing with plus sign:
+    [42, "%+d", "+42"],
+    [-42, "%+d", "-42"],
+  ])(
+    "formats %p to %p based on the sprintf format %p",
+    (input: number, format: string, displayValue: string) => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+        format,
+      })
+
+      const cell = mockColumn.getCell(input)
+      expect((cell as NumberCell).displayData).toEqual(displayValue)
+    }
+  )
+
+  it.each([
+    [10, "%d %d"],
+    [1234567.89, "%'_,.2f"],
+    [1234.5678, "%+.2E"],
+    [0.000123456, "%+.2E"],
+    [-0.000123456, "%+.2E"],
+    [255, "%#x"],
+    [4096, "%#X"],
+    [42, "% d"],
+    [1000, "%,.0f"],
+    [25000.25, "$%,.2f"],
+    [9876543210, "%,.0f"],
+  ])(
+    "cannot format %p using the sprintf format %p",
+    (input: number, format: string) => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
+        format,
+      })
+
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
+    }
+  )
 })
