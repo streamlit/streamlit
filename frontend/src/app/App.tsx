@@ -115,7 +115,7 @@ import { DefaultStreamlitEndpoints } from "src/app/connection/DefaultStreamlitEn
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
-import { StyledApp } from "src/styled-components"
+import { StyledApp } from "src/app/styled-components"
 
 import withHostCommunication, {
   HostCommunicationHOC,
