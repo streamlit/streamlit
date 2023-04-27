@@ -21,10 +21,12 @@ import SelectboxColumn from "./SelectboxColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
 import LinkColumn from "./LinkColumn"
+import ImageColumn from "./ImageColumn"
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 import { LineChartColumn, BarChartColumn } from "./ChartColumn"
 
 import { DateTimeCellRenderer } from "./cells/DateTimeCell"
+export { ImageCellEditor } from "./cells/ImageCellEditor"
 
 import { ColumnCreator } from "./utils"
 
@@ -49,6 +51,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     time: TimeColumn,
     line_chart: LineChartColumn,
     bar_chart: BarChartColumn,
+    image: ImageColumn,
   })
 )
 
@@ -67,4 +70,5 @@ export {
   TimeColumn,
   LineChartColumn,
   BarChartColumn,
+  ImageColumn,
 }

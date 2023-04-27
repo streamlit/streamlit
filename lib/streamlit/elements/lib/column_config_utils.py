@@ -50,6 +50,7 @@ ColumnType: TypeAlias = Literal[
     "link",
     "line_chart",
     "bar_chart",
+    "image",
 ]
 
 
