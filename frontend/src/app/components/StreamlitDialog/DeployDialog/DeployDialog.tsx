@@ -27,8 +27,8 @@ import {
   PlainEventHandler,
 } from "src/app/components/StreamlitDialog/StreamlitDialog"
 import Button, { Kind } from "src/lib/components/shared/Button"
-import StreamlitLogo from "src/lib/assets/svg/logo.svg"
-import Rocket from "src/lib/assets/svg/rocket.svg"
+import StreamlitLogo from "src/assets/svg/logo.svg"
+import Rocket from "src/assets/svg/rocket.svg"
 import {
   STREAMLIT_COMMUNITY_CLOUD_DOCS_URL,
   STREAMLIT_DEPLOY_TUTORIAL_URL,

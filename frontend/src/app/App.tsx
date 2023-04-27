@@ -126,7 +126,7 @@ import withScreencast, {
 } from "src/app/hocs/withScreencast/withScreencast"
 
 // Used to import fonts + responsive reboot items
-import "src/lib/assets/css/theme.scss"
+import "src/assets/css/theme.scss"
 import { ensureError } from "src/lib/util/ErrorHandling"
 
 export interface Props {

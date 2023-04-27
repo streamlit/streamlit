@@ -20,12 +20,12 @@ import React, { FC, memo } from "react"
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
  * served from a subpath.
  */
-import Balloon0 from "src/lib/assets/img/balloons/balloon-0.png"
-import Balloon1 from "src/lib/assets/img/balloons/balloon-1.png"
-import Balloon2 from "src/lib/assets/img/balloons/balloon-2.png"
-import Balloon3 from "src/lib/assets/img/balloons/balloon-3.png"
-import Balloon4 from "src/lib/assets/img/balloons/balloon-4.png"
-import Balloon5 from "src/lib/assets/img/balloons/balloon-5.png"
+import Balloon0 from "src/assets/img/balloons/balloon-0.png"
+import Balloon1 from "src/assets/img/balloons/balloon-1.png"
+import Balloon2 from "src/assets/img/balloons/balloon-2.png"
+import Balloon3 from "src/assets/img/balloons/balloon-3.png"
+import Balloon4 from "src/assets/img/balloons/balloon-4.png"
+import Balloon5 from "src/assets/img/balloons/balloon-5.png"
 
 import Particles from "src/lib/components/elements/Particles"
 import { ParticleProps } from "src/lib/components/elements/Particles/Particles"

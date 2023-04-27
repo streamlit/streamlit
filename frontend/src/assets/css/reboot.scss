@@ -16,7 +16,7 @@
 
 // stylelint-disable at-rule-no-vendor-prefix, declaration-no-important, selector-no-qualifying-type, property-no-vendor-prefi
 @import "variables";
-@import "rfs";
+@import "vendor/rfs.scss";
 
 @function valid-radius($radius) {
   $return: ();

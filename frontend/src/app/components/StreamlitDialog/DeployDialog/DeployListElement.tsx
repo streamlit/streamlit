@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import { StyledElement } from "./styled-components"
-import Checkmark from "src/lib/assets/svg/checkmark.svg"
+import Checkmark from "src/assets/svg/checkmark.svg"
 
 export interface IDeployListElementProps {
   children?: React.ReactNode

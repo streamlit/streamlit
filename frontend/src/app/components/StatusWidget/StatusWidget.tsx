@@ -37,8 +37,8 @@ import { EmotionTheme } from "src/lib/theme"
  * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served
  * from a subpath.
  */
-import iconRunning from "src/lib/assets/img/icon_running.gif"
-import newYearsRunning from "src/lib/assets/img/fireworks.gif"
+import iconRunning from "src/assets/img/icon_running.gif"
+import newYearsRunning from "src/assets/img/fireworks.gif"
 
 import {
   StyledConnectionStatus,
