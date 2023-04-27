@@ -20,6 +20,13 @@ import CheckboxColumn from "./CheckboxColumn"
 import SelectboxColumn from "./SelectboxColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
+import LinkColumn from "./LinkColumn"
+import ImageColumn from "./ImageColumn"
+import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
+import { LineChartColumn, BarChartColumn } from "./ChartColumn"
+
+import { DateTimeCellRenderer } from "./cells/DateTimeCell"
+export { ImageCellEditor } from "./cells/ImageCellEditor"
 
 import { ColumnCreator } from "./utils"
 
@@ -27,6 +34,8 @@ export * from "./utils"
 
 /**
  * All available column types need to be registered here.
+ *
+ * These names must match the column names used in the backend.
  */
 export const ColumnTypes = new Map<string, ColumnCreator>(
   Object.entries({
@@ -36,8 +45,17 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     selectbox: SelectboxColumn,
     list: ListColumn,
     number: NumberColumn,
+    link: LinkColumn,
+    datetime: DateTimeColumn,
+    date: DateColumn,
+    time: TimeColumn,
+    line_chart: LineChartColumn,
+    bar_chart: BarChartColumn,
+    image: ImageColumn,
   })
 )
+
+export const CustomCells = [DateTimeCellRenderer]
 
 export {
   ObjectColumn,
@@ -46,4 +64,11 @@ export {
   SelectboxColumn,
   ListColumn,
   NumberColumn,
+  LinkColumn,
+  DateTimeColumn,
+  DateColumn,
+  TimeColumn,
+  LineChartColumn,
+  BarChartColumn,
+  ImageColumn,
 }

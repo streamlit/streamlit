@@ -29,6 +29,9 @@ import {
   BaseColumnProps,
   toSafeBoolean,
   toGlideColumn,
+  toSafeDate,
+  countDecimals,
+  truncateDecimals,
 } from "./utils"
 import { TextColumn } from "./index"
 
@@ -310,4 +313,116 @@ describe("toGlideColumn", () => {
 
     expect(toGlideColumn(indexColumn).grow).toEqual(1)
   })
+})
+
+function getTodayIsoDate(): string {
+  return new Date().toISOString().split("T")[0]
+}
+
+describe("toSafeDate", () => {
+  it.each([
+    // valid date object
+    [new Date("2023-04-25"), new Date("2023-04-25")],
+    // undefined value
+    [undefined, null],
+    // null value
+    [null, null],
+    // empty string
+    ["", null],
+    // invalid number
+    [NaN, undefined],
+    // invalid string
+    ["foo", undefined],
+    // valid date string
+    ["2023-04-25", new Date("2023-04-25")],
+    // valid unix timestamp in seconds
+    [1671951600, new Date("2022-12-25T07:00:00.000Z")],
+    // valid bigint timestamp in seconds
+    [BigInt(1671951600), new Date("2022-12-25T07:00:00.000Z")],
+    // valid unix timestamp in milliseconds
+    [1671951600000, new Date("2022-12-25T07:00:00.000Z")],
+    // valid unix timestamp in microseconds
+    [1671951600000000, new Date("2022-12-25T07:00:00.000Z")],
+    // valid unix timestamp in nanoseconds
+    [1671951600000000000, new Date("2022-12-25T07:00:00.000Z")],
+    // other date formats:
+    ["04/25/2023", new Date("2023-04-25T00:00:00.000Z")],
+    // invalid string
+    ["invalid date", undefined],
+    // valid ISO date string
+    ["2023-04-25T10:30:00.000Z", new Date("2023-04-25T10:30:00.000Z")],
+    // valid date string with time
+    ["2023-04-25 10:30", new Date("2023-04-25T10:30:00.000Z")],
+    // valid date string with timezone
+    ["2023-04-25T10:30:00.000+02:00", new Date("2023-04-25T08:30:00.000Z")],
+    // valid time string
+    ["10:30", new Date(getTodayIsoDate() + "T10:30:00.000Z")],
+    // valid time string with milliseconds
+    ["10:30:25.123", new Date(getTodayIsoDate() + "T10:30:25.123Z")],
+    // valid time string with seconds
+    ["10:30:25", new Date(getTodayIsoDate() + "T10:30:25.000Z")],
+    // valid month string
+    ["Jan 2023", new Date("2023-01-01T00:00:00.000Z")],
+    // valid month string with day
+    ["Jan 15, 2023", new Date("2023-01-15T00:00:00.000Z")],
+    // valid date string with day and month names
+    ["25 April 2023", new Date("2023-04-25T00:00:00.000Z")],
+    // valid date string with day and short month names
+    ["25 Apr 2023", new Date("2023-04-25T00:00:00.000Z")],
+    // valid date string with short day and month names
+    ["Tue, 25 Apr 2023", new Date("2023-04-25T00:00:00.000Z")],
+    // valid date string with time and AM/PM
+    ["2023-04-25 10:30 AM", new Date("2023-04-25T10:30:00.000Z")],
+    // valid Unix timestamp in seconds as a string
+    ["1671951600", new Date("2022-12-25T07:00:00.000Z")],
+  ])("converts input %p to the correct date %p", (input, expectedOutput) => {
+    expect(toSafeDate(input)).toEqual(expectedOutput)
+  })
+})
+
+describe("countDecimals", () => {
+  it.each([
+    [0, 0],
+    [1, 0],
+    [0.1, 1],
+    [0.01, 2],
+    [0.123456789, 9],
+    [0.000001, 6],
+    [0.0000001, 7],
+    [1.23456789e-10, 18],
+    [0.0000000000000000001, 19],
+    [-0.12345, 5],
+    [123456789432, 0],
+    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+    [123456789876543212312313, 0],
+    // It is expected that very large and small numbers won't work correctly:
+    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
+    [1234567898765432.1, 0],
+    [0.0000000000000000000001, 0],
+    [1.234567890123456e-20, 20],
+  ])("should return correct decimal count for %d", (value, expected) => {
+    const result = countDecimals(value)
+    expect(result).toEqual(expected)
+  })
+})
+
+describe("truncateDecimals", () => {
+  it.each([
+    [3.14159265, 2, 3.14],
+    [123.456, 1, 123.4],
+    [-3.14159265, 2, -3.14],
+    [-123.456, 1, -123.4],
+    [3.14159265, 0, 3],
+    [123.456, 0, 123],
+    [-3.14159265, 0, -3],
+    [-123.456, 0, -123],
+    [42, 0, 42],
+    [-42, 0, -42],
+    [0.1 + 0.2, 2, 0.3],
+  ])(
+    "truncates value %f to %i decimal places, resulting in %f",
+    (value, decimals, expected) => {
+      expect(truncateDecimals(value, decimals)).toBe(expected)
+    }
+  )
 })

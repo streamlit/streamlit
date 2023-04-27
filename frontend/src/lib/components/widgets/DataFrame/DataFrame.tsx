@@ -51,6 +51,8 @@ import {
   toGlideColumn,
   isMissingValueCell,
   getTextCell,
+  CustomCells,
+  ImageCellEditor,
 } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
@@ -491,7 +493,9 @@ function DataFrame({
             scrollbarWidthOverride: 1,
           }}
           // Add support for additional cells:
-          customRenderers={extraCellArgs.customRenderers}
+          customRenderers={[...extraCellArgs.customRenderers, ...CustomCells]}
+          // Custom image editor to render single images:
+          imageEditorOverride={ImageCellEditor}
           // Add our custom SVG header icons:
           headerIcons={theme.headerIcons}
           // Add support for user input validation:

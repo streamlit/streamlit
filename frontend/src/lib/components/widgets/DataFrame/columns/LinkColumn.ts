@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import { GridCell, TextCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCell, UriCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/util/utils"
 
 import {
   BaseColumn,
   BaseColumnProps,
+  toSafeString,
   getErrorCell,
   ColumnCreator,
-  toSafeString,
 } from "./utils"
 
-export interface TextColumnParams {
+export interface LinkColumnParams {
   // The maximum number of characters the user can enter into the text input.
   readonly max_chars?: number
   // Regular expression that the input's value must match for the value to pass
@@ -34,10 +34,11 @@ export interface TextColumnParams {
 }
 
 /**
- * A column that supports rendering & editing of text values.
+ * The link column is a special column that interprets the cell content as
+ * an hyperlink / url and allows the user to click on it.
  */
-function TextColumn(props: BaseColumnProps): BaseColumn {
-  const parameters = (props.columnTypeOptions as TextColumnParams) || {}
+function LinkColumn(props: BaseColumnProps): BaseColumn {
+  const parameters = (props.columnTypeOptions as LinkColumnParams) || {}
 
   let validateRegex: RegExp | string | undefined = undefined
 
@@ -54,14 +55,13 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
   }
 
   const cellTemplate = {
-    kind: GridCellKind.Text,
+    kind: GridCellKind.Uri,
     data: "",
-    displayData: "",
-    allowOverlay: true,
-    contentAlignment: props.contentAlignment,
     readonly: !props.isEditable,
+    allowOverlay: true,
+    contentAlign: props.contentAlignment,
     style: props.isIndex ? "faded" : "normal",
-  } as TextCell
+  } as UriCell
 
   const validateInput = (data?: any): boolean | string => {
     if (isNullOrUndefined(data)) {
@@ -97,7 +97,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
 
   return {
     ...props,
-    kind: "text",
+    kind: "link",
     sortMode: "default",
     validateInput,
     getCell(data?: any, validate?: boolean): GridCell {
@@ -122,29 +122,18 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
         }
       }
 
-      try {
-        const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
-        const displayData = notNullOrUndefined(cellData) ? cellData : ""
-        return {
-          ...cellTemplate,
-          isMissingValue: isNullOrUndefined(cellData),
-          data: cellData,
-          displayData,
-        } as TextCell
-      } catch (error) {
-        // This should never happen, but if it does, we want to show an error
-        return getErrorCell(
-          "Incompatible value",
-          `The value cannot be interpreted as string. Error: ${error}`
-        )
-      }
+      return {
+        ...cellTemplate,
+        data: notNullOrUndefined(data) ? toSafeString(data) : null,
+        isMissingValue: isNullOrUndefined(data),
+      } as UriCell
     },
-    getCellValue(cell: TextCell): string | null {
+    getCellValue(cell: UriCell): string | null {
       return cell.data === undefined ? null : cell.data
     },
   }
 }
 
-TextColumn.isEditableType = true
+LinkColumn.isEditableType = true
 
-export default TextColumn as ColumnCreator
+export default LinkColumn as ColumnCreator
