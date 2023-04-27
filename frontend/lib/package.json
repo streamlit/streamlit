@@ -9,7 +9,7 @@
     "scripts": {
         "build": "yarn build:src && yarn build:lib-type",
         "build:lib-type": "tsc -P tsconfig.json && tsc-alias -p tsconfig.json",
-        "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src"
+        "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel src --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" --no-babelrc --verbose src"
     },
     "dependencies": {
         "typescript": "^4.9.5"
@@ -21,6 +21,7 @@
         "not op_mini all"
     ],
     "devDependencies": {
+        "@babel/core": "^7.21.4",
         "babel-cli": "^6.26.0",
         "tsc-alias": "^1.8.5"
     }

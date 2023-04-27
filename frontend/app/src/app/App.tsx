@@ -88,11 +88,10 @@ import {
   WidgetStates,
 } from "src/lib/proto"
 import { concat, noop, without } from "lodash"
-import { x } from "@streamlit/st-lib"
 import {
   RERUN_PROMPT_MODAL_DIALOG,
   SHOW_DEPLOY_BUTTON,
-} from "src/lib/baseconsts"
+} from "@streamlit/st-lib"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { logError, logMessage } from "src/lib/util/log"
