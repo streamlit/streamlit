@@ -150,7 +150,7 @@ types-requests==2.28.11.17
 types-setuptools==67.7.0.0
 types-toml==0.10.8.6
 types-typed-ast==1.5.8.6
-types-urllib3==1.26.25.10
+types-urllib3==1.26.25.11
 typing_extensions==4.5.0
 tzdata==2023.3
 tzlocal==4.3
