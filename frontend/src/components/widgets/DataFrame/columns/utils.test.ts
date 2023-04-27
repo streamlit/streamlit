@@ -393,8 +393,10 @@ describe("countDecimals", () => {
     [0.0000000000000000001, 19],
     [-0.12345, 5],
     [123456789432, 0],
+    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
     [123456789876543212312313, 0],
     // It is expected that very large and small numbers won't work correctly:
+    // eslint-disable-next-line  @typescript-eslint/no-loss-of-precision
     [1234567898765432.1, 0],
     [0.0000000000000000000001, 0],
     [1.234567890123456e-20, 20],
