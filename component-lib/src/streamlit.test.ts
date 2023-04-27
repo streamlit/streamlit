@@ -72,6 +72,7 @@ describe("Streamlit", () => {
       },
       "*",
     ]);
+    // @ts-expect-error
     delete document.body.scrollHeight;
   });
 
