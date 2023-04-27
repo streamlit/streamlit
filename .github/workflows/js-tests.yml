@@ -69,5 +69,7 @@ jobs:
           else
             echo "NOTICES is up to date."
           fi
+      - name: Run frontend backwards compat tests
+        run: make jstest-backwards-compat
       - name: Run frontend tests
         run: make jstest
