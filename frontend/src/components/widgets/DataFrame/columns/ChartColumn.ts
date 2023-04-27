@@ -142,11 +142,12 @@ function BaseChartColumn(
         (maxValue > parameters.y_max || minValue < parameters.y_min)
       ) {
         // Normalize values between the configured range
-        normalizedChartData = convertedChartData.map(
-          v =>
-            ((parameters.y_max || 1) - (parameters.y_min || 0)) *
-              ((v - minValue) / (maxValue - minValue)) +
-            (parameters.y_min || 0)
+        normalizedChartData = convertedChartData.map(v =>
+          maxValue - minValue === 0 // Prevent division by zero
+            ? parameters.y_min || 0
+            : ((parameters.y_max || 1) - (parameters.y_min || 0)) *
+                ((v - minValue) / (maxValue - minValue)) +
+              (parameters.y_min || 0)
         )
       } else {
         // Values are already in the configured range
