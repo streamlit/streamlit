@@ -125,6 +125,8 @@ describe("TextColumn", () => {
     expect(isErrorCell(mockColumn.getCell("abcdef", true))).toBe(false)
     // Applies the max chars limit
     expect((mockColumn.getCell("abcdef", true) as TextCell).data).toBe("abcde")
+    // But a too long input that is still wrong after fixing should result in error
+    expect(isErrorCell(mockColumn.getCell("1234567", true))).toBe(true)
   })
 
   it("handles invalid validate regex", () => {
