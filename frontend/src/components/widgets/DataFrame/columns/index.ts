@@ -22,6 +22,7 @@ import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
 import LinkColumn from "./LinkColumn"
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
+import { LineChartColumn, BarChartColumn } from "./ChartColumn"
 
 import { DateTimeCellRenderer } from "./cells/DateTimeCell"
 
@@ -46,6 +47,8 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     datetime: DateTimeColumn,
     date: DateColumn,
     time: TimeColumn,
+    line_chart: LineChartColumn,
+    bar_chart: BarChartColumn,
   })
 )
 
@@ -62,4 +65,6 @@ export {
   DateTimeColumn,
   DateColumn,
   TimeColumn,
+  LineChartColumn,
+  BarChartColumn,
 }
