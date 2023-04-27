@@ -34,6 +34,7 @@ from streamlit import type_util
 from streamlit.elements.spinner import spinner
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import (
+    BadTTLStringError,
     CacheError,
     CacheKeyNotFoundError,
     UnevaluatedDataFrameError,
@@ -60,18 +61,18 @@ TTLCACHE_TIMER = time.monotonic
 
 @overload
 def ttl_to_seconds(
-    ttl: float | timedelta | None, *, coerce_none_to_inf: Literal[False]
+    ttl: float | timedelta | str | None, *, coerce_none_to_inf: Literal[False]
 ) -> float | None:
     ...
 
 
 @overload
-def ttl_to_seconds(ttl: float | timedelta | None) -> float:
+def ttl_to_seconds(ttl: float | timedelta | str | None) -> float:
     ...
 
 
 def ttl_to_seconds(
-    ttl: float | timedelta | None, *, coerce_none_to_inf: bool = True
+    ttl: float | timedelta | str | None, *, coerce_none_to_inf: bool = True
 ) -> float | None:
     """
     Convert a ttl value to a float representing "number of seconds".
@@ -80,6 +81,20 @@ def ttl_to_seconds(
         return math.inf
     if isinstance(ttl, timedelta):
         return ttl.total_seconds()
+    if isinstance(ttl, str):
+        import numpy as np
+        import pandas as pd
+
+        try:
+            out: float = pd.Timedelta(ttl).total_seconds()
+        except ValueError as ex:
+            raise BadTTLStringError(ttl) from ex
+
+        if np.isnan(out):
+            raise BadTTLStringError(ttl)
+
+        return out
+
     return ttl
 
 
