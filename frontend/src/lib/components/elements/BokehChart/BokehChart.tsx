@@ -22,12 +22,12 @@ import { BokehChart as BokehChartProto } from "src/lib/proto"
 // Importing these files will cause global Bokeh to be mutated
 // Consumers of this component will have to provide these js files
 // bokeh.esm is renamed from bokeh-2.4.3.esm.min.js because addon bokeh scripts have hardcoded path to bokeh main script ("import main from “./bokeh.esm.js")
-import Bokeh from "src/vendor/bokeh/bokeh.esm"
-import "src/vendor/bokeh/bokeh-api-2.4.3.esm.min"
-import "src/vendor/bokeh/bokeh-gl-2.4.3.esm.min"
-import "src/vendor/bokeh/bokeh-mathjax-2.4.3.esm.min"
-import "src/vendor/bokeh/bokeh-tables-2.4.3.esm.min"
-import "src/vendor/bokeh/bokeh-widgets-2.4.3.esm.min"
+import Bokeh from "src/lib/vendor/bokeh/bokeh.esm"
+import "src/lib/vendor/bokeh/bokeh-api-2.4.3.esm.min"
+import "src/lib/vendor/bokeh/bokeh-gl-2.4.3.esm.min"
+import "src/lib/vendor/bokeh/bokeh-mathjax-2.4.3.esm.min"
+import "src/lib/vendor/bokeh/bokeh-tables-2.4.3.esm.min"
+import "src/lib/vendor/bokeh/bokeh-widgets-2.4.3.esm.min"
 
 export interface BokehChartProps {
   width: number
