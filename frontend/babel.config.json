@@ -13,10 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-console.log("Got here!")
-module.exports = {
-  presets: [["./scripts/babel-preset-dev-env.js"]],
-  plugins: ["@emotion"],
-  ignore: ["./src/autogen/**", "**/*.test.ts", "**/*.test.tsx"],
+ {
+    "presets": [
+      ["./lib/scripts/babel-preset-dev-env.js"]
+    ],
+    "plugins": ["@emotion"],
+    "ignore": [
+      "./src/autogen/",
+      "/.test.ts",
+      "**/.test.tsx"
+    ],
+    "babelrcRoots": [
+      ".",
+      "lib"
+    ]
 }
+  
