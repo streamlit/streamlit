@@ -47,6 +47,7 @@ ColumnType: TypeAlias = Literal[
     "datetime",
     "date",
     "time",
+    "link",
 ]
 
 

@@ -20,6 +20,7 @@ import CheckboxColumn from "./CheckboxColumn"
 import SelectboxColumn from "./SelectboxColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
+import LinkColumn from "./LinkColumn"
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 
 import { DateTimeCellRenderer } from "./cells/DateTimeCell"
@@ -41,6 +42,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     selectbox: SelectboxColumn,
     list: ListColumn,
     number: NumberColumn,
+    link: LinkColumn,
     datetime: DateTimeColumn,
     date: DateColumn,
     time: TimeColumn,
@@ -56,6 +58,7 @@ export {
   SelectboxColumn,
   ListColumn,
   NumberColumn,
+  LinkColumn,
   DateTimeColumn,
   DateColumn,
   TimeColumn,
