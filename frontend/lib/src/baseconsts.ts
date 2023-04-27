@@ -32,14 +32,14 @@ export const WEBSOCKET_PORT_DEV = 8501
  */
 export const IS_DEV_ENV = +window.location.port === WWW_PORT_DEV
 
-// /**
-//  * Parameters for our fetch() requests.
-//  */
-// export const FETCH_PARAMS: RequestInit = {
-//   redirect: "follow",
-//   credentials: "same-origin",
-//   mode: "cors",
-// }
+/**
+ * Parameters for our fetch() requests.
+ */
+export const FETCH_PARAMS: RequestInit = {
+  redirect: "follow",
+  credentials: "same-origin",
+  mode: "cors",
+}
 
 /**
  * Feature flag for https://github.com/streamlit/streamlit/issues/678.

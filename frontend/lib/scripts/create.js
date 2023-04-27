@@ -73,7 +73,7 @@ module.exports = function (api, opts, env) {
           runtime: "automatic",
         },
       ],
-      isTypeScriptEnabled && [require("@babel/preset-typescript").default],
+      [require("@babel/preset-typescript").default],
     ].filter(Boolean),
     plugins: [
       // Experimental macros support. Will be documented after it's had some time
