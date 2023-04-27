@@ -362,12 +362,12 @@ notices:
 	cd frontend; \
 		yarn licenses generate-disclaimer --silent --production --ignore-platform > ../NOTICES
 
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
-	./scripts/append_license.sh frontend/src/vendor/bokeh/bokeh-LICENSE.txt
+	./scripts/append_license.sh frontend/src/lib/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
+	./scripts/append_license.sh frontend/src/lib/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
+	./scripts/append_license.sh frontend/src/lib/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
+	./scripts/append_license.sh frontend/src/lib/assets/img/Material-Icons.LICENSE
+	./scripts/append_license.sh frontend/src/lib/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/src/lib/vendor/bokeh/bokeh-LICENSE.txt
 	./scripts/append_license.sh frontend/src/lib/vendor/twemoji-LICENSE.txt
 	./scripts/append_license.sh frontend/src/app/vendor/Segment-LICENSE.txt
 	./scripts/append_license.sh frontend/src/lib/vendor/react-bootstrap-LICENSE.txt
