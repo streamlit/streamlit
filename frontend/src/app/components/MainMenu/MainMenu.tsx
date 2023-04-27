@@ -41,7 +41,7 @@ import {
   IMenuItem,
 } from "src/lib/hocs/withHostCommunication/types"
 import { Config, GitInfo, IGitInfo, PageConfig } from "src/lib/proto"
-import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/urls"
+import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/lib/urls"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import {
   StyledCoreItem,

@@ -32,7 +32,7 @@ import Rocket from "src/assets/svg/rocket.svg"
 import {
   STREAMLIT_COMMUNITY_CLOUD_DOCS_URL,
   STREAMLIT_DEPLOY_TUTORIAL_URL,
-} from "src/urls"
+} from "src/lib/urls"
 import {
   DetachedHead,
   ModuleIsNotAdded,
