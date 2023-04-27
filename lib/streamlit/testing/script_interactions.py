@@ -37,6 +37,13 @@ class InteractiveScriptTests(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # To allow loading scripts to be relative to the test class's directory,
+        # we do this in the init so it will run in the subclass's module.
+        # `__file__` refers to the base class's file, and `self.__module__`
+        # contains not enough information to get the directory, so instead
+        # we get the module object using importlib machinery, which does have
+        # that information.
+        # Based on https://stackoverflow.com/a/54142935
         m = importlib.import_module(self.__module__)
         assert m.__file__
         self.dir_path = pathlib.Path(m.__file__).parent
