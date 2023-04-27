@@ -25,7 +25,7 @@ const StyledImage = styled.img(() => ({
 }))
 
 export const ImageCellEditor: ImageEditorType = ({ urls }) => {
-  const imageData = urls ? urls[0] : ""
+  const imageData = urls && urls.length > 0 ? urls[0] : ""
   // Allow external image links to be opened in a new tab on click
   if (imageData.startsWith("http")) {
     return (
