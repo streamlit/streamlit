@@ -45,7 +45,6 @@ export interface ChartColumnParams {
 /**
  * Base class for chart columns. This class is not meant to be used directly.
  * Instead, use the LineChartColumn and BarChartColumn classes.
- *
  */
 function BaseChartColumn(
   kind: string,
