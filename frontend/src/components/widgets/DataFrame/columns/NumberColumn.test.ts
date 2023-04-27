@@ -123,6 +123,16 @@ describe("NumberColumn", () => {
     }
   )
 
+  it("properly configures the column for unsigned integers", () => {
+    const mockColumn = getNumberColumn(MOCK_UINT_ARROW_TYPE)
+    expect(mockColumn.kind).toEqual("number")
+
+    const mockCell = mockColumn.getCell("104")
+    expect(mockCell.kind).toEqual(GridCellKind.Number)
+    expect((mockCell as NumberCell).fixedDecimals).toEqual(0)
+    expect((mockCell as NumberCell).allowNegative).toEqual(false)
+  })
+
   it.each([
     [100, true],
     [-100, false],
