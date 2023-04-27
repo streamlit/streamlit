@@ -21,9 +21,11 @@ import SelectboxColumn from "./SelectboxColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
 import LinkColumn from "./LinkColumn"
+import ImageColumn from "./ImageColumn"
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 
 import { DateTimeCellRenderer } from "./cells/DateTimeCell"
+export { ImageCellEditor } from "./cells/ImageCellEditor"
 
 import { ColumnCreator } from "./utils"
 
@@ -46,6 +48,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     datetime: DateTimeColumn,
     date: DateColumn,
     time: TimeColumn,
+    image: ImageColumn,
   })
 )
 
@@ -62,4 +65,5 @@ export {
   DateTimeColumn,
   DateColumn,
   TimeColumn,
+  ImageColumn,
 }
