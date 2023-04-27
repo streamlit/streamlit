@@ -48,6 +48,8 @@ ColumnType: TypeAlias = Literal[
     "date",
     "time",
     "link",
+    "line_chart",
+    "bar_chart",
     "image",
 ]
 
