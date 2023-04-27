@@ -11,6 +11,9 @@ jobs:
       ref: ${{ github.ref_name }}
     secrets:
       PARAMETER_PASSWORD: ${{ secrets.PARAMETER_PASSWORD }}
+    permissions:
+      # Permission needed to upload constraints file
+      contents: write
 
   run-javascript-tests:
     uses: ./.github/workflows/js-tests.yml
