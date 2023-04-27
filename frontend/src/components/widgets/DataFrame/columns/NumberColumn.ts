@@ -42,6 +42,8 @@ export interface NumberColumnParams {
   // This can be used for adding prefix or suffix, or changing the number of decimals of the display value.
   readonly format?: string
   // Specifies the granularity that the value must adhere.
+  // This will also influence the maximum precision. This will impact the number of decimals
+  // allowed to be entered as well as the number of decimals displayed (if format is not specified).
   // This is set to 1 for integer types.
   readonly step?: number
 }

@@ -129,8 +129,8 @@ describe("NumberColumn", () => {
 
     const mockCell = mockColumn.getCell("104")
     expect(mockCell.kind).toEqual(GridCellKind.Number)
-    expect((mockCell as NumberCell).fixedDecimals).toEqual(0)
-    expect((mockCell as NumberCell).allowNegative).toEqual(false)
+    expect((mockCell as any).fixedDecimals).toEqual(0)
+    expect((mockCell as any).allowNegative).toEqual(false)
   })
 
   it.each([
