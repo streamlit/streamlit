@@ -448,28 +448,23 @@ export function formatNumber(
  */
 export function formatMoment(momentDate: Moment, format: string): string {
   if (format === "localized") {
-    // date-fns intlFormat()
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
       timeStyle: "medium",
     }).format(momentDate.toDate())
   } else if (format === "distance") {
-    // return momentDate.fromNow()
     return intlFormatDistance(momentDate.toDate(), new Date())
   } else if (format === "relative") {
-    // return moment().calendar()
     return formatRelative(momentDate.toDate(), new Date())
   }
   const timezone = momentDate.tz()
   if (notNullOrUndefined(timezone)) {
-    console.log("timezone", timezone)
     // Format based on the timezone IANA name:
     return formatInTimeZone(momentDate.toDate(), timezone, format)
   }
 
   const utcOffset = momentDate.utcOffset()
   if (utcOffset !== 0) {
-    console.log("utcOffset", utcOffset)
     // Format based on the UTC offset:
     return formatInTimeZone(
       momentDate.toDate(),
