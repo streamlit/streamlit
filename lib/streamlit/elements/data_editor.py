@@ -44,6 +44,7 @@ from streamlit.elements.lib.column_config_utils import (
     ColumnDataKind,
     DataframeSchema,
     determine_dataframe_schema,
+    is_type_compatible,
     marshall_column_config,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
@@ -405,6 +406,91 @@ def _apply_data_specific_configs(
         data_df.rename(columns={0: "value"}, inplace=True)
 
 
+def _is_supported_index(df_index: pd.Index) -> bool:
+    """Check if the index is supported by the data editor component.
+
+    Parameters
+    ----------
+    df_index : pd.Index
+        The index to check.
+
+    Returns
+    -------
+    bool
+        True if the index is supported, False otherwise.
+    """
+
+    return (
+        type(df_index)
+        in [
+            pd.RangeIndex,
+            pd.Index,
+        ]
+        # We need to check these index types without importing, since they are deprecated
+        # and planned to be removed soon.
+        or is_type(df_index, "pandas.core.indexes.numeric.Int64Index")
+        or is_type(df_index, "pandas.core.indexes.numeric.Float64Index")
+        or is_type(df_index, "pandas.core.indexes.numeric.UInt64Index")
+    )
+
+
+def _check_type_compatibilities(
+    data_df: pd.DataFrame,
+    columns_config: ColumnConfigMapping,
+    dataframe_schema: DataframeSchema,
+):
+    """Check column type to data type compatibility.
+
+    Iterates the index and all columns of the dataframe to check if
+    the configured column types are compatible with the underlying data types.
+
+    Parameters
+    ----------
+    data_df : pd.DataFrame
+        The dataframe to check the type compatibilities for.
+
+    columns_config : ColumnConfigMapping
+        A mapping of column to column configurations.
+
+    dataframe_schema : DataframeSchema
+        The schema of the dataframe.
+
+    Raises
+    ------
+    StreamlitAPIException
+        If a configured column type is editable and not compatible with the
+        underlying data type.
+    """
+    for i, column in enumerate(
+        [(INDEX_IDENTIFIER, data_df.index)] + list(data_df.items())
+    ):
+        column_name, _ = column
+        column_data_kind = dataframe_schema[i]
+
+        # TODO: support column config by numerical index
+        if column_name in columns_config:
+            column_config = columns_config[column_name]
+            if column_config.get("disabled") is True:
+                # Disabled columns are not checked for compatibility.
+                # This might change in the future.
+                continue
+
+            configured_column_type = column_config.get("type")
+
+            if configured_column_type is None:
+                continue
+
+            if is_type_compatible(configured_column_type, column_data_kind) is False:
+                # TODO: Put on top as constant?
+                raise StreamlitAPIException(
+                    f"The configured column type `{configured_column_type}` for column "
+                    f"`{column_name}` is not compatible for editing the underlying "
+                    f"data type `{column_data_kind}`.\n\nYou have following options to "
+                    f"fix this: 1) choose a compatible type 2) disable the column "
+                    f"3) convert the column into a compatible data type."
+                )
+
+
 class DataEditorMixin:
     @overload
     def experimental_data_editor(
@@ -420,6 +506,7 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        column_config: Optional[ColumnConfigMapping] = None,
     ) -> EditableData:
         pass
 
@@ -437,6 +524,7 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        column_config: Optional[ColumnConfigMapping] = None,
     ) -> pd.DataFrame:
         pass
 
@@ -454,6 +542,7 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
+        column_config: Optional[ColumnConfigMapping] = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -553,7 +642,7 @@ class DataEditorMixin:
 
         """
 
-        columns_config: ColumnConfigMapping = {}
+        column_config_mapping: ColumnConfigMapping = column_config or {}
 
         data_format = type_util.determine_data_format(data)
         if data_format == DataFormat.UNKNOWN:
@@ -567,31 +656,20 @@ class DataEditorMixin:
         data_df = type_util.convert_anything_to_df(data, ensure_copy=True)
 
         # Check if the index is supported.
-        if not (
-            type(data_df.index)
-            in [
-                pd.RangeIndex,
-                pd.Index,
-            ]
-            # We need to check these index types without importing, since they are deprecated
-            # and planned to be removed soon.
-            or is_type(data_df.index, "pandas.core.indexes.numeric.Int64Index")
-            or is_type(data_df.index, "pandas.core.indexes.numeric.Float64Index")
-            or is_type(data_df.index, "pandas.core.indexes.numeric.UInt64Index")
-        ):
+        if not _is_supported_index(data_df.index):
             raise StreamlitAPIException(
                 f"The type of the dataframe index - {type(data_df.index).__name__} - is not "
                 "yet supported by the data editor."
             )
 
-        _apply_data_specific_configs(columns_config, data_df, data_format)
+        _apply_data_specific_configs(column_config_mapping, data_df, data_format)
 
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.
         if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
-            if INDEX_IDENTIFIER not in columns_config:
-                columns_config[INDEX_IDENTIFIER] = {}
-            columns_config[INDEX_IDENTIFIER]["hidden"] = True
+            if INDEX_IDENTIFIER not in column_config_mapping:
+                column_config_mapping[INDEX_IDENTIFIER] = {}
+            column_config_mapping[INDEX_IDENTIFIER]["hidden"] = True
 
         # Convert the dataframe to an arrow table which is used as the main
         # serialization format for sending the data to the frontend.
@@ -601,6 +679,10 @@ class DataEditorMixin:
         # Determine the dataframe schema which is required for parsing edited values
         # and for checking type compatibilities.
         dataframe_schema = determine_dataframe_schema(data_df, arrow_table.schema)
+
+        # Check if all configured column types are compatible with the underlying data.
+        # Throws an exception if any of the configured types are incompatible.
+        _check_type_compatibilities(data_df, column_config_mapping, dataframe_schema)
 
         proto = ArrowProto()
 
@@ -627,7 +709,7 @@ class DataEditorMixin:
 
         proto.data = type_util.pyarrow_table_to_bytes(arrow_table)
 
-        marshall_column_config(proto, columns_config)
+        marshall_column_config(proto, column_config_mapping)
 
         serde = DataEditorSerde()
 
