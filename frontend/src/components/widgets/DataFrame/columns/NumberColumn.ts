@@ -15,10 +15,10 @@
  */
 
 import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
-import { sprintf } from "sprintf-js"
 
 import { Quiver } from "src/lib/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
+import { isIntegerType } from "src/components/widgets/DataFrame/arrowUtils"
 
 import {
   BaseColumn,
@@ -59,12 +59,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     // Default parameters:
     {
       // Set step to 1 for integer types
-      step:
-        arrowTypeName.startsWith("int") ||
-        arrowTypeName === "range" ||
-        arrowTypeName.startsWith("uint")
-          ? 1
-          : undefined,
+      step: isIntegerType(arrowTypeName) ? 1 : undefined,
       // if uint (unsigned int), only positive numbers are allowed
       min_value: arrowTypeName.startsWith("uint") ? 0 : undefined,
     } as NumberColumnParams,
@@ -158,7 +153,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       }
 
       let cellData: number | null = toSafeNumber(data)
-      let displayData: string | undefined
+      let displayData = ""
 
       if (notNullOrUndefined(cellData)) {
         if (Number.isNaN(cellData)) {
@@ -181,26 +176,19 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
           )
         }
 
-        // Apply format configuration option:
-        if (notNullOrUndefined(parameters.format)) {
-          try {
-            displayData = sprintf(parameters.format, cellData)
-          } catch (error) {
-            return getErrorCell(
-              toSafeString(cellData),
-              `Format configuration (${parameters.format}) is not sprintf compatible. Error: ${error}`
-            )
-          }
-        }
-      }
-
-      if (displayData === undefined) {
-        if (isNullOrUndefined(cellData)) {
-          displayData = ""
-        } else if (notNullOrUndefined(fixedDecimals)) {
-          displayData = formatNumber(cellData, fixedDecimals, true)
-        } else {
-          displayData = formatNumber(cellData)
+        try {
+          displayData = formatNumber(
+            cellData,
+            parameters.format,
+            fixedDecimals
+          )
+        } catch (error) {
+          return getErrorCell(
+            toSafeString(cellData),
+            notNullOrUndefined(parameters.format)
+              ? `Failed to format the number based on the provided format configuration: (${parameters.format}). Error: ${error}`
+              : `Failed to format the number. Error: ${error}`
+          )
         }
       }
 

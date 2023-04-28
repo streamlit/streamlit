@@ -24,8 +24,9 @@ import {
   BaseGridCell,
 } from "@glideapps/glide-data-grid"
 import { toString, merge, isArray } from "lodash"
-import moment from "moment"
 import numbro from "numbro"
+import { sprintf } from "sprintf-js"
+import moment from "moment"
 
 import { Type as ArrowType } from "src/lib/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
@@ -405,31 +406,48 @@ export function toSafeNumber(value: any): number | null {
 }
 
 /**
- * Formats the given number to a string with the given maximum precision.
+ * Formats the given number to a string based on a provided format or the default format.
  *
  * @param value - The number to format.
- * @param maxPrecision - The maximum number of decimals to show.
- * @param keepTrailingZeros - Whether to keep trailing zeros.
+ * @param format - The format to use. If not provided, the default format is used.
+ * @param maxPrecision - The maximum number of decimals to show. This is only used by the default format.
+ *                     If not provided, the default is 4 decimals and trailing zeros are hidden.
  *
  * @returns The formatted number as a string.
  */
 export function formatNumber(
   value: number,
-  maxPrecision = 4,
-  keepTrailingZeros = false
+  format?: string | undefined,
+  maxPrecision?: number | undefined
 ): string {
-  if (!Number.isNaN(value) && Number.isFinite(value)) {
+  if (Number.isNaN(value) || !Number.isFinite(value)) {
+    return ""
+  }
+
+  if (isNullOrUndefined(format) || format === "") {
     if (maxPrecision === 0) {
       // Numbro is unable to format the number with 0 decimals.
       value = Math.round(value)
     }
     return numbro(value).format(
-      keepTrailingZeros
+      notNullOrUndefined(maxPrecision)
         ? `0,0.${"0".repeat(maxPrecision)}`
-        : `0,0.[${"0".repeat(maxPrecision)}]`
+        : `0,0.[0000]` // If no precision is given, use 4 decimals and hide trailing zeros
     )
   }
-  return ""
+
+  if (format === "percent") {
+    return new Intl.NumberFormat(undefined, {
+      style: "percent",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value)
+  } else if (["compact", "scientific", "engineering"].includes(format)) {
+    return new Intl.NumberFormat(undefined, {
+      notation: format as any,
+    }).format(value)
+  }
+  return sprintf(format, value)
 }
 
 /**
