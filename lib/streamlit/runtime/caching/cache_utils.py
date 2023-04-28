@@ -381,6 +381,7 @@ def _make_value_key(
                 hasher=args_hasher,
                 cache_type=cache_type,
                 hash_funcs=hash_funcs,
+                hash_source=func,
             )
         except UnhashableTypeError as exc:
             raise UnhashableParamError(cache_type, func, arg_name, arg_value, exc)
@@ -407,6 +408,7 @@ def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
         (func.__module__, func.__qualname__),
         hasher=func_hasher,
         cache_type=cache_type,
+        hash_source=func,
     )
 
     # Include the function's source code in its hash. If the source code can't
@@ -422,9 +424,7 @@ def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
         source_code = func.__code__.co_code
 
     update_hash(
-        source_code,
-        hasher=func_hasher,
-        cache_type=cache_type,
+        source_code, hasher=func_hasher, cache_type=cache_type, hash_source=func
     )
 
     cache_key = func_hasher.hexdigest()
