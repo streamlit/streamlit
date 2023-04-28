@@ -41,11 +41,13 @@ from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
+    ColumnConfigMappingInput,
     ColumnDataKind,
     DataframeSchema,
     determine_dataframe_schema,
     is_type_compatible,
     marshall_column_config,
+    process_config_mapping,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.errors import StreamlitAPIException
@@ -506,7 +508,7 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        column_config: Optional[ColumnConfigMapping] = None,
+        column_config: Optional[ColumnConfigMappingInput] = None,
     ) -> EditableData:
         pass
 
@@ -524,7 +526,7 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        column_config: Optional[ColumnConfigMapping] = None,
+        column_config: Optional[ColumnConfigMappingInput] = None,
     ) -> pd.DataFrame:
         pass
 
@@ -542,7 +544,7 @@ class DataEditorMixin:
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
-        column_config: Optional[ColumnConfigMapping] = None,
+        column_config: Optional[ColumnConfigMappingInput] = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -642,8 +644,6 @@ class DataEditorMixin:
 
         """
 
-        column_config_mapping: ColumnConfigMapping = column_config or {}
-
         data_format = type_util.determine_data_format(data)
         if data_format == DataFormat.UNKNOWN:
             raise StreamlitAPIException(
@@ -662,6 +662,7 @@ class DataEditorMixin:
                 "yet supported by the data editor."
             )
 
+        column_config_mapping = process_config_mapping(column_config)
         _apply_data_specific_configs(column_config_mapping, data_df, data_format)
 
         # Temporary workaround: We hide range indices if num_rows is dynamic.

@@ -16,13 +16,17 @@ from __future__ import annotations
 
 import json
 from enum import Enum
-from typing import Any, Dict, Final, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, Union
 
 import pandas as pd
 import pyarrow as pa
 from typing_extensions import Literal, TypeAlias, TypedDict
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+
+if TYPE_CHECKING:
+    import builtins
 
 # The index identifier can be used to apply configuration options
 IndexIdentifierType = Literal["index"]
@@ -397,19 +401,76 @@ def determine_dataframe_schema(
 
 
 class ColumnConfig(TypedDict, total=False):
+    """Configuration options for columns in `st.dataframe` and `st.data_editor`.
+
+    Parameters
+    ----------
+    title: str
+        The title of the column, shown at the top in the column header.
+        If None, the column name is used.
+    width: "small" or "medium" or "large" or None
+        The display width of the column.
+        If None, the column will be sized to fit its contents.
+    help: str or None
+        An optional tooltip that gets displayed when hovering over the column header.
+    hidden: bool or None
+        An optional boolean, which hides the column if set to True.
+    disabled: bool or None
+       An optional boolean, which disables the editing if set to True.
+    required: bool or None
+        If True, a cell can only be submitted by the user if it has a value.
+    default: str or bool or int or float or None
+        The default value in a cell when the user adds a new row.
+        Defaults to None.
+    type: str or None
+        The type of the column. If None, the column will be inferred from the data.
+    type_options: dict or None
+        Additional configuration options specific to the selected column type.
+    """
+
     title: Optional[str]
-    width: Optional[Literal["small", "medium", "large"]]
+    width: Optional[ColumnWidth]
+    help: Optional[str]
     hidden: Optional[bool]
     disabled: Optional[bool]
     required: Optional[bool]
+    default: Optional[str | bool | int | float]
     alignment: Optional[Literal["left", "center", "right"]]
-    help: Optional[str]
     type: Optional[ColumnType]
     type_options: Optional[Dict[str, Any]]
 
 
 # A mapping of column names/IDs to column configs.
 ColumnConfigMapping: TypeAlias = Dict[Union[IndexIdentifierType, str], ColumnConfig]
+ColumnConfigMappingInput: TypeAlias = Dict[
+    Union[IndexIdentifierType, str],
+    Union[ColumnConfig, None, str, "builtins.ellipsis"],
+]
+
+
+def process_config_mapping(
+    column_config: ColumnConfigMappingInput | None = None,
+) -> ColumnConfigMapping:
+    if column_config is None:
+        return {}
+
+    transformed_column_config: ColumnConfigMapping = {}
+    for column, config in column_config.items():
+        if config is None:
+            transformed_column_config[column] = ColumnConfig(hidden=True)
+        elif config is ...:
+            # Just add an empty config mapping for the column
+            transformed_column_config[column] = ColumnConfig()
+        elif isinstance(config, str):
+            transformed_column_config[column] = ColumnConfig(title=config)
+        elif isinstance(config, dict):
+            transformed_column_config[column] = config
+        else:
+            raise StreamlitAPIException(
+                f"Invalid column config for column `{column}`. "
+                f"Expected `None`, `str` or `dict`, but got `{type(config)}`."
+            )
+    return transformed_column_config
 
 
 def marshall_column_config(
