@@ -264,7 +264,7 @@ describe("NumberColumn", () => {
     [0.12, "percent", "12.00%"],
     [1100, "compact", "1.1K"],
   ])(
-    "formats %p to %p based on the sprintf format %p",
+    "formats %p with sprintf format %p to %p",
     (input: number, format: string, displayValue: string) => {
       const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
         format,

@@ -76,6 +76,10 @@ function useDataEditor(
     ): void => {
       const column = columns[col]
 
+      if (!column.isEditable) {
+        return
+      }
+
       const originalCol = column.indexNumber
 
       // We need to apply two different mappings here. One for the case that
