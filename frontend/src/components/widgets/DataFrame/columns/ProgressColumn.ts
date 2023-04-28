@@ -73,7 +73,7 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
 
   // Measure the display value of the max value, so that all progress bars are aligned correctly:
   const measureLabel = formatNumber(
-    parameters.max_value || isInteger ? 100 : 1,
+    parameters.max_value as number,
     parameters.format
   )
 
@@ -178,7 +178,6 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
           ...cellTemplate.data,
           value: normalizeCellValue,
           label: displayData,
-          // measureLabel: displayData,
         },
       } as RangeCellType
     },
