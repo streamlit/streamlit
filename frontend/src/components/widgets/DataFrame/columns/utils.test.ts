@@ -433,7 +433,7 @@ describe("truncateDecimals", () => {
 describe("formatMoment", () => {
   beforeAll(() => {
     jest.useFakeTimers("modern")
-    jest.setSystemTime(new Date("2023-04-28T00:00:00Z"))
+    jest.setSystemTime(new Date("2022-04-28T00:00:00Z"))
     timezoneMock.register("UTC")
   })
 
@@ -475,20 +475,20 @@ describe("formatMoment", () => {
       "April 27th, 2023 -02:30",
     ],
     // Distance:
-    ["distance", moment.utc("2023-04-10T20:20:30Z"), "2 weeks ago"],
-    ["distance", moment.utc("2021-04-10T20:20:30Z"), "2 years ago"],
-    ["distance", moment.utc("2023-04-27T23:59:59Z"), "1 second ago"],
-    ["distance", moment.utc("2023-04-20T00:00:00Z"), "last week"],
-    ["distance", moment.utc("2023-05-27T23:59:59Z"), "in 4 weeks"],
-    ["relative", moment.utc("2023-04-30T15:30:00Z"), "Sunday at 3:30 PM"],
+    ["distance", moment.utc("2022-04-10T20:20:30Z"), "2 weeks ago"],
+    ["distance", moment.utc("2020-04-10T20:20:30Z"), "2 years ago"],
+    ["distance", moment.utc("2022-04-27T23:59:59Z"), "1 second ago"],
+    ["distance", moment.utc("2022-04-20T00:00:00Z"), "last week"],
+    ["distance", moment.utc("2022-05-27T23:59:59Z"), "in 4 weeks"],
+    ["relative", moment.utc("2022-04-30T15:30:00Z"), "Saturday at 3:30 PM"],
     // Relative:
     [
       "relative",
-      moment.utc("2023-04-24T12:20:30Z"),
-      "last Monday at 12:20 PM",
+      moment.utc("2022-04-24T12:20:30Z"),
+      "last Sunday at 12:20 PM",
     ],
-    ["relative", moment.utc("2023-04-28T12:00:00Z"), "today at 12:00 PM"],
-    ["relative", moment.utc("2023-04-29T12:00:00Z"), "tomorrow at 12:00 PM"],
+    ["relative", moment.utc("2022-04-28T12:00:00Z"), "today at 12:00 PM"],
+    ["relative", moment.utc("2022-04-29T12:00:00Z"), "tomorrow at 12:00 PM"],
   ])(
     "uses %s format to format %p to %p",
     (format: string, momentDate: Moment, expected: string) => {
