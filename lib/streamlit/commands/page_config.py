@@ -123,8 +123,8 @@ def set_page_config(
     Configures the default settings of the page.
 
     .. note::
-        This must be the first Streamlit command used in your app, and must only
-        be set once.
+        This must be the first Streamlit command used on an app page, and must only
+        be set once per page.
 
     Parameters
     ----------
