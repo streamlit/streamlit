@@ -26,6 +26,7 @@ import {
 import { toString, merge, isArray } from "lodash"
 import numbro from "numbro"
 import { sprintf } from "sprintf-js"
+import moment from "moment"
 
 import { Type as ArrowType } from "src/lib/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
@@ -418,7 +419,7 @@ export function formatNumber(
   value: number,
   format?: string | undefined,
   maxPrecision?: number | undefined
-) {
+): string {
   if (Number.isNaN(value) || !Number.isFinite(value)) {
     return ""
   }
