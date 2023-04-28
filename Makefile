@@ -221,8 +221,8 @@ clean:
 	rm -rf frontend/build
 	rm -rf frontend/node_modules
 	rm -rf frontend/test_results
-	rm -f frontend/src/lib/proto.js
-	rm -f frontend/src/lib/proto.d.ts
+	rm -f frontend/src/proto.js
+	rm -f frontend/src/proto.d.ts
 	rm -rf frontend/public/reports
 	rm -rf ~/.cache/pre-commit
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
@@ -268,14 +268,14 @@ endif
 		yarn --silent pbjs \
 			../proto/streamlit/proto/*.proto \
 			-t static-module --wrap es6 \
-	) > ./src/lib/proto.js
+	) > ./lib/src/proto.js
 
 	@# Typescript type declarations for our generated protobufs
 	cd frontend/ ; ( \
 		echo "/* eslint-disable */" ; \
 		echo ; \
-		yarn --silent pbts ./src/lib/proto.js \
-	) > ./src/lib/proto.d.ts
+		yarn --silent pbts ./lib/src/proto.js \
+	) > ./lib/src/proto.d.ts
 
 .PHONY: react-init
 react-init:
@@ -297,7 +297,7 @@ frontend-fast:
 .PHONY: jslint
 # Lint the JS code
 jslint:
-	./scripts/validate_frontend_lib_imports.py frontend/src/lib
+	./scripts/validate_frontend_lib_imports.py frontend/src
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
 ifndef CIRCLECI
 	cd frontend; \
@@ -368,9 +368,9 @@ notices:
 	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
 	./scripts/append_license.sh frontend/src/vendor/bokeh/bokeh-LICENSE.txt
-	./scripts/append_license.sh frontend/src/lib/vendor/twemoji-LICENSE.txt
+	./scripts/append_license.sh frontend/src/vendor/twemoji-LICENSE.txt
 	./scripts/append_license.sh frontend/src/app/vendor/Segment-LICENSE.txt
-	./scripts/append_license.sh frontend/src/lib/vendor/react-bootstrap-LICENSE.txt
+	./scripts/append_license.sh frontend/src/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh lib/streamlit/vendor/ipython/IPython-LICENSE.txt
 
 .PHONY: headers

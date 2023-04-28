@@ -19,8 +19,9 @@
     ],
     "plugins": ["@emotion"],
     "ignore": [
-      "./src/autogen/",
-      "/.test.ts",
+      "**/proto.d.ts",
+      "**/proto.js",
+      "**/vendor/bokeh/*",
       "**/.test.tsx"
     ],
     "babelrcRoots": [
@@ -28,4 +29,3 @@
       "lib"
     ]
 }
-  

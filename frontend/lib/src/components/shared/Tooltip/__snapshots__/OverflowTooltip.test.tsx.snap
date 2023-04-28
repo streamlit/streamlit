@@ -1,0 +1,31 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Tooltip component should render and match snapshots when ellipsized 1`] = `
+<Tooltip
+  content="the content"
+  placement="auto"
+>
+  <StyledWrapper>
+    <StyledEllipsizedDiv
+      style={Object {}}
+    >
+      the child
+    </StyledEllipsizedDiv>
+  </StyledWrapper>
+</Tooltip>
+`;
+
+exports[`Tooltip component should render and match snapshots when it fits onscreen 1`] = `
+<Tooltip
+  content=""
+  placement="auto"
+>
+  <StyledWrapper>
+    <StyledEllipsizedDiv
+      style={Object {}}
+    >
+      the child
+    </StyledEllipsizedDiv>
+  </StyledWrapper>
+</Tooltip>
+`;

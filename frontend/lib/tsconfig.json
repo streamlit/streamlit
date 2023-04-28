@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
       "allowJs": true,
+      "checkJs": false,
       "allowSyntheticDefaultImports": true,
       "baseUrl": ".",
       "esModuleInterop": true,
@@ -23,6 +24,6 @@
       "rootDir": "src",
       "paths": { "src/*": ["src/*"] }
     },
-    "include": ["src"],
-    "exclude": ["node_modules/**/*"]
+    "include": ["src", "declarations.d.ts"],
+    "exclude": ["node_modules/**/*", "**/proto.js"]
   }

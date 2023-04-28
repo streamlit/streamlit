@@ -7,11 +7,17 @@
     "types": "dist/index.d.ts",
     "sideEffects": false,
     "scripts": {
-        "build": "yarn build:src && yarn build:lib-type",
-        "build:lib-type": "tsc -P tsconfig.json && tsc-alias -p tsconfig.json",
-        "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --root-mode=upward --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src"
+        "build": "yarn build:src && yarn build:lib-type && yarn build:proto && yarn build:vendor",
+        "build:lib-type": "yarn build:tsc && yarn build:tsc-alias",
+        "build:tsc": "tsc -P tsconfig.json",
+        "build:tsc-alias": "tsc-alias -p tsconfig.json",
+        "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --root-mode=upward --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src",
+        "build:proto": "cp ./src/proto* ./dist",
+        "build:vendor": "cp -R ./src/vendor ./dist"
     },
     "dependencies": {
+        "apache-arrow": "^11.0.0",
+        "react-markdown": "^8.0.7",
         "typescript": "^4.9.5"
     },
     "browserslist": [

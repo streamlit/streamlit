@@ -17,7 +17,7 @@
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
-import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
+import { RERUN_PROMPT_MODAL_DIALOG } from "@streamlit/lib"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
 import { CSSTransition } from "react-transition-group"

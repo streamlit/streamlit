@@ -1,0 +1,12 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`GraphVizChart Element should render with height and width 1`] = `
+Object {
+  "className": "graphviz stGraphVizChart",
+  "id": "graphviz-chart-1",
+  "style": Object {
+    "height": 500,
+    "width": 400,
+  },
+}
+`;
