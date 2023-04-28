@@ -48,6 +48,7 @@ import {
   getColumnFromArrow,
   getAllColumnsFromArrow,
   getCellFromArrow,
+  isIntegerType,
 } from "./arrowUtils"
 
 const MOCK_TEXT_COLUMN = TextColumn({
@@ -813,6 +814,79 @@ describe("getColumnTypeFromArrow", () => {
     "interprets %p as column type: %p",
     (arrowType: ArrowType, expectedType: ColumnCreator) => {
       expect(getColumnTypeFromArrow(arrowType)).toEqual(expectedType)
+    }
+  )
+})
+
+describe("isIntegerType", () => {
+  it.each([
+    [
+      {
+        pandas_type: "float64",
+        numpy_type: "float64",
+      },
+      false,
+    ],
+    [
+      {
+        pandas_type: "int64",
+        numpy_type: "int64",
+      },
+      true,
+    ],
+    [
+      {
+        pandas_type: "object",
+        numpy_type: "int16",
+      },
+      true,
+    ],
+    [
+      {
+        pandas_type: "range",
+        numpy_type: "range",
+      },
+      true,
+    ],
+    [
+      {
+        pandas_type: "uint64",
+        numpy_type: "uint64",
+      },
+      true,
+    ],
+    [
+      {
+        pandas_type: "unicode",
+        numpy_type: "object",
+      },
+      false,
+    ],
+    [
+      {
+        pandas_type: "bool",
+        numpy_type: "bool",
+      },
+      false,
+    ],
+    [
+      {
+        pandas_type: "categorical",
+        numpy_type: "int8",
+      },
+      false,
+    ],
+    [
+      {
+        pandas_type: "object",
+        numpy_type: "interval[int64, both]",
+      },
+      false,
+    ],
+  ])(
+    "interprets %p as integer type: %p",
+    (arrowType: ArrowType, expected: boolean) => {
+      expect(isIntegerType(Quiver.getTypeName(arrowType))).toEqual(expected)
     }
   )
 })

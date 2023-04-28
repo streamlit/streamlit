@@ -162,7 +162,7 @@ function BaseChartColumn(
         data: {
           ...cellTemplate.data,
           values: normalizedChartData,
-          displayValues: convertedChartData.map(v => formatNumber(v, 3)),
+          displayValues: convertedChartData.map(v => formatNumber(v)),
         },
         isMissingValue: isNullOrUndefined(data),
       } as SparklineCellType
