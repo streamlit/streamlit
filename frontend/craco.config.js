@@ -80,9 +80,7 @@ module.exports = {
         // turn off sourcemaps
         webpackConfig.devtool = "eval"
       } else {
-        // TODO: Trace/Test this for update to GITHUB_ACTION instead
-        const parallel = process.env.CIRCLECI ? false : true
-        minimizerPlugins[terserPluginIndex].options.parallel = parallel
+        minimizerPlugins[terserPluginIndex].options.parallel = true
       }
 
       return webpackConfig

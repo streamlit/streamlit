@@ -843,6 +843,13 @@ describe("isIntegerType", () => {
     ],
     [
       {
+        pandas_type: "range",
+        numpy_type: "range",
+      },
+      true,
+    ],
+    [
+      {
         pandas_type: "uint64",
         numpy_type: "uint64",
       },
