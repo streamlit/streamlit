@@ -36,6 +36,7 @@ import {
   toSafeNumber,
   countDecimals,
 } from "./utils"
+import { exec } from "child_process"
 
 export interface ProgressColumnParams {
   // The minimum permitted value. Defaults to 0.
@@ -72,10 +73,15 @@ function ProgressColumn(props: BaseColumnProps): BaseColumn {
   ) as ProgressColumnParams
 
   // Measure the display value of the max value, so that all progress bars are aligned correctly:
-  const measureLabel = formatNumber(
-    parameters.max_value as number,
-    parameters.format
-  )
+  let measureLabel: string
+  try {
+    measureLabel = formatNumber(
+      parameters.max_value as number,
+      parameters.format
+    )
+  } catch (error) {
+    measureLabel = toSafeString(parameters.max_value)
+  }
 
   const fixedDecimals =
     isNullOrUndefined(parameters.step) || Number.isNaN(parameters.step)

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCellKind, TextCell } from "@glideapps/glide-data-grid"
 import { RangeCellType } from "@glideapps/glide-data-grid-cells"
 
 import { BaseColumnProps, isErrorCell } from "./utils"
@@ -47,9 +47,6 @@ function getProgressColumn(
 }
 
 describe("ProgressColumn", () => {
-  // TODO(lukasmasuch): Implement test for step parameter
-  // TODO(lukasmasuch): Implement test for format parameter
-
   it("creates a valid column instance", () => {
     const mockColumn = getProgressColumn()
     expect(mockColumn.kind).toEqual("progress")
@@ -129,5 +126,91 @@ describe("ProgressColumn", () => {
     const mockColumn = getProgressColumn()
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)
+  })
+
+  it.each([
+    // This should support everything that is supported by formatNumber
+    // So we are not testing all the cases here, just a few to make sure it works
+    // All other cases are tested for formatNumber in utils.test.ts
+    [10.123, "%d", "10"],
+    [10.123, "%i", "10"],
+    [10.123, "%u", "10"],
+    [10.123, "%f", "10.123"],
+    [10.123, "%g", "10.123"],
+    [10, "$%.2f", "$10.00"],
+    [10.126, "$%.2f", "$10.13"],
+    [10.123, "%.2f€", "10.12€"],
+    [10.126, "($%.2f)", "($10.13)"],
+    [65, "%d years", "65 years"],
+    [1234567898765432, "%d ⭐", "1234567898765432 ⭐"],
+    [72.3, "%.1f%%", "72.3%"],
+    [-5.678, "%.1f", "-5.7"],
+    [0.12, "percent", "12.00%"],
+    [1100, "compact", "1.1K"],
+  ])(
+    "formats %p with sprintf format %p to %p",
+    (input: number, format: string, displayValue: string) => {
+      const mockColumn = getProgressColumn({
+        format,
+      })
+
+      const cell = mockColumn.getCell(input)
+      expect((cell as RangeCellType).data.label).toEqual(displayValue)
+    }
+  )
+
+  it("shows an error cell if the numeric value is too large", () => {
+    const mockColumn = getProgressColumn()
+    const unsafeCell = mockColumn.getCell("1234567898765432123")
+    expect(isErrorCell(unsafeCell)).toEqual(true)
+    expect((unsafeCell as TextCell)?.data).toEqual(
+      "⚠️ 1234567898765432123\n\nThe value is larger than the maximum supported integer values in number columns (2^53).\n"
+    )
+  })
+
+  it.each([
+    [10, "%d %d"],
+    [1234567.89, "%'_,.2f"],
+    [1234.5678, "%+.2E"],
+    [0.000123456, "%+.2E"],
+    [-0.000123456, "%+.2E"],
+    [255, "%#x"],
+    [4096, "%#X"],
+    [42, "% d"],
+    [1000, "%,.0f"],
+    [25000.25, "$%,.2f"],
+    [9876543210, "%,.0f"],
+  ])(
+    "cannot format %p using the sprintf format %p",
+    (input: number, format: string) => {
+      const mockColumn = getProgressColumn({
+        format,
+      })
+
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
+    }
+  )
+
+  it("correctly formats float values to percentage", () => {
+    const mockColumn = getProgressColumn()
+    const mockCell = mockColumn.getCell(0.52356)
+    expect(mockCell.kind).toEqual(GridCellKind.Custom)
+    expect((mockCell as RangeCellType).data?.value).toEqual(0.52356)
+    expect((mockCell as RangeCellType).data?.label).toEqual("52.36%")
+  })
+
+  it("correctly formats int values to percentage", () => {
+    const mockColumn = ProgressColumn({
+      ...PROGRESS_COLUMN_TEMPLATE,
+      arrowType: {
+        pandas_type: "int64",
+        numpy_type: "int64",
+      },
+    } as BaseColumnProps)
+    const mockCell = mockColumn.getCell(52)
+    expect(mockCell.kind).toEqual(GridCellKind.Custom)
+    expect((mockCell as RangeCellType).data?.value).toEqual(52)
+    expect((mockCell as RangeCellType).data?.label).toEqual(" 52%")
   })
 })
