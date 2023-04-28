@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import moment, { Moment } from "moment"
+import timezoneMock from "timezone-mock"
 
 import {
   getErrorCell,
@@ -32,6 +34,7 @@ import {
   toSafeDate,
   countDecimals,
   truncateDecimals,
+  formatMoment,
 } from "./utils"
 import { TextColumn } from "."
 
@@ -221,18 +224,18 @@ describe("toSafeNumber", () => {
 
 describe("formatNumber", () => {
   it.each([
-    [10, 0, "10"],
-    [10.123, 0, "10"],
-    [10.123, 1, "10.1"],
-    [10.123, 2, "10.12"],
-    [10.123, 3, "10.123"],
-    [10.123, 4, "10.123"],
-    [10.123, 5, "10.123"],
-    [0.123, 0, "0"],
-    [0.123, 1, "0.1"],
-  ])("formats %p to %p with %p decimals", (value, decimals, expected) => {
-    expect(formatNumber(value, decimals)).toEqual(expected)
-  })
+    [10, "10"],
+    [10.1, "10.1"],
+    [10.123, "10.123"],
+    [10.1234, "10.1234"],
+    // Rounds to 4 decimals
+    [10.12346, "10.1235"],
+  ])(
+    "formats %p to %p with default options (no trailing zeros)",
+    (value, expected) => {
+      expect(formatNumber(value)).toEqual(expected)
+    }
+  )
 
   it.each([
     [10, 0, "10"],
@@ -248,7 +251,88 @@ describe("formatNumber", () => {
   ])(
     "formats %p to %p with %p decimals (keeps trailing zeros)",
     (value, decimals, expected) => {
-      expect(formatNumber(value, decimals, true)).toEqual(expected)
+      expect(formatNumber(value, undefined, decimals)).toEqual(expected)
+    }
+  )
+
+  it.each([
+    [0.5, "percent", "50.00%"],
+    [0.51236, "percent", "51.24%"],
+    [1.1, "percent", "110.00%"],
+    [0, "percent", "0.00%"],
+    [0.00001, "percent", "0.00%"],
+    [1000, "compact", "1K"],
+    [1100, "compact", "1.1K"],
+    [10, "compact", "10"],
+    [10.123, "compact", "10"],
+    [123456789, "compact", "123M"],
+    [1000, "scientific", "1E3"],
+    [123456789, "scientific", "1.235E8"],
+    [1000, "engineering", "1E3"],
+    [123456789, "engineering", "123.457E6"],
+    // sprintf format
+    [10.123, "%d", "10"],
+    [10.123, "%i", "10"],
+    [10.123, "%u", "10"],
+    [10.123, "%f", "10.123"],
+    [10.123, "%g", "10.123"],
+    [10, "$%.2f", "$10.00"],
+    [10.126, "$%.2f", "$10.13"],
+    [10.123, "%.2f€", "10.12€"],
+    [10.126, "($%.2f)", "($10.13)"],
+    [65, "%d years", "65 years"],
+    [1234567898765432, "%d ⭐", "1234567898765432 ⭐"],
+    [72.3, "%.1f%%", "72.3%"],
+    [-5.678, "%.1f", "-5.7"],
+    [0.123456, "%.4f", "0.1235"],
+    [0.123456, "%.4g", "0.1235"],
+    // Test boolean formatting:
+    [1, "%t", "true"],
+    [0, "%t", "false"],
+    // Test zero-padding for integers
+    [42, "%05d", "00042"],
+    // Test scientific notations:
+    [1234.5678, "%.2e", "1.23e+3"],
+    [0.000123456, "%.2e", "1.23e-4"],
+    // Test hexadecimal representation:
+    [255, "%x", "ff"],
+    [255, "%X", "FF"],
+    [4096, "%X", "1000"],
+    // Test octal representation:
+    [8, "%o", "10"],
+    [64, "%o", "100"],
+    // Test fixed width formatting:
+    [12345, "%8d", "   12345"],
+    [12.34, "%8.2f", "   12.34"],
+    [12345, "%'_8d", "___12345"],
+    // Test left-justified formatting:
+    [12345, "%-8d", "12345   "],
+    [12.34, "%-8.2f", "12.34   "],
+    // Test prefixing with plus sign:
+    [42, "%+d", "+42"],
+    [-42, "%+d", "-42"],
+  ])("formats %p with format %p to '%p'", (value, format, expected) => {
+    expect(formatNumber(value, format)).toEqual(expected)
+  })
+
+  it.each([
+    [10, "%d %d"],
+    [1234567.89, "%'_,.2f"],
+    [1234.5678, "%+.2E"],
+    [0.000123456, "%+.2E"],
+    [-0.000123456, "%+.2E"],
+    [255, "%#x"],
+    [4096, "%#X"],
+    [42, "% d"],
+    [1000, "%,.0f"],
+    [25000.25, "$%,.2f"],
+    [9876543210, "%,.0f"],
+  ])(
+    "cannot format %p using the invalid sprintf format %p",
+    (input: number, format: string) => {
+      expect(() => {
+        formatNumber(input, format)
+      }).toThrowError()
     }
   )
 })
@@ -423,6 +507,73 @@ describe("truncateDecimals", () => {
     "truncates value %f to %i decimal places, resulting in %f",
     (value, decimals, expected) => {
       expect(truncateDecimals(value, decimals)).toBe(expected)
+    }
+  )
+})
+
+describe("formatMoment", () => {
+  beforeAll(() => {
+    jest.useFakeTimers("modern")
+    jest.setSystemTime(new Date("2022-04-28T00:00:00Z"))
+    timezoneMock.register("UTC")
+  })
+
+  afterAll(() => {
+    jest.useRealTimers()
+    timezoneMock.unregister()
+  })
+
+  it.each([
+    [
+      "yyyy-MM-dd HH:mm:ss zzz",
+      moment.utc("2023-04-27T10:20:30Z"),
+      "2023-04-27 10:20:30 UTC",
+    ],
+    [
+      "yyyy-MM-dd HH:mm:ss zzz",
+      moment.utc("2023-04-27T10:20:30Z").tz("America/Los_Angeles"),
+      "2023-04-27 03:20:30 PDT",
+    ],
+    [
+      "yyyy-MM-dd HH:mm:ss xxx",
+      moment.utc("2023-04-27T10:20:30Z").tz("America/Los_Angeles"),
+      "2023-04-27 03:20:30 -07:00",
+    ],
+    [
+      "yyyy-MM-dd HH:mm:ss xxx",
+      moment.utc("2023-04-27T10:20:30Z").utcOffset("+04:00"),
+      "2023-04-27 14:20:30 +04:00",
+    ],
+    ["yyyy-MM-dd", moment.utc("2023-04-27T10:20:30Z"), "2023-04-27"],
+    [
+      "MMM do, yyyy 'at' h:mm aa",
+      moment.utc("2023-04-27T15:45:00Z"),
+      "Apr 27th, 2023 at 3:45 PM",
+    ],
+    [
+      "MMMM do, yyyy xxxxx",
+      moment.utc("2023-04-27T10:20:30Z").utcOffset("-02:30"),
+      "April 27th, 2023 -02:30",
+    ],
+    // Distance:
+    ["distance", moment.utc("2022-04-10T20:20:30Z"), "2 weeks ago"],
+    ["distance", moment.utc("2020-04-10T20:20:30Z"), "2 years ago"],
+    ["distance", moment.utc("2022-04-27T23:59:59Z"), "1 second ago"],
+    ["distance", moment.utc("2022-04-20T00:00:00Z"), "last week"],
+    ["distance", moment.utc("2022-05-27T23:59:59Z"), "in 4 weeks"],
+    ["relative", moment.utc("2022-04-30T15:30:00Z"), "Saturday at 3:30 PM"],
+    // Relative:
+    [
+      "relative",
+      moment.utc("2022-04-24T12:20:30Z"),
+      "last Sunday at 12:20 PM",
+    ],
+    ["relative", moment.utc("2022-04-28T12:00:00Z"), "today at 12:00 PM"],
+    ["relative", moment.utc("2022-04-29T12:00:00Z"), "tomorrow at 12:00 PM"],
+  ])(
+    "uses %s format to format %p to %p",
+    (format: string, momentDate: Moment, expected: string) => {
+      expect(formatMoment(momentDate, format)).toBe(expected)
     }
   )
 })

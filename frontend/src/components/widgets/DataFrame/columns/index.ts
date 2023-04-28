@@ -22,6 +22,7 @@ import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
 import LinkColumn from "./LinkColumn"
 import ImageColumn from "./ImageColumn"
+import ProgressColumn from "./ProgressColumn"
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 import { LineChartColumn, BarChartColumn } from "./ChartColumn"
 
@@ -52,6 +53,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     line_chart: LineChartColumn,
     bar_chart: BarChartColumn,
     image: ImageColumn,
+    progress: ProgressColumn,
   })
 )
 
@@ -71,4 +73,5 @@ export {
   LineChartColumn,
   BarChartColumn,
   ImageColumn,
+  ProgressColumn,
 }
