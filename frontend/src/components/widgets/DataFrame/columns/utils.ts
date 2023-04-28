@@ -24,8 +24,12 @@ import {
   BaseGridCell,
 } from "@glideapps/glide-data-grid"
 import { toString, merge, isArray } from "lodash"
-import moment from "moment"
 import numbro from "numbro"
+import { intlFormatDistance, formatRelative } from "date-fns"
+import { formatInTimeZone } from "date-fns-tz"
+import moment, { Moment } from "moment"
+import "moment-duration-format"
+import "moment-timezone"
 
 import { Type as ArrowType } from "src/lib/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
@@ -430,6 +434,50 @@ export function formatNumber(
     )
   }
   return ""
+}
+
+/**
+ * Formats the given date to a string with the given format.
+ *
+ * @param momentDate The moment date to format.
+ * @param format The format to use.
+ *   If the format is `localized` the date will be formatted according to the user's locale.
+ *   If the format is `relative` the date will be formatted as a relative time (e.g. "2 hours ago").
+ *   Otherwise, it is interpreted as date-fns format string: https://date-fns.org/v2.29.3/docs/format
+ * @returns The formatted date as a string.
+ */
+export function formatMoment(momentDate: Moment, format: string): string {
+  if (format === "localized") {
+    // date-fns intlFormat()
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "medium",
+    }).format(momentDate.toDate())
+  } else if (format === "distance") {
+    // return momentDate.fromNow()
+    return intlFormatDistance(momentDate.toDate(), new Date())
+  } else if (format === "relative") {
+    // return moment().calendar()
+    return formatRelative(momentDate.toDate(), new Date())
+  }
+  const timezone = momentDate.tz()
+  if (notNullOrUndefined(timezone)) {
+    console.log("timezone", timezone)
+    // Format based on the timezone IANA name:
+    return formatInTimeZone(momentDate.toDate(), timezone, format)
+  }
+
+  const utcOffset = momentDate.utcOffset()
+  if (utcOffset !== 0) {
+    console.log("utcOffset", utcOffset)
+    // Format based on the UTC offset:
+    return formatInTimeZone(
+      momentDate.toDate(),
+      momentDate.format("Z"),
+      format
+    )
+  }
+  return formatInTimeZone(momentDate.toDate(), "UTC", format)
 }
 
 /**

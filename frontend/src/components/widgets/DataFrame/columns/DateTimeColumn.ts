@@ -16,6 +16,9 @@
 
 import { GridCell, GridCellKind, TextCell } from "@glideapps/glide-data-grid"
 import moment, { Moment } from "moment"
+import "moment-timezone"
+
+import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
 
 import {
   BaseColumn,
@@ -24,9 +27,8 @@ import {
   toSafeDate,
   getErrorCell,
   toSafeString,
-} from "src/components/widgets/DataFrame/columns/utils"
-import { notNullOrUndefined, isNullOrUndefined } from "src/lib/utils"
-
+  formatMoment,
+} from "./utils"
 import { DateTimeCell } from "./cells/DateTimeCell"
 
 /**
@@ -233,7 +235,10 @@ function BaseDateTimeColumn(
         }
 
         try {
-          displayDate = momentDate.format(parameters.format)
+          displayDate = formatMoment(
+            momentDate,
+            parameters.format || defaultFormat
+          )
         } catch (error) {
           return getErrorCell(
             momentDate.toISOString(),
@@ -241,7 +246,7 @@ function BaseDateTimeColumn(
           )
         }
         // Copy data should always use the default format
-        copyData = momentDate.format(defaultFormat)
+        copyData = formatMoment(momentDate, defaultFormat)
       }
 
       if (!props.isEditable) {
@@ -304,7 +309,7 @@ export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
   return BaseDateTimeColumn(
     "datetime",
     props,
-    hasTimezone ? "YYYY-MM-DD HH:mm:ssZ" : "YYYY-MM-DD HH:mm:ss",
+    hasTimezone ? "yyyy-MM-dd HH:mm:ssxxx" : "yyyy-MM-dd HH:mm:ss",
     1,
     "datetime-local",
     (date: Date): string => {
@@ -361,7 +366,7 @@ export function DateColumn(props: BaseColumnProps): BaseColumn {
   return BaseDateTimeColumn(
     "date",
     props,
-    "YYYY-MM-DD",
+    "yyyy-MM-dd",
     1,
     "date",
     (date: Date): string => {
