@@ -195,7 +195,10 @@ describe("ProgressColumn", () => {
   it("correctly formats float values to percentage", () => {
     const mockColumn = getProgressColumn()
     const mockCell = mockColumn.getCell(0.52356)
-    expect(mockCell.kind).toEqual(GridCellKind.Custom)
+    expect((mockCell as RangeCellType).data?.min).toEqual(0)
+    expect((mockCell as RangeCellType).data?.max).toEqual(1)
+    expect((mockCell as RangeCellType).data?.step).toEqual(0.01)
+    // Correctly formats float values to percentage:
     expect((mockCell as RangeCellType).data?.value).toEqual(0.52356)
     expect((mockCell as RangeCellType).data?.label).toEqual("52.36%")
   })
@@ -209,7 +212,10 @@ describe("ProgressColumn", () => {
       },
     } as BaseColumnProps)
     const mockCell = mockColumn.getCell(52)
-    expect(mockCell.kind).toEqual(GridCellKind.Custom)
+    expect((mockCell as RangeCellType).data?.min).toEqual(0)
+    expect((mockCell as RangeCellType).data?.max).toEqual(100)
+    expect((mockCell as RangeCellType).data?.step).toEqual(1)
+    // Correctly formats int values to percentage:
     expect((mockCell as RangeCellType).data?.value).toEqual(52)
     expect((mockCell as RangeCellType).data?.label).toEqual(" 52%")
   })
