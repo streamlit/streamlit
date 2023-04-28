@@ -51,7 +51,7 @@ function applyTimezone(momentDate: Moment, timezone: string): Moment {
 }
 
 export interface DateTimeColumnParams {
-  // A MomentJS formatting syntax to format the display value.
+  // A date-fns formatting syntax to format the display value.
   readonly format?: string
   // Specifies the granularity that the value must adhere.
   // For time and datetime, this is the number of seconds between each allowed value.
