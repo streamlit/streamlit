@@ -36,7 +36,6 @@ import {
   toSafeNumber,
   countDecimals,
 } from "./utils"
-import { exec } from "child_process"
 
 export interface ProgressColumnParams {
   // The minimum permitted value. Defaults to 0.
