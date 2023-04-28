@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import moment, { Moment } from "moment"
+import timezoneMock from "timezone-mock"
 
 import {
   getErrorCell,
@@ -32,6 +34,7 @@ import {
   toSafeDate,
   countDecimals,
   truncateDecimals,
+  formatMoment,
 } from "./utils"
 import { TextColumn } from "."
 
@@ -504,6 +507,73 @@ describe("truncateDecimals", () => {
     "truncates value %f to %i decimal places, resulting in %f",
     (value, decimals, expected) => {
       expect(truncateDecimals(value, decimals)).toBe(expected)
+    }
+  )
+})
+
+describe("formatMoment", () => {
+  beforeAll(() => {
+    jest.useFakeTimers("modern")
+    jest.setSystemTime(new Date("2022-04-28T00:00:00Z"))
+    timezoneMock.register("UTC")
+  })
+
+  afterAll(() => {
+    jest.useRealTimers()
+    timezoneMock.unregister()
+  })
+
+  it.each([
+    [
+      "yyyy-MM-dd HH:mm:ss zzz",
+      moment.utc("2023-04-27T10:20:30Z"),
+      "2023-04-27 10:20:30 UTC",
+    ],
+    [
+      "yyyy-MM-dd HH:mm:ss zzz",
+      moment.utc("2023-04-27T10:20:30Z").tz("America/Los_Angeles"),
+      "2023-04-27 03:20:30 PDT",
+    ],
+    [
+      "yyyy-MM-dd HH:mm:ss xxx",
+      moment.utc("2023-04-27T10:20:30Z").tz("America/Los_Angeles"),
+      "2023-04-27 03:20:30 -07:00",
+    ],
+    [
+      "yyyy-MM-dd HH:mm:ss xxx",
+      moment.utc("2023-04-27T10:20:30Z").utcOffset("+04:00"),
+      "2023-04-27 14:20:30 +04:00",
+    ],
+    ["yyyy-MM-dd", moment.utc("2023-04-27T10:20:30Z"), "2023-04-27"],
+    [
+      "MMM do, yyyy 'at' h:mm aa",
+      moment.utc("2023-04-27T15:45:00Z"),
+      "Apr 27th, 2023 at 3:45 PM",
+    ],
+    [
+      "MMMM do, yyyy xxxxx",
+      moment.utc("2023-04-27T10:20:30Z").utcOffset("-02:30"),
+      "April 27th, 2023 -02:30",
+    ],
+    // Distance:
+    ["distance", moment.utc("2022-04-10T20:20:30Z"), "2 weeks ago"],
+    ["distance", moment.utc("2020-04-10T20:20:30Z"), "2 years ago"],
+    ["distance", moment.utc("2022-04-27T23:59:59Z"), "1 second ago"],
+    ["distance", moment.utc("2022-04-20T00:00:00Z"), "last week"],
+    ["distance", moment.utc("2022-05-27T23:59:59Z"), "in 4 weeks"],
+    ["relative", moment.utc("2022-04-30T15:30:00Z"), "Saturday at 3:30 PM"],
+    // Relative:
+    [
+      "relative",
+      moment.utc("2022-04-24T12:20:30Z"),
+      "last Sunday at 12:20 PM",
+    ],
+    ["relative", moment.utc("2022-04-28T12:00:00Z"), "today at 12:00 PM"],
+    ["relative", moment.utc("2022-04-29T12:00:00Z"), "tomorrow at 12:00 PM"],
+  ])(
+    "uses %s format to format %p to %p",
+    (format: string, momentDate: Moment, expected: string) => {
+      expect(formatMoment(momentDate, format)).toBe(expected)
     }
   )
 })
