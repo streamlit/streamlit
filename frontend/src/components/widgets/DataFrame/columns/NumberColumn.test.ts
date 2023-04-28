@@ -245,6 +245,9 @@ describe("NumberColumn", () => {
   })
 
   it.each([
+    // This should support everything that is supported by formatNumber
+    // So we are not testing all the cases here, just a few to make sure it works
+    // All other cases are tested for formatNumber in utils.test.ts
     [10.123, "%d", "10"],
     [10.123, "%i", "10"],
     [10.123, "%u", "10"],
@@ -258,33 +261,8 @@ describe("NumberColumn", () => {
     [1234567898765432, "%d ⭐", "1234567898765432 ⭐"],
     [72.3, "%.1f%%", "72.3%"],
     [-5.678, "%.1f", "-5.7"],
-    [0.123456, "%.4f", "0.1235"],
-    [0.123456, "%.4g", "0.1235"],
-    // Test boolean formatting:
-    [1, "%t", "true"],
-    [0, "%t", "false"],
-    // Test zero-padding for integers
-    [42, "%05d", "00042"],
-    // Test scientific notations:
-    [1234.5678, "%.2e", "1.23e+3"],
-    [0.000123456, "%.2e", "1.23e-4"],
-    // Test hexadecimal representation:
-    [255, "%x", "ff"],
-    [255, "%X", "FF"],
-    [4096, "%X", "1000"],
-    // Test octal representation:
-    [8, "%o", "10"],
-    [64, "%o", "100"],
-    // Test fixed width formatting:
-    [12345, "%8d", "   12345"],
-    [12.34, "%8.2f", "   12.34"],
-    [12345, "%'_8d", "___12345"],
-    // Test left-justified formatting:
-    [12345, "%-8d", "12345   "],
-    [12.34, "%-8.2f", "12.34   "],
-    // Test prefixing with plus sign:
-    [42, "%+d", "+42"],
-    [-42, "%+d", "-42"],
+    [0.12, "percent", "12.00%"],
+    [1100, "compact", "1.1K"],
   ])(
     "formats %p to %p based on the sprintf format %p",
     (input: number, format: string, displayValue: string) => {
