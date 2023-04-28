@@ -14,87 +14,246 @@
  * limitations under the License.
  */
 
-import React from "react"
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
+import { CancelToken } from "axios"
+import { ReactWrapper } from "enzyme"
+import React, { PureComponent, ReactElement } from "react"
 import {
-  Text as TextProto,
-  Block as BlockProto,
+  Delta as DeltaProto,
   Element as ElementProto,
   ForwardMsgMetadata as ForwardMsgMetadataProto,
+  IAppPage,
+  Text as TextProto,
+  WidgetStates,
 } from "src/lib/proto"
-import { BlockNode, ElementNode } from "./AppNode"
+import { AppRoot } from "./AppNode"
 import VerticalBlock from "./components/core/Block"
-import Text from "src/lib/components/elements/Text"
+import Alert from "./components/elements/Alert"
+import Text from "./components/elements/Text"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { FileUploadClient } from "./FileUploadClient"
-import { mockEndpoints, mockSessionInfo } from "./mocks/mocks"
 import { ScriptRunState } from "./ScriptRunState"
+import { SessionInfo } from "./SessionInfo"
+import { StreamlitEndpoints } from "./StreamlitEndpoints"
 import { mount } from "./test_util"
-import { createFormsData, WidgetStateManager } from "./WidgetStateManager"
+import {
+  createFormsData,
+  FormsData,
+  WidgetStateManager,
+} from "./WidgetStateManager"
 
-function createMockBlockNode(scriptRunID: string, text: string): BlockNode {
-  const textElement = new ElementNode(
-    ElementProto.create({
-      text: TextProto.create({ body: text }),
-    }),
-    ForwardMsgMetadataProto.create(), // This doesn't actually matter
-    scriptRunID
-  )
+/**
+ * Example StreamlitEndpoints implementation.
+ */
+class Endpoints implements StreamlitEndpoints {
+  public buildComponentURL(componentName: string, path: string): string {
+    throw new Error("Unimplemented")
+  }
 
-  return new BlockNode(
-    [textElement],
-    BlockProto.create({
-      vertical: BlockProto.Vertical.create({}),
-    }),
-    scriptRunID
-  )
+  public buildMediaURL(url: string): string {
+    return url
+  }
+
+  public buildAppPageURL(
+    pageLinkBaseURL: string | undefined,
+    page: IAppPage,
+    pageIndex: number
+  ): string {
+    throw new Error("Unimplemented")
+  }
+
+  public uploadFileUploaderFile(
+    file: File,
+    widgetId: string,
+    sessionId: string,
+    onUploadProgress?: (progressEvent: any) => void,
+    cancelToken?: CancelToken
+  ): Promise<number> {
+    return Promise.reject(new Error("Unimplemented"))
+  }
+
+  public fetchCachedForwardMsg(hash: string): Promise<Uint8Array> {
+    return Promise.reject(new Error("Unimplemented"))
+  }
 }
 
-describe("StreamlitLib", () => {
-  it("can be mounted", () => {
-    // Construct required managers
-    const scriptRunID = "mockScriptRunID"
-    const sessionInfo = mockSessionInfo()
-    const endpoints = mockEndpoints()
-    let formsData = createFormsData()
-    const widgetMgr = new WidgetStateManager({
-      sendRerunBackMsg: () => {
-        console.log("rerun requested!")
-      },
-      formsDataChanged: newFormsData => {
-        formsData = newFormsData
-      },
+interface Props {}
+
+interface State {
+  elements: AppRoot
+  formsData: FormsData
+  scriptRunState: ScriptRunState
+  scriptRunId: string
+}
+
+/** An example root component for an app that uses StreamlitLib. */
+class StreamlitLibExample extends PureComponent<Props, State> {
+  private readonly sessionInfo = new SessionInfo()
+
+  private readonly endpoints = new Endpoints()
+
+  private readonly componentRegistry = new ComponentRegistry(this.endpoints)
+
+  private readonly widgetMgr: WidgetStateManager
+
+  private readonly uploadClient: FileUploadClient
+
+  public constructor(props: Props) {
+    super(props)
+
+    // Initialize managers
+    this.widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: this.sendRerunBackMsg,
+      formsDataChanged: formsData => this.setState({ formsData }),
     })
-    const uploadClient = new FileUploadClient({
-      sessionInfo,
-      endpoints,
+
+    this.uploadClient = new FileUploadClient({
+      sessionInfo: this.sessionInfo,
+      endpoints: this.endpoints,
       // A form cannot be submitted if it contains a FileUploader widget
       // that's currently uploading. We write that state here, in response
       // to a FileUploadClient callback. The FormSubmitButton element
       // reads the state.
       formsWithPendingRequestsChanged: formIds =>
-        widgetMgr.setFormsWithUploads(formIds),
+        this.widgetMgr.setFormsWithUploads(formIds),
     })
-    const componentRegistry = new ComponentRegistry(endpoints)
 
-    // Build a mock BlockNode
-    const node = createMockBlockNode(scriptRunID, "hello, StreamlitLib!")
+    this.sessionInfo.setCurrent({
+      // Disable ForwardMessageCaching:
+      maxCachedMessageAge: 0,
 
-    const wrapper = mount(
+      // Used by FileUploadClient to associate file uploads with
+      // sessions.
+      sessionId: "mockSessionId",
+
+      // Unused by StreamlitLib:
+      appId: "",
+      streamlitVersion: "",
+      pythonVersion: "",
+      installationId: "",
+      installationIdV3: "",
+      commandLine: "",
+      userMapboxToken: "",
+    })
+
+    // Initialize React state
+    this.state = {
+      elements: AppRoot.empty("Please wait..."),
+      formsData: createFormsData(),
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+      // ScriptRunID should get a new unique ID every time the
+      // Streamlit view is being "rebuilt".
+      scriptRunId: `${0}`,
+    }
+  }
+
+  /**
+   * Should be called before the first Delta from a "script run" is handled.
+   * Stores this script run's unique ID, and sets our ScriptRunState to RUNNING.
+   */
+  public beginScriptRun = (scriptRunId: string): void => {
+    this.setState({
+      scriptRunState: ScriptRunState.RUNNING,
+      scriptRunId: scriptRunId,
+    })
+  }
+
+  /**
+   * Should be called after all Deltas from a "script run" have been handled.
+   * Sets ScriptRunState to NOT_RUNNING, and clears "stale nodes" (nodes that
+   * belonged to a previous script run).
+   */
+  public endScriptRun = (): void => {
+    this.setState(prevState => ({
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+      elements: prevState.elements.clearStaleNodes(prevState.scriptRunId),
+    }))
+  }
+
+  /** Process a DeltaMsg and its associated ForwardMsgMetadata. */
+  public handleDeltaMsg = (
+    deltaMsg: DeltaProto,
+    metadataMsg: ForwardMsgMetadataProto
+  ): void => {
+    // Apply the Delta to our root AppNode to produce a new root and
+    // trigger a re-render.
+    this.setState(prevState => ({
+      elements: prevState.elements.applyDelta(
+        prevState.scriptRunId,
+        deltaMsg,
+        metadataMsg
+      ),
+    }))
+  }
+
+  public render = (): ReactElement => {
+    // This example doesn't involve a sidebar, so our only root blockNode
+    // is `elements.main`.
+    const blockNode = this.state.elements.main
+
+    return (
       <VerticalBlock
-        node={node}
-        endpoints={endpoints}
-        sessionInfo={sessionInfo}
-        scriptRunId={scriptRunID}
-        scriptRunState={ScriptRunState.NOT_RUNNING}
-        widgetMgr={widgetMgr}
-        uploadClient={uploadClient}
+        node={blockNode}
+        endpoints={this.endpoints}
+        sessionInfo={this.sessionInfo}
+        scriptRunId={this.state.scriptRunId}
+        scriptRunState={this.state.scriptRunState}
+        widgetMgr={this.widgetMgr}
+        uploadClient={this.uploadClient}
         widgetsDisabled={false}
-        componentRegistry={componentRegistry}
-        formsData={formsData}
+        componentRegistry={this.componentRegistry}
+        formsData={this.state.formsData}
       />
     )
+  }
 
+  private sendRerunBackMsg = (widgetStates: WidgetStates): void => {
+    console.log(`rerun requested (widgetStates=${widgetStates.toJSON()})`)
+  }
+}
+
+describe("StreamlitLibExample", () => {
+  it("can be mounted", () => {
+    const wrapper = mount(<StreamlitLibExample />)
+
+    // Before any Elements are explicitly added, our example class
+    // will show a placeholder "Please wait..." info message
+    const alert = wrapper.find(Alert)
+    expect(alert.text()).toBe("Please wait...")
+  })
+
+  it("handles Delta messages", () => {
+    const wrapper: ReactWrapper<Props, State, StreamlitLibExample> = mount(
+      <StreamlitLibExample />
+    )
+
+    // construct a delta
+    const delta = DeltaProto.create({
+      newElement: ElementProto.create({
+        text: TextProto.create({ body: "Hello, world!" }),
+      }),
+    })
+
+    // construct its metadata
+    const metadata = ForwardMsgMetadataProto.create({
+      deltaPath: [0, 0], // main container, first element
+    })
+
+    // Send the delta to our app
+    wrapper.instance().beginScriptRun("newScriptRun")
+    wrapper.instance().handleDeltaMsg(delta, metadata)
+    wrapper.instance().endScriptRun()
+
+    wrapper.update()
+
+    // our "Please wait..." alert should be gone, because it
+    // belonged to a previous "script run"
+    const alert = wrapper.find(Alert)
+    expect(alert.exists()).toBe(false)
+
+    // And we should have the single Text element we created
     const text = wrapper.find(Text)
-    expect(text.text()).toBe("hello, StreamlitLib!")
+    expect(text.text()).toBe("Hello, world!")
   })
 })
