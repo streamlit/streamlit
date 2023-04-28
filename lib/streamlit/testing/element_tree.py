@@ -524,7 +524,6 @@ class NumberInput(Widget):
     min_value: Number
     max_value: Number
     step: Number
-    placeholder: str
 
     def __init__(self, proto: NumberInputProto, root: ElementTree):
         self.proto = proto

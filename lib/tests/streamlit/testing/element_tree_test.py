@@ -24,7 +24,6 @@ from streamlit.testing.script_interactions import InteractiveScriptTests
 class ButtonTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "button_test.py",
             """
             import streamlit as st
 
@@ -48,7 +47,6 @@ class ButtonTest(InteractiveScriptTests):
 class CheckboxTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "checkbox_test.py",
             """
             import streamlit as st
 
@@ -73,7 +71,6 @@ class CheckboxTest(InteractiveScriptTests):
 class ColorPickerTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "color_picker.py",
             """
             import streamlit as st
 
@@ -94,7 +91,6 @@ class ColorPickerTest(InteractiveScriptTests):
 class DateInputTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "date_input.py",
             """
             import streamlit as st
             import datetime
@@ -127,7 +123,6 @@ class DateInputTest(InteractiveScriptTests):
 class ExceptionTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "exception.py",
             """
             import streamlit as st
 
@@ -140,7 +135,6 @@ class ExceptionTest(InteractiveScriptTests):
 
     def test_markdown(self):
         script = self.script_from_string(
-            "exception2.py",
             """
             import streamlit as st
 
@@ -155,7 +149,6 @@ class ExceptionTest(InteractiveScriptTests):
 class HeadingTest(InteractiveScriptTests):
     def test_title(self):
         script = self.script_from_string(
-            "title_element.py",
             """
             import streamlit as st
 
@@ -174,7 +167,6 @@ class HeadingTest(InteractiveScriptTests):
 
     def test_header(self):
         script = self.script_from_string(
-            "header_element.py",
             """
             import streamlit as st
 
@@ -193,7 +185,6 @@ class HeadingTest(InteractiveScriptTests):
 
     def test_subheader(self):
         script = self.script_from_string(
-            "subheader_element.py",
             """
             import streamlit as st
 
@@ -215,7 +206,6 @@ class HeadingTest(InteractiveScriptTests):
 
     def test_heading_elements_by_type(self):
         script = self.script_from_string(
-            "heading_elements.py",
             """
             import streamlit as st
 
@@ -238,7 +228,6 @@ class HeadingTest(InteractiveScriptTests):
 class MarkdownTest(InteractiveScriptTests):
     def test_markdown(self):
         script = self.script_from_string(
-            "markdown_element.py",
             """
             import streamlit as st
 
@@ -253,7 +242,6 @@ class MarkdownTest(InteractiveScriptTests):
 
     def test_caption(self):
         script = self.script_from_string(
-            "caption_element.py",
             """
             import streamlit as st
 
@@ -269,7 +257,6 @@ class MarkdownTest(InteractiveScriptTests):
 
     def test_code(self):
         script = self.script_from_string(
-            "code_element.py",
             """
             import streamlit as st
 
@@ -284,7 +271,6 @@ class MarkdownTest(InteractiveScriptTests):
 
     def test_latex(self):
         script = self.script_from_string(
-            "latex_element.py",
             """
             import streamlit as st
 
@@ -299,7 +285,6 @@ class MarkdownTest(InteractiveScriptTests):
 
     def test_divider(self):
         script = self.script_from_string(
-            "divider_element.py",
             """
             import streamlit as st
 
@@ -314,7 +299,6 @@ class MarkdownTest(InteractiveScriptTests):
 
     def test_markdown_elements_by_type(self):
         script = self.script_from_string(
-            "markdown_element.py",
             """
             import streamlit as st
 
@@ -340,7 +324,6 @@ class MarkdownTest(InteractiveScriptTests):
 class MultiselectTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "multiselect_test.py",
             """
             import streamlit as st
 
@@ -368,7 +351,6 @@ class MultiselectTest(InteractiveScriptTests):
 class NumberInputTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "number_input.py",
             """
             import streamlit as st
 
@@ -396,7 +378,6 @@ class NumberInputTest(InteractiveScriptTests):
 class SelectboxTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "select_slider_test.py",
             """
             import pandas as pd
             import streamlit as st
@@ -441,7 +422,6 @@ class SelectboxTest(InteractiveScriptTests):
 class SelectSliderTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "select_slider_test.py",
             """
             import streamlit as st
 
@@ -463,7 +443,6 @@ class SelectSliderTest(InteractiveScriptTests):
 class SidebarTest(InteractiveScriptTests):
     def test_access(self):
         script = self.script_from_string(
-            "sidebar.py",
             """
             import streamlit as st
 
@@ -480,7 +459,6 @@ class SidebarTest(InteractiveScriptTests):
 class SliderTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "slider_test.py",
             """
             import streamlit as st
             from datetime import datetime, time
@@ -515,7 +493,6 @@ class SliderTest(InteractiveScriptTests):
 class TextAreaTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "text_area.py",
             """
             import streamlit as st
 
@@ -539,7 +516,6 @@ class TextAreaTest(InteractiveScriptTests):
 class TextInputTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "text_input.py",
             """
             import streamlit as st
 
@@ -564,7 +540,6 @@ class TextInputTest(InteractiveScriptTests):
 class TimeInputTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(
-            "time_input.py",
             """
             import streamlit as st
             import datetime

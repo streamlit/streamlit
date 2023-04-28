@@ -13,7 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
-import os
+import hashlib
+import importlib
 import pathlib
 import tempfile
 import textwrap
@@ -32,6 +33,20 @@ from streamlit.testing.local_script_runner import LocalScriptRunner
 
 class InteractiveScriptTests(unittest.TestCase):
     tmp_script_dir: tempfile.TemporaryDirectory[str]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # To allow loading scripts to be relative to the test class's directory,
+        # we do this in the init so it will run in the subclass's module.
+        # `__file__` refers to the base class's file, and `self.__module__`
+        # contains not enough information to get the directory, so instead
+        # we get the module object using importlib machinery, which does have
+        # that information.
+        # Based on https://stackoverflow.com/a/54142935
+        m = importlib.import_module(self.__module__)
+        assert m.__file__
+        self.dir_path = pathlib.Path(m.__file__).parent
 
     def setUp(self) -> None:
         super().setUp()
@@ -59,21 +74,21 @@ class InteractiveScriptTests(unittest.TestCase):
         # set unconditionally for whole process, since we are just running tests
         config.set_option("runner.postScriptGC", False)
 
-    def script_from_string(self, script_name: str, script: str) -> LocalScriptRunner:
+    def script_from_string(self, script: str) -> LocalScriptRunner:
         """Create a runner for a script with the contents from a string.
 
         Useful for testing short scripts that fit comfortably as an inline
         string in the test itself, without having to create a separate file
         for it.
         """
+        hasher = hashlib.md5(bytes(script, "utf-8"))
+        script_name = hasher.hexdigest()
+
         path = pathlib.Path(self.tmp_script_dir.name, script_name)
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
         return LocalScriptRunner(str(path))
 
-    def script_from_filename(
-        self, test_dir: str, script_name: str
-    ) -> LocalScriptRunner:
+    def script_from_filename(self, script_path: str) -> LocalScriptRunner:
         """Create a runner for the script with the given name, for testing."""
-        script_path = os.path.join(os.path.dirname(test_dir), "test_data", script_name)
-        return LocalScriptRunner(script_path)
+        return LocalScriptRunner(str(self.dir_path / script_path))
