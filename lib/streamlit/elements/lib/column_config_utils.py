@@ -31,7 +31,7 @@ INDEX_IDENTIFIER: IndexIdentifierType = "index"
 # This is used as prefix for columns that are configured via the numerical position.
 # The integer value is converted into a string key with this prefix.
 # This needs to match with the prefix configured in the frontend.
-_NUMERICAL_POSITION_PREFIX = "col:"
+_NUMERICAL_POSITION_PREFIX = "_pos:"
 
 ColumnWidth = Literal["small", "medium", "large"]
 

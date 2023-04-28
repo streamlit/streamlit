@@ -36,7 +36,7 @@ import {
 // Using this ID for column config will apply the config to all index columns
 export const INDEX_IDENTIFIER = "index"
 // Prefix used in the config column mapping when referring to a column via the numeric position
-export const COLUMN_POSITION_PREFIX = "col:"
+export const COLUMN_POSITION_PREFIX = "_pos:"
 
 export const COLUMN_WIDTH_MAPPING = {
   small: 75,
@@ -82,7 +82,10 @@ export function applyColumnConfig(
   }
 
   let columnConfig
-  if (columnConfigMapping.has(columnProps.name)) {
+  if (
+    columnConfigMapping.has(columnProps.name) &&
+    columnProps.name !== INDEX_IDENTIFIER // "index" is not supported as name for normal columns
+  ) {
     // Config is configured based on the column name
     columnConfig = columnConfigMapping.get(columnProps.name)
   } else if (
