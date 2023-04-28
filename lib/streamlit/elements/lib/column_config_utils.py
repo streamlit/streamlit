@@ -51,6 +51,7 @@ ColumnType: TypeAlias = Literal[
     "line_chart",
     "bar_chart",
     "image",
+    "progress",
 ]
 
 
