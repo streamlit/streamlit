@@ -59,6 +59,8 @@
     "copy-to-clipboard": "^3.3.3",
     "d3": "^7.8.2",
     "d3-graphviz": "^2.6.1",
+    "date-fns": "^2.29.3",
+    "date-fns-tz": "^2.0.0",
     "decamelize": "^4.0.0",
     "deck.gl": "^8.8.23",
     "dompurify": "^2.4.4",
