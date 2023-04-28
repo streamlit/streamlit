@@ -437,7 +437,6 @@ export function formatNumber(
   }
 
   if (format === "percent") {
-    // return numbro(value).format("3%")
     return new Intl.NumberFormat(undefined, {
       style: "percent",
       minimumFractionDigits: 2,
