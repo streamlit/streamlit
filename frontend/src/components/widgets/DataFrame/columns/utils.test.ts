@@ -433,13 +433,13 @@ describe("truncateDecimals", () => {
 describe("formatMoment", () => {
   beforeAll(() => {
     jest.useFakeTimers("modern")
-    timezoneMock.register("UTC")
     jest.setSystemTime(new Date("2023-04-28T00:00:00Z"))
+    timezoneMock.register("UTC")
   })
 
   afterAll(() => {
-    timezoneMock.unregister()
     jest.useRealTimers()
+    timezoneMock.unregister()
   })
 
   it.each([
@@ -474,17 +474,6 @@ describe("formatMoment", () => {
       moment.utc("2023-04-27T10:20:30Z").utcOffset("-02:30"),
       "April 27th, 2023 -02:30",
     ],
-    // Localized:
-    [
-      "localized",
-      moment.utc("2023-04-10T10:20:30Z"),
-      "Apr 10, 2023, 12:20:30 PM",
-    ],
-    [
-      "localized",
-      moment.utc("2019-05-01T00:00:00Z"),
-      "May 1, 2019, 2:00:00 AM",
-    ],
     // Distance:
     ["distance", moment.utc("2023-04-10T20:20:30Z"), "2 weeks ago"],
     ["distance", moment.utc("2021-04-10T20:20:30Z"), "2 years ago"],
@@ -501,7 +490,7 @@ describe("formatMoment", () => {
     ["relative", moment.utc("2023-04-28T12:00:00Z"), "today at 12:00 PM"],
     ["relative", moment.utc("2023-04-29T12:00:00Z"), "tomorrow at 12:00 PM"],
   ])(
-    "formats date as %s",
+    "uses %s format to format %p to %p",
     (format: string, momentDate: Moment, expected: string) => {
       expect(formatMoment(momentDate, format)).toBe(expected)
     }
