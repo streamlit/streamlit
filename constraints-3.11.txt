@@ -82,7 +82,7 @@ PyYAML==6.0
 readme-renderer==37.3
 requests==2.29.0
 requests-mock==1.10.0
-requests-toolbelt==1.0.0
+requests-toolbelt==0.10.1
 retrying==1.3.4
 rfc3986==2.0.0
 rich==13.3.5
