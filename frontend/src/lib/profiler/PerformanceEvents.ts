@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { logMessage } from "src/lib/log"
+import { logMessage } from "src/lib/util/log"
 import { getRerunAnalysis } from "src/lib/profiler/RerunAnalyzer"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 

@@ -30,8 +30,8 @@ import {
 } from "enzyme"
 /* eslint-enable */
 import React, { Component, FC, ReactElement } from "react"
-import ThemeProvider from "src/components/core/ThemeProvider"
-import { EmotionTheme } from "src/theme"
+import ThemeProvider from "src/lib/components/core/ThemeProvider"
+import { EmotionTheme } from "src/lib/theme"
 import { mockTheme } from "./mocks/mockTheme"
 
 export function mount<C extends Component, P = C["props"], S = C["state"]>(

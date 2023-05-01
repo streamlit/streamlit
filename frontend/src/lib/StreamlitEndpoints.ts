@@ -15,7 +15,7 @@
  */
 
 import { CancelToken } from "axios"
-import { IAppPage } from "src/autogen/proto"
+import { IAppPage } from "src/lib/proto"
 
 /** Exposes non-websocket endpoints used by the frontend. */
 export interface StreamlitEndpoints {

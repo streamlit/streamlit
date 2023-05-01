@@ -18,7 +18,7 @@ import { CancelToken } from "axios"
 import { SessionInfo } from "src/lib/SessionInfo"
 import _ from "lodash"
 import { StreamlitEndpoints } from "./StreamlitEndpoints"
-import { isValidFormId } from "./utils"
+import { isValidFormId } from "./util/utils"
 
 /** Common widget protobuf fields that are used by the FileUploadClient. */
 interface WidgetInfo {
