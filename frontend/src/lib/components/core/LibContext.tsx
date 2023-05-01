@@ -16,59 +16,9 @@
 
 import React from "react"
 
-import { PageConfig } from "src/lib/proto"
 import { baseTheme, ThemeConfig } from "src/lib/theme"
 
 export interface Props {
-  /**
-   * If true, render the app with a wider column size.
-   * Set from the UserSettings object.
-   * @see UserSettings
-   */
-  wideMode: boolean
-
-  /**
-   * The sidebar's default display state.
-   * Set from the PageConfig protobuf.
-   */
-  initialSidebarState: PageConfig.SidebarState
-
-  /**
-   * True if the app is embedded.
-   * @see isEmbed
-   */
-  embedded: boolean
-
-  /**
-   * True if padding is enabled.
-   * @see isPaddingDisplayed
-   */
-  showPadding: boolean
-
-  /**
-   * True if scrolling is disabled.
-   * @see isScrollingHidden
-   */
-  disableScrolling: boolean
-
-  /**
-   * True if the footer should be displayed.
-   * @see isFooterDisplayed
-   */
-  showFooter: boolean
-
-  /**
-   * True if the toolbar should be displayed.
-   * @see isToolbarDisplayed
-   */
-  showToolbar: boolean
-
-  /**
-   * True if the thin colored line at the top of the app should be displayed.
-   * @see isColoredLineDisplayed
-   */
-  showColoredLine: boolean
-
   /** True if the app is in full-screen mode. */
   isFullScreen: boolean
 
@@ -101,25 +51,9 @@ export interface Props {
    * @see ThemeCreatorDialog
    */
   addThemes: (themes: ThemeConfig[]) => void
-
-  /**
-   * If non-zero, this is the number of pixels that the sidebar's
-   * "chevron" icon is shifted. (If sidebarChevronDownshift is 0, then
-   * the current theme's spacing is used.)
-   * @see StyledSidebarCollapsedControl
-   */
-  sidebarChevronDownshift: number
 }
 
-export const AppContext = React.createContext<Props>({
-  wideMode: false,
-  initialSidebarState: PageConfig.SidebarState.AUTO,
-  embedded: false,
-  showPadding: false,
-  disableScrolling: false,
-  showFooter: false,
-  showToolbar: false,
-  showColoredLine: false,
+export const LibContext = React.createContext<Props>({
   isFullScreen: false,
   setFullScreen: () => {},
   addScriptFinishedHandler: () => {},
@@ -128,5 +62,4 @@ export const AppContext = React.createContext<Props>({
   setTheme: () => {},
   availableThemes: [],
   addThemes: () => {},
-  sidebarChevronDownshift: 0,
 })
