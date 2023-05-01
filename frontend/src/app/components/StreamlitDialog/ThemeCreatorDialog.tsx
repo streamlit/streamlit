@@ -36,6 +36,7 @@ import {
   ThemeConfig,
   toThemeInput,
 } from "src/lib/theme"
+import { LibContext } from "src/lib/components/core/LibContext"
 
 import {
   StyledDialogBody,
@@ -188,7 +189,8 @@ export interface Props {
 
 const ThemeCreatorDialog = (props: Props): ReactElement => {
   const [copied, updateCopied] = React.useState(false)
-  const { activeTheme, addThemes, setTheme } = React.useContext(AppContext)
+  const { activeTheme, setTheme } = React.useContext(LibContext)
+  const { addThemes } = React.useContext(AppContext)
 
   const themeInput = toThemeInput(activeTheme.emotion)
 

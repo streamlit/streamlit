@@ -128,6 +128,7 @@ import withScreencast, {
 // Used to import fonts + responsive reboot items
 import "src/assets/css/theme.scss"
 import { ensureError } from "src/lib/util/ErrorHandling"
+import { LibContext } from "src/lib/components/core/LibContext"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -1564,13 +1565,7 @@ export class App extends PureComponent<Props, State> {
         value={{
           initialSidebarState,
           wideMode: userSettings.wideMode,
-          isFullScreen,
-          setFullScreen: this.handleFullScreen,
-          addScriptFinishedHandler: this.addScriptFinishedHandler,
-          removeScriptFinishedHandler: this.removeScriptFinishedHandler,
-          activeTheme: this.props.theme.activeTheme,
           availableThemes: this.props.theme.availableThemes,
-          setTheme: this.setAndSendTheme,
           addThemes: this.props.theme.addThemes,
           sidebarChevronDownshift:
             this.props.hostCommunication.currentState.sidebarChevronDownshift,
@@ -1582,89 +1577,104 @@ export class App extends PureComponent<Props, State> {
           showColoredLine: !isEmbed() || isColoredLineDisplayed(),
         }}
       >
-        <HotKeys
-          keyMap={this.keyMap}
-          handlers={this.keyHandlers}
-          attach={window}
-          focused={true}
+        <LibContext.Provider
+          value={{
+            isFullScreen,
+            setFullScreen: this.handleFullScreen,
+            addScriptFinishedHandler: this.addScriptFinishedHandler,
+            removeScriptFinishedHandler: this.removeScriptFinishedHandler,
+            activeTheme: this.props.theme.activeTheme,
+            setTheme: this.setAndSendTheme,
+          }}
         >
-          <StyledApp className={outerDivClass}>
-            {/* The tabindex below is required for testing. */}
-            <Header>
-              {!hideTopBar && (
-                <>
-                  <StatusWidget
-                    connectionState={connectionState}
-                    sessionEventDispatcher={this.sessionEventDispatcher}
-                    scriptRunState={scriptRunState}
-                    rerunScript={this.rerunScript}
-                    stopScript={this.stopScript}
-                    allowRunOnSave={allowRunOnSave}
+          <HotKeys
+            keyMap={this.keyMap}
+            handlers={this.keyHandlers}
+            attach={window}
+            focused={true}
+          >
+            <StyledApp className={outerDivClass}>
+              {/* The tabindex below is required for testing. */}
+              <Header>
+                {!hideTopBar && (
+                  <>
+                    <StatusWidget
+                      connectionState={connectionState}
+                      sessionEventDispatcher={this.sessionEventDispatcher}
+                      scriptRunState={scriptRunState}
+                      rerunScript={this.rerunScript}
+                      stopScript={this.stopScript}
+                      allowRunOnSave={allowRunOnSave}
+                    />
+                    <ToolbarActions
+                      hostToolbarItems={
+                        this.props.hostCommunication.currentState.toolbarItems
+                      }
+                      sendMessageToHost={
+                        this.props.hostCommunication.sendMessage
+                      }
+                    />
+                  </>
+                )}
+                {this.showDeployButton() && (
+                  <DeployButton
+                    onClick={this.deployButtonClicked.bind(this)}
                   />
-                  <ToolbarActions
-                    hostToolbarItems={
-                      this.props.hostCommunication.currentState.toolbarItems
-                    }
-                    sendMessageToHost={
-                      this.props.hostCommunication.sendMessage
-                    }
-                  />
-                </>
-              )}
-              {this.showDeployButton() && (
-                <DeployButton onClick={this.deployButtonClicked.bind(this)} />
-              )}
-              <MainMenu
-                isServerConnected={this.isServerConnected()}
-                quickRerunCallback={this.rerunScript}
-                clearCacheCallback={this.openClearCacheDialog}
-                settingsCallback={this.settingsCallback}
-                aboutCallback={this.aboutCallback}
-                printCallback={this.printCallback}
-                screencastCallback={this.screencastCallback}
-                screenCastState={this.props.screenCast.currentState}
-                hostMenuItems={
-                  this.props.hostCommunication.currentState.menuItems
-                }
-                developmentMode={developmentMode}
-                sendMessageToHost={this.props.hostCommunication.sendMessage}
-                gitInfo={gitInfo}
-                showDeployError={this.showDeployError}
-                closeDialog={this.closeDialog}
-                isDeployErrorModalOpen={
-                  this.state.dialog?.type === DialogType.DEPLOY_ERROR
-                }
-                loadGitInfo={this.sendLoadGitInfoBackMsg}
-                canDeploy={this.sessionInfo.isSet && !this.sessionInfo.isHello}
-                menuItems={menuItems}
-                metricsMgr={this.metricsMgr}
-                toolbarMode={this.state.toolbarMode}
-              />
-            </Header>
+                )}
+                <MainMenu
+                  isServerConnected={this.isServerConnected()}
+                  quickRerunCallback={this.rerunScript}
+                  clearCacheCallback={this.openClearCacheDialog}
+                  settingsCallback={this.settingsCallback}
+                  aboutCallback={this.aboutCallback}
+                  printCallback={this.printCallback}
+                  screencastCallback={this.screencastCallback}
+                  screenCastState={this.props.screenCast.currentState}
+                  hostMenuItems={
+                    this.props.hostCommunication.currentState.menuItems
+                  }
+                  developmentMode={developmentMode}
+                  sendMessageToHost={this.props.hostCommunication.sendMessage}
+                  gitInfo={gitInfo}
+                  showDeployError={this.showDeployError}
+                  closeDialog={this.closeDialog}
+                  isDeployErrorModalOpen={
+                    this.state.dialog?.type === DialogType.DEPLOY_ERROR
+                  }
+                  loadGitInfo={this.sendLoadGitInfoBackMsg}
+                  canDeploy={
+                    this.sessionInfo.isSet && !this.sessionInfo.isHello
+                  }
+                  menuItems={menuItems}
+                  metricsMgr={this.metricsMgr}
+                  toolbarMode={this.state.toolbarMode}
+                />
+              </Header>
 
-            <AppView
-              endpoints={this.endpoints}
-              sessionInfo={this.sessionInfo}
-              sendMessageToHost={this.props.hostCommunication.sendMessage}
-              elements={elements}
-              scriptRunId={scriptRunId}
-              scriptRunState={scriptRunState}
-              widgetMgr={this.widgetMgr}
-              widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
-              uploadClient={this.uploadClient}
-              componentRegistry={this.componentRegistry}
-              formsData={this.state.formsData}
-              appPages={this.state.appPages}
-              onPageChange={this.onPageChange}
-              currentPageScriptHash={currentPageScriptHash}
-              hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
-              pageLinkBaseUrl={
-                this.props.hostCommunication.currentState.pageLinkBaseUrl
-              }
-            />
-            {renderedDialog}
-          </StyledApp>
-        </HotKeys>
+              <AppView
+                endpoints={this.endpoints}
+                sessionInfo={this.sessionInfo}
+                sendMessageToHost={this.props.hostCommunication.sendMessage}
+                elements={elements}
+                scriptRunId={scriptRunId}
+                scriptRunState={scriptRunState}
+                widgetMgr={this.widgetMgr}
+                widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
+                uploadClient={this.uploadClient}
+                componentRegistry={this.componentRegistry}
+                formsData={this.state.formsData}
+                appPages={this.state.appPages}
+                onPageChange={this.onPageChange}
+                currentPageScriptHash={currentPageScriptHash}
+                hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
+                pageLinkBaseUrl={
+                  this.props.hostCommunication.currentState.pageLinkBaseUrl
+                }
+              />
+              {renderedDialog}
+            </StyledApp>
+          </HotKeys>
+        </LibContext.Provider>
       </AppContext.Provider>
     )
   }

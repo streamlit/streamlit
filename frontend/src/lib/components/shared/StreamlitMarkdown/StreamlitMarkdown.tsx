@@ -39,7 +39,6 @@ import rehypeKatex from "rehype-katex"
 import { Link as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
-import { AppContext } from "src/lib/components/core/AppContext"
 import CodeBlock from "src/lib/components/elements/CodeBlock"
 import IsSidebarContext from "src/lib/components/core/IsSidebarContext"
 import { Heading as HeadingProto } from "src/lib/proto"
@@ -56,6 +55,7 @@ import {
   InlineTooltipIcon,
   StyledLabelHelpWrapper,
 } from "src/lib/components/shared/TooltipIcon"
+import { LibContext } from "src/lib/components/core/LibContext"
 
 import {
   StyledHeaderContainer,
@@ -154,7 +154,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
 
   const { addScriptFinishedHandler, removeScriptFinishedHandler } =
-    React.useContext(AppContext)
+    React.useContext(LibContext)
   const onScriptFinished = React.useCallback(() => {
     if (target !== null) {
       // wait a bit for everything on page to finish loading

@@ -17,7 +17,7 @@
 import React from "react"
 
 import { PageConfig } from "src/lib/proto"
-import { baseTheme, ThemeConfig } from "src/lib/theme"
+import { ThemeConfig } from "src/lib/theme"
 
 export interface Props {
   /**
@@ -69,30 +69,6 @@ export interface Props {
    */
   showColoredLine: boolean
 
-  /** True if the app is in full-screen mode. */
-  isFullScreen: boolean
-
-  /** Function that sets the `isFullScreen` property. */
-  setFullScreen: (value: boolean) => void
-
-  /**
-   * Add a callback that will be called every time the app's script finishes
-   * executing.
-   */
-  addScriptFinishedHandler: (func: () => void) => void
-
-  /** Remove a previously-added scriptFinishedHandler callback. */
-  removeScriptFinishedHandler: (func: () => void) => void
-
-  /** The currently active app theme. */
-  activeTheme: ThemeConfig
-
-  /**
-   * Set the app's active theme locally and send it the app's host (if any).
-   * @see App.setAndSendTheme
-   */
-  setTheme: (theme: ThemeConfig) => void
-
   /** List of all available themes. */
   availableThemes: ThemeConfig[]
 
@@ -120,12 +96,6 @@ export const AppContext = React.createContext<Props>({
   showFooter: false,
   showToolbar: false,
   showColoredLine: false,
-  isFullScreen: false,
-  setFullScreen: () => {},
-  addScriptFinishedHandler: () => {},
-  removeScriptFinishedHandler: () => {},
-  activeTheme: baseTheme,
-  setTheme: () => {},
   availableThemes: [],
   addThemes: () => {},
   sidebarChevronDownshift: 0,
