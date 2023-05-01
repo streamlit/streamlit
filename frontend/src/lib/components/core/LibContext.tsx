@@ -42,6 +42,15 @@ export interface Props {
    * @see App.setAndSendTheme
    */
   setTheme: (theme: ThemeConfig) => void
+
+  /** List of all available themes. */
+  availableThemes: ThemeConfig[]
+
+  /**
+   * Call to add additional themes to the app.
+   * @see ThemeCreatorDialog
+   */
+  addThemes: (themes: ThemeConfig[]) => void
 }
 
 export const LibContext = React.createContext<Props>({
@@ -51,4 +60,6 @@ export const LibContext = React.createContext<Props>({
   removeScriptFinishedHandler: () => {},
   activeTheme: baseTheme,
   setTheme: () => {},
+  availableThemes: [],
+  addThemes: () => {},
 })

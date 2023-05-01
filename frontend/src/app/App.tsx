@@ -1565,8 +1565,6 @@ export class App extends PureComponent<Props, State> {
         value={{
           initialSidebarState,
           wideMode: userSettings.wideMode,
-          availableThemes: this.props.theme.availableThemes,
-          addThemes: this.props.theme.addThemes,
           sidebarChevronDownshift:
             this.props.hostCommunication.currentState.sidebarChevronDownshift,
           embedded: isEmbed(),
@@ -1585,6 +1583,8 @@ export class App extends PureComponent<Props, State> {
             removeScriptFinishedHandler: this.removeScriptFinishedHandler,
             activeTheme: this.props.theme.activeTheme,
             setTheme: this.setAndSendTheme,
+            availableThemes: this.props.theme.availableThemes,
+            addThemes: this.props.theme.addThemes,
           }}
         >
           <HotKeys

@@ -17,7 +17,6 @@
 import React from "react"
 
 import { PageConfig } from "src/lib/proto"
-import { ThemeConfig } from "src/lib/theme"
 
 export interface Props {
   /**
@@ -69,15 +68,6 @@ export interface Props {
    */
   showColoredLine: boolean
 
-  /** List of all available themes. */
-  availableThemes: ThemeConfig[]
-
-  /**
-   * Call to add additional themes to the app.
-   * @see ThemeCreatorDialog
-   */
-  addThemes: (themes: ThemeConfig[]) => void
-
   /**
    * If non-zero, this is the number of pixels that the sidebar's
    * "chevron" icon is shifted. (If sidebarChevronDownshift is 0, then
@@ -96,7 +86,5 @@ export const AppContext = React.createContext<Props>({
   showFooter: false,
   showToolbar: false,
   showColoredLine: false,
-  availableThemes: [],
-  addThemes: () => {},
   sidebarChevronDownshift: 0,
 })

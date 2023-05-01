@@ -18,7 +18,7 @@ import React from "react"
 import PropTypes from "prop-types"
 import { createPresetThemes, lightTheme, darkTheme } from "src/lib/theme"
 import { shallow } from "src/lib/test_util"
-import { Props as ContextProps } from "src/lib/components/core/AppContext"
+import { Props as LibContextProps } from "src/lib/components/core/LibContext"
 import UISelectbox from "src/lib/components/shared/Dropdown"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 
@@ -29,8 +29,8 @@ const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()
 
 const getContext = (
-  extend?: Partial<ContextProps>
-): Partial<ContextProps> => ({
+  extend?: Partial<LibContextProps>
+): Partial<LibContextProps> => ({
   activeTheme: lightTheme,
   setTheme: mockSetTheme,
   availableThemes: [],
