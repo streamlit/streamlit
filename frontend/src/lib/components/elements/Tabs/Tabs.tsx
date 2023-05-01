@@ -49,7 +49,6 @@ function Tabs(props: TabProps): ReactElement {
 
   const TAB_HEIGHT = "2.5rem"
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS
-  console.error(props.node)
   return (
     <StyledTabContainer
       isOverflowing={isOverflowing}
