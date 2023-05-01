@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React from "react"
 import { mount } from "src/lib/test_util"
 import { BlockNode } from "src/lib/AppNode"
 import { Block as BlockProto } from "src/lib/proto"

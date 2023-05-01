@@ -19,9 +19,7 @@ import { useTheme } from "@emotion/react"
 import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
 
 import { BlockNode, AppNode } from "src/lib/AppNode"
-import VerticalBlock, {
-  BlockPropsWithoutWidth,
-} from "src/lib/components/core/Block"
+import { BlockPropsWithoutWidth } from "src/lib/components/core/Block"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 
 import { StyledTabContainer } from "./styled-components"
@@ -30,7 +28,7 @@ export interface TabProps extends BlockPropsWithoutWidth {
   widgetsDisabled: boolean
   node: BlockNode
   isStale: boolean
-  renderTabContent: (childProps) => ReactElement
+  renderTabContent: (childProps: any) => ReactElement
 }
 
 function Tabs(props: TabProps): ReactElement {
@@ -183,7 +181,6 @@ function Tabs(props: TabProps): ReactElement {
               }}
             >
               {props.renderTabContent(childProps)}
-              {/* <VerticalBlock {...childProps}></VerticalBlock> */}
             </UITab>
           )
         })}
