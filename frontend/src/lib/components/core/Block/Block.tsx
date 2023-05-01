@@ -22,7 +22,7 @@ import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/util/utils"
 import withExpandable from "src/lib/hocs/withExpandable"
 import { Form } from "src/lib/components/widgets/Form"
-import Tabs from "src/lib/components/elements/Tabs"
+import Tabs, { TabProps } from "src/lib/components/elements/Tabs"
 
 import {
   BaseBlockProps,
@@ -114,7 +114,10 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   }
 
   if (node.deltaBlock.tabContainer) {
-    const tabsProps = { ...childProps, isStale }
+    const renderTabContent = (mappedChildProps): ReactElement => {
+      return <VerticalBlock {...mappedChildProps}></VerticalBlock>
+    }
+    const tabsProps: TabProps = { ...childProps, isStale, renderTabContent }
     return <Tabs {...tabsProps} />
   }
 
