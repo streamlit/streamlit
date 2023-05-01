@@ -18,7 +18,11 @@
 
 import { LightTheme, lightThemePrimitives } from "baseui"
 import { transparentize } from "color2k"
-import { createBaseUiTheme, createEmotionColors, ThemeConfig } from "src/theme"
+import {
+  createBaseUiTheme,
+  createEmotionColors,
+  ThemeConfig,
+} from "src/lib/theme"
 import {
   breakpoints,
   fonts,
@@ -33,7 +37,7 @@ import {
   spacing,
   zIndices,
   colors,
-} from "src/theme/primitives"
+} from "src/lib/theme/primitives"
 
 const requiredThemeColors = {
   bgColor: colors.white,

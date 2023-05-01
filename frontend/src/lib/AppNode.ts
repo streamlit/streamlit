@@ -27,20 +27,20 @@ import Protobuf, {
   IArrow,
   IArrowNamedDataSet,
   NamedDataSet,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import {
   VegaLiteChartElement,
   WrappedNamedDataset,
-} from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
-import { Quiver } from "src/lib/Quiver"
-import { addRows } from "./dataFrameProto"
-import { ensureError } from "./ErrorHandling"
-import { toImmutableProto } from "./immutableProto"
+} from "src/lib/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
+import { Quiver } from "src/lib/dataframes/Quiver"
+import { addRows } from "./dataframes/dataFrameProto"
+import { ensureError } from "./util/ErrorHandling"
+import { toImmutableProto } from "./util/immutableProto"
 import {
   makeElementWithInfoText,
   makeElementWithErrorText,
   notUndefined,
-} from "./utils"
+} from "./util/utils"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
