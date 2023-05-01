@@ -90,6 +90,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     # Vector Stores:
     "pgvector",
     "faiss",
+    "annoy",
     "pinecone",
     "chromadb",
     "weaviate",
