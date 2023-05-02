@@ -17,7 +17,7 @@ chart-studio==1.1.0
 click==8.1.3
 cloudpickle==2.0.0
 contourpy==1.0.7
-coverage==7.2.4
+coverage==7.2.5
 cryptography==40.0.2
 cx-Oracle==7.3.0
 cycler==0.11.0
@@ -39,7 +39,7 @@ graphviz==0.20.1
 greenlet==2.0.2
 grpcio==1.54.0
 h5py==3.8.0
-hypothesis==6.74.1
+hypothesis==6.75.1
 identify==2.5.23
 idna==3.4
 importlib-metadata==6.6.0
@@ -81,7 +81,7 @@ pkgutil_resolve_name==1.3.10
 platformdirs==3.5.0
 plotly==5.14.1
 pluggy==1.0.0
-pre-commit==3.2.2
+pre-commit==3.3.0
 protobuf==3.19.6
 psycopg2-binary==2.9.6
 py4j==0.10.9.7
@@ -110,7 +110,7 @@ readme-renderer==37.3
 requests==2.29.0
 requests-mock==1.10.0
 requests-oauthlib==1.3.1
-requests-toolbelt==0.10.1
+requests-toolbelt==1.0.0
 retrying==1.3.4
 rfc3986==2.0.0
 rich==13.3.5
@@ -124,7 +124,7 @@ smmap==5.0.0
 snowflake-connector-python==3.0.3
 snowflake-snowpark-python==1.4.0
 sortedcontainers==2.4.0
-SQLAlchemy==1.4.47
+SQLAlchemy==1.4.48
 sqlalchemy2-stubs==0.0.2a34
 tenacity==8.2.2
 tensorboard==2.12.2
@@ -147,10 +147,10 @@ types-protobuf==4.22.0.2
 types-python-dateutil==2.8.19.12
 types-pytz==2023.3.0.0
 types-requests==2.29.0.0
-types-setuptools==67.7.0.0
+types-setuptools==67.7.0.1
 types-toml==0.10.8.6
 types-typed-ast==1.5.8.6
-types-urllib3==1.26.25.11
+types-urllib3==1.26.25.12
 typing_extensions==4.5.0
 tzdata==2023.3
 tzlocal==4.3
@@ -159,6 +159,6 @@ validators==0.20.0
 virtualenv==20.23.0
 watchdog==3.0.0
 webencodings==0.5.1
-Werkzeug==2.3.2
+Werkzeug==2.3.3
 wrapt==1.15.0
 zipp==3.15.0
