@@ -17,10 +17,7 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 
-import Snow, {
-  SnowProps,
-  NUM_FLAKES,
-} from "src/lib/components/elements/Snow/index"
+import Snow, { SnowProps, NUM_FLAKES } from "src/lib/components/elements/Snow"
 
 const getProps = (): SnowProps => ({
   scriptRunId: "51522269",

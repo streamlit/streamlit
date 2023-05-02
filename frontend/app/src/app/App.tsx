@@ -21,7 +21,7 @@ import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
 // Other local imports.
-import { AppContext } from "src/lib/components/core/AppContext"
+import { AppContext } from "src/app/components/AppContext"
 import AppView from "src/app/components/AppView"
 import StatusWidget from "src/app/components/StatusWidget"
 import MainMenu, { isLocalhost } from "src/app/components/MainMenu"
@@ -100,7 +100,6 @@ import { handleFavicon } from "src/lib/components/elements/Favicon"
 
 import {
   createAutoTheme,
-  createPresetThemes,
   createTheme,
   CUSTOM_THEME_NAME,
   getCachedTheme,
@@ -112,7 +111,7 @@ import { DefaultStreamlitEndpoints } from "src/app/connection/DefaultStreamlitEn
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
-import { StyledApp } from "src/styled-components"
+import { StyledApp } from "src/app/styled-components"
 
 import withHostCommunication, {
   HostCommunicationHOC,
@@ -125,6 +124,7 @@ import withScreencast, {
 // Used to import fonts + responsive reboot items
 import "src/assets/css/theme.scss"
 import { ensureError } from "src/lib/util/ErrorHandling"
+import { LibContext } from "src/lib/components/core/LibContext"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -570,12 +570,6 @@ export class App extends PureComponent<Props, State> {
     const { title, favicon, layout, initialSidebarState, menuItems } =
       pageConfig
 
-    this.metricsMgr.enqueue("pageConfigChanged", {
-      favicon,
-      layout,
-      initialSidebarState,
-    })
-
     if (title) {
       this.props.hostCommunication.sendMessage({
         type: "SET_PAGE_TITLE",
@@ -702,19 +696,6 @@ export class App extends PureComponent<Props, State> {
         // if we don't have a pending rerun request, and we don't have
         // a script compilation failure
         scriptRunState = ScriptRunState.NOT_RUNNING
-
-        this.metricsMgr.enqueue(
-          "deltaStats",
-          this.metricsMgr.getAndResetDeltaCounter()
-        )
-
-        const { availableThemes, activeTheme } = this.props.theme
-        const customThemeDefined =
-          availableThemes.length > createPresetThemes().length
-        this.metricsMgr.enqueue("themeStats", {
-          activeThemeName: activeTheme.name,
-          customThemeDefined,
-        })
 
         const customComponentCounter =
           this.metricsMgr.getAndResetCustomComponentCounter()
@@ -873,7 +854,6 @@ export class App extends PureComponent<Props, State> {
       this.props.hostCommunication.currentState.deployedAppMetadata
     )
     this.metricsMgr.setAppHash(newSessionHash)
-    this.metricsMgr.clearDeltaCounter()
 
     this.metricsMgr.enqueue("updateReport", {
       numPages: newSessionProto.appPages.length,
@@ -905,10 +885,6 @@ export class App extends PureComponent<Props, State> {
 
     this.metricsMgr.initialize({
       gatherUsageStats: config.gatherUsageStats,
-    })
-
-    this.metricsMgr.enqueue("createReport", {
-      pythonVersion: this.sessionInfo.current.pythonVersion,
     })
 
     this.handleSessionStatusChanged(initialize.sessionStatus)
@@ -1120,7 +1096,7 @@ export class App extends PureComponent<Props, State> {
     )
 
     // Update metrics
-    this.metricsMgr.handleDeltaMessage(deltaMsg, metadataMsg)
+    this.metricsMgr.handleDeltaMessage(deltaMsg)
 
     if (!this.pendingElementsTimerRunning) {
       this.pendingElementsTimerRunning = true
@@ -1585,14 +1561,6 @@ export class App extends PureComponent<Props, State> {
         value={{
           initialSidebarState,
           wideMode: userSettings.wideMode,
-          isFullScreen,
-          setFullScreen: this.handleFullScreen,
-          addScriptFinishedHandler: this.addScriptFinishedHandler,
-          removeScriptFinishedHandler: this.removeScriptFinishedHandler,
-          activeTheme: this.props.theme.activeTheme,
-          availableThemes: this.props.theme.availableThemes,
-          setTheme: this.setAndSendTheme,
-          addThemes: this.props.theme.addThemes,
           sidebarChevronDownshift:
             this.props.hostCommunication.currentState.sidebarChevronDownshift,
           embedded: isEmbed(),
@@ -1603,89 +1571,106 @@ export class App extends PureComponent<Props, State> {
           showColoredLine: !isEmbed() || isColoredLineDisplayed(),
         }}
       >
-        <HotKeys
-          keyMap={this.keyMap}
-          handlers={this.keyHandlers}
-          attach={window}
-          focused={true}
+        <LibContext.Provider
+          value={{
+            isFullScreen,
+            setFullScreen: this.handleFullScreen,
+            addScriptFinishedHandler: this.addScriptFinishedHandler,
+            removeScriptFinishedHandler: this.removeScriptFinishedHandler,
+            activeTheme: this.props.theme.activeTheme,
+            setTheme: this.setAndSendTheme,
+            availableThemes: this.props.theme.availableThemes,
+            addThemes: this.props.theme.addThemes,
+          }}
         >
-          <StyledApp className={outerDivClass}>
-            {/* The tabindex below is required for testing. */}
-            <Header>
-              {!hideTopBar && (
-                <>
-                  <StatusWidget
-                    connectionState={connectionState}
-                    sessionEventDispatcher={this.sessionEventDispatcher}
-                    scriptRunState={scriptRunState}
-                    rerunScript={this.rerunScript}
-                    stopScript={this.stopScript}
-                    allowRunOnSave={allowRunOnSave}
+          <HotKeys
+            keyMap={this.keyMap}
+            handlers={this.keyHandlers}
+            attach={window}
+            focused={true}
+          >
+            <StyledApp className={outerDivClass}>
+              {/* The tabindex below is required for testing. */}
+              <Header>
+                {!hideTopBar && (
+                  <>
+                    <StatusWidget
+                      connectionState={connectionState}
+                      sessionEventDispatcher={this.sessionEventDispatcher}
+                      scriptRunState={scriptRunState}
+                      rerunScript={this.rerunScript}
+                      stopScript={this.stopScript}
+                      allowRunOnSave={allowRunOnSave}
+                    />
+                    <ToolbarActions
+                      hostToolbarItems={
+                        this.props.hostCommunication.currentState.toolbarItems
+                      }
+                      sendMessageToHost={
+                        this.props.hostCommunication.sendMessage
+                      }
+                    />
+                  </>
+                )}
+                {this.showDeployButton() && (
+                  <DeployButton
+                    onClick={this.deployButtonClicked.bind(this)}
                   />
-                  <ToolbarActions
-                    hostToolbarItems={
-                      this.props.hostCommunication.currentState.toolbarItems
-                    }
-                    sendMessageToHost={
-                      this.props.hostCommunication.sendMessage
-                    }
-                  />
-                </>
-              )}
-              {this.showDeployButton() && (
-                <DeployButton onClick={this.deployButtonClicked.bind(this)} />
-              )}
-              <MainMenu
-                isServerConnected={this.isServerConnected()}
-                quickRerunCallback={this.rerunScript}
-                clearCacheCallback={this.openClearCacheDialog}
-                settingsCallback={this.settingsCallback}
-                aboutCallback={this.aboutCallback}
-                printCallback={this.printCallback}
-                screencastCallback={this.screencastCallback}
-                screenCastState={this.props.screenCast.currentState}
-                hostMenuItems={
-                  this.props.hostCommunication.currentState.menuItems
-                }
-                developmentMode={developmentMode}
-                sendMessageToHost={this.props.hostCommunication.sendMessage}
-                gitInfo={gitInfo}
-                showDeployError={this.showDeployError}
-                closeDialog={this.closeDialog}
-                isDeployErrorModalOpen={
-                  this.state.dialog?.type === DialogType.DEPLOY_ERROR
-                }
-                loadGitInfo={this.sendLoadGitInfoBackMsg}
-                canDeploy={this.sessionInfo.isSet && !this.sessionInfo.isHello}
-                menuItems={menuItems}
-                metricsMgr={this.metricsMgr}
-                toolbarMode={this.state.toolbarMode}
-              />
-            </Header>
+                )}
+                <MainMenu
+                  isServerConnected={this.isServerConnected()}
+                  quickRerunCallback={this.rerunScript}
+                  clearCacheCallback={this.openClearCacheDialog}
+                  settingsCallback={this.settingsCallback}
+                  aboutCallback={this.aboutCallback}
+                  printCallback={this.printCallback}
+                  screencastCallback={this.screencastCallback}
+                  screenCastState={this.props.screenCast.currentState}
+                  hostMenuItems={
+                    this.props.hostCommunication.currentState.menuItems
+                  }
+                  developmentMode={developmentMode}
+                  sendMessageToHost={this.props.hostCommunication.sendMessage}
+                  gitInfo={gitInfo}
+                  showDeployError={this.showDeployError}
+                  closeDialog={this.closeDialog}
+                  isDeployErrorModalOpen={
+                    this.state.dialog?.type === DialogType.DEPLOY_ERROR
+                  }
+                  loadGitInfo={this.sendLoadGitInfoBackMsg}
+                  canDeploy={
+                    this.sessionInfo.isSet && !this.sessionInfo.isHello
+                  }
+                  menuItems={menuItems}
+                  metricsMgr={this.metricsMgr}
+                  toolbarMode={this.state.toolbarMode}
+                />
+              </Header>
 
-            <AppView
-              endpoints={this.endpoints}
-              sessionInfo={this.sessionInfo}
-              sendMessageToHost={this.props.hostCommunication.sendMessage}
-              elements={elements}
-              scriptRunId={scriptRunId}
-              scriptRunState={scriptRunState}
-              widgetMgr={this.widgetMgr}
-              widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
-              uploadClient={this.uploadClient}
-              componentRegistry={this.componentRegistry}
-              formsData={this.state.formsData}
-              appPages={this.state.appPages}
-              onPageChange={this.onPageChange}
-              currentPageScriptHash={currentPageScriptHash}
-              hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
-              pageLinkBaseUrl={
-                this.props.hostCommunication.currentState.pageLinkBaseUrl
-              }
-            />
-            {renderedDialog}
-          </StyledApp>
-        </HotKeys>
+              <AppView
+                endpoints={this.endpoints}
+                sessionInfo={this.sessionInfo}
+                sendMessageToHost={this.props.hostCommunication.sendMessage}
+                elements={elements}
+                scriptRunId={scriptRunId}
+                scriptRunState={scriptRunState}
+                widgetMgr={this.widgetMgr}
+                widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
+                uploadClient={this.uploadClient}
+                componentRegistry={this.componentRegistry}
+                formsData={this.state.formsData}
+                appPages={this.state.appPages}
+                onPageChange={this.onPageChange}
+                currentPageScriptHash={currentPageScriptHash}
+                hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
+                pageLinkBaseUrl={
+                  this.props.hostCommunication.currentState.pageLinkBaseUrl
+                }
+              />
+              {renderedDialog}
+            </StyledApp>
+          </HotKeys>
+        </LibContext.Provider>
       </AppContext.Provider>
     )
   }

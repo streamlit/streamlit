@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement, ReactNode, useCallback } from "react"
+import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import Modal from "./DeployModal"
 import Card from "./DeployCard"
 import ListElement from "./DeployListElement"
@@ -31,7 +32,7 @@ import Rocket from "src/assets/svg/rocket.svg"
 import {
   STREAMLIT_COMMUNITY_CLOUD_DOCS_URL,
   STREAMLIT_DEPLOY_TUTORIAL_URL,
-} from "src/urls"
+} from "src/lib/urls"
 import {
   DetachedHead,
   ModuleIsNotAdded,
@@ -39,7 +40,6 @@ import {
 } from "src/app/components/StreamlitDialog/DeployErrorDialogs"
 import { getDeployAppUrl } from "src/app/components/MainMenu/MainMenu"
 import { GitInfo, IGitInfo } from "src/lib/proto"
-import { MetricsManager } from "src/lib/MetricsManager"
 
 const { GitStates } = GitInfo
 
@@ -53,7 +53,7 @@ export interface DeployDialogProps {
   ) => void
   isDeployErrorModalOpen: boolean
   gitInfo: IGitInfo | null
-  metricsMgr: MetricsManager
+  metricsMgr: SegmentMetricsManager
 }
 
 export function DeployDialog(props: DeployDialogProps): ReactElement {

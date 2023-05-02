@@ -30,7 +30,7 @@ import { debounce } from "src/lib/util/utils"
 import Icon from "src/lib/components/shared/Icon"
 import { EmotionTheme } from "src/lib/theme"
 import themeColors from "src/lib/theme/emotionBaseTheme/themeColors"
-import { CAMERA_PERMISSION_URL } from "src/urls"
+import { CAMERA_PERMISSION_URL } from "src/lib/urls"
 
 import CameraInputButton from "./CameraInputButton"
 import SwitchFacingModeButton, { FacingMode } from "./SwitchFacingModeButton"

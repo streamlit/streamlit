@@ -16,10 +16,18 @@
 
 import ObjectColumn from "./ObjectColumn"
 import TextColumn from "./TextColumn"
-import BooleanColumn from "./BooleanColumn"
-import CategoricalColumn from "./CategoricalColumn"
+import CheckboxColumn from "./CheckboxColumn"
+import SelectboxColumn from "./SelectboxColumn"
 import ListColumn from "./ListColumn"
 import NumberColumn from "./NumberColumn"
+import LinkColumn from "./LinkColumn"
+import ImageColumn from "./ImageColumn"
+import ProgressColumn from "./ProgressColumn"
+import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
+import { LineChartColumn, BarChartColumn } from "./ChartColumn"
+
+import { DateTimeCellRenderer } from "./cells/DateTimeCell"
+export { ImageCellEditor } from "./cells/ImageCellEditor"
 
 import { ColumnCreator } from "./utils"
 
@@ -27,23 +35,43 @@ export * from "./utils"
 
 /**
  * All available column types need to be registered here.
+ *
+ * These names must match the column names used in the backend.
  */
 export const ColumnTypes = new Map<string, ColumnCreator>(
   Object.entries({
     object: ObjectColumn,
     text: TextColumn,
-    boolean: BooleanColumn,
-    categorical: CategoricalColumn,
+    checkbox: CheckboxColumn,
+    selectbox: SelectboxColumn,
     list: ListColumn,
     number: NumberColumn,
+    link: LinkColumn,
+    datetime: DateTimeColumn,
+    date: DateColumn,
+    time: TimeColumn,
+    line_chart: LineChartColumn,
+    bar_chart: BarChartColumn,
+    image: ImageColumn,
+    progress: ProgressColumn,
   })
 )
+
+export const CustomCells = [DateTimeCellRenderer]
 
 export {
   ObjectColumn,
   TextColumn,
-  BooleanColumn,
-  CategoricalColumn,
+  CheckboxColumn,
+  SelectboxColumn,
   ListColumn,
   NumberColumn,
+  LinkColumn,
+  DateTimeColumn,
+  DateColumn,
+  TimeColumn,
+  LineChartColumn,
+  BarChartColumn,
+  ImageColumn,
+  ProgressColumn,
 }

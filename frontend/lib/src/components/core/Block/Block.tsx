@@ -17,12 +17,12 @@
 import React, { ReactElement } from "react"
 import { AutoSizer } from "react-virtualized"
 
-import { Block as BlockProto } from "src/proto"
-import { BlockNode, AppNode, ElementNode } from "src/AppNode"
-import { getElementWidgetID } from "src/util/utils"
-import withExpandable from "src/hocs/withExpandable"
-import { Form } from "src/components/widgets/Form"
-import Tabs from "src/components/elements/Tabs"
+import { Block as BlockProto } from "src/lib/proto"
+import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
+import { getElementWidgetID } from "src/lib/util/utils"
+import withExpandable from "src/lib/hocs/withExpandable"
+import { Form } from "src/lib/components/widgets/Form"
+import Tabs, { TabProps } from "src/lib/components/elements/Tabs"
 
 import {
   BaseBlockProps,
@@ -114,7 +114,14 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   }
 
   if (node.deltaBlock.tabContainer) {
-    const tabsProps = { ...childProps, isStale }
+    const renderTabContent = (
+      mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
+    ): ReactElement => {
+      // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      return <VerticalBlock {...mappedChildProps}></VerticalBlock>
+    }
+    const tabsProps: TabProps = { ...childProps, isStale, renderTabContent }
     return <Tabs {...tabsProps} />
   }
 
