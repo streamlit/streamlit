@@ -51,6 +51,8 @@ _OBJECT_NAME_MAPPING: Final = {
     "pandas.io.formats.style.Styler": "PandasStyler",
     "pandas.core.indexes.base.Index": "PandasIndex",
     "pandas.core.series.Series": "PandasSeries",
+    "streamlit.connections.snowpark_connection.SnowparkConnection": "SnowparkConnection",
+    "streamlit.connections.sql_connection.SQLConnection": "SQLConnection",
 }
 
 # A list of dependencies to check for attribution

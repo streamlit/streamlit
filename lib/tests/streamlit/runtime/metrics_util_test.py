@@ -24,7 +24,7 @@ from parameterized import parameterized
 
 import streamlit as st
 import streamlit.components.v1 as components
-from streamlit.connections import SnowparkConnection
+from streamlit.connections import SnowparkConnection, SQLConnection
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.legacy_caching import caching
@@ -116,6 +116,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             (datetime.date, "datetime.date"),
             (pd.DataFrame, "DataFrame"),
             (SnowparkConnection, "SnowparkConnection"),
+            (SQLConnection, "SQLConnection"),
         ]
     )
     def test_get_type_name(self, obj: object, expected_type: str):
