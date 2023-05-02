@@ -14,5 +14,14 @@
  * limitations under the License.
  */
 
-export { default } from "./Tabs"
-export type { TabProps } from "./Tabs"
+/**
+ * Returns true if a given arrow type name is an integer type.
+ */
+export function isIntegerType(arrowTypeName: string): boolean {
+  return (
+    (arrowTypeName.startsWith("int") &&
+      !arrowTypeName.startsWith("interval")) ||
+    arrowTypeName === "range" ||
+    arrowTypeName.startsWith("uint")
+  )
+}

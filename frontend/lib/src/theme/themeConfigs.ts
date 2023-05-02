@@ -20,7 +20,6 @@ import emotionBaseTheme from "./emotionBaseTheme"
 import emotionLightTheme from "./emotionLightTheme"
 import emotionDarkTheme from "./emotionDarkTheme"
 import { ThemeConfig } from "./types"
-import { AUTO_THEME_NAME, getSystemTheme } from "./utils"
 
 export const baseTheme: ThemeConfig = {
   name: "base",
@@ -42,15 +41,3 @@ export const lightTheme: ThemeConfig = {
   basewebTheme: baseuiLightTheme,
   primitives: lightThemePrimitives,
 }
-
-export const createAutoTheme = (): ThemeConfig => ({
-  ...getSystemTheme(),
-  name: AUTO_THEME_NAME,
-})
-
-// Update auto theme in case it has changed
-export const createPresetThemes = (): ThemeConfig[] => [
-  createAutoTheme(),
-  lightTheme,
-  darkTheme,
-]

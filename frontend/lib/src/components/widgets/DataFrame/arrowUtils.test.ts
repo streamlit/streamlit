@@ -46,6 +46,7 @@ import {
   getAllColumnsFromArrow,
   getCellFromArrow,
 } from "./arrowUtils"
+import { isIntegerType } from "./isIntegerType"
 
 const MOCK_TEXT_COLUMN = TextColumn({
   id: "1",
