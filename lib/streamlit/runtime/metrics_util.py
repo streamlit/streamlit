@@ -96,6 +96,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "weaviate",
     "qdrant_client",
     # Others:
+    "whisper",
     "huggingface_hub",
     "datasets",
     "snowflake",
