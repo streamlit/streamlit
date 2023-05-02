@@ -20,7 +20,7 @@ import { BlockNode } from "src/lib/AppNode"
 import { Block as BlockProto } from "src/lib/proto"
 
 import { Tabs as UITabs } from "baseui/tabs-motion"
-import Tabs, { Props } from "./Tabs"
+import Tabs, { TabProps } from "./Tabs"
 
 function makeTab(label: string, children: BlockNode[] = []): BlockNode {
   return new BlockNode(
@@ -36,12 +36,13 @@ function makeTabsNode(tabs: number): BlockNode {
   )
 }
 
-const getProps = (props?: Partial<Props>): Props =>
+const getProps = (props?: Partial<TabProps>): TabProps =>
   Object({
     widgetsDisabled: false,
     node: makeTabsNode(5),
     isStale: false,
     ...props,
+    renderTabContent: jest.fn(),
   })
 
 describe("st.tabs", () => {

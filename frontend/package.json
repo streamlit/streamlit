@@ -173,6 +173,7 @@
     "axios-mock-adapter": "^1.21.2",
     "babel-plugin-emotion": "^11.0.0",
     "buffer": "^6.0.3",
+    "circular-dependency-plugin": "^5.2.2",
     "cypress": "^9.7.0",
     "cypress-file-upload": "^5.0.8",
     "cypress-image-snapshot": "^4.0.1",

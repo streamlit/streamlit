@@ -15,7 +15,7 @@
  */
 
 import emotionBaseTheme from "src/lib/theme/emotionBaseTheme"
-import { createEmotionColors } from "src/lib/theme/utils"
+import { createEmotionColors } from "src/lib/theme/getColors"
 import genericColors from "./themeColors"
 
 export default {

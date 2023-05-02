@@ -20,7 +20,7 @@ import {
 } from "baseui"
 import emotionLightTheme from "./emotionLightTheme"
 import emotionDarkTheme from "./emotionDarkTheme"
-import { createBaseUiTheme } from "./utils"
+import { createBaseUiTheme } from "./createThemeUtil"
 
 export const baseuiLightTheme = createBaseUiTheme(
   emotionLightTheme,
