@@ -217,7 +217,7 @@ class ForwardMsgCache(CacheStatsProvider):
         age = entry.get_session_ref_age(session, script_run_count)
         return age <= int(config.get_option("global.maxCachedMessageAge"))
 
-    def remove_expired_session_entries(
+    def remove_expired_entries_for_session(
         self, session: "AppSession", script_run_count: int
     ) -> None:
         """Remove any cached messages that have expired from the given session.

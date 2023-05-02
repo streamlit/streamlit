@@ -131,14 +131,14 @@ class ForwardMsgCacheTest(unittest.TestCase):
 
         # Remove session1's expired entries. This should not remove the
         # entry from the cache, because session2 still has a reference to it.
-        cache.remove_expired_session_entries(session1, runcount1)
+        cache.remove_expired_entries_for_session(session1, runcount1)
         self.assertFalse(cache.has_message_reference(msg, session1, runcount1))
         self.assertTrue(cache.has_message_reference(msg, session2, runcount2))
 
         # Expire session2's reference. The message should no longer be
         # in the cache at all.
         runcount2 += 2
-        cache.remove_expired_session_entries(session2, runcount2)
+        cache.remove_expired_entries_for_session(session2, runcount2)
         self.assertIsNone(cache.get_message(msg_hash))
 
     def test_cache_stats_provider(self):
