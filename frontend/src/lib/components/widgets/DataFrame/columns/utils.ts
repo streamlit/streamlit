@@ -25,6 +25,12 @@ import {
 } from "@glideapps/glide-data-grid"
 import { toString, merge, isArray } from "lodash"
 import numbro from "numbro"
+import { sprintf } from "sprintf-js"
+import { intlFormatDistance, formatRelative } from "date-fns"
+import { formatInTimeZone } from "date-fns-tz"
+import moment, { Moment } from "moment"
+import "moment-duration-format"
+import "moment-timezone"
 
 import { Type as ArrowType } from "src/lib/dataframes/Quiver"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/util/utils"
@@ -82,9 +88,13 @@ export interface BaseColumn extends BaseColumnProps {
   // smart: Detects if value is a number or a string and sorts accordingly.
   // raw: Sorts based on the actual type of the cell data value.
   readonly sortMode: "default" | "raw" | "smart"
+  // Validate the input data for compatibility with the column type:
+  // Either returns a boolean indicating if the data is valid or not, or
+  // returns the corrected value.
+  validateInput?(data?: any): boolean | any
   // Get a cell with the provided data for the column type:
-  getCell(data?: any): GridCell
-  // Get the raw cell of a provided cell:
+  getCell(data?: any, validate?: boolean): GridCell
+  // Get the raw value of the given cell:
   getCellValue(cell: GridCell): any | null
 }
 
@@ -400,29 +410,218 @@ export function toSafeNumber(value: any): number | null {
 }
 
 /**
- * Formats the given number to a string with the given maximum precision.
+ * Formats the given number to a string based on a provided format or the default format.
  *
  * @param value - The number to format.
- * @param maxPrecision - The maximum number of decimals to show.
- * @param keepTrailingZeros - Whether to keep trailing zeros.
+ * @param format - The format to use. If not provided, the default format is used.
+ * @param maxPrecision - The maximum number of decimals to show. This is only used by the default format.
+ *                     If not provided, the default is 4 decimals and trailing zeros are hidden.
  *
  * @returns The formatted number as a string.
  */
 export function formatNumber(
   value: number,
-  maxPrecision = 4,
-  keepTrailingZeros = false
+  format?: string | undefined,
+  maxPrecision?: number | undefined
 ): string {
-  if (!Number.isNaN(value) && Number.isFinite(value)) {
+  if (Number.isNaN(value) || !Number.isFinite(value)) {
+    return ""
+  }
+
+  if (isNullOrUndefined(format) || format === "") {
     if (maxPrecision === 0) {
       // Numbro is unable to format the number with 0 decimals.
       value = Math.round(value)
     }
     return numbro(value).format(
-      keepTrailingZeros
+      notNullOrUndefined(maxPrecision)
         ? `0,0.${"0".repeat(maxPrecision)}`
-        : `0,0.[${"0".repeat(maxPrecision)}]`
+        : `0,0.[0000]` // If no precision is given, use 4 decimals and hide trailing zeros
     )
   }
-  return ""
+
+  if (format === "percent") {
+    return new Intl.NumberFormat(undefined, {
+      style: "percent",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value)
+  } else if (["compact", "scientific", "engineering"].includes(format)) {
+    return new Intl.NumberFormat(undefined, {
+      notation: format as any,
+    }).format(value)
+  }
+  return sprintf(format, value)
+}
+
+/**
+ * Formats the given date to a string with the given format.
+ *
+ * @param momentDate The moment date to format.
+ * @param format The format to use.
+ *   If the format is `localized` the date will be formatted according to the user's locale.
+ *   If the format is `relative` the date will be formatted as a relative time (e.g. "2 hours ago").
+ *   Otherwise, it is interpreted as date-fns format string: https://date-fns.org/v2.29.3/docs/format
+ * @returns The formatted date as a string.
+ */
+export function formatMoment(momentDate: Moment, format: string): string {
+  if (format === "localized") {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "medium",
+    }).format(momentDate.toDate())
+  } else if (format === "distance") {
+    return intlFormatDistance(momentDate.toDate(), new Date())
+  } else if (format === "relative") {
+    return formatRelative(momentDate.toDate(), new Date())
+  }
+  const timezone = momentDate.tz()
+  if (notNullOrUndefined(timezone)) {
+    // Format based on the timezone IANA name:
+    return formatInTimeZone(momentDate.toDate(), timezone, format)
+  }
+
+  const utcOffset = momentDate.utcOffset()
+  if (utcOffset !== 0) {
+    // Format based on the UTC offset:
+    return formatInTimeZone(
+      momentDate.toDate(),
+      momentDate.format("Z"),
+      format
+    )
+  }
+  return formatInTimeZone(momentDate.toDate(), "UTC", format)
+}
+
+/**
+ * Converts the given value of unknown type to a date without
+ * the risks of any exceptions.
+ *
+ * Note: Unix timestamps are only supported in seconds.
+ *
+ * @param value - The value to convert to a date.
+ *
+ * @returns The converted date or null if the value cannot be interpreted as a date.
+ */
+export function toSafeDate(value: any): Date | null | undefined {
+  if (isNullOrUndefined(value)) {
+    return null
+  }
+
+  // Return the value as-is if it is already a date
+  if (value instanceof Date) {
+    if (!isNaN(value.getTime())) {
+      return value
+    }
+    return undefined
+  }
+
+  if (typeof value === "string" && value.trim().length === 0) {
+    // Empty string should return null
+    return null
+  }
+
+  try {
+    const parsedTimestamp = Number(value)
+    if (!isNaN(parsedTimestamp)) {
+      // Unix timestamps can be have different units.
+      // As default, we handle the unit as second, but
+      // if it larger than a certain threshold, we assume
+      // a different unit. This is not 100% accurate, but
+      // should be good enough since it is unlikely that
+      // users are actually referring to years >= 5138.
+      let timestampInSeconds = parsedTimestamp
+      if (parsedTimestamp >= 10 ** 18) {
+        // Assume that the timestamp is in nanoseconds
+        // and adjust to seconds
+        timestampInSeconds = parsedTimestamp / 1000 ** 3
+      } else if (parsedTimestamp >= 10 ** 15) {
+        // Assume that the timestamp is in microseconds
+        // and adjust to seconds
+        timestampInSeconds = parsedTimestamp / 1000 ** 2
+      } else if (parsedTimestamp >= 10 ** 12) {
+        // Assume that the timestamp is in milliseconds
+        // and adjust to seconds
+        timestampInSeconds = parsedTimestamp / 1000
+      }
+
+      // Parse it as a unix timestamp in seconds
+      const parsedMomentDate = moment.unix(timestampInSeconds).utc()
+      if (parsedMomentDate.isValid()) {
+        return parsedMomentDate.toDate()
+      }
+    }
+
+    if (typeof value === "string") {
+      // Try to parse string via momentJS:
+      const parsedMomentDate = moment.utc(value)
+      if (parsedMomentDate.isValid()) {
+        return parsedMomentDate.toDate()
+      }
+      // The pasted value was not a valid date string
+      // Try to interpret value as time string instead (HH:mm:ss)
+      const parsedMomentTime = moment.utc(value, [
+        moment.HTML5_FMT.TIME_MS, // HH:mm:ss.SSS
+        moment.HTML5_FMT.TIME_SECONDS, // HH:mm:ss
+        moment.HTML5_FMT.TIME, // HH:mm
+      ])
+      if (parsedMomentTime.isValid()) {
+        return parsedMomentTime.toDate()
+      }
+    }
+  } catch (error) {
+    return undefined
+  }
+
+  // Unable to interpret this value as a date:
+  return undefined
+}
+
+/**
+ * Count the number of decimals in a number.
+ *
+ * @param {number} value - The number to count the decimals for.
+ *
+ * @returns {number} The number of decimals.
+ */
+export function countDecimals(value: number): number {
+  if (value % 1 === 0) {
+    return 0
+  }
+
+  let numberStr = value.toString()
+
+  if (numberStr.indexOf("e") !== -1) {
+    // Handle scientific notation
+    numberStr = value.toLocaleString("fullwide", {
+      useGrouping: false,
+      maximumFractionDigits: 20,
+    })
+  }
+
+  if (numberStr.indexOf(".") === -1) {
+    // Fallback to 0 decimals, this can happen with
+    // extremely large or small numbers
+    return 0
+  }
+
+  return numberStr.split(".")[1].length
+}
+
+/**
+ * Truncates a number to a specified number of decimal places without rounding.
+ *
+ * @param {number} value - The number to be truncated.
+ * @param {number} decimals - The number of decimal places to preserve after truncation.
+ *
+ * @returns {number} The truncated number.
+ *
+ * @example
+ * truncateDecimals(3.14159265, 2); // returns 3.14
+ * truncateDecimals(123.456, 0); // returns 123
+ */
+export function truncateDecimals(value: number, decimals: number): number {
+  return decimals === 0
+    ? Math.trunc(value)
+    : Math.trunc(value * 10 ** decimals) / 10 ** decimals
 }

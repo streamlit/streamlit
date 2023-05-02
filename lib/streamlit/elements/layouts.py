@@ -416,8 +416,3 @@ class LayoutsMixin:
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-    # Deprecated beta_ functions
-    beta_container = deprecate_func_name(container, "beta_container", "2021-11-02")
-    beta_expander = deprecate_func_name(expander, "beta_expander", "2021-11-02")
-    beta_columns = deprecate_func_name(columns, "beta_columns", "2021-11-02")

@@ -55,13 +55,64 @@ export function isComponentStale(
 }
 
 export interface BaseBlockProps {
+  /**
+   * The app's StreamlitEndpoints instance. Exposes non-websocket endpoint logic
+   * used by various Streamlit elements.
+   */
   endpoints: StreamlitEndpoints
+
+  /**
+   * The app's SessionInfo instance. Exposes session-specific properties.
+   */
   sessionInfo: SessionInfo
-  scriptRunId: string
-  scriptRunState: ScriptRunState
+
+  /**
+   * The app's WidgetStateManager instance. Used by all widget elements to
+   * store and retrieve widget state. When the user interacts with a widget,
+   * the WidgetStateManager initiates the "rerun BackMsg" data flow to kick
+   * off a script rerun.
+   */
   widgetMgr: WidgetStateManager
+
+  /**
+   * The app's FileUploadClient instance. Used by the FileUploader component
+   * to send files to the Streamlit backend.
+   */
   uploadClient: FileUploadClient
-  widgetsDisabled: boolean
+
+  /**
+   * The app's ComponentRegistry instance. Dispatches "Custom Component"
+   * iframe messages to ComponentInstances.
+   */
   componentRegistry: ComponentRegistry
+
+  /**
+   * The ID of the current "script run". When a Streamlit script is re-run
+   * (usually as a result of the user interacting with a widget), the Streamlit
+   * backend sends a new scriptRunId to the frontend. When the script run ends,
+   * the frontend discards "stale" elements (that is, elements with a non-current
+   * scriptRunId).
+   */
+  scriptRunId: string
+
+  /**
+   * The app's current ScriptRunState. This is used in combination with
+   * scriptRunId to prune stale elements. It's also used by the app to
+   * display the "running man" indicator when the app's script is being re-run.
+   */
+  scriptRunState: ScriptRunState
+
+  /**
+   * If true, all widgets will be disabled and the app will be non-interactive.
+   * This is generally set when the frontend is disconnected from the backend.
+   */
+  widgetsDisabled: boolean
+
+  /**
+   * Data about all forms in the app. The WidgetStateManager creates its own
+   * internal FormsData instance, and calls a callback (`formsDataChanged`)
+   * when forms are updated. This FormsData instance should be updated
+   * from that callback.
+   */
   formsData: FormsData
 }

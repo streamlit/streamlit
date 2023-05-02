@@ -524,7 +524,6 @@ class NumberInput(Widget):
     min_value: Number
     max_value: Number
     step: Number
-    placeholder: str
 
     def __init__(self, proto: NumberInputProto, root: ElementTree):
         self.proto = proto
@@ -1014,6 +1013,101 @@ class Block:
     def key(self) -> str | None:
         return None
 
+    # We could implement these using __getattr__ but that would have
+    # much worse type information.
+    @property
+    def button(self) -> Sequence[Button]:
+        return self.get("button")
+
+    @property
+    def caption(self) -> Sequence[Caption]:
+        return self.get("caption")
+
+    @property
+    def checkbox(self) -> Sequence[Checkbox]:
+        return self.get("checkbox")
+
+    @property
+    def code(self) -> Sequence[Code]:
+        return self.get("code")
+
+    @property
+    def color_picker(self) -> Sequence[ColorPicker]:
+        return self.get("color_picker")
+
+    @property
+    def date_input(self) -> Sequence[DateInput]:
+        return self.get("date_input")
+
+    @property
+    def divider(self) -> Sequence[Divider]:
+        return self.get("divider")
+
+    @property
+    def exception(self) -> Sequence[Exception]:
+        return self.get("exception")
+
+    @property
+    def header(self) -> Sequence[Header]:
+        return self.get("header")
+
+    @property
+    def latex(self) -> Sequence[Latex]:
+        return self.get("latex")
+
+    @property
+    def markdown(self) -> Sequence[Markdown]:
+        return self.get("markdown")
+
+    @property
+    def multiselect(self) -> Sequence[Multiselect[Any]]:
+        return self.get("multiselect")
+
+    @property
+    def number_input(self) -> Sequence[NumberInput]:
+        return self.get("number_input")
+
+    @property
+    def radio(self) -> Sequence[Radio[Any]]:
+        return self.get("radio")
+
+    @property
+    def select_slider(self) -> Sequence[SelectSlider[Any]]:
+        return self.get("select_slider")
+
+    @property
+    def selectbox(self) -> Sequence[Selectbox[Any]]:
+        return self.get("selectbox")
+
+    @property
+    def slider(self) -> Sequence[Slider[Any]]:
+        return self.get("slider")
+
+    @property
+    def subheader(self) -> Sequence[Subheader]:
+        return self.get("subheader")
+
+    @property
+    def text(self) -> Sequence[Text]:
+        return self.get("text")
+
+    @property
+    def text_area(self) -> Sequence[TextArea]:
+        return self.get("text_area")
+
+    @property
+    def text_input(self) -> Sequence[TextInput]:
+        return self.get("text_input")
+
+    @property
+    def time_input(self) -> Sequence[TimeInput]:
+        return self.get("time_input")
+
+    @property
+    def title(self) -> Sequence[Title]:
+        return self.get("title")
+
+    # These overloads improve type information for code calling `get`
     @overload
     def get(self, element_type: Literal["button"]) -> Sequence[Button]:
         ...
@@ -1167,6 +1261,18 @@ class ElementTree(Block):
         self.children = {}
         self.root = self
         self.type = "root"
+
+    @property
+    def main(self) -> Block:
+        m = self[0]
+        assert isinstance(m, Block)
+        return m
+
+    @property
+    def sidebar(self) -> Block:
+        s = self[1]
+        assert isinstance(s, Block)
+        return s
 
     @property
     def session_state(self) -> SessionState:
