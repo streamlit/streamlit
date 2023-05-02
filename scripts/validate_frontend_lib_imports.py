@@ -25,13 +25,11 @@ import os
 import re
 import sys
 
-ILLEGAL_IMPORTS = [
-    re.compile(r"from\s+['\"]src\/app\/[^'\"]+['\"]"),
-    re.compile(r"from\s+['\"]src\/assets\/[^'\"]+['\"]"),
-]
-
 
 def validate_files(directory: str) -> None:
+    search_pattern = r"from\s+['\"]src\/app\/[^'\"]+['\"]"
+    regex = re.compile(search_pattern)
+
     for root, _, files in os.walk(directory):
         for file in files:
             if not file.endswith(".ts") and not file.endswith(".tsx"):
@@ -43,14 +41,13 @@ def validate_files(directory: str) -> None:
                 file_lines = f.readlines()
 
                 for line_number, line in enumerate(file_lines, start=1):
-                    for regex in ILLEGAL_IMPORTS:
-                        if regex.search(line):
-                            print(
-                                f"Error: illegal import found in {file_path} (line {line_number}): {line.strip()}"
-                            )
-                            sys.exit(1)
+                    if regex.search(line):
+                        print(
+                            f"Error: TypeScript import from 'src/app' found in {file_path} (line {line_number}): {line.strip()}"
+                        )
+                        sys.exit(1)
 
-    print(f"No illegal imports found in '{directory}'")
+    print(f"No imports from 'src/app' found in '{directory}'")
 
 
 if __name__ == "__main__":

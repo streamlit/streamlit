@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
 import { GridCellKind, NumberCell, TextCell } from "@glideapps/glide-data-grid"
 
@@ -123,42 +122,40 @@ describe("NumberColumn", () => {
     }
   )
 
-  it("properly configures the column for unsigned integers", () => {
-    const mockColumn = getNumberColumn(MOCK_UINT_ARROW_TYPE)
-    expect(mockColumn.kind).toEqual("number")
-
-    const mockCell = mockColumn.getCell("104")
-    expect(mockCell.kind).toEqual(GridCellKind.Number)
-    expect((mockCell as any).fixedDecimals).toEqual(0)
-    expect((mockCell as any).allowNegative).toEqual(false)
-  })
-
   it.each([
-    [100, true],
-    [-100, false],
-    ["4", true],
-    ["-4.12", false],
+    [100, 100],
+    [-100, 0],
+    ["4", 4],
+    ["4.12", 4],
+    ["4.61", 4],
+    ["-4.12", 0],
+    [1.3122, 1],
+    [-1.3122, 0],
+    ["1,212", 1212],
+    ["1,212,123,312", 1212123312],
+    [null, null],
   ])(
-    "supports unsigned integer validation (%p validates to %p)",
-    (input: DataType | null, valid: boolean) => {
+    "supports unsigned integer value (%p parsed as %p)",
+    (input: DataType | null, value: number | null) => {
       const mockColumn = getNumberColumn(MOCK_UINT_ARROW_TYPE)
-      expect(mockColumn.validateInput!(input)).toEqual(valid)
+      const cell = mockColumn.getCell(input)
+      expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
   )
 
   it.each([
     [0, 1.234567, 1],
-    [0.1, 1.234567, 1.2],
-    [0.01, 1.234567, 1.23],
-    [0.001, 1.234567, 1.234],
-    [0.0001, 1.234567, 1.2345],
-    [0.001, 1.1, 1.1],
-    [0.00000001, 1, 1],
+    [1, 1.234567, 1.2],
+    [2, 1.234567, 1.23],
+    [3, 1.234567, 1.234],
+    [4, 1.234567, 1.2345],
+    [3, 1.1, 1.1],
+    [100, 1, 1],
   ])(
-    "converts value to precision from step %p (%p converted to %p)",
-    (step: number, input: DataType, value: number | null) => {
+    "converts value to precision %p (%p parsed to %p)",
+    (precision: number, input: DataType, value: number | null) => {
       const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
-        step,
+        precision,
       })
       const mockCell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(mockCell)).toEqual(value)
@@ -166,51 +163,34 @@ describe("NumberColumn", () => {
   )
 
   it.each([
-    [0, 1.234567, "1"],
-    [0.1, 1.234567, "1.2"],
-    [0.01, 1.234567, "1.23"],
-    [0.001, 1.234567, "1.234"],
-    [0.0001, 1.234567, "1.2345"],
-    [0.001, 1.1, "1.100"],
-    [0.00000001, 1, "1.00000000"],
+    [10, 10, 10],
+    [10, 100, 100],
+    [10, 5, 10],
+    [10, -5, 10],
   ])(
-    "correctly adapts default value to precision from step %p (%p displayed as %p)",
-    (step: number, input: DataType, displayValue: string) => {
+    "supports minimal value %p (%p parsed to %p)",
+    (min: number, input: DataType, value: number | null) => {
       const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
-        step,
+        min,
       })
       const mockCell = mockColumn.getCell(input)
-      expect((mockCell as NumberCell).displayData).toEqual(displayValue)
+      expect(mockColumn.getCellValue(mockCell)).toEqual(value)
     }
   )
 
   it.each([
-    [10, 10, true],
-    [10, 100, true],
-    [10, 5, false],
-    [10, -5, false],
-  ])(
-    "supports minimal value configuration %p (%p validates to %p)",
-    (min_value: number, input: DataType, valid: boolean) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
-        min_value,
-      })
-      expect(mockColumn.validateInput!(input)).toEqual(valid)
-    }
-  )
-
-  it.each([
-    [10, 10, true],
+    [10, 10, 10],
     [10, 100, 10],
-    [10, 5, true],
-    [10, -5, true],
+    [10, 5, 5],
+    [10, -5, -5],
   ])(
-    "supports maximal value configuration %p (%p validates to %p)",
-    (max_value: number, input: DataType, validation: number | boolean) => {
+    "supports maximal value %p (%p parsed to %p)",
+    (max: number, input: DataType, value: number | null) => {
       const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
-        max_value,
+        max,
       })
-      expect(mockColumn.validateInput!(input)).toEqual(validation)
+      const mockCell = mockColumn.getCell(input)
+      expect(mockColumn.getCellValue(mockCell)).toEqual(value)
     }
   )
 
@@ -243,59 +223,4 @@ describe("NumberColumn", () => {
     const safeCell = mockColumn.getCell("1234567898765432")
     expect(isErrorCell(safeCell)).toEqual(false)
   })
-
-  it.each([
-    // This should support everything that is supported by formatNumber
-    // So we are not testing all the cases here, just a few to make sure it works
-    // All other cases are tested for formatNumber in utils.test.ts
-    [10.123, "%d", "10"],
-    [10.123, "%i", "10"],
-    [10.123, "%u", "10"],
-    [10.123, "%f", "10.123"],
-    [10.123, "%g", "10.123"],
-    [10, "$%.2f", "$10.00"],
-    [10.126, "$%.2f", "$10.13"],
-    [10.123, "%.2f€", "10.12€"],
-    [10.126, "($%.2f)", "($10.13)"],
-    [65, "%d years", "65 years"],
-    [1234567898765432, "%d ⭐", "1234567898765432 ⭐"],
-    [72.3, "%.1f%%", "72.3%"],
-    [-5.678, "%.1f", "-5.7"],
-    [0.12, "percent", "12.00%"],
-    [1100, "compact", "1.1K"],
-  ])(
-    "formats %p with sprintf format %p to %p",
-    (input: number, format: string, displayValue: string) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
-        format,
-      })
-
-      const cell = mockColumn.getCell(input)
-      expect((cell as NumberCell).displayData).toEqual(displayValue)
-    }
-  )
-
-  it.each([
-    [10, "%d %d"],
-    [1234567.89, "%'_,.2f"],
-    [1234.5678, "%+.2E"],
-    [0.000123456, "%+.2E"],
-    [-0.000123456, "%+.2E"],
-    [255, "%#x"],
-    [4096, "%#X"],
-    [42, "% d"],
-    [1000, "%,.0f"],
-    [25000.25, "$%,.2f"],
-    [9876543210, "%,.0f"],
-  ])(
-    "cannot format %p using the sprintf format %p",
-    (input: number, format: string) => {
-      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, {
-        format,
-      })
-
-      const cell = mockColumn.getCell(input)
-      expect(isErrorCell(cell)).toEqual(true)
-    }
-  )
 })

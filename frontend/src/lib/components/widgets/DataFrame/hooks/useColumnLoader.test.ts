@@ -23,8 +23,8 @@ import {
   BaseColumn,
   ObjectColumn,
   TextColumn,
-  CheckboxColumn,
-  SelectboxColumn,
+  BooleanColumn,
+  CategoricalColumn,
   ListColumn,
   NumberColumn,
   ColumnCreator,
@@ -219,8 +219,8 @@ describe("getColumnType", () => {
   it.each([
     ["object", ObjectColumn],
     ["text", TextColumn],
-    ["checkbox", CheckboxColumn],
-    ["selectbox", SelectboxColumn],
+    ["boolean", BooleanColumn],
+    ["categorical", CategoricalColumn],
     ["list", ListColumn],
     ["number", NumberColumn],
   ])(

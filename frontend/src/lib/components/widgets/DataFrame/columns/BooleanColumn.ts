@@ -33,7 +33,7 @@ import {
  * A column type that supports optimized rendering and editing for boolean values
  * by using checkboxes.
  */
-function CheckboxColumn(props: BaseColumnProps): BaseColumn {
+function BooleanColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
     kind: GridCellKind.Boolean,
     data: false,
@@ -45,7 +45,7 @@ function CheckboxColumn(props: BaseColumnProps): BaseColumn {
 
   return {
     ...props,
-    kind: "checkbox",
+    kind: "boolean",
     sortMode: "default",
     getCell(data?: any): GridCell {
       let cellData = null
@@ -71,6 +71,6 @@ function CheckboxColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-CheckboxColumn.isEditableType = true
+BooleanColumn.isEditableType = true
 
-export default CheckboxColumn as ColumnCreator
+export default BooleanColumn as ColumnCreator

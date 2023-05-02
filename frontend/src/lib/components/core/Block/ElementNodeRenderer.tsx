@@ -76,8 +76,8 @@ import { getAlertKind } from "src/lib/components/elements/Alert/Alert"
 
 import Maybe from "src/lib/components/core/Maybe"
 import { FormSubmitContent } from "src/lib/components/widgets/Form"
-import Heading from "src/lib/components/shared/StreamlitMarkdown/Heading"
-import { LibContext } from "src/lib/components/core/LibContext"
+import { Heading } from "src/lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { AppContext } from "src/lib/components/core/AppContext"
 
 import {
   BaseBlockProps,
@@ -674,7 +674,7 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
-  const { isFullScreen } = React.useContext(LibContext)
+  const { isFullScreen } = React.useContext(AppContext)
   const { node } = props
 
   const elementType = node.element.type || ""

@@ -43,15 +43,6 @@ from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings
 SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
 
 
-TYPE_PAIRS = [
-    (".jpg", ".jpeg"),
-    (".mpg", ".mpeg"),
-    (".mp4", ".mpeg4"),
-    (".tif", ".tiff"),
-    (".htm", ".html"),
-]
-
-
 def _get_file_recs(
     widget_id: str, widget_value: Optional[FileUploaderStateProto]
 ) -> List[UploadedFileRec]:
@@ -398,14 +389,6 @@ class FileUploaderMixin:
                 file_type if file_type[0] == "." else f".{file_type}"
                 for file_type in type
             ]
-
-            type = [t.lower() for t in type]
-
-            for x, y in TYPE_PAIRS:
-                if x in type and y not in type:
-                    type.append(y)
-                if y in type and x not in type:
-                    type.append(x)
 
         file_uploader_proto = FileUploaderProto()
         file_uploader_proto.label = label

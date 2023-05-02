@@ -16,6 +16,7 @@
 
 import React, { ReactElement } from "react"
 import { useTheme } from "@emotion/react"
+import { AppContext } from "src/lib/components/core/AppContext"
 import { EmotionTheme, isPresetTheme } from "src/lib/theme"
 import {
   ProgressBar as UIProgressBar,
@@ -23,7 +24,6 @@ import {
 } from "baseui/progress-bar"
 import { mergeOverrides } from "baseui"
 import { Overrides } from "baseui/overrides"
-import { LibContext } from "src/lib/components/core/LibContext"
 
 export enum Size {
   EXTRASMALL = "xs",
@@ -54,7 +54,7 @@ function ProgressBar({
     lg: theme.spacing.xl,
     xl: theme.spacing.twoXL,
   }
-  const { activeTheme } = React.useContext(LibContext)
+  const { activeTheme } = React.useContext(AppContext)
   const usingCustomTheme = !isPresetTheme(activeTheme)
   const defaultOverrides: Overrides<ProgressBarOverrides> = {
     BarContainer: {

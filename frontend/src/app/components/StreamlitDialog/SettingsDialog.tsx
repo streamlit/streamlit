@@ -23,12 +23,12 @@ import React, {
 import { ThemeConfig } from "src/lib/theme"
 import Button, { Kind } from "src/lib/components/shared/Button"
 import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
-import UISelectbox from "src/lib/components/shared/Dropdown"
-import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import {
-  LibContext,
-  Props as LibContextProps,
-} from "src/lib/components/core/LibContext"
+  AppContext,
+  Props as AppContextProps,
+} from "src/lib/components/core/AppContext"
+import UISelectbox from "src/lib/components/shared/Dropdown"
+import { MetricsManager } from "src/lib/MetricsManager"
 
 import {
   StyledCheckbox,
@@ -50,7 +50,7 @@ export interface Props {
   developerMode: boolean
   openThemeCreator: () => void
   animateModal: boolean
-  metricsMgr: SegmentMetricsManager
+  metricsMgr: MetricsManager
 }
 
 /**
@@ -59,7 +59,7 @@ export interface Props {
 export class SettingsDialog extends PureComponent<Props, UserSettings> {
   private activeSettings: UserSettings
 
-  static contextType = LibContext
+  static contextType = AppContext
 
   constructor(props: Props) {
     super(props)
@@ -174,7 +174,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   private handleThemeChange = (index: number): void => {
-    const { activeTheme: oldTheme, availableThemes }: LibContextProps =
+    const { activeTheme: oldTheme, availableThemes }: AppContextProps =
       this.context
     const newTheme = availableThemes[index]
 

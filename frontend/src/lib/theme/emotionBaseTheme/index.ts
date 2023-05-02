@@ -28,7 +28,7 @@ import {
   spacing,
   zIndices,
 } from "src/lib/theme/primitives"
-import { createEmotionColors } from "src/lib/theme/getColors"
+import { createEmotionColors } from "src/lib/theme/utils"
 import genericColors from "./themeColors"
 
 export default {

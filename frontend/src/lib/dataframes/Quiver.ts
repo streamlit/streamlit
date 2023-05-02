@@ -836,17 +836,8 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     return `${leftBracket + leftInterval}, ${rightInterval + rightBracket}`
   }
 
-  /**
-   * Adjusts a timestamp to second based on the unit information in the field.
-   */
-  public static adjustTimestamp(data: number | bigint, field?: Field): number {
+  private static formatTime(data: number, field?: Field): string {
     let timeInSeconds
-
-    if (typeof data === "bigint") {
-      // TODO(lukasmasuch): We might need some special handling of nanoseconds since
-      // JavaScript's `Number` type can not represent those numbers accurately.
-      data = Number(data)
-    }
 
     // Unit information:
     // https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
@@ -864,13 +855,8 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       timeInSeconds = data
     }
 
-    return timeInSeconds
-  }
-
-  private static formatTime(data: number, field?: Field): string {
-    const timeInSeconds = Quiver.adjustTimestamp(data, field)
     return moment
-      .unix(Quiver.adjustTimestamp(data))
+      .unix(timeInSeconds)
       .utc()
       .format(timeInSeconds % 1 === 0 ? "HH:mm:ss" : "HH:mm:ss.SSS")
   }

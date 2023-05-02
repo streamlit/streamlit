@@ -31,8 +31,8 @@ import {
   toSafeBoolean,
 } from "./utils"
 
-export interface SelectboxColumnParams {
-  /** A list of options available in the selectbox.
+export interface CategoricalColumnParams {
+  /** A list of options available in the dropdown.
    * Every value in the column needs to match one of the options.
    */
   readonly options: (string | number | boolean)[]
@@ -40,12 +40,11 @@ export interface SelectboxColumnParams {
 
 /**
  * A column type that supports optimized rendering and editing for categorical values
- * by using a selectbox. This is automatically used by categorical columns (Pandas).
+ * by using a dropdown. This is automatically used by categorical columns (Pandas).
  *
  */
-function SelectboxColumn(props: BaseColumnProps): BaseColumn {
-  // The selectbox column can be either string, number or boolean type
-  // based on the options type.
+function CategoricalColumn(props: BaseColumnProps): BaseColumn {
+  // Categorical column can be either string, number or boolean type based on the options
   let dataType: "number" | "boolean" | "string" = "string"
 
   const parameters = mergeColumnParameters(
@@ -56,7 +55,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     },
     // User parameters:
     props.columnTypeOptions
-  ) as SelectboxColumnParams
+  ) as CategoricalColumnParams
 
   const uniqueTypes = new Set(parameters.options.map(x => typeof x))
   if (uniqueTypes.size === 1) {
@@ -76,7 +75,6 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     data: {
       kind: "dropdown-cell",
       allowedValues: [
-        // Add empty option if the column is not configured as required:
         ...(props.isRequired !== true ? [""] : []),
         ...parameters.options
           .filter(opt => opt !== "") // ignore empty option if it exists
@@ -89,16 +87,16 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
 
   return {
     ...props,
-    kind: "selectbox",
+    kind: "categorical",
     sortMode: "default",
-    getCell(data?: any, validate?: boolean): GridCell {
+    getCell(data?: any): GridCell {
       // Empty string refers to a missing value
       let cellData = ""
       if (notNullOrUndefined(data)) {
         cellData = toSafeString(data)
       }
 
-      if (validate && !cellTemplate.data.allowedValues.includes(cellData)) {
+      if (!cellTemplate.data.allowedValues.includes(cellData)) {
         return getErrorCell(
           toSafeString(cellData),
           `The value is not part of the allowed options.`
@@ -128,6 +126,6 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
   }
 }
 
-SelectboxColumn.isEditableType = true
+CategoricalColumn.isEditableType = true
 
-export default SelectboxColumn as ColumnCreator
+export default CategoricalColumn as ColumnCreator

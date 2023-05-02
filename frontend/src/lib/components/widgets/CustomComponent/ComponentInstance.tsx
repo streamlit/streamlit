@@ -35,7 +35,7 @@ import { Source, WidgetStateManager } from "src/lib/WidgetStateManager"
 import queryString from "query-string"
 import React, { createRef, ReactNode } from "react"
 import { EmotionTheme, toExportedTheme } from "src/lib/theme"
-import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "src/lib/urls"
+import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "src/urls"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 

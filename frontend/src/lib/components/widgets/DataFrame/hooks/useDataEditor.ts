@@ -21,10 +21,8 @@ import {
   DataEditorProps,
   GridSelection,
   Item,
-  ValidatedGridCell,
 } from "@glideapps/glide-data-grid"
 
-import { logWarning } from "src/lib/util/log"
 import { notNullOrUndefined } from "src/lib/util/utils"
 import {
   BaseColumn,
@@ -37,7 +35,7 @@ import EditingState from "src/lib/components/widgets/DataFrame/EditingState"
  */
 type DataEditorReturn = Pick<
   DataEditorProps,
-  "onCellEdited" | "onPaste" | "onRowAppended" | "onDelete" | "validateCell"
+  "onCellEdited" | "onPaste" | "onRowAppended" | "onDelete"
 >
 
 /**
@@ -76,10 +74,6 @@ function useDataEditor(
     ): void => {
       const column = columns[col]
 
-      if (!column.isEditable) {
-        return
-      }
-
       const originalCol = column.indexNumber
 
       // We need to apply two different mappings here. One for the case that
@@ -96,20 +90,14 @@ function useDataEditor(
         return
       }
 
-      const newCell = column.getCell(newValue, true)
-      // Only update the cell if the new cell is not causing any errors:
-      if (!isErrorCell(newCell)) {
-        editingState.current.setCell(originalCol, originalRow, {
-          ...newCell,
-          lastUpdated: performance.now(),
-        })
+      const newCell = column.getCell(newValue)
 
-        applyEdits()
-      } else {
-        logWarning(
-          `Not applying the cell edit since it causes this error:\n ${newCell.data}`
-        )
-      }
+      editingState.current.setCell(originalCol, originalRow, {
+        ...newCell,
+        lastUpdated: performance.now(),
+      })
+
+      applyEdits()
     },
     [columns, editingState, getOriginalIndex, getCellContent, applyEdits]
   )
@@ -227,7 +215,7 @@ function useDataEditor(
           const column = columns[colIndex]
           // Only add to columns that are editable:
           if (column.isEditable) {
-            const newCell = column.getCell(pasteDataValue, true)
+            const newCell = column.getCell(pasteDataValue)
             // We are not editing cells if the pasted value leads to an error:
             if (notNullOrUndefined(newCell) && !isErrorCell(newCell)) {
               const originalCol = column.indexNumber
@@ -273,42 +261,11 @@ function useDataEditor(
     ]
   )
 
-  const validateCell = React.useCallback(
-    (cell: Item, newValue: EditableGridCell) => {
-      const col = cell[0]
-      if (col >= columns.length) {
-        // This should never happen.
-        // But we return true (default) to avoid any unknown issues.
-        return true
-      }
-
-      const column = columns[col]
-      if (column.validateInput) {
-        // We get the actual raw value of the new cell and
-        // validate it based on the column validateInput implementation:
-        const validationResult = column.validateInput(
-          column.getCellValue(newValue)
-        )
-        if (validationResult === true || validationResult === false) {
-          // Only return if the validation result is a valid boolean value (true or false)
-          // validationResult can also be other values, so we need to check this specifically.
-          return validationResult
-        }
-        // If it is any other value, we return it as a corrected cell:
-        return column.getCell(validationResult) as ValidatedGridCell
-      }
-      // If no validation is implemented, we accept the value:
-      return true
-    },
-    [columns]
-  )
-
   return {
     onCellEdited,
     onPaste,
     onRowAppended,
     onDelete,
-    validateCell,
   }
 }
 

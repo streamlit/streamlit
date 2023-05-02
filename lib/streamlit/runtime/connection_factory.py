@@ -176,7 +176,7 @@ def connection_factory(
 ):
     """Create a new connection to a data store or API, or return an existing one.
 
-    Config options, credentials, secrets, etc. for connections are taken from various
+    Config options, credentials, secrets, etc. for connections are sourced from various
     sources:
 
     - Any connection-specific configuration files.
@@ -188,12 +188,11 @@ def connection_factory(
     name : str
         The connection name used for secrets lookup in ``[connections.<name>]``.
         Type will be inferred from passing ``"sql"`` or ``"snowpark"``.
-    type : str or connection class or None
+    type : str or connection class
         The type of connection to create. It can be a keyword (``"sql"`` or ``"snowpark"``),
         a path to an importable class, or an imported class reference. All classes
         must extend ``st.connections.ExperimentalBaseConnection`` and implement the
-        ``_connect()`` method. If the type kwarg is None, a ``type`` field must be set
-        in the connection's section in ``secrets.toml``.
+        ``_connect()`` method.
     max_entries : int or None
         The maximum number of connections to keep in the cache, or None
         for an unbounded cache. (When a new entry is added to a full cache,
@@ -213,18 +212,18 @@ def connection_factory(
     Examples
     --------
     The easiest way to create a first-party (SQL or Snowpark) connection is to use their
-    default names and define corresponding sections in your ``secrets.toml`` file.
+    default names and define corresponding sections in your config.toml file.
 
     >>> import streamlit as st
     >>> conn = st.experimental_connection("sql") # Config section defined in [connections.sql] in secrets.toml.
 
     Creating a SQLConnection with a custom name requires you to explicitly specify the
-    type. If type is not passed as a kwarg, it must be set in the appropriate section of
-    ``secrets.toml``.
+    type. If type is not passed in as a kwarg, we try to infer it from the contents of
+    your secrets.toml.
 
     >>> import streamlit as st
     >>> conn1 = st.experimental_connection("my_sql_connection", type="sql") # Config section defined in [connections.my_sql_connection].
-    >>> conn2 = st.experimental_connection("my_other_sql_connection") # type must be set in [connections.my_other_sql_connection].
+    >>> conn2 = st.experimental_connection("my_other_sql_connection") # Type is inferred from [connections.my_other_sql_connection].
 
     Passing the full module path to the connection class that you want to use can be
     useful, especially when working with a custom connection:
@@ -232,9 +231,7 @@ def connection_factory(
     >>> import streamlit as st
     >>> conn = st.experimental_connection("my_sql_connection", type="streamlit.connections.SQLConnection")
 
-    Finally, you can pass the connection class to use directly to this function. Doing
-    so allows static type checking tools such as ``mypy`` to infer the exact return
-    type of ``st.experimental_connection``.
+    Finally, you can even pass the connection class to use directly to this function.
 
     >>> import streamlit as st
     >>> from streamlit.connections import SQLConnection

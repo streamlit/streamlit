@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  Quiver,
-  Type as ArrowType,
-  DataFrameCell,
-} from "src/lib/dataframes/Quiver"
+import { Quiver, Type as ArrowType } from "src/lib/dataframes/Quiver"
 import { Arrow as ArrowProto } from "src/lib/proto"
 import {
   UNICODE,
@@ -34,14 +30,11 @@ import {
   getTextCell,
   ColumnCreator,
   ObjectColumn,
-  CheckboxColumn,
+  BooleanColumn,
   NumberColumn,
   TextColumn,
-  SelectboxColumn,
+  CategoricalColumn,
   ListColumn,
-  DateTimeColumn,
-  DateColumn,
-  TimeColumn,
 } from "./columns"
 import {
   extractCssProperty,
@@ -53,7 +46,6 @@ import {
   getAllColumnsFromArrow,
   getCellFromArrow,
 } from "./arrowUtils"
-import { isIntegerType } from "./isIntegerType"
 
 const MOCK_TEXT_COLUMN = TextColumn({
   id: "1",
@@ -493,94 +485,6 @@ describe("getCellFromArrow", () => {
     })
   })
 
-  it("parses numeric timestamps for time columns into valid Date values", () => {
-    const MOCK_TIME_COLUMN = {
-      ...TimeColumn({
-        id: "1",
-        name: "time_column",
-        title: "Time column",
-        indexNumber: 0,
-        isEditable: false,
-        isHidden: false,
-        isIndex: false,
-        isStretched: false,
-        arrowType: {
-          pandas_type: "time",
-          numpy_type: "object",
-        },
-      }),
-      getCell: jest.fn().mockReturnValue(getTextCell(false, false)),
-    }
-
-    // Create a mock arrowCell object with time data
-    const arrowCell = {
-      // Unix timestamp in microseconds Wed Sep 29 2021 21:13:20
-      // Our default unit is seconds, so it needs to be adjusted internally
-      content: BigInt(1632950000123000),
-      contentType: null,
-      field: {
-        type: {
-          unit: 2, // Microseconds
-        },
-      },
-      displayContent: null,
-      cssId: null,
-      cssClass: null,
-      type: "columns",
-    } as object as DataFrameCell
-
-    // Call the getCellFromArrow function
-    getCellFromArrow(MOCK_TIME_COLUMN, arrowCell)
-
-    // Check if the timestamp is adjusted properly
-    expect(MOCK_TIME_COLUMN.getCell).toHaveBeenCalledWith(
-      new Date("2021-09-29T21:13:20.123Z")
-    )
-  })
-
-  it("parses numeric timestamps for datetime columns into valid Date values", () => {
-    const MOCK_TIME_COLUMN = {
-      ...TimeColumn({
-        id: "1",
-        name: "datetime_column",
-        title: "Datetime column",
-        indexNumber: 0,
-        isEditable: false,
-        isHidden: false,
-        isIndex: false,
-        isStretched: false,
-        arrowType: {
-          pandas_type: "datetime",
-          numpy_type: "datetime64[ns]",
-        },
-      }),
-      getCell: jest.fn().mockReturnValue(getTextCell(false, false)),
-    }
-
-    // Create a mock arrowCell object with time data
-    const arrowCell = {
-      // Unix timestamp in milliseconds (Wed Sep 29 2021 21:13:20)
-      // Milliseconds is the default unit that is used for all datetime values
-      // in arrow. So we don't need to adjust based on the unit here. It just
-      // needs conversion from milliseconds unix timestamp to Date object.
-      // Our internal parsing assumes seconds as default unit.
-      content: 1632950000123,
-      contentType: null,
-      displayContent: null,
-      cssId: null,
-      cssClass: null,
-      type: "columns",
-    } as object as DataFrameCell
-
-    // Call the getCellFromArrow function
-    getCellFromArrow(MOCK_TIME_COLUMN, arrowCell)
-
-    // Check if the timestamp is adjusted properly
-    expect(MOCK_TIME_COLUMN.getCell).toHaveBeenCalledWith(
-      new Date("2021-09-29T21:13:20.123Z")
-    )
-  })
-
   it("applies display content from arrow cell", () => {
     const element = {
       data: STYLER,
@@ -721,21 +625,21 @@ describe("getColumnTypeFromArrow", () => {
         pandas_type: "bool",
         numpy_type: "bool",
       },
-      CheckboxColumn,
+      BooleanColumn,
     ],
     [
       {
         pandas_type: "bool",
         numpy_type: "boolean",
       },
-      CheckboxColumn,
+      BooleanColumn,
     ],
     [
       {
         pandas_type: "categorical",
         numpy_type: "int8",
       },
-      SelectboxColumn,
+      CategoricalColumn,
     ],
     [
       {
@@ -763,35 +667,35 @@ describe("getColumnTypeFromArrow", () => {
         pandas_type: "empty",
         numpy_type: "object",
       },
-      TextColumn,
+      TextColumn, // TODO: why not ObjectColumn?
     ],
     [
       {
         pandas_type: "datetime",
         numpy_type: "datetime64[ns]",
       },
-      DateTimeColumn,
+      ObjectColumn,
     ],
     [
       {
         pandas_type: "datetimetz",
         numpy_type: "datetime64[ns]",
       },
-      DateTimeColumn,
+      ObjectColumn,
     ],
     [
       {
         pandas_type: "time",
         numpy_type: "object",
       },
-      TimeColumn,
+      ObjectColumn,
     ],
     [
       {
         pandas_type: "date",
         numpy_type: "object",
       },
-      DateColumn,
+      ObjectColumn,
     ],
     [
       {
@@ -818,79 +722,6 @@ describe("getColumnTypeFromArrow", () => {
     "interprets %p as column type: %p",
     (arrowType: ArrowType, expectedType: ColumnCreator) => {
       expect(getColumnTypeFromArrow(arrowType)).toEqual(expectedType)
-    }
-  )
-})
-
-describe("isIntegerType", () => {
-  it.each([
-    [
-      {
-        pandas_type: "float64",
-        numpy_type: "float64",
-      },
-      false,
-    ],
-    [
-      {
-        pandas_type: "int64",
-        numpy_type: "int64",
-      },
-      true,
-    ],
-    [
-      {
-        pandas_type: "object",
-        numpy_type: "int16",
-      },
-      true,
-    ],
-    [
-      {
-        pandas_type: "range",
-        numpy_type: "range",
-      },
-      true,
-    ],
-    [
-      {
-        pandas_type: "uint64",
-        numpy_type: "uint64",
-      },
-      true,
-    ],
-    [
-      {
-        pandas_type: "unicode",
-        numpy_type: "object",
-      },
-      false,
-    ],
-    [
-      {
-        pandas_type: "bool",
-        numpy_type: "bool",
-      },
-      false,
-    ],
-    [
-      {
-        pandas_type: "categorical",
-        numpy_type: "int8",
-      },
-      false,
-    ],
-    [
-      {
-        pandas_type: "object",
-        numpy_type: "interval[int64, both]",
-      },
-      false,
-    ],
-  ])(
-    "interprets %p as integer type: %p",
-    (arrowType: ArrowType, expected: boolean) => {
-      expect(isIntegerType(Quiver.getTypeName(arrowType))).toEqual(expected)
     }
   )
 })

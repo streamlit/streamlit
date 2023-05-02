@@ -30,7 +30,7 @@ import {
 } from "src/app/components/StreamlitDialog/ScriptChangedDialog"
 import { IException } from "src/lib/proto"
 import { SessionInfo } from "src/lib/SessionInfo"
-import { STREAMLIT_HOME_URL } from "src/lib/urls"
+import { STREAMLIT_HOME_URL } from "src/urls"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {

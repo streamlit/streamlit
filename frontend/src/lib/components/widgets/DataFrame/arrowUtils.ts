@@ -21,7 +21,6 @@ import {
   NumberCell,
   GridCellKind,
 } from "@glideapps/glide-data-grid"
-import moment from "moment"
 
 import {
   DataFrameCell,
@@ -35,15 +34,12 @@ import {
   BaseColumnProps,
   ColumnCreator,
   ObjectColumn,
-  CheckboxColumn,
+  BooleanColumn,
   NumberColumn,
   TextColumn,
-  SelectboxColumn,
+  CategoricalColumn,
   ListColumn,
   isErrorCell,
-  DateTimeColumn,
-  TimeColumn,
-  DateColumn,
 } from "./columns"
 
 /**
@@ -148,21 +144,21 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
   if (["unicode", "empty"].includes(typeName)) {
     return TextColumn
   }
-
-  if (["datetime", "datetimetz"].includes(typeName)) {
-    return DateTimeColumn
-  }
-  if (typeName === "time") {
-    return TimeColumn
-  }
-  if (typeName === "date") {
-    return DateColumn
-  }
-  if (["object", "decimal", "bytes"].includes(typeName)) {
+  if (
+    [
+      "object",
+      "date",
+      "time",
+      "datetime",
+      "datetimetz",
+      "decimal",
+      "bytes",
+    ].includes(typeName)
+  ) {
     return ObjectColumn
   }
   if (["bool"].includes(typeName)) {
-    return CheckboxColumn
+    return BooleanColumn
   }
   if (
     [
@@ -185,7 +181,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
     return NumberColumn
   }
   if (typeName === "categorical") {
-    return SelectboxColumn
+    return CategoricalColumn
   }
   if (typeName.startsWith("list")) {
     return ListColumn
@@ -359,32 +355,6 @@ export function getCellFromArrow(
           )
         : null
     )
-  } else if (
-    ["time", "date", "datetime"].includes(column.kind) &&
-    notNullOrUndefined(arrowCell.content) &&
-    (typeof arrowCell.content === "number" ||
-      typeof arrowCell.content === "bigint")
-  ) {
-    // This is a special case where we want to already parse a numerical timestamp
-    // to a date object based on the arrow field metadata.
-    // Our implementation only supports unix timestamps in seconds, so we need to
-    // do some custom conversion here.
-    let parsedDate
-    if (
-      Quiver.getTypeName(column.arrowType) === "time" &&
-      notNullOrUndefined(arrowCell.field?.type?.unit)
-    ) {
-      // Time values needs to be adjusted to seconds based on the unit
-      parsedDate = moment
-        .unix(Quiver.adjustTimestamp(arrowCell.content, arrowCell.field))
-        .utc()
-        .toDate()
-    } else {
-      // All other datetime related values are assumed to be in milliseconds
-      parsedDate = moment.utc(Number(arrowCell.content)).toDate()
-    }
-
-    cellTemplate = column.getCell(parsedDate)
   } else {
     cellTemplate = column.getCell(arrowCell.content)
   }

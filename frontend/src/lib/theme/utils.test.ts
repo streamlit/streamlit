@@ -21,7 +21,7 @@ import {
   createAutoTheme,
   darkTheme,
   lightTheme,
-} from "src/lib/theme"
+} from "src/lib/theme/index"
 import { ThemeConfig } from "src/lib/theme/types"
 import { fonts } from "src/lib/theme/primitives/typography"
 

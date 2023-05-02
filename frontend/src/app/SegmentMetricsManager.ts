@@ -18,9 +18,14 @@ import { pick } from "lodash"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { initializeSegment } from "src/app/vendor/Segment"
 import { DeployedAppMetadata } from "src/lib/hocs/withHostCommunication/types"
-import { Delta, Element } from "src/lib/proto"
+import Protobuf, { Delta, Element, ForwardMsgMetadata } from "src/lib/proto"
 import { IS_DEV_ENV } from "src/lib/baseconsts"
 import { logAlways } from "src/lib/util/log"
+import {
+  CustomComponentCounter,
+  DeltaCounter,
+  MetricsManager,
+} from "src/lib/MetricsManager"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts
@@ -31,15 +36,7 @@ declare const analytics: any
 
 type Event = [string, Record<string, unknown>]
 
-/**
- * A mapping of [component instance name] -> [count] which is used to upload
- * custom component stats when the app is idle.
- */
-export interface CustomComponentCounter {
-  [name: string]: number
-}
-
-export class SegmentMetricsManager {
+export class SegmentMetricsManager implements MetricsManager {
   /** The app's SessionInfo instance. */
   private readonly sessionInfo: SessionInfo
 
@@ -55,6 +52,12 @@ export class SegmentMetricsManager {
    * initialized.
    */
   private pendingEvents: Event[] = []
+
+  /**
+   * Object used to count the number of delta types seen in a given script run.
+   * Maps type of delta (string) to count (number).
+   */
+  private pendingDeltaCounter: DeltaCounter = {}
 
   /**
    * Object used to count the number of custom instance names seen in a given
@@ -109,17 +112,67 @@ export class SegmentMetricsManager {
     this.send(evName, evData)
   }
 
-  public handleDeltaMessage(delta: Delta): void {
-    if (delta.type === "newElement") {
-      const element = delta.newElement as Element
-      // Track component instance name.
-      if (element.type === "componentInstance") {
-        const componentName = element.componentInstance?.componentName
-        if (componentName != null) {
-          this.incrementCustomComponentCounter(componentName)
+  public handleDeltaMessage(delta: Delta, metadata: ForwardMsgMetadata): void {
+    // The full path to the AppNode within the element tree.
+    // Used to find and update the element node specified by this Delta.
+    const deltaPath = metadata.deltaPath
+
+    this.incrementDeltaCounter(getRootContainerName(deltaPath))
+
+    switch (delta.type) {
+      case "newElement": {
+        const element = delta.newElement as Element
+        if (element.type != null) {
+          this.incrementDeltaCounter(element.type)
         }
+
+        // Track component instance name.
+        if (element.type === "componentInstance") {
+          const componentName = element.componentInstance?.componentName
+          if (componentName != null) {
+            this.incrementCustomComponentCounter(componentName)
+          }
+        }
+        break
       }
+
+      case "addBlock":
+        this.incrementDeltaCounter("new block")
+        break
+
+      case "addRows":
+        this.incrementDeltaCounter("add rows")
+        break
+
+      case "arrowAddRows":
+        this.incrementDeltaCounter("arrow add rows")
+        break
     }
+  }
+
+  public clearDeltaCounter(): void {
+    this.pendingDeltaCounter = {}
+  }
+
+  /**
+   * Increment a counter that tracks the number of times a Delta message
+   * of the given type has been processed by the frontend.
+   *
+   * No event is recorded for this. Instead, call `getAndResetDeltaCounter`
+   * periodically, and enqueue an event with the result.
+   */
+  public incrementDeltaCounter(deltaType: string): void {
+    if (this.pendingDeltaCounter[deltaType] == null) {
+      this.pendingDeltaCounter[deltaType] = 1
+    } else {
+      this.pendingDeltaCounter[deltaType]++
+    }
+  }
+
+  public getAndResetDeltaCounter(): DeltaCounter {
+    const deltaCounter = this.pendingDeltaCounter
+    this.clearDeltaCounter()
+    return deltaCounter
   }
 
   /**
@@ -228,4 +281,19 @@ export class SegmentMetricsManager {
     }
     return {}
   }
+}
+
+function getRootContainerName(deltaPath: number[]): string {
+  if (deltaPath.length > 0) {
+    switch (deltaPath[0]) {
+      case Protobuf.RootContainer.MAIN:
+        return "main"
+      case Protobuf.RootContainer.SIDEBAR:
+        return "sidebar"
+      default:
+        break
+    }
+  }
+
+  throw new Error(`Unrecognized RootContainer in deltaPath: ${deltaPath}`)
 }

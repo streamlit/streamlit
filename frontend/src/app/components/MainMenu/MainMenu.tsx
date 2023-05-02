@@ -41,8 +41,8 @@ import {
   IMenuItem,
 } from "src/lib/hocs/withHostCommunication/types"
 import { Config, GitInfo, IGitInfo, PageConfig } from "src/lib/proto"
-import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/lib/urls"
-import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
+import { MetricsManager } from "src/lib/MetricsManager"
+import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/urls"
 import {
   StyledCoreItem,
   StyledDevItem,
@@ -112,7 +112,7 @@ export interface Props {
 
   toolbarMode: Config.ToolbarMode
 
-  metricsMgr: SegmentMetricsManager
+  metricsMgr: MetricsManager
 }
 
 const getOpenInWindowCallback = (url: string) => (): void => {
@@ -156,7 +156,7 @@ export interface SubMenuProps {
   menuItems: any[]
   closeMenu: () => void
   isDevMenu: boolean
-  metricsMgr: SegmentMetricsManager
+  metricsMgr: MetricsManager
 }
 
 // BaseWeb provides a very basic list item (or option) for its dropdown
@@ -173,7 +173,7 @@ export interface SubMenuProps {
 //  * creating a forward ref to add properties to the DOM element.
 function buildMenuItemComponent(
   StyledMenuItemType: typeof StyledCoreItem | typeof StyledDevItem,
-  metricsMgr: SegmentMetricsManager
+  metricsMgr: MetricsManager
 ): any {
   const MenuItem = forwardRef<HTMLLIElement, MenuItemProps>(
     (

@@ -17,12 +17,12 @@
 import { BooleanCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { isErrorCell } from "./utils"
-import CheckboxColumn from "./CheckboxColumn"
+import BooleanColumn from "./BooleanColumn"
 
-const MOCK_CHECKBOX_COLUMN_PROPS = {
+const MOCK_BOOLEAN_COLUMN_PROPS = {
   id: "1",
-  name: "checkbox_column",
-  title: "Checkbox column",
+  name: "boolean_column",
+  title: "Boolean column",
   indexNumber: 0,
   isEditable: false,
   isHidden: false,
@@ -36,12 +36,12 @@ const MOCK_CHECKBOX_COLUMN_PROPS = {
   },
 }
 
-describe("CheckboxColumn", () => {
+describe("BooleanColumn", () => {
   it("creates a valid column instance", () => {
-    const mockColumn = CheckboxColumn(MOCK_CHECKBOX_COLUMN_PROPS)
-    expect(mockColumn.kind).toEqual("checkbox")
-    expect(mockColumn.title).toEqual(MOCK_CHECKBOX_COLUMN_PROPS.title)
-    expect(mockColumn.id).toEqual(MOCK_CHECKBOX_COLUMN_PROPS.id)
+    const mockColumn = BooleanColumn(MOCK_BOOLEAN_COLUMN_PROPS)
+    expect(mockColumn.kind).toEqual("boolean")
+    expect(mockColumn.title).toEqual(MOCK_BOOLEAN_COLUMN_PROPS.title)
+    expect(mockColumn.id).toEqual(MOCK_BOOLEAN_COLUMN_PROPS.id)
     expect(mockColumn.sortMode).toEqual("default")
 
     const mockCell = mockColumn.getCell(true)
@@ -73,7 +73,7 @@ describe("CheckboxColumn", () => {
   ])(
     "supports boolean compatible value (%p parsed as %p)",
     (input: any, value: boolean | null) => {
-      const mockColumn = CheckboxColumn(MOCK_CHECKBOX_COLUMN_PROPS)
+      const mockColumn = BooleanColumn(MOCK_BOOLEAN_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
       expect(isErrorCell(cell)).toEqual(false)
@@ -83,7 +83,7 @@ describe("CheckboxColumn", () => {
   it.each([["foo"], [12345], [0.1], [["foo", "bar"]]])(
     "%p results in error cell: %p",
     (input: any) => {
-      const mockColumn = CheckboxColumn(MOCK_CHECKBOX_COLUMN_PROPS)
+      const mockColumn = BooleanColumn(MOCK_BOOLEAN_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
       expect(isErrorCell(cell)).toEqual(true)
     }

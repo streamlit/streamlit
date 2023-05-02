@@ -19,27 +19,14 @@ from typing import Any
 
 from parameterized import parameterized
 
-from streamlit.runtime.caching.cache_errors import BadTTLStringError
 from streamlit.runtime.caching.cache_utils import ttl_to_seconds
-
-NORMAL_PARAMS = [
-    ("float", 3.5, 3.5),
-    ("timedelta", timedelta(minutes=3), 60 * 3),
-    ("str 1 arg", "1d", 24 * 60 * 60),
-    ("str 2 args", "1d23h", 24 * 60 * 60 + 23 * 60 * 60),
-    (
-        "complex str 3 args",
-        "1 day 23hr 45minutes",
-        24 * 60 * 60 + 23 * 60 * 60 + 45 * 60,
-    ),
-    ("str 2 args with float", "1.5d23.5h", 1.5 * 24 * 60 * 60 + 23.5 * 60 * 60),
-]
 
 
 class CacheUtilsTest(unittest.TestCase):
     @parameterized.expand(
         [
-            *NORMAL_PARAMS,
+            ("float", 3.5, 3.5),
+            ("timedelta", timedelta(minutes=3), 60 * 3),
             ("None", None, math.inf),
         ]
     )
@@ -49,7 +36,8 @@ class CacheUtilsTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            *NORMAL_PARAMS,
+            ("float", 3.5, 3.5),
+            ("timedelta", timedelta(minutes=3), 60 * 3),
             ("None", None, None),
         ]
     )
@@ -60,11 +48,3 @@ class CacheUtilsTest(unittest.TestCase):
         self.assertEqual(
             expected_seconds, ttl_to_seconds(input_value, coerce_none_to_inf=False)
         )
-
-    def test_ttl_str_exception(self):
-        """Test that a badly-formatted TTL string raises an exception."""
-        with self.assertRaises(BadTTLStringError):
-            ttl_to_seconds("")
-
-        with self.assertRaises(BadTTLStringError):
-            ttl_to_seconds("1 flecond")
