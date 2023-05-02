@@ -54,7 +54,9 @@ export type WrappedMapboxProps<P extends InjectedProps> = Omit<
 
 const withMapboxToken =
   (deltaType: string) =>
-  <P extends InjectedProps>(WrappedComponent: ComponentType<P>) => {
+  <P extends InjectedProps>(
+    WrappedComponent: ComponentType<P>
+  ): ComponentType<WrappedMapboxProps<P>> => {
     // Return a wrapper that accepts the wrapped component's props, minus
     // "mapboxToken". The wrapper will fetch the mapboxToken and inject it into
     // the wrapped component automatically.
