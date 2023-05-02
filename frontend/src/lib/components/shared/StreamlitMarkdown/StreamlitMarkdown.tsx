@@ -16,7 +16,6 @@
 
 import React, {
   CSSProperties,
-  Fragment,
   FunctionComponent,
   HTMLProps,
   PureComponent,
@@ -41,7 +40,6 @@ import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import CodeBlock from "src/lib/components/elements/CodeBlock"
 import IsSidebarContext from "src/lib/components/core/IsSidebarContext"
-import { Heading as HeadingProto } from "src/lib/proto"
 import ErrorBoundary from "src/lib/components/shared/ErrorBoundary"
 import {
   getMdBlue,
@@ -51,12 +49,7 @@ import {
   getMdViolet,
 } from "src/lib/theme"
 
-import {
-  InlineTooltipIcon,
-  StyledLabelHelpWrapper,
-} from "src/lib/components/shared/TooltipIcon"
 import { LibContext } from "src/lib/components/core/LibContext"
-
 import {
   StyledHeaderContainer,
   StyledHeaderContent,
@@ -68,7 +61,7 @@ import {
 import "katex/dist/katex.min.css"
 import StreamlitSyntaxHighlighter from "src/lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 
-enum Tags {
+export enum Tags {
   H1 = "h1",
   H2 = "h2",
   H3 = "h3",
@@ -135,11 +128,6 @@ interface HeadingWithAnchorProps {
   hideAnchor?: boolean
   children: ReactNode[] | ReactNode
   tagProps?: HTMLProps<HTMLHeadingElement>
-}
-
-export interface HeadingProtoProps {
-  width: number
-  element: HeadingProto
 }
 
 export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
@@ -456,86 +444,6 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
     >
       {children}
     </a>
-  )
-}
-
-function makeMarkdownHeading(tag: string, markdown: string): string {
-  switch (tag.toLowerCase()) {
-    case Tags.H1: {
-      return `# ${markdown}`
-    }
-    case Tags.H2: {
-      return `## ${markdown}`
-    }
-    case Tags.H3: {
-      return `### ${markdown}`
-    }
-    default: {
-      throw new Error(`Unrecognized tag for header: ${tag}`)
-    }
-  }
-}
-
-export function Heading(props: HeadingProtoProps): ReactElement {
-  const { width, element } = props
-  const { tag, anchor, body, help, hideAnchor } = element
-  const isSidebar = React.useContext(IsSidebarContext)
-  // st.header can contain new lines which are just interpreted as new
-  // markdown to be rendered as such.
-  const [heading, ...rest] = body.split("\n")
-
-  return (
-    <div className="stMarkdown" style={{ width }}>
-      <StyledStreamlitMarkdown
-        isCaption={Boolean(false)}
-        isInSidebar={isSidebar}
-        style={{ width }}
-        data-testid="stMarkdownContainer"
-      >
-        <StyledHeaderContainer>
-          <HeadingWithAnchor tag={tag} anchor={anchor} hideAnchor={hideAnchor}>
-            {help ? (
-              <StyledLabelHelpWrapper>
-                <RenderedMarkdown
-                  source={makeMarkdownHeading(tag, heading)}
-                  allowHTML={false}
-                  // this is purely an inline string
-                  overrideComponents={{
-                    p: Fragment,
-                    h1: Fragment,
-                    h2: Fragment,
-                    h3: Fragment,
-                    h4: Fragment,
-                    h5: Fragment,
-                    h6: Fragment,
-                  }}
-                />
-                <InlineTooltipIcon content={help} />
-              </StyledLabelHelpWrapper>
-            ) : (
-              <RenderedMarkdown
-                source={makeMarkdownHeading(tag, heading)}
-                allowHTML={false}
-                // this is purely an inline string
-                overrideComponents={{
-                  p: Fragment,
-                  h1: Fragment,
-                  h2: Fragment,
-                  h3: Fragment,
-                  h4: Fragment,
-                  h5: Fragment,
-                  h6: Fragment,
-                }}
-              />
-            )}
-          </HeadingWithAnchor>
-        </StyledHeaderContainer>
-        {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
-        {rest.length > 0 && (
-          <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
-        )}
-      </StyledStreamlitMarkdown>
-    </div>
   )
 }
 

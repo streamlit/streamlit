@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+const CircularDependencyPlugin = require("circular-dependency-plugin")
+
 module.exports = {
   devServer: {
     static: {
@@ -82,6 +84,20 @@ module.exports = {
       } else {
         minimizerPlugins[terserPluginIndex].options.parallel = true
       }
+
+      // detect circular dependency plugins as these can cause runtime errors
+      // no circular dependencies also mean better jest test runtimes, code organization, and better code splitting
+      webpackConfig.plugins.push(
+        new CircularDependencyPlugin({
+          // exclude detection of files based on a RegExp
+          exclude: /node_modules/,
+          // add errors to webpack compiltion instead of warnings
+          failOnError: true,
+          // allow import cycles that include an asyncronous import,
+          // e.g. via import(/* webpackMode: "weak" */ './file.js')
+          allowAsyncCycles: false,
+        })
+      )
 
       return webpackConfig
     },

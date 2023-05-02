@@ -23,7 +23,7 @@ import { RangeCellType } from "@glideapps/glide-data-grid-cells"
 
 import { Quiver } from "src/lib/dataframes/Quiver"
 import { isNullOrUndefined, notNullOrUndefined } from "src/lib/util/utils"
-import { isIntegerType } from "src/lib/components/widgets/DataFrame/arrowUtils"
+import { isIntegerType } from "src/lib/components/widgets/DataFrame/isIntegerType"
 
 import {
   BaseColumn,
