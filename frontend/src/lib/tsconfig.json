@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "lib": ["dom", "dom.iterable", "esnext", "ES6"],
+    "module": "esnext",
+    "moduleResolution": "node",
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es6",
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "paths": { "src/lib/*": ["./*"] },
+    "composite": true
+  },
+  "include": [
+    "**/*",
+    // When composite: true, we need to ensure all implementation files are
+    // matched by an "include", which defaults to files with extensions
+    // ending in ".ts, .tsx, d.ts, .js, .jsx (when allowJs = true)"
+    // Oddly, js files with multiple extensions (i.e. bokeh.esm.min.js)
+    // are not included so include here explicitly
+    "**/*.*.js",
+  ],
+  "exclude": [
+    "node_modules/**/*", 
+    "babel/**/*", 
+    "dist/**/*", 
+    "mocks/**/*", 
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "./proto.js",
+    "./test_util.tsx"
+  ],
+}
