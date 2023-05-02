@@ -155,11 +155,6 @@ function aboutDialog(props: AboutProps): ReactElement {
             />
           </StyledAboutInfo>
         </ModalBody>
-        <ModalFooter>
-          <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
-            Close
-          </ModalButton>
-        </ModalFooter>
       </Modal>
     )
   }
@@ -182,11 +177,6 @@ function aboutDialog(props: AboutProps): ReactElement {
           reserved.
         </div>
       </ModalBody>
-      <ModalFooter>
-        <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
-          Close
-        </ModalButton>
-      </ModalFooter>
     </Modal>
   )
 }

@@ -35,7 +35,7 @@ import {
   StyledDialogBody,
   StyledFullRow,
   StyledHeader,
-  StyledHr,
+  StyledButtonContainer,
   StyledLabel,
   StyledSmall,
 } from "./styled-components"
@@ -72,11 +72,11 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
 
   private renderThemeCreatorButton = (): ReactElement | false =>
     this.props.developerMode && (
-      <div>
+      <StyledButtonContainer>
         <Button onClick={this.props.openThemeCreator} kind={Kind.SECONDARY}>
           Edit active theme
         </Button>
-      </div>
+      </StyledButtonContainer>
     )
 
   public render(): ReactNode {
@@ -113,10 +113,6 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                     Automatically updates the app when the underlying code is
                     updated.
                   </StyledSmall>
-                </StyledFullRow>
-
-                <StyledFullRow>
-                  <StyledHr />
                 </StyledFullRow>
               </React.Fragment>
             )}
