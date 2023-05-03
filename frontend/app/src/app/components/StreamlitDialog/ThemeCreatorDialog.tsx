@@ -20,7 +20,7 @@ import { toHex } from "color2k"
 import humanizeString from "humanize-string"
 import mapValues from "lodash/mapValues"
 
-import { CustomThemeConfig } from "src/lib/proto"
+import { CustomThemeConfig } from "@streamlit/lib/dist/proto"
 import { AppContext } from "src/lib/components/core/AppContext"
 import Button, { Kind } from "src/lib/components/shared/Button"
 import ColorPicker from "src/lib/components/shared/ColorPicker"

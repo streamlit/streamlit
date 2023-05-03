@@ -38,7 +38,7 @@ import {
   NoRepositoryDetected,
 } from "src/app/components/StreamlitDialog/DeployErrorDialogs"
 import { getDeployAppUrl } from "src/app/components/MainMenu/MainMenu"
-import { GitInfo, IGitInfo } from "src/lib/proto"
+import { GitInfo, IGitInfo } from "@streamlit/lib/dist/proto"
 import { MetricsManager } from "src/lib/MetricsManager"
 
 const { GitStates } = GitInfo

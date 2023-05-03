@@ -34,7 +34,7 @@ import {
   PageInfo,
   PageNotFound,
   PagesChanged,
-} from "src/lib/proto"
+} from "@streamlit/lib/dist/proto"
 import { HostCommunicationHOC } from "src/lib/hocs/withHostCommunication"
 import {
   HostCommunicationState,

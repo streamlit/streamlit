@@ -17,7 +17,7 @@
 // Disable Typescript checking, since mm.track has private scope
 // @ts-nocheck
 
-import { Alert, Delta, ForwardMsgMetadata, Element } from "src/lib/proto"
+import { Alert, Delta, ForwardMsgMetadata, Element } from "@streamlit/lib/dist/proto"
 import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
 import { SegmentMetricsManager } from "./SegmentMetricsManager"
 import { SessionInfo } from "src/lib/SessionInfo"
