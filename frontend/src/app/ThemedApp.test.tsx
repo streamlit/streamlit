@@ -26,6 +26,7 @@ import {
   setCachedTheme,
   ThemeConfig,
 } from "src/lib/theme"
+import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 
 import AppWithScreencast from "./App"
 import ThemedApp from "./ThemedApp"
@@ -79,7 +80,12 @@ describe("ThemedApp", () => {
     expect(wrapper.html()).not.toBeNull()
   })
 
-  it("updates theme", () => {
+  it.only("only renders a single instance of BaseWeb <ThemeProvider>", () => {
+    const wrapper = mount(<ThemedApp />)
+    expect(wrapper.find(BaseUIThemeProvider)).toHaveLength(1)
+  })
+
+  it("updates the theme", () => {
     const wrapper = shallow(<ThemedApp />)
     wrapper.find(AppWithScreencast).props().theme.setTheme(darkTheme)
     const updatedTheme: ThemeConfig = wrapper.find(AppWithScreencast).props()
