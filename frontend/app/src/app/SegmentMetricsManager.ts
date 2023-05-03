@@ -15,7 +15,7 @@
  */
 
 import { pick } from "lodash"
-import { SessionInfo } from "src/lib/SessionInfo"
+import { SessionInfo } from "@streamlit/lib"
 import { initializeSegment } from "src/app/vendor/Segment"
 import { DeployedAppMetadata } from "@streamlit/lib"
 import Protobuf, { Delta, Element, ForwardMsgMetadata } from "@streamlit/lib/dist/proto"

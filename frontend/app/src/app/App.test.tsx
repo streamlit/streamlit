@@ -43,7 +43,7 @@ import {
 } from "src/lib/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
-import { SessionInfo } from "src/lib/SessionInfo"
+import { SessionInfo } from "@streamlit/lib"
 import {
   createAutoTheme,
   CUSTOM_THEME_NAME,

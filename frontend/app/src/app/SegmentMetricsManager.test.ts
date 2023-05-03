@@ -20,7 +20,7 @@
 import { Alert, Delta, ForwardMsgMetadata, Element } from "@streamlit/lib/dist/proto"
 import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
 import { SegmentMetricsManager } from "./SegmentMetricsManager"
-import { SessionInfo } from "src/lib/SessionInfo"
+import { SessionInfo } from "@streamlit/lib"
 
 const getSegmentMetricsManager = (
   sessionInfo?: SessionInfo
