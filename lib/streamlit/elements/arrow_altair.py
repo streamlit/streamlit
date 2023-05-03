@@ -33,7 +33,7 @@ from typing import (
 
 import altair as alt
 import pandas as pd
-from altair.vegalite.v4.api import Chart
+from altair.vegalite.api import Chart
 from pandas.api.types import infer_dtype, is_integer_dtype
 from typing_extensions import Literal
 
@@ -298,7 +298,7 @@ class ArrowAltairMixin:
 
         Parameters
         ----------
-        altair_chart : altair.vegalite.v2.api.Chart
+        altair_chart : altair.vegalite.api.Chart
             The Altair chart object to display.
 
         use_container_width : bool
