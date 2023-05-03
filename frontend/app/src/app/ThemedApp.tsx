@@ -21,7 +21,7 @@ import { Global } from "@emotion/react"
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/lib/dist/proto"
 
 import FontFaceDeclaration from "src/app/components/FontFaceDeclaration"
-import ThemeProvider from "src/lib/components/core/ThemeProvider"
+import ThemeProvider from "@streamlit/lib"
 import {
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
