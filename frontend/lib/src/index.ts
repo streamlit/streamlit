@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// These imports are each exported specifically in order to minimize public apis.
 export {
   IS_DEV_ENV,
   RERUN_PROMPT_MODAL_DIALOG,
@@ -21,6 +22,8 @@ export {
   WEBSOCKET_PORT_DEV,
 } from "./baseconsts"
 export { default as VerticalBlock } from "./components/core/Block"
+export { default as ElementNodeRenderer } from "./components/core/Block/ElementNodeRenderer"
+export type { ElementNodeRendererProps } from "./components/core/Block/ElementNodeRenderer"
 export type { BlockPropsWithoutWidth } from "./components/core/Block"
 export type { StreamlitEndpoints } from "./StreamlitEndpoints"
 export { SessionInfo } from "./SessionInfo"
@@ -29,4 +32,6 @@ export { WidgetStateManager } from "./WidgetStateManager"
 export type { FormsData } from "./WidgetStateManager"
 export { FileUploadClient } from "./FileUploadClient"
 export { ComponentRegistry } from "./components/widgets/CustomComponent"
-export { AppRoot } from "./AppNode"
+export { AppRoot, ElementNode } from "./AppNode"
+export { Quiver } from "./dataframes/Quiver"
+export { default as VegaLiteChartElement } from "./components/elements/VegaLiteChart"
