@@ -15,7 +15,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
+import { Modal, ModalHeader, ModalBody } from "@streamlit/lib"
 import {
   StyledScreenCastWarningDialog,
   StyledUnsupportedScreenCastExplanation,

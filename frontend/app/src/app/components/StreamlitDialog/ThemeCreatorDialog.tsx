@@ -24,7 +24,7 @@ import { CustomThemeConfig } from "src/lib/proto"
 import { AppContext } from "src/lib/components/core/AppContext"
 import Button, { Kind } from "src/lib/components/shared/Button"
 import ColorPicker from "src/lib/components/shared/ColorPicker"
-import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
+import { Modal, ModalHeader, ModalBody } from "@streamlit/lib"
 import UISelectbox from "src/lib/components/shared/Dropdown"
 import Icon from "src/lib/components/shared/Icon"
 import {
