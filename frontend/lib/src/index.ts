@@ -38,3 +38,4 @@ export { default as VegaLiteChartElement } from "./components/elements/VegaLiteC
 export type { DeployedAppMetadata } from "./hocs/withHostCommunication/types"
 export { default as Modal, ModalHeader, ModalBody } from "./components/shared/Modal"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
+export { LocalStore } from "./util/storageUtils"
