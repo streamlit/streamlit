@@ -221,8 +221,8 @@ clean:
 	rm -rf frontend/build
 	rm -rf frontend/node_modules
 	rm -rf frontend/test_results
-	rm -f frontend/src/proto.js
-	rm -f frontend/src/proto.d.ts
+	rm -f frontend/lib/src/proto.js
+	rm -f frontend/lib/src/proto.d.ts
 	rm -rf frontend/public/reports
 	rm -rf ~/.cache/pre-commit
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
@@ -297,7 +297,7 @@ frontend-fast:
 .PHONY: jslint
 # Lint the JS code
 jslint:
-	./scripts/validate_frontend_lib_imports.py frontend/src
+	./scripts/validate_frontend_lib_imports.py frontend/lib/src
 	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
 ifndef CIRCLECI
 	cd frontend; \
@@ -362,15 +362,15 @@ notices:
 	cd frontend; \
 		yarn licenses generate-disclaimer --silent --production --ignore-platform > ../NOTICES
 
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
-	./scripts/append_license.sh frontend/src/vendor/bokeh/bokeh-LICENSE.txt
-	./scripts/append_license.sh frontend/src/vendor/twemoji-LICENSE.txt
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/img/Material-Icons.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/lib/src/vendor/bokeh/bokeh-LICENSE.txt
+	./scripts/append_license.sh frontend/lib/src/vendor/twemoji-LICENSE.txt
 	./scripts/append_license.sh frontend/src/app/vendor/Segment-LICENSE.txt
-	./scripts/append_license.sh frontend/src/vendor/react-bootstrap-LICENSE.txt
+	./scripts/append_license.sh frontend/lib/src/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh lib/streamlit/vendor/ipython/IPython-LICENSE.txt
 
 .PHONY: headers

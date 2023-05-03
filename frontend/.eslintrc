@@ -32,7 +32,7 @@
     "sourceType": "module"
   },
   // Ignore our auto-generated and vendored code
-  "ignorePatterns": ["src/proto.js", "src/proto.d.ts", "**/vendor/*", "**/node_modules/*"],
+  "ignorePatterns": ["lib/src/proto.js", "lib/src/proto.d.ts", "**/vendor/*", "**/node_modules/*"],
   "plugins": ["no-relative-import-paths"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
