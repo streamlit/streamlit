@@ -51,6 +51,8 @@ _OBJECT_NAME_MAPPING: Final = {
     "pandas.io.formats.style.Styler": "PandasStyler",
     "pandas.core.indexes.base.Index": "PandasIndex",
     "pandas.core.series.Series": "PandasSeries",
+    "streamlit.connections.snowpark_connection.SnowparkConnection": "SnowparkConnection",
+    "streamlit.connections.sql_connection.SQLConnection": "SQLConnection",
 }
 
 # A list of dependencies to check for attribution
@@ -163,7 +165,7 @@ class Installation:
 def _get_type_name(obj: object) -> str:
     """Get a simplified name for the type of the given object."""
     with contextlib.suppress(Exception):
-        obj_type = type(obj)
+        obj_type = obj if inspect.isclass(obj) else type(obj)
         type_name = "unknown"
         if hasattr(obj_type, "__qualname__"):
             type_name = obj_type.__qualname__
