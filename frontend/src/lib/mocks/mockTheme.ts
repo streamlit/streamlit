@@ -16,7 +16,7 @@
 
 /** A mock theme definition for use in unit tests. */
 
-import { LightTheme, lightThemePrimitives } from "baseui"
+import { lightThemePrimitives } from "baseui"
 import { transparentize } from "color2k"
 import {
   createBaseUiTheme,
@@ -103,7 +103,6 @@ const baseuiMockTheme = createBaseUiTheme(
 export const mockTheme: ThemeConfig = {
   name: "MockTheme",
   emotion: emotionMockTheme,
-  baseweb: LightTheme,
   basewebTheme: baseuiMockTheme,
   primitives: lightThemePrimitives,
 }
