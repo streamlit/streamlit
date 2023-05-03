@@ -33,7 +33,6 @@ from typing import (
 
 import altair as alt
 import pandas as pd
-from altair.vegalite.api import Chart
 from pandas.api.types import infer_dtype, is_integer_dtype
 from typing_extensions import Literal
 
@@ -48,6 +47,8 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from altair import Chart
+
     from streamlit.delta_generator import DeltaGenerator
 
 # Create and enable streamlit theme
@@ -290,7 +291,7 @@ class ArrowAltairMixin:
     @gather_metrics("_arrow_altair_chart")
     def _arrow_altair_chart(
         self,
-        altair_chart: Chart,
+        altair_chart: "Chart",
         use_container_width: bool = False,
         theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> "DeltaGenerator":
@@ -298,7 +299,7 @@ class ArrowAltairMixin:
 
         Parameters
         ----------
-        altair_chart : altair.vegalite.api.Chart
+        altair_chart : altair.Chart
             The Altair chart object to display.
 
         use_container_width : bool
@@ -498,7 +499,7 @@ def _generate_chart(
     y: Union[str, Sequence[str], None] = None,
     width: int = 0,
     height: int = 0,
-) -> Chart:
+) -> "Chart":
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
 
     if data is None:
@@ -584,7 +585,7 @@ def _generate_chart(
 
 def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
-    altair_chart: Chart,
+    altair_chart: "Chart",
     use_container_width: bool = False,
     theme: Union[None, Literal["streamlit"]] = "streamlit",
     **kwargs: Any,
