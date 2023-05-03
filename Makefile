@@ -229,6 +229,9 @@ clean:
 	cd lib; rm -rf .coverage .coverage\.*
 
 MIN_PROTOC_VERSION = 3.19
+BINARY_DIR = ./vendor/protoc-3.20.3-linux-x86_64/bin
+LOCAL_PATH = $(BINARY_DIR):$(shell echo $$PATH)
+export PATH := $(LOCAL_PATH)
 .PHONY: check-protoc
 # Ensure protoc is installed and is >= MIN_PROTOC_VERSION.
 check-protoc:
