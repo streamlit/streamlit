@@ -137,6 +137,13 @@ function BaseChartColumn(
         convertedChartData.push(convertedValue)
       }
 
+      if (chart_type === "line" && convertedChartData.length <= 2) {
+        // TODO(lukasmasuch): This is only a temporary workaround to prevent
+        // an error in glide-data-grid that occurs during cell drawing when the
+        // line chart has less than 3 values. This needs to a fix in glide-data-grid.
+        return getEmptyCell()
+      }
+
       if (
         convertedChartData.length > 0 &&
         (maxValue > parameters.y_max || minValue < parameters.y_min)

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCellKind, LoadingCell } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
 import { BaseColumnProps, isErrorCell } from "./utils"
@@ -70,25 +70,28 @@ describe("ChartColumn", () => {
     // Column should be readonly:
     expect(mockColumn.isEditable).toEqual(false)
 
-    const mockCell = mockColumn.getCell([0.1, 0.2])
+    const mockCell = mockColumn.getCell([0.1, 0.2, 0.3])
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect((mockCell as SparklineCellType).data?.values).toEqual([0.1, 0.2])
+    expect((mockCell as SparklineCellType).data?.values).toEqual([
+      0.1, 0.2, 0.3,
+    ])
     expect((mockCell as SparklineCellType).data?.displayValues).toEqual([
       "0.1",
       "0.2",
+      "0.3",
     ])
   })
 
   it("supports configuring the chart type", () => {
     const mockColumn = getLineChartColumn()
     expect(mockColumn.kind).toEqual("line_chart")
-    const mockCell = mockColumn.getCell([0.1, 0.2])
+    const mockCell = mockColumn.getCell([0.1, 0.2, 0.3])
     // Default chart type is line
     expect((mockCell as SparklineCellType).data?.graphKind).toEqual("line")
 
     const mockBarChartColumn = getBarChartColumn()
     expect(mockBarChartColumn.kind).toEqual("bar_chart")
-    const mockBarChartCell = mockBarChartColumn.getCell([0.1, 0.2])
+    const mockBarChartCell = mockBarChartColumn.getCell([0.1, 0.2, 0.3])
     // Chart type should be bar
     expect((mockBarChartCell as SparklineCellType).data?.graphKind).toEqual(
       "bar"
@@ -161,8 +164,29 @@ describe("ChartColumn", () => {
     expect(isErrorCell(mockCell6)).toEqual(true)
   })
 
+  it("returns empty cell if line chart with less than 3 values", () => {
+    // This is only a temporary workaround since the line chart rendering
+    // runs into an error if there are less than 3 values. This needs
+    // to be fixed in the glide-data-grid library.
+
+    const mockColumn = getLineChartColumn()
+
+    let mockCell = mockColumn.getCell([])
+    expect((mockCell as LoadingCell).kind).toEqual(GridCellKind.Loading)
+
+    mockCell = mockColumn.getCell([1])
+    expect((mockCell as LoadingCell).kind).toEqual(GridCellKind.Loading)
+
+    mockCell = mockColumn.getCell([1, 2])
+    expect((mockCell as LoadingCell).kind).toEqual(GridCellKind.Loading)
+
+    // Three items should work
+    mockCell = mockColumn.getCell([1, 2, 3])
+    expect((mockCell as SparklineCellType).kind).toEqual(GridCellKind.Custom)
+  })
+
   it("works with single values or only same values without running into division by zero", () => {
-    const mockColumn = getLineChartColumn({
+    const mockColumn = getBarChartColumn({
       y_min: 0,
       y_max: 100,
     })
@@ -202,7 +226,7 @@ describe("ChartColumn", () => {
   ])(
     "supports numerical array-compatible value (%p parsed as %p)",
     (input: any, value: any[] | null) => {
-      const mockColumn = getLineChartColumn()
+      const mockColumn = getBarChartColumn()
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
