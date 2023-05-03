@@ -55,6 +55,27 @@ _OBJECT_NAME_MAPPING: Final = {
 
 # A list of dependencies to check for attribution
 _ATTRIBUTIONS_TO_CHECK: Final = [
+    # DB Clients:
+    "pymysql",
+    "MySQLdb",
+    "mysql",
+    "pymongo",
+    "ibis",
+    "boto3",
+    "psycopg2",
+    "psycopg3",
+    "sqlalchemy",
+    "elasticsearch",
+    "pyodbc",
+    "pymssql",
+    "cassandra",
+    "azure",
+    "google",
+    "redis",
+    "sqlite3",
+    "neo4j",
+    "duckdb",
+    "opensearch-py",
     # LLM Tools:
     "openai",
     "langchain",
@@ -69,6 +90,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     # Vector Stores:
     "pgvector",
     "faiss",
+    "annoy",
     "pinecone",
     "chromadb",
     "weaviate",

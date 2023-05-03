@@ -22,13 +22,13 @@ import {
   ForwardMsgMetadata,
   IArrowVegaLiteChart,
   NamedDataSet,
-} from "src/autogen/proto"
-import { IndexTypeName } from "src/lib/Quiver"
-import { mockDataFrame as mockDataFrameData } from "src/components/elements/DataFrame/mock"
+} from "src/lib/proto"
+import { IndexTypeName } from "src/lib/dataframes/Quiver"
+import { mockDataFrame as mockDataFrameData } from "src/lib/components/elements/DataFrame/mock"
 import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
-import { addRows } from "./dataFrameProto"
-import { toImmutableProto } from "./immutableProto"
+import { addRows } from "./dataframes/dataFrameProto"
+import { toImmutableProto } from "./util/immutableProto"
 import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
 import { UNICODE } from "./mocks/arrow"
 
