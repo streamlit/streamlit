@@ -1,5 +1,5 @@
-import { VerticalBlock, SessionInfo, ComponentRegistry, AppRoot, BlockPropsWithoutWidth, StreamlitEndpoints, FileUploadClient, ScriptRunState, WidgetStateManager, FormsData } from "@streamlit/lib"
-import { IAppPage, WidgetStates, Delta as DeltaProto, ForwardMsgMetadata as ForwardMsgMetadataProto } from "@streamlit/lib/dist/proto"
+import { VerticalBlock, SessionInfo, ComponentRegistry, AppRoot, BlockPropsWithoutWidth, StreamlitEndpoints, FileUploadClient, ScriptRunState, WidgetStateManager, FormsData, ElementNodeRenderer, ElementNodeRendererProps, ElementNode } from "@streamlit/lib"
+import { IAppPage, WidgetStates, Delta as DeltaProto, ForwardMsgMetadata as ForwardMsgMetadataProto, Snow as SnowProto } from "@streamlit/lib/dist/proto"
 import { CancelToken } from "axios"
 import { PureComponent, ReactElement } from "react"
 
@@ -158,23 +158,70 @@ class StreamlitLibExample extends PureComponent<Props, State> {
  }
 
  public render = (): ReactElement => {
+function getProps(
+    props: Partial<ElementNodeRendererProps> &
+        Pick<ElementNodeRendererProps, "node" | "scriptRunId">
+    ): ElementNodeRendererProps {
+    const sessionInfo: SessionInfo = new SessionInfo()
+    const endpoints = new Endpoints()
+    return {
+        endpoints: endpoints,
+        scriptRunState: ScriptRunState.RUNNING,
+        sessionInfo: sessionInfo,
+        widgetMgr: new WidgetStateManager({
+        sendRerunBackMsg: jest.fn(),
+        formsDataChanged: jest.fn(),
+        }),
+        widgetsDisabled: false,
+        uploadClient: new FileUploadClient({
+        sessionInfo: sessionInfo,
+        endpoints,
+        formsWithPendingRequestsChanged: () => {},
+        }),
+        componentRegistry: new ComponentRegistry(endpoints),
+        formsData: createFormsData(),
+        width: 1000,
+        ...props,
+    }
+}
    // This example doesn't involve a sidebar, so our only root blockNode
    // is `elements.main`.
    const blockNode = this.state.elements.main
-
+   function createSnowNode(scriptRunId: string): ElementNode {
+    const node = new ElementNode(
+      new SnowProto({
+        show: true,
+      }),
+      ForwardMsgMetadataProto.create({}),
+      scriptRunId
+    )
+    node.element.type = "snow"
+    return node
+  }
+  const scriptRunId = "SCRIPT_RUN_ID"
+      const elementNodeRendererProps = getProps({
+        node: createSnowNode(scriptRunId),
+        scriptRunId,
+      })
    return (
-     <VerticalBlock
-       node={blockNode}
-       endpoints={this.endpoints}
-       sessionInfo={this.sessionInfo}
-       scriptRunId={this.state.scriptRunId}
-       scriptRunState={this.state.scriptRunState}
-       widgetMgr={this.widgetMgr}
-       uploadClient={this.uploadClient}
-       widgetsDisabled={false}
-       componentRegistry={this.componentRegistry}
-       formsData={this.state.formsData}
-     />
+       <>
+        <ElementNodeRenderer
+            {...elementNodeRendererProps}
+        >
+        </ElementNodeRenderer>
+        <VerticalBlock
+        node={blockNode}
+        endpoints={this.endpoints}
+        sessionInfo={this.sessionInfo}
+        scriptRunId={this.state.scriptRunId}
+        scriptRunState={this.state.scriptRunState}
+        widgetMgr={this.widgetMgr}
+        uploadClient={this.uploadClient}
+        widgetsDisabled={false}
+        componentRegistry={this.componentRegistry}
+        formsData={this.state.formsData}
+        />
+     </>
    )
  }
 
