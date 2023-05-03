@@ -37,7 +37,7 @@ greenlet==2.0.2
 grpcio==1.54.0
 h5py==3.8.0
 hypothesis==6.75.1
-identify==2.5.23
+identify==2.5.24
 idna==3.4
 importlib-metadata==6.6.0
 importlib-resources==5.12.0
