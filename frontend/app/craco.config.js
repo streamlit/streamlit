@@ -17,7 +17,7 @@ module.exports = {
   devServer: {
     static: {
       watch: {
-        ignored: [/node_modules/, "*.test.{ts,tsx}", /cypress/, "../lib/dist/*"],
+        ignored: [/node_modules/, "*.test.{ts,tsx}", /cypress/],
       },
     },
   },

@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import { Card } from "baseui/card"
-import { EmotionTheme } from "src/lib/theme"
+import { EmotionTheme } from "@streamlit/lib"
 import { useTheme } from "@emotion/react"
 
 interface IDeployCardProps {

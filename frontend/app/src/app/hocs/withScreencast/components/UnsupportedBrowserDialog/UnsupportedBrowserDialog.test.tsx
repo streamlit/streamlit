@@ -18,7 +18,7 @@ import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
 
 import { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
-import { mount } from "src/lib/test_util"
+import { mount } from "@streamlit/lib"
 import UnsupportedBrowserDialog from "./UnsupportedBrowserDialog"
 
 describe("UnsupportedBrowserDialog", () => {

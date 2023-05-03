@@ -16,8 +16,8 @@
 
 import React from "react"
 import PropTypes from "prop-types"
-import { createPresetThemes, lightTheme, darkTheme } from "src/lib/theme"
-import { shallow } from "src/lib/test_util"
+import { createPresetThemes, lightTheme, darkTheme } from "@streamlit/lib"
+import { shallow } from "@streamlit/lib"
 import { Props as ContextProps } from "src/lib/components/core/AppContext"
 import UISelectbox from "src/lib/components/shared/Dropdown"
 

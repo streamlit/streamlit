@@ -19,7 +19,7 @@ import { BaseProvider, LightTheme } from "baseui"
 import { ReactWrapper } from "enzyme"
 
 import { ModalHeader, ModalFooter } from "src/lib/components/shared/Modal"
-import { mount } from "src/lib/test_util"
+import { mount } from "@streamlit/lib"
 import ScreencastDialog, { Props } from "./ScreencastDialog"
 
 const getProps = (props: Partial<Props> = {}): Props => ({

@@ -17,7 +17,7 @@
 import React from "react"
 
 import { LocalStore } from "@streamlit/lib"
-import { shallow, mount } from "src/lib/test_util"
+import { shallow, mount } from "@streamlit/lib"
 import {
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
@@ -25,7 +25,7 @@ import {
   darkTheme,
   setCachedTheme,
   ThemeConfig,
-} from "src/lib/theme"
+} from "@streamlit/lib"
 
 import AppWithScreencast from "./App"
 import ThemedApp from "./ThemedApp"

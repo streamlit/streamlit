@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { shallow } from "src/lib/test_util"
+import { shallow } from "@streamlit/lib"
 
 import { StyledActionButtonIcon } from "./styled-components"
 import ToolbarActions, {

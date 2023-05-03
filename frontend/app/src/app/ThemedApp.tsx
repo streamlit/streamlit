@@ -34,7 +34,7 @@ import {
   setCachedTheme,
   ThemeConfig,
   createTheme,
-} from "src/lib/theme"
+} from "@streamlit/lib"
 
 import AppWithScreencast from "./App"
 import { StyledDataFrameOverlay } from "src/styled-components"

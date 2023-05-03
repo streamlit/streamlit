@@ -39,3 +39,9 @@ export type { DeployedAppMetadata } from "./hocs/withHostCommunication/types"
 export { default as Modal, ModalHeader, ModalBody } from "./components/shared/Modal"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { LocalStore } from "./util/storageUtils"
+export { createAutoTheme,
+  CUSTOM_THEME_NAME,
+  darkTheme,
+  lightTheme,
+  toExportedTheme } from "./theme"
+export { mount, shallow, mockWindowLocation, render } from "./test_util"

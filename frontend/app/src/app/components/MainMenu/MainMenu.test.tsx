@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { mount, render } from "src/lib/test_util"
+import { mount, render } from "@streamlit/lib"
 import { IMenuItem } from "src/lib/hocs/withHostCommunication/types"
 
 import { Config, GitInfo, IGitInfo } from "@streamlit/lib/dist/proto"

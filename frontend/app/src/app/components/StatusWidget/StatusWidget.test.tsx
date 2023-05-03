@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { shallow, mount } from "src/lib/test_util"
+import { shallow, mount } from "@streamlit/lib"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"

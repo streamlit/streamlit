@@ -20,7 +20,7 @@ import { waitFor } from "@testing-library/dom"
 import cloneDeep from "lodash/cloneDeep"
 import { LocalStore } from "@streamlit/lib"
 import { hashString } from "src/lib/util/utils"
-import { shallow, mount, mockWindowLocation } from "src/lib/test_util"
+import { shallow, mount, mockWindowLocation } from "@streamlit/lib"
 import {
   Config,
   CustomThemeConfig,
@@ -50,7 +50,7 @@ import {
   darkTheme,
   lightTheme,
   toExportedTheme,
-} from "src/lib/theme"
+} from "@streamlit/lib"
 import Modal from "src/lib/components/shared/Modal"
 import {
   DialogType,
