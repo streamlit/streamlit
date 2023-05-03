@@ -44,7 +44,7 @@ INSTALL_REQUIRES = [
     # (`protoc` is installed separately from the Python protobuf package, so this >= 3.19 pin
     # doesn't actually enforce a `protoc` minimum version. `protoc` min version is enforced
     # in our Makefile.)
-    "protobuf>=3.19, <5",
+    "protobuf>=3.20, <5",
     "pyarrow>=4.0",
     "pympler>=0.9",
     "python-dateutil",
