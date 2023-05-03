@@ -16,12 +16,14 @@
 
 import React from "react"
 import { BaseProvider } from "baseui"
-import { Global } from "@emotion/react"
+import { Global, ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 
-import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/lib/dist/proto"
+import {
+  CustomThemeConfig,
+  ICustomThemeConfig,
+} from "@streamlit/lib/dist/proto"
 
 import FontFaceDeclaration from "src/app/components/FontFaceDeclaration"
-import ThemeProvider from "@streamlit/lib"
 import {
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
@@ -103,10 +105,10 @@ const ThemedApp = (): JSX.Element => {
 
   return (
     <BaseProvider
-      theme={theme.baseweb}
+      theme={theme.basewebTheme}
       zIndex={theme.emotion.zIndices.popupMenu}
     >
-      <ThemeProvider theme={theme.emotion} baseuiTheme={theme.basewebTheme}>
+      <EmotionThemeProvider theme={theme.emotion}>
         <Global styles={globalStyles} />
         {theme.name === CUSTOM_THEME_NAME && fontFaces && (
           <FontFaceDeclaration fontFaces={fontFaces} />
@@ -122,7 +124,7 @@ const ThemedApp = (): JSX.Element => {
         />
         {/* The data grid requires one root level portal element for rendering cell overlays */}
         <StyledDataFrameOverlay id="portal" />
-      </ThemeProvider>
+      </EmotionThemeProvider>
     </BaseProvider>
   )
 }

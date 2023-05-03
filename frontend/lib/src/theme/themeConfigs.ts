@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  LightTheme,
-  DarkTheme,
-  lightThemePrimitives,
-  darkThemePrimitives,
-} from "baseui"
+import { lightThemePrimitives, darkThemePrimitives } from "baseui"
 import { baseuiLightTheme, baseuiDarkTheme } from "./baseui"
 import emotionBaseTheme from "./emotionBaseTheme"
 import emotionLightTheme from "./emotionLightTheme"
@@ -30,7 +25,6 @@ import { AUTO_THEME_NAME, getSystemTheme } from "./utils"
 export const baseTheme: ThemeConfig = {
   name: "base",
   emotion: emotionBaseTheme,
-  baseweb: LightTheme,
   basewebTheme: baseuiLightTheme,
   primitives: lightThemePrimitives,
 }
@@ -38,7 +32,6 @@ export const baseTheme: ThemeConfig = {
 export const darkTheme: ThemeConfig = {
   name: "Dark",
   emotion: emotionDarkTheme,
-  baseweb: DarkTheme,
   basewebTheme: baseuiDarkTheme,
   primitives: darkThemePrimitives,
 }
@@ -46,7 +39,6 @@ export const darkTheme: ThemeConfig = {
 export const lightTheme: ThemeConfig = {
   name: "Light",
   emotion: emotionLightTheme,
-  baseweb: LightTheme,
   basewebTheme: baseuiLightTheme,
   primitives: lightThemePrimitives,
 }
