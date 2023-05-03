@@ -1,4 +1,5 @@
 name: "Setup Virtual Env"
+description: Sets up virtualenv + React; compiles protobuf
 
 inputs:
   use_cached_venv:
@@ -42,6 +43,10 @@ runs:
             graphviz \
             libgvc6 \
             protobuf-compiler
+      shell: bash --login -eo pipefail {0}
+    - name: Add vendored `protoc` to $PATH
+      run: |
+        echo "./vendor/protoc-3.20.3-linux-x86_64/bin" >> $GITHUB_PATH
       shell: bash --login -eo pipefail {0}
     # Combine hashes of the Python interpreter, Pipfile, and today's
     # date into a file whose hash will key the Python virtualenv.

@@ -228,15 +228,12 @@ clean:
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
-MIN_PROTOC_VERSION = 3.19
-BINARY_DIR = ./vendor/protoc-3.20.3-linux-x86_64/bin
-LOCAL_PATH = $(BINARY_DIR):$(shell echo $$PATH)
-export PATH := $(LOCAL_PATH)
+MIN_PROTOC_VERSION = 3.20
 .PHONY: check-protoc
 # Ensure protoc is installed and is >= MIN_PROTOC_VERSION.
 check-protoc:
-	@# We support Python protobuf 4.21, which is compatible with code generated
-	@# from protoc 3.19.0 or newer (https://protobuf.dev/news/2022-05-06/#python-updates)
+	@# We support Python protobuf 4.21, which is incompatible with code generated from
+	@# protoc < 3.20
 	@if ! command -v protoc &> /dev/null ; then \
 		echo "protoc not installed."; \
 		exit 1; \
