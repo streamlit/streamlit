@@ -40,10 +40,9 @@ INSTALL_REQUIRES = [
     "pandas<3,>=0.25",
     "pillow>=6.2.0",
     # Python protobuf 4.21 (the first 4.x version) is compatible with protobufs
-    # generated from `protoc` >= 3.19.0 (https://protobuf.dev/news/2022-05-06/#python-updates).
-    # (`protoc` is installed separately from the Python protobuf package, so this >= 3.19 pin
-    # doesn't actually enforce a `protoc` minimum version. `protoc` min version is enforced
-    # in our Makefile.)
+    # generated from `protoc` >= 3.20. (`protoc` is installed separately from the Python
+    # protobuf package, so this pin doesn't actually enforce a `protoc` minimum version.
+    # Instead, the `protoc` min version is enforced in our Makefile.)
     "protobuf>=3.20, <5",
     "pyarrow>=4.0",
     "pympler>=0.9",
