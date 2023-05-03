@@ -60,6 +60,9 @@ from streamlit.runtime.caching import (
     experimental_singleton as _experimental_singleton,
     experimental_memo as _experimental_memo,
 )
+from streamlit.runtime.connection_factory import (
+    connection_factory as _connection_factory,
+)
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
@@ -68,7 +71,6 @@ from streamlit.commands.query_params import (
     get_query_params as _get_query_params,
     set_query_params as _set_query_params,
 )
-from streamlit.elements.show import show as _show
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
@@ -198,17 +200,12 @@ session_state = _SessionStateProxy()
 cache_data = _cache_data
 cache_resource = _cache_resource
 
-# Beta APIs
-beta_container = _gather_metrics("beta_container", _main.beta_container)
-beta_expander = _gather_metrics("beta_expander", _main.beta_expander)
-beta_columns = _gather_metrics("beta_columns", _main.beta_columns)
-
 # Experimental APIs
 experimental_user = _UserInfoProxy()
 experimental_singleton = _experimental_singleton
 experimental_memo = _experimental_memo
 experimental_get_query_params = _get_query_params
 experimental_set_query_params = _set_query_params
-experimental_show = _show
 experimental_rerun = _rerun
 experimental_data_editor = _main.experimental_data_editor
+experimental_connection = _connection_factory
