@@ -117,9 +117,8 @@ sortedcontainers==2.4.0
 SQLAlchemy==1.4.48
 sqlalchemy2-stubs==0.0.2a34
 tenacity==8.2.2
-tensorboard==2.12.2
+tensorboard==2.12.3
 tensorboard-data-server==0.7.0
-tensorboard-plugin-wit==1.8.1
 tensorflow==2.7.4
 tensorflow-estimator==2.7.0
 tensorflow-io-gcs-filesystem==0.32.0

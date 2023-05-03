@@ -59,11 +59,11 @@ pkginfo==1.9.6
 platformdirs==3.5.0
 plotly==5.14.1
 pluggy==1.0.0
-pre-commit==3.3.0
+pre-commit==3.3.1
 protobuf==3.20.3
 psycopg2-binary==2.9.6
 py4j==0.10.9.7
-pyarrow==11.0.0
+pyarrow==12.0.0
 pycparser==2.21
 pydeck==0.8.1b0
 pydot==1.4.2
