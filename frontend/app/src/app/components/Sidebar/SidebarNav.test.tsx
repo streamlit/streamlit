@@ -22,7 +22,7 @@ import React from "react"
 import * as reactDeviceDetect from "react-device-detect"
 import { act } from "react-dom/test-utils"
 
-import Icon from "@streamlit/lib"
+import { Icon } from "@streamlit/lib"
 import { useIsOverflowing } from "src/lib/util/Hooks"
 import { mount, shallow } from "@streamlit/lib"
 import { mockEndpoints } from "@streamlit/lib"
