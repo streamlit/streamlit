@@ -610,9 +610,7 @@ class DataEditorMixin:
         # This gets translated into the columns configuration:
         if not isinstance(disabled, bool):
             for column in disabled:
-                if column not in columns_config:
-                    columns_config[column] = {}
-                columns_config[column]["disabled"] = True
+                update_column_config(columns_config, column, {"disabled": True})
 
         # Convert the dataframe to an arrow table which is used as the main
         # serialization format for sending the data to the frontend.
