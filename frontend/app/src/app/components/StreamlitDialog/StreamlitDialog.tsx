@@ -31,7 +31,7 @@ import {
 import { IException } from "@streamlit/lib/dist/proto"
 import { SessionInfo } from "@streamlit/lib"
 import { STREAMLIT_HOME_URL } from "src/urls"
-import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "@streamlit/lib"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
