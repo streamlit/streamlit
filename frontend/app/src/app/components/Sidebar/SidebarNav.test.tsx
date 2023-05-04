@@ -23,7 +23,7 @@ import * as reactDeviceDetect from "react-device-detect"
 import { act } from "react-dom/test-utils"
 
 import { Icon } from "@streamlit/lib"
-import { useIsOverflowing } from "src/lib/util/Hooks"
+import { useIsOverflowing } from "@streamlit/lib"
 import { mount, shallow } from "@streamlit/lib"
 import { mockEndpoints } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/lib/dist/proto"
@@ -38,9 +38,9 @@ import {
 
 expect.extend(matchers)
 
-jest.mock("src/lib/util/Hooks", () => ({
+jest.mock("@streamlit/dist/util/Hooks", () => ({
   __esModule: true,
-  ...jest.requireActual("src/lib/util/Hooks"),
+  ...jest.requireActual("@streamlit/dist/util/Hooks"),
   useIsOverflowing: jest.fn(),
 }))
 

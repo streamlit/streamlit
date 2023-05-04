@@ -41,7 +41,7 @@ import {
   WidgetStateManager,
 } from "@streamlit/lib"
 import { ConnectionState } from "src/app/connection/ConnectionState"
-import { ScriptRunState } from "src/lib/ScriptRunState"
+import { ScriptRunState } from "@streamlit/lib"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
 import {
   generateUID,
@@ -90,7 +90,7 @@ import {
 import { concat, noop, without } from "lodash"
 import { RERUN_PROMPT_MODAL_DIALOG, SHOW_DEPLOY_BUTTON } from "@streamlit/lib"
 import { SessionInfo } from "@streamlit/lib"
-import { FileUploadClient } from "src/lib/FileUploadClient"
+import { FileUploadClient } from "@streamlit/lib"
 import { logError, logMessage } from "@streamlit/lib"
 import { AppRoot } from "@streamlit/lib"
 

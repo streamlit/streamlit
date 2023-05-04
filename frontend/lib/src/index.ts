@@ -93,3 +93,6 @@ export { hashString,
   makeElementWithInfoText,
   getCookie,
 } from "./util/utils"
+export {
+  useIsOverflowing
+} from "./util/Hooks"

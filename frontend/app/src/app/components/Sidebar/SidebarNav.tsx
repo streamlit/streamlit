@@ -22,7 +22,7 @@ import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { IAppPage } from "@streamlit/lib/dist/proto"
 import { Icon, EmojiIcon } from "@streamlit/lib"
-import { useIsOverflowing } from "src/lib/util/Hooks"
+import { useIsOverflowing } from "@streamlit/lib"
 import { StreamlitEndpoints } from "@streamlit/lib"
 
 import {

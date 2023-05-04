@@ -15,20 +15,20 @@
  */
 
 import React, { ReactElement } from "react"
-import { IAppPage } from "src/lib/proto"
+import { IAppPage } from "@streamlit/lib/dist/proto"
 
-import VerticalBlock from "src/lib/components/core/Block"
+import { VerticalBlock } from "@streamlit/lib"
 import { ThemedSidebar } from "src/app/components/Sidebar"
-import { ScriptRunState } from "src/lib/ScriptRunState"
-import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
-import { FileUploadClient } from "src/lib/FileUploadClient"
-import { ComponentRegistry } from "src/lib/components/widgets/CustomComponent"
+import { ScriptRunState } from "@streamlit/lib"
+import { FormsData, WidgetStateManager } from "@streamlit/lib"
+import { FileUploadClient } from "@streamlit/lib"
+import { ComponentRegistry } from "@streamlit/lib"
 
-import { AppContext } from "src/lib/components/core/AppContext"
-import { BlockNode, AppRoot } from "src/lib/AppNode"
-import { SessionInfo } from "src/lib/SessionInfo"
-import { IGuestToHostMessage } from "src/lib/hocs/withHostCommunication/types"
-import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
+import { AppContext } from "src/app/components/AppContext"
+import { BlockNode, AppRoot } from "@streamlit/lib"
+import { SessionInfo } from "@streamlit/lib"
+import { IGuestToHostMessage } from "@streamlit/lib"
+import { StreamlitEndpoints } from "@streamlit/lib"
 
 import {
   StyledAppViewBlockContainer,

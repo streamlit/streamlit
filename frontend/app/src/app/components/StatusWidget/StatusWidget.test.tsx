@@ -17,7 +17,7 @@
 import React from "react"
 import { shallow, mount } from "@streamlit/lib"
 import { ConnectionState } from "src/app/connection/ConnectionState"
-import { ScriptRunState } from "src/lib/ScriptRunState"
+import { ScriptRunState } from "@streamlit/lib"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
 import { SessionEvent } from "@streamlit/lib/dist/proto"
 import { mockTheme } from "src/lib/mocks/mockTheme"

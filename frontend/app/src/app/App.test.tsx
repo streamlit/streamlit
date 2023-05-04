@@ -42,7 +42,7 @@ import {
   IToolbarItem,
 } from "@streamlit/lib"
 import { ConnectionState } from "src/app/connection/ConnectionState"
-import { ScriptRunState } from "src/lib/ScriptRunState"
+import { ScriptRunState } from "@streamlit/lib"
 import { SessionInfo } from "@streamlit/lib"
 import {
   createAutoTheme,
