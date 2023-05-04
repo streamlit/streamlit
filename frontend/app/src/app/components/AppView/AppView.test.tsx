@@ -15,18 +15,14 @@
  */
 
 import React from "react"
-import { Block as BlockProto, ForwardMsgMetadata } from "@streamlit/lib/dist/proto"
-import { ScriptRunState } from "@streamlit/lib"
-import { BlockNode, ElementNode, AppRoot } from "@streamlit/lib"
-import { FileUploadClient } from "@streamlit/lib"
 import {
+  Block as BlockProto,
+  ForwardMsgMetadata,
+} from "@streamlit/lib/dist/proto"
+import { ScriptRunState , BlockNode, ElementNode, AppRoot , FileUploadClient ,
   createFormsData,
   WidgetStateManager,
-} from "@streamlit/lib"
-import { makeElementWithInfoText } from "@streamlit/lib"
-import { ComponentRegistry } from "@streamlit/lib"
-import { mockEndpoints, mockSessionInfo } from "@streamlit/lib"
-import { render, shallow } from "@streamlit/lib"
+, makeElementWithInfoText , ComponentRegistry , mockEndpoints, mockSessionInfo , render, shallow } from "@streamlit/lib"
 import AppView, { AppViewProps } from "./AppView"
 
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {

@@ -15,8 +15,8 @@
  */
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
-import { Kind } from "@streamlit/lib"
 import {
+  Kind,
   Modal,
   ModalHeader,
   ModalBody,

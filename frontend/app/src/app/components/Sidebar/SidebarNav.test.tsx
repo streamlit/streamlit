@@ -22,10 +22,13 @@ import React from "react"
 import * as reactDeviceDetect from "react-device-detect"
 import { act } from "react-dom/test-utils"
 
-import { Icon } from "@streamlit/lib"
-import { useIsOverflowing } from "@streamlit/lib"
-import { mount, shallow } from "@streamlit/lib"
-import { mockEndpoints } from "@streamlit/lib"
+import {
+  Icon,
+  useIsOverflowing,
+  mount,
+  shallow,
+  mockEndpoints,
+} from "@streamlit/lib"
 import { IAppPage } from "@streamlit/lib/dist/proto"
 
 import SidebarNav, { Props } from "./SidebarNav"

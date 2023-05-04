@@ -18,8 +18,7 @@ import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
 import { ReactWrapper } from "enzyme"
 
-import { Modal, ModalHeader, ModalBody } from "@streamlit/lib"
-import { mount } from "@streamlit/lib"
+import { Modal, ModalHeader, ModalBody, mount } from "@streamlit/lib"
 import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 
 URL.createObjectURL = jest.fn()

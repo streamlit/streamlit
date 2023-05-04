@@ -21,7 +21,11 @@ import React, { Fragment } from "react"
 
 import { BackMsg } from "@streamlit/lib/dist/proto"
 import { ConnectionState } from "src/app/connection/ConnectionState"
-import { SessionInfo } from "@streamlit/lib"
+import {
+  SessionInfo,
+  mockEndpoints,
+  mockSessionInfoProps,
+} from "@streamlit/lib"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   StyledBashCode,
@@ -29,7 +33,6 @@ import {
   doInitPings,
   Args,
 } from "src/app/connection/WebsocketConnection"
-import { mockEndpoints, mockSessionInfoProps } from "@streamlit/lib"
 
 const MOCK_ALLOWED_ORIGINS_RESPONSE = {
   data: {

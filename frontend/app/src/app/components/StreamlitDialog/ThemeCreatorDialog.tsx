@@ -22,12 +22,15 @@ import mapValues from "lodash/mapValues"
 
 import { CustomThemeConfig } from "@streamlit/lib/dist/proto"
 import { AppContext } from "src/app/components/AppContext"
-import { Button, Kind } from "@streamlit/lib"
-import { ColorPicker } from "@streamlit/lib"
-import { Modal, ModalHeader, ModalBody } from "@streamlit/lib"
-import { UISelectbox } from "@streamlit/lib"
-import { Icon } from "@streamlit/lib"
 import {
+  Button,
+  Kind,
+  ColorPicker,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  UISelectbox,
+  Icon,
   CUSTOM_THEME_NAME,
   createTheme,
   darkTheme,

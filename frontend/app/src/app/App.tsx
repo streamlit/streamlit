@@ -34,16 +34,11 @@ import {
   StreamlitDialog,
 } from "src/app/components/StreamlitDialog"
 import { ConnectionManager } from "src/app/connection/ConnectionManager"
-import { PerformanceEvents } from "@streamlit/lib"
-import {
+import { PerformanceEvents ,
   createFormsData,
   FormsData,
   WidgetStateManager,
-} from "@streamlit/lib"
-import { ConnectionState } from "src/app/connection/ConnectionState"
-import { ScriptRunState } from "@streamlit/lib"
-import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
-import {
+, ScriptRunState ,
   generateUID,
   getElementWidgetID,
   getEmbeddingIdClassName,
@@ -62,8 +57,20 @@ import {
   notUndefined,
   setCookie,
   extractPageNameFromPathName,
-} from "@streamlit/lib"
-import { BaseUriParts } from "@streamlit/lib"
+, BaseUriParts , RERUN_PROMPT_MODAL_DIALOG, SHOW_DEPLOY_BUTTON , SessionInfo , FileUploadClient , logError, logMessage , AppRoot , ComponentRegistry , handleFavicon ,
+  createAutoTheme,
+  createTheme,
+  CUSTOM_THEME_NAME,
+  getCachedTheme,
+  isPresetTheme,
+  ThemeConfig,
+  toExportedTheme,
+, StreamlitEndpoints , 
+  withHostCommunication,
+  HostCommunicationHOC,
+, ensureError , LibContext } from "@streamlit/lib"
+import { ConnectionState } from "src/app/connection/ConnectionState"
+import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
 import {
   AppPage,
   BackMsg,
@@ -88,35 +95,14 @@ import {
   WidgetStates,
 } from "@streamlit/lib/dist/proto"
 import { concat, noop, without } from "lodash"
-import { RERUN_PROMPT_MODAL_DIALOG, SHOW_DEPLOY_BUTTON } from "@streamlit/lib"
-import { SessionInfo } from "@streamlit/lib"
-import { FileUploadClient } from "@streamlit/lib"
-import { logError, logMessage } from "@streamlit/lib"
-import { AppRoot } from "@streamlit/lib"
 
 import { UserSettings } from "src/app/components/StreamlitDialog/UserSettings"
-import { ComponentRegistry } from "@streamlit/lib"
-import { handleFavicon } from "@streamlit/lib"
 
-import {
-  createAutoTheme,
-  createTheme,
-  CUSTOM_THEME_NAME,
-  getCachedTheme,
-  isPresetTheme,
-  ThemeConfig,
-  toExportedTheme,
-} from "@streamlit/lib"
 import { DefaultStreamlitEndpoints } from "src/app/connection/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
-import { StreamlitEndpoints } from "@streamlit/lib"
 
 import { StyledApp } from "src/styled-components"
 
-import { 
-  withHostCommunication,
-  HostCommunicationHOC,
-} from "@streamlit/lib"
 
 import withScreencast, {
   ScreenCastHOC,
@@ -124,8 +110,6 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "src/assets/css/theme.scss"
-import { ensureError } from "@streamlit/lib"
-import { LibContext } from "@streamlit/lib"
 
 export interface Props {
   screenCast: ScreenCastHOC

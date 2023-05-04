@@ -20,14 +20,19 @@ import React, {
   ReactElement,
   ReactNode,
 } from "react"
-import { ThemeConfig } from "@streamlit/lib"
-import { Button, Kind } from "@streamlit/lib"
-import { Modal, ModalHeader, ModalBody } from "@streamlit/lib"
+import {
+  ThemeConfig,
+  Button,
+  Kind,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  UISelectbox,
+} from "@streamlit/lib"
 import {
   AppContext,
   Props as AppContextProps,
 } from "src/app/components/AppContext"
-import { UISelectbox } from "@streamlit/lib"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 
 import {

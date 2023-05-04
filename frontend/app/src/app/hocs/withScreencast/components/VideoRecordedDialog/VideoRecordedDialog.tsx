@@ -15,8 +15,7 @@
  */
 
 import React, { FunctionComponent } from "react"
-import { Button, Kind } from "@streamlit/lib"
-import { Modal, ModalHeader, ModalBody } from "@streamlit/lib"
+import { Button, Kind, Modal, ModalHeader, ModalBody } from "@streamlit/lib"
 import {
   StyledDialogContainer,
   StyledRow,

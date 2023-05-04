@@ -16,8 +16,9 @@
 
 import React, { ReactElement } from "react"
 
-import { Button, Kind } from "@streamlit/lib"
 import {
+  Button,
+  Kind,
   IGuestToHostMessage,
   IToolbarItem,
 } from "@streamlit/lib"

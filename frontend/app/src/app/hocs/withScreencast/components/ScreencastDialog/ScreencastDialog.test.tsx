@@ -18,8 +18,7 @@ import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
 import { ReactWrapper } from "enzyme"
 
-import { ModalHeader, ModalFooter } from "@streamlit/lib"
-import { mount } from "@streamlit/lib"
+import { ModalHeader, ModalFooter, mount } from "@streamlit/lib"
 import ScreencastDialog, { Props } from "./ScreencastDialog"
 
 const getProps = (props: Partial<Props> = {}): Props => ({

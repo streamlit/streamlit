@@ -16,8 +16,7 @@
 
 import React from "react"
 
-import { mount, render } from "@streamlit/lib"
-import { IMenuItem } from "@streamlit/lib"
+import { mount, render, IMenuItem, mockSessionInfo } from "@streamlit/lib"
 
 import { Config, GitInfo, IGitInfo } from "@streamlit/lib/dist/proto"
 import { IDeployErrorDialog } from "src/app/components/StreamlitDialog/DeployErrorDialogs/types"
@@ -31,7 +30,6 @@ import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import MainMenu, { Props } from "./MainMenu"
 import { waitFor } from "@testing-library/dom"
 import { fireEvent, RenderResult } from "@testing-library/react"
-import { mockSessionInfo } from "@streamlit/lib"
 
 const { GitStates } = GitInfo
 

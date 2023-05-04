@@ -16,9 +16,10 @@
 
 import React from "react"
 
-import { LocalStore } from "@streamlit/lib"
-import { shallow, mount } from "@streamlit/lib"
 import {
+  LocalStore,
+  shallow,
+  mount,
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
   createPresetThemes,

@@ -20,10 +20,10 @@ import {
   buildHttpUri,
   SVG_PREFIX,
   xssSanitizeSvg,
+  StreamlitEndpoints,
+  getCookie,
 } from "@streamlit/lib"
-import { StreamlitEndpoints } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/lib/dist/proto"
-import { getCookie } from "@streamlit/lib"
 
 interface Props {
   getServerUri: () => BaseUriParts | undefined

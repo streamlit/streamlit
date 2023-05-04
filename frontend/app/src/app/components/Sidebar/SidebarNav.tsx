@@ -21,9 +21,12 @@ import * as reactDeviceDetect from "react-device-detect"
 import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { IAppPage } from "@streamlit/lib/dist/proto"
-import { Icon, EmojiIcon } from "@streamlit/lib"
-import { useIsOverflowing } from "@streamlit/lib"
-import { StreamlitEndpoints } from "@streamlit/lib"
+import {
+  Icon,
+  EmojiIcon,
+  useIsOverflowing,
+  StreamlitEndpoints,
+} from "@streamlit/lib"
 
 import {
   StyledSidebarNavContainer,

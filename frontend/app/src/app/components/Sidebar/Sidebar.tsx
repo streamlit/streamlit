@@ -19,12 +19,18 @@ import { ChevronRight, Close } from "@emotion-icons/material-outlined"
 import { withTheme } from "@emotion/react"
 import { Resizable } from "re-resizable"
 
-import { Icon } from "@streamlit/lib"
-import { Button, Kind } from "@streamlit/lib"
+import {
+  Icon,
+  Button,
+  Kind,
+  EmotionTheme,
+  localStorageAvailable,
+  StreamlitEndpoints,
+  IsSidebarContext,
+  isEmbed,
+  isColoredLineDisplayed,
+} from "@streamlit/lib"
 import { IAppPage, PageConfig } from "@streamlit/lib/dist/proto"
-import { EmotionTheme } from "@streamlit/lib"
-import { localStorageAvailable } from "@streamlit/lib"
-import { StreamlitEndpoints } from "@streamlit/lib"
 
 import {
   StyledSidebar,
@@ -34,10 +40,7 @@ import {
   StyledSidebarUserContent,
   StyledResizeHandle,
 } from "./styled-components"
-import { IsSidebarContext } from "@streamlit/lib"
 import SidebarNav from "./SidebarNav"
-
-import { isEmbed, isColoredLineDisplayed } from "@streamlit/lib"
 
 export interface SidebarProps {
   endpoints: StreamlitEndpoints

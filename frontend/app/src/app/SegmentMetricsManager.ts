@@ -15,12 +15,14 @@
  */
 
 import { pick } from "lodash"
-import { SessionInfo } from "@streamlit/lib"
+import {
+  SessionInfo,
+  DeployedAppMetadata,
+  IS_DEV_ENV,
+  logAlways,
+} from "@streamlit/lib"
 import { initializeSegment } from "src/app/vendor/Segment"
-import { DeployedAppMetadata } from "@streamlit/lib"
 import Protobuf, { Delta, Element } from "@streamlit/lib/dist/proto"
-import { IS_DEV_ENV } from "@streamlit/lib"
-import { logAlways } from "@streamlit/lib"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts

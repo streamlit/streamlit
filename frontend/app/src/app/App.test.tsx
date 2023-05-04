@@ -18,9 +18,17 @@ import React from "react"
 import { ReactWrapper, ShallowWrapper } from "enzyme"
 import { waitFor } from "@testing-library/dom"
 import cloneDeep from "lodash/cloneDeep"
-import { LocalStore } from "@streamlit/lib"
-import { hashString } from "@streamlit/lib"
-import { shallow, mount, mockWindowLocation } from "@streamlit/lib"
+import { LocalStore , hashString , shallow, mount, mockWindowLocation , HostCommunicationHOC ,
+  HostCommunicationState,
+  IMenuItem,
+  IToolbarItem,
+, ScriptRunState , SessionInfo ,
+  createAutoTheme,
+  CUSTOM_THEME_NAME,
+  darkTheme,
+  lightTheme,
+  toExportedTheme,
+, Modal , mockSessionInfo, mockSessionInfoProps } from "@streamlit/lib"
 import {
   Config,
   CustomThemeConfig,
@@ -35,23 +43,7 @@ import {
   PageNotFound,
   PagesChanged,
 } from "@streamlit/lib/dist/proto"
-import { HostCommunicationHOC } from "@streamlit/lib"
-import {
-  HostCommunicationState,
-  IMenuItem,
-  IToolbarItem,
-} from "@streamlit/lib"
 import { ConnectionState } from "src/app/connection/ConnectionState"
-import { ScriptRunState } from "@streamlit/lib"
-import { SessionInfo } from "@streamlit/lib"
-import {
-  createAutoTheme,
-  CUSTOM_THEME_NAME,
-  darkTheme,
-  lightTheme,
-  toExportedTheme,
-} from "@streamlit/lib"
-import { Modal } from "@streamlit/lib"
 import {
   DialogType,
   StreamlitDialog,
@@ -59,7 +51,6 @@ import {
 import { App, Props, showDevelopmentOptions } from "./App"
 import MainMenu from "src/app/components/MainMenu"
 import ToolbarActions from "src/app/components/ToolbarActions"
-import { mockSessionInfo, mockSessionInfoProps } from "@streamlit/lib"
 
 jest.mock("src/app/connection/ConnectionManager")
 jest.mock("@streamlit/lib/dist/baseconsts", () => {

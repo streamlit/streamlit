@@ -16,14 +16,17 @@
 
 import React from "react"
 import PropTypes from "prop-types"
-import { createPresetThemes, lightTheme, darkTheme } from "@streamlit/lib"
-import { shallow } from "@streamlit/lib"
+import UISelectbox, {
+  createPresetThemes,
+  lightTheme,
+  darkTheme,
+  shallow,
+  mockSessionInfo,
+} from "@streamlit/lib"
 import { Props as ContextProps } from "src/app/components/AppContext"
-import UISelectbox from "@streamlit/lib"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 
 import { SettingsDialog, Props } from "./SettingsDialog"
-import { mockSessionInfo } from "@streamlit/lib"
 
 const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()

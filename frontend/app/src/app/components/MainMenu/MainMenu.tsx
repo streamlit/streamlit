@@ -27,16 +27,20 @@ import { StatefulMenu } from "baseui/menu"
 import { Menu } from "@emotion-icons/material-outlined"
 
 import { useTheme } from "@emotion/react"
-import { EmotionTheme } from "@streamlit/lib"
-import { Button, Kind } from "@streamlit/lib"
+import {
+  EmotionTheme,
+  Button,
+  Kind,
+  Icon,
+  IGuestToHostMessage,
+  IMenuItem,
+} from "@streamlit/lib"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import {
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
 } from "src/app/components/StreamlitDialog/DeployErrorDialogs"
-import { Icon } from "@streamlit/lib"
-import { IGuestToHostMessage, IMenuItem } from "@streamlit/lib"
 import {
   Config,
   GitInfo,

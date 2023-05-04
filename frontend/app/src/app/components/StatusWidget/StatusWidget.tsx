@@ -17,21 +17,25 @@
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
-import { RERUN_PROMPT_MODAL_DIALOG } from "@streamlit/lib"
+import {
+  RERUN_PROMPT_MODAL_DIALOG,
+  Button,
+  Kind,
+  Tooltip,
+  Placement,
+  ScriptRunState,
+  Timer,
+  Icon,
+  EmotionTheme,
+} from "@streamlit/lib"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
 import { CSSTransition } from "react-transition-group"
-import { Button, Kind } from "@streamlit/lib"
-import { Tooltip, Placement } from "@streamlit/lib"
 import { SignalConnection } from "typed-signals"
 
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { SessionEvent } from "@streamlit/lib/dist/proto"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
-import { ScriptRunState } from "@streamlit/lib"
-import { Timer } from "@streamlit/lib"
-import { Icon } from "@streamlit/lib"
-import { EmotionTheme } from "@streamlit/lib"
 
 /*
  * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served

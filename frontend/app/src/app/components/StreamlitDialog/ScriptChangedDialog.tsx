@@ -22,8 +22,8 @@ import {
   ModalBody,
   ModalFooter,
   ModalButton,
+  Kind,
 } from "@streamlit/lib"
-import { Kind } from "@streamlit/lib"
 import { StyledShortcutLabel } from "./styled-components"
 
 export interface Props {

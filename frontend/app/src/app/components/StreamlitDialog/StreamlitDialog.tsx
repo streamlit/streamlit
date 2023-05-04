@@ -15,14 +15,13 @@
  */
 
 import React, { ReactElement, ReactNode, CSSProperties } from "react"
-import { Kind } from "@streamlit/lib"
-import { 
+import { Kind , 
   Modal,
   ModalHeader,
   ModalBody,
   ModalFooter,
   ModalButton,
-} from "@streamlit/lib"
+, SessionInfo , StreamlitMarkdown } from "@streamlit/lib"
 import { HotKeys } from "react-hotkeys"
 
 import {
@@ -30,9 +29,7 @@ import {
   Props as ScriptChangedDialogProps,
 } from "src/app/components/StreamlitDialog/ScriptChangedDialog"
 import { IException } from "@streamlit/lib/dist/proto"
-import { SessionInfo } from "@streamlit/lib"
 import { STREAMLIT_HOME_URL } from "src/urls"
-import { StreamlitMarkdown } from "@streamlit/lib"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,

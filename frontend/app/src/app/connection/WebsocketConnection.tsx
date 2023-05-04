@@ -18,16 +18,22 @@ import styled from "@emotion/styled"
 import axios from "axios"
 
 import { BackMsg, ForwardMsg, IBackMsg } from "@streamlit/lib/dist/proto"
-import { IAllowedMessageOriginsResponse } from "@streamlit/lib"
+import {
+  IAllowedMessageOriginsResponse,
+  ForwardMsgCache,
+  logError,
+  logMessage,
+  logWarning,
+  PerformanceEvents,
+  Resolver,
+  SessionInfo,
+  BaseUriParts,
+  buildHttpUri,
+  buildWsUri,
+  StreamlitEndpoints,
+} from "@streamlit/lib"
 import { ConnectionState } from "src/app/connection/ConnectionState"
-import { ForwardMsgCache } from "@streamlit/lib"
-import { logError, logMessage, logWarning } from "@streamlit/lib"
-import { PerformanceEvents } from "@streamlit/lib"
-import { Resolver } from "@streamlit/lib"
-import { SessionInfo } from "@streamlit/lib"
-import { BaseUriParts, buildHttpUri, buildWsUri } from "@streamlit/lib"
 import React, { Fragment } from "react"
-import { StreamlitEndpoints } from "@streamlit/lib"
 
 /**
  * Name of the logger.

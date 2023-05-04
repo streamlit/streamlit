@@ -19,10 +19,9 @@ import React from "react"
 import { ReactWrapper } from "enzyme"
 
 import { PageConfig } from "@streamlit/lib/dist/proto"
-import { mount } from "@streamlit/lib"
+import { mount, mockEndpoints } from "@streamlit/lib"
 import { spacing } from "@streamlit/lib/primitives/spacing"
 import emotionLightTheme from "@streamlit/lib/emotionLightTheme"
-import { mockEndpoints } from "@streamlit/lib"
 import Sidebar, { SidebarProps } from "./Sidebar"
 import SidebarNav from "./SidebarNav"
 
