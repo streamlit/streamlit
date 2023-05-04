@@ -78,7 +78,7 @@ platformdirs==3.5.0
 plotly==5.14.1
 pluggy==1.0.0
 pre-commit==2.21.0
-protobuf==3.19.6
+protobuf==3.20.3
 psycopg2-binary==2.9.6
 py4j==0.10.9.7
 pyarrow==12.0.0
@@ -121,7 +121,7 @@ tenacity==8.2.2
 tensorboard==2.11.2
 tensorboard-data-server==0.6.1
 tensorboard-plugin-wit==1.8.1
-tensorflow==2.7.4
+tensorflow==2.7.2
 tensorflow-estimator==2.7.0
 tensorflow-io-gcs-filesystem==0.32.0
 termcolor==2.3.0

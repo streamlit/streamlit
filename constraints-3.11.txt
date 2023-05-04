@@ -80,7 +80,7 @@ pytz==2023.3
 pytz-deprecation-shim==0.1.0.post0
 PyYAML==6.0
 readme-renderer==37.3
-requests==2.29.0
+requests==2.30.0
 requests-mock==1.10.0
 requests-toolbelt==1.0.0
 retrying==1.3.4
@@ -113,7 +113,7 @@ types-urllib3==1.26.25.12
 typing_extensions==4.5.0
 tzdata==2023.3
 tzlocal==4.3
-urllib3==1.26.15
+urllib3==2.0.2
 validators==0.20.0
 virtualenv==20.23.0
 watchdog==3.0.0
