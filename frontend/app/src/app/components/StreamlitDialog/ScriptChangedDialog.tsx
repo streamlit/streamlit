@@ -22,7 +22,7 @@ import Modal, {
   ModalFooter,
   ModalButton,
 } from "@streamlit/lib"
-import { Kind } from "src/lib/components/shared/Button"
+import { Kind } from "@streamlit/lib"
 import { StyledShortcutLabel } from "./styled-components"
 
 export interface Props {
