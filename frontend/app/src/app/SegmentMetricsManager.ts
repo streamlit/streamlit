@@ -22,7 +22,7 @@ import {
   logAlways,
 } from "@streamlit/lib"
 import { initializeSegment } from "src/app/vendor/Segment"
-import Protobuf, { Delta, Element } from "@streamlit/lib/dist/proto"
+import { Delta, Element } from "@streamlit/lib/dist/proto"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts

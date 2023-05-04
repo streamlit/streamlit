@@ -18,17 +18,27 @@ import React from "react"
 import { ReactWrapper, ShallowWrapper } from "enzyme"
 import { waitFor } from "@testing-library/dom"
 import cloneDeep from "lodash/cloneDeep"
-import { LocalStore , hashString , shallow, mount, mockWindowLocation , HostCommunicationHOC ,
+import {
+  LocalStore,
+  hashString,
+  shallow,
+  mount,
+  mockWindowLocation,
+  HostCommunicationHOC,
   HostCommunicationState,
   IMenuItem,
   IToolbarItem,
-, ScriptRunState , SessionInfo ,
+  ScriptRunState,
+  SessionInfo,
   createAutoTheme,
   CUSTOM_THEME_NAME,
   darkTheme,
   lightTheme,
   toExportedTheme,
-, Modal , mockSessionInfo, mockSessionInfoProps } from "@streamlit/lib"
+  Modal,
+  mockSessionInfo,
+  mockSessionInfoProps,
+} from "@streamlit/lib"
 import {
   Config,
   CustomThemeConfig,

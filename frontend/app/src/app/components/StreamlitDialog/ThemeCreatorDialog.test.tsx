@@ -16,15 +16,16 @@
 
 import React from "react"
 import { CustomThemeConfig } from "@streamlit/lib/dist/proto"
-import UISelectbox, {
+import {
+  UISelectbox,
   shallow,
   ColorPicker,
   baseTheme,
   darkTheme,
   lightTheme,
   toThemeInput,
+  fonts,
 } from "@streamlit/lib"
-import { fonts } from "@streamlit/lib/primitives/typography"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
   toMinimalToml,

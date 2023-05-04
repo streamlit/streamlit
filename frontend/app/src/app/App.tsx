@@ -34,11 +34,12 @@ import {
   StreamlitDialog,
 } from "src/app/components/StreamlitDialog"
 import { ConnectionManager } from "src/app/connection/ConnectionManager"
-import { PerformanceEvents ,
+import {
+  PerformanceEvents,
   createFormsData,
   FormsData,
   WidgetStateManager,
-, ScriptRunState ,
+  ScriptRunState,
   generateUID,
   getElementWidgetID,
   getEmbeddingIdClassName,
@@ -57,7 +58,16 @@ import { PerformanceEvents ,
   notUndefined,
   setCookie,
   extractPageNameFromPathName,
-, BaseUriParts , RERUN_PROMPT_MODAL_DIALOG, SHOW_DEPLOY_BUTTON , SessionInfo , FileUploadClient , logError, logMessage , AppRoot , ComponentRegistry , handleFavicon ,
+  BaseUriParts,
+  RERUN_PROMPT_MODAL_DIALOG,
+  SHOW_DEPLOY_BUTTON,
+  SessionInfo,
+  FileUploadClient,
+  logError,
+  logMessage,
+  AppRoot,
+  ComponentRegistry,
+  handleFavicon,
   createAutoTheme,
   createTheme,
   CUSTOM_THEME_NAME,
@@ -65,10 +75,12 @@ import { PerformanceEvents ,
   isPresetTheme,
   ThemeConfig,
   toExportedTheme,
-, StreamlitEndpoints , 
+  StreamlitEndpoints,
   withHostCommunication,
   HostCommunicationHOC,
-, ensureError , LibContext } from "@streamlit/lib"
+  ensureError,
+  LibContext,
+} from "@streamlit/lib"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
 import {
@@ -102,7 +114,6 @@ import { DefaultStreamlitEndpoints } from "src/app/connection/DefaultStreamlitEn
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 
 import { StyledApp } from "src/styled-components"
-
 
 import withScreencast, {
   ScreenCastHOC,

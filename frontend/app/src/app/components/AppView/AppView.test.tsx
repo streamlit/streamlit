@@ -19,10 +19,21 @@ import {
   Block as BlockProto,
   ForwardMsgMetadata,
 } from "@streamlit/lib/dist/proto"
-import { ScriptRunState , BlockNode, ElementNode, AppRoot , FileUploadClient ,
+import {
+  ScriptRunState,
+  BlockNode,
+  ElementNode,
+  AppRoot,
+  FileUploadClient,
   createFormsData,
   WidgetStateManager,
-, makeElementWithInfoText , ComponentRegistry , mockEndpoints, mockSessionInfo , render, shallow } from "@streamlit/lib"
+  makeElementWithInfoText,
+  ComponentRegistry,
+  mockEndpoints,
+  mockSessionInfo,
+  render,
+  shallow,
+} from "@streamlit/lib"
 import AppView, { AppViewProps } from "./AppView"
 
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {

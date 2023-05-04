@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, ReactNode, useCallback } from "react"
-import { SegmentMetricsManager } from "src/lib/SegmentMetricsManager"
+import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import Modal from "./DeployModal"
 import Card from "./DeployCard"
 import ListElement from "./DeployListElement"

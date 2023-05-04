@@ -15,13 +15,16 @@
  */
 
 import React, { ReactElement, ReactNode, CSSProperties } from "react"
-import { Kind , 
+import {
+  Kind,
   Modal,
   ModalHeader,
   ModalBody,
   ModalFooter,
   ModalButton,
-, SessionInfo , StreamlitMarkdown } from "@streamlit/lib"
+  SessionInfo,
+  StreamlitMarkdown,
+} from "@streamlit/lib"
 import { HotKeys } from "react-hotkeys"
 
 import {
