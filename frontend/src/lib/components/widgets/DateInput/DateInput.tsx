@@ -271,13 +271,29 @@ class DateInput extends React.PureComponent<Props, State> {
               },
             },
             Day: {
-              style: {
+              style: ({
+                $pseudoHighlighted,
+                $pseudoSelected,
+                $selected,
+                $isHovered,
+              }) => ({
                 fontSize: fontSizes.sm,
                 lineHeight: lineHeights.base,
+
+                "::before": {
+                  backgroundColor:
+                    $pseudoHighlighted ||
+                    $pseudoSelected ||
+                    $selected ||
+                    $isHovered
+                      ? colors.secondaryBg
+                      : colors.transparent,
+                },
+
                 "::after": {
                   borderColor: colors.transparent,
                 },
-              },
+              }),
             },
             PrevButton: {
               style: () => ({
