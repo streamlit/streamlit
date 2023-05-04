@@ -40,7 +40,7 @@ import {
   HostCommunicationState,
   IMenuItem,
   IToolbarItem,
-} from "src/lib/hocs/withHostCommunication/types"
+} from "@streamlit/lib"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionInfo } from "@streamlit/lib"

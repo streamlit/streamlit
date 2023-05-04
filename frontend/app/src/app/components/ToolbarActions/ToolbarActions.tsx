@@ -20,7 +20,7 @@ import Button, { Kind } from "src/lib/components/shared/Button"
 import {
   IGuestToHostMessage,
   IToolbarItem,
-} from "src/lib/hocs/withHostCommunication/types"
+} from "@streamlit/lib"
 import {
   StyledActionButtonContainer,
   StyledActionButtonIcon,
