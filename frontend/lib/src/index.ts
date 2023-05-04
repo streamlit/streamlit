@@ -40,10 +40,12 @@ export { default as Modal, ModalHeader, ModalBody, ModalFooter, ModalButton } fr
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { LocalStore, localStorageAvailable } from "./util/storageUtils"
 export { 
-  AUTO_THEME_NAME,
-  CUSTOM_THEME_NAME,
   createAutoTheme,
   createPresetThemes,
+  CUSTOM_THEME_NAME,
+  getCachedTheme,
+  toExportedTheme,
+  AUTO_THEME_NAME,
   getDefaultTheme,
   globalStyles,
   isPresetTheme,
