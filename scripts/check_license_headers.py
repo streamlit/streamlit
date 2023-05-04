@@ -52,9 +52,9 @@ IGNORE_PATTERN = re.compile(
     r"|\.isort\.cfg$"
     r"|\.credentials/\.gitignore$"
     # Excluding test files, because adding headers may cause tests to fail.
-    r"|/(fixtures|__snapshots__|vendor|test_data|data)/"
+    r"|/(fixtures|__snapshots__|test_data|data)/"
     # Exclude vendored files.
-    r"|/vendor/|^component-lib/declarations/apache-arrow"
+    r"|/vendor/|^vendor/|^component-lib/declarations/apache-arrow"
     r"|proto/streamlit/proto/openmetrics_data_model\.proto"
     r"|lib/tests/isolated_asyncio_test_case\.py",
     re.IGNORECASE,

@@ -114,6 +114,7 @@ repos:
         exclude: |
           (?x)
           /vendor/
+          |^vendor/
           |^component-lib/declarations/apache-arrow
           |^frontend/src/assets/css/variables\.scss
       - id: insert-license
@@ -128,6 +129,7 @@ repos:
         exclude: |
           (?x)
           /vendor/
+          |^vendor/
           |^component-lib/declarations/apache-arrow
           |^proto/streamlit/proto/openmetrics_data_model\.proto
       - id: insert-license
@@ -142,6 +144,7 @@ repos:
         exclude: |
           (?x)
           /vendor/
+          |^vendor/
           |^component-lib/declarations/apache-arrow
       - id: insert-license
         name: Add license for all Python files
@@ -155,6 +158,7 @@ repos:
         exclude: |
           (?x)
           /vendor/
+          |^vendor/
           |^component-lib/declarations/apache-arrow
           |^lib/tests/isolated_asyncio_test_case\.py$
       - id: insert-license
@@ -169,6 +173,7 @@ repos:
         exclude: |
           (?x)
           /vendor/
+          |^vendor/
           |^component-lib/declarations/apache-arrow
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.3.0

@@ -228,23 +228,29 @@ clean:
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
-.PHONY: protobuf
-# Recompile Protobufs for Python and the frontend.
-protobuf:
-	@# Python protobuf generation
-	if ! command -v protoc &> /dev/null ; then \
+MIN_PROTOC_VERSION = 3.20
+.PHONY: check-protoc
+# Ensure protoc is installed and is >= MIN_PROTOC_VERSION.
+check-protoc:
+	@# We support Python protobuf 4.21, which is incompatible with code generated from
+	@# protoc < 3.20
+	@if ! command -v protoc &> /dev/null ; then \
 		echo "protoc not installed."; \
 		exit 1; \
+	fi; \
+	\
+	PROTOC_VERSION=$$(protoc --version | cut -d ' ' -f 2); \
+	\
+	if [[ $$(echo -e "$$PROTOC_VERSION\n$(MIN_PROTOC_VERSION)" | sort -V | head -n1) != $(MIN_PROTOC_VERSION) ]]; then \
+	  echo "Error: protoc version $${PROTOC_VERSION} is < $(MIN_PROTOC_VERSION)"; \
+	  exit 1; \
+	else \
+	  echo "protoc version $${PROTOC_VERSION} is >= than $(MIN_PROTOC_VERSION)"; \
 	fi
-	protoc_version=$$(protoc --version | cut -d ' ' -f 2);
-	protobuf_version=$$(pip show protobuf | grep Version | cut -d " " -f 2-);
-	if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
-		echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
-		echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
-		echo "protoc version: $${protoc_version}"; \
-		echo "protobuf version: $${protobuf_version}"; \
-		echo -n "Do you want to continue anyway? [y/N] " && read ans && [ $${ans:-N} = y ]; \
-	fi
+
+.PHONY: protobuf
+# Recompile Protobufs for Python and the frontend.
+protobuf: check-protoc
 	protoc \
 		--proto_path=proto \
 		--python_out=lib \
