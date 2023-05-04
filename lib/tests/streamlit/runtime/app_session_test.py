@@ -23,7 +23,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import streamlit.runtime.app_session as app_session
-from streamlit import config, runtime
+from streamlit import config
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
