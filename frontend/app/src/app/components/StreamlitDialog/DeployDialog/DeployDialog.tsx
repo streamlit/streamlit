@@ -26,7 +26,7 @@ import {
   DialogType,
   PlainEventHandler,
 } from "src/app/components/StreamlitDialog/StreamlitDialog"
-@streamlit/lib
+import Button, { Kind } from "src/lib/components/shared/Button"
 import StreamlitLogo from "src/assets/svg/logo.svg"
 import Rocket from "src/assets/svg/rocket.svg"
 import {

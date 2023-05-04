@@ -20,7 +20,7 @@ import { withTheme } from "@emotion/react"
 import { Resizable } from "re-resizable"
 
 import Icon from "src/lib/components/shared/Icon"
-@streamlit/lib
+import Button, { Kind } from "src/lib/components/shared/Button"
 import { IAppPage, PageConfig } from "@streamlit/lib/dist/proto"
 import { EmotionTheme } from "@streamlit/lib"
 import { localStorageAvailable } from "@streamlit/lib"

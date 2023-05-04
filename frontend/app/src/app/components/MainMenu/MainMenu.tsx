@@ -28,7 +28,7 @@ import { Menu } from "@emotion-icons/material-outlined"
 
 import { useTheme } from "@emotion/react"
 import { EmotionTheme } from "@streamlit/lib"
-@streamlit/lib
+import Button, { Kind } from "src/lib/components/shared/Button"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import {
   DetachedHead,
