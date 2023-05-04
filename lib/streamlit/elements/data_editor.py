@@ -20,6 +20,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    Iterable,
     List,
     Mapping,
     Optional,
@@ -414,6 +415,7 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        column_order: Iterable[str] | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool = False,
         key: Optional[Key] = None,
@@ -431,6 +433,7 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        column_order: Iterable[str] | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool = False,
         key: Optional[Key] = None,
@@ -448,6 +451,7 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        column_order: Iterable[str] | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool = False,
         key: Optional[Key] = None,
@@ -476,6 +480,14 @@ class DataEditorMixin:
         use_container_width : bool
             If True, set the data editor width to the width of the parent container.
             This takes precedence over the width argument. Defaults to False.
+
+        column_order : iterable of str or None
+            Specifies the display order of all non-index columns, affecting both
+            the order and visibility of columns to the user. For example,
+            specifying `column_order=("col2", "col1")` will display 'col2' first,
+            followed by 'col1', and all other non-index columns in the data will
+            be hidden. If None (default), the order is inherited from the
+            original data structure.
 
         num_rows : "fixed" or "dynamic"
             Specifies if the user can add and delete rows in the data editor.
@@ -610,6 +622,9 @@ class DataEditorMixin:
             proto.width = width
         if height:
             proto.height = height
+
+        if column_order:
+            proto.column_order[:] = column_order
 
         proto.disabled = disabled
         proto.editing_mode = (

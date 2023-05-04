@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union, cast
 
 import pyarrow as pa
 from numpy import ndarray
@@ -43,6 +44,7 @@ class ArrowMixin:
         height: Optional[int] = None,
         *,
         use_container_width: bool = False,
+        column_order: Iterable[str] | None = None,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -66,6 +68,14 @@ class ArrowMixin:
             If True, set the dataframe width to the width of the parent container.
             This takes precedence over the width argument.
             This argument can only be supplied by keyword.
+
+        column_order : iterable of str or None
+            Specifies the display order of all non-index columns, affecting both
+            the order and visibility of columns to the user. For example,
+            specifying `column_order=("col2", "col1")` will display 'col2' first,
+            followed by 'col1', and all other non-index columns in the data will
+            be hidden. If None (default), the order is inherited from the
+            original data structure.
 
         Examples
         --------
@@ -104,6 +114,10 @@ class ArrowMixin:
             proto.width = width
         if height:
             proto.height = height
+
+        if column_order:
+            proto.column_order[:] = column_order
+
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
         marshall(proto, data, default_uuid)
