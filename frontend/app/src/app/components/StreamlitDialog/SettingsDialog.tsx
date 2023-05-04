@@ -27,7 +27,7 @@ import {
   AppContext,
   Props as AppContextProps,
 } from "src/app/components/AppContext"
-import UISelectbox from "src/components/shared/Dropdown"
+import { UISelectbox } from "@streamlit/lib"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 
 import {

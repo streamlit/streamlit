@@ -113,7 +113,8 @@ import { StreamlitEndpoints } from "@streamlit/lib"
 
 import { StyledApp } from "src/styled-components"
 
-import withHostCommunication, {
+import { 
+  withHostCommunication,
   HostCommunicationHOC,
 } from "@streamlit/lib"
 
