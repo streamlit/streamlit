@@ -32,7 +32,7 @@ export { WidgetStateManager, createFormsData } from "./WidgetStateManager"
 export type { FormsData } from "./WidgetStateManager"
 export { FileUploadClient } from "./FileUploadClient"
 export { ComponentRegistry } from "./components/widgets/CustomComponent"
-export { AppRoot, ElementNode } from "./AppNode"
+export { BlockNode, AppRoot, ElementNode } from "./AppNode"
 export { Quiver } from "./dataframes/Quiver"
 export { default as VegaLiteChartElement } from "./components/elements/VegaLiteChart"
 export type { DeployedAppMetadata, IGuestToHostMessage, HostCommunicationState, IMenuItem, IAllowedMessageOriginsResponse, IToolbarItem } from "./hocs/withHostCommunication/types"
@@ -41,7 +41,7 @@ export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { LocalStore, localStorageAvailable } from "./util/storageUtils"
 export { 
   createAutoTheme,
-  createPresetThemes,
+createPresetThemes,
   CUSTOM_THEME_NAME,
   getCachedTheme,
   toExportedTheme,
@@ -102,4 +102,5 @@ export { handleFavicon } from "./components/elements/Favicon"
 export { default as withHostCommunication } from "./hocs/withHostCommunication"
 export type { HostCommunicationHOC } from "./hocs/withHostCommunication"
 export { default as IsSidebarContext } from "./components/core/IsSidebarContext"
-export { default as Tooltip, Placement } from "./components/shared/Tooltip" 
+export { default as Tooltip, Placement } from "./components/shared/Tooltip"
+export { default as ColorPicker } from "./components/shared/ColorPicker"
