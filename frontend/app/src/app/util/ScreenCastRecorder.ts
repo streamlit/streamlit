@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { logWarning } from "src/lib/util/log"
+import { logWarning } from "@streamlit/lib"
 
 const BLOB_TYPE = "video/webm"
 

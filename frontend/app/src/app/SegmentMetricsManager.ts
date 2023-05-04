@@ -20,7 +20,7 @@ import { initializeSegment } from "src/app/vendor/Segment"
 import { DeployedAppMetadata } from "@streamlit/lib"
 import Protobuf, { Delta, Element, ForwardMsgMetadata } from "@streamlit/lib/dist/proto"
 import { IS_DEV_ENV } from "@streamlit/lib"
-import { logAlways } from "src/lib/util/log"
+import { logAlways } from "@streamlit/lib"
 import {
   CustomComponentCounter,
   DeltaCounter,

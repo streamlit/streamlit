@@ -20,7 +20,7 @@ import { IAllowedMessageOriginsResponse } from "src/lib/hocs/withHostCommunicati
 import { BaseUriParts, getPossibleBaseUris } from "src/lib/util/UriUtil"
 
 import { ConnectionState } from "./ConnectionState"
-import { logError } from "src/lib/util/log"
+import { logError } from "@streamlit/lib"
 import { SessionInfo } from "@streamlit/lib"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 import { WebsocketConnection } from "./WebsocketConnection"
