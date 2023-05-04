@@ -21,6 +21,12 @@ from numpy import ndarray
 from pandas import DataFrame
 
 from streamlit import type_util
+from streamlit.elements.lib.column_config_utils import (
+    INDEX_IDENTIFIER,
+    ColumnConfigMapping,
+    marshall_column_config,
+    update_column_config,
+)
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -44,6 +50,7 @@ class ArrowMixin:
         height: Optional[int] = None,
         *,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
@@ -68,6 +75,12 @@ class ArrowMixin:
             If True, set the dataframe width to the width of the parent container.
             This takes precedence over the width argument.
             This argument can only be supplied by keyword.
+
+        hide_index : bool or None
+            Determines whether to hide the index column(s). If set to True, the
+            index column(s) will be hidden. If None (default), the visibility of
+            the index column(s) is automatically determined based on the index
+            type and input data format.
 
         column_order : iterable of str or None
             Specifies the display order of all non-index columns, affecting both
@@ -102,6 +115,7 @@ class ArrowMixin:
 
         """
 
+        column_config_mapping: ColumnConfigMapping = {}
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
         # when the position of the element is changed.
@@ -121,6 +135,12 @@ class ArrowMixin:
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
         marshall(proto, data, default_uuid)
+
+        if hide_index is not None:
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
+            )
+        marshall_column_config(proto, column_config_mapping)
 
         return self.dg._enqueue("arrow_data_frame", proto)
 

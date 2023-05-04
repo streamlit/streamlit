@@ -47,6 +47,7 @@ class DataFrameSelectorMixin:
         height: Optional[int] = None,
         *,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
@@ -78,6 +79,12 @@ class DataFrameSelectorMixin:
             If True, set the dataframe width to the width of the parent container.
             This takes precedence over the width argument.
             This argument can only be supplied by keyword.
+
+        hide_index : bool or None
+            Determines whether to hide the index column(s). If set to True, the
+            index column(s) will be hidden. If None (default), the visibility of
+            the index column(s) is automatically determined based on the index
+            type and input data format.
 
         column_order : iterable of str or None
             Specifies the display order of all non-index columns, affecting both
@@ -129,6 +136,7 @@ class DataFrameSelectorMixin:
                 width,
                 height,
                 use_container_width=use_container_width,
+                hide_index=hide_index,
                 column_order=column_order,
             )
         else:

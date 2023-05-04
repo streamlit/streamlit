@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-describe("st.dataframe support various configuration options", () => {
+describe("st.dataframe supports various configuration options", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
     cy.prepForElementSnapshots();
   });
 
-  it("shows correct table based on configuration", () => {
-    cy.get(".stDataFrame").should("have.length", 1);
+  it("shows correct tables based on configuration", () => {
+    cy.get(".stDataFrame").should("have.length", 3);
 
     cy.get(".stDataFrame").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("dataframe-config-" + idx);

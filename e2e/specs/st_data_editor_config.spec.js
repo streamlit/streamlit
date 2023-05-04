@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-describe("st.data_editor support various configuration options", () => {
+describe("st.data_editor supports various configuration options", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
     cy.prepForElementSnapshots();
   });
 
-  it("shows correct table based on configuration", () => {
-    cy.get(".stDataFrame").should("have.length", 1);
+  it("shows correct tables based on configuration", () => {
+    cy.get(".stDataFrame").should("have.length", 5);
 
     cy.get(".stDataFrame").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("data_editor-config-" + idx);
