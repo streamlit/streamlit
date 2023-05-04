@@ -59,7 +59,7 @@ import {
 import { App, Props, showDevelopmentOptions } from "./App"
 import MainMenu from "src/app/components/MainMenu"
 import ToolbarActions from "src/app/components/ToolbarActions"
-import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
+import { mockSessionInfo, mockSessionInfoProps } from "@streamlit/lib"
 
 jest.mock("src/app/connection/ConnectionManager")
 jest.mock("@streamlit/lib/dist/baseconsts", () => {

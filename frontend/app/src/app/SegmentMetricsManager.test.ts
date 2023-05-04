@@ -23,7 +23,7 @@ import {
   ForwardMsgMetadata,
   Element,
 } from "@streamlit/lib/dist/proto"
-import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
+import { mockSessionInfo, mockSessionInfoProps } from "@streamlit/lib"
 import { SegmentMetricsManager } from "./SegmentMetricsManager"
 import { SessionInfo } from "@streamlit/lib"
 

@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { Block as BlockProto, ForwardMsgMetadata } from "src/lib/proto"
+import { Block as BlockProto, ForwardMsgMetadata } from "@streamlit/lib/dist/proto"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { BlockNode, ElementNode, AppRoot } from "src/lib/AppNode"
 import { FileUploadClient } from "src/lib/FileUploadClient"
@@ -24,9 +24,9 @@ import {
   WidgetStateManager,
 } from "src/lib/WidgetStateManager"
 import { makeElementWithInfoText } from "src/lib/util/utils"
-import { ComponentRegistry } from "src/lib/components/widgets/CustomComponent"
-import { mockEndpoints, mockSessionInfo } from "src/lib/mocks/mocks"
-import { render, shallow } from "src/lib/test_util"
+import { ComponentRegistry } from "@streamlit/lib"
+import { mockEndpoints, mockSessionInfo } from "@streamlit/lib"
+import { render, shallow } from "@streamlit/lib"
 import AppView, { AppViewProps } from "./AppView"
 
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {

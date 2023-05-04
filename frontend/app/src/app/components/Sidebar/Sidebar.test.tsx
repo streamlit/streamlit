@@ -22,7 +22,7 @@ import { PageConfig } from "@streamlit/lib/dist/proto"
 import { mount } from "@streamlit/lib"
 import { spacing } from "@streamlit/lib/primitives/spacing"
 import emotionLightTheme from "@streamlit/lib/emotionLightTheme"
-import { mockEndpoints } from "src/lib/mocks/mocks"
+import { mockEndpoints } from "@streamlit/lib"
 import Sidebar, { SidebarProps } from "./Sidebar"
 import SidebarNav from "./SidebarNav"
 

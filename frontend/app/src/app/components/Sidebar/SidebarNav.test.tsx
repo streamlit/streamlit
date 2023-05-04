@@ -25,7 +25,7 @@ import { act } from "react-dom/test-utils"
 import Icon from "src/lib/components/shared/Icon"
 import { useIsOverflowing } from "src/lib/util/Hooks"
 import { mount, shallow } from "@streamlit/lib"
-import { mockEndpoints } from "src/lib/mocks/mocks"
+import { mockEndpoints } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/lib/dist/proto"
 
 import SidebarNav, { Props } from "./SidebarNav"

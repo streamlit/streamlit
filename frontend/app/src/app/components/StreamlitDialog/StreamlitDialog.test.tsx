@@ -18,7 +18,7 @@ import React, { Fragment } from "react"
 import { Modal } from "@streamlit/lib"
 import { mount } from "@streamlit/lib"
 import { SessionInfo } from "@streamlit/lib"
-import { mockSessionInfo } from "src/lib/mocks/mocks"
+import { mockSessionInfo } from "@streamlit/lib"
 import { StreamlitDialog, DialogType } from "./StreamlitDialog"
 
 function flushPromises(): Promise<void> {

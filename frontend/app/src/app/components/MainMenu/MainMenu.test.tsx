@@ -31,7 +31,7 @@ import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import MainMenu, { Props } from "./MainMenu"
 import { waitFor } from "@testing-library/dom"
 import { fireEvent, RenderResult } from "@testing-library/react"
-import { mockSessionInfo } from "src/lib/mocks/mocks"
+import { mockSessionInfo } from "@streamlit/lib"
 
 const { GitStates } = GitInfo
 

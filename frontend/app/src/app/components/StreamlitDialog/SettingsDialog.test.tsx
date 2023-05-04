@@ -23,7 +23,7 @@ import UISelectbox from "src/lib/components/shared/Dropdown"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 
 import { SettingsDialog, Props } from "./SettingsDialog"
-import { mockSessionInfo } from "src/lib/mocks/mocks"
+import { mockSessionInfo } from "@streamlit/lib"
 
 const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()
