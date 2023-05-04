@@ -24,7 +24,7 @@ import { logError } from "@streamlit/lib"
 import { SessionInfo } from "@streamlit/lib"
 import { StreamlitEndpoints } from "@streamlit/lib"
 import { WebsocketConnection } from "./WebsocketConnection"
-import { ensureError } from "src/lib/util/ErrorHandling"
+import { ensureError } from "@streamlit/lib"
 
 /**
  * When the websocket connection retries this many times, we show a dialog
