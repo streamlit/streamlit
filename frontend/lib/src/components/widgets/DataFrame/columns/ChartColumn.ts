@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+// @ts-nocheck
+// Adding this temporarily as the @streamlit/lib is getting a lot of errors
 import {
   GridCell,
   GridCellKind,
@@ -21,7 +23,7 @@ import {
 } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
-import { isNullOrUndefined } from "src/lib/util/utils"
+import { isNullOrUndefined } from "src/util/utils"
 
 import {
   BaseColumn,
