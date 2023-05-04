@@ -49,11 +49,10 @@ export {
   isPresetTheme,
   removeCachedTheme,
   setCachedTheme,
-  ThemeConfig,
   createTheme,
-  EmotionTheme,
   lightTheme,
   darkTheme,
 } from "./theme"
+export type { ThemeConfig, EmotionTheme } from "./theme"
 export { mount, shallow, mockWindowLocation, render } from "./test_util"
 export { logError, logMessage, logWarning, logAlways } from "./util/log"
