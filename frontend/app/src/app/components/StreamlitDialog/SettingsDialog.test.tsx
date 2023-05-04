@@ -19,7 +19,7 @@ import PropTypes from "prop-types"
 import { createPresetThemes, lightTheme, darkTheme } from "@streamlit/lib"
 import { shallow } from "@streamlit/lib"
 import { Props as ContextProps } from "src/app/components/core/AppContext"
-import UISelectbox from "src/lib/components/shared/Dropdown"
+import UISelectbox from "@streamlit/lib"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 
 import { SettingsDialog, Props } from "./SettingsDialog"
