@@ -21,7 +21,7 @@ import React, {
   ReactNode,
 } from "react"
 import { ThemeConfig } from "@streamlit/lib"
-import Button, { Kind } from "src/lib/components/shared/Button"
+@streamlit/lib
 import { Modal, ModalHeader, ModalBody } from "@streamlit/lib"
 import {
   AppContext,

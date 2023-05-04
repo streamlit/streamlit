@@ -22,7 +22,7 @@ import mapValues from "lodash/mapValues"
 
 import { CustomThemeConfig } from "@streamlit/lib/dist/proto"
 import { AppContext } from "src/app/components/AppContext"
-import Button, { Kind } from "src/lib/components/shared/Button"
+@streamlit/lib
 import ColorPicker from "src/lib/components/shared/ColorPicker"
 import { Modal, ModalHeader, ModalBody } from "@streamlit/lib"
 import UISelectbox from "src/lib/components/shared/Dropdown"
