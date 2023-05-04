@@ -96,7 +96,7 @@ import { AppRoot } from "@streamlit/lib"
 
 import { UserSettings } from "src/app/components/StreamlitDialog/UserSettings"
 import { ComponentRegistry } from "@streamlit/lib"
-import { handleFavicon } from "src/lib/components/elements/Favicon"
+import { handleFavicon } from "@streamlit/lib"
 
 import {
   createAutoTheme,
