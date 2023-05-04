@@ -56,6 +56,7 @@ export {
   darkTheme,
   toThemeInput,
   baseTheme,
+  hasLightBackgroundColor
 } from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export type { ThemeConfig, EmotionTheme } from "./theme"
