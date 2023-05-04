@@ -38,7 +38,7 @@ export { default as VegaLiteChartElement } from "./components/elements/VegaLiteC
 export type { DeployedAppMetadata, IGuestToHostMessage, HostCommunicationState, IMenuItem, IAllowedMessageOriginsResponse, IToolbarItem } from "./hocs/withHostCommunication/types"
 export { default as Modal, ModalHeader, ModalBody, ModalFooter, ModalButton } from "./components/shared/Modal"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
-export { LocalStore } from "./util/storageUtils"
+export { LocalStore, localStorageAvailable } from "./util/storageUtils"
 export { 
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
@@ -60,3 +60,4 @@ export { getPossibleBaseUris, buildHttpUri, SVG_PREFIX, xssSanitizeSvg, buildWsU
 export type { BaseUriParts } from "./util/UriUtil"
 export { ensureError } from "./util/ErrorHandling"
 export { default as Button, Kind } from "./components/shared/Button"
+export { PerformanceEvents } from "./profiler/PerformanceEvents"
