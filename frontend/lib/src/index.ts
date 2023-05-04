@@ -54,6 +54,8 @@ export {
   createTheme,
   lightTheme,
   darkTheme,
+  toThemeInput,
+  baseTheme,
 } from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export type { ThemeConfig, EmotionTheme } from "./theme"
