@@ -21,7 +21,7 @@ import Modal, {
   ModalBody,
   ModalFooter,
   ModalButton,
-} from "src/lib/components/shared/Modal"
+} from "@streamlit/lib"
 import { HotKeys } from "react-hotkeys"
 
 import {

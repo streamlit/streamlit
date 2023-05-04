@@ -21,7 +21,7 @@ import Modal, {
   ModalBody,
   ModalFooter,
   ModalButton,
-} from "src/lib/components/shared/Modal"
+} from "@streamlit/lib"
 import { Kind } from "src/lib/components/shared/Button"
 import { StyledShortcutLabel } from "./styled-components"
 

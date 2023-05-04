@@ -15,7 +15,7 @@
  */
 
 import React, { Fragment } from "react"
-import Modal from "src/lib/components/shared/Modal"
+import { Modal } from "@streamlit/lib"
 import { mount } from "@streamlit/lib"
 import { SessionInfo } from "@streamlit/lib"
 import { mockSessionInfo } from "src/lib/mocks/mocks"

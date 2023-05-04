@@ -17,7 +17,7 @@
 import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
 
-import { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
+import { ModalHeader, ModalBody } from "@streamlit/lib"
 import { mount } from "@streamlit/lib"
 import UnsupportedBrowserDialog from "./UnsupportedBrowserDialog"
 

@@ -21,7 +21,7 @@ import { RERUN_PROMPT_MODAL_DIALOG } from "@streamlit/lib"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
 import { CSSTransition } from "react-transition-group"
-import Button, { Kind } from "src/lib/components/shared/Button"
+import { Button, Kind } from "@streamlit/lib"
 import Tooltip, { Placement } from "src/lib/components/shared/Tooltip"
 import { SignalConnection } from "typed-signals"
 

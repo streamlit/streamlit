@@ -15,7 +15,7 @@
  */
 
 import React, { MouseEvent, ReactElement } from "react"
-import Button, { Kind } from "src/lib/components/shared/Button"
+import { Button, Kind } from "@streamlit/lib"
 import { DeployButtonContainer } from "./styled-components"
 
 interface IDeployButtonProps {

@@ -51,7 +51,7 @@ import {
   lightTheme,
   toExportedTheme,
 } from "@streamlit/lib"
-import Modal from "src/lib/components/shared/Modal"
+import { Modal } from "@streamlit/lib"
 import {
   DialogType,
   StreamlitDialog,
