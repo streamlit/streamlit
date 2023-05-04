@@ -19,7 +19,7 @@ import { useTheme } from "@emotion/react"
 import { EmotionTheme, isPresetTheme } from "src/theme"
 import { Spinner as SpinnerProto } from "src/proto"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
-import { AppContext } from "src/components/core/AppContext"
+import { LibContext } from "src/components/core/LibContext"
 import {
   StyledSpinnerContainer,
   ThemedStyledSpinner,
@@ -32,7 +32,7 @@ export interface SpinnerProps {
 
 function Spinner({ width, element }: SpinnerProps): ReactElement {
   const theme: EmotionTheme = useTheme()
-  const { activeTheme } = React.useContext(AppContext)
+  const { activeTheme } = React.useContext(LibContext)
   const usingCustomTheme = !isPresetTheme(activeTheme)
   const styleProp = { width }
 

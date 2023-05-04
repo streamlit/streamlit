@@ -14,119 +14,77 @@
  * limitations under the License.
  */
 
-import React from "react"
+ import React from "react"
 
-import { PageConfig } from "src/proto"
-import { baseTheme, ThemeConfig } from "src/theme"
-
-export interface Props {
-  /**
-   * If true, render the app with a wider column size.
-   * Set from the UserSettings object.
-   * @see UserSettings
-   */
-  wideMode: boolean
-
-  /**
-   * The sidebar's default display state.
-   * Set from the PageConfig protobuf.
-   */
-  initialSidebarState: PageConfig.SidebarState
-
-  /**
-   * True if the app is embedded.
-   * @see isEmbed
-   */
-  embedded: boolean
-
-  /**
-   * True if padding is enabled.
-   * @see isPaddingDisplayed
-   */
-  showPadding: boolean
-
-  /**
-   * True if scrolling is disabled.
-   * @see isScrollingHidden
-   */
-  disableScrolling: boolean
-
-  /**
-   * True if the footer should be displayed.
-   * @see isFooterDisplayed
-   */
-  showFooter: boolean
-
-  /**
-   * True if the toolbar should be displayed.
-   * @see isToolbarDisplayed
-   */
-  showToolbar: boolean
-
-  /**
-   * True if the thin colored line at the top of the app should be displayed.
-   * @see isColoredLineDisplayed
-   */
-  showColoredLine: boolean
-
-  /** True if the app is in full-screen mode. */
-  isFullScreen: boolean
-
-  /** Function that sets the `isFullScreen` property. */
-  setFullScreen: (value: boolean) => void
-
-  /**
-   * Add a callback that will be called every time the app's script finishes
-   * executing.
-   */
-  addScriptFinishedHandler: (func: () => void) => void
-
-  /** Remove a previously-added scriptFinishedHandler callback. */
-  removeScriptFinishedHandler: (func: () => void) => void
-
-  /** The currently active app theme. */
-  activeTheme: ThemeConfig
-
-  /**
-   * Set the app's active theme locally and send it the app's host (if any).
-   * @see App.setAndSendTheme
-   */
-  setTheme: (theme: ThemeConfig) => void
-
-  /** List of all available themes. */
-  availableThemes: ThemeConfig[]
-
-  /**
-   * Call to add additional themes to the app.
-   * @see ThemeCreatorDialog
-   */
-  addThemes: (themes: ThemeConfig[]) => void
-
-  /**
-   * If non-zero, this is the number of pixels that the sidebar's
-   * "chevron" icon is shifted. (If sidebarChevronDownshift is 0, then
-   * the current theme's spacing is used.)
-   * @see StyledSidebarCollapsedControl
-   */
-  sidebarChevronDownshift: number
-}
-
-export const AppContext = React.createContext<Props>({
-  wideMode: false,
-  initialSidebarState: PageConfig.SidebarState.AUTO,
-  embedded: false,
-  showPadding: false,
-  disableScrolling: false,
-  showFooter: false,
-  showToolbar: false,
-  showColoredLine: false,
-  isFullScreen: false,
-  setFullScreen: () => {},
-  addScriptFinishedHandler: () => {},
-  removeScriptFinishedHandler: () => {},
-  activeTheme: baseTheme,
-  setTheme: () => {},
-  availableThemes: [],
-  addThemes: () => {},
-  sidebarChevronDownshift: 0,
-})
+ import { PageConfig } from "@streamlit/lib/dist/proto"
+ 
+ export interface Props {
+   /**
+    * If true, render the app with a wider column size.
+    * Set from the UserSettings object.
+    * @see UserSettings
+    */
+   wideMode: boolean
+ 
+   /**
+    * The sidebar's default display state.
+    * Set from the PageConfig protobuf.
+    */
+   initialSidebarState: PageConfig.SidebarState
+ 
+   /**
+    * True if the app is embedded.
+    * @see isEmbed
+    */
+   embedded: boolean
+ 
+   /**
+    * True if padding is enabled.
+    * @see isPaddingDisplayed
+    */
+   showPadding: boolean
+ 
+   /**
+    * True if scrolling is disabled.
+    * @see isScrollingHidden
+    */
+   disableScrolling: boolean
+ 
+   /**
+    * True if the footer should be displayed.
+    * @see isFooterDisplayed
+    */
+   showFooter: boolean
+ 
+   /**
+    * True if the toolbar should be displayed.
+    * @see isToolbarDisplayed
+    */
+   showToolbar: boolean
+ 
+   /**
+    * True if the thin colored line at the top of the app should be displayed.
+    * @see isColoredLineDisplayed
+    */
+   showColoredLine: boolean
+ 
+   /**
+    * If non-zero, this is the number of pixels that the sidebar's
+    * "chevron" icon is shifted. (If sidebarChevronDownshift is 0, then
+    * the current theme's spacing is used.)
+    * @see StyledSidebarCollapsedControl
+    */
+   sidebarChevronDownshift: number
+ }
+ 
+ export const AppContext = React.createContext<Props>({
+   wideMode: false,
+   initialSidebarState: PageConfig.SidebarState.AUTO,
+   embedded: false,
+   showPadding: false,
+   disableScrolling: false,
+   showFooter: false,
+   showToolbar: false,
+   showColoredLine: false,
+   sidebarChevronDownshift: 0,
+ })

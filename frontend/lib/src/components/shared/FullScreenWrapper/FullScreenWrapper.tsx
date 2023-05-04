@@ -18,7 +18,7 @@ import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
 import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
 import Icon from "src/components/shared/Icon"
-import { AppContext } from "src/components/core/AppContext"
+import { LibContext } from "src/components/core/LibContext"
 import { EmotionTheme } from "src/theme"
 import {
   StyledFullScreenFrame,
@@ -55,9 +55,9 @@ interface State {
  * to fixed and cover all screen, updating wrapped element height and width
  */
 class FullScreenWrapper extends PureComponent<Props, State> {
-  public context!: React.ContextType<typeof AppContext>
+  public context!: React.ContextType<typeof LibContext>
 
-  public static contextType = AppContext
+  public static contextType = LibContext
 
   public constructor(props: Props) {
     super(props)

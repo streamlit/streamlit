@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import { useTheme } from "@emotion/react"
-import { AppContext } from "src/components/core/AppContext"
+import { LibContext } from "src/components/core/LibContext"
 import { EmotionTheme, isPresetTheme } from "src/theme"
 import {
   ProgressBar as UIProgressBar,
@@ -54,7 +54,7 @@ function ProgressBar({
     lg: theme.spacing.xl,
     xl: theme.spacing.twoXL,
   }
-  const { activeTheme } = React.useContext(AppContext)
+  const { activeTheme } = React.useContext(LibContext)
   const usingCustomTheme = !isPresetTheme(activeTheme)
   const defaultOverrides: Overrides<ProgressBarOverrides> = {
     BarContainer: {
