@@ -35,7 +35,7 @@ import {
   ModuleIsNotAdded,
   NoRepositoryDetected,
 } from "src/app/components/StreamlitDialog/DeployErrorDialogs"
-import Icon from "src/lib/components/shared/Icon"
+import Icon from "@streamlit/lib"
 import { IGuestToHostMessage, IMenuItem } from "@streamlit/lib"
 import {
   Config,

@@ -19,7 +19,7 @@ import { ChevronRight, Close } from "@emotion-icons/material-outlined"
 import { withTheme } from "@emotion/react"
 import { Resizable } from "re-resizable"
 
-import Icon from "src/lib/components/shared/Icon"
+import Icon from "@streamlit/lib"
 import { Button, Kind } from "@streamlit/lib"
 import { IAppPage, PageConfig } from "@streamlit/lib/dist/proto"
 import { EmotionTheme } from "@streamlit/lib"

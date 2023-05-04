@@ -30,7 +30,7 @@ import { SessionEvent } from "@streamlit/lib/dist/proto"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { Timer } from "src/lib/util/Timer"
-import Icon from "src/lib/components/shared/Icon"
+import Icon from "@streamlit/lib"
 import { EmotionTheme } from "@streamlit/lib"
 
 /*
