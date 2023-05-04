@@ -20,6 +20,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    Iterable,
     List,
     Mapping,
     Optional,
@@ -415,7 +416,7 @@ class DataEditorMixin:
         height: Optional[int] = None,
         use_container_width: bool = False,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool = False,
+        disabled: bool | Iterable[str] = False,
         key: Optional[Key] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -432,7 +433,7 @@ class DataEditorMixin:
         height: Optional[int] = None,
         use_container_width: bool = False,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool = False,
+        disabled: bool | Iterable[str] = False,
         key: Optional[Key] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -449,7 +450,7 @@ class DataEditorMixin:
         height: Optional[int] = None,
         use_container_width: bool = False,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool = False,
+        disabled: bool | Iterable[str] = False,
         key: Optional[Key] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -484,8 +485,11 @@ class DataEditorMixin:
             Defaults to "fixed".
 
         disabled : bool
-            An optional boolean which, if True, disables the data editor and prevents
-            any edits. Defaults to False. This argument can only be supplied by keyword.
+            Controls the editing of columns. If set to True, editing
+            is disabled for all columns. If an iterable of column names is provided
+            (e.g., `disabled=("col1", "col2")`), only the specified columns will be
+            disabled for editing. By default, all columns that support editing
+            are editable.
 
         key : str
             An optional string to use as the unique key for this widget. If this
@@ -593,6 +597,14 @@ class DataEditorMixin:
                 columns_config[INDEX_IDENTIFIER] = {}
             columns_config[INDEX_IDENTIFIER]["hidden"] = True
 
+        # If disabled not a boolean, we assume it is a list of columns to disable.
+        # This gets translated into the columns configuration:
+        if not isinstance(disabled, bool):
+            for column in disabled:
+                if column not in columns_config:
+                    columns_config[column] = {}
+                columns_config[column]["disabled"] = True
+
         # Convert the dataframe to an arrow table which is used as the main
         # serialization format for sending the data to the frontend.
         # We also utilize the arrow schema to determine the data kinds of every column.
@@ -611,7 +623,9 @@ class DataEditorMixin:
         if height:
             proto.height = height
 
-        proto.disabled = disabled
+        # Only set disabled to true if it is actually true
+        # It can also be a list of columns, which should result in false here.
+        proto.disabled = disabled is True
         proto.editing_mode = (
             ArrowProto.EditingMode.DYNAMIC
             if num_rows == "dynamic"
