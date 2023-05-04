@@ -101,6 +101,42 @@ class ForwardMsgCacheTest(unittest.TestCase):
         cache.clear()
         self.assertEqual(None, cache.get_message(msg_hash))
 
+    def test_remove_refs_for_session(self):
+        cache = ForwardMsgCache()
+
+        session1 = _create_mock_session()
+        session2 = _create_mock_session()
+
+        # Only session1 has a ref to msg1.
+        msg1 = _create_dataframe_msg([1, 2, 3])
+        populate_hash_if_needed(msg1)
+        cache.add_message(msg1, session1, 0)
+
+        # Only session2 has a ref to msg2.
+        msg2 = _create_dataframe_msg([1, 2, 3, 4])
+        populate_hash_if_needed(msg2)
+        cache.add_message(msg2, session2, 0)
+
+        # Both session1 and session2 have a ref to msg3.
+        msg3 = _create_dataframe_msg([1, 2, 3, 4, 5])
+        populate_hash_if_needed(msg2)
+        cache.add_message(msg3, session1, 0)
+        cache.add_message(msg3, session2, 0)
+
+        cache.remove_refs_for_session(session1)
+
+        cache_entries = list(cache._entries.values())
+
+        cached_msgs = [entry.msg for entry in cache_entries]
+        assert cached_msgs == [msg2, msg3]
+
+        sessions_with_refs = {
+            s
+            for entry in cache_entries
+            for s in entry._session_script_run_counts.keys()
+        }
+        assert sessions_with_refs == {session2}
+
     def test_message_expiration(self):
         """Test MessageCache's expiration logic"""
         config._set_option("global.maxCachedMessageAge", 1, "test")
@@ -131,14 +167,14 @@ class ForwardMsgCacheTest(unittest.TestCase):
 
         # Remove session1's expired entries. This should not remove the
         # entry from the cache, because session2 still has a reference to it.
-        cache.remove_expired_session_entries(session1, runcount1)
+        cache.remove_expired_entries_for_session(session1, runcount1)
         self.assertFalse(cache.has_message_reference(msg, session1, runcount1))
         self.assertTrue(cache.has_message_reference(msg, session2, runcount2))
 
         # Expire session2's reference. The message should no longer be
         # in the cache at all.
         runcount2 += 2
-        cache.remove_expired_session_entries(session2, runcount2)
+        cache.remove_expired_entries_for_session(session2, runcount2)
         self.assertIsNone(cache.get_message(msg_hash))
 
     def test_cache_stats_provider(self):

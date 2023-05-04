@@ -687,7 +687,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 config.get_option("global.maxCachedMessageAge"),
             )
             session_info.script_run_count += 1
-            self._message_cache.remove_expired_session_entries(
+            self._message_cache.remove_expired_entries_for_session(
                 session_info.session, session_info.script_run_count
             )
 
