@@ -20,6 +20,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    Iterable,
     List,
     Mapping,
     Optional,
@@ -48,6 +49,7 @@ from streamlit.elements.lib.column_config_utils import (
     is_type_compatible,
     marshall_column_config,
     process_config_mapping,
+    update_column_config,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.errors import StreamlitAPIException
@@ -372,9 +374,7 @@ def _apply_data_specific_configs(
     # Deactivate editing for columns that are not compatible with arrow
     for column_name, column_data in data_df.items():
         if type_util.is_colum_type_arrow_incompatible(column_data):
-            if column_name not in columns_config:
-                columns_config[column_name] = {}
-            columns_config[column_name]["disabled"] = True
+            update_column_config(columns_config, column_name, {"disabled": True})
             # Convert incompatible type to string
             data_df[column_name] = column_data.astype(str)
 
@@ -391,9 +391,7 @@ def _apply_data_specific_configs(
         DataFormat.LIST_OF_ROWS,
         DataFormat.COLUMN_VALUE_MAPPING,
     ]:
-        if INDEX_IDENTIFIER not in columns_config:
-            columns_config[INDEX_IDENTIFIER] = {}
-        columns_config[INDEX_IDENTIFIER]["hidden"] = True
+        update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
 
     # Rename the first column to "value" for some of the data formats
     if data_format in [
@@ -502,8 +500,9 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool = False,
+        disabled: bool | Iterable[str] = False,
         key: Optional[Key] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -520,8 +519,9 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool = False,
+        disabled: bool | Iterable[str] = False,
         key: Optional[Key] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -538,8 +538,9 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
-        disabled: bool = False,
+        disabled: bool | Iterable[str] = False,
         key: Optional[Key] = None,
         on_change: Optional[WidgetCallback] = None,
         args: Optional[WidgetArgs] = None,
@@ -568,6 +569,12 @@ class DataEditorMixin:
             If True, set the data editor width to the width of the parent container.
             This takes precedence over the width argument. Defaults to False.
 
+        hide_index : bool or None
+            Determines whether to hide the index column(s). If set to True, the
+            index column(s) will be hidden. If None (default), the visibility of
+            the index column(s) is automatically determined based on the index
+            type and input data format.
+
         num_rows : "fixed" or "dynamic"
             Specifies if the user can add and delete rows in the data editor.
             If "fixed", the user cannot add or delete rows. If "dynamic", the user can
@@ -575,8 +582,11 @@ class DataEditorMixin:
             Defaults to "fixed".
 
         disabled : bool
-            An optional boolean which, if True, disables the data editor and prevents
-            any edits. Defaults to False. This argument can only be supplied by keyword.
+            Controls the editing of columns. If set to True, editing
+            is disabled for all columns. If an iterable of column names is provided
+            (e.g., `disabled=("col1", "col2")`), only the specified columns will be
+            disabled for editing. By default, all columns that support editing
+            are editable.
 
         key : str
             An optional string to use as the unique key for this widget. If this
@@ -668,9 +678,18 @@ class DataEditorMixin:
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.
         if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
-            if INDEX_IDENTIFIER not in column_config_mapping:
-                column_config_mapping[INDEX_IDENTIFIER] = {}
-            column_config_mapping[INDEX_IDENTIFIER]["hidden"] = True
+            update_column_config(column_config_mapping, INDEX_IDENTIFIER, {"hidden": True})
+
+        if hide_index is not None:
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
+            )
+
+        # If disabled not a boolean, we assume it is a list of columns to disable.
+        # This gets translated into the columns configuration:
+        if not isinstance(disabled, bool):
+            for column in disabled:
+                update_column_config(column_config_mapping, column, {"disabled": True})
 
         # Convert the dataframe to an arrow table which is used as the main
         # serialization format for sending the data to the frontend.
@@ -694,7 +713,9 @@ class DataEditorMixin:
         if height:
             proto.height = height
 
-        proto.disabled = disabled
+        # Only set disabled to true if it is actually true
+        # It can also be a list of columns, which should result in false here.
+        proto.disabled = disabled is True
         proto.editing_mode = (
             ArrowProto.EditingMode.DYNAMIC
             if num_rows == "dynamic"
