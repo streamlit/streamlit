@@ -56,3 +56,5 @@ export {
 export type { ThemeConfig, EmotionTheme } from "./theme"
 export { mount, shallow, mockWindowLocation, render } from "./test_util"
 export { logError, logMessage, logWarning, logAlways } from "./util/log"
+export { getPossibleBaseUris, buildHttpUri, SVG_PREFIX, xssSanitizeSvg, buildWsUri } from "./util/UriUtil"
+export type { BaseUriParts } from "./util/UriUtil"

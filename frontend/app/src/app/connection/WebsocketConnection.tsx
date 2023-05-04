@@ -25,7 +25,7 @@ import { logError, logMessage, logWarning } from "@streamlit/lib"
 import { PerformanceEvents } from "src/lib/profiler/PerformanceEvents"
 import Resolver from "src/lib/util/Resolver"
 import { SessionInfo } from "@streamlit/lib"
-import { BaseUriParts, buildHttpUri, buildWsUri } from "src/lib/util/UriUtil"
+import { BaseUriParts, buildHttpUri, buildWsUri } from "@streamlit/lib"
 import React, { Fragment } from "react"
 import { StreamlitEndpoints } from "@streamlit/lib"
 

@@ -17,7 +17,7 @@ import { ReactNode } from "react"
 
 import { BackMsg, ForwardMsg } from "@streamlit/lib/dist/proto"
 import { IAllowedMessageOriginsResponse } from "@streamlit/lib"
-import { BaseUriParts, getPossibleBaseUris } from "src/lib/util/UriUtil"
+import { BaseUriParts, getPossibleBaseUris } from "@streamlit/lib"
 
 import { ConnectionState } from "./ConnectionState"
 import { logError } from "@streamlit/lib"

@@ -20,7 +20,7 @@ import {
   buildHttpUri,
   SVG_PREFIX,
   xssSanitizeSvg,
-} from "src/lib/util/UriUtil"
+} from "@streamlit/lib"
 import { StreamlitEndpoints } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/lib/dist/proto"
 import { getCookie } from "src/lib/util/utils"
