@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 import { ChevronLeft } from "react-feather"
-import { Small } from "src/lib/components/shared/TextElements"
+import { Small } from "@streamlit/lib"
 
 export const StyledRerunHeader = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,

@@ -29,7 +29,7 @@ import { ConnectionState } from "src/app/connection/ConnectionState"
 import { SessionEvent } from "@streamlit/lib/dist/proto"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
 import { ScriptRunState } from "@streamlit/lib"
-import { Timer } from "src/lib/util/Timer"
+import { Timer } from "@streamlit/lib"
 import { Icon } from "@streamlit/lib"
 import { EmotionTheme } from "@streamlit/lib"
 
