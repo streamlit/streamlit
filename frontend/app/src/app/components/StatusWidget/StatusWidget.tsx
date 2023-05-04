@@ -22,7 +22,7 @@ import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
 import { CSSTransition } from "react-transition-group"
 import { Button, Kind } from "@streamlit/lib"
-import Tooltip, { Placement } from "src/lib/components/shared/Tooltip"
+import { Tooltip, Placement } from "@streamlit/lib"
 import { SignalConnection } from "typed-signals"
 
 import { ConnectionState } from "src/app/connection/ConnectionState"
