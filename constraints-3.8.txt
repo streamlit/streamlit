@@ -40,7 +40,7 @@ greenlet==2.0.2
 grpcio==1.54.0
 h5py==3.8.0
 hypothesis==6.75.1
-identify==2.5.23
+identify==2.5.24
 idna==3.4
 importlib-metadata==6.6.0
 importlib-resources==5.12.0
@@ -127,9 +127,8 @@ sortedcontainers==2.4.0
 SQLAlchemy==1.4.48
 sqlalchemy2-stubs==0.0.2a34
 tenacity==8.2.2
-tensorboard==2.12.2
+tensorboard==2.12.3
 tensorboard-data-server==0.7.0
-tensorboard-plugin-wit==1.8.1
 tensorflow==2.7.4
 tensorflow-estimator==2.7.0
 tensorflow-io-gcs-filesystem==0.32.0
