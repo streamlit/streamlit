@@ -45,6 +45,7 @@ from streamlit.elements.lib.column_config_utils import (
     DataframeSchema,
     determine_dataframe_schema,
     marshall_column_config,
+    update_column_config,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.errors import StreamlitAPIException
@@ -369,9 +370,7 @@ def _apply_data_specific_configs(
     # Deactivate editing for columns that are not compatible with arrow
     for column_name, column_data in data_df.items():
         if type_util.is_colum_type_arrow_incompatible(column_data):
-            if column_name not in columns_config:
-                columns_config[column_name] = {}
-            columns_config[column_name]["disabled"] = True
+            update_column_config(columns_config, column_name, {"disabled": True})
             # Convert incompatible type to string
             data_df[column_name] = column_data.astype(str)
 
@@ -388,9 +387,7 @@ def _apply_data_specific_configs(
         DataFormat.LIST_OF_ROWS,
         DataFormat.COLUMN_VALUE_MAPPING,
     ]:
-        if INDEX_IDENTIFIER not in columns_config:
-            columns_config[INDEX_IDENTIFIER] = {}
-        columns_config[INDEX_IDENTIFIER]["hidden"] = True
+        update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
 
     # Rename the first column to "value" for some of the data formats
     if data_format in [
@@ -414,6 +411,7 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool = False,
         key: Optional[Key] = None,
@@ -431,6 +429,7 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool = False,
         key: Optional[Key] = None,
@@ -448,6 +447,7 @@ class DataEditorMixin:
         width: Optional[int] = None,
         height: Optional[int] = None,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool = False,
         key: Optional[Key] = None,
@@ -476,6 +476,12 @@ class DataEditorMixin:
         use_container_width : bool
             If True, set the data editor width to the width of the parent container.
             This takes precedence over the width argument. Defaults to False.
+
+        hide_index : bool or None
+            Determines whether to hide the index column(s). If set to True, the
+            index column(s) will be hidden. If None (default), the visibility of
+            the index column(s) is automatically determined based on the index
+            type and input data format.
 
         num_rows : "fixed" or "dynamic"
             Specifies if the user can add and delete rows in the data editor.
@@ -589,9 +595,12 @@ class DataEditorMixin:
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.
         if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
-            if INDEX_IDENTIFIER not in columns_config:
-                columns_config[INDEX_IDENTIFIER] = {}
-            columns_config[INDEX_IDENTIFIER]["hidden"] = True
+            update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
+
+        if hide_index is not None:
+            update_column_config(
+                columns_config, INDEX_IDENTIFIER, {"hidden": hide_index}
+            )
 
         # Convert the dataframe to an arrow table which is used as the main
         # serialization format for sending the data to the frontend.

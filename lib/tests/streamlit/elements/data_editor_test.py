@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import datetime
+import json
 import unittest
 from typing import Any, Dict, List, Mapping
 from unittest.mock import MagicMock, patch
@@ -311,6 +312,40 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.form_id, "")
+
+    def test_hide_index_true(self):
+        """Test that it can be called with hide_index=True param."""
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+            }
+        )
+
+        st.experimental_data_editor(data_df, hide_index=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(
+            proto.columns,
+            json.dumps({"index": {"hidden": True}}),
+        )
+
+    def test_hide_index_false(self):
+        """Test that it can be called with hide_index=False param."""
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+            }
+        )
+
+        st.experimental_data_editor(data_df, hide_index=False)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(
+            proto.columns,
+            json.dumps({"index": {"hidden": False}}),
+        )
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
