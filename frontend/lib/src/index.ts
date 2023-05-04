@@ -39,9 +39,21 @@ export type { DeployedAppMetadata } from "./hocs/withHostCommunication/types"
 export { default as Modal, ModalHeader, ModalBody } from "./components/shared/Modal"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { LocalStore } from "./util/storageUtils"
-export { createAutoTheme,
+export { 
+  AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
-  darkTheme,
+  createAutoTheme,
+  createPresetThemes,
+  getDefaultTheme,
+  globalStyles,
+  isPresetTheme,
+  removeCachedTheme,
+  setCachedTheme,
+  ThemeConfig,
+  createTheme,
+  EmotionTheme,
   lightTheme,
-  toExportedTheme } from "./theme"
+  darkTheme,
+} from "./theme"
 export { mount, shallow, mockWindowLocation, render } from "./test_util"
+export { logError, logMessage, logWarning, logAlways } from "./util/log"
