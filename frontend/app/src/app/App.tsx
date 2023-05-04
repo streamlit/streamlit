@@ -124,7 +124,7 @@ import withScreencast, {
 // Used to import fonts + responsive reboot items
 import "src/assets/css/theme.scss"
 import { ensureError } from "@streamlit/lib"
-import { LibContext } from "src/lib/components/core/LibContext"
+import { LibContext } from "@streamlit/lib"
 
 export interface Props {
   screenCast: ScreenCastHOC

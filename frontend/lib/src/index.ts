@@ -96,3 +96,4 @@ export { hashString,
 export {
   useIsOverflowing
 } from "./util/Hooks"
+export { LibContext } from "./components/core/LibContext"
