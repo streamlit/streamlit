@@ -22,7 +22,7 @@ import { FileUploadClient } from "src/lib/FileUploadClient"
 import {
   createFormsData,
   WidgetStateManager,
-} from "src/lib/WidgetStateManager"
+} from "@streamlit/lib"
 import { makeElementWithInfoText } from "@streamlit/lib"
 import { ComponentRegistry } from "@streamlit/lib"
 import { mockEndpoints, mockSessionInfo } from "@streamlit/lib"

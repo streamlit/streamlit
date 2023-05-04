@@ -28,7 +28,7 @@ export type { BlockPropsWithoutWidth } from "./components/core/Block"
 export type { StreamlitEndpoints } from "./StreamlitEndpoints"
 export { SessionInfo } from "./SessionInfo"
 export { ScriptRunState } from "./ScriptRunState"
-export { WidgetStateManager } from "./WidgetStateManager"
+export { WidgetStateManager, createFormsData } from "./WidgetStateManager"
 export type { FormsData } from "./WidgetStateManager"
 export { FileUploadClient } from "./FileUploadClient"
 export { ComponentRegistry } from "./components/widgets/CustomComponent"
@@ -55,6 +55,7 @@ export {
   lightTheme,
   darkTheme,
 } from "./theme"
+export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export type { ThemeConfig, EmotionTheme } from "./theme"
 export { mount, shallow, mockWindowLocation, render } from "./test_util"
 export { logError, logMessage, logWarning, logAlways } from "./util/log"
