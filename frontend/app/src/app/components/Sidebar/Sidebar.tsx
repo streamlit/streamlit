@@ -37,7 +37,7 @@ import {
 import IsSidebarContext from "src/lib/components/core/IsSidebarContext"
 import SidebarNav from "./SidebarNav"
 
-import { isEmbed, isColoredLineDisplayed } from "src/lib/util/utils"
+import { isEmbed, isColoredLineDisplayed } from "@streamlit/lib"
 
 export interface SidebarProps {
   endpoints: StreamlitEndpoints

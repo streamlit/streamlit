@@ -23,7 +23,7 @@ import {
   createFormsData,
   WidgetStateManager,
 } from "src/lib/WidgetStateManager"
-import { makeElementWithInfoText } from "src/lib/util/utils"
+import { makeElementWithInfoText } from "@streamlit/lib"
 import { ComponentRegistry } from "@streamlit/lib"
 import { mockEndpoints, mockSessionInfo } from "@streamlit/lib"
 import { render, shallow } from "@streamlit/lib"

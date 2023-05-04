@@ -69,3 +69,24 @@ export { mockSessionInfo, mockSessionInfoProps, mockEndpoints } from "./mocks/mo
 export { default as UISelectbox } from "./components/shared/Dropdown/Selectbox"
 export { default as Icon, EmojiIcon} from "./components/shared/Icon"
 export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown"
+export { hashString, 
+  generateUID,
+  getElementWidgetID,
+  getEmbeddingIdClassName,
+  getIFrameEnclosingApp,
+  isColoredLineDisplayed,
+  isDarkTheme,
+  isEmbed,
+  isFooterDisplayed,
+  isInChildFrame,
+  isLightTheme,
+  isPaddingDisplayed,
+  isScrollingHidden,
+  isToolbarDisplayed,
+  isTesting,
+  notUndefined,
+  setCookie,
+  extractPageNameFromPathName,
+  makeElementWithInfoText,
+  getCookie,
+} from "./util/utils"

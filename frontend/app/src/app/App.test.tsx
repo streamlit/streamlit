@@ -19,7 +19,7 @@ import { ReactWrapper, ShallowWrapper } from "enzyme"
 import { waitFor } from "@testing-library/dom"
 import cloneDeep from "lodash/cloneDeep"
 import { LocalStore } from "@streamlit/lib"
-import { hashString } from "src/lib/util/utils"
+import { hashString } from "@streamlit/lib"
 import { shallow, mount, mockWindowLocation } from "@streamlit/lib"
 import {
   Config,
