@@ -623,7 +623,9 @@ class DataEditorMixin:
         if height:
             proto.height = height
 
-        proto.disabled = disabled
+        # Only set disabled to true if it is actually true
+        # It can also be a list of columns, which should result in false here.
+        proto.disabled = disabled is True
         proto.editing_mode = (
             ArrowProto.EditingMode.DYNAMIC
             if num_rows == "dynamic"

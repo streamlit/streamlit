@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import datetime
+import json
 import unittest
 from typing import Any, Dict, List, Mapping
 from unittest.mock import MagicMock, patch
@@ -269,12 +270,19 @@ class DataEditorUtilTest(unittest.TestCase):
 
 
 class DataEditorTest(DeltaGeneratorTestCase):
-    def test_just_disabled(self):
-        """Test that it can be called with disabled param."""
+    def test_just_disabled_true(self):
+        """Test that it can be called with disabled=True param."""
         st.experimental_data_editor(pd.DataFrame(), disabled=True)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.disabled, True)
+
+    def test_just_disabled_false(self):
+        """Test that it can be called with disabled=False param."""
+        st.experimental_data_editor(pd.DataFrame(), disabled=False)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.disabled, False)
 
     def test_just_width_height(self):
         """Test that it can be called with width and height."""
@@ -304,6 +312,26 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.use_container_width, True)
+
+    def test_disable_individual_columns(self):
+        """Test that disable can be used to disable individual columns."""
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+                "c": pd.Series([1, 2]),
+                "d": pd.Series(["foo", "bar"]),
+            }
+        )
+
+        st.experimental_data_editor(data_df, disabled=["a", "b"])
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.disabled, False)
+        self.assertEqual(
+            proto.columns,
+            json.dumps({"a": {"disabled": True}, "b": {"disabled": True}}),
+        )
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
