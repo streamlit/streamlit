@@ -28,7 +28,7 @@ import {
   Props as AppContextProps,
 } from "src/lib/components/core/AppContext"
 import UISelectbox from "src/lib/components/shared/Dropdown"
-import { MetricsManager } from "src/lib/MetricsManager"
+import { MetricsManager } from "@streamlit/lib"
 
 import {
   StyledCheckbox,

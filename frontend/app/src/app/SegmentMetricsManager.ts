@@ -25,7 +25,7 @@ import {
   CustomComponentCounter,
   DeltaCounter,
   MetricsManager,
-} from "src/lib/MetricsManager"
+} from "@streamlit/lib"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts

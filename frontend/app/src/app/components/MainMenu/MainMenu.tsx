@@ -41,7 +41,7 @@ import {
   IMenuItem,
 } from "src/lib/hocs/withHostCommunication/types"
 import { Config, GitInfo, IGitInfo, PageConfig } from "@streamlit/lib/dist/proto"
-import { MetricsManager } from "src/lib/MetricsManager"
+import { MetricsManager } from "@streamlit/lib"
 import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/urls"
 import {
   StyledCoreItem,
