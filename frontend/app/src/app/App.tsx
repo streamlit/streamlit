@@ -21,7 +21,7 @@ import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
 // Other local imports.
-import { AppContext } from "src/lib/components/core/AppContext"
+import { AppContext } from "src/app/components/AppContext"
 import AppView from "src/app/components/AppView"
 import StatusWidget from "src/app/components/StatusWidget"
 import MainMenu, { isLocalhost } from "src/app/components/MainMenu"
@@ -34,7 +34,7 @@ import {
   StreamlitDialog,
 } from "src/app/components/StreamlitDialog"
 import { ConnectionManager } from "src/app/connection/ConnectionManager"
-import { PerformanceEvents } from "src/lib/profiler/PerformanceEvents"
+import { PerformanceEvents } from "@streamlit/lib"
 import {
   createFormsData,
   FormsData,
@@ -62,8 +62,8 @@ import {
   notUndefined,
   setCookie,
   extractPageNameFromPathName,
-} from "src/lib/util/utils"
-import { BaseUriParts } from "src/lib/util/UriUtil"
+} from "@streamlit/lib"
+import { BaseUriParts } from "@streamlit/lib"
 import {
   AppPage,
   BackMsg,
@@ -86,16 +86,16 @@ import {
   SessionEvent,
   SessionStatus,
   WidgetStates,
-} from "src/lib/proto"
+} from "@streamlit/lib/dist/proto"
 import { concat, noop, without } from "lodash"
 import { RERUN_PROMPT_MODAL_DIALOG, SHOW_DEPLOY_BUTTON } from "@streamlit/lib"
-import { SessionInfo } from "src/lib/SessionInfo"
+import { SessionInfo } from "@streamlit/lib"
 import { FileUploadClient } from "src/lib/FileUploadClient"
-import { logError, logMessage } from "src/lib/util/log"
-import { AppRoot } from "src/lib/AppNode"
+import { logError, logMessage } from "@streamlit/lib"
+import { AppRoot } from "@streamlit/lib"
 
 import { UserSettings } from "src/app/components/StreamlitDialog/UserSettings"
-import { ComponentRegistry } from "src/lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "@streamlit/lib"
 import { handleFavicon } from "src/lib/components/elements/Favicon"
 
 import {
@@ -106,12 +106,12 @@ import {
   isPresetTheme,
   ThemeConfig,
   toExportedTheme,
-} from "src/lib/theme"
+} from "@streamlit/lib"
 import { DefaultStreamlitEndpoints } from "src/app/connection/DefaultStreamlitEndpoints"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
-import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
+import { StreamlitEndpoints } from "@streamlit/lib"
 
-import { StyledApp } from "src/styled-components"
+import { StyledApp } from "src/app/styled-components"
 
 import withHostCommunication, {
   HostCommunicationHOC,
@@ -123,7 +123,8 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "src/assets/css/theme.scss"
-import { ensureError } from "src/lib/util/ErrorHandling"
+import { ensureError } from "@streamlit/lib"
+import { LibContext } from "src/lib/components/core/LibContext"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -1560,14 +1561,6 @@ export class App extends PureComponent<Props, State> {
         value={{
           initialSidebarState,
           wideMode: userSettings.wideMode,
-          isFullScreen,
-          setFullScreen: this.handleFullScreen,
-          addScriptFinishedHandler: this.addScriptFinishedHandler,
-          removeScriptFinishedHandler: this.removeScriptFinishedHandler,
-          activeTheme: this.props.theme.activeTheme,
-          availableThemes: this.props.theme.availableThemes,
-          setTheme: this.setAndSendTheme,
-          addThemes: this.props.theme.addThemes,
           sidebarChevronDownshift:
             this.props.hostCommunication.currentState.sidebarChevronDownshift,
           embedded: isEmbed(),
@@ -1578,89 +1571,106 @@ export class App extends PureComponent<Props, State> {
           showColoredLine: !isEmbed() || isColoredLineDisplayed(),
         }}
       >
-        <HotKeys
-          keyMap={this.keyMap}
-          handlers={this.keyHandlers}
-          attach={window}
-          focused={true}
+        <LibContext.Provider
+          value={{
+            isFullScreen,
+            setFullScreen: this.handleFullScreen,
+            addScriptFinishedHandler: this.addScriptFinishedHandler,
+            removeScriptFinishedHandler: this.removeScriptFinishedHandler,
+            activeTheme: this.props.theme.activeTheme,
+            setTheme: this.setAndSendTheme,
+            availableThemes: this.props.theme.availableThemes,
+            addThemes: this.props.theme.addThemes,
+          }}
         >
-          <StyledApp className={outerDivClass}>
-            {/* The tabindex below is required for testing. */}
-            <Header>
-              {!hideTopBar && (
-                <>
-                  <StatusWidget
-                    connectionState={connectionState}
-                    sessionEventDispatcher={this.sessionEventDispatcher}
-                    scriptRunState={scriptRunState}
-                    rerunScript={this.rerunScript}
-                    stopScript={this.stopScript}
-                    allowRunOnSave={allowRunOnSave}
+          <HotKeys
+            keyMap={this.keyMap}
+            handlers={this.keyHandlers}
+            attach={window}
+            focused={true}
+          >
+            <StyledApp className={outerDivClass}>
+              {/* The tabindex below is required for testing. */}
+              <Header>
+                {!hideTopBar && (
+                  <>
+                    <StatusWidget
+                      connectionState={connectionState}
+                      sessionEventDispatcher={this.sessionEventDispatcher}
+                      scriptRunState={scriptRunState}
+                      rerunScript={this.rerunScript}
+                      stopScript={this.stopScript}
+                      allowRunOnSave={allowRunOnSave}
+                    />
+                    <ToolbarActions
+                      hostToolbarItems={
+                        this.props.hostCommunication.currentState.toolbarItems
+                      }
+                      sendMessageToHost={
+                        this.props.hostCommunication.sendMessage
+                      }
+                    />
+                  </>
+                )}
+                {this.showDeployButton() && (
+                  <DeployButton
+                    onClick={this.deployButtonClicked.bind(this)}
                   />
-                  <ToolbarActions
-                    hostToolbarItems={
-                      this.props.hostCommunication.currentState.toolbarItems
-                    }
-                    sendMessageToHost={
-                      this.props.hostCommunication.sendMessage
-                    }
-                  />
-                </>
-              )}
-              {this.showDeployButton() && (
-                <DeployButton onClick={this.deployButtonClicked.bind(this)} />
-              )}
-              <MainMenu
-                isServerConnected={this.isServerConnected()}
-                quickRerunCallback={this.rerunScript}
-                clearCacheCallback={this.openClearCacheDialog}
-                settingsCallback={this.settingsCallback}
-                aboutCallback={this.aboutCallback}
-                printCallback={this.printCallback}
-                screencastCallback={this.screencastCallback}
-                screenCastState={this.props.screenCast.currentState}
-                hostMenuItems={
-                  this.props.hostCommunication.currentState.menuItems
-                }
-                developmentMode={developmentMode}
-                sendMessageToHost={this.props.hostCommunication.sendMessage}
-                gitInfo={gitInfo}
-                showDeployError={this.showDeployError}
-                closeDialog={this.closeDialog}
-                isDeployErrorModalOpen={
-                  this.state.dialog?.type === DialogType.DEPLOY_ERROR
-                }
-                loadGitInfo={this.sendLoadGitInfoBackMsg}
-                canDeploy={this.sessionInfo.isSet && !this.sessionInfo.isHello}
-                menuItems={menuItems}
-                metricsMgr={this.metricsMgr}
-                toolbarMode={this.state.toolbarMode}
-              />
-            </Header>
+                )}
+                <MainMenu
+                  isServerConnected={this.isServerConnected()}
+                  quickRerunCallback={this.rerunScript}
+                  clearCacheCallback={this.openClearCacheDialog}
+                  settingsCallback={this.settingsCallback}
+                  aboutCallback={this.aboutCallback}
+                  printCallback={this.printCallback}
+                  screencastCallback={this.screencastCallback}
+                  screenCastState={this.props.screenCast.currentState}
+                  hostMenuItems={
+                    this.props.hostCommunication.currentState.menuItems
+                  }
+                  developmentMode={developmentMode}
+                  sendMessageToHost={this.props.hostCommunication.sendMessage}
+                  gitInfo={gitInfo}
+                  showDeployError={this.showDeployError}
+                  closeDialog={this.closeDialog}
+                  isDeployErrorModalOpen={
+                    this.state.dialog?.type === DialogType.DEPLOY_ERROR
+                  }
+                  loadGitInfo={this.sendLoadGitInfoBackMsg}
+                  canDeploy={
+                    this.sessionInfo.isSet && !this.sessionInfo.isHello
+                  }
+                  menuItems={menuItems}
+                  metricsMgr={this.metricsMgr}
+                  toolbarMode={this.state.toolbarMode}
+                />
+              </Header>
 
-            <AppView
-              endpoints={this.endpoints}
-              sessionInfo={this.sessionInfo}
-              sendMessageToHost={this.props.hostCommunication.sendMessage}
-              elements={elements}
-              scriptRunId={scriptRunId}
-              scriptRunState={scriptRunState}
-              widgetMgr={this.widgetMgr}
-              widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
-              uploadClient={this.uploadClient}
-              componentRegistry={this.componentRegistry}
-              formsData={this.state.formsData}
-              appPages={this.state.appPages}
-              onPageChange={this.onPageChange}
-              currentPageScriptHash={currentPageScriptHash}
-              hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
-              pageLinkBaseUrl={
-                this.props.hostCommunication.currentState.pageLinkBaseUrl
-              }
-            />
-            {renderedDialog}
-          </StyledApp>
-        </HotKeys>
+              <AppView
+                endpoints={this.endpoints}
+                sessionInfo={this.sessionInfo}
+                sendMessageToHost={this.props.hostCommunication.sendMessage}
+                elements={elements}
+                scriptRunId={scriptRunId}
+                scriptRunState={scriptRunState}
+                widgetMgr={this.widgetMgr}
+                widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
+                uploadClient={this.uploadClient}
+                componentRegistry={this.componentRegistry}
+                formsData={this.state.formsData}
+                appPages={this.state.appPages}
+                onPageChange={this.onPageChange}
+                currentPageScriptHash={currentPageScriptHash}
+                hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
+                pageLinkBaseUrl={
+                  this.props.hostCommunication.currentState.pageLinkBaseUrl
+                }
+              />
+              {renderedDialog}
+            </StyledApp>
+          </HotKeys>
+        </LibContext.Provider>
       </AppContext.Provider>
     )
   }

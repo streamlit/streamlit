@@ -17,7 +17,7 @@
 import React from "react"
 import { Block as BlockProto, ForwardMsgMetadata } from "@streamlit/lib/dist/proto"
 import { ScriptRunState } from "src/lib/ScriptRunState"
-import { BlockNode, ElementNode, AppRoot } from "src/lib/AppNode"
+import { BlockNode, ElementNode, AppRoot } from "@streamlit/lib"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import {
   createFormsData,
