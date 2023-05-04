@@ -99,3 +99,4 @@ export {
 export { LibContext } from "./components/core/LibContext"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as withHostCommunication, HostCommunicationHOC } from "./hocs/withHostCommunication"
+export { default as IsSidebarContext } from "./components/core/IsSidebarContext"

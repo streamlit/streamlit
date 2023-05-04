@@ -115,7 +115,7 @@ import { StyledApp } from "src/app/styled-components"
 
 import withHostCommunication, {
   HostCommunicationHOC,
-} from "src/lib/hocs/withHostCommunication"
+} from "@streamlit/lib"
 
 import withScreencast, {
   ScreenCastHOC,

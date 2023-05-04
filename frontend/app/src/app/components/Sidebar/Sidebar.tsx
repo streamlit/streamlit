@@ -34,7 +34,7 @@ import {
   StyledSidebarUserContent,
   StyledResizeHandle,
 } from "./styled-components"
-import IsSidebarContext from "src/lib/components/core/IsSidebarContext"
+import IsSidebarContext from "@streamlit/lib"
 import SidebarNav from "./SidebarNav"
 
 import { isEmbed, isColoredLineDisplayed } from "@streamlit/lib"

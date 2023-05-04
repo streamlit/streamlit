@@ -35,7 +35,7 @@ import {
   PageNotFound,
   PagesChanged,
 } from "@streamlit/lib/dist/proto"
-import { HostCommunicationHOC } from "src/lib/hocs/withHostCommunication"
+import { HostCommunicationHOC } from "@streamlit/lib"
 import {
   HostCommunicationState,
   IMenuItem,
