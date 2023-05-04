@@ -80,7 +80,7 @@ describe("ThemedApp", () => {
     expect(wrapper.html()).not.toBeNull()
   })
 
-  it.only("only renders a single instance of BaseWeb <ThemeProvider>", () => {
+  it("only renders a single instance of BaseWeb <ThemeProvider>", () => {
     const wrapper = mount(<ThemedApp />)
     expect(wrapper.find(BaseUIThemeProvider)).toHaveLength(1)
   })
