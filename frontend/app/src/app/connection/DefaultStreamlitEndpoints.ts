@@ -21,7 +21,7 @@ import {
   SVG_PREFIX,
   xssSanitizeSvg,
 } from "src/lib/util/UriUtil"
-import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
+import { StreamlitEndpoints } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/lib/dist/proto"
 import { getCookie } from "src/lib/util/utils"
 

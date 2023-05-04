@@ -27,7 +27,7 @@ import Resolver from "src/lib/util/Resolver"
 import { SessionInfo } from "@streamlit/lib"
 import { BaseUriParts, buildHttpUri, buildWsUri } from "src/lib/util/UriUtil"
 import React, { Fragment } from "react"
-import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
+import { StreamlitEndpoints } from "@streamlit/lib"
 
 /**
  * Name of the logger.

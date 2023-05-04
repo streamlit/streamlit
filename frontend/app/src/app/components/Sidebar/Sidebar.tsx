@@ -24,7 +24,7 @@ import Button, { Kind } from "src/lib/components/shared/Button"
 import { IAppPage, PageConfig } from "@streamlit/lib/dist/proto"
 import { EmotionTheme } from "@streamlit/lib"
 import { localStorageAvailable } from "@streamlit/lib"
-import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
+import { StreamlitEndpoints } from "@streamlit/lib"
 
 import {
   StyledSidebar,

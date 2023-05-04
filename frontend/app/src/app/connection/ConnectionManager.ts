@@ -22,7 +22,7 @@ import { BaseUriParts, getPossibleBaseUris } from "src/lib/util/UriUtil"
 import { ConnectionState } from "./ConnectionState"
 import { logError } from "@streamlit/lib"
 import { SessionInfo } from "@streamlit/lib"
-import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
+import { StreamlitEndpoints } from "@streamlit/lib"
 import { WebsocketConnection } from "./WebsocketConnection"
 import { ensureError } from "src/lib/util/ErrorHandling"
 
