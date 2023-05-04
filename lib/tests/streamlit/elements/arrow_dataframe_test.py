@@ -14,6 +14,7 @@
 
 """Arrow DataFrame tests."""
 
+import json
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -62,6 +63,40 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.data, pyarrow_table_to_bytes(table))
+
+    def test_hide_index_true(self):
+        """Test that it can be called with hide_index=True param."""
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+            }
+        )
+
+        st._arrow_dataframe(data_df, hide_index=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(
+            proto.columns,
+            json.dumps({"index": {"hidden": True}}),
+        )
+
+    def test_hide_index_false(self):
+        """Test that it can be called with hide_index=False param."""
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+            }
+        )
+
+        st._arrow_dataframe(data_df, hide_index=False)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(
+            proto.columns,
+            json.dumps({"index": {"hidden": False}}),
+        )
 
     def test_uuid(self):
         df = mock_data_frame()

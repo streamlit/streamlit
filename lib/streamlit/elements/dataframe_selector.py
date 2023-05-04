@@ -15,6 +15,8 @@
 """Selects between our two DataFrame serialization methods ("legacy" and
 "arrow") based on a config option.
 """
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union, cast
 
 from typing_extensions import Literal
@@ -45,6 +47,7 @@ class DataFrameSelectorMixin:
         height: Optional[int] = None,
         *,
         use_container_width: bool = False,
+        hide_index: bool | None = None,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -75,6 +78,12 @@ class DataFrameSelectorMixin:
             If True, set the dataframe width to the width of the parent container.
             This takes precedence over the width argument.
             This argument can only be supplied by keyword.
+
+        hide_index : bool or None
+            Determines whether to hide the index column(s). If set to True, the
+            index column(s) will be hidden. If None (default), the visibility of
+            the index column(s) is automatically determined based on the index
+            type and input data format.
 
         Examples
         --------
@@ -114,7 +123,11 @@ class DataFrameSelectorMixin:
         """
         if _use_arrow():
             return self.dg._arrow_dataframe(
-                data, width, height, use_container_width=use_container_width
+                data,
+                width,
+                height,
+                use_container_width=use_container_width,
+                hide_index=hide_index,
             )
         else:
             return self.dg._legacy_dataframe(data, width, height)

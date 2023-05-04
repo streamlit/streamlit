@@ -23,12 +23,15 @@ import pyarrow as pa
 from parameterized import parameterized
 
 from streamlit.elements.lib.column_config_utils import (
+    ColumnConfig,
+    ColumnConfigMapping,
     ColumnDataKind,
     _determine_data_kind,
     _determine_data_kind_via_arrow,
     _determine_data_kind_via_inferred_type,
     _determine_data_kind_via_pandas_dtype,
     determine_dataframe_schema,
+    update_column_config,
 )
 
 
@@ -327,3 +330,39 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                 ColumnDataKind.EMPTY,
             ],
         )
+
+    def test_update_column_config(self):
+        """Test that the update_column_config function correctly updates a column's configuration."""
+
+        # Create an initial column config mapping
+        initial_column_config: ColumnConfigMapping = {
+            "index": {"title": "Index", "width": "medium"},
+            "col1": {"title": "Column 1", "width": "small"},
+        }
+
+        # Define the column and new column config to update
+        column_to_update = "col1"
+        new_column_config: ColumnConfig = {"width": "large", "disabled": True}
+
+        # Call the update_column_config method
+        update_column_config(initial_column_config, column_to_update, new_column_config)
+
+        # Check if the column config was updated correctly
+        expected_column_config: ColumnConfig = {
+            "title": "Column 1",
+            "width": "large",
+            "disabled": True,
+        }
+        self.assertEqual(
+            initial_column_config[column_to_update], expected_column_config
+        )
+
+        # Test updating a column that doesn't exist in the initial column config mapping
+        column_to_update = "col2"
+        new_column_config: ColumnConfig = {"title": "Column 2", "width": "medium"}
+
+        # Call the update_column_config method
+        update_column_config(initial_column_config, column_to_update, new_column_config)
+
+        # Check if the new column config was added correctly
+        self.assertEqual(initial_column_config[column_to_update], new_column_config)
