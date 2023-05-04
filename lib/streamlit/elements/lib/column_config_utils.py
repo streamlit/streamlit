@@ -352,6 +352,30 @@ class ColumnConfig(TypedDict, total=False):
 ColumnConfigMapping: TypeAlias = Dict[Union[IndexIdentifierType, str], ColumnConfig]
 
 
+def update_column_config(
+    column_config_mapping: ColumnConfigMapping, column: str, column_config: ColumnConfig
+) -> None:
+    """Updates the column config value for a single column within the mapping.
+
+    Parameters
+    ----------
+
+    column_config_mapping : ColumnConfigMapping
+        The column config mapping to update.
+
+    column : str
+        The column to update the config value for.
+
+    column_config : ColumnConfig
+        The column config to update.
+    """
+
+    if column not in column_config_mapping:
+        column_config_mapping[column] = {}
+
+    column_config_mapping[column].update(column_config)
+
+
 def marshall_column_config(
     proto: ArrowProto, column_config_mapping: ColumnConfigMapping
 ) -> None:
