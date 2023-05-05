@@ -16,9 +16,16 @@
 
 import React from "react"
 
-import { mount, render, IMenuItem, mockSessionInfo } from "@streamlit/lib"
+import {
+  mount,
+  render,
+  IMenuItem,
+  mockSessionInfo,
+  Config,
+  GitInfo,
+  IGitInfo,
+} from "@streamlit/lib"
 
-import { Config, GitInfo, IGitInfo } from "@streamlit/lib/dist/proto"
 import { IDeployErrorDialog } from "src/app/components/StreamlitDialog/DeployErrorDialogs/types"
 import {
   DetachedHead,

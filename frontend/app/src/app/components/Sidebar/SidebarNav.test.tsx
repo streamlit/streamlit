@@ -28,8 +28,8 @@ import {
   mount,
   shallow,
   mockEndpoints,
+  IAppPage,
 } from "@streamlit/lib"
-import { IAppPage } from "@streamlit/lib/dist/proto"
 
 import SidebarNav, { Props } from "./SidebarNav"
 import {

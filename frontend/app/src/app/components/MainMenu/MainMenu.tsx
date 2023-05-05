@@ -37,6 +37,10 @@ import {
   Icon,
   IGuestToHostMessage,
   IMenuItem,
+  Config,
+  GitInfo,
+  IGitInfo,
+  PageConfig,
 } from "@streamlit/lib"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import {
@@ -44,12 +48,6 @@ import {
   ModuleIsNotAdded,
   NoRepositoryDetected,
 } from "src/app/components/StreamlitDialog/DeployErrorDialogs"
-import {
-  Config,
-  GitInfo,
-  IGitInfo,
-  PageConfig,
-} from "@streamlit/lib/dist/proto"
 import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/urls"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import {

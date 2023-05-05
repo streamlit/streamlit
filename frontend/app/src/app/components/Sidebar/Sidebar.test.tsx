@@ -18,12 +18,12 @@ import { matchers } from "@emotion/jest"
 import React from "react"
 import { ReactWrapper } from "enzyme"
 
-import { PageConfig } from "@streamlit/lib/dist/proto"
 import {
   mount,
   mockEndpoints,
   spacing,
   emotionLightTheme,
+  PageConfig,
 } from "@streamlit/lib"
 import Sidebar, { SidebarProps } from "./Sidebar"
 import SidebarNav from "./SidebarNav"

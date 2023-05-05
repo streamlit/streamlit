@@ -15,10 +15,15 @@
  */
 
 import React from "react"
-import { shallow, mount, ScriptRunState, mockTheme } from "@streamlit/lib"
+import {
+  shallow,
+  mount,
+  ScriptRunState,
+  mockTheme,
+  SessionEvent,
+} from "@streamlit/lib"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
-import { SessionEvent } from "@streamlit/lib/dist/proto"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 

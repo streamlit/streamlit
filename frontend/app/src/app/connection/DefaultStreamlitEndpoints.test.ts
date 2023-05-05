@@ -16,8 +16,7 @@
 
 import axios from "axios"
 import MockAdapter from "axios-mock-adapter"
-import { BaseUriParts, buildHttpUri } from "@streamlit/lib"
-import { ForwardMsg } from "@streamlit/lib/dist/proto"
+import { BaseUriParts, buildHttpUri, ForwardMsg } from "@streamlit/lib"
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
 const MOCK_SERVER_URI = {

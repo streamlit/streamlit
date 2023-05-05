@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { PageConfig } from "@streamlit/lib/dist/proto"
+import { PageConfig } from "@streamlit/lib"
 
 export interface Props {
   /**

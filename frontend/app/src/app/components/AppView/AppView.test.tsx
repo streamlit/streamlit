@@ -16,10 +16,6 @@
 
 import React from "react"
 import {
-  Block as BlockProto,
-  ForwardMsgMetadata,
-} from "@streamlit/lib/dist/proto"
-import {
   ScriptRunState,
   BlockNode,
   ElementNode,
@@ -33,6 +29,8 @@ import {
   mockSessionInfo,
   render,
   shallow,
+  Block as BlockProto,
+  ForwardMsgMetadata,
 } from "@streamlit/lib"
 import AppView, { AppViewProps } from "./AppView"
 
