@@ -41,7 +41,7 @@ export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { LocalStore, localStorageAvailable } from "./util/storageUtils"
 export { 
   createAutoTheme,
-createPresetThemes,
+  createPresetThemes,
   CUSTOM_THEME_NAME,
   getCachedTheme,
   toExportedTheme,

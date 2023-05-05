@@ -14,52 +14,31 @@
  * limitations under the License.
  */
 
-import camelcase from "camelcase"
 import { getLuminance } from "color2k"
+import camelcase from "camelcase"
 import decamelize from "decamelize"
 import cloneDeep from "lodash/cloneDeep"
 import merge from "lodash/merge"
 
-<<<<<<< HEAD:frontend/lib/src/theme/utils.ts
 import { CustomThemeConfig, ICustomThemeConfig } from "src/proto"
 import { logError } from "src/util/log"
 import { LocalStore, localStorageAvailable } from "src/util/storageUtils"
 import {
   baseTheme,
   CachedTheme,
-  createAutoTheme,
-  createPresetThemes,
   darkTheme,
   lightTheme,
   EmotionTheme,
   ThemeConfig,
   ThemeSpacing,
-} from "src/theme/index"
-=======
-import { CustomThemeConfig, ICustomThemeConfig } from "src/lib/proto"
-import { logError } from "src/lib/util/log"
-import { LocalStore, localStorageAvailable } from "src/lib/util/storageUtils"
-import { CachedTheme, EmotionTheme, ThemeConfig, ThemeSpacing } from "./types"
-import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
-import { createBaseUiTheme } from "./createThemeUtil"
-import {
-  computeDerivedColors,
-  createEmotionColors,
-  DerivedColors,
-} from "./getColors"
->>>>>>> cec1c141f (Remove circular dependencies and fix imports (#6606)):frontend/src/lib/theme/utils.ts
+} from "src/theme"
 
 import { fonts } from "./primitives/typography"
+import { computeDerivedColors, createEmotionColors, DerivedColors } from "./getColors"
+import { createBaseUiTheme } from "./createThemeUtil"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
-
-export const getSystemTheme = (): ThemeConfig => {
-  return window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? darkTheme
-    : lightTheme
-}
 
 export const createAutoTheme = (): ThemeConfig => ({
   ...getSystemTheme(),
@@ -306,6 +285,13 @@ export const createTheme = (
     emotion,
     basewebTheme: createBaseUiTheme(emotion, startingTheme.primitives),
   }
+}
+
+export const getSystemTheme = (): ThemeConfig => {
+  return window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? darkTheme
+    : lightTheme
 }
 
 export const getCachedTheme = (): ThemeConfig | null => {
