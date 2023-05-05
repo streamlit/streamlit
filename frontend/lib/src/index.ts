@@ -110,9 +110,5 @@ export { Small } from "./components/shared/TextElements"
 export { spacing, fonts } from "./theme/primitives"
 export { mockTheme } from "./mocks/mockTheme"
 export { default as Alert } from "./components/elements/Alert"
-<<<<<<< HEAD
 export { default as TextElement } from "./components/elements/Text"
 export * from "./proto"
-=======
-export { default as Text } from "./components/elements/Text"
->>>>>>> feature/st-lib
