@@ -30,7 +30,10 @@ export interface TextProps {
 /**
  * Functional element representing preformatted (plain) text.
  */
-export default function Text({ width, element }: TextProps): ReactElement {
+export default function TextElement({
+  width,
+  element,
+}: TextProps): ReactElement {
   const styleProp = { width }
   return (
     <StyledLabelHelpWrapper style={styleProp} className="stTextLabelWrapper">
