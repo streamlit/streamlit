@@ -27,9 +27,21 @@ import {
   Text as TextProto,
   WidgetStates,
 } from "@streamlit/lib/dist/proto"
-import { AppRoot, VerticalBlock, Alert, Text, ComponentRegistry, FileUploadClient, ScriptRunState, SessionInfo, StreamlitEndpoints, mount, createFormsData,
-    FormsData,
-    WidgetStateManager, } from "@streamlit/lib"
+import {
+  AppRoot,
+  VerticalBlock,
+  Alert,
+  Text,
+  ComponentRegistry,
+  FileUploadClient,
+  ScriptRunState,
+  SessionInfo,
+  StreamlitEndpoints,
+  mount,
+  createFormsData,
+  FormsData,
+  WidgetStateManager,
+} from "@streamlit/lib"
 
 /**
  * Example StreamlitEndpoints implementation.
