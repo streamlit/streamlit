@@ -27,6 +27,9 @@ jobs:
         with:
           persist-credentials: false
           submodules: "recursive"
+          fetch-depth: 2
+      - name: Set build config env vars
+        uses: ./.github/actions/build_info
       # We need to install Python 3.9 here because it's the latest version
       # supported by the miniconda installer as of 2022/10/11.
       - name: Set up Python 3.9
