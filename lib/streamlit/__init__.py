@@ -209,3 +209,7 @@ experimental_set_query_params = _set_query_params
 experimental_rerun = _rerun
 experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _connection_factory
+
+from streamlit.elements.lib.column_types import column_config as _column_config
+
+column_config = _column_config
