@@ -21,7 +21,6 @@ import humanizeString from "humanize-string"
 import mapValues from "lodash/mapValues"
 
 import { CustomThemeConfig } from "@streamlit/lib/dist/proto"
-import { AppContext } from "src/app/components/AppContext"
 import {
   Button,
   Kind,
@@ -38,6 +37,7 @@ import {
   EmotionTheme,
   ThemeConfig,
   toThemeInput,
+  LibContext
 } from "@streamlit/lib"
 
 import {
@@ -191,7 +191,7 @@ export interface Props {
 
 const ThemeCreatorDialog = (props: Props): ReactElement => {
   const [copied, updateCopied] = React.useState(false)
-  const { activeTheme, addThemes, setTheme } = React.useContext(AppContext)
+  const { activeTheme, addThemes, setTheme } = React.useContext(LibContext)
 
   const themeInput = toThemeInput(activeTheme.emotion)
 

@@ -18,7 +18,7 @@
 
  import { baseTheme, ThemeConfig } from "src/theme"
  
- export interface Props {
+ export interface LibContextProps {
    /** True if the app is in full-screen mode. */
    isFullScreen: boolean
  
@@ -53,7 +53,7 @@
    addThemes: (themes: ThemeConfig[]) => void
  }
  
- export const LibContext = React.createContext<Props>({
+ export const LibContext = React.createContext<LibContextProps>({
    isFullScreen: false,
    setFullScreen: () => {},
    addScriptFinishedHandler: () => {},

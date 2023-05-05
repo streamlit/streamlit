@@ -28,11 +28,9 @@ import {
   ModalHeader,
   ModalBody,
   UISelectbox,
+  LibContext,
+  LibContextProps
 } from "@streamlit/lib"
-import {
-  AppContext,
-  Props as AppContextProps,
-} from "src/app/components/AppContext"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 
 import {
@@ -64,7 +62,7 @@ export interface Props {
 export class SettingsDialog extends PureComponent<Props, UserSettings> {
   private activeSettings: UserSettings
 
-  static contextType = AppContext
+  static contextType = LibContext
 
   constructor(props: Props) {
     super(props)
@@ -179,7 +177,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   }
 
   private handleThemeChange = (index: number): void => {
-    const { activeTheme: oldTheme, availableThemes }: AppContextProps =
+    const { activeTheme: oldTheme, availableThemes }: LibContextProps =
       this.context
     const newTheme = availableThemes[index]
 

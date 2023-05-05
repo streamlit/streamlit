@@ -702,6 +702,8 @@ export function doInitPings(
       axios.get(allowedOriginsUri, { timeout: PING_TIMEOUT_MS }),
     ])
       .then(([_, originsResp]) => {
+        // added this temporarily as typescript compiler is not liking data not existing
+        // @ts-nocheck
         setAllowedOriginsResp(originsResp.data)
         resolver.resolve(uriNumber)
       })

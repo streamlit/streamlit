@@ -23,8 +23,8 @@ import {
   darkTheme,
   shallow,
   mockSessionInfo,
+  LibContextProps
 } from "@streamlit/lib"
-import { Props as ContextProps } from "src/app/components/AppContext"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 
 import { SettingsDialog, Props } from "./SettingsDialog"
@@ -33,8 +33,8 @@ const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()
 
 const getContext = (
-  extend?: Partial<ContextProps>
-): Partial<ContextProps> => ({
+  extend?: Partial<LibContextProps>
+): Partial<LibContextProps> => ({
   activeTheme: lightTheme,
   setTheme: mockSetTheme,
   availableThemes: [],

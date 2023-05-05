@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import { AppContext } from "src/app/components/AppContext"
-import { ThemeProvider, createTheme, ThemeConfig } from "@streamlit/lib"
+import { ThemeProvider, createTheme, ThemeConfig, LibContext } from "@streamlit/lib"
 import Sidebar, { SidebarProps } from "./Sidebar"
 
 const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>
@@ -35,8 +35,9 @@ const ThemedSidebar = ({
   children,
   ...sidebarProps
 }: Omit<SidebarProps, "chevronDownshift" | "theme">): ReactElement => {
-  const { activeTheme, sidebarChevronDownshift: chevronDownshift } =
+  const { sidebarChevronDownshift: chevronDownshift } =
     React.useContext(AppContext)
+  const { activeTheme } = React.useContext(LibContext)
   const sidebarTheme = createSidebarTheme(activeTheme)
 
   return (

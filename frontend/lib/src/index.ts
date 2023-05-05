@@ -98,6 +98,7 @@ export {
   useIsOverflowing
 } from "./util/Hooks"
 export { LibContext } from "./components/core/LibContext"
+export type { LibContextProps } from "./components/core/LibContext"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as withHostCommunication } from "./hocs/withHostCommunication"
 export type { HostCommunicationHOC } from "./hocs/withHostCommunication"
