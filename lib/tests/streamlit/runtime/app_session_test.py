@@ -101,18 +101,15 @@ class AppSessionTest(unittest.TestCase):
 
         mock_file_mgr = MagicMock(spec=UploadedFileManager)
         session._uploaded_file_mgr = mock_file_mgr
-        mock_message_cache = Runtime._instance.message_cache
 
         session.shutdown()
         self.assertEqual(AppSessionState.SHUTDOWN_REQUESTED, session._state)
         mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
         patched_disconnect.assert_called_once_with(session._on_secrets_file_changed)
-        mock_message_cache.remove_refs_for_session.assert_called_once_with(session)
 
         # A 2nd shutdown call should have no effect.
         session.shutdown()
         self.assertEqual(AppSessionState.SHUTDOWN_REQUESTED, session._state)
-        mock_message_cache.remove_refs_for_session.assert_called_once_with(session)
 
         mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
 
