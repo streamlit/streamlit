@@ -26,22 +26,10 @@ import {
   IAppPage,
   Text as TextProto,
   WidgetStates,
-} from "src/proto"
-import { AppRoot } from "./AppNode"
-import VerticalBlock from "./components/core/Block"
-import Alert from "./components/elements/Alert"
-import Text from "./components/elements/Text"
-import { ComponentRegistry } from "./components/widgets/CustomComponent"
-import { FileUploadClient } from "./FileUploadClient"
-import { ScriptRunState } from "./ScriptRunState"
-import { SessionInfo } from "./SessionInfo"
-import { StreamlitEndpoints } from "./StreamlitEndpoints"
-import { mount } from "./test_util"
-import {
-  createFormsData,
-  FormsData,
-  WidgetStateManager,
-} from "./WidgetStateManager"
+} from "@streamlit/lib/dist/proto"
+import { AppRoot, VerticalBlock, Alert, Text, ComponentRegistry, FileUploadClient, ScriptRunState, SessionInfo, StreamlitEndpoints, mount, createFormsData,
+    FormsData,
+    WidgetStateManager, } from "@streamlit/lib"
 
 /**
  * Example StreamlitEndpoints implementation.
