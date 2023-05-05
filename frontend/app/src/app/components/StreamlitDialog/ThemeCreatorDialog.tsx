@@ -37,7 +37,7 @@ import {
   EmotionTheme,
   ThemeConfig,
   toThemeInput,
-  LibContext
+  LibContext,
 } from "@streamlit/lib"
 
 import {

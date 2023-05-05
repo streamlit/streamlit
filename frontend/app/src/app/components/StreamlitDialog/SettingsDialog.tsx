@@ -29,7 +29,7 @@ import {
   ModalBody,
   UISelectbox,
   LibContext,
-  LibContextProps
+  LibContextProps,
 } from "@streamlit/lib"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 

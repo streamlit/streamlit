@@ -23,7 +23,7 @@ import {
   darkTheme,
   shallow,
   mockSessionInfo,
-  LibContextProps
+  LibContextProps,
 } from "@streamlit/lib"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 
