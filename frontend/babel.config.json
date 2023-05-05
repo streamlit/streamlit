@@ -25,7 +25,6 @@
       "**/.test.tsx"
     ],
     "babelrcRoots": [
-      ".",
-      "lib"
+      "."
     ]
 }
