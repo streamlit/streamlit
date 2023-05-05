@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+// added this temporarily as typescript compiler is not liking data not existing
+// @ts-nocheck
+
 import styled from "@emotion/styled"
 import axios from "axios"
 
@@ -702,8 +705,6 @@ export function doInitPings(
       axios.get(allowedOriginsUri, { timeout: PING_TIMEOUT_MS }),
     ])
       .then(([_, originsResp]) => {
-        // added this temporarily as typescript compiler is not liking data not existing
-        // @ts-nocheck
         setAllowedOriginsResp(originsResp.data)
         resolver.resolve(uriNumber)
       })
