@@ -293,18 +293,9 @@ frontend-fast:
 .PHONY: jslint
 # Lint the JS code
 jslint:
-	./scripts/validate_frontend_lib_imports.py frontend/lib/src
-	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
-ifndef CIRCLECI
+	./scripts/validate_frontend_lib_imports.py frontend/src/lib
 	cd frontend; \
 		yarn lint;
-else
-	cd frontend; \
-		yarn lint \
-			--format junit \
-			--output-file test-reports/eslint/eslint.xml \
-			./src
-endif #CIRCLECI
 
 .PHONY: tstypecheck
 # Type check the JS/TS code
@@ -386,7 +377,6 @@ build-test-env:
 		echo "Proto files not generated."; \
 		exit 1; \
 	fi
-ifndef CIRCLECI
 	docker build \
 		--build-arg UID=$$(id -u) \
 		--build-arg GID=$$(id -g) \
@@ -395,17 +385,6 @@ ifndef CIRCLECI
 		-t streamlit_e2e_tests \
 		-f e2e/Dockerfile \
 		.
-else
-	docker build \
-		--build-arg UID=$$(id -u) \
-		--build-arg GID=$$(id -g) \
-		--build-arg OSTYPE=$$(uname) \
-		--build-arg NODE_VERSION=$$(node --version) \
-		-t streamlit_e2e_tests \
-		-f e2e/Dockerfile \
-		--progress plain \
-		.
-endif #CIRCLECI
 
 .PHONY: run-test-env
 # Run test env image with volume mounts
