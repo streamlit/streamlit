@@ -29,8 +29,9 @@ import {
   IsSidebarContext,
   isEmbed,
   isColoredLineDisplayed,
+  IAppPage,
+  PageConfig,
 } from "@streamlit/lib"
-import { IAppPage, PageConfig } from "@streamlit/lib/dist/proto"
 
 import {
   StyledSidebar,

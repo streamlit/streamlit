@@ -18,11 +18,6 @@ import React from "react"
 import { BaseProvider } from "baseui"
 import { Global, ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 
-import {
-  CustomThemeConfig,
-  ICustomThemeConfig,
-} from "@streamlit/lib/dist/proto"
-
 import FontFaceDeclaration from "src/app/components/FontFaceDeclaration"
 import {
   AUTO_THEME_NAME,
@@ -36,6 +31,8 @@ import {
   setCachedTheme,
   ThemeConfig,
   createTheme,
+  CustomThemeConfig,
+  ICustomThemeConfig,
 } from "@streamlit/lib"
 
 import AppWithScreencast from "./App"

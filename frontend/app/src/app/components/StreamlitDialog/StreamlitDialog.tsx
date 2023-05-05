@@ -24,6 +24,7 @@ import {
   ModalButton,
   SessionInfo,
   StreamlitMarkdown,
+  IException,
 } from "@streamlit/lib"
 import { HotKeys } from "react-hotkeys"
 
@@ -31,7 +32,6 @@ import {
   ScriptChangedDialog,
   Props as ScriptChangedDialogProps,
 } from "src/app/components/StreamlitDialog/ScriptChangedDialog"
-import { IException } from "@streamlit/lib/dist/proto"
 import { STREAMLIT_HOME_URL } from "src/urls"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {

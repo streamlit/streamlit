@@ -15,7 +15,6 @@
  */
 import { ReactNode } from "react"
 
-import { BackMsg, ForwardMsg } from "@streamlit/lib/dist/proto"
 import {
   IAllowedMessageOriginsResponse,
   BaseUriParts,
@@ -24,6 +23,8 @@ import {
   SessionInfo,
   StreamlitEndpoints,
   ensureError,
+  BackMsg,
+  ForwardMsg,
 } from "@streamlit/lib"
 
 import { ConnectionState } from "./ConnectionState"

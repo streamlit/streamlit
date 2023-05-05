@@ -26,7 +26,7 @@ import {
   DialogType,
   PlainEventHandler,
 } from "src/app/components/StreamlitDialog/StreamlitDialog"
-import { Button, Kind } from "@streamlit/lib"
+import { Button, Kind, GitInfo, IGitInfo } from "@streamlit/lib"
 import StreamlitLogo from "src/assets/svg/logo.svg"
 import Rocket from "src/assets/svg/rocket.svg"
 import {
@@ -39,7 +39,6 @@ import {
   NoRepositoryDetected,
 } from "src/app/components/StreamlitDialog/DeployErrorDialogs"
 import { getDeployAppUrl } from "src/app/components/MainMenu/MainMenu"
-import { GitInfo, IGitInfo } from "@streamlit/lib/dist/proto"
 
 const { GitStates } = GitInfo
 

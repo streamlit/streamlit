@@ -20,12 +20,12 @@ import React, { ReactElement, useCallback, useRef, useState } from "react"
 import * as reactDeviceDetect from "react-device-detect"
 import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
-import { IAppPage } from "@streamlit/lib/dist/proto"
 import {
   Icon,
   EmojiIcon,
   useIsOverflowing,
   StreamlitEndpoints,
+  IAppPage,
 } from "@streamlit/lib"
 
 import {

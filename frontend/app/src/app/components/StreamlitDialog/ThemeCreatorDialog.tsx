@@ -20,7 +20,6 @@ import { toHex } from "color2k"
 import humanizeString from "humanize-string"
 import mapValues from "lodash/mapValues"
 
-import { CustomThemeConfig } from "@streamlit/lib/dist/proto"
 import {
   Button,
   Kind,
@@ -38,6 +37,7 @@ import {
   ThemeConfig,
   toThemeInput,
   LibContext,
+  CustomThemeConfig,
 } from "@streamlit/lib"
 
 import {

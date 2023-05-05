@@ -80,10 +80,6 @@ import {
   HostCommunicationHOC,
   ensureError,
   LibContext,
-} from "@streamlit/lib"
-import { ConnectionState } from "src/app/connection/ConnectionState"
-import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
-import {
   AppPage,
   BackMsg,
   Config,
@@ -105,7 +101,9 @@ import {
   SessionEvent,
   SessionStatus,
   WidgetStates,
-} from "@streamlit/lib/dist/proto"
+} from "@streamlit/lib"
+import { ConnectionState } from "src/app/connection/ConnectionState"
+import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
 import { concat, noop, without } from "lodash"
 
 import { UserSettings } from "src/app/components/StreamlitDialog/UserSettings"

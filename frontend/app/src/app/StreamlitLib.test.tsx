@@ -20,18 +20,9 @@ import { CancelToken } from "axios"
 import { ReactWrapper } from "enzyme"
 import React, { PureComponent, ReactElement } from "react"
 import {
-  Delta as DeltaProto,
-  Element as ElementProto,
-  ForwardMsgMetadata as ForwardMsgMetadataProto,
-  IAppPage,
-  Text as TextProto,
-  WidgetStates,
-} from "@streamlit/lib/dist/proto"
-import {
   AppRoot,
   VerticalBlock,
   Alert,
-  Text,
   ComponentRegistry,
   FileUploadClient,
   ScriptRunState,
@@ -41,6 +32,13 @@ import {
   createFormsData,
   FormsData,
   WidgetStateManager,
+  Delta as DeltaProto,
+  Element as ElementProto,
+  ForwardMsgMetadata as ForwardMsgMetadataProto,
+  IAppPage,
+  Text as TextProto,
+  WidgetStates,
+  TextElement,
 } from "@streamlit/lib"
 
 /**
@@ -253,7 +251,7 @@ describe("StreamlitLibExample", () => {
     expect(alert.exists()).toBe(false)
 
     // And we should have the single Text element we created
-    const text = wrapper.find(Text)
+    const text = wrapper.find(TextElement)
     expect(text.text()).toBe("Hello, world!")
   })
 })

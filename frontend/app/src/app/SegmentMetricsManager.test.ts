@@ -17,11 +17,12 @@
 // Disable Typescript checking, since mm.track has private scope
 // @ts-nocheck
 
-import { Delta, Element } from "@streamlit/lib/dist/proto"
 import {
   mockSessionInfo,
   mockSessionInfoProps,
   SessionInfo,
+  Delta,
+  Element,
 } from "@streamlit/lib"
 import { SegmentMetricsManager } from "./SegmentMetricsManager"
 

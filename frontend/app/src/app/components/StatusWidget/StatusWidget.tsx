@@ -27,6 +27,7 @@ import {
   Timer,
   Icon,
   EmotionTheme,
+  SessionEvent,
 } from "@streamlit/lib"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
@@ -34,7 +35,6 @@ import { CSSTransition } from "react-transition-group"
 import { SignalConnection } from "typed-signals"
 
 import { ConnectionState } from "src/app/connection/ConnectionState"
-import { SessionEvent } from "@streamlit/lib/dist/proto"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
 
 /*

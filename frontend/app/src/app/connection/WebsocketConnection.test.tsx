@@ -19,12 +19,12 @@ import { WS } from "jest-websocket-mock"
 import { zip } from "lodash"
 import React, { Fragment } from "react"
 
-import { BackMsg } from "@streamlit/lib/dist/proto"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import {
   SessionInfo,
   mockEndpoints,
   mockSessionInfoProps,
+  BackMsg,
 } from "@streamlit/lib"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,

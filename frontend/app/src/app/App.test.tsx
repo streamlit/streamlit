@@ -38,8 +38,6 @@ import {
   Modal,
   mockSessionInfo,
   mockSessionInfoProps,
-} from "@streamlit/lib"
-import {
   Config,
   CustomThemeConfig,
   Delta,
@@ -52,7 +50,7 @@ import {
   PageInfo,
   PageNotFound,
   PagesChanged,
-} from "@streamlit/lib/dist/proto"
+} from "@streamlit/lib"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import {
   DialogType,

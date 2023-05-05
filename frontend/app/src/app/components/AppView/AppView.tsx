@@ -15,9 +15,8 @@
  */
 
 import React, { ReactElement } from "react"
-import { IAppPage } from "@streamlit/lib/dist/proto"
-
 import {
+  IAppPage,
   VerticalBlock,
   ScriptRunState,
   FormsData,
@@ -30,6 +29,7 @@ import {
   IGuestToHostMessage,
   StreamlitEndpoints,
 } from "@streamlit/lib"
+
 import { ThemedSidebar } from "src/app/components/Sidebar"
 
 import { AppContext } from "src/app/components/AppContext"

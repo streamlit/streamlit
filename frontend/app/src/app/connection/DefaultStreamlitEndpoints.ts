@@ -22,8 +22,8 @@ import {
   xssSanitizeSvg,
   StreamlitEndpoints,
   getCookie,
+  IAppPage,
 } from "@streamlit/lib"
-import { IAppPage } from "@streamlit/lib/dist/proto"
 
 interface Props {
   getServerUri: () => BaseUriParts | undefined

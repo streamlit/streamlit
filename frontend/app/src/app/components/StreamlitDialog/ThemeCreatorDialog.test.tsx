@@ -15,7 +15,6 @@
  */
 
 import React from "react"
-import { CustomThemeConfig } from "@streamlit/lib/dist/proto"
 import {
   UISelectbox,
   shallow,
@@ -25,6 +24,7 @@ import {
   lightTheme,
   toThemeInput,
   fonts,
+  CustomThemeConfig,
 } from "@streamlit/lib"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,

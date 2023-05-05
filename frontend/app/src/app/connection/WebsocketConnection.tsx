@@ -20,7 +20,6 @@
 import styled from "@emotion/styled"
 import axios from "axios"
 
-import { BackMsg, ForwardMsg, IBackMsg } from "@streamlit/lib/dist/proto"
 import {
   IAllowedMessageOriginsResponse,
   ForwardMsgCache,
@@ -34,6 +33,9 @@ import {
   buildHttpUri,
   buildWsUri,
   StreamlitEndpoints,
+  BackMsg,
+  ForwardMsg,
+  IBackMsg,
 } from "@streamlit/lib"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import React, { Fragment } from "react"
