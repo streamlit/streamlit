@@ -26,7 +26,7 @@ import {
   IAppPage,
   Text as TextProto,
   WidgetStates,
-} from "src/lib/proto"
+} from "src/proto"
 import { AppRoot } from "./AppNode"
 import VerticalBlock from "./components/core/Block"
 import Alert from "./components/elements/Alert"

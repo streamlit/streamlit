@@ -17,7 +17,7 @@
 import { Field, Utf8, vectorFromArray } from "apache-arrow"
 import { cloneDeep } from "lodash"
 
-import { IndexTypeName, Quiver } from "src/lib/dataframes/Quiver"
+import { IndexTypeName, Quiver } from "src/dataframes/Quiver"
 import {
   // Types
   CATEGORICAL,
@@ -44,7 +44,7 @@ import {
   DIFFERENT_COLUMN_TYPES,
   CATEGORICAL_INTERVAL,
   NAMED_INDEX,
-} from "src/lib/mocks/arrow"
+} from "src/mocks/arrow"
 
 describe("Quiver", () => {
   describe("Public methods", () => {

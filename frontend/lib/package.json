@@ -31,6 +31,8 @@
         "@babel/core": "^7.21.4",
         "@emotion/babel-plugin": "^11.7.2",
         "babel-plugin-emotion": "^11.0.0",
-        "tsc-alias": "^1.8.5"
+        "tsc-alias": "^1.8.5",
+        "date-fns": "^2.29.3",
+        "date-fns-tz": "^2.0.0"
     }
 }
