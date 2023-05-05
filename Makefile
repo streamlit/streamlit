@@ -310,14 +310,7 @@ jsformat:
 .PHONY: jstest
 # Run JS unit tests.
 jstest:
-ifndef CIRCLECI
 	cd frontend; TESTPATH=$(TESTPATH) yarn run test
-else
-	# Previously we used --runInBand here, which just completely turns off parallelization.
-	# But since our CircleCI instance has 2 CPUs, use maxWorkers instead:
-	# https://jestjs.io/docs/troubleshooting#tests-are-extremely-slow-on-docker-andor-continuous-integration-ci-server
-	cd frontend; yarn run test --maxWorkers=2
-endif
 
 .PHONY: jscoverage
 # Run JS unit tests and generate a coverage report.
