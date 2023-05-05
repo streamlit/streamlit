@@ -51,6 +51,8 @@ import {
   toGlideColumn,
   isMissingValueCell,
   getTextCell,
+  CustomCells,
+  ImageCellEditor,
 } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
@@ -291,15 +293,16 @@ function DataFrame({
     [widgetMgr, element, numRows, clearSelection, columns]
   )
 
-  const { onCellEdited, onPaste, onRowAppended, onDelete } = useDataEditor(
-    columns,
-    element.editingMode !== DYNAMIC,
-    editingState,
-    getCellContent,
-    getOriginalIndex,
-    refreshCells,
-    applyEdits
-  )
+  const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
+    useDataEditor(
+      columns,
+      element.editingMode !== DYNAMIC,
+      editingState,
+      getCellContent,
+      getOriginalIndex,
+      refreshCells,
+      applyEdits
+    )
 
   const { tooltip, clearTooltip, onItemHovered } = useTooltips(
     columns,
@@ -490,9 +493,13 @@ function DataFrame({
             scrollbarWidthOverride: 1,
           }}
           // Add support for additional cells:
-          customRenderers={extraCellArgs.customRenderers}
+          customRenderers={[...extraCellArgs.customRenderers, ...CustomCells]}
+          // Custom image editor to render single images:
+          imageEditorOverride={ImageCellEditor}
           // Add our custom SVG header icons:
           headerIcons={theme.headerIcons}
+          // Add support for user input validation:
+          validateCell={validateCell}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
           // If element is editable, enable editing features:

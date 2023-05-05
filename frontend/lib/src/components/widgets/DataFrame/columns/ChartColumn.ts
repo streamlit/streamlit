@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-// @ts-nocheck
-// Adding this temporarily as the @streamlit/lib is getting a lot of errors
 import {
   GridCell,
   GridCellKind,
