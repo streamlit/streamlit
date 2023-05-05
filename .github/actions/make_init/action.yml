@@ -1,4 +1,5 @@
 name: "Setup Virtual Env"
+description: Sets up virtualenv + React; compiles protobuf
 
 inputs:
   use_cached_venv:
@@ -42,6 +43,16 @@ runs:
             graphviz \
             libgvc6 \
             protobuf-compiler
+      shell: bash --login -eo pipefail {0}
+    # We require protoc >= 3.20, but Ubuntu 22.04 - the OS that these Github
+    # Actions are running as of 2023.05.03 - doesn't have recent versions
+    # of protoc in its package repository. To work around this, we vendor in
+    # protoc 3.20.3.
+    # We can remove the vendored protoc binary and this run step once Github
+    # Actions moves to a newer version of Ubunutu.
+    - name: Add vendored `protoc` to $PATH
+      run: |
+        echo "./vendor/protoc-3.20.3-linux-x86_64/bin" >> $GITHUB_PATH
       shell: bash --login -eo pipefail {0}
     # Combine hashes of the Python interpreter, Pipfile, and today's
     # date into a file whose hash will key the Python virtualenv.
