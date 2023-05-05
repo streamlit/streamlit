@@ -33,11 +33,11 @@ def NumberColumn(
 
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
@@ -51,19 +51,21 @@ def NumberColumn(
         if used with a disabled column.
 
     default: int or float or None
-        The default value for the cell in this column when the user adds a new row.
-        Defaults to None.
+        Specifies the default value for a new cell in this column when a new row is
+        added by the user. If None (default), the value added to the column will be None.
 
     min_value : int or float or None
         The minimum value that can be entered by the user.
-        If None, there will be no minimum.
+        If None (default), there will be no minimum.
 
     max_value : int or float or None
         The maximum value that can be entered by the user.
-        If None, there will be no maximum.
+        If None (default), there will be no maximum.
 
     format : str or None
-        A printf-style format string controlling how the cell value is displayed.
+        A sprintf format string (printf-like) controlling how the cell value is
+        displayed. This can be used for adding prefix or suffix, or changing the number
+        of decimals of the display value.
 
     step: int or float or None
         Specifies the value granularity and precision that can be entered by the user.
@@ -105,11 +107,11 @@ def TextColumn(
 
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
@@ -123,12 +125,12 @@ def TextColumn(
         if used with a disabled column.
 
     default: int or float or None
-        The default value for the cell in this column when the user adds a new row.
-        Defaults to None.
+        Specifies the default value for a new cell in this column when a new row is
+        added by the user. If None (default), the value added to the column will be None.
 
     max_chars: int or None
         The maximum number of characters that can be entered by the user.
-        If None, there will be no maximum.
+        If None (default), there will be no maximum.
 
     validate: str or None
         A regular expression that edited values should be validated against.
@@ -157,6 +159,7 @@ def LinkColumn(
     required: bool | None = None,
     default: str | None = None,
     max_chars: int | None = None,
+    validate: str | None = None,
 ) -> ColumnConfig:
     """Rendering and editing of clickable URL values.
 
@@ -167,11 +170,11 @@ def LinkColumn(
 
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
@@ -185,12 +188,16 @@ def LinkColumn(
         if used with a disabled column.
 
     default: str or None
-        The default value for the cell in this column when the user adds a new row.
-        Defaults to None.
+        Specifies the default value for a new cell in this column when a new row is
+        added by the user. If None (default), the value added to the column will be None.
 
     max_chars: int or None
         The maximum number of characters that can be entered by the user.
         If None, there will be no maximum.
+
+    validate: str or None
+        A regular expression that edited values should be validated against.
+        If the input is invalid, it will not be submitted by the user.
     """
 
     return ColumnConfig(
@@ -202,6 +209,7 @@ def LinkColumn(
         type="link",
         type_options={
             "max_chars": max_chars,
+            "validate": validate,
         },
     )
 
@@ -223,11 +231,11 @@ def CheckboxColumn(
 
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
@@ -241,8 +249,8 @@ def CheckboxColumn(
         if used with a disabled column.
 
     default: bool or None
-        The default value for the cell in this column when the user adds a new row.
-        Defaults to None.
+        Specifies the default value for a new cell in this column when a new row is
+        added by the user. If None (default), the value added to the column will be None.
     """
 
     return ColumnConfig(
@@ -273,11 +281,11 @@ def SelectboxColumn(
 
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
@@ -291,11 +299,11 @@ def SelectboxColumn(
         if used with a disabled column.
 
     default: str or None
-        The default value in a cell when the user adds a new row.
-        Defaults to None.
+        Specifies the default value for a new cell in this column when a new row is
+        added by the user. If None (default), the value added to the column will be None.
 
     options: list of str or None
-        A list of options to choose from. If None, uses the categories from the
+        A list of options to choose from. If None (default), uses the categories from the
         underlying column in case it is configured as dtype "category".
     """
 
@@ -330,22 +338,22 @@ def BarChartColumn(
 
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
 
     y_min: int or float or None
         The minimum value of the y-axis of the chart.
-        If None, the scales will be normalized individually for each column.
+        If None (default), the scales will be normalized individually for each column.
 
     y_max: int or float or None
         The maximum value of the y-axis of the chart.
-        If None, the scales will be normalized individually for each column.
+        If None (default), the scales will be normalized individually for each column.
     """
 
     return ColumnConfig(
@@ -378,22 +386,22 @@ def LineChartColumn(
 
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
 
     y_min: int or float or None
         The minimum value of the y-axis of the chart.
-        If None, the scales will be normalized individually for each column.
+        If None (default), the scales will be normalized individually for each column.
 
     y_max: int or float or None
         The maximum value of the y-axis of the chart.
-        If None, the scales will be normalized individually for each column.
+        If None (default), the scales will be normalized individually for each column.
     """
 
     return ColumnConfig(
@@ -424,11 +432,11 @@ def ImageColumn(
 
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
@@ -457,11 +465,11 @@ def ListColumn(
 
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
@@ -474,7 +482,7 @@ def ListColumn(
     )
 
 
-def DateTimeColumn(
+def DatetimeColumn(
     *,
     title: str | None = None,
     width: ColumnWidth | None = None,
@@ -496,11 +504,11 @@ def DateTimeColumn(
 
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
@@ -518,22 +526,24 @@ def DateTimeColumn(
         Defaults to None.
 
     format: str or None
-        A momentJS-style format string controlling how the cell value is displayed.
+        A date-fns format string (Unicode Technical Standard #35) controlling
+        how the cell value is displayed.
 
     min_value: datetime.datetime or None
         The minimum datetime that can be entered by the user.
-        If None, there will be no minimum.
+        If None (default), there will be no minimum.
 
     max_value: datetime.datetime or None
         The maximum datetime that can be entered by the user.
-        If None, there will be no maximum.
+        If None (default), there will be no maximum.
 
     timezone: str or None
-        The timezone of this column.
+        The timezone of this column. If None (default), the timezone is inferred
+        from the underlying data.
 
     step: int or float or None
         Specifies the value granularity in seconds that can be entered by the user.
-        If None, the step will be 1 second.
+        If None (default), the step will be 1 second.
     """
 
     # TODO: Check if this code is correct:
@@ -578,11 +588,11 @@ def TimeColumn(
 
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
@@ -600,19 +610,20 @@ def TimeColumn(
         Defaults to None.
 
     format: str or None
-        A momentJS-style format string controlling how the cell value is displayed.
+        A date-fns format string (Unicode Technical Standard #35) controlling
+        how the cell value is displayed.
 
     min_value: datetime.time or None
         The minimum time that can be entered by the user.
-        If None, there will be no minimum.
+        If None (default), there will be no minimum.
 
     max_value: datetime.time or None
         The maximum time that can be entered by the user.
-        If None, there will be no maximum.
+        If None (default), there will be no maximum.
 
     step: int or float or None
         Specifies the value granularity in seconds that can be entered by the user.
-        If None, the step will be 0.1 second.
+        If None (default), the step will be set to 0.1 seconds.
     """
 
     # TODO: Check if this code is correct:
@@ -645,6 +656,7 @@ def DateColumn(
     format: str | None = None,
     min_value: datetime.date | None = None,
     max_value: datetime.date | None = None,
+    step: int | None = None,
 ) -> ColumnConfig:
     """Rendering and editing of date values.
 
@@ -654,11 +666,11 @@ def DateColumn(
     ----------
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
@@ -676,15 +688,20 @@ def DateColumn(
         Defaults to None.
 
     format: str or None
-        A momentJS-style format string controlling how the cell value is displayed.
+        A date-fns format string (Unicode Technical Standard #35) controlling
+        how the cell value is displayed.
 
     min_value: datetime.date or None
         The minimum date that can be entered by the user.
-        If None, there will be no minimum.
+        If None (default), there will be no minimum.
 
     max_value: datetime.date or None
         The maximum date that can be entered by the user.
-        If None, there will be no maximum.
+        If None (default), there will be no maximum.
+
+    step: int or None
+        Specifies the value granularity in days that can be entered by the user.
+        If None (default), the step will be set to 1 day.
     """
 
     # TODO: Check if this code is correct:
@@ -702,6 +719,7 @@ def DateColumn(
             "format": format,
             "min_value": _format_datetime(min_value),
             "max_value": _format_datetime(max_value),
+            "step": step,
         },
     )
 
@@ -727,11 +745,11 @@ def ProgressColumn(
 
     title: str
         The title of the column shown at the top in the column header.
-        If None, the column name is used.
+        If None (default), the column name is used.
 
     width: "small" or "medium" or "large" or None
         The display width of the column. Can be either small, medium, or large.
-        If None, the column will be sized to fit its contents.
+        If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
@@ -749,16 +767,18 @@ def ProgressColumn(
         Defaults to None.
 
     min_value : int or float or None
-        The minimum value of the range bar.
+        The minimum value of the progress bar.
         Defaults to 0.
 
     max_value : int or float or None
-        The maximum value of the range bar.
-        Defaults to 1.
+        The maximum permitted value. Defaults to 100 if the underlying data is integer
+        or 1 in all other cases.
 
     format : str or None
-        A printf-style format string controlling how the number next to
-        the range bar should be formatted.
+        A sprintf format string (printf-like) controlling how the number next to
+        the progress bar should be formatted. This can be used for adding prefix or
+        suffix, or changing the number of decimals of the display value.
+        Defaults to percentage formatting.
     """
 
     return ColumnConfig(
@@ -799,11 +819,11 @@ class ColumnConfigAPI:
         ----------
         title: str
             The title of the column shown at the top in the column header.
-            If None, the column name is used.
+            If None (default), the column name is used.
 
         width: "small" or "medium" or "large" or None
             The display width of the column. Can be either small, medium, or large.
-            If None, the column will be sized to fit its contents.
+            If None (default), the column will be sized to fit its contents.
 
         help: str or None
             An optional tooltip that gets displayed when hovering over the column header.
@@ -837,7 +857,7 @@ class ColumnConfigAPI:
     CheckboxColumn = CheckboxColumn
     SelectboxColumn = SelectboxColumn
     ListColumn = ListColumn
-    DateTimeColumn = DateTimeColumn
+    DatetimeColumn = DatetimeColumn
     DateColumn = DateColumn
     TimeColumn = TimeColumn
     LinkColumn = LinkColumn
