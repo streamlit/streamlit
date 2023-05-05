@@ -228,7 +228,6 @@ class AppSession:
                 rt = runtime.get_instance()
                 rt.media_file_mgr.clear_session_refs(self.id)
                 rt.media_file_mgr.remove_orphaned_files()
-                rt.message_cache.remove_refs_for_session(self)
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
