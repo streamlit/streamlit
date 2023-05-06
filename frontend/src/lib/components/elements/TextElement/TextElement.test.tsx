@@ -17,7 +17,7 @@
 import React from "react"
 import { shallow, mount } from "src/lib/test_util"
 import { Text as TextProto } from "src/lib/proto"
-import Text, { TextProps } from "./Text"
+import TextElement, { TextProps } from "./TextElement"
 
 import { InlineTooltipIcon } from "src/lib/components/shared/TooltipIcon"
 
@@ -29,17 +29,17 @@ const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({
   width: 100,
 })
 
-describe("Text element", () => {
+describe("TextElement element", () => {
   it("renders preformatted text as expected", () => {
     const props = getProps()
-    const wrap = shallow(<Text {...props} />)
+    const wrap = shallow(<TextElement {...props} />)
     expect(wrap).toBeDefined()
     expect(wrap.text()).toBe("some plain text")
   })
 
   it("renders text with help tooltip", () => {
     const props = getProps({ help: "help text" })
-    const wrap = mount(<Text {...props} />)
+    const wrap = mount(<TextElement {...props} />)
     expect(wrap).toBeDefined()
     expect(wrap.text()).toBe("some plain text")
     const inlineTooltipIcon = wrap.find(InlineTooltipIcon)
