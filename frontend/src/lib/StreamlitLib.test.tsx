@@ -30,7 +30,7 @@ import {
 import { AppRoot } from "./AppNode"
 import VerticalBlock from "./components/core/Block"
 import Alert from "./components/elements/Alert"
-import Text from "./components/elements/Text"
+import TextElement from "./components/elements/TextElement"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { FileUploadClient } from "./FileUploadClient"
 import { ScriptRunState } from "./ScriptRunState"
@@ -253,7 +253,7 @@ describe("StreamlitLibExample", () => {
     expect(alert.exists()).toBe(false)
 
     // And we should have the single Text element we created
-    const text = wrapper.find(Text)
+    const text = wrapper.find(TextElement)
     expect(text.text()).toBe("Hello, world!")
   })
 })

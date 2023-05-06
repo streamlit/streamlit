@@ -68,7 +68,7 @@ import Json from "src/lib/components/elements/Json"
 import Markdown from "src/lib/components/elements/Markdown"
 import Metric from "src/lib/components/elements/Metric"
 import Table from "src/lib/components/elements/Table"
-import Text from "src/lib/components/elements/Text"
+import TextElement from "src/lib/components/elements/TextElement"
 import { ComponentInstance } from "src/lib/components/widgets/CustomComponent"
 import { Kind } from "src/lib/components/shared/AlertContainer"
 import { VegaLiteChartElement } from "src/lib/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
@@ -386,7 +386,9 @@ const RawElementNodeRenderer = (
       )
 
     case "text":
-      return <Text width={width} element={node.element.text as TextProto} />
+      return (
+        <TextElement width={width} element={node.element.text as TextProto} />
+      )
 
     case "metric":
       return <Metric element={node.element.metric as MetricProto} />
