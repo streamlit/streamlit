@@ -47,7 +47,6 @@ from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.routes import (
     AddSlashHandler,
     AllowedMessageOriginsHandler,
-    AssetsFileHandler,
     HealthHandler,
     MessageCacheHandler,
     StaticFileHandler,
@@ -307,11 +306,6 @@ class Server:
                     file_mgr=self._runtime.uploaded_file_mgr,
                     is_active_session=self._runtime.is_active_session,
                 ),
-            ),
-            (
-                make_url_path_regex(base, "assets/(.*)"),
-                AssetsFileHandler,
-                {"path": "%s/" % file_util.get_assets_dir()},
             ),
             (
                 make_url_path_regex(base, f"{MEDIA_ENDPOINT}/(.*)"),
