@@ -95,6 +95,11 @@ export interface Props {
    * Checkbox has larger label font sizing
    */
   isCheckbox?: boolean
+
+  /**
+   * Toast has smaller font sizing & doesn't allow colored text
+   */
+  isToast?: boolean
 }
 
 /**
@@ -231,6 +236,11 @@ export interface RenderedMarkdownProps {
    * Does not allow links
    */
   isButton?: boolean
+
+  /**
+   * Does not allow colored text
+   */
+  isToast?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -266,6 +276,7 @@ export function RenderedMarkdown({
   overrideComponents,
   isLabel,
   isButton,
+  isToast,
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
@@ -312,6 +323,12 @@ export function RenderedMarkdown({
     remarkDirective,
     remarkColoring,
   ]
+
+  if (isToast) {
+    // Removes remarkColoring plugin
+    plugins.pop()
+  }
+
   const rehypePlugins: PluggableList = [rehypeKatex]
 
   if (allowHTML) {
@@ -390,6 +407,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
       isLabel,
       isButton,
       isCheckbox,
+      isToast,
     } = this.props
     const isInSidebar = this.context
 
@@ -400,6 +418,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isLabel={isLabel}
         isButton={isButton}
         isCheckbox={isCheckbox}
+        isToast={isToast}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
       >
@@ -408,6 +427,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
           allowHTML={allowHTML}
           isLabel={isLabel}
           isButton={isButton}
+          isToast={isToast}
         />
       </StyledStreamlitMarkdown>
     )

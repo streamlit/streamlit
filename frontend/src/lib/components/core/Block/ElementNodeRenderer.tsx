@@ -49,6 +49,7 @@ import {
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
   Text as TextProto,
+  Toast as ToastProto,
   Video as VideoProto,
   Heading as HeadingProto,
 } from "src/lib/proto"
@@ -69,6 +70,7 @@ import Markdown from "src/lib/components/elements/Markdown"
 import Metric from "src/lib/components/elements/Metric"
 import Table from "src/lib/components/elements/Table"
 import TextElement from "src/lib/components/elements/TextElement"
+import Toast from "src/lib/components/elements/Toast/"
 import { ComponentInstance } from "src/lib/components/widgets/CustomComponent"
 import { Kind } from "src/lib/components/shared/AlertContainer"
 import { VegaLiteChartElement } from "src/lib/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
@@ -388,6 +390,17 @@ const RawElementNodeRenderer = (
     case "text":
       return (
         <TextElement width={width} element={node.element.text as TextProto} />
+      )
+
+    case "toast":
+      const toastProto = node.element.toast as ToastProto
+      return hideIfStale(
+        props.isStale,
+        <Toast
+          text={toastProto.text}
+          icon={toastProto.icon}
+          type={toastProto.type}
+        />
       )
 
     case "metric":

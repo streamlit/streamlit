@@ -87,6 +87,12 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
           marginBottom: `-${theme.spacing.lg}`,
         }
       : {}),
+    ...(elementType === "toast"
+      ? {
+          // Use display: none for empty elements to avoid the flexbox gap.
+          display: "none",
+        }
+      : {}),
   })
 )
 

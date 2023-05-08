@@ -18,6 +18,7 @@ import React, { ReactElement } from "react"
 import { IAppPage } from "src/lib/proto"
 
 import VerticalBlock from "src/lib/components/core/Block"
+import ToastRenderer from "src/lib/components/core/ToastRenderer"
 import { ThemedSidebar } from "src/app/components/Sidebar"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
@@ -175,6 +176,8 @@ function AppView(props: AppViewProps): ReactElement {
         className="main"
       >
         {renderBlock(elements.main)}
+        {/* Container consolidating all toasts within an app */}
+        <ToastRenderer />
         {/* Anchor indicates to the iframe resizer that this is the lowest
         possible point to determine height */}
         <StyledIFrameResizerAnchor
