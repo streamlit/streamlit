@@ -271,6 +271,53 @@ describe("useColumnLoader hook", () => {
     expect(columns[2].isIndex).toBe(false)
   })
 
+  it("reorders columns when specified via column order", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+      columnOrder: ["c2", "c1"],
+    })
+    const data = new Quiver(element)
+
+    const { result } = renderHook(() => {
+      return useColumnLoader(element, data, false)
+    })
+
+    const { columns } = result.current
+
+    expect(columns.length).toBe(3)
+
+    expect(columns[0].title).toBe("")
+    expect(columns[0].isIndex).toBe(true)
+
+    expect(columns[1].title).toBe("c2")
+    expect(columns[1].isIndex).toBe(false)
+
+    expect(columns[2].title).toBe("c1")
+    expect(columns[2].isIndex).toBe(false)
+  })
+
+  it("hides columns not specified in column order", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+      columnOrder: ["c2"],
+    })
+    const data = new Quiver(element)
+
+    const { result } = renderHook(() => {
+      return useColumnLoader(element, data, false)
+    })
+
+    const { columns } = result.current
+
+    expect(columns.length).toBe(2)
+
+    expect(columns[0].title).toBe("")
+    expect(columns[0].isIndex).toBe(true)
+
+    expect(columns[1].title).toBe("c2")
+    expect(columns[1].isIndex).toBe(false)
+  })
+
   it("activates colum stretch if configured by user", () => {
     const element = ArrowProto.create({
       data: UNICODE,

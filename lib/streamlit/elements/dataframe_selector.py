@@ -17,7 +17,7 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Sequence, Union, cast
 
 from typing_extensions import Literal
 
@@ -48,6 +48,7 @@ class DataFrameSelectorMixin:
         *,
         use_container_width: bool = False,
         hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -84,6 +85,14 @@ class DataFrameSelectorMixin:
             index column(s) will be hidden. If None (default), the visibility of
             the index column(s) is automatically determined based on the index
             type and input data format.
+
+        column_order : iterable of str or None
+            Specifies the display order of all non-index columns, affecting both
+            the order and visibility of columns to the user. For example,
+            specifying `column_order=("col2", "col1")` will display 'col2' first,
+            followed by 'col1', and all other non-index columns in the data will
+            be hidden. If None (default), the order is inherited from the
+            original data structure.
 
         Examples
         --------
@@ -128,6 +137,7 @@ class DataFrameSelectorMixin:
                 height,
                 use_container_width=use_container_width,
                 hide_index=hide_index,
+                column_order=column_order,
             )
         else:
             return self.dg._legacy_dataframe(data, width, height)

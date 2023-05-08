@@ -37,6 +37,8 @@ message Arrow {
   bool disabled = 9;
   // The form ID of the widget, this is required if the dataframe is editable
   string form_id = 10;
+  // Defines the order in which columns are displayed
+  repeated string column_order = 11;
 
   // Available editing modes:
   enum EditingMode {
