@@ -220,7 +220,7 @@ class ForwardMsgCache(CacheStatsProvider):
     def remove_refs_for_session(self, session: "AppSession") -> None:
         """Remove refs for all entries for the given session.
 
-        This should be called when an AppSession is being shut down.
+        This should be called when an AppSession is disconnected or closed.
 
         Parameters
         ----------

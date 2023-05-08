@@ -52,6 +52,7 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
+from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -665,6 +666,12 @@ class DataEditorMixin:
 
         """
 
+        key = to_key(key)
+        check_callback_rules(self.dg, on_change)
+        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+
+        columns_config: ColumnConfigMapping = {}
+
         data_format = type_util.determine_data_format(data)
         if data_format == DataFormat.UNKNOWN:
             raise StreamlitAPIException(
@@ -689,7 +696,9 @@ class DataEditorMixin:
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.
         if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
-            update_column_config(column_config_mapping, INDEX_IDENTIFIER, {"hidden": True})
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+            )
 
         if hide_index is not None:
             update_column_config(
@@ -754,7 +763,7 @@ class DataEditorMixin:
         widget_state = register_widget(
             "data_editor",
             proto,
-            user_key=to_key(key),
+            user_key=key,
             on_change_handler=on_change,
             args=args,
             kwargs=kwargs,
