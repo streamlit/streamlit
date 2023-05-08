@@ -16,7 +16,7 @@
 
 import {Streamlit} from "./streamlit";
 
-beforeEach(() =>{
+beforeEach(() => {
   Object.defineProperty(Streamlit, 'registeredMessageListener', {
     value: false,
     configurable: true,
