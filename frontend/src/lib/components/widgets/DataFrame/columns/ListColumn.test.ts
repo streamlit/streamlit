@@ -63,6 +63,8 @@ describe("ListColumn", () => {
     [null, null],
     [undefined, null],
     ["", []],
+    [[], []],
+    ["[]", []],
     ["foo", ["foo"]],
     // Comma separated syntax
     ["foo,bar", ["foo", "bar"]],
