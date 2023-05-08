@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-// Adding this temporarily as typechecking for theme is not properly working
-// Will need to fix this but in a separate PR
-// @ts-nocheck
-
 import styled from "@emotion/styled"
 
 export const StyledRecordAudioLabel = styled.label({
