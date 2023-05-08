@@ -244,16 +244,16 @@ function withHostCommunication<P extends InjectedProps>(
         }
       }
 
-      if (!allowedOrigins.length) {
-        return () => {}
-      }
+      // if (!allowedOrigins.length) {
+      //   return () => {}
+      // }
 
-      window.addEventListener("message", receiveMessage)
-      sendMessageToHost({ type: "GUEST_READY" })
+      // window.addEventListener("message", receiveMessage)
+      // sendMessageToHost({ type: "GUEST_READY" })
 
-      return () => {
-        window.removeEventListener("message", receiveMessage)
-      }
+      // return () => {
+      //   window.removeEventListener("message", receiveMessage)
+      // }
     }, [allowedOriginsResp, deferredAuthToken, props.theme])
 
     return (

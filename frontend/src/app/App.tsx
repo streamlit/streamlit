@@ -40,6 +40,7 @@ import {
   FormsData,
   WidgetStateManager,
 } from "src/lib/WidgetStateManager"
+import { HostCommunicationManager } from "src/lib/HostCommunicationManager"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
@@ -207,6 +208,8 @@ export class App extends PureComponent<Props, State> {
 
   private readonly widgetMgr: WidgetStateManager
 
+  private hostCommunicationMgr: HostCommunicationManager
+
   private readonly uploadClient: FileUploadClient
 
   /**
@@ -271,6 +274,14 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr = new WidgetStateManager({
       sendRerunBackMsg: this.sendRerunBackMsg,
       formsDataChanged: formsData => this.setState({ formsData }),
+    })
+
+    this.hostCommunicationMgr = new HostCommunicationManager({
+      theme: this.props.theme,
+      closeModal: this.closeDialog,
+      stopScript: this.stopScript,
+      rerunScript: this.rerunScript,
+      clearCache: this.clearCache,
     })
 
     this.endpoints = new DefaultStreamlitEndpoints({
@@ -343,6 +354,7 @@ export class App extends PureComponent<Props, State> {
       resetHostAuthToken: this.props.hostCommunication.resetAuthToken,
       setAllowedOriginsResp:
         this.props.hostCommunication.setAllowedOriginsResp,
+      // this.hostCommunicationMgr.setAllowedOriginsResp,
     })
 
     if (isScrollingHidden()) {
@@ -371,15 +383,27 @@ export class App extends PureComponent<Props, State> {
       import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
-    this.props.hostCommunication.sendMessage({
+    // this.hostCommunicationMgr.openHostCommunication()
+
+    this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
     })
 
-    this.props.hostCommunication.sendMessage({
+    this.hostCommunicationMgr.sendMessageToHost({
       type: "SCRIPT_RUN_STATE_CHANGED",
       scriptRunState: this.state.scriptRunState,
     })
+
+    // this.props.hostCommunication.sendMessage({
+    //   type: "SET_THEME_CONFIG",
+    //   themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
+    // })
+
+    // this.props.hostCommunication.sendMessage({
+    //   type: "SCRIPT_RUN_STATE_CHANGED",
+    //   scriptRunState: this.state.scriptRunState,
+    // })
 
     this.metricsMgr.enqueue("viewReport")
 
@@ -396,18 +420,18 @@ export class App extends PureComponent<Props, State> {
     ) {
       this.sendRerunBackMsg()
     }
-    if (this.props.hostCommunication.currentState.forcedModalClose) {
-      this.closeDialog()
-    }
-    if (this.props.hostCommunication.currentState.scriptRerunRequested) {
-      this.rerunScript()
-    }
-    if (this.props.hostCommunication.currentState.scriptStopRequested) {
-      this.stopScript()
-    }
-    if (this.props.hostCommunication.currentState.cacheClearRequested) {
-      this.clearCache()
-    }
+    // if (this.props.hostCommunication.currentState.forcedModalClose) {
+    //   this.closeDialog()
+    // }
+    // if (this.props.hostCommunication.currentState.scriptRerunRequested) {
+    //   this.rerunScript()
+    // }
+    // if (this.props.hostCommunication.currentState.scriptStopRequested) {
+    //   this.stopScript()
+    // }
+    // if (this.props.hostCommunication.currentState.cacheClearRequested) {
+    //   this.clearCache()
+    // }
 
     const { requestedPageScriptHash } =
       this.props.hostCommunication.currentState
@@ -443,6 +467,8 @@ export class App extends PureComponent<Props, State> {
     // happy since connectionManager's type is `ConnectionManager | null`,
     // but at this point it should always be set.
     this.connectionManager?.disconnect()
+
+    this.hostCommunicationMgr.closeHostCommunication()
 
     window.removeEventListener("popstate", this.onHistoryChange, false)
   }
