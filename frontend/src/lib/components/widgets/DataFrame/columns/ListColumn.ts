@@ -15,6 +15,7 @@
  */
 
 import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { isString } from "lodash"
 
 import { isNullOrUndefined } from "src/lib/util/utils"
 
@@ -23,6 +24,8 @@ import {
   BaseColumnProps,
   ColumnCreator,
   toSafeArray,
+  toSafeString,
+  isMissingValueCell,
 } from "./utils"
 
 /**
@@ -43,15 +46,29 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     isEditable: false, // List column is always readonly
     getCell(data?: any): GridCell {
-      // TODO(lukasmasuch): if notNullOrUndefined -> use empty cell to return null value
+      const cellData = isNullOrUndefined(data) ? [] : toSafeArray(data)
+
       return {
         ...cellTemplate,
-        data: toSafeArray(data),
+        data: cellData,
         isMissingValue: isNullOrUndefined(data),
+        copyData: isNullOrUndefined(data)
+          ? ""
+          : toSafeString(
+              cellData.map((x: any) =>
+                // Replace commas with spaces since commas are used to
+                // separate the list items.
+                isString(x) && x.includes(",") ? x.replace(/,/g, " ") : x
+              )
+            ),
       } as BubbleCell
     },
     getCellValue(cell: BubbleCell): string[] | null {
-      return cell.data === undefined ? null : cell.data
+      if (isNullOrUndefined(cell.data) || isMissingValueCell(cell)) {
+        return null
+      }
+
+      return cell.data
     },
   }
 }
