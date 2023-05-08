@@ -108,7 +108,7 @@ describe("ListColumn", () => {
     (input: any, copyData: string | undefined) => {
       const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
-      expect((cell as BubbleCell).copyData).toEqual(copyData)
+      expect((cell as any).copyData).toEqual(copyData)
     }
   )
 })
