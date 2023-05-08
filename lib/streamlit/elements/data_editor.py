@@ -462,6 +462,9 @@ class DataEditorMixin:
         Display a data editor widget that allows you to edit DataFrames and
         many other data structures in a table-like UI.
 
+        Editing is currently not supported for columns that show
+        images, lists, line charts, bar charts, or progress elements.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
