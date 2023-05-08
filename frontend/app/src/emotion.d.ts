@@ -14,23 +14,13 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
+import { EmotionTheme as StreamlitTheme } from "@streamlit/lib"
 
-export const StyledScreenCastWarningDialog = styled.div(() => ({
-  display: "flex",
-}))
-
-export const StyledUnsupportedScreenCastIcon = styled.div(() => ({
-  display: "flex",
-  alignItems: "center",
-  justifyItems: "center",
-  marginRight: "26px",
-  marginLeft: "10px",
-  fontSize: "50px",
-}))
-
-export const StyledUnsupportedScreenCastExplanation = styled.p(
-  ({ theme }) => ({
-    margin: theme.spacing.none,
-  })
-)
+// Outside imports make declarations not ambient, so we separate out from
+// the ambient declarations.d.ts
+//
+// This declaration allows us to extend our type declarations for emotion's
+// theme (an empty object) to be our type
+declare module "@emotion/react" {
+  export interface Theme extends StreamlitTheme {}
+}

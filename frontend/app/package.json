@@ -1,5 +1,5 @@
 {
-  "name": "streamlit-browser",
+  "name": "@streamlit/app",
   "version": "1.21.0",
   "private": true,
   "scripts": {
