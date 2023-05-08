@@ -95,8 +95,8 @@ describe("ListColumn", () => {
   )
 
   it.each([
-    [null, undefined],
-    [undefined, undefined],
+    [null, ""],
+    [undefined, ""],
     [[], ""],
     [["foo", "bar"], "foo,bar"],
     [["foo", "bar", ""], "foo,bar,"],
@@ -104,7 +104,7 @@ describe("ListColumn", () => {
     [[0, 1.2], "0,1.2"],
     [[true, false], "true,false"],
   ])(
-    "supports array-compatible value (%p parsed as %p)",
+    "correctly prepares data for copy (%p parsed as %p)",
     (input: any, copyData: string | undefined) => {
       const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
