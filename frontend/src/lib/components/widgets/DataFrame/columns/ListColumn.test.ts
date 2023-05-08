@@ -60,8 +60,8 @@ describe("ListColumn", () => {
 
   it.each([
     // Supports almost the same as toSafeArray
-    [null, []],
-    [undefined, []],
+    [null, null],
+    [undefined, null],
     ["", []],
     ["foo", ["foo"]],
     // Comma separated syntax
