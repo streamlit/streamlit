@@ -8,7 +8,7 @@ bleach==6.0.0
 blinker==1.6.2
 bokeh==2.4.3
 cachetools==5.3.0
-certifi==2022.12.7
+certifi==2023.5.7
 cffi==1.15.1
 cfgv==3.3.1
 charset-normalizer==3.1.0
