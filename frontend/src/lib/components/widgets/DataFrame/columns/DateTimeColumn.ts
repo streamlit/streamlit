@@ -344,7 +344,7 @@ export function TimeColumn(props: BaseColumnProps): BaseColumn {
     "time",
     props,
     defaultFormat,
-    0.1,
+    1,
     "time",
     (date: Date): string => {
       // Only return the time part of the ISO string:
