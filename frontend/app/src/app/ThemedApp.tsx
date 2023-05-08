@@ -106,7 +106,7 @@ const ThemedApp = (): JSX.Element => {
       zIndex={theme.emotion.zIndices.popupMenu}
     >
       <EmotionThemeProvider theme={theme.emotion}>
-        <Global styles={globalStyles} />
+        <Global styles={globalStyles(theme.emotion)} />
         {theme.name === CUSTOM_THEME_NAME && fontFaces && (
           <FontFaceDeclaration fontFaces={fontFaces} />
         )}
