@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  GridCell,
-  BubbleCell,
-  GridCellKind,
-  LoadingCell,
-} from "@glideapps/glide-data-grid"
+import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { isString } from "lodash"
 
 import { isNullOrUndefined } from "src/lib/util/utils"
