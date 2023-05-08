@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -21,8 +23,29 @@ from streamlit import config
 from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 
+SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
+CONFIG_OPTIONS = copy.deepcopy(config._config_options)
+
 
 class ElementUtilsTest(unittest.TestCase):
+    def setUp(self):
+        self.patches = [
+            patch.object(
+                config, "_section_descriptions", new=copy.deepcopy(SECTION_DESCRIPTIONS)
+            ),
+            patch.object(config, "_config_options", new=copy.deepcopy(CONFIG_OPTIONS)),
+            patch.dict(os.environ),
+        ]
+
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+
+        config._delete_option("_test.tomlTest")
+
     @patch("streamlit.elements.utils.is_in_form", MagicMock(return_value=False))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_check_callback_rules_not_in_form(self):
