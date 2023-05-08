@@ -465,6 +465,9 @@ class DataEditorMixin:
         Display a data editor widget that allows you to edit DataFrames and
         many other data structures in a table-like UI.
 
+        The following types are not supported for editing: complex, list, tuple,
+        bytes, bytearray, memoryview, dict, set, frozenset.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
