@@ -93,4 +93,22 @@ describe("ListColumn", () => {
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
   )
+
+  it.each([
+    [null, undefined],
+    [undefined, undefined],
+    [[], ""],
+    [["foo", "bar"], "foo,bar"],
+    [["foo", "bar", ""], "foo,bar,"],
+    [["foo", "comma,in value"], "foo,comma in value"],
+    [[0, 1.2], "0,1.2"],
+    [[true, false], "true,false"],
+  ])(
+    "supports array-compatible value (%p parsed as %p)",
+    (input: any, copyData: string | undefined) => {
+      const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
+      const cell = mockColumn.getCell(input)
+      expect(cell.copyData).toEqual(copyData)
+    }
+  )
 })
