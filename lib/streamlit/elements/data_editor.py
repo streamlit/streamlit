@@ -414,6 +414,7 @@ class DataEditorMixin:
         height: Optional[int] = None,
         use_container_width: bool = False,
         hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool | Iterable[str] = False,
         key: Optional[Key] = None,
@@ -432,6 +433,7 @@ class DataEditorMixin:
         height: Optional[int] = None,
         use_container_width: bool = False,
         hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool | Iterable[str] = False,
         key: Optional[Key] = None,
@@ -450,6 +452,7 @@ class DataEditorMixin:
         height: Optional[int] = None,
         use_container_width: bool = False,
         hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool | Iterable[str] = False,
         key: Optional[Key] = None,
@@ -484,6 +487,14 @@ class DataEditorMixin:
             index column(s) will be hidden. If None (default), the visibility of
             the index column(s) is automatically determined based on the index
             type and input data format.
+
+        column_order : iterable of str or None
+            Specifies the display order of all non-index columns, affecting both
+            the order and visibility of columns to the user. For example,
+            specifying `column_order=("col2", "col1")` will display 'col2' first,
+            followed by 'col1', and all other non-index columns in the data will
+            be hidden. If None (default), the order is inherited from the
+            original data structure.
 
         num_rows : "fixed" or "dynamic"
             Specifies if the user can add and delete rows in the data editor.
@@ -635,14 +646,19 @@ class DataEditorMixin:
         if height:
             proto.height = height
 
+        if column_order:
+            proto.column_order[:] = column_order
+
         # Only set disabled to true if it is actually true
         # It can also be a list of columns, which should result in false here.
         proto.disabled = disabled is True
+
         proto.editing_mode = (
             ArrowProto.EditingMode.DYNAMIC
             if num_rows == "dynamic"
             else ArrowProto.EditingMode.FIXED
         )
+
         proto.form_id = current_form_id(self.dg)
 
         if type_util.is_pandas_styler(data):
