@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
+import {
+  GridCell,
+  BubbleCell,
+  GridCellKind,
+  LoadingCell,
+} from "@glideapps/glide-data-grid"
 import { isString } from "lodash"
 
 import { isNullOrUndefined } from "src/lib/util/utils"
@@ -25,6 +30,7 @@ import {
   ColumnCreator,
   toSafeArray,
   toSafeString,
+  getEmptyCell,
 } from "./utils"
 
 /**
@@ -45,6 +51,10 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     isEditable: false, // List column is always readonly
     getCell(data?: any): GridCell {
+      if (isNullOrUndefined(data)) {
+        return getEmptyCell(true)
+      }
+
       const cellData = toSafeArray(data)
 
       return {
@@ -62,8 +72,12 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
             ),
       } as BubbleCell
     },
-    getCellValue(cell: BubbleCell): string[] | null {
-      return cell.data === undefined ? null : cell.data
+    getCellValue(cell: BubbleCell | LoadingCell): string[] | null {
+      if (cell.kind === GridCellKind.Loading || isNullOrUndefined(cell.data)) {
+        return null
+      }
+
+      return cell.data
     },
   }
 }
