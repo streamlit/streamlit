@@ -466,7 +466,7 @@ class DataEditorMixin:
         many other data structures in a table-like UI.
 
         The following types are not supported for editing as values within your
-        data structure: complex, list, tuple, bytes, bytearray, memoryview, dict, 
+        data structure: complex, list, tuple, bytes, bytearray, memoryview, dict,
         set, frozenset.
 
         Parameters
