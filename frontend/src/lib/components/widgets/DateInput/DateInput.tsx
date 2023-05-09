@@ -272,6 +272,11 @@ class DateInput extends React.PureComponent<Props, State> {
             },
             Day: {
               style: ({
+                // Due to a bug in BaseWeb, where the range selection defaults to mono300 and can't be changed, we need to override the background colors for all these shared props:
+                // $pseudoHighlighted: Styles the range selection when you click an initial date, and hover over the end one, but NOT click it.
+                // $pseudoSelected: Styles when a range was selected, click outide, and click the calendar again.
+                // $selected: Styles the background below the red circle from the start and end dates.
+                // $isHovered: Styles the background below the end date when hovered.
                 $pseudoHighlighted,
                 $pseudoSelected,
                 $selected,
@@ -282,11 +287,11 @@ class DateInput extends React.PureComponent<Props, State> {
 
                 "::before": {
                   backgroundColor:
-                    $pseudoHighlighted ||
-                    $pseudoSelected ||
                     $selected ||
+                    $pseudoSelected ||
+                    $pseudoHighlighted ||
                     $isHovered
-                      ? colors.secondaryBg
+                      ? `${colors.secondaryBg} !important`
                       : colors.transparent,
                 },
 
