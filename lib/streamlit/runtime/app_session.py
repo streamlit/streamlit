@@ -33,7 +33,6 @@ from streamlit.proto.NewSession_pb2 import (
 )
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.runtime import caching, legacy_caching
-from streamlit.runtime.credentials import Credentials
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.script_data import ScriptData
