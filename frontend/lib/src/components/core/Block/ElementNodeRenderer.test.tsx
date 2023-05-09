@@ -24,10 +24,7 @@ import { render } from "src/test_util"
 import { ElementNode } from "src/AppNode"
 import { ScriptRunState } from "src/ScriptRunState"
 import { waitFor } from "@testing-library/dom"
-import {
-  createFormsData,
-  WidgetStateManager,
-} from "src/WidgetStateManager"
+import { createFormsData, WidgetStateManager } from "src/WidgetStateManager"
 import { FileUploadClient } from "src/FileUploadClient"
 import { ComponentRegistry } from "src/components/widgets/CustomComponent"
 import { mockEndpoints, mockSessionInfo } from "src/mocks/mocks"

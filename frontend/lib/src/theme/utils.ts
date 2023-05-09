@@ -34,7 +34,11 @@ import {
 } from "src/theme"
 
 import { fonts } from "./primitives/typography"
-import { computeDerivedColors, createEmotionColors, DerivedColors } from "./getColors"
+import {
+  computeDerivedColors,
+  createEmotionColors,
+  DerivedColors,
+} from "./getColors"
 import { createBaseUiTheme } from "./createThemeUtil"
 
 export const AUTO_THEME_NAME = "Use system setting"

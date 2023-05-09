@@ -18,7 +18,7 @@ import { css, SerializedStyles } from "@emotion/react"
 import { darken, transparentize, readableColor } from "color2k"
 import { EmotionTheme } from "src/theme"
 
-// This theme should be emotionTheme but needs to be researched more why 
+// This theme should be emotionTheme but needs to be researched more why
 // app doesn't pick up theme properly
 export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   a,
