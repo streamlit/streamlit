@@ -14,14 +14,19 @@
 
 """Manage the user's Streamlit credentials."""
 
+import json
 import os
 import sys
 import textwrap
 from collections import namedtuple
+from datetime import datetime
 from typing import Optional
+from uuid import uuid4
 
 import click
+import requests
 import toml
+from requests.exceptions import RequestException
 
 from streamlit import env_util, file_util, util
 from streamlit.logger import get_logger
@@ -100,6 +105,49 @@ _INSTRUCTIONS_TEXT = """
     "prompt": click.style("$", fg="blue"),
     "hello": click.style("streamlit hello", bold=True),
 }
+
+
+def _send_email(email: str) -> None:
+    """Send the user's email to segment.io, if submitted"""
+
+    if email is None or "@" not in email:
+        return
+
+    headers = {
+        "authority": "api.segment.io",
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "content-type": "text/plain",
+        "origin": "localhost:8501",
+        "referer": "localhost:8501/",
+    }
+
+    dt = datetime.utcnow().isoformat() + "+00:00"
+
+    data = {
+        "anonymous_id": None,
+        "context": {
+            "library": {"name": "analytics-python", "version": "2.2.2"},
+        },
+        "messageId": str(uuid4()),
+        "timestamp": dt,
+        "event": "submittedEmail",
+        "traits": {
+            "authoremail": email,
+            "source": "provided_email",
+        },
+        "type": "track",
+        "userId": email,
+        "writeKey": "iCkMy7ymtJ9qYzQRXkQpnAJEq7D4NyMU",
+    }
+
+    response = requests.post(
+        "https://api.segment.io/v1/t",
+        headers=headers,
+        data=json.dumps(data).encode(),
+    )
+
+    response.raise_for_status()
 
 
 class Credentials(object):
@@ -193,7 +241,7 @@ class Credentials(object):
             LOGGER.error("Error removing credentials file: %s" % e)
 
     def save(self):
-        """Save to toml file."""
+        """Save to toml file and send email."""
         if self.activation is None:
             return
 
@@ -204,6 +252,11 @@ class Credentials(object):
         data = {"email": self.activation.email}
         with open(self._conf_file, "w") as f:
             toml.dump({"general": data}, f)
+
+        try:
+            _send_email(self.activation.email)
+        except RequestException as e:
+            LOGGER.error(f"Error saving email: {e}")
 
     def activate(self, show_instructions: bool = True) -> None:
         """Activate Streamlit.

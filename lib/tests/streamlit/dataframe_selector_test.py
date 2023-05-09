@@ -52,7 +52,12 @@ class DataFrameSelectorTest(unittest.TestCase):
         streamlit.dataframe(DATAFRAME, 100, 200)
         legacy_dataframe.assert_not_called()
         arrow_dataframe.assert_called_once_with(
-            DATAFRAME, 100, 200, use_container_width=False
+            DATAFRAME,
+            100,
+            200,
+            use_container_width=False,
+            hide_index=None,
+            column_order=None,
         )
 
     @patch.object(DeltaGenerator, "_legacy_dataframe")
@@ -65,7 +70,12 @@ class DataFrameSelectorTest(unittest.TestCase):
         streamlit.dataframe(snowpark_df, 100, 200)
         legacy_dataframe.assert_not_called()
         arrow_dataframe.assert_called_once_with(
-            snowpark_df, 100, 200, use_container_width=False
+            snowpark_df,
+            100,
+            200,
+            use_container_width=False,
+            hide_index=None,
+            column_order=None,
         )
 
     @pytest.mark.skipif(
@@ -83,7 +93,12 @@ class DataFrameSelectorTest(unittest.TestCase):
         streamlit.dataframe(pyspark_dataframe, 100, 200)
         legacy_dataframe.assert_not_called()
         arrow_dataframe.assert_called_once_with(
-            pyspark_dataframe, 100, 200, use_container_width=False
+            pyspark_dataframe,
+            100,
+            200,
+            use_container_width=False,
+            hide_index=None,
+            column_order=None,
         )
 
     @patch.object(DeltaGenerator, "_legacy_dataframe")
@@ -96,7 +111,12 @@ class DataFrameSelectorTest(unittest.TestCase):
         streamlit.dataframe(snowpark_table, 100, 200)
         legacy_dataframe.assert_not_called()
         arrow_dataframe.assert_called_once_with(
-            snowpark_table, 100, 200, use_container_width=False
+            snowpark_table,
+            100,
+            200,
+            use_container_width=False,
+            hide_index=None,
+            column_order=None,
         )
 
     @patch.object(DeltaGenerator, "_legacy_table")

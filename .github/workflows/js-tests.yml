@@ -3,8 +3,8 @@ name: Javascript
 on:
   push:
     branches:
-      - 'develop'
-      - 'feature/**'
+      - "develop"
+      - "feature/**"
   pull_request:
     types: [opened, synchronize, reopened]
   # Allows workflow to be called from other workflows
@@ -33,7 +33,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-          submodules: 'recursive'
+          submodules: "recursive"
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info

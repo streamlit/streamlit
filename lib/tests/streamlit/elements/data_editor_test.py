@@ -17,23 +17,28 @@
 from __future__ import annotations
 
 import datetime
+import json
 import unittest
 from typing import Any, Dict, List, Mapping
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.data_editor import (
-    _INDEX_IDENTIFIER,
-    ColumnConfigMapping,
     _apply_cell_edits,
     _apply_data_specific_configs,
     _apply_dataframe_edits,
     _apply_row_additions,
     _apply_row_deletions,
+)
+from streamlit.elements.lib.column_config_utils import (
+    INDEX_IDENTIFIER,
+    ColumnConfigMapping,
+    determine_dataframe_schema,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
@@ -44,6 +49,11 @@ from streamlit.type_util import (
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
+
+
+def _get_arrow_schema(df: pd.DataFrame) -> pa.Schema:
+    """Get the Arrow schema for a DataFrame."""
+    return pa.Table.from_pandas(df).schema
 
 
 class DataEditorUtilTest(unittest.TestCase):
@@ -74,7 +84,9 @@ class DataEditorUtilTest(unittest.TestCase):
             # TODO: "3:1": "2020-03-20T14:28:23",
         }
 
-        _apply_cell_edits(df, edited_cells)
+        _apply_cell_edits(
+            df, edited_cells, determine_dataframe_schema(df, _get_arrow_schema(df))
+        )
 
         self.assertEqual(df.iat[0, 0], 10)
         self.assertEqual(df.iat[0, 1], "foo")
@@ -98,7 +110,9 @@ class DataEditorUtilTest(unittest.TestCase):
             {"1": 11, "2": "bar", "3": True},
         ]
 
-        _apply_row_additions(df, added_rows)
+        _apply_row_additions(
+            df, added_rows, determine_dataframe_schema(df, _get_arrow_schema(df))
+        )
 
         self.assertEqual(len(df), 5)
 
@@ -145,6 +159,7 @@ class DataEditorUtilTest(unittest.TestCase):
                 "added_rows": added_rows,
                 "edited_cells": edited_cells,
             },
+            determine_dataframe_schema(df, _get_arrow_schema(df)),
         )
 
         self.assertEqual(
@@ -187,12 +202,12 @@ class DataEditorUtilTest(unittest.TestCase):
 
         if hidden:
             self.assertEqual(
-                columns_config[_INDEX_IDENTIFIER]["hidden"],
+                columns_config[INDEX_IDENTIFIER]["hidden"],
                 hidden,
                 f"Data of type {data_format} should be hidden.",
             )
         else:
-            self.assertNotIn(_INDEX_IDENTIFIER, columns_config)
+            self.assertNotIn(INDEX_IDENTIFIER, columns_config)
 
     @parameterized.expand(
         [
@@ -250,17 +265,24 @@ class DataEditorUtilTest(unittest.TestCase):
         )
         self.assertNotIn("a", columns_config)
         self.assertNotIn("b", columns_config)
-        self.assertFalse(columns_config["c"]["editable"])
-        self.assertFalse(columns_config["d"]["editable"])
+        self.assertTrue(columns_config["c"]["disabled"])
+        self.assertTrue(columns_config["d"]["disabled"])
 
 
 class DataEditorTest(DeltaGeneratorTestCase):
-    def test_just_disabled(self):
-        """Test that it can be called with disabled param."""
+    def test_just_disabled_true(self):
+        """Test that it can be called with disabled=True param."""
         st.experimental_data_editor(pd.DataFrame(), disabled=True)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.disabled, True)
+
+    def test_just_disabled_false(self):
+        """Test that it can be called with disabled=False param."""
+        st.experimental_data_editor(pd.DataFrame(), disabled=False)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.disabled, False)
 
     def test_just_width_height(self):
         """Test that it can be called with width and height."""
@@ -284,6 +306,13 @@ class DataEditorTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.editing_mode, ArrowProto.EditingMode.DYNAMIC)
 
+    def test_column_order_parameter(self):
+        """Test that it can be called with column_order."""
+        st.experimental_data_editor(pd.DataFrame(), column_order=["a", "b"])
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.column_order, ["a", "b"])
+
     def test_just_use_container_width(self):
         """Test that it can be called with use_container_width."""
         st.experimental_data_editor(pd.DataFrame(), use_container_width=True)
@@ -291,12 +320,66 @@ class DataEditorTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.use_container_width, True)
 
+    def test_disable_individual_columns(self):
+        """Test that disable can be used to disable individual columns."""
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+                "c": pd.Series([1, 2]),
+                "d": pd.Series(["foo", "bar"]),
+            }
+        )
+
+        st.experimental_data_editor(data_df, disabled=["a", "b"])
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.disabled, False)
+        self.assertEqual(
+            proto.columns,
+            json.dumps({"a": {"disabled": True}, "b": {"disabled": True}}),
+        )
+
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
         st.experimental_data_editor(pd.DataFrame())
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.form_id, "")
+
+    def test_hide_index_true(self):
+        """Test that it can be called with hide_index=True param."""
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+            }
+        )
+
+        st.experimental_data_editor(data_df, hide_index=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(
+            proto.columns,
+            json.dumps({"index": {"hidden": True}}),
+        )
+
+    def test_hide_index_false(self):
+        """Test that it can be called with hide_index=False param."""
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+            }
+        )
+
+        st.experimental_data_editor(data_df, hide_index=False)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(
+            proto.columns,
+            json.dumps({"index": {"hidden": False}}),
+        )
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self):
@@ -420,7 +503,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         self.assertIsInstance(return_df, pd.DataFrame)
 
     @unittest.skipIf(
-        is_pandas_version_less_than("2.0.0rc1") is False,
+        is_pandas_version_less_than("2.0.0") is False,
         "This test only runs if pandas is < 2.0.0",
     )
     def test_with_old_supported_index(self):

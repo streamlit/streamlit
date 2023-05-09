@@ -1,10 +1,19 @@
-# These owners will be the default owners for everything in
-# the repo. Unless a later match takes precedence, that is.
-lib/Pipfile @vdonato @anoctopus @tconkling @kmcgrady
+# We need to take additional care when making changes to Python dependencies
+# to ensure that Streamlit works with as wide a range of packages/package
+# versions as possible.
 lib/setup.py @vdonato @anoctopus @tconkling @kmcgrady
-proto/ @vdonato @tconkling @LukasMasuch @sfc-gh-mnowotka
-.github/ @vdonato @mayagbarnes @kmcgrady
 
 # `audit_frontend_dependencies` ensures that the libraries we ship
 # with our frontend code don't violate Snowflake open source policy.
 scripts/audit_frontend_licenses.py @vdonato @kmcgrady @tconkling
+
+# Ensure changes to our GitHub Actions and related files are reviewed by
+# someone closely familiar with how our CI works.
+.github/ @vdonato @mayagbarnes @kmcgrady
+
+# Changes to the following files/directories are likely to have backwards
+# compatibility implications for platforms that host Streamlit apps, so we need
+# to be extra-careful with these.
+proto/ @vdonato @tconkling @LukasMasuch @sfc-gh-mnowotka
+lib/streamlit/web/server/server.py @vdonato @tconkling @LukasMasuch @sfc-gh-mnowotka
+frontend/src/lib/DefaultStreamlitEndpoints.ts @vdonato @tconkling @LukasMasuch @sfc-gh-mnowotka

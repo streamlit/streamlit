@@ -30,11 +30,19 @@ jobs:
   build-release-candidate:
     runs-on: ubuntu-latest
 
-    needs: [run-python-tests, run-javascript-tests, run-py-prod-deps-smoke-test, run-cypress-tests]
+    needs:
+      - run-python-tests
+      - run-javascript-tests
+      - run-py-prod-deps-smoke-test
+      - run-cypress-tests
 
     defaults:
       run:
         shell: bash --login -eo pipefail {0}
+
+    env:
+      # We don't want to use constraints files because they might not exist yet.
+      USE_CONSTRAINT_FILE: "false"
 
     steps:
       - name: Checkout Streamlit code
@@ -42,7 +50,7 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
           persist-credentials: false
-          submodules: 'recursive'
+          submodules: "recursive"
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info

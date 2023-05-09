@@ -225,8 +225,9 @@ class AppSession:
             self._uploaded_file_mgr.remove_session_files(self.id)
 
             if runtime.exists():
-                runtime.get_instance().media_file_mgr.clear_session_refs(self.id)
-                runtime.get_instance().media_file_mgr.remove_orphaned_files()
+                rt = runtime.get_instance()
+                rt.media_file_mgr.clear_session_refs(self.id)
+                rt.media_file_mgr.remove_orphaned_files()
 
             # Shut down the ScriptRunner, if one is active.
             # self._state must not be set to SHUTDOWN_REQUESTED until
@@ -811,10 +812,6 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
 def _populate_user_info_msg(msg: UserInfo) -> None:
     msg.installation_id = Installation.instance().installation_id
     msg.installation_id_v3 = Installation.instance().installation_id_v3
-    if Credentials.get_current().activation:
-        msg.email = Credentials.get_current().activation.email
-    else:
-        msg.email = ""
 
 
 def _populate_app_pages(

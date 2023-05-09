@@ -20,9 +20,9 @@ import {
   Initialize,
   NewSession,
   UserInfo,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 
-import { hashString } from "src/lib/utils"
+import { hashString } from "src/lib/util/utils"
 
 /**
  * SessionInfo properties. These don't change during the lifetime of a session.
@@ -34,7 +34,6 @@ export interface Props {
   readonly pythonVersion: string
   readonly installationId: string
   readonly installationIdV3: string
-  readonly authorEmail: string
   readonly maxCachedMessageAge: number
   readonly commandLine: string
 
@@ -110,7 +109,6 @@ export class SessionInfo {
       pythonVersion: environmentInfo.pythonVersion,
       installationId: userInfo.installationId,
       installationIdV3: userInfo.installationIdV3,
-      authorEmail: userInfo.email,
       maxCachedMessageAge: config.maxCachedMessageAge,
       commandLine: initialize.commandLine,
       userMapboxToken: config.mapboxToken,

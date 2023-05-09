@@ -1,5 +1,5 @@
 # point_of_contact: the owner of this repository, can be a GitHub user or GitHub team
-point_of_contact: @sfc-gh-kmcgrady
+point_of_contact: "@sfc-gh-kmcgrady"
 
 # production: whether this repository meets the criteria for being "production"
 production: true

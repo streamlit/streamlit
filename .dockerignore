@@ -6,4 +6,5 @@ docker-compose.yml
 .gitignore
 frontend/node_modules
 frontend/test_results
+frontend/cypress/videos
 venv
