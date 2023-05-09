@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ReactElement } from "react"
 import { screen, fireEvent, waitFor } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
@@ -22,8 +22,24 @@ import { render } from "src/lib/test_util"
 
 import { Toast as ToastProto } from "src/lib/proto"
 import { mockTheme } from "src/lib/mocks/mockTheme"
-import Toast, { ToastProps } from "./Toast"
-import ToastContainer from "../../../../app/components/ToastContainer/ToastContainer"
+import { Toast, ToastProps } from "./Toast"
+import { ToasterContainer, PLACEMENT } from "baseui/toast"
+
+// The Toast Container is required to render Toasts
+const createContainer = (): ReactElement => (
+  <ToasterContainer
+    placement={PLACEMENT.bottomRight}
+    // increasing autoHideDuration to 10s to avoid test flakiness
+    autoHideDuration={10000}
+    overrides={{
+      Root: {
+        props: {
+          "data-testid": "toastContainer",
+        },
+      },
+    }}
+  />
+)
 
 const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
   text: "This is a toast message",
@@ -36,10 +52,10 @@ const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
 describe("Toast Component", () => {
   test("renders default toast", () => {
     const props = getProps()
-    // Toast Container is required to render Toasts
+    const container = createContainer()
     render(
       <>
-        <ToastContainer />
+        {container}
         <Toast {...props} />
       </>
     )
@@ -60,9 +76,10 @@ describe("Toast Component", () => {
       icon: "✅",
       type: "success",
     })
+    const container = createContainer()
     render(
       <>
-        <ToastContainer />
+        {container}
         <Toast {...props} />
       </>
     )
@@ -78,9 +95,10 @@ describe("Toast Component", () => {
       icon: "🚧",
       type: "warning",
     })
+    const container = createContainer()
     render(
       <>
-        <ToastContainer />
+        {container}
         <Toast {...props} />
       </>
     )
@@ -96,9 +114,10 @@ describe("Toast Component", () => {
       icon: "🚨",
       type: "error",
     })
+    const container = createContainer()
     render(
       <>
-        <ToastContainer />
+        {container}
         <Toast {...props} />
       </>
     )
@@ -113,9 +132,10 @@ describe("Toast Component", () => {
       icon: "",
       text: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
     })
+    const container = createContainer()
     render(
       <>
-        <ToastContainer />
+        {container}
         <Toast {...props} />
       </>
     )
@@ -134,9 +154,10 @@ describe("Toast Component", () => {
       icon: "",
       text: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
     })
+    const container = createContainer()
     render(
       <>
-        <ToastContainer />
+        {container}
         <Toast {...props} />
       </>
     )
@@ -162,9 +183,10 @@ describe("Toast Component", () => {
       icon: "",
       text: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
     })
+    const container = createContainer()
     render(
       <>
-        <ToastContainer />
+        {container}
         <Toast {...props} />
       </>
     )
@@ -188,9 +210,10 @@ describe("Toast Component", () => {
 
   test("can close toast", async () => {
     const props = getProps()
+    const container = createContainer()
     render(
       <>
-        <ToastContainer />
+        {container}
         <Toast {...props} />
       </>
     )

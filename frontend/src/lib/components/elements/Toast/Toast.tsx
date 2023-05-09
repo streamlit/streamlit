@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, useEffect } from "react"
+import React, { ReactElement, useState, useEffect, useCallback } from "react"
 import { withTheme } from "@emotion/react"
 import { toaster, ToastOverrides } from "baseui/toast"
 
@@ -95,11 +95,11 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
   const [expanded, setExpanded] = useState(!shortened)
   const [toastKey, setToastKey] = useState<React.Key>(0)
 
-  function handleClick(): void {
+  const handleClick = useCallback((): void => {
     setExpanded(!expanded)
-  }
+  }, [expanded])
 
-  function toastContent(): ReactElement {
+  const toastContent = useCallback((): ReactElement => {
     return (
       <>
         <StyledToastMessage expanded={expanded}>
@@ -116,7 +116,7 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
         )}
       </>
     )
-  }
+  }, [shortened, expanded, displayMessage, fullMessage, handleClick])
 
   function createToast(): React.Key {
     const content = toastContent()
@@ -147,6 +147,7 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
       // Remove the toast on unmount
       toaster.clear(key)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -157,7 +158,7 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
       children: content,
       overrides: { ...styleOverrides },
     })
-  }, [expanded, theme])
+  }, [toastContent, toastKey, type, expanded, theme])
 
   return <></>
 }
