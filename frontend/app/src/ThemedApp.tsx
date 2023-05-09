@@ -18,7 +18,7 @@ import React from "react"
 import { BaseProvider } from "baseui"
 import { Global, ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 
-import FontFaceDeclaration from "src/app/components/FontFaceDeclaration"
+import FontFaceDeclaration from "src/components/FontFaceDeclaration"
 import {
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,

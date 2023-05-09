@@ -30,9 +30,9 @@ import {
   StreamlitEndpoints,
 } from "@streamlit/lib"
 
-import { ThemedSidebar } from "src/app/components/Sidebar"
+import { ThemedSidebar } from "src/components/Sidebar"
 
-import { AppContext } from "src/app/components/AppContext"
+import { AppContext } from "src/components/AppContext"
 
 import {
   StyledAppViewBlockContainer,

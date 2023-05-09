@@ -15,7 +15,7 @@
  */
 
 import { logWarning } from "@streamlit/lib"
-import ScreenCastRecorder from "src/app/util/ScreenCastRecorder"
+import ScreenCastRecorder from "src/util/ScreenCastRecorder"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { PureComponent, ComponentType, ReactNode } from "react"
 
@@ -23,8 +23,8 @@ import {
   UnsupportedBrowserDialog,
   ScreencastDialog,
   VideoRecordedDialog,
-} from "src/app/hocs/withScreencast/components"
-import Countdown from "src/app/components/Countdown"
+} from "src/hocs/withScreencast/components"
+import Countdown from "src/components/Countdown"
 
 export type Steps =
   | "UNSUPPORTED"

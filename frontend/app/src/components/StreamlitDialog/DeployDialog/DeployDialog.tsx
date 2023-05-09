@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, ReactNode, useCallback } from "react"
-import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
+import { SegmentMetricsManager } from "src/SegmentMetricsManager"
 import Modal from "./DeployModal"
 import Card from "./DeployCard"
 import ListElement from "./DeployListElement"
@@ -25,7 +25,7 @@ import { FlexGrid, FlexGridItem } from "baseui/flex-grid"
 import {
   DialogType,
   PlainEventHandler,
-} from "src/app/components/StreamlitDialog/StreamlitDialog"
+} from "src/components/StreamlitDialog/StreamlitDialog"
 import { Button, Kind, GitInfo, IGitInfo } from "@streamlit/lib"
 import StreamlitLogo from "src/assets/svg/logo.svg"
 import Rocket from "src/assets/svg/rocket.svg"
@@ -37,8 +37,8 @@ import {
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
-} from "src/app/components/StreamlitDialog/DeployErrorDialogs"
-import { getDeployAppUrl } from "src/app/components/MainMenu/MainMenu"
+} from "src/components/StreamlitDialog/DeployErrorDialogs"
+import { getDeployAppUrl } from "src/components/MainMenu/MainMenu"
 
 const { GitStates } = GitInfo
 

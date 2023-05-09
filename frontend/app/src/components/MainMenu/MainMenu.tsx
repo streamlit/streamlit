@@ -44,9 +44,9 @@ import {
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
-} from "src/app/components/StreamlitDialog/DeployErrorDialogs"
+} from "src/components/StreamlitDialog/DeployErrorDialogs"
 import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/urls"
-import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
+import { SegmentMetricsManager } from "src/SegmentMetricsManager"
 import {
   StyledCoreItem,
   StyledDevItem,

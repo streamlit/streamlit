@@ -23,7 +23,7 @@ import {
   Delta,
   Element,
 } from "@streamlit/lib"
-import { initializeSegment } from "src/app/vendor/Segment"
+import { initializeSegment } from "src/vendor/Segment"
 
 /**
  * The analytics is the Segment.io object. It is initialized in Segment.ts

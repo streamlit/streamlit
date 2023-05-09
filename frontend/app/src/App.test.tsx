@@ -51,16 +51,16 @@ import {
   PageNotFound,
   PagesChanged,
 } from "@streamlit/lib"
-import { ConnectionState } from "src/app/connection/ConnectionState"
+import { ConnectionState } from "src/connection/ConnectionState"
 import {
   DialogType,
   StreamlitDialog,
-} from "src/app/components/StreamlitDialog"
+} from "src/components/StreamlitDialog"
 import { App, Props, showDevelopmentOptions } from "./App"
-import MainMenu from "src/app/components/MainMenu"
-import ToolbarActions from "src/app/components/ToolbarActions"
+import MainMenu from "src/components/MainMenu"
+import ToolbarActions from "src/components/ToolbarActions"
 
-jest.mock("src/app/connection/ConnectionManager")
+jest.mock("src/connection/ConnectionManager")
 jest.mock("@streamlit/lib/dist/baseconsts", () => {
   return {
     ...jest.requireActual("@streamlit/lib/dist/baseconsts"),
