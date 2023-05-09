@@ -696,7 +696,6 @@ export function doInitPings(
       axios.get(allowedOriginsUri, { timeout: PING_TIMEOUT_MS }),
     ])
       .then(([_, originsResp]) => {
-        // @ts-expect-error
         setAllowedOriginsResp(originsResp.data)
         resolver.resolve(uriNumber)
       })
