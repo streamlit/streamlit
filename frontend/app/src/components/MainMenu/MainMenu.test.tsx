@@ -26,13 +26,13 @@ import {
   IGitInfo,
 } from "@streamlit/lib"
 
-import { IDeployErrorDialog } from "src/app/components/StreamlitDialog/DeployErrorDialogs/types"
+import { IDeployErrorDialog } from "src/components/StreamlitDialog/DeployErrorDialogs/types"
 import {
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
-} from "src/app/components/StreamlitDialog/DeployErrorDialogs"
-import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
+} from "src/components/StreamlitDialog/DeployErrorDialogs"
+import { SegmentMetricsManager } from "src/SegmentMetricsManager"
 
 import MainMenu, { Props } from "./MainMenu"
 import { waitFor } from "@testing-library/dom"

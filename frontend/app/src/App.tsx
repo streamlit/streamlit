@@ -21,19 +21,19 @@ import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
 // Other local imports.
-import { AppContext } from "src/app/components/AppContext"
-import AppView from "src/app/components/AppView"
-import StatusWidget from "src/app/components/StatusWidget"
-import MainMenu, { isLocalhost } from "src/app/components/MainMenu"
-import ToolbarActions from "src/app/components/ToolbarActions"
-import DeployButton from "src/app/components/DeployButton"
-import Header from "src/app/components/Header"
+import { AppContext } from "src/components/AppContext"
+import AppView from "src/components/AppView"
+import StatusWidget from "src/components/StatusWidget"
+import MainMenu, { isLocalhost } from "src/components/MainMenu"
+import ToolbarActions from "src/components/ToolbarActions"
+import DeployButton from "src/components/DeployButton"
+import Header from "src/components/Header"
 import {
   DialogProps,
   DialogType,
   StreamlitDialog,
-} from "src/app/components/StreamlitDialog"
-import { ConnectionManager } from "src/app/connection/ConnectionManager"
+} from "src/components/StreamlitDialog"
+import { ConnectionManager } from "src/connection/ConnectionManager"
 import {
   PerformanceEvents,
   createFormsData,
@@ -102,20 +102,20 @@ import {
   SessionStatus,
   WidgetStates,
 } from "@streamlit/lib"
-import { ConnectionState } from "src/app/connection/ConnectionState"
-import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
+import { ConnectionState } from "src/connection/ConnectionState"
+import { SessionEventDispatcher } from "src/SessionEventDispatcher"
 import { concat, noop, without } from "lodash"
 
-import { UserSettings } from "src/app/components/StreamlitDialog/UserSettings"
+import { UserSettings } from "src/components/StreamlitDialog/UserSettings"
 
-import { DefaultStreamlitEndpoints } from "src/app/connection/DefaultStreamlitEndpoints"
-import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
+import { DefaultStreamlitEndpoints } from "src/connection/DefaultStreamlitEndpoints"
+import { SegmentMetricsManager } from "src/SegmentMetricsManager"
 
 import { StyledApp } from "src/styled-components"
 
 import withScreencast, {
   ScreenCastHOC,
-} from "src/app/hocs/withScreencast/withScreencast"
+} from "src/hocs/withScreencast/withScreencast"
 
 // Used to import fonts + responsive reboot items
 import "src/assets/css/theme.scss"

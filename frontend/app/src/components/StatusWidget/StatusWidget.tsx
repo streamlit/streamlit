@@ -34,8 +34,8 @@ import { HotKeys } from "react-hotkeys"
 import { CSSTransition } from "react-transition-group"
 import { SignalConnection } from "typed-signals"
 
-import { ConnectionState } from "src/app/connection/ConnectionState"
-import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
+import { ConnectionState } from "src/connection/ConnectionState"
+import { SessionEventDispatcher } from "src/SessionEventDispatcher"
 
 /*
  * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served

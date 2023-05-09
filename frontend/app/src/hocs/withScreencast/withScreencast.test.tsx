@@ -15,10 +15,10 @@
  */
 
 import React, { PureComponent, ReactElement } from "react"
-import ScreenCastRecorder from "src/app/util/ScreenCastRecorder"
+import ScreenCastRecorder from "src/util/ScreenCastRecorder"
 import { shallow } from "@streamlit/lib"
 
-import Countdown from "src/app/components/Countdown"
+import Countdown from "src/components/Countdown"
 import withScreencast, { ScreenCastHOC } from "./withScreencast"
 import {
   ScreencastDialog,
@@ -26,7 +26,7 @@ import {
   VideoRecordedDialog,
 } from "./components"
 
-jest.mock("src/app/util/ScreenCastRecorder")
+jest.mock("src/util/ScreenCastRecorder")
 
 interface TestProps {
   screenCast: ScreenCastHOC

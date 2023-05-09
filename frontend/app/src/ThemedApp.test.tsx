@@ -32,7 +32,7 @@ import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 import AppWithScreencast from "./App"
 import ThemedApp from "./ThemedApp"
 import { act } from "react-dom/test-utils"
-import FontFaceDeclaration from "src/app/components/FontFaceDeclaration"
+import FontFaceDeclaration from "src/components/FontFaceDeclaration"
 
 const mockCustomThemeConfig = {
   primaryColor: "#1A6CE7",
@@ -50,7 +50,7 @@ const mockCustomThemeConfig = {
   ],
 }
 
-jest.mock("src/app/connection/ConnectionManager")
+jest.mock("src/connection/ConnectionManager")
 
 describe("ThemedApp", () => {
   beforeEach(() => {

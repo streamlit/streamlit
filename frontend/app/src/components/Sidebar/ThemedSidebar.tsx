@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { AppContext } from "src/app/components/AppContext"
+import { AppContext } from "src/components/AppContext"
 import {
   ThemeProvider,
   createTheme,

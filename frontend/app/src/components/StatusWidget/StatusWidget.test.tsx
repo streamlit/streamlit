@@ -22,8 +22,8 @@ import {
   mockTheme,
   SessionEvent,
 } from "@streamlit/lib"
-import { ConnectionState } from "src/app/connection/ConnectionState"
-import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
+import { ConnectionState } from "src/connection/ConnectionState"
+import { SessionEventDispatcher } from "src/SessionEventDispatcher"
 
 import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
 

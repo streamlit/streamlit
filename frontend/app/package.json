@@ -1,6 +1,7 @@
 {
   "name": "@streamlit/app",
   "version": "1.21.0",
+  "license": "Apache-2.0",
   "private": true,
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
@@ -13,7 +14,7 @@
     "cy:run": "unset NODE_OPTIONS && cypress run",
     "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 --cache src"
+    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 --cache --fix src"
   },
   "jest": {
     "resetMocks": false,
@@ -120,6 +121,10 @@
     "vega-interpreter": "^1.0.4",
     "vega-lite": "^5.6.1",
     "xxhashjs": "^0.2.2"
+  },
+  "peerDependencies": {
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.7",

@@ -31,7 +31,7 @@ import { HotKeys } from "react-hotkeys"
 import {
   ScriptChangedDialog,
   Props as ScriptChangedDialogProps,
-} from "src/app/components/StreamlitDialog/ScriptChangedDialog"
+} from "src/components/StreamlitDialog/ScriptChangedDialog"
 import { STREAMLIT_HOME_URL } from "src/urls"
 import { Props as SettingsDialogProps, SettingsDialog } from "./SettingsDialog"
 import ThemeCreatorDialog, {
