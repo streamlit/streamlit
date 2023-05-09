@@ -30,7 +30,8 @@ from typing_extensions import TypeAlias
 PackageInfo: TypeAlias = Tuple[str, str, str, str, str, str]
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-FRONTEND_DIR = SCRIPT_DIR.parent / "frontend"
+FRONTEND_DIR_LIB = SCRIPT_DIR.parent / "frontend/lib"
+FRONTEND_DIR_APP = SCRIPT_DIR.parent / "frontend/app"
 
 # Set of acceptable licenses. If a library uses one of these licenses,
 # we can include it as a dependency.
@@ -49,6 +50,7 @@ ACCEPTABLE_LICENSES = {
     "Zlib",  # https://opensource.org/licenses/Zlib
     "Unlicense",  # https://unlicense.org/
     "WTFPL",  # http://www.wtfpl.net/about/
+    "MPL-2.0",  # https://www.mozilla.org/en-US/MPL/2.0/
     # Dual-licenses are acceptable if at least one of the two licenses is
     # acceptable.
     "(MIT OR Apache-2.0)",
@@ -87,7 +89,7 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
     (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
         "mapbox-gl",
-        "1.13.2",
+        "1.13.3",
         "SEE LICENSE IN LICENSE.txt",
         "git://github.com/mapbox/mapbox-gl-js.git",
         "Unknown",
@@ -129,6 +131,15 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "http://colorbrewer2.org/",
         "Cynthia Brewer",
     ),
+    (
+        #Our own @streamlit/lib
+        '@streamlit/app',
+        '1.21.0',
+        'UNKNOWN',
+        'Unknown',
+        'Unknown',
+        'Unknown'
+    )
 }
 
 
@@ -137,20 +148,10 @@ def get_license_type(package: PackageInfo) -> str:
     return package[2]
 
 
-def main() -> NoReturn:
-    # Run `yarn licenses`.
-    licenses_output = (
-        subprocess.check_output(
-            ["yarn", "licenses", "list", "--json", "--production", "--ignore-platform"],
-            cwd=str(FRONTEND_DIR),
-        )
-        .decode()
-        .splitlines()
-    )
-
+def check_licenses(licenses) -> NoReturn:
     # `yarn licenses` outputs a bunch of lines.
     # The last line contains the JSON object we care about
-    licenses_json = json.loads(licenses_output[len(licenses_output) - 1])
+    licenses_json = json.loads(licenses[len(licenses) - 1])
     assert licenses_json["type"] == "table"
 
     # Pull out the list of package infos from the JSON.
@@ -173,6 +174,8 @@ def main() -> NoReturn:
         for package in packages
         if (get_license_type(package) not in ACCEPTABLE_LICENSES)
         and (package not in PACKAGE_EXCEPTIONS)
+        # workspace aggregator is yarn workspaces
+        and "workspace-aggregator" not in package[0]
     ]
 
     if len(bad_packages) > 0:
@@ -183,6 +186,30 @@ def main() -> NoReturn:
 
     print(f"No unacceptable licenses")
     sys.exit(0)
+
+
+def main() -> NoReturn:
+    # Run `yarn licenses` for lib.
+    licenses_output = (
+        subprocess.check_output(
+            ["yarn", "licenses", "list", "--json", "--production", "--ignore-platform"],
+            cwd=str(FRONTEND_DIR_LIB),
+        )
+        .decode()
+        .splitlines()
+    )
+
+    # Run `yarn licenses` for app.
+    licenses_output = licenses_output + (
+        subprocess.check_output(
+            ["yarn", "licenses", "list", "--json", "--production", "--ignore-platform"],
+            cwd=str(FRONTEND_DIR_APP),
+        )
+        .decode()
+        .splitlines()
+    )
+
+    check_licenses(licenses_output)
 
 
 if __name__ == "__main__":
