@@ -42,6 +42,9 @@ function generateToastOverrides(
 ): ToastOverrides {
   return {
     Body: {
+      props: {
+        "data-testid": "stToast",
+      },
       style: {
         width: "288px",
         marginTop: "8px",
@@ -107,7 +110,7 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
           />
         </StyledToastMessage>
         {shortened && (
-          <StyledViewButton onClick={handleClick}>
+          <StyledViewButton className="toastViewButton" onClick={handleClick}>
             {expanded ? "view less" : "view more"}
           </StyledViewButton>
         )}

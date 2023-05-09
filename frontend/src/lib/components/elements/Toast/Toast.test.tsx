@@ -23,7 +23,7 @@ import { render } from "src/lib/test_util"
 import { Toast as ToastProto } from "src/lib/proto"
 import { mockTheme } from "src/lib/mocks/mockTheme"
 import Toast, { ToastProps } from "./Toast"
-import ToastContainer from "../../core/ToastContainer/ToastContainer"
+import ToastContainer from "../../../../app/components/ToastContainer/ToastContainer"
 
 const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
   text: "This is a toast message",

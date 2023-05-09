@@ -15,7 +15,7 @@
  */
 
 
-describe("st.toasts - Light Theme", () => {
+describe("st.toast - Light Theme", () => {
     before(() => {
       cy.loadApp("http://localhost:3000/");
 
@@ -25,14 +25,14 @@ describe("st.toasts - Light Theme", () => {
     beforeEach(() => {
         // Rerun the script before each test so snapshots have sufficient time
         cy.get("body").type("r");
-        cy.get("[data-testid='toastContainer'] > div").should("have.length", 5);
+        cy.get("[data-testid='stToast']").should("have.length", 5);
     });
 
     it("displays default toast correctly", () => {
         cy.getIndexed("[data-testid='stMarkdownContainer']", 4)
             .should("contain.text", "This is a default toast message")
 
-        cy.getIndexed("[data-testid='toastContainer'] > div", 4)
+        cy.getIndexed("[data-testid='stToast']", 4)
             .matchImageSnapshot("toast-default");
     });
 
@@ -40,7 +40,7 @@ describe("st.toasts - Light Theme", () => {
         cy.getIndexed("[data-testid='stMarkdownContainer']", 3)
             .should("contain.text", "This is a success toast message")
 
-        cy.getIndexed("[data-testid='toastContainer'] > div", 3)
+        cy.getIndexed("[data-testid='stToast']", 3)
             .matchImageSnapshot("toast-success");
     });
 
@@ -48,7 +48,7 @@ describe("st.toasts - Light Theme", () => {
         cy.getIndexed("[data-testid='stMarkdownContainer']", 2)
             .should("contain.text", "This is a warning toast message")
 
-        cy.getIndexed("[data-testid='toastContainer'] > div", 2)
+        cy.getIndexed("[data-testid='stToast']", 2)
             .matchImageSnapshot("toast-warning");
     });
 
@@ -56,7 +56,7 @@ describe("st.toasts - Light Theme", () => {
         cy.getIndexed("[data-testid='stMarkdownContainer']", 1)
             .should("contain.text", "This is a error toast message")
 
-        cy.getIndexed("[data-testid='toastContainer'] > div", 1)
+        cy.getIndexed("[data-testid='stToast']", 1)
             .matchImageSnapshot("toast-error");
     });
 
@@ -67,12 +67,12 @@ describe("st.toasts - Light Theme", () => {
                 "Random toast message that is a really really really really really really really long message, going way"
             )
 
-        cy.getIndexed("[data-testid='toastContainer'] > div", 0)
+        cy.getIndexed("[data-testid='stToast']", 0)
             .matchImageSnapshot("toast-long");
     });
 
     it("displays expanded long message toast correctly", () => {
-        cy.get("[data-testid='toastContainer'] > div").eq(0).find('button').click();
+        cy.getIndexed("[data-testid='stToast']", 0).find('.toastViewButton').click();
 
         cy.getIndexed("[data-testid='stMarkdownContainer']", 0)
             .should(
@@ -80,12 +80,12 @@ describe("st.toasts - Light Theme", () => {
                 "Random toast message that is a really really really really really really really long message, going way past the 3 line limit"
             );
 
-        cy.getIndexed("[data-testid='toastContainer'] > div", 0)
+        cy.getIndexed("[data-testid='stToast']", 0)
             .matchImageSnapshot("toast-expanded");
     });
 });
 
-describe("st.toasts - Dark Theme", () => {
+describe("st.toast - Dark Theme", () => {
     before(() => {
       cy.loadApp("http://localhost:3000/");
 
@@ -97,14 +97,14 @@ describe("st.toasts - Dark Theme", () => {
     beforeEach(() => {
         // Rerun the script before each test so snapshots have sufficient time
         cy.get("body").type("r");
-        cy.get("[data-testid='toastContainer'] > div").should("have.length", 5);
+        cy.get("[data-testid='stToast']").should("have.length", 5);
     });
 
     it("displays default toast correctly", () => {
         cy.getIndexed("[data-testid='stMarkdownContainer']", 4)
             .should("contain.text", "This is a default toast message")
 
-        cy.getIndexed("[data-testid='toastContainer'] > div", 4)
+        cy.getIndexed("[data-testid='stToast']", 4)
             .matchImageSnapshot("toast-default-dark");
     });
 
@@ -112,7 +112,7 @@ describe("st.toasts - Dark Theme", () => {
         cy.getIndexed("[data-testid='stMarkdownContainer']", 3)
             .should("contain.text", "This is a success toast message")
 
-        cy.getIndexed("[data-testid='toastContainer'] > div", 3)
+        cy.getIndexed("[data-testid='stToast']", 3)
             .matchImageSnapshot("toast-success-dark");
     });
 
@@ -120,7 +120,7 @@ describe("st.toasts - Dark Theme", () => {
         cy.getIndexed("[data-testid='stMarkdownContainer']", 2)
             .should("contain.text", "This is a warning toast message")
 
-        cy.getIndexed("[data-testid='toastContainer'] > div", 2)
+        cy.getIndexed("[data-testid='stToast']", 2)
             .matchImageSnapshot("toast-warning-dark");
     });
 
@@ -128,7 +128,7 @@ describe("st.toasts - Dark Theme", () => {
         cy.getIndexed("[data-testid='stMarkdownContainer']", 1)
             .should("contain.text", "This is a error toast message")
 
-        cy.getIndexed("[data-testid='toastContainer'] > div", 1)
+        cy.getIndexed("[data-testid='stToast']", 1)
             .matchImageSnapshot("toast-error-dark");
     });
 
@@ -138,12 +138,12 @@ describe("st.toasts - Dark Theme", () => {
                 "contain.text",
                 "Random toast message that is a really really really really really really really long message, going way")
 
-        cy.getIndexed("[data-testid='toastContainer'] > div", 0)
+        cy.getIndexed("[data-testid='stToast']", 0)
             .matchImageSnapshot("toast-long-dark");
     });
 
     it("displays expanded long message toast correctly", () => {
-        cy.get("[data-testid='toastContainer'] > div").eq(0).find('button').click();
+        cy.getIndexed("[data-testid='stToast']", 0).find('.toastViewButton').click();
 
         cy.getIndexed("[data-testid='stMarkdownContainer']", 0)
             .should(
@@ -151,7 +151,7 @@ describe("st.toasts - Dark Theme", () => {
                 "Random toast message that is a really really really really really really really long message, going way past the 3 line limit"
             );
 
-        cy.getIndexed("[data-testid='toastContainer'] > div", 0)
+        cy.getIndexed("[data-testid='stToast']", 0)
             .matchImageSnapshot("toast-expanded-dark");
     });
 });

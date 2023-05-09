@@ -70,7 +70,7 @@ export interface Props {
 
   /**
    * True if the app is hosted on Community Cloud.
-   * @see ToastRenderer
+   * @see ToastContainer
    */
   communityCloud: boolean
 

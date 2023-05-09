@@ -18,7 +18,7 @@ import React, { ReactElement } from "react"
 import { IAppPage } from "src/lib/proto"
 
 import VerticalBlock from "src/lib/components/core/Block"
-import ToastContainer from "src/lib/components/core/ToastContainer/ToastContainer"
+import ToastContainer from "src/app/components/ToastContainer"
 import { ThemedSidebar } from "src/app/components/Sidebar"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"

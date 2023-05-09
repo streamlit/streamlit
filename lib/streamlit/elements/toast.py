@@ -39,7 +39,7 @@ def validate_type(toast_type: Optional[str]) -> str:
         )
 
 
-def validate_text(toast_text: Optional[str]) -> None:
+def validate_text(toast_text: SupportsStr) -> None:
     if toast_text is "":
         raise StreamlitAPIException(
             f"Toast text cannot be blank - please provide a message."
