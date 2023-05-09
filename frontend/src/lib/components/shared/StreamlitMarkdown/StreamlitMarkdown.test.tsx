@@ -18,7 +18,7 @@ import React, { ReactElement } from "react"
 import "@testing-library/jest-dom"
 import ReactMarkdown from "react-markdown"
 import { mount, render } from "src/lib/test_util"
-import { cleanup } from "@testing-library/react"
+import { screen, cleanup } from "@testing-library/react"
 import IsSidebarContext from "src/lib/components/core/IsSidebarContext"
 import { colors } from "src/lib/theme/primitives/colors"
 import StreamlitMarkdown, {
@@ -254,6 +254,18 @@ describe("StreamlitMarkdown", () => {
     const invalidTag = container.querySelector("a")
     expect(invalidTag).toBeNull()
     expect(container).toHaveTextContent("Link: ")
+  })
+
+  it("doesn't render colored text when isToast is true", () => {
+    // Valid markdown further restricted with toast messages to eliminate colored text
+    const source = ":red[Colored text]"
+    render(<StreamlitMarkdown source={source} allowHTML={false} isToast />)
+
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveTextContent("Colored text")
+    const textTag = screen.getByText("Colored text")
+    // Colored text renders within a span tag
+    expect(textTag.nodeName).toBe("DIV")
   })
 
   it("colours text properly", () => {

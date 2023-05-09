@@ -18,11 +18,11 @@ import { CSSProperties } from "@emotion/serialize"
 import styled from "@emotion/styled"
 import { darken, lighten } from "color2k"
 
-import { hasLightBackgroundColor, Theme } from "src/lib/theme"
+import { hasLightBackgroundColor, EmotionTheme } from "src/lib/theme"
 
 export function toastColoration(
   toastType: string,
-  theme: Theme
+  theme: EmotionTheme
 ): CSSProperties {
   const lightTheme = hasLightBackgroundColor(theme)
   const inSidebar = theme.inSidebar

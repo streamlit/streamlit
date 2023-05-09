@@ -39,6 +39,13 @@ def validate_type(toast_type: Optional[str]) -> str:
         )
 
 
+def validate_text(toast_text: Optional[str]) -> None:
+    if toast_text is "":
+        raise StreamlitAPIException(
+            f"Toast text cannot be blank - please provide a message."
+        )
+
+
 class ToastMixin:
     @gather_metrics("toast")
     def toast(
@@ -67,6 +74,8 @@ class ToastMixin:
         >>>
         >>> st.toast('Your edited image was saved!', icon='😍', type='success')
         """
+
+        validate_text(text)
         toast_proto = ToastProto()
         toast_proto.text = clean_text(text)
         toast_proto.icon = validate_emoji(icon)

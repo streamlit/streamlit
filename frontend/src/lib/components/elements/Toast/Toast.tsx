@@ -68,29 +68,31 @@ function generateToastOverrides(
   }
 }
 
-function shortenMessage(
-  icon: string | undefined,
-  fullMessage: string
-): string {
-  // const characterLimit = icon ? 116 : 118
-  const characterLimit = 116
+function shortenMessage(fullMessage: string): string {
+  const characterLimit = 114
+
   if (fullMessage.length > characterLimit) {
-    // if (characterLimit === 118) return fullMessage.replace(/^(.{118}[^\s]*).*/, "$1")
-    return fullMessage.replace(/^(.{116}[^\s]*).*/, "$1")
+    let message = fullMessage.replace(/^(.{114}[^\s]*).*/, "$1")
+
+    if (message.length > characterLimit) {
+      message = message.split(" ").slice(0, -1).join(" ")
+    }
+
+    return message
   }
+
   return fullMessage
 }
 
 export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
   const fullMessage = icon ? `${icon}&ensp;${text}` : text
-  const displayMessage = shortenMessage(icon, fullMessage)
+  const displayMessage = shortenMessage(fullMessage)
   const shortened = fullMessage !== displayMessage
 
   const [expanded, setExpanded] = useState(!shortened)
-  const [toastKey, setToastKey] = useState<React.Key>(1000)
+  const [toastKey, setToastKey] = useState<React.Key>(0)
 
   function handleClick(): void {
-    console.log("CLICK:", toastKey)
     setExpanded(!expanded)
   }
 
@@ -133,14 +135,14 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
 
   useEffect(() => {
     const key = createToast()
-    console.log("--- Toast MOUNTED ---", key)
 
-    // Remove the toast on unmount
     return () => {
+      // Disable transition so toast doesn't flicker on removal
+      toaster.update(key, {
+        overrides: { Body: { style: { transitionDuration: 0 } } },
+      })
+      // Remove the toast on unmount
       toaster.clear(key)
-      // toaster.getRef()?.clearAll
-
-      console.log("--- UNMOUNT Toast ---", key)
     }
   }, [])
 

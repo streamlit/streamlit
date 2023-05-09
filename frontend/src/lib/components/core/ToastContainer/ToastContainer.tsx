@@ -14,23 +14,14 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect } from "react"
+import React, { ReactElement } from "react"
 import { ToasterContainer, PLACEMENT } from "baseui/toast"
 
 import { AppContext } from "src/app/components/AppContext"
 
 // Toasts should all be rendered under one ToasterContainer
-export function ToastRenderer(): ReactElement {
+export function ToastContainer(): ReactElement {
   const { communityCloud } = React.useContext(AppContext)
-
-  useEffect(() => {
-    let mounted = true
-    console.log("CONTAINER STATE: ", mounted)
-    return () => {
-      mounted = false
-      console.log("CONTAINER STATE: ", mounted)
-    }
-  })
 
   return (
     <ToasterContainer
@@ -42,10 +33,13 @@ export function ToastRenderer(): ReactElement {
             // If deployed in Community Cloud, move toasts up to avoid blocking Manage App button
             bottom: communityCloud ? "45px" : "0px",
           },
+          props: {
+            "data-testid": "toastContainer",
+          },
         },
       }}
     />
   )
 }
 
-export default ToastRenderer
+export default ToastContainer
