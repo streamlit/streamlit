@@ -467,7 +467,8 @@ class DataEditorMixin:
 
         The following types are not supported for editing as values within your
         data structure: complex, list, tuple, bytes, bytearray, memoryview, dict,
-        set, frozenset.
+        set, frozenset, datetime.timedelta, fractions.Fraction, pandas.Interval,
+        pandas.Period, pandas.Timedelta, pyarrow.decimal128
 
         Parameters
         ----------
