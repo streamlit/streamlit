@@ -15,7 +15,6 @@
 """Hashing for st.cache_data and st.cache_resource."""
 import collections
 import dataclasses
-import enum
 import functools
 import hashlib
 import inspect
@@ -24,7 +23,6 @@ import os
 import pickle
 import sys
 import tempfile
-import textwrap
 import threading
 import unittest.mock
 import uuid
@@ -53,101 +51,25 @@ HashFuncsDict = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
 _CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
 
 
-class HashReason(enum.Enum):
-    CACHING_FUNC_ARGS = 0
-    CACHING_FUNC_BODY = 1
-    CACHING_FUNC_OUTPUT = 2
-    CACHING_BLOCK = 3
-
-
-def _get_error_message_args(
-    orig_exc: BaseException, failed_obj: Any, cache_type: Optional[CacheType] = None
-) -> Dict[str, Any]:
-    hash_reason = HashReason.CACHING_FUNC_ARGS
-    hash_source = hash_stacks.current.hash_source
-
-    failed_obj_type_str = type_util.get_fqn_type(failed_obj)
-    object_part = ""
-
-    if hash_source is None or hash_reason is None:
-        object_desc = "something"
-
-    elif hash_reason is HashReason.CACHING_BLOCK:
-        object_desc = "a code block"
-
-    else:
-        if hasattr(hash_source, "__name__"):
-            object_desc = f"`{hash_source.__name__}()`"
-        else:
-            object_desc = "a function"
-
-        if hash_reason is HashReason.CACHING_FUNC_ARGS:
-            object_part = "the arguments of"
-        elif hash_reason is HashReason.CACHING_FUNC_BODY:
-            object_part = "the body of"
-        elif hash_reason is HashReason.CACHING_FUNC_OUTPUT:
-            object_part = "the return value of"
-
-    decorator_name = "@st.cache"
-    if cache_type is CacheType.RESOURCE:
-        decorator_name = "@st.cache_resource"
-    elif cache_type is CacheType.DATA:
-        decorator_name = "@st.cache_data"
-
-    return {
-        "orig_exception_desc": str(orig_exc),
-        "failed_obj_type_str": failed_obj_type_str,
-        "hash_stack": hash_stacks.current.pretty_print(),
-        "object_desc": object_desc,
-        "object_part": object_part,
-        "cache_primitive": decorator_name,
-    }
-
-
-def _get_failing_lines(code, lineno: int) -> List[str]:
-    """Get list of strings (lines of code) from lineno to lineno+3.
-
-    Ideally we'd return the exact line where the error took place, but there
-    are reasons why this is not possible without a lot of work, including
-    playing with the AST. So for now we're returning 3 lines near where
-    the error took place.
-    """
-    source_lines, source_lineno = inspect.getsourcelines(code)
-
-    start = lineno - source_lineno
-    end = min(start + 3, len(source_lines))
-    lines = source_lines[start:end]
-
-    return lines
-
-
 class UserHashError(StreamlitAPIException):
     def __init__(
         self,
         orig_exc,
-        cached_func_or_code,
-        hash_func=None,
-        lineno=None,
+        object_to_hash,
+        hash_func,
         cache_type: Optional[CacheType] = None,
     ):
         self.alternate_name = type(orig_exc).__name__
+        self.hash_func = hash_func
         self.cache_type = cache_type
 
-        if hash_func:
-            msg = self._get_message_from_func(orig_exc, cached_func_or_code, hash_func)
-        else:
-            msg = self._get_message_from_code(orig_exc, cached_func_or_code, lineno)
+        msg = self._get_message_from_func(orig_exc, object_to_hash)
 
-        super(UserHashError, self).__init__(msg)
+        super().__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
-    def _get_message_from_func(self, orig_exc, cached_func, hash_func):
-        args = _get_error_message_args(orig_exc, cached_func, self.cache_type)
-
-        if hasattr(hash_func, "__name__"):
-            args["hash_func_name"] = "`%s()`" % hash_func.__name__
-        else:
-            args["hash_func_name"] = "a function"
+    def _get_message_from_func(self, orig_exc, cached_func):
+        args = self._get_error_message_args(orig_exc, cached_func)
 
         return (
             """
@@ -172,44 +94,49 @@ If you think this is actually a Streamlit bug, please [file a bug report here.]
             % args
         ).strip("\n")
 
-    def _get_message_from_code(self, orig_exc: BaseException, cached_code, lineno: int):
-        args = _get_error_message_args(orig_exc, cached_code)
+    def _get_error_message_args(
+        self,
+        orig_exc: BaseException,
+        failed_obj: Any,
+    ) -> Dict[str, Any]:
+        hash_source = hash_stacks.current.hash_source
 
-        failing_lines = _get_failing_lines(cached_code, lineno)
-        failing_lines_str = "".join(failing_lines)
-        failing_lines_str = textwrap.dedent(failing_lines_str).strip("\n")
+        failed_obj_type_str = type_util.get_fqn_type(failed_obj)
 
-        args["failing_lines_str"] = failing_lines_str
-        args["filename"] = cached_code.co_filename
-        args["lineno"] = lineno
+        if hash_source is None:
+            object_desc = "something"
+        else:
+            if hasattr(hash_source, "__name__"):
+                object_desc = f"`{hash_source.__name__}()`"
+            else:
+                object_desc = "a function"
 
-        # This needs to have zero indentation otherwise %(lines_str)s will
-        # render incorrectly in Markdown.
-        return (
-            """
-%(orig_exception_desc)s
+        decorator_name = ""
+        if self.cache_type is CacheType.RESOURCE:
+            decorator_name = "@st.cache_resource"
+        elif self.cache_type is CacheType.DATA:
+            decorator_name = "@st.cache_data"
 
-Streamlit encountered an error while caching %(object_part)s %(object_desc)s.
-This is likely due to a bug in `%(filename)s` near line `%(lineno)s`:
+        if hasattr(self.hash_func, "__name__"):
+            hash_func_name = f"`{self.hash_func.__name__}()`"
+        else:
+            hash_func_name = "a function"
 
-```
-%(failing_lines_str)s
-```
-
-Please modify the code above to address this.
-
-If you think this is actually a Streamlit bug, you may [file a bug report
-here.] (https://github.com/streamlit/streamlit/issues/new/choose)
-        """
-            % args
-        ).strip("\n")
+        return {
+            "orig_exception_desc": str(orig_exc),
+            "failed_obj_type_str": failed_obj_type_str,
+            "hash_stack": hash_stacks.current.pretty_print(),
+            "object_desc": object_desc,
+            "cache_primitive": decorator_name,
+            "hash_func_name": hash_func_name,
+        }
 
 
 def update_hash(
     val: Any,
     hasher,
     cache_type: CacheType,
-    hash_source: Callable[..., Any],
+    hash_source: Optional[Callable[..., Any]] = None,
     hash_funcs: Optional[HashFuncsDict] = None,
 ) -> None:
     """Updates a hashlib hasher with the hash of val.
@@ -237,6 +164,9 @@ class _HashStack:
 
     def __init__(self):
         self._stack: collections.OrderedDict[int, List[Any]] = collections.OrderedDict()
+        # A function that we decorate with streamlit cache
+        # primitive (st.cache_data or st.cache_resource).
+        self.hash_source: Optional[Callable[..., Any]] = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -257,11 +187,6 @@ class _HashStack:
             except Exception:
                 return "<Unable to convert item to string>"
 
-        # IDEA: Maybe we should remove our internal "hash_funcs" from the
-        # stack. I'm not removing those now because even though those aren't
-        # useful to users I think they might be useful when we're debugging an
-        # issue sent by a user. So let's wait a few months and see if they're
-        # indeed useful...
         return "\n".join(to_str(x) for x in reversed(self._stack.values()))
 
 
