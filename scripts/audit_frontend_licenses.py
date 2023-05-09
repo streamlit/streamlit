@@ -60,6 +60,7 @@ ACCEPTABLE_LICENSES = {
     "(MIT AND Zlib)",
     "(WTFPL OR MIT)",
     "(AFL-2.1 OR BSD-3-Clause)",
+    "MPL-2.0",  # https://www.mozilla.org/en-US/MPL/2.0/
 }
 
 # Some of our dependencies have licenses that yarn fails to parse, but that
