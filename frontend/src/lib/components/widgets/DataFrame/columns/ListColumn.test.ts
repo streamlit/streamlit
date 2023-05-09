@@ -60,9 +60,11 @@ describe("ListColumn", () => {
 
   it.each([
     // Supports almost the same as toSafeArray
-    [null, []],
-    [undefined, []],
+    [null, null],
+    [undefined, null],
     ["", []],
+    [[], []],
+    ["[]", []],
     ["foo", ["foo"]],
     // Comma separated syntax
     ["foo,bar", ["foo", "bar"]],
@@ -89,6 +91,24 @@ describe("ListColumn", () => {
       const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
+    }
+  )
+
+  it.each([
+    [null, ""],
+    [undefined, ""],
+    [[], ""],
+    [["foo", "bar"], "foo,bar"],
+    [["foo", "bar", ""], "foo,bar,"],
+    [["foo", "comma,in value"], "foo,comma in value"],
+    [[0, 1.2], "0,1.2"],
+    [[true, false], "true,false"],
+  ])(
+    "correctly prepares data for copy (%p parsed as %p)",
+    (input: any, copyData: string | undefined) => {
+      const mockColumn = ListColumn(MOCK_LIST_COLUMN_PROPS)
+      const cell = mockColumn.getCell(input)
+      expect((cell as any).copyData).toEqual(copyData)
     }
   )
 })
