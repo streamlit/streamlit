@@ -132,14 +132,14 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "Cynthia Brewer",
     ),
     (
-        #Our own @streamlit/lib
-        '@streamlit/app',
-        '1.21.0',
-        'UNKNOWN',
-        'Unknown',
-        'Unknown',
-        'Unknown'
-    )
+        # Our own @streamlit/lib
+        "@streamlit/app",
+        "1.21.0",
+        "UNKNOWN",
+        "Unknown",
+        "Unknown",
+        "Unknown",
+    ),
 }
 
 
