@@ -16,11 +16,11 @@
 
 import React, { ReactElement, useEffect } from "react"
 import { Button as ButtonProto } from "src/lib/proto"
-import UIButton, {
-  ButtonTooltip,
-  Kind,
-  Size,
-} from "src/lib/components/shared/Button"
+import BaseButton, {
+  BaseButtonTooltip,
+  BaseButtonKind,
+  BaseButtonSize,
+} from "src/lib/components/shared/BaseButton"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 
@@ -38,8 +38,8 @@ export function FormSubmitButton(props: Props): ReactElement {
   const style = { width }
   const kind =
     element.type === "primary"
-      ? Kind.PRIMARY_FORM_SUBMIT
-      : Kind.SECONDARY_FORM_SUBMIT
+      ? BaseButtonKind.PRIMARY_FORM_SUBMIT
+      : BaseButtonKind.SECONDARY_FORM_SUBMIT
 
   useEffect(() => {
     widgetMgr.incrementSubmitButtonCount(formId)
@@ -52,10 +52,10 @@ export function FormSubmitButton(props: Props): ReactElement {
       data-testid="stFormSubmitButton"
       style={style}
     >
-      <ButtonTooltip help={element.help}>
-        <UIButton
+      <BaseButtonTooltip help={element.help}>
+        <BaseButton
           kind={kind}
-          size={Size.SMALL}
+          size={BaseButtonSize.SMALL}
           fluidWidth={element.useContainerWidth || false}
           disabled={disabled || hasInProgressUpload}
           onClick={() => widgetMgr.submitForm(element)}
@@ -66,8 +66,8 @@ export function FormSubmitButton(props: Props): ReactElement {
             isLabel
             isButton
           />
-        </UIButton>
-      </ButtonTooltip>
+        </BaseButton>
+      </BaseButtonTooltip>
     </div>
   )
 }

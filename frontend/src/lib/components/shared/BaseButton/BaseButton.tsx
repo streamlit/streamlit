@@ -16,9 +16,9 @@
 
 import React, { ReactElement } from "react"
 import {
-  ButtonProps as ButtonPropsT,
-  Kind,
-  Size,
+  BaseButtonProps as BaseButtonPropsT,
+  BaseButtonKind,
+  BaseButtonSize,
   StyledBorderlessIconButton,
   StyledIconButton,
   StyledLinkButton,
@@ -31,7 +31,7 @@ import {
   StyledHeaderButton,
 } from "./styled-components"
 
-function Button({
+function BaseButton({
   kind,
   size,
   disabled,
@@ -39,33 +39,33 @@ function Button({
   fluidWidth,
   children,
   autoFocus,
-}: ButtonPropsT): ReactElement {
+}: BaseButtonPropsT): ReactElement {
   let ComponentType = StyledPrimaryButton
 
-  if (kind === Kind.SECONDARY) {
+  if (kind === BaseButtonKind.SECONDARY) {
     ComponentType = StyledSecondaryButton
-  } else if (kind === Kind.TERTIARY) {
+  } else if (kind === BaseButtonKind.TERTIARY) {
     ComponentType = StyledTertiaryButton
-  } else if (kind === Kind.LINK) {
+  } else if (kind === BaseButtonKind.LINK) {
     ComponentType = StyledLinkButton
-  } else if (kind === Kind.ICON) {
+  } else if (kind === BaseButtonKind.ICON) {
     ComponentType = StyledIconButton
-  } else if (kind === Kind.BORDERLESS_ICON) {
+  } else if (kind === BaseButtonKind.BORDERLESS_ICON) {
     ComponentType = StyledBorderlessIconButton
-  } else if (kind === Kind.MINIMAL) {
+  } else if (kind === BaseButtonKind.MINIMAL) {
     ComponentType = StyledMinimalButton
-  } else if (kind === Kind.PRIMARY_FORM_SUBMIT) {
+  } else if (kind === BaseButtonKind.PRIMARY_FORM_SUBMIT) {
     ComponentType = StyledPrimaryFormSubmitButton
-  } else if (kind === Kind.SECONDARY_FORM_SUBMIT) {
+  } else if (kind === BaseButtonKind.SECONDARY_FORM_SUBMIT) {
     ComponentType = StyledSecondaryFormSubmitButton
-  } else if (kind === Kind.HEADER_BUTTON) {
+  } else if (kind === BaseButtonKind.HEADER_BUTTON) {
     ComponentType = StyledHeaderButton
   }
 
   return (
     <ComponentType
       kind={kind}
-      size={size || Size.MEDIUM}
+      size={size || BaseButtonSize.MEDIUM}
       fluidWidth={fluidWidth || false}
       disabled={disabled || false}
       onClick={onClick || (() => {})}
@@ -75,6 +75,6 @@ function Button({
     </ComponentType>
   )
 }
-export type ButtonProps = ButtonPropsT
-export { Kind, Size }
-export default Button
+export type BaseButtonProps = BaseButtonPropsT
+export { BaseButtonKind, BaseButtonSize }
+export default BaseButton

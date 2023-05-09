@@ -22,7 +22,7 @@ import React from "react"
 import { Button as ButtonProto } from "src/lib/proto"
 
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
-import UIButton from "src/lib/components/shared/Button"
+import BaseButton from "src/lib/components/shared/BaseButton"
 import { render, shallow } from "src/lib/test_util"
 import {
   createFormsData,
@@ -90,11 +90,11 @@ describe("FormSubmitButton", () => {
   it("renders a label", () => {
     const wrapper = shallow(<FormSubmitButton {...getProps()} />)
 
-    const wrappedUIButton = wrapper.find(UIButton)
+    const wrappedBaseButton = wrapper.find(BaseButton)
 
-    expect(wrappedUIButton.length).toBe(1)
+    expect(wrappedBaseButton.length).toBe(1)
     const markdownInsideWrappedUIButton =
-      wrappedUIButton.find(StreamlitMarkdown)
+      wrappedBaseButton.find(StreamlitMarkdown)
     expect(markdownInsideWrappedUIButton.props().source).toBe(
       getProps().element.label
     )
@@ -141,14 +141,14 @@ describe("FormSubmitButton", () => {
   it("does not use container width by default", () => {
     const wrapper = shallow(<FormSubmitButton {...getProps()} />)
 
-    const wrappedUIButton = wrapper.find(UIButton)
-    expect(wrappedUIButton.props().fluidWidth).toBe(false)
+    const wrappedBaseButton = wrapper.find(BaseButton)
+    expect(wrappedBaseButton.props().fluidWidth).toBe(false)
   })
 
   it("passes useContainerWidth property correctly", () => {
     const wrapper = shallow(<FormSubmitButton {...getProps({}, true)} />)
 
-    const wrappedUIButton = wrapper.find(UIButton)
-    expect(wrappedUIButton.props().fluidWidth).toBe(true)
+    const wrappedBaseButton = wrapper.find(BaseButton)
+    expect(wrappedBaseButton.props().fluidWidth).toBe(true)
   })
 })

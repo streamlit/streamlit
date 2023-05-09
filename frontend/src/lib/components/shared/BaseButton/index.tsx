@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { ButtonProps as ButtonPropsT } from "./Button"
+import { BaseButtonProps as BaseButtonPropsT } from "./BaseButton"
 
-export { default, Kind, Size } from "./Button"
-export { ButtonTooltip } from "./ButtonTooltip"
-export type ButtonProps = ButtonPropsT
+export { default, BaseButtonKind, BaseButtonSize } from "./BaseButton"
+export { BaseButtonTooltip as BaseButtonTooltip } from "./BaseButtonTooltip"
+export type BaseButtonProps = BaseButtonPropsT

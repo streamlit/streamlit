@@ -16,7 +16,9 @@
 
 import React from "react"
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
-import Button, { Kind } from "src/lib/components/shared/Button"
+import BaseButton, {
+  BaseButtonKind,
+} from "src/lib/components/shared/BaseButton"
 import Icon from "src/lib/components/shared/Icon"
 import { Small } from "src/lib/components/shared/TextElements"
 import { StyledPagination, StyledPaginators } from "./styled-components"
@@ -41,12 +43,12 @@ const Pagination = ({
     <StyledPagination className={className}>
       <Small>{`Showing page ${currentPage} of ${totalPages}`}</Small>
       <StyledPaginators>
-        <Button onClick={onPrevious} kind={Kind.MINIMAL}>
+        <BaseButton onClick={onPrevious} kind={BaseButtonKind.MINIMAL}>
           <Icon content={ChevronLeft} size="xl" />
-        </Button>
-        <Button onClick={onNext} kind={Kind.MINIMAL}>
+        </BaseButton>
+        <BaseButton onClick={onNext} kind={BaseButtonKind.MINIMAL}>
           <Icon content={ChevronRight} size="xl" />
-        </Button>
+        </BaseButton>
       </StyledPaginators>
     </StyledPagination>
   )
