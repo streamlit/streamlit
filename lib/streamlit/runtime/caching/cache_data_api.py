@@ -422,7 +422,7 @@ class CacheDataAPI:
             a "cache miss" and the cached data is being created. If string,
             value of show_spinner param will be used for spinner text.
 
-        persist : str or boolean or None
+        persist : "disk" or boolean or None
             Optional location to persist cached data to. Passing "disk" (or True)
             will persist the cached data to the local disk. None (or False) will disable
             persistence. The default is None.
