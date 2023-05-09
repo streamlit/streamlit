@@ -188,7 +188,7 @@ def connection_factory(
     name : str
         The connection name used for secrets lookup in ``[connections.<name>]``.
         Type will be inferred from passing ``"sql"`` or ``"snowpark"``.
-    type : str or connection class or None
+    type : str, connection class, or None
         The type of connection to create. It can be a keyword (``"sql"`` or ``"snowpark"``),
         a path to an importable class, or an imported class reference. All classes
         must extend ``st.connections.ExperimentalBaseConnection`` and implement the
@@ -198,7 +198,7 @@ def connection_factory(
         The maximum number of connections to keep in the cache, or None
         for an unbounded cache. (When a new entry is added to a full cache,
         the oldest cached entry will be removed.) The default is None.
-    ttl : float or timedelta or None
+    ttl : float, timedelta, or None
         The maximum number of seconds to keep results in the cache, or
         None if cached results should not expire. The default is None.
     **kwargs : any
