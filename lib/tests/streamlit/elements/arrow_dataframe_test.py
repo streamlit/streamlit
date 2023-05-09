@@ -14,6 +14,7 @@
 
 """Arrow DataFrame tests."""
 
+import json
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -55,6 +56,20 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
 
+    def test_column_order_parameter(self):
+        """Test that it can be called with column_order."""
+        st._arrow_dataframe(pd.DataFrame(), column_order=["a", "b"])
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.column_order, ["a", "b"])
+
+    def test_empty_column_order_parameter(self):
+        """Test that an empty column_order is correctly added."""
+        st._arrow_dataframe(pd.DataFrame(), column_order=[])
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.column_order, [])
+
     def test_pyarrow_table_data(self):
         df = mock_data_frame()
         table = pa.Table.from_pandas(df)
@@ -62,6 +77,40 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.data, pyarrow_table_to_bytes(table))
+
+    def test_hide_index_true(self):
+        """Test that it can be called with hide_index=True param."""
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+            }
+        )
+
+        st._arrow_dataframe(data_df, hide_index=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(
+            proto.columns,
+            json.dumps({"index": {"hidden": True}}),
+        )
+
+    def test_hide_index_false(self):
+        """Test that it can be called with hide_index=False param."""
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+            }
+        )
+
+        st._arrow_dataframe(data_df, hide_index=False)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(
+            proto.columns,
+            json.dumps({"index": {"hidden": False}}),
+        )
 
     def test_uuid(self):
         df = mock_data_frame()

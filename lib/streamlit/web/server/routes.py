@@ -87,13 +87,6 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             super().write_error(status_code, **kwargs)
 
 
-class AssetsFileHandler(tornado.web.StaticFileHandler):
-    # CORS protection should be disabled as we need access
-    # to this endpoint from the inner iframe.
-    def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Origin", "*")
-
-
 class AddSlashHandler(tornado.web.RequestHandler):
     @tornado.web.addslash
     def get(self):
