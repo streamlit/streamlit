@@ -26,7 +26,9 @@ import {
   DialogType,
   PlainEventHandler,
 } from "src/app/components/StreamlitDialog/StreamlitDialog"
-import Button, { Kind } from "src/lib/components/shared/Button"
+import BaseButton, {
+  BaseButtonKind,
+} from "src/lib/components/shared/BaseButton"
 import StreamlitLogo from "src/assets/svg/logo.svg"
 import Rocket from "src/assets/svg/rocket.svg"
 import {
@@ -131,10 +133,13 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
             </StyledBody>
             <StyledAction>
               <StyledActionsWrapper>
-                <Button kind={Kind.SECONDARY} onClick={onClickDeployApp}>
+                <BaseButton
+                  kind={BaseButtonKind.SECONDARY}
+                  onClick={onClickDeployApp}
+                >
                   Deploy now
-                </Button>
-                <Button
+                </BaseButton>
+                <BaseButton
                   onClick={() => {
                     metricsMgr.enqueue(
                       "readMoreCommunityCloudInDeployDialog",
@@ -142,10 +147,10 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
                     )
                     window.open(STREAMLIT_COMMUNITY_CLOUD_DOCS_URL, "_blank")
                   }}
-                  kind={Kind.MINIMAL}
+                  kind={BaseButtonKind.MINIMAL}
                 >
                   Read more
-                </Button>
+                </BaseButton>
               </StyledActionsWrapper>
             </StyledAction>
           </Card>
@@ -164,7 +169,7 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
             </StyledBody>
             <StyledAction>
               <StyledActionsWrapper>
-                <Button
+                <BaseButton
                   onClick={() => {
                     metricsMgr.enqueue(
                       "readMoreDeployTutorialInDeployDialog",
@@ -172,10 +177,10 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
                     )
                     window.open(STREAMLIT_DEPLOY_TUTORIAL_URL, "_blank")
                   }}
-                  kind={Kind.MINIMAL}
+                  kind={BaseButtonKind.MINIMAL}
                 >
                   Read more
-                </Button>
+                </BaseButton>
               </StyledActionsWrapper>
             </StyledAction>
           </Card>

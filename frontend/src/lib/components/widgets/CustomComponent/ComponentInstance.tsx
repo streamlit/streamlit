@@ -20,7 +20,7 @@ import {
   ISpecialArg,
   SpecialArg as SpecialArgProto,
 } from "src/lib/proto"
-import Alert from "src/lib/components/elements/Alert"
+import AlertElement from "src/lib/components/elements/AlertElement"
 import { Kind } from "src/lib/components/shared/AlertContainer"
 import ErrorElement from "src/lib/components/shared/ErrorElement"
 import { withTheme } from "@emotion/react"
@@ -330,7 +330,11 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       `or visit our [forums](${COMMUNITY_URL}).`
 
     return (
-      <Alert width={this.props.width} body={message} kind={Kind.WARNING} />
+      <AlertElement
+        width={this.props.width}
+        body={message}
+        kind={Kind.WARNING}
+      />
     )
   }
 

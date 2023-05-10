@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, ReactNode, useEffect, useState } from "react"
-import Alert from "src/lib/components/elements/Alert"
+import AlertElement from "src/lib/components/elements/AlertElement"
 import { Kind } from "src/lib/components/shared/AlertContainer"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
@@ -78,7 +78,7 @@ export function Form(props: Props): ReactElement {
   if (showWarning) {
     submitWarning = (
       <StyledErrorContainer>
-        <Alert
+        <AlertElement
           body={MISSING_SUBMIT_BUTTON_WARNING}
           kind={Kind.ERROR}
           width={width}

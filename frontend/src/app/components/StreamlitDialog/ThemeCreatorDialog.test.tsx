@@ -17,7 +17,7 @@
 import React from "react"
 import { CustomThemeConfig } from "src/lib/proto"
 import { shallow } from "src/lib/test_util"
-import ColorPicker from "src/lib/components/shared/ColorPicker"
+import ColorPicker from "src/lib/components/shared/BaseColorPicker"
 import UISelectbox from "src/lib/components/shared/Dropdown"
 import { baseTheme, darkTheme, lightTheme, toThemeInput } from "src/lib/theme"
 import { fonts } from "src/lib/theme/primitives/typography"
@@ -246,7 +246,7 @@ describe("Opened ThemeCreatorDialog", () => {
 
     const props = getProps()
     const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-    const copyBtn = wrapper.find("Button")
+    const copyBtn = wrapper.find("BaseButton")
 
     expect(copyBtn.prop("children")).toBe("Copy theme to clipboard")
     copyBtn.simulate("click")

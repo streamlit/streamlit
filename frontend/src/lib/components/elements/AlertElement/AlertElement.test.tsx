@@ -19,9 +19,14 @@ import React from "react"
 import { shallow } from "src/lib/test_util"
 import { Kind } from "src/lib/components/shared/AlertContainer"
 import { Alert as AlertProto } from "src/lib/proto"
-import Alert, { AlertProps, getAlertKind } from "./Alert"
+import AlertElement, {
+  AlertElementProps,
+  getAlertElementKind,
+} from "./AlertElement"
 
-const getProps = (elementProps: Partial<AlertProps> = {}): AlertProps => ({
+const getProps = (
+  elementProps: Partial<AlertElementProps> = {}
+): AlertElementProps => ({
   body: "Something happened!",
   kind: Kind.INFO,
   width: 100,
@@ -31,10 +36,10 @@ const getProps = (elementProps: Partial<AlertProps> = {}): AlertProps => ({
 describe("Alert element", () => {
   it("renders an ERROR box as expected", () => {
     const props = getProps({
-      kind: getAlertKind(AlertProto.Format.ERROR),
+      kind: getAlertElementKind(AlertProto.Format.ERROR),
       body: "#what in the world?",
     })
-    const wrap = shallow(<Alert {...props} />)
+    const wrap = shallow(<AlertElement {...props} />)
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.ERROR)
@@ -46,10 +51,10 @@ describe("Alert element", () => {
 
   it("renders a WARNING box as expected", () => {
     const props = getProps({
-      kind: getAlertKind(AlertProto.Format.WARNING),
+      kind: getAlertElementKind(AlertProto.Format.WARNING),
       body: "Are you *sure*?",
     })
-    const wrap = shallow(<Alert {...props} />)
+    const wrap = shallow(<AlertElement {...props} />)
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.WARNING)
@@ -61,10 +66,10 @@ describe("Alert element", () => {
 
   it("renders a SUCCESS box as expected", () => {
     const props = getProps({
-      kind: getAlertKind(AlertProto.Format.SUCCESS),
+      kind: getAlertElementKind(AlertProto.Format.SUCCESS),
       body: "But our princess was in another castle!",
     })
-    const wrap = shallow(<Alert {...props} />)
+    const wrap = shallow(<AlertElement {...props} />)
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.SUCCESS)
@@ -76,10 +81,10 @@ describe("Alert element", () => {
 
   it("renders an INFO box as expected", () => {
     const props = getProps({
-      kind: getAlertKind(AlertProto.Format.INFO),
+      kind: getAlertElementKind(AlertProto.Format.INFO),
       body: "It's dangerous to go alone.",
     })
-    const wrap = shallow(<Alert {...props} />)
+    const wrap = shallow(<AlertElement {...props} />)
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.INFO)
@@ -91,11 +96,11 @@ describe("Alert element", () => {
 
   it("accepts an icon", () => {
     const props = getProps({
-      kind: getAlertKind(AlertProto.Format.INFO),
+      kind: getAlertElementKind(AlertProto.Format.INFO),
       body: "It's dangerous to go alone.",
       icon: "👉🏻",
     })
-    const wrap = shallow(<Alert {...props} />)
+    const wrap = shallow(<AlertElement {...props} />)
     const elem = wrap.get(0)
     expect(elem.props.className.includes("stAlert")).toBeTruthy()
     expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.INFO)
@@ -107,8 +112,8 @@ describe("Alert element", () => {
   })
 })
 
-test("getAlertKind throws an error on invalid format", () => {
-  expect(() => getAlertKind(AlertProto.Format.UNUSED)).toThrow(
+test("getAlertElementKind throws an error on invalid format", () => {
+  expect(() => getAlertElementKind(AlertProto.Format.UNUSED)).toThrow(
     `Unexpected alert type: ${AlertProto.Format.UNUSED}`
   )
 })

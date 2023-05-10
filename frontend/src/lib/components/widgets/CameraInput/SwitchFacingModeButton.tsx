@@ -17,7 +17,9 @@
 import React, { ReactElement } from "react"
 import { SwitchCamera } from "@emotion-icons/material-rounded"
 
-import Button, { Kind } from "src/lib/components/shared/Button"
+import BaseButton, {
+  BaseButtonKind,
+} from "src/lib/components/shared/BaseButton"
 import Icon from "src/lib/components/shared/Icon"
 import Tooltip, { Placement } from "src/lib/components/shared/Tooltip"
 import themeColors from "src/lib/theme/emotionBaseTheme/themeColors"
@@ -38,13 +40,13 @@ const SwitchFacingModeButton = ({
   return (
     <StyledSwitchFacingModeButton>
       <Tooltip content={"Switch camera"} placement={Placement.TOP_RIGHT}>
-        <Button kind={Kind.MINIMAL} onClick={switchFacingMode}>
+        <BaseButton kind={BaseButtonKind.MINIMAL} onClick={switchFacingMode}>
           <Icon
             content={SwitchCamera}
             size="twoXL"
             color={themeColors.white}
           />
-        </Button>
+        </BaseButton>
       </Tooltip>
     </StyledSwitchFacingModeButton>
   )
