@@ -14,7 +14,7 @@
         "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --root-mode=upward --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src",
         "build:vendor": "cp -R ./src/vendor ./dist",
         "build:assets": "cp -R ./src/assets ./dist",
-        "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 --fix src"
+        "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src"
     },
     "dependencies": {
         "@deck.gl/core": "^8.8.23",
