@@ -15,7 +15,9 @@
  */
 
 import React, { MouseEvent, ReactElement } from "react"
-import Button, { Kind } from "src/lib/components/shared/Button"
+import BaseButton, {
+  BaseButtonKind,
+} from "src/lib/components/shared/BaseButton"
 import { DeployButtonContainer } from "./styled-components"
 
 interface IDeployButtonProps {
@@ -27,11 +29,11 @@ class DeployButton extends React.Component<IDeployButtonProps> {
     const { onClick } = this.props
     return (
       <div className="stDeployButton">
-        <Button kind={Kind.HEADER_BUTTON} onClick={onClick}>
+        <BaseButton kind={BaseButtonKind.HEADER_BUTTON} onClick={onClick}>
           <DeployButtonContainer>
             <span>Deploy</span>
           </DeployButtonContainer>
-        </Button>
+        </BaseButton>
       </div>
     )
   }

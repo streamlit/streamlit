@@ -59,7 +59,7 @@ import { ElementNode } from "src/lib/AppNode"
 import { Quiver } from "src/lib/dataframes/Quiver"
 
 // Load (non-lazy) elements.
-import Alert from "src/lib/components/elements/Alert"
+import AlertElement from "src/lib/components/elements/AlertElement"
 import ArrowTable from "src/lib/components/elements/ArrowTable"
 import DocString from "src/lib/components/elements/DocString"
 import ErrorBoundary from "src/lib/components/shared/ErrorBoundary"
@@ -72,7 +72,7 @@ import TextElement from "src/lib/components/elements/TextElement"
 import { ComponentInstance } from "src/lib/components/widgets/CustomComponent"
 import { Kind } from "src/lib/components/shared/AlertContainer"
 import { VegaLiteChartElement } from "src/lib/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
-import { getAlertKind } from "src/lib/components/elements/Alert/Alert"
+import { getAlertElementKind } from "src/lib/components/elements/AlertElement/AlertElement"
 
 import Maybe from "src/lib/components/core/Maybe"
 import { FormSubmitContent } from "src/lib/components/widgets/Form"
@@ -232,11 +232,11 @@ const RawElementNodeRenderer = (
     case "alert": {
       const alertProto = node.element.alert as AlertProto
       return (
-        <Alert
+        <AlertElement
           width={width}
           icon={alertProto.icon}
           body={alertProto.body}
-          kind={getAlertKind(alertProto.format)}
+          kind={getAlertElementKind(alertProto.format)}
         />
       )
     }
@@ -711,7 +711,7 @@ const ElementNodeRenderer = (
         <ErrorBoundary width={width}>
           <Suspense
             fallback={
-              <Alert body="Loading..." kind={Kind.INFO} width={width} />
+              <AlertElement body="Loading..." kind={Kind.INFO} width={width} />
             }
           >
             <RawElementNodeRenderer {...props} isStale={isStale} />

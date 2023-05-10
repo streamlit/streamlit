@@ -24,7 +24,7 @@ interface Props {
   help?: string
 }
 
-export function ButtonTooltip({ children, help }: Props): ReactElement {
+export function BaseButtonTooltip({ children, help }: Props): ReactElement {
   if (!help) {
     return children
   }

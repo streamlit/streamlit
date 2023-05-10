@@ -17,11 +17,17 @@
 import React from "react"
 import { shallow } from "src/lib/test_util"
 
-import Button, { Size, Kind, ButtonProps } from "./Button"
+import BaseButton, {
+  BaseButtonSize,
+  BaseButtonKind,
+  BaseButtonProps,
+} from "./BaseButton"
 
-const getProps = (propOverrides: Partial<ButtonProps> = {}): ButtonProps => ({
-  kind: Kind.SECONDARY,
-  size: Size.MEDIUM,
+const getProps = (
+  propOverrides: Partial<BaseButtonProps> = {}
+): BaseButtonProps => ({
+  kind: BaseButtonKind.SECONDARY,
+  size: BaseButtonSize.MEDIUM,
   onClick: () => {},
   disabled: false,
   fluidWidth: false,
@@ -30,11 +36,14 @@ const getProps = (propOverrides: Partial<ButtonProps> = {}): ButtonProps => ({
 })
 
 describe("Button element", () => {
-  Object.keys(Kind).forEach(key => {
-    const kind: Kind = Kind[key as keyof typeof Kind]
+  Object.keys(BaseButtonKind).forEach(key => {
+    const kind: BaseButtonKind =
+      BaseButtonKind[key as keyof typeof BaseButtonKind]
 
     it(`renders ${kind} buttons correctly`, () => {
-      const wrapper = shallow(<Button {...getProps({ kind })}>Hello</Button>)
+      const wrapper = shallow(
+        <BaseButton {...getProps({ kind })}>Hello</BaseButton>
+      )
 
       expect(
         wrapper
@@ -47,7 +56,7 @@ describe("Button element", () => {
 
     it(`renders disabled ${kind} correctly`, () => {
       const wrapper = shallow(
-        <Button {...getProps({ kind, disabled: true })}>Hello</Button>
+        <BaseButton {...getProps({ kind, disabled: true })}>Hello</BaseButton>
       )
 
       expect(
@@ -60,11 +69,14 @@ describe("Button element", () => {
     })
   })
 
-  Object.keys(Size).forEach(key => {
-    const size: Size = Size[key as keyof typeof Size]
+  Object.keys(BaseButtonSize).forEach(key => {
+    const size: BaseButtonSize =
+      BaseButtonSize[key as keyof typeof BaseButtonSize]
 
     it(`renders ${size} buttons correctly`, () => {
-      const wrapper = shallow(<Button {...getProps({ size })}>Hello</Button>)
+      const wrapper = shallow(
+        <BaseButton {...getProps({ size })}>Hello</BaseButton>
+      )
 
       expect(wrapper.find("StyledSecondaryButton").prop("size")).toBe(size)
     })
@@ -72,7 +84,7 @@ describe("Button element", () => {
 
   it("renders fluid width buttons correctly", () => {
     const wrapper = shallow(
-      <Button {...getProps({ fluidWidth: true })}>Hello</Button>
+      <BaseButton {...getProps({ fluidWidth: true })}>Hello</BaseButton>
     )
 
     expect(wrapper.find("StyledSecondaryButton").prop("fluidWidth")).toBe(true)
@@ -80,7 +92,7 @@ describe("Button element", () => {
 
   it("renders disabled buttons correctly", () => {
     const wrapper = shallow(
-      <Button {...getProps({ disabled: true })}>Hello</Button>
+      <BaseButton {...getProps({ disabled: true })}>Hello</BaseButton>
     )
 
     expect(wrapper.find("StyledSecondaryButton").prop("disabled")).toBe(true)
@@ -88,14 +100,16 @@ describe("Button element", () => {
 
   it("calls onClick when button is clicked", () => {
     const onClick = jest.fn()
-    const wrapper = shallow(<Button {...getProps({ onClick })}>Hello</Button>)
+    const wrapper = shallow(
+      <BaseButton {...getProps({ onClick })}>Hello</BaseButton>
+    )
     wrapper.find("StyledSecondaryButton").simulate("click")
 
     expect(onClick).toBeCalled()
   })
 
   it("does not use container width by default", () => {
-    const wrapper = shallow(<Button {...getProps()}>Hello</Button>)
+    const wrapper = shallow(<BaseButton {...getProps()}>Hello</BaseButton>)
 
     expect(wrapper.find("StyledSecondaryButton").prop("fluidWidth")).toBe(
       false
@@ -104,7 +118,7 @@ describe("Button element", () => {
 
   it("renders use container width buttons correctly", () => {
     const wrapper = shallow(
-      <Button {...getProps({ fluidWidth: true })}>Hello</Button>
+      <BaseButton {...getProps({ fluidWidth: true })}>Hello</BaseButton>
     )
 
     expect(wrapper.find("StyledSecondaryButton").prop("fluidWidth")).toBe(true)

@@ -14,4 +14,8 @@
  * limitations under the License.
  */
 
-export { default } from "./ColorPicker"
+import { BaseButtonProps as BaseButtonPropsT } from "./BaseButton"
+
+export { default, BaseButtonKind, BaseButtonSize } from "./BaseButton"
+export { BaseButtonTooltip as BaseButtonTooltip } from "./BaseButtonTooltip"
+export type BaseButtonProps = BaseButtonPropsT

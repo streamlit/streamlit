@@ -33,7 +33,7 @@ import {
   StyledColorBlock,
 } from "./styled-components"
 
-export interface Props {
+export interface BaseColorPickerProps {
   disabled?: boolean
   width?: number
   value: string
@@ -52,12 +52,15 @@ interface State {
   value: string
 }
 
-class ColorPicker extends React.PureComponent<Props, State> {
+class BaseColorPicker extends React.PureComponent<
+  BaseColorPickerProps,
+  State
+> {
   public state: State = {
     value: this.props.value,
   }
 
-  public componentDidUpdate(prevProps: Props): void {
+  public componentDidUpdate(prevProps: BaseColorPickerProps): void {
     if (
       prevProps.value !== this.props.value &&
       this.props.value !== this.state.value
@@ -151,4 +154,4 @@ class ColorPicker extends React.PureComponent<Props, State> {
   }
 }
 
-export default ColorPicker
+export default BaseColorPicker

@@ -16,11 +16,11 @@
 
 import React, { ReactElement } from "react"
 import { DownloadButton as DownloadButtonProto } from "src/lib/proto"
-import UIButton, {
-  ButtonTooltip,
-  Kind,
-  Size,
-} from "src/lib/components/shared/Button"
+import BaseButton, {
+  BaseButtonTooltip,
+  BaseButtonKind,
+  BaseButtonSize,
+} from "src/lib/components/shared/BaseButton"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
@@ -52,10 +52,10 @@ function DownloadButton(props: Props): ReactElement {
 
   return (
     <div className="row-widget stDownloadButton" style={style}>
-      <ButtonTooltip help={element.help}>
-        <UIButton
-          kind={Kind.SECONDARY}
-          size={Size.SMALL}
+      <BaseButtonTooltip help={element.help}>
+        <BaseButton
+          kind={BaseButtonKind.SECONDARY}
+          size={BaseButtonSize.SMALL}
           disabled={disabled}
           onClick={handleDownloadClick}
           fluidWidth={element.useContainerWidth || false}
@@ -66,8 +66,8 @@ function DownloadButton(props: Props): ReactElement {
             isLabel
             isButton
           />
-        </UIButton>
-      </ButtonTooltip>
+        </BaseButton>
+      </BaseButtonTooltip>
     </div>
   )
 }

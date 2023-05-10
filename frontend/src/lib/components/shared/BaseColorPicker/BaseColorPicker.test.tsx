@@ -15,15 +15,17 @@
  */
 
 import React from "react"
-import { StyledColorPicker } from "src/lib/components/shared/ColorPicker/styled-components"
+import { StyledColorPicker } from "src/lib/components/shared/BaseColorPicker/styled-components"
 import { mount, shallow } from "src/lib/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker } from "react-color"
 
 import { LabelVisibilityOptions } from "src/lib/util/utils"
-import ColorPicker, { Props } from "./ColorPicker"
+import BaseColorPicker, { BaseColorPickerProps } from "./BaseColorPicker"
 
-const getProps = (props: Partial<Props> = {}): Props => ({
+const getProps = (
+  props: Partial<BaseColorPickerProps> = {}
+): BaseColorPickerProps => ({
   label: "Label",
   value: "#000000",
   width: 0,
@@ -34,7 +36,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 
 describe("ColorPicker widget", () => {
   const props = getProps()
-  const wrapper = shallow(<ColorPicker {...props} />)
+  const wrapper = shallow(<BaseColorPicker {...props} />)
   const colorPickerWrapper = wrapper
     .find(UIPopover)
     .renderProp("content")({ close: () => {} })
@@ -45,7 +47,7 @@ describe("ColorPicker widget", () => {
   })
 
   it("should render a label in the title", () => {
-    const wrapper = mount(<ColorPicker {...props} />)
+    const wrapper = mount(<BaseColorPicker {...props} />)
     const wrappedDiv = wrapper.find("StyledColorPicker")
     expect(wrappedDiv.find("StyledWidgetLabel").text()).toBe(props.label)
   })
@@ -54,7 +56,7 @@ describe("ColorPicker widget", () => {
     const props = getProps({
       labelVisibility: LabelVisibilityOptions.Hidden,
     })
-    const wrapper = mount(<ColorPicker {...props} />)
+    const wrapper = mount(<BaseColorPicker {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
       LabelVisibilityOptions.Hidden
     )
@@ -64,7 +66,7 @@ describe("ColorPicker widget", () => {
     const props = getProps({
       labelVisibility: LabelVisibilityOptions.Collapsed,
     })
-    const wrapper = mount(<ColorPicker {...props} />)
+    const wrapper = mount(<BaseColorPicker {...props} />)
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
       LabelVisibilityOptions.Collapsed
     )
@@ -137,19 +139,19 @@ describe("ColorPicker widget", () => {
 describe("ColorPicker widget with optional params", () => {
   it("renders with showValue", () => {
     const props = getProps({ showValue: true })
-    const wrapper = shallow(<ColorPicker {...props} />)
+    const wrapper = shallow(<BaseColorPicker {...props} />)
     expect(wrapper.find("StyledColorValue").exists()).toBe(true)
   })
 
   it("renders without showValue", () => {
     const props = getProps()
-    const wrapper = shallow(<ColorPicker {...props} />)
+    const wrapper = shallow(<BaseColorPicker {...props} />)
     expect(wrapper.find("StyledColorValue").exists()).toBe(false)
   })
 
   it("should render TooltipIcon if help text provided", () => {
     const props = getProps({ help: "help text" })
-    const wrapper = shallow(<ColorPicker {...props} />)
+    const wrapper = shallow(<BaseColorPicker {...props} />)
     expect(wrapper.find("TooltipIcon").prop("content")).toBe("help text")
   })
 })
@@ -157,7 +159,7 @@ describe("ColorPicker widget with optional params", () => {
 describe("ColorPicker error handler", () => {
   it("swallows SecurityErrors", () => {
     const props = getProps({})
-    const wrapper = shallow(<ColorPicker {...props} />)
+    const wrapper = shallow(<BaseColorPicker {...props} />)
     wrapper
       .find(StyledColorPicker)
       .simulateError({ name: "SecurityError", message: "", stack: [] })
@@ -172,7 +174,7 @@ describe("ColorPicker error handler", () => {
 
     expect(() => {
       const props = getProps({})
-      const wrapper = shallow(<ColorPicker {...props} />)
+      const wrapper = shallow(<BaseColorPicker {...props} />)
       wrapper.find(StyledColorPicker).simulateError(mockError)
     }).toThrowError(mockError)
   })

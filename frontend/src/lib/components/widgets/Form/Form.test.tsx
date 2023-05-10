@@ -45,25 +45,25 @@ describe("Form", () => {
     const wrapper = shallow(<Form {...props} />)
 
     // We have no Submit Button, but the app is still running
-    expect(wrapper.find("Alert").exists()).toBeFalsy()
+    expect(wrapper.find("BaseButton").exists()).toBeFalsy()
 
     // When the app stops running, we show an error if the submit button
     // is still missing.
     wrapper.setProps({ scriptRunState: ScriptRunState.NOT_RUNNING })
 
-    expect(wrapper.find("Alert").exists()).toBeTruthy()
-    expect(wrapper.find("Alert").prop("kind")).toBe(Kind.ERROR)
-    expect(wrapper.find("Alert").prop("body")).toContain(
+    expect(wrapper.find("AlertElement").exists()).toBeTruthy()
+    expect(wrapper.find("AlertElement").prop("kind")).toBe(Kind.ERROR)
+    expect(wrapper.find("AlertElement").prop("body")).toContain(
       "Missing Submit Button"
     )
 
     // If the app restarts, we continue to show the error...
     wrapper.setProps({ scriptRunState: ScriptRunState.RUNNING })
-    expect(wrapper.find("Alert").exists()).toBeTruthy()
+    expect(wrapper.find("AlertElement").exists()).toBeTruthy()
 
     // Until we get a submit button, and the error is removed immediately,
     // regardless of ScriptRunState.
     wrapper.setProps({ hasSubmitButton: true })
-    expect(wrapper.find("Alert").exists()).toBeFalsy()
+    expect(wrapper.find("AlertElement").exists()).toBeFalsy()
   })
 })

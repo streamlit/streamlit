@@ -18,7 +18,7 @@ import React from "react"
 import { shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
-import UIButton from "src/lib/components/shared/Button"
+import UIButton from "src/lib/components/shared/BaseButton"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 
 import { Button as ButtonProto } from "src/lib/proto"

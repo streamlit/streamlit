@@ -22,7 +22,7 @@ import Modal, {
   ModalFooter,
   ModalButton,
 } from "src/lib/components/shared/Modal"
-import { Kind } from "src/lib/components/shared/Button"
+import { BaseButtonKind } from "src/lib/components/shared/BaseButton"
 import { StyledShortcutLabel } from "./styled-components"
 
 export interface Props {
@@ -67,11 +67,14 @@ export class ScriptChangedDialog extends PureComponent<Props> {
           </ModalBody>
           <ModalFooter>
             {this.props.allowRunOnSave ? (
-              <ModalButton kind={Kind.TERTIARY} onClick={this.alwaysRerun}>
+              <ModalButton
+                kind={BaseButtonKind.TERTIARY}
+                onClick={this.alwaysRerun}
+              >
                 <StyledShortcutLabel>Always rerun</StyledShortcutLabel>
               </ModalButton>
             ) : null}
-            <ModalButton kind={Kind.SECONDARY} onClick={this.rerun}>
+            <ModalButton kind={BaseButtonKind.SECONDARY} onClick={this.rerun}>
               <StyledShortcutLabel>Rerun</StyledShortcutLabel>
             </ModalButton>
           </ModalFooter>
