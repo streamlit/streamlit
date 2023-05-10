@@ -18,7 +18,7 @@ import React from "react"
 import { shallow } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
-import UIButton from "src/lib/components/shared/BaseButton"
+import BaseButton from "src/lib/components/shared/BaseButton"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 
 import { Button as ButtonProto } from "src/lib/proto"
@@ -66,22 +66,24 @@ describe("Button widget", () => {
   it("should render a label within the button", () => {
     const wrapper = shallow(<Button {...getProps()} />)
 
-    const wrappedUIButton = wrapper.find(UIButton)
-    const wrappedButtonLabel = wrappedUIButton.find(StreamlitMarkdown)
+    const wrappedBaseButton = wrapper.find(BaseButton)
+    const wrappedBaseButtonlabel = wrappedBaseButton.find(StreamlitMarkdown)
 
-    expect(wrappedUIButton.length).toBe(1)
-    expect(wrappedButtonLabel.props().source).toBe(getProps().element.label)
-    expect(wrappedButtonLabel.props().isButton).toBe(true)
+    expect(wrappedBaseButton.length).toBe(1)
+    expect(wrappedBaseButtonlabel.props().source).toBe(
+      getProps().element.label
+    )
+    expect(wrappedBaseButtonlabel.props().isButton).toBe(true)
   })
 
-  describe("UIButton props should work", () => {
+  describe("BaseButton props should work", () => {
     it("onClick prop", () => {
       const props = getProps()
       const wrapper = shallow(<Button {...props} />)
 
-      const wrappedUIButton = wrapper.find(UIButton)
+      const wrappedBaseButton = wrapper.find(BaseButton)
 
-      wrappedUIButton.simulate("click")
+      wrappedBaseButton.simulate("click")
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
         props.element,
@@ -93,17 +95,17 @@ describe("Button widget", () => {
       const props = getProps()
       const wrapper = shallow(<Button {...props} />)
 
-      const wrappedUIButton = wrapper.find(UIButton)
+      const wrappedBaseButton = wrapper.find(BaseButton)
 
-      expect(wrappedUIButton.props().disabled).toBe(props.disabled)
+      expect(wrappedBaseButton.props().disabled).toBe(props.disabled)
     })
   })
 
   it("does not use container width by default", () => {
     const wrapper = shallow(<Button {...getProps()}>Hello</Button>)
 
-    const wrappedUIButton = wrapper.find(UIButton)
-    expect(wrappedUIButton.props().fluidWidth).toBe(false)
+    const wrappedBaseButton = wrapper.find(BaseButton)
+    expect(wrappedBaseButton.props().fluidWidth).toBe(false)
   })
 
   it("passes useContainerWidth property correctly", () => {
@@ -111,7 +113,7 @@ describe("Button widget", () => {
       <Button {...getProps({ useContainerWidth: true })}>Hello</Button>
     )
 
-    const wrappedUIButton = wrapper.find(UIButton)
-    expect(wrappedUIButton.props().fluidWidth).toBe(true)
+    const wrappedBaseButton = wrapper.find(BaseButton)
+    expect(wrappedBaseButton.props().fluidWidth).toBe(true)
   })
 })
