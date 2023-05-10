@@ -24,7 +24,7 @@ import { CustomThemeConfig } from "src/lib/proto"
 import BaseButton, {
   BaseButtonKind,
 } from "src/lib/components/shared/BaseButton"
-import ColorPicker from "src/lib/components/shared/ColorPicker"
+import ColorPicker from "src/lib/components/shared/BaseColorPicker"
 import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
 import UISelectbox from "src/lib/components/shared/Dropdown"
 import Icon from "src/lib/components/shared/Icon"
