@@ -7,8 +7,25 @@
         "src": "app"
     },
     "scripts": {
-        "buildLib": "yarn workspace @streamlit/lib build",
-        "buildApp": "yarn workspace @streamlit/app build"
+      "start": "yarn workspace @streamlit/app start",
+      "build": "yarn workspace @streamlit/lib build && yarn workspace @streamlit/app build",
+      "buildFast": "yarn buildLib && yarn workspace @streamlit/app buildFast",
+      "buildLib": "yarn workspace @streamlit/lib build",
+      "buildApp": "yarn workspace @streamlit/app build",
+      "buildAppFast": "yarn workspace @streamlit/app buildFast",
+      "test": "yarn workspace @streamlit/lib test && yarn workspace @streamlit/app test",
+      "testLib": "yarn workspace @streamlit/lib testWatch",
+      "testApp": "yarn workspace @streamlit/app testWatch",
+      "testLib:coverage": "yarn workspace @streamlit/lib test:coverage",
+      "testApp:coverage": "yarn workspace @streamlit/app test:coverage",
+      "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
+      "cy:run": "unset NODE_OPTIONS && cypress run",
+      "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
+      "typecheck": "yarn workspace @streamlit/lib typecheck && yarn workspace @streamlit/app typecheck",
+      "lint": "yarn lintApp && yarn lintLib",
+      "lintApp": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 app/src",
+      "lintLib": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 lib/src",
+      "prettier": "prettier --write --config .prettierrc app/src && prettier --write --config .prettierrc lib/src"
     },
     "browserslist": [
       ">0.2%",
