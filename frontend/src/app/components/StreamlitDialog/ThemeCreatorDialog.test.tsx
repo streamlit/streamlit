@@ -17,7 +17,7 @@
 import React from "react"
 import { CustomThemeConfig } from "src/lib/proto"
 import { shallow } from "src/lib/test_util"
-import ColorPicker from "src/lib/components/shared/BaseColorPicker"
+import BaseColorPicker from "src/lib/components/shared/BaseColorPicker"
 import UISelectbox from "src/lib/components/shared/Dropdown"
 import { baseTheme, darkTheme, lightTheme, toThemeInput } from "src/lib/theme"
 import { fonts } from "src/lib/theme/primitives/typography"
@@ -174,7 +174,7 @@ describe("Opened ThemeCreatorDialog", () => {
       .first()
       .dive()
 
-    const colorpicker = wrapper.find(ColorPicker)
+    const colorpicker = wrapper.find(BaseColorPicker)
     expect(colorpicker).toHaveLength(1)
 
     colorpicker.at(0).prop("onChange")("pink")
