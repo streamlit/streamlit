@@ -93,9 +93,9 @@ describe("FormSubmitButton", () => {
     const wrappedBaseButton = wrapper.find(BaseButton)
 
     expect(wrappedBaseButton.length).toBe(1)
-    const markdownInsideWrappedUIButton =
+    const markdownInsideWrappedBaseButton =
       wrappedBaseButton.find(StreamlitMarkdown)
-    expect(markdownInsideWrappedUIButton.props().source).toBe(
+    expect(markdownInsideWrappedBaseButton.props().source).toBe(
       getProps().element.label
     )
   })
