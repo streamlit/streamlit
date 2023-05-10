@@ -23,8 +23,8 @@
       "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
       "typecheck": "yarn workspace @streamlit/lib typecheck && yarn workspace @streamlit/app typecheck",
       "lint": "yarn lintApp && yarn lintLib",
-      "lintApp": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 app/src",
-      "lintLib": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 lib/src",
+      "lintApp": "yarn workspace @streamlit/app lint",
+      "lintLib": "yarn workspace @streamlit/lib lint",
       "prettier": "prettier --write --config .prettierrc app/src && prettier --write --config .prettierrc lib/src"
     },
     "browserslist": [
