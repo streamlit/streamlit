@@ -470,6 +470,8 @@ class DataEditorMixin:
         set, frozenset, datetime.timedelta, decimal.Decimal, fractions.Fraction,
         pandas.Interval, pandas.Period, pandas.Timedelta
 
+        Mixing data types within a column can make the column uneditable.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
