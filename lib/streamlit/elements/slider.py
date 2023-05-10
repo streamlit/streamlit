@@ -245,7 +245,7 @@ class SliderMixin:
             and upper bounds is rendered. For example, if set to `(1, 10)` the
             slider will have a selectable range between 1 and 10.
             Defaults to min_value.
-        step : int/float/timedelta or None
+        step : int, float, timedelta, or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 if a float,
             timedelta(days=1) if a date/datetime, timedelta(minutes=15) if a time
@@ -272,7 +272,7 @@ class SliderMixin:
         disabled : bool
             An optional boolean, which disables the slider if set to True. The
             default is False. This argument can only be supplied by keyword.
-        label_visibility : "visible" or "hidden" or "collapsed"
+        label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is

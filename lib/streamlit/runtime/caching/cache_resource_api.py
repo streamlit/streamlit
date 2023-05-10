@@ -284,7 +284,7 @@ class CacheResourceAPI:
             The function that creates the cached resource. Streamlit hashes the
             function's source code.
 
-        ttl : float or timedelta or str or None
+        ttl : float, timedelta, str, or None
             The maximum time to keep an entry in the cache, or None if cache
             entries should not expire. The default is None.
 

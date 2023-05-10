@@ -117,28 +117,28 @@ class ImageMixin:
             Image width. None means use the image width,
             but do not exceed the width of the column.
             Should be set for SVG images, as they have no default image width.
-        use_column_width : 'auto' or 'always' or 'never' or bool
-            If 'auto', set the image's width to its natural size,
+        use_column_width : "auto", "always", "never", or bool
+            If "auto", set the image's width to its natural size,
             but do not exceed the width of the column.
-            If 'always' or True, set the image's width to the column width.
-            If 'never' or False, set the image's width to its natural size.
+            If "always" or True, set the image's width to the column width.
+            If "never" or False, set the image's width to its natural size.
             Note: if set, `use_column_width` takes precedence over the `width` parameter.
         clamp : bool
             Clamp image pixel values to a valid range ([0-255] per channel).
             This is only meaningful for byte array images; the parameter is
             ignored for image URLs. If this is not set, and an image has an
             out-of-range value, an error will be thrown.
-        channels : 'RGB' or 'BGR'
+        channels : "RGB" or "BGR"
             If image is an nd.array, this parameter denotes the format used to
-            represent color information. Defaults to 'RGB', meaning
+            represent color information. Defaults to "RGB", meaning
             `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
             `image[:, :, 2]` is blue. For images coming from libraries like
-            OpenCV you should set this to 'BGR', instead.
-        output_format : 'JPEG', 'PNG', or 'auto'
+            OpenCV you should set this to "BGR", instead.
+        output_format : "JPEG", "PNG", or "auto"
             This parameter specifies the format to use when transferring the
             image data. Photos should use the JPEG format for lossy compression
             while diagrams should use the PNG format for lossless compression.
-            Defaults to 'auto' which identifies the compression type based
+            Defaults to "auto" which identifies the compression type based
             on the type and format of the image argument.
 
         Example

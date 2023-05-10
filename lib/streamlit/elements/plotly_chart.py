@@ -107,8 +107,8 @@ class PlotlyMixin:
             If True, set the chart width to the column width. This takes
             precedence over the figure's native `width` value.
 
-        sharing : {'streamlit', 'private', 'secret', 'public'}
-            Use 'streamlit' to insert the plot and all its dependencies
+        sharing : "streamlit", "private", "secret", or "public"
+            Use "streamlit" to insert the plot and all its dependencies
             directly in the Streamlit app using plotly's offline mode (default).
             Use any other sharing mode to send the chart to Plotly chart studio, which
             requires an account. See https://plot.ly/python/chart-studio/ for more information.

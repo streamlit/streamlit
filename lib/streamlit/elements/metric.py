@@ -92,7 +92,7 @@ class MetricMixin:
             sign (str), the arrow points down and the text is red; else the
             arrow points up and the text is green. If None (default), no delta
             indicator is shown.
-        delta_color : str
+        delta_color : "normal", "inverse", or "off"
              If "normal" (default), the delta indicator is shown as described
              above. If "inverse", it is red when positive and green when
              negative. This is useful when a negative change is considered
@@ -100,7 +100,7 @@ class MetricMixin:
              regardless of its value.
         help : str
             An optional tooltip that gets displayed next to the metric label.
-        label_visibility : "visible" or "hidden" or "collapsed"
+        label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is

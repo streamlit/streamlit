@@ -402,7 +402,7 @@ class CacheDataAPI:
         func : callable
             The function to cache. Streamlit hashes the function's source code.
 
-        ttl : float or timedelta or str or None
+        ttl : float, timedelta, str, or None
             The maximum time to keep an entry in the cache, or None if cache
             entries should not expire. The default is None. Note that ttl is
             incompatible with ``persist="disk"`` - ``ttl`` will be ignored if
@@ -422,7 +422,7 @@ class CacheDataAPI:
             a "cache miss" and the cached data is being created. If string,
             value of show_spinner param will be used for spinner text.
 
-        persist : str or boolean or None
+        persist : "disk", boolean, or None
             Optional location to persist cached data to. Passing "disk" (or True)
             will persist the cached data to the local disk. None (or False) will disable
             persistence. The default is None.

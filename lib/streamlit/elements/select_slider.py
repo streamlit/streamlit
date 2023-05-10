@@ -188,7 +188,7 @@ class SelectSliderMixin:
         disabled : bool
             An optional boolean, which disables the select slider if set to True.
             The default is False. This argument can only be supplied by keyword.
-        label_visibility : "visible" or "hidden" or "collapsed"
+        label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
