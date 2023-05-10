@@ -294,6 +294,7 @@ frontend-fast:
 # Lint the JS code
 jslint:
 	cd frontend; \
+		yarn buildLib;
 		yarn lint;
 
 .PHONY: tstypecheck
