@@ -197,6 +197,15 @@ def _fix_pydeck_mapbox_api_warning() -> None:
     os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
 
 
+def _fix_pydantic_validators():
+    try:
+        from pydantic import class_validators
+
+        class_validators.in_ipython = lambda: True
+    except ImportError:
+        pass
+
+
 def _print_new_version_message() -> None:
     if version.should_show_new_version_notice():
         click.secho(NEW_VERSION_TEXT)
@@ -381,6 +390,7 @@ def run(
     _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)
     _fix_pydeck_mapbox_api_warning()
+    _fix_pydantic_validators()
     _install_config_watchers(flag_options)
     _install_pages_watcher(main_script_path)
 
