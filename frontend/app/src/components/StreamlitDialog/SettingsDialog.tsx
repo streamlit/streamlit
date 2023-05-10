@@ -22,8 +22,8 @@ import React, {
 } from "react"
 import {
   ThemeConfig,
-  Button,
-  Kind,
+  BaseButton,
+  BaseButtonKind,
   Modal,
   ModalHeader,
   ModalBody,
@@ -76,9 +76,12 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   private renderThemeCreatorButton = (): ReactElement | false =>
     this.props.developerMode && (
       <div>
-        <Button onClick={this.props.openThemeCreator} kind={Kind.SECONDARY}>
+        <BaseButton
+          onClick={this.props.openThemeCreator}
+          kind={BaseButtonKind.SECONDARY}
+        >
           Edit active theme
-        </Button>
+        </BaseButton>
       </div>
     )
 

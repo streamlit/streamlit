@@ -15,7 +15,7 @@
  */
 
 import React, { FunctionComponent } from "react"
-import { Button, Kind, Modal, ModalHeader, ModalBody } from "@streamlit/lib"
+import { BaseButton, BaseButtonKind, Modal, ModalHeader, ModalBody } from "@streamlit/lib"
 import {
   StyledDialogContainer,
   StyledRow,
@@ -77,9 +77,12 @@ const VideoRecordedDialog: FunctionComponent<Props> = ({
             <StyledFirstColumn>Step 2</StyledFirstColumn>
             <StyledSecondColumn>
               <StyledDownloadButtonContainer>
-                <Button kind={Kind.SECONDARY} onClick={handleDownloadClick}>
+                <BaseButton
+                  kind={BaseButtonKind.SECONDARY}
+                  onClick={handleDownloadClick}
+                >
                   Save video to disk
-                </Button>
+                </BaseButton>
               </StyledDownloadButtonContainer>
               <StyledVideoFormatInstructions>
                 This video is encoded in the{" "}

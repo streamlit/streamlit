@@ -21,8 +21,8 @@ import humanizeString from "humanize-string"
 import mapValues from "lodash/mapValues"
 
 import {
-  Button,
-  Kind,
+  BaseButton,
+  BaseButtonKind,
   ColorPicker,
   Modal,
   ModalHeader,
@@ -308,7 +308,7 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
             </StyledSmall>
 
             <div>
-              <Button onClick={copyConfig} kind={Kind.SECONDARY}>
+              <BaseButton onClick={copyConfig} kind={BaseButtonKind.SECONDARY}>
                 {copied ? (
                   <React.Fragment>
                     {"Copied to clipboard "}
@@ -321,7 +321,7 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
                 ) : (
                   "Copy theme to clipboard"
                 )}
-              </Button>
+              </BaseButton>
             </div>
           </StyledFullRow>
         </StyledDialogBody>

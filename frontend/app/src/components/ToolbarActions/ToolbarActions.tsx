@@ -17,8 +17,8 @@
 import React, { ReactElement } from "react"
 
 import {
-  Button,
-  Kind,
+  BaseButton,
+  BaseButtonKind,
   IGuestToHostMessage,
   IToolbarItem,
 } from "@streamlit/lib"
@@ -40,12 +40,12 @@ export function ActionButton({
 }: ActionButtonProps): ReactElement {
   return (
     <div className="stActionButton">
-      <Button onClick={onClick} kind={Kind.HEADER_BUTTON}>
+      <BaseButton onClick={onClick} kind={BaseButtonKind.HEADER_BUTTON}>
         <StyledActionButtonContainer>
           {icon && <StyledActionButtonIcon icon={icon} />}
           {label && <span>{label}</span>}
         </StyledActionButtonContainer>
-      </Button>
+      </BaseButton>
     </div>
   )
 }

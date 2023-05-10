@@ -21,8 +21,8 @@ import { Resizable } from "re-resizable"
 
 import {
   Icon,
-  Button,
-  Kind,
+  BaseButton,
+  BaseButtonKind,
   EmotionTheme,
   localStorageAvailable,
   StreamlitEndpoints,
@@ -227,9 +227,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             isCollapsed={collapsedSidebar}
             data-testid="collapsedControl"
           >
-            <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
+            <BaseButton
+              kind={BaseButtonKind.HEADER_BUTTON}
+              onClick={this.toggleCollapse}
+            >
               <Icon content={ChevronRight} size="lg" />
-            </Button>
+            </BaseButton>
           </StyledSidebarCollapsedControl>
         )}
         <Resizable
@@ -262,9 +265,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             ref={this.sidebarRef}
           >
             <StyledSidebarCloseButton>
-              <Button kind={Kind.HEADER_BUTTON} onClick={this.toggleCollapse}>
+              <BaseButton
+                kind={BaseButtonKind.HEADER_BUTTON}
+                onClick={this.toggleCollapse}
+              >
                 <Icon content={Close} size="lg" />
-              </Button>
+              </BaseButton>
             </StyledSidebarCloseButton>
             {!hideSidebarNav && (
               <SidebarNav

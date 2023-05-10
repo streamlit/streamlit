@@ -30,12 +30,12 @@ const getProps = (
 })
 
 describe("ErrorElement element", () => {
-  it("renders an Alert without crashing", () => {
+  it("renders an AlertElement without crashing", () => {
     const props = getProps()
     const wrapper = shallow(<ErrorElement {...props} />)
 
     expect(wrapper).toBeDefined()
-    expect(wrapper.find("Alert")).toBeDefined()
+    expect(wrapper.find("AlertElement")).toBeDefined()
   })
 
   it("renders stack without first line and trimmed lines", () => {

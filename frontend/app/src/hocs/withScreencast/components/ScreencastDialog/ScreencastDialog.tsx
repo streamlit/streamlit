@@ -16,7 +16,7 @@
 
 import React, { ChangeEvent, PureComponent, ReactNode } from "react"
 import {
-  Kind,
+  BaseButtonKind,
   Modal,
   ModalHeader,
   ModalBody,
@@ -93,7 +93,10 @@ class ScreencastDialog extends PureComponent<Props, State> {
           </StyledInstruction>
         </ModalBody>
         <ModalFooter>
-          <ModalButton kind={Kind.SECONDARY} onClick={this.handleStartButton}>
+          <ModalButton
+            kind={BaseButtonKind.SECONDARY}
+            onClick={this.handleStartButton}
+          >
             Start recording!
           </ModalButton>
         </ModalFooter>

@@ -107,7 +107,7 @@ class LayoutsMixin:
                 For example, `st.columns([3, 1, 2])` creates 3 columns where
                 the first column is 3 times the width of the second, and the last
                 column is 2 times that width.
-        gap : string ("small", "medium", or "large")
+        gap : "small", "medium", or "large"
             An optional string, which indicates the size of the gap between each column.
             The default is a small gap between columns. This argument can only be supplied by
             keyword.

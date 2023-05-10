@@ -59,7 +59,7 @@ import { ElementNode } from "src/AppNode"
 import { Quiver } from "src/dataframes/Quiver"
 
 // Load (non-lazy) elements.
-import Alert from "src/components/elements/Alert"
+import AlertElement from "src/components/elements/AlertElement"
 import ArrowTable from "src/components/elements/ArrowTable"
 import DocString from "src/components/elements/DocString"
 import ErrorBoundary from "src/components/shared/ErrorBoundary"
@@ -68,11 +68,11 @@ import Json from "src/components/elements/Json"
 import Markdown from "src/components/elements/Markdown"
 import Metric from "src/components/elements/Metric"
 import Table from "src/components/elements/Table"
-import Text from "src/components/elements/Text"
+import TextElement from "src/components/elements/TextElement"
 import { ComponentInstance } from "src/components/widgets/CustomComponent"
 import { Kind } from "src/components/shared/AlertContainer"
 import { VegaLiteChartElement } from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
-import { getAlertKind } from "src/components/elements/Alert/Alert"
+import { getAlertKind } from "src/components/elements/AlertElement/AlertElement"
 
 import Maybe from "src/components/core/Maybe"
 import { FormSubmitContent } from "src/components/widgets/Form"
@@ -211,11 +211,11 @@ const RawElementNodeRenderer = (
     case "alert": {
       const alertProto = node.element.alert as AlertProto
       return (
-        <Alert
+        <AlertElement
           width={width}
           icon={alertProto.icon}
           body={alertProto.body}
-          kind={getAlertKind(alertProto.format)}
+          kind={getAlertElementKind(alertProto.format)}
         />
       )
     }
@@ -365,7 +365,9 @@ const RawElementNodeRenderer = (
       )
 
     case "text":
-      return <Text width={width} element={node.element.text as TextProto} />
+      return (
+        <TextElement width={width} element={node.element.text as TextProto} />
+      )
 
     case "metric":
       return <Metric element={node.element.metric as MetricProto} />
@@ -688,7 +690,7 @@ const ElementNodeRenderer = (
         <ErrorBoundary width={width}>
           <Suspense
             fallback={
-              <Alert body="Loading..." kind={Kind.INFO} width={width} />
+              <AlertElement body="Loading..." kind={Kind.INFO} width={width} />
             }
           >
             <RawElementNodeRenderer {...props} isStale={isStale} />

@@ -111,16 +111,16 @@ class NumberInputMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        min_value : int or float or None
+        min_value : int, float, or None
             The minimum permitted value.
             If None, there will be no minimum.
-        max_value : int or float or None
+        max_value : int, float, or None
             The maximum permitted value.
             If None, there will be no maximum.
-        value : int or float or None
+        value : int, float, or None
             The value of this widget when it first renders.
             Defaults to min_value, or 0.0 if min_value is None
-        step : int or float or None
+        step : int, float, or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
             If the value is not specified, the format parameter will be used.
@@ -145,7 +145,7 @@ class NumberInputMixin:
             An optional boolean, which disables the number input if set to
             True. The default is False. This argument can only be supplied by
             keyword.
-        label_visibility : "visible" or "hidden" or "collapsed"
+        label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is

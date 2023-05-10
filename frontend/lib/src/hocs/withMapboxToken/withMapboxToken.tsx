@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import Alert from "src/components/elements/Alert"
+import AlertElement from "src/components/elements/AlertElement"
 import { Kind } from "src/components/shared/AlertContainer"
 import { MapboxToken } from "src/hocs/withMapboxToken/MapboxToken"
 import { ensureError } from "src/util/ErrorHandling"
@@ -113,7 +113,9 @@ const withMapboxToken =
 
         // If our mapboxToken hasn't been retrieved yet, show a loading alert.
         if (isFetching) {
-          return <Alert body={"Loading..."} kind={Kind.INFO} width={width} />
+          return (
+            <AlertElement body={"Loading..."} kind={Kind.INFO} width={width} />
+          )
         }
 
         // We have the mapbox token. Pass it through to our component.
