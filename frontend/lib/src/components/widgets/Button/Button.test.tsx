@@ -66,7 +66,7 @@ describe("Button widget", () => {
   it("should render a label within the button", () => {
     const wrapper = shallow(<Button {...getProps()} />)
 
-    const wrappedUIButton = wrapper.find(UIButton)
+    const wrappedUIButton = wrapper.find(BaseButton)
     const wrappedButtonLabel = wrappedUIButton.find(StreamlitMarkdown)
 
     expect(wrappedUIButton.length).toBe(1)
@@ -79,7 +79,7 @@ describe("Button widget", () => {
       const props = getProps()
       const wrapper = shallow(<Button {...props} />)
 
-      const wrappedUIButton = wrapper.find(UIButton)
+      const wrappedUIButton = wrapper.find(BaseButton)
 
       wrappedUIButton.simulate("click")
 
@@ -93,7 +93,7 @@ describe("Button widget", () => {
       const props = getProps()
       const wrapper = shallow(<Button {...props} />)
 
-      const wrappedUIButton = wrapper.find(UIButton)
+      const wrappedUIButton = wrapper.find(BaseButton)
 
       expect(wrappedUIButton.props().disabled).toBe(props.disabled)
     })
@@ -102,7 +102,7 @@ describe("Button widget", () => {
   it("does not use container width by default", () => {
     const wrapper = shallow(<Button {...getProps()}>Hello</Button>)
 
-    const wrappedUIButton = wrapper.find(UIButton)
+    const wrappedUIButton = wrapper.find(BaseButton)
     expect(wrappedUIButton.props().fluidWidth).toBe(false)
   })
 
@@ -111,7 +111,7 @@ describe("Button widget", () => {
       <Button {...getProps({ useContainerWidth: true })}>Hello</Button>
     )
 
-    const wrappedUIButton = wrapper.find(UIButton)
+    const wrappedUIButton = wrapper.find(BaseButton)
     expect(wrappedUIButton.props().fluidWidth).toBe(true)
   })
 })
