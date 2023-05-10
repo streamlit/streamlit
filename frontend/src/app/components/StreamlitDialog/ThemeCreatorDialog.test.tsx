@@ -246,7 +246,7 @@ describe("Opened ThemeCreatorDialog", () => {
 
     const props = getProps()
     const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-    const copyBtn = wrapper.find("Button")
+    const copyBtn = wrapper.find("BaseButton")
 
     expect(copyBtn.prop("children")).toBe("Copy theme to clipboard")
     copyBtn.simulate("click")
