@@ -465,12 +465,11 @@ class DataEditorMixin:
         Display a data editor widget that allows you to edit DataFrames and
         many other data structures in a table-like UI.
 
-        The following types are not supported for editing as values within your
-        data structure: complex, list, tuple, bytes, bytearray, memoryview, dict,
-        set, frozenset, datetime.timedelta, decimal.Decimal, fractions.Fraction,
-        pandas.Interval, pandas.Period, pandas.Timedelta
-
         Mixing data types within a column can make the column uneditable.
+        Additionally, the following types are not supported for editing as values
+        within your data structure: complex, list, tuple, bytes, bytearray,
+        memoryview, dict, set, frozenset, datetime.timedelta, decimal.Decimal,
+        fractions.Fraction, pandas.Interval, pandas.Period, pandas.Timedelta
 
         Parameters
         ----------
