@@ -22,7 +22,6 @@ from unittest.mock import MagicMock
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
-from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
@@ -37,11 +36,6 @@ from streamlit.runtime.scriptrunner import (
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.web.server.server import MEDIA_ENDPOINT
-
-
-class FakeAppSession(AppSession):
-    def __init__(self):
-        self._session_state = SessionState()
 
 
 class DeltaGeneratorTestCase(unittest.TestCase):
@@ -62,8 +56,6 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             user_info={"email": "test@test.com"},
         )
         add_script_run_ctx(threading.current_thread(), self.script_run_ctx)
-
-        self.app_session = FakeAppSession()
 
         # Create a MemoryMediaFileStorage instance, and the MediaFileManager
         # singleton.
