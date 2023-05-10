@@ -183,7 +183,15 @@ export function isMissingValueCell(
 /**
  * Returns an empty cell.
  */
-export function getEmptyCell(): LoadingCell {
+export function getEmptyCell(missingCell = false): LoadingCell {
+  if (missingCell) {
+    return {
+      kind: GridCellKind.Loading,
+      allowOverlay: false,
+      isMissingValue: true,
+    } as LoadingCell
+  }
+
   return {
     kind: GridCellKind.Loading,
     allowOverlay: false,

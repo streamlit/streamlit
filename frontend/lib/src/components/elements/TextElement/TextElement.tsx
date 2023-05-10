@@ -15,27 +15,30 @@
  */
 
 import React, { ReactElement } from "react"
-import TooltipIcon from "src/components/shared/TooltipIcon"
-import { Placement } from "src/components/shared/Tooltip"
-import { StyledTooltipNormal, StyledTooltipMobile } from "./styled-components"
+import { Text as TextProto } from "src/proto"
+import {
+  InlineTooltipIcon,
+  StyledLabelHelpWrapper,
+} from "src/components/shared/TooltipIcon"
+import { StyledText } from "./styled-components"
 
-interface Props {
-  children: ReactElement
-  help?: string
+export interface TextProps {
+  width: number
+  element: TextProto
 }
 
-export function ButtonTooltip({ children, help }: Props): ReactElement {
-  if (!help) {
-    return children
-  }
+/**
+ * Functional element representing preformatted (plain) text.
+ */
+export default function TextElement({
+  width,
+  element,
+}: TextProps): ReactElement {
+  const styleProp = { width }
   return (
-    <div className="stTooltipIcon">
-      <StyledTooltipNormal>
-        <TooltipIcon content={help} placement={Placement.TOP}>
-          {children}
-        </TooltipIcon>
-      </StyledTooltipNormal>
-      <StyledTooltipMobile>{children}</StyledTooltipMobile>
-    </div>
+    <StyledLabelHelpWrapper style={styleProp} className="stTextLabelWrapper">
+      <StyledText data-testid="stText">{element.body}</StyledText>
+      {element.help && <InlineTooltipIcon content={element.help} />}
+    </StyledLabelHelpWrapper>
   )
 }

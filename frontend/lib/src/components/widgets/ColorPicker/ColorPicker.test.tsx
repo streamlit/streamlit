@@ -21,7 +21,7 @@ import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ColorPicker as ColorPickerProto } from "src/proto"
 import { WidgetStateManager } from "src/WidgetStateManager"
 import { ChromePicker } from "react-color"
-import { StyledChromePicker } from "src/components/shared/ColorPicker/styled-components"
+import { StyledChromePicker } from "src/components/shared/BaseColorPicker/styled-components"
 
 import ColorPicker, { Props } from "./ColorPicker"
 

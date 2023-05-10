@@ -23,7 +23,7 @@ import {
   ModalFooter as UIModalFooter,
   ModalProps,
 } from "baseui/modal"
-import Button, { ButtonProps } from "src/components/shared/Button"
+import BaseButton, { BaseButtonProps } from "src/components/shared/BaseButton"
 import merge from "lodash/merge"
 import { EmotionTheme } from "src/theme"
 import { StyledModalButton } from "./styled-components"
@@ -118,9 +118,9 @@ function ModalFooter({ children }: ModalFooterProps): ReactElement {
   )
 }
 
-const ModalButton: FunctionComponent<ButtonProps> = buttonProps => (
+const ModalButton: FunctionComponent<BaseButtonProps> = buttonProps => (
   <StyledModalButton>
-    <Button {...buttonProps} />
+    <BaseButton {...buttonProps} />
   </StyledModalButton>
 )
 

@@ -18,7 +18,7 @@ import React from "react"
 import { shallow } from "src/test_util"
 import { WidgetStateManager } from "src/WidgetStateManager"
 
-import UIButton from "src/components/shared/Button"
+import BaseButton from "src/components/shared/BaseButton"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 
 import { DownloadButton as DownloadButtonProto } from "src/proto"
@@ -70,7 +70,7 @@ describe("DownloadButton widget", () => {
   it("renders a label within the button", () => {
     const wrapper = shallow(<DownloadButton {...getProps()} />)
 
-    const wrappedUIButton = wrapper.find(UIButton)
+    const wrappedUIButton = wrapper.find(BaseButton)
     const wrappedButtonLabel = wrappedUIButton.find(StreamlitMarkdown)
 
     expect(wrappedUIButton.length).toBe(1)
@@ -83,7 +83,7 @@ describe("DownloadButton widget", () => {
       const props = getProps()
       const wrapper = shallow(<DownloadButton {...props} />)
 
-      const wrappedUIButton = wrapper.find(UIButton)
+      const wrappedUIButton = wrapper.find(BaseButton)
 
       wrappedUIButton.simulate("click")
 
@@ -101,7 +101,7 @@ describe("DownloadButton widget", () => {
       const props = getProps()
       const wrapper = shallow(<DownloadButton {...props} />)
 
-      const wrappedUIButton = wrapper.find(UIButton)
+      const wrappedUIButton = wrapper.find(BaseButton)
 
       expect(wrappedUIButton.props().disabled).toBe(props.disabled)
     })
@@ -111,7 +111,7 @@ describe("DownloadButton widget", () => {
         <DownloadButton {...getProps()}>Hello</DownloadButton>
       )
 
-      const wrappedUIButton = wrapper.find(UIButton)
+      const wrappedUIButton = wrapper.find(BaseButton)
       expect(wrappedUIButton.props().fluidWidth).toBe(false)
     })
 
@@ -122,7 +122,7 @@ describe("DownloadButton widget", () => {
         </DownloadButton>
       )
 
-      const wrappedUIButton = wrapper.find(UIButton)
+      const wrappedUIButton = wrapper.find(BaseButton)
       expect(wrappedUIButton.props().fluidWidth).toBe(true)
     })
   })

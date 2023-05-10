@@ -64,7 +64,7 @@ describe("withMapboxToken", () => {
     const WrappedComponent = withMapboxToken("st.test")(TestComponent)
     const wrapper = shallow(<WrappedComponent {...props} />)
 
-    expect(wrapper.find("Alert").exists()).toBe(true)
+    expect(wrapper.find("AlertElement").exists()).toBe(true)
   })
 
   it("passes mapboxToken to wrapped component", async () => {

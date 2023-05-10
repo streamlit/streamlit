@@ -30,10 +30,13 @@ df = pd.DataFrame(
     columns=("col_%d" % i for i in range(5)),
 )
 
-# disabled parameter:
+# Disabled parameter:
 st.experimental_data_editor(df, disabled=True)
 st.experimental_data_editor(df, disabled=["col_4", "col_1"])
 
-# hide index parameter:
+# Hide index parameter:
 st.experimental_data_editor(df, hide_index=True)
 st.experimental_data_editor(df, hide_index=False)
+
+# Column order parameter:
+st.experimental_data_editor(df, column_order=["col_4", "col_3", "col_0"])

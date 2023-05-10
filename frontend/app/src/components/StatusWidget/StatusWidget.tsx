@@ -19,8 +19,8 @@ import { Ellipses, Info, Warning } from "@emotion-icons/open-iconic"
 import { withTheme } from "@emotion/react"
 import {
   RERUN_PROMPT_MODAL_DIALOG,
-  Button,
-  Kind,
+  BaseButton,
+  BaseButtonKind,
   Tooltip,
   Placement,
   ScriptRunState,
@@ -439,14 +439,14 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   ): ReactNode {
     return (
       <StyledAppButtonContainer isMinimized={isMinimized}>
-        <Button
-          kind={Kind.HEADER_BUTTON}
+        <BaseButton
+          kind={BaseButtonKind.HEADER_BUTTON}
           disabled={disabled}
           fluidWidth
           onClick={onClick}
         >
           {title}
-        </Button>
+        </BaseButton>
       </StyledAppButtonContainer>
     )
   }

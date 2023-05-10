@@ -30,5 +30,9 @@ df = pd.DataFrame(
     columns=("col_%d" % i for i in range(5)),
 )
 
+# Hide index parameter:
 st.dataframe(df, hide_index=True)
 st.dataframe(df, hide_index=False)
+
+# Column order parameter:
+st.dataframe(df, column_order=["col_4", "col_3", "col_0"])

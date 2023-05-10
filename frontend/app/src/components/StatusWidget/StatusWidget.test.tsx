@@ -121,7 +121,7 @@ describe("Tooltip element", () => {
     const stopScript = jest.fn()
     const wrapper = mount(<StatusWidget {...getProps({ stopScript })} />)
 
-    wrapper.find("button").simulate("click")
+    wrapper.find("BaseButton").simulate("click")
 
     expect(stopScript).toBeCalled()
   })
@@ -148,9 +148,9 @@ describe("Tooltip element", () => {
       })
     )
 
-    expect(wrapper.find("Button").length).toEqual(2)
+    expect(wrapper.find("BaseButton").length).toEqual(2)
 
-    wrapper.find("Button").at(0).simulate("click")
+    wrapper.find("BaseButton").at(0).simulate("click")
     expect(rerunScript).toBeCalledWith(false)
   })
 
@@ -176,9 +176,9 @@ describe("Tooltip element", () => {
       })
     )
 
-    expect(wrapper.find("Button").length).toEqual(2)
+    expect(wrapper.find("BaseButton").length).toEqual(2)
 
-    wrapper.find("Button").at(1).simulate("click")
+    wrapper.find("BaseButton").at(1).simulate("click")
     expect(rerunScript).toBeCalledWith(true)
   })
 
@@ -205,7 +205,7 @@ describe("Tooltip element", () => {
       })
     )
 
-    expect(wrapper.find("Button").length).toEqual(1)
+    expect(wrapper.find("BaseButton").length).toEqual(1)
   })
 })
 

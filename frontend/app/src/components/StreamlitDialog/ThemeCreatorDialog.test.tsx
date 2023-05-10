@@ -18,7 +18,7 @@ import React from "react"
 import {
   UISelectbox,
   shallow,
-  ColorPicker,
+  BaseColorPicker,
   baseTheme,
   darkTheme,
   lightTheme,
@@ -179,7 +179,7 @@ describe("Opened ThemeCreatorDialog", () => {
       .first()
       .dive()
 
-    const colorpicker = wrapper.find(ColorPicker)
+    const colorpicker = wrapper.find(BaseColorPicker)
     expect(colorpicker).toHaveLength(1)
 
     colorpicker.at(0).prop("onChange")("pink")
@@ -251,7 +251,7 @@ describe("Opened ThemeCreatorDialog", () => {
 
     const props = getProps()
     const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-    const copyBtn = wrapper.find("Button")
+    const copyBtn = wrapper.find("BaseButton")
 
     expect(copyBtn.prop("children")).toBe("Copy theme to clipboard")
     copyBtn.simulate("click")

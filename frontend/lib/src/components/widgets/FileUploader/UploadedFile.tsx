@@ -20,7 +20,7 @@ import {
   Error,
   InsertDriveFile,
 } from "@emotion-icons/material-outlined"
-import Button, { Kind } from "src/components/shared/Button"
+import BaseButton, { BaseButtonKind } from "src/components/shared/BaseButton"
 import Icon from "src/components/shared/Icon"
 import ProgressBar, { Size } from "src/components/shared/ProgressBar"
 import { Small } from "src/components/shared/TextElements"
@@ -101,9 +101,12 @@ const UploadedFile = ({ fileInfo, onDelete }: Props): React.ReactElement => {
         <UploadedFileStatus fileInfo={fileInfo} />
       </StyledUploadedFileData>
       <div data-testid="fileDeleteBtn">
-        <Button onClick={() => onDelete(fileInfo.id)} kind={Kind.MINIMAL}>
+        <BaseButton
+          onClick={() => onDelete(fileInfo.id)}
+          kind={BaseButtonKind.MINIMAL}
+        >
           <Icon content={Clear} size="lg" />
-        </Button>
+        </BaseButton>
       </div>
     </StyledUploadedFile>
   )
