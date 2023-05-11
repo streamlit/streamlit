@@ -3,9 +3,6 @@
   "version": "1.21.0",
   "private": true,
   "workspaces": ["app", "lib"],
-  "directories": {
-      "src": "app"
-  },
   "scripts": {
     "start": "yarn workspace @streamlit/app start",
     "build": "yarn workspace @streamlit/lib build && yarn workspace @streamlit/app build",
