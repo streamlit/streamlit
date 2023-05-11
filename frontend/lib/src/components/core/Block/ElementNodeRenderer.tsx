@@ -72,7 +72,7 @@ import TextElement from "src/components/elements/TextElement"
 import { ComponentInstance } from "src/components/widgets/CustomComponent"
 import { Kind } from "src/components/shared/AlertContainer"
 import { VegaLiteChartElement } from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
-import { getAlertKind } from "src/components/elements/AlertElement/AlertElement"
+import { getAlertElementKind } from "src/components/elements/AlertElement/AlertElement"
 
 import Maybe from "src/components/core/Maybe"
 import { FormSubmitContent } from "src/components/widgets/Form"
