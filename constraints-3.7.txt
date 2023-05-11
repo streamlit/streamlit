@@ -29,7 +29,7 @@ fonttools==4.38.0
 gast==0.4.0
 gitdb==4.0.10
 GitPython==3.1.31
-google-auth==2.17.3
+google-auth==2.18.0
 google-auth-oauthlib==0.4.6
 google-pasta==0.2.0
 graphviz==0.20.1
@@ -146,7 +146,7 @@ types-urllib3==1.26.25.13
 typing_extensions==4.5.0
 tzdata==2023.3
 tzlocal==4.3
-urllib3==2.0.2
+urllib3==1.26.15
 validators==0.20.0
 virtualenv==20.23.0
 watchdog==3.0.0
