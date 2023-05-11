@@ -530,8 +530,8 @@ def convert_anything_to_df(
             )
         return data
 
-    # This is inefficient as the data will be converted back to Arrow
-    # when marshalled to protobuf, but area/bar/line charts need
+    # This is inefficient when data is a pyarrow.Table as it will be converted
+    # back to Arrow when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
     if hasattr(data, "to_pandas"):
         return data.to_pandas()
