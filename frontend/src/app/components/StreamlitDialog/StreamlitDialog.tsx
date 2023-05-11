@@ -350,11 +350,6 @@ function warningDialog(props: WarningProps): ReactElement {
     <Modal isOpen onClose={props.onClose}>
       <ModalHeader>{props.title}</ModalHeader>
       <ModalBody>{props.msg}</ModalBody>
-      <ModalFooter>
-        <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
-          Done
-        </ModalButton>
-      </ModalFooter>
     </Modal>
   )
 }
