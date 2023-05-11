@@ -41,7 +41,6 @@ import {
   StyledDialogBody,
   StyledFullRow,
   StyledBackButton,
-  StyledHr,
   StyledSmall,
 } from "./styled-components"
 
@@ -290,10 +289,6 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
 
           <StyledFullRow>
             <ThemeOption name="font" value={String(themeInput.font)} />
-          </StyledFullRow>
-
-          <StyledFullRow>
-            <StyledHr />
           </StyledFullRow>
 
           <StyledFullRow>
