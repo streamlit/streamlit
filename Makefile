@@ -290,17 +290,24 @@ frontend-fast:
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
 
+.PHONY: frontend-lib
+frontend-lib:
+	cd frontend/ ; yarn run buildLib;
+
+.PHONY: frontend-app
+frontend-app:
+	cd frontend/ ; yarn run buildApp
+
 .PHONY: jslint
 # Lint the JS code
 jslint:
-	./scripts/validate_frontend_lib_imports.py frontend/src/lib
 	cd frontend; \
 		yarn lint;
 
 .PHONY: tstypecheck
 # Type check the JS/TS code
 tstypecheck:
-	pre-commit run typecheck --all-files --hook-stage manual
+	pre-commit run typecheck-lib --all-files --hook-stage manual && pre-commit run typecheck-app --all-files --hook-stage manual
 
 .PHONY: jsformat
 # Fix formatting issues in our JavaScript & TypeScript files.
