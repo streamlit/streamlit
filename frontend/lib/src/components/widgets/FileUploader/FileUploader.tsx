@@ -26,11 +26,7 @@ import {
 } from "src/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 
-import {
-  FileSize,
-  getSizeDisplay,
-  sizeConverter,
-} from "src/util/FileHelper"
+import { FileSize, getSizeDisplay, sizeConverter } from "src/util/FileHelper"
 import { FileUploadClient } from "src/FileUploadClient"
 import { WidgetStateManager } from "src/WidgetStateManager"
 import {

@@ -20,11 +20,7 @@
 
 import camelcase from "camelcase"
 import { fromJS } from "immutable"
-import {
-  dispatchOneOf,
-  mapOneOf,
-  updateOneOf,
-} from "src/util/immutableProto"
+import { dispatchOneOf, mapOneOf, updateOneOf } from "src/util/immutableProto"
 import { Format } from "src/util/format"
 
 // Must match dict_builder.py

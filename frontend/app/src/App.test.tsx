@@ -52,10 +52,7 @@ import {
   PagesChanged,
 } from "@streamlit/lib"
 import { ConnectionState } from "src/connection/ConnectionState"
-import {
-  DialogType,
-  StreamlitDialog,
-} from "src/components/StreamlitDialog"
+import { DialogType, StreamlitDialog } from "src/components/StreamlitDialog"
 import { App, Props, showDevelopmentOptions } from "./App"
 import MainMenu from "src/components/MainMenu"
 import ToolbarActions from "src/components/ToolbarActions"

@@ -20,9 +20,7 @@ import {
   Error,
   InsertDriveFile,
 } from "@emotion-icons/material-outlined"
-import BaseButton, {
-  BaseButtonKind,
-} from "src/components/shared/BaseButton"
+import BaseButton, { BaseButtonKind } from "src/components/shared/BaseButton"
 import Icon from "src/components/shared/Icon"
 import ProgressBar, { Size } from "src/components/shared/ProgressBar"
 import { Small } from "src/components/shared/TextElements"
