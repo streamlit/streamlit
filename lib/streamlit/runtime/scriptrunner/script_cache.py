@@ -17,8 +17,9 @@ from __future__ import annotations
 import threading
 from typing import Any
 
-from streamlit import config, source_util
+from streamlit import config
 from streamlit.runtime.scriptrunner import magic
+from streamlit.source_util import open_python_file
 
 
 class ScriptCache:
@@ -61,7 +62,7 @@ class ScriptCache:
                 return bytecode
 
             # Populate the cache
-            with source_util.open_python_file(script_path) as f:
+            with open_python_file(script_path) as f:
                 filebody = f.read()
 
             if config.get_option("runner.magicEnabled"):
