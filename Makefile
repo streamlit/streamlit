@@ -291,10 +291,12 @@ frontend-fast:
 		frontend/build/ lib/streamlit/static/
 
 .PHONY: frontend-lib
+# Build the frontend library
 frontend-lib:
 	cd frontend/ ; yarn run buildLib;
 
 .PHONY: frontend-app
+# Build the frontend app. One must build the frontend lib first before building the app.
 frontend-app:
 	cd frontend/ ; yarn run buildApp
 
