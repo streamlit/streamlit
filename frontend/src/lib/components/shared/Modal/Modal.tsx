@@ -34,9 +34,7 @@ export interface ModalHeaderProps {
 }
 
 function ModalHeader({ children }: ModalHeaderProps): ReactElement {
-  const { genericFonts, fontSizes, spacing, colors }: EmotionTheme = useTheme()
-  const { activeTheme } = React.useContext(LibContext)
-  const isDarkTheme = activeTheme.name === "Dark"
+  const { genericFonts, fontSizes, spacing }: EmotionTheme = useTheme()
 
   return (
     <UIModalHeader
@@ -59,7 +57,6 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         alignItems: "center",
         maxHeight: "80vh",
         flexDirection: "row",
-        background: isDarkTheme ? colors.bgMix : colors.bgColor,
       }}
     >
       {children}
@@ -73,8 +70,6 @@ export interface ModalBodyProps {
 
 function ModalBody({ children }: ModalBodyProps): ReactElement {
   const { colors, fontSizes, spacing }: EmotionTheme = useTheme()
-  const { activeTheme } = React.useContext(LibContext)
-  const isDarkTheme = activeTheme.name === "Dark"
 
   return (
     <UIModalBody
@@ -90,7 +85,6 @@ function ModalBody({ children }: ModalBodyProps): ReactElement {
         color: colors.bodyText,
         fontSize: fontSizes.md,
         overflowY: "auto",
-        background: isDarkTheme ? colors.bgMix : colors.bgColor,
       }}
     >
       {children}
@@ -103,9 +97,7 @@ export interface ModalFooterProps {
 }
 
 function ModalFooter({ children }: ModalFooterProps): ReactElement {
-  const { spacing, colors }: EmotionTheme = useTheme()
-  const { activeTheme } = React.useContext(LibContext)
-  const isDarkTheme = activeTheme.name === "Dark"
+  const { spacing }: EmotionTheme = useTheme()
 
   return (
     <UIModalFooter
@@ -118,7 +110,6 @@ function ModalFooter({ children }: ModalFooterProps): ReactElement {
         paddingRight: spacing.md,
         paddingBottom: spacing.md,
         paddingLeft: spacing.md,
-        background: isDarkTheme ? colors.bgMix : colors.bgColor,
       }}
     >
       <div className="ModalBody">{children}</div>
@@ -133,7 +124,10 @@ const ModalButton: FunctionComponent<ButtonProps> = buttonProps => (
 )
 
 function Modal(props: ModalProps): ReactElement {
-  const { spacing, radii }: EmotionTheme = useTheme()
+  const { spacing, radii, colors }: EmotionTheme = useTheme()
+  const { activeTheme } = React.useContext(LibContext)
+  const isDarkTheme = activeTheme.name === "Dark"
+
   const defaultOverrides = {
     DialogContainer: {
       style: {
@@ -144,6 +138,7 @@ function Modal(props: ModalProps): ReactElement {
     Dialog: {
       style: {
         borderRadius: radii.xl,
+        background: isDarkTheme ? colors.bgMix : colors.bgColor,
       },
     },
     Close: {
