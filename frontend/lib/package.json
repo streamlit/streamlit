@@ -7,13 +7,14 @@
     "types": "dist/index.d.ts",
     "sideEffects": false,
     "scripts": {
-        "build": "yarn build:src && yarn build:lib-type && yarn build:vendor && yarn build:assets",
+        "build": "yarn build:src && yarn build:lib-type && yarn build:vendor && yarn build:assets && yarn build:proto",
         "build:lib-type": "yarn build:tsc && yarn build:tsc-alias",
         "build:tsc": "tsc -P tsconfig.json",
         "build:tsc-alias": "tsc-alias -p tsconfig.json",
         "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --root-mode=upward --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src",
         "build:vendor": "cp -R ./src/vendor ./dist",
         "build:assets": "cp -R ./src/assets ./dist",
+        "build:proto": "cp ./src/proto* ./dist",
         "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src",
         "typecheck": "tsc"
     },
