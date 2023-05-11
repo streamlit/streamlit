@@ -19,6 +19,7 @@ from typing_extensions import Final
 from streamlit.logger import get_logger
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.script_data import ScriptData
+from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
     ActiveSessionInfo,
     SessionClient,
@@ -46,10 +47,12 @@ class WebsocketSessionManager(SessionManager):
         self,
         session_storage: SessionStorage,
         uploaded_file_manager: UploadedFileManager,
+        script_cache: ScriptCache,
         message_enqueued_callback: Optional[Callable[[], None]],
     ) -> None:
         self._session_storage = session_storage
         self._uploaded_file_mgr = uploaded_file_manager
+        self._script_cache = script_cache
         self._message_enqueued_callback = message_enqueued_callback
 
         # Mapping of AppSession.id -> ActiveSessionInfo.
@@ -90,6 +93,7 @@ class WebsocketSessionManager(SessionManager):
         session = AppSession(
             script_data=script_data,
             uploaded_file_manager=self._uploaded_file_mgr,
+            script_cache=self._script_cache,
             message_enqueued_callback=self._message_enqueued_callback,
             local_sources_watcher=LocalSourcesWatcher(script_data.main_script_path),
             user_info=user_info,
