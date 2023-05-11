@@ -292,7 +292,7 @@ frontend-fast:
 
 .PHONY: frontend-lib
 frontend-lib:
-	cd frontend/ ; ls lib/src/proto.*; yarn run buildLib
+	cd frontend/ ; ls lib/src/proto.*; ls lib/dist/proto.*; cat lib/dist/index.js; yarn run buildLib
 
 .PHONY: frontend-app
 frontend-app:
