@@ -78,7 +78,7 @@ class ResourceCaches(CacheStatsProvider):
         key: str,
         display_name: str,
         max_entries: int | float | None,
-        ttl: float | timedelta | None,
+        ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
         allow_widgets: bool,
     ) -> ResourceCache:
@@ -150,7 +150,7 @@ class CachedResourceFuncInfo(CachedFuncInfo):
         func: types.FunctionType,
         show_spinner: bool | str,
         max_entries: int | None,
-        ttl: float | timedelta | None,
+        ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
         allow_widgets: bool,
     ):
@@ -228,7 +228,7 @@ class CacheResourceAPI:
     def __call__(
         self,
         *,
-        ttl: float | timedelta | None = None,
+        ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
         validate: ValidateFunc | None = None,
@@ -240,7 +240,7 @@ class CacheResourceAPI:
         self,
         func: F | None = None,
         *,
-        ttl: float | timedelta | None = None,
+        ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
         show_spinner: bool | str = True,
         validate: ValidateFunc | None = None,
@@ -259,7 +259,7 @@ class CacheResourceAPI:
         self,
         func: F | None,
         *,
-        ttl: float | timedelta | None,
+        ttl: float | timedelta | str | None,
         max_entries: int | None,
         show_spinner: bool | str,
         validate: ValidateFunc | None,
@@ -284,9 +284,13 @@ class CacheResourceAPI:
             The function that creates the cached resource. Streamlit hashes the
             function's source code.
 
-        ttl : float or timedelta or None
-            The maximum number of seconds to keep an entry in the cache, or
-            None if cache entries should not expire. The default is None.
+        ttl : float, timedelta, str, or None
+            The maximum time to keep an entry in the cache, or None if cache
+            entries should not expire. The default is None.
+
+            If ttl is a str, then it should be in a format supported by `Pandas's
+            Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_.
+            Examples of valid strings are: "1d", "1.5 days", and "1h23s".
 
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None

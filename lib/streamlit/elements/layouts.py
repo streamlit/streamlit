@@ -107,7 +107,7 @@ class LayoutsMixin:
                 For example, `st.columns([3, 1, 2])` creates 3 columns where
                 the first column is 3 times the width of the second, and the last
                 column is 2 times that width.
-        gap : string ("small", "medium", or "large")
+        gap : "small", "medium", or "large"
             An optional string, which indicates the size of the gap between each column.
             The default is a small gap between columns. This argument can only be supplied by
             keyword.
@@ -416,8 +416,3 @@ class LayoutsMixin:
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-    # Deprecated beta_ functions
-    beta_container = deprecate_func_name(container, "beta_container", "2021-11-02")
-    beta_expander = deprecate_func_name(expander, "beta_expander", "2021-11-02")
-    beta_columns = deprecate_func_name(columns, "beta_columns", "2021-11-02")

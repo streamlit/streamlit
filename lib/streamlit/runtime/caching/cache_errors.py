@@ -174,3 +174,14 @@ class UnevaluatedDataFrameError(StreamlitAPIException):
     """Used to display a message about uncollected dataframe being used"""
 
     pass
+
+
+class BadTTLStringError(StreamlitAPIException):
+    """Raised when a bad ttl= argument string is passed."""
+
+    def __init__(self, ttl: str):
+        MarkdownFormattedException.__init__(
+            self,
+            "TTL string doesn't look right. It should be formatted as"
+            f"`'1d2h34m'` or `2 days`, for example. Got: {ttl}",
+        )
