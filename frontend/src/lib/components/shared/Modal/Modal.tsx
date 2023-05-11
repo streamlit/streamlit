@@ -26,6 +26,7 @@ import {
 import Button, { ButtonProps } from "src/lib/components/shared/Button"
 import merge from "lodash/merge"
 import { EmotionTheme } from "src/lib/theme"
+import { LibContext } from "src/lib/components/core/LibContext"
 import { StyledModalButton } from "./styled-components"
 
 export interface ModalHeaderProps {
@@ -33,7 +34,9 @@ export interface ModalHeaderProps {
 }
 
 function ModalHeader({ children }: ModalHeaderProps): ReactElement {
-  const { genericFonts, fontSizes, spacing }: EmotionTheme = useTheme()
+  const { genericFonts, fontSizes, spacing, colors }: EmotionTheme = useTheme()
+  const { activeTheme } = React.useContext(LibContext)
+  const isDarkTheme = activeTheme.name === "Dark"
 
   return (
     <UIModalHeader
@@ -56,6 +59,7 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         alignItems: "center",
         maxHeight: "80vh",
         flexDirection: "row",
+        background: isDarkTheme ? colors.bgMix : colors.bgColor,
       }}
     >
       {children}
@@ -69,6 +73,8 @@ export interface ModalBodyProps {
 
 function ModalBody({ children }: ModalBodyProps): ReactElement {
   const { colors, fontSizes, spacing }: EmotionTheme = useTheme()
+  const { activeTheme } = React.useContext(LibContext)
+  const isDarkTheme = activeTheme.name === "Dark"
 
   return (
     <UIModalBody
@@ -84,6 +90,7 @@ function ModalBody({ children }: ModalBodyProps): ReactElement {
         color: colors.bodyText,
         fontSize: fontSizes.md,
         overflowY: "auto",
+        background: isDarkTheme ? colors.bgMix : colors.bgColor,
       }}
     >
       {children}
@@ -96,7 +103,9 @@ export interface ModalFooterProps {
 }
 
 function ModalFooter({ children }: ModalFooterProps): ReactElement {
-  const { spacing }: EmotionTheme = useTheme()
+  const { spacing, colors }: EmotionTheme = useTheme()
+  const { activeTheme } = React.useContext(LibContext)
+  const isDarkTheme = activeTheme.name === "Dark"
 
   return (
     <UIModalFooter
@@ -109,6 +118,7 @@ function ModalFooter({ children }: ModalFooterProps): ReactElement {
         paddingRight: spacing.md,
         paddingBottom: spacing.md,
         paddingLeft: spacing.md,
+        background: isDarkTheme ? colors.bgMix : colors.bgColor,
       }}
     >
       <div className="ModalBody">{children}</div>
