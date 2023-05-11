@@ -131,15 +131,6 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "http://colorbrewer2.org/",
         "Cynthia Brewer",
     ),
-    (
-        # Our own @streamlit/lib
-        "@streamlit/app",
-        "1.21.0",
-        "UNKNOWN",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-    ),
 }
 
 
