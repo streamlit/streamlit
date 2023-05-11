@@ -53,9 +53,17 @@ from streamlit.web.server.routes import (
 )
 from streamlit.web.server.server_util import make_url_path_regex
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
+from streamlit.web.server.upload_file_presigned_url import (
+    UPLOAD_FILE_PRESIGNED_URL_ROUTE,
+    UploadFilePresignedUrlRequestHandler,
+)
 from streamlit.web.server.upload_file_request_handler import (
     UPLOAD_FILE_ROUTE,
     UploadFileRequestHandler,
+)
+from streamlit.web.server.upload_file_request_handler_new import (
+    NEW_UPLOAD_FILE_ROUTE,
+    NewUploadFileRequestHandler,
 )
 
 LOGGER = get_logger(__name__)
@@ -306,6 +314,22 @@ class Server:
                     file_mgr=self._runtime.uploaded_file_mgr,
                     is_active_session=self._runtime.is_active_session,
                 ),
+            ),
+            (
+                make_url_path_regex(
+                    base,
+                    NEW_UPLOAD_FILE_ROUTE,
+                ),
+                NewUploadFileRequestHandler,
+                # TODO[Karen] PASS NEW file_mgr instance, to abstract file storage handling
+            ),
+            (
+                make_url_path_regex(
+                    base,
+                    UPLOAD_FILE_PRESIGNED_URL_ROUTE,
+                ),
+                UploadFilePresignedUrlRequestHandler,
+                # TODO[Karen] PASS NEW file_mgr instance, to abstract presigned url generation
             ),
             (
                 make_url_path_regex(base, f"{MEDIA_ENDPOINT}/(.*)"),
