@@ -22,7 +22,7 @@ import React, { PureComponent, ReactElement } from "react"
 import {
   AppRoot,
   VerticalBlock,
-  Alert,
+  AlertElement,
   ComponentRegistry,
   FileUploadClient,
   ScriptRunState,

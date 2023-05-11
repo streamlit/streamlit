@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { StyledColorPicker } from "src/components/shared/ColorPicker/styled-components"
+import { StyledColorPicker } from "src/components/shared/BaseColorPicker/styled-components"
 import { mount, shallow } from "src/test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker } from "react-color"
