@@ -59,7 +59,7 @@ IGNORE_PATTERN = re.compile(
     r"|lib/tests/isolated_asyncio_test_case\.py"
     # exclude variables.scss because scss handles multiline comments differently
     # https://sass-lang.com/documentation/syntax/comments
-    r"|frontend/app/src/assets/css/variables\.scss",
+    r"|^frontend/app/src/assets/css/variables\.scss$",
     re.IGNORECASE,
 )
 
