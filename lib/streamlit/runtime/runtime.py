@@ -194,7 +194,9 @@ class Runtime:
 
         self._script_cache = ScriptCache()
         source_watcher = LocalSourcesWatcher(self._main_script_path)
-        source_watcher.register_file_change_callback(self._script_cache.clear)
+        source_watcher.register_file_change_callback(
+            lambda _: self._script_cache.clear()
+        )
 
         self._session_mgr = config.session_manager_class(
             session_storage=config.session_storage,
