@@ -191,7 +191,7 @@ repos:
       - id: trailing-whitespace
         exclude: |
           (?x)
-          ^frontend/src/assets/
+          ^frontend/app/src/assets/
           |^NOTICES$
           |^proto/streamlit/proto/openmetrics_data_model.proto$
           |\.snap$
