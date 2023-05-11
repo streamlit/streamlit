@@ -57,6 +57,8 @@ IGNORE_PATTERN = re.compile(
     r"|/vendor/|^vendor/|^component-lib/declarations/apache-arrow"
     r"|proto/streamlit/proto/openmetrics_data_model\.proto"
     r"|lib/tests/isolated_asyncio_test_case\.py",
+    # exclude variables.scss because scss handles multiline comments differently
+    # https://sass-lang.com/documentation/syntax/comments
     re.IGNORECASE,
 )
 
