@@ -307,7 +307,7 @@ jslint:
 .PHONY: tstypecheck
 # Type check the JS/TS code
 tstypecheck:
-	pre-commit run typecheck --all-files --hook-stage manual
+	pre-commit run typecheck-lib --all-files --hook-stage manual && pre-commit run typecheck-app --all-files --hook-stage manual
 
 .PHONY: jsformat
 # Fix formatting issues in our JavaScript & TypeScript files.
