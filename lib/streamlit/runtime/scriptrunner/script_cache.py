@@ -27,7 +27,7 @@ class ScriptCache:
 
     def __init__(self):
         # Mapping of script_path: bytecode
-        self._bytecode: dict[str, Any] = {}
+        self._cache: dict[str, Any] = {}
         self._lock = threading.Lock()
 
     def clear(self) -> None:
@@ -38,7 +38,7 @@ class ScriptCache:
         Threading: SAFE. May be called on any thread.
         """
         with self._lock:
-            self._bytecode = {}
+            self._cache.clear()
 
     def get_bytecode(self, script_path: str) -> Any:
         """Return the bytecode for the Python script at the given path.
@@ -56,7 +56,7 @@ class ScriptCache:
         """
 
         with self._lock:
-            bytecode = self._bytecode.get(script_path, None)
+            bytecode = self._cache.get(script_path, None)
             if bytecode is not None:
                 # Fast path: the code is already cached.
                 return bytecode
@@ -82,5 +82,5 @@ class ScriptCache:
                 optimize=-1,
             )
 
-            self._bytecode[script_path] = bytecode
+            self._cache[script_path] = bytecode
             return bytecode
