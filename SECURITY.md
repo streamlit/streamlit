@@ -2,9 +2,9 @@
 
 ## Supported Versions
 
-| Version  | Supported          |
-| -------- | ------------------ |
-| >= 1.11.1|         ✅         |
+| Version   | Supported |
+| --------- | --------- |
+| >= 1.11.1 | ✅        |
 
 </br>
 
