@@ -19,6 +19,8 @@
     ],
     "plugins": ["@emotion"],
     "ignore": [
+      "**/proto.d.ts",
+      "**/proto.js",
       "**/vendor/bokeh/*",
       "**/.test.tsx"
     ],
