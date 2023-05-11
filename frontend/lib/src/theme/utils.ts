@@ -44,6 +44,13 @@ import { createBaseUiTheme } from "./createThemeUtil"
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
 
+export const getSystemTheme = (): ThemeConfig => {
+  return window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? darkTheme
+    : lightTheme
+}
+
 export const createAutoTheme = (): ThemeConfig => ({
   ...getSystemTheme(),
   name: AUTO_THEME_NAME,
@@ -289,13 +296,6 @@ export const createTheme = (
     emotion,
     basewebTheme: createBaseUiTheme(emotion, startingTheme.primitives),
   }
-}
-
-export const getSystemTheme = (): ThemeConfig => {
-  return window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? darkTheme
-    : lightTheme
 }
 
 export const getCachedTheme = (): ThemeConfig | null => {
