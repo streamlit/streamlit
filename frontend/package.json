@@ -1,19 +1,25 @@
 {
-    "name": "streamlit",
-    "version": "1.21.0",
-    "private": true,
-    "workspaces": ["app", "lib"],
-    "directories": {
-        "src": "app"
-    },
-    "scripts": {
-        "buildLib": "yarn workspace @streamlit/lib build",
-        "buildApp": "yarn workspace @streamlit/app build"
-    },
-    "browserslist": [
-      ">0.2%",
-      "not dead",
-      "not ie <= 11",
-      "not op_mini all"
-    ]
-  }
+  "name": "streamlit",
+  "version": "1.21.0",
+  "private": true,
+  "workspaces": ["app", "lib"],
+  "scripts": {
+    "start": "yarn workspace @streamlit/app start",
+    "build": "yarn workspace @streamlit/lib build && yarn workspace @streamlit/app build",
+    "buildFast": "yarn buildLib && yarn workspace @streamlit/app buildFast",
+    "buildLib": "yarn workspace @streamlit/lib build",
+    "buildApp": "yarn workspace @streamlit/app build",
+    "buildAppFast": "yarn workspace @streamlit/app buildFast",
+    "typecheck": "yarn workspace @streamlit/lib typecheck && yarn workspace @streamlit/app typecheck",
+    "lint": "yarn lintApp && yarn lintLib",
+    "lintApp": "yarn workspace @streamlit/app lint",
+    "lintLib": "yarn workspace @streamlit/lib lint",
+    "prettier": "prettier --write --config .prettierrc app/src && prettier --write --config .prettierrc lib/src"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
+}

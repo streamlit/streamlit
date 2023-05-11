@@ -35,11 +35,24 @@ export { ComponentRegistry } from "./components/widgets/CustomComponent"
 export { BlockNode, AppRoot, ElementNode } from "./AppNode"
 export { Quiver } from "./dataframes/Quiver"
 export { default as VegaLiteChartElement } from "./components/elements/VegaLiteChart"
-export type { DeployedAppMetadata, IGuestToHostMessage, HostCommunicationState, IMenuItem, IAllowedMessageOriginsResponse, IToolbarItem } from "./hocs/withHostCommunication/types"
-export { default as Modal, ModalHeader, ModalBody, ModalFooter, ModalButton } from "./components/shared/Modal"
+export type {
+  DeployedAppMetadata,
+  IGuestToHostMessage,
+  HostCommunicationState,
+  IMenuItem,
+  IAllowedMessageOriginsResponse,
+  IToolbarItem,
+} from "./hocs/withHostCommunication/types"
+export {
+  default as Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalButton,
+} from "./components/shared/Modal"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
 export { LocalStore, localStorageAvailable } from "./util/storageUtils"
-export { 
+export {
   createAutoTheme,
   createPresetThemes,
   CUSTOM_THEME_NAME,
@@ -56,24 +69,38 @@ export {
   darkTheme,
   toThemeInput,
   baseTheme,
-  hasLightBackgroundColor
+  hasLightBackgroundColor,
 } from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export type { ThemeConfig, EmotionTheme } from "./theme"
 export { mount, shallow, mockWindowLocation, render } from "./test_util"
 export { logError, logMessage, logWarning, logAlways } from "./util/log"
-export { getPossibleBaseUris, buildHttpUri, SVG_PREFIX, xssSanitizeSvg, buildWsUri } from "./util/UriUtil"
+export {
+  getPossibleBaseUris,
+  buildHttpUri,
+  SVG_PREFIX,
+  xssSanitizeSvg,
+  buildWsUri,
+} from "./util/UriUtil"
 export type { BaseUriParts } from "./util/UriUtil"
 export { ensureError } from "./util/ErrorHandling"
-export { default as Button, Kind } from "./components/shared/Button"
+export {
+  default as BaseButton,
+  BaseButtonKind,
+} from "./components/shared/BaseButton"
 export { PerformanceEvents } from "./profiler/PerformanceEvents"
 export { ForwardMsgCache } from "./ForwardMessageCache"
 export { default as Resolver } from "./util/Resolver"
-export { mockSessionInfo, mockSessionInfoProps, mockEndpoints } from "./mocks/mocks"
+export {
+  mockSessionInfo,
+  mockSessionInfoProps,
+  mockEndpoints,
+} from "./mocks/mocks"
 export { default as UISelectbox } from "./components/shared/Dropdown/Selectbox"
-export { default as Icon, EmojiIcon} from "./components/shared/Icon"
+export { default as Icon, EmojiIcon } from "./components/shared/Icon"
 export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown"
-export { hashString, 
+export {
+  hashString,
   generateUID,
   getElementWidgetID,
   getEmbeddingIdClassName,
@@ -94,9 +121,7 @@ export { hashString,
   makeElementWithInfoText,
   getCookie,
 } from "./util/utils"
-export {
-  useIsOverflowing
-} from "./util/Hooks"
+export { useIsOverflowing } from "./util/Hooks"
 export { LibContext } from "./components/core/LibContext"
 export type { LibContextProps } from "./components/core/LibContext"
 export { handleFavicon } from "./components/elements/Favicon"
@@ -104,11 +129,11 @@ export { default as withHostCommunication } from "./hocs/withHostCommunication"
 export type { HostCommunicationHOC } from "./hocs/withHostCommunication"
 export { default as IsSidebarContext } from "./components/core/IsSidebarContext"
 export { default as Tooltip, Placement } from "./components/shared/Tooltip"
-export { default as ColorPicker } from "./components/shared/ColorPicker"
+export { default as BaseColorPicker } from "./components/shared/BaseColorPicker"
 export { Timer } from "./util/Timer"
 export { Small } from "./components/shared/TextElements"
 export { spacing, fonts } from "./theme/primitives"
 export { mockTheme } from "./mocks/mockTheme"
-export { default as Alert } from "./components/elements/Alert"
-export { default as TextElement } from "./components/elements/Text"
+export { default as AlertElement } from "./components/elements/AlertElement"
+export { default as TextElement } from "./components/elements/TextElement"
 export * from "./proto"

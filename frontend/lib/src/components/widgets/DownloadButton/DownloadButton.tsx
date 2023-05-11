@@ -20,7 +20,7 @@ import BaseButton, {
   BaseButtonTooltip,
   BaseButtonKind,
   BaseButtonSize,
-}  from "src/components/shared/BaseButton"
+} from "src/components/shared/BaseButton"
 import { WidgetStateManager } from "src/WidgetStateManager"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import { StreamlitEndpoints } from "src/StreamlitEndpoints"
