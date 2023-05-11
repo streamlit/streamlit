@@ -126,7 +126,7 @@ repos:
           /vendor/
           |^vendor/
           |^component-lib/declarations/apache-arrow
-          |^frontend/src/assets/css/variables\.scss
+          |^frontend/app/src/assets/
       - id: insert-license
         name: Add license for all Proto files
         files: \.proto$
