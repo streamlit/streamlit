@@ -691,7 +691,13 @@ time.sleep(5)
 
 class RuntimeScriptCacheTest(unittest.TestCase):
     def setUp(self) -> None:
-        source_util.invalidate_pages_cache()
+        # This global is initialized the first time a LocalSourcesWatcher is created.
+        # Ensure that it's unset so that our Runtime instance's LocalSourcesWatcher actually
+        # watches the test script's directory.
+        source_util._cached_pages = None
+
+    def tearDown(self) -> None:
+        Runtime._instance = None
 
     def test_clear_script_cache_when_user_script_changes(self):
         """The Runtime's ScriptCache instance should have its `clear` function called
