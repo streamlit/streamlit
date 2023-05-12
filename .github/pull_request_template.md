@@ -9,10 +9,10 @@ https://github.com/streamlit/streamlit/wiki/Contributing
 
 ## Testing Plan
 
-- Explanation of no testing needed
+- Explanation of why no additional tests are needed
 - Unit Tests (JS and/or Python)
 - E2E Tests
-- Manual Testing Needed?
+- Any manual testing needed?
 
 ---
 
