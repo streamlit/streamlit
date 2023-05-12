@@ -22,14 +22,21 @@ from streamlit.runtime.scriptrunner.user_script_cache import UserScriptCache
 
 
 def _get_script_path(name: str) -> str:
-    return os.path.join(os.path.dirname(__file__), "test_data", name)
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "test_data", name))
 
 
 class ScriptCacheTest(unittest.TestCase):
+    def setUp(self) -> None:
+        source_util.invalidate_pages_cache()
+        self.main_script_path = _get_script_path("good_script.py")
+        self.cache = UserScriptCache(self.main_script_path)
+
+    def tearDown(self) -> None:
+        source_util.invalidate_pages_cache()
+
     def test_load_valid_script(self):
         """`get_bytecode` works as expected."""
-        cache = UserScriptCache("mock/main/script/path.py")
-        result = cache.get_bytecode(_get_script_path("good_script.py"))
+        result = self.cache.get_bytecode(_get_script_path("good_script.py"))
         self.assertIsNotNone(result)
         # Execing the code shouldn't raise an error
         exec(result)
@@ -38,35 +45,47 @@ class ScriptCacheTest(unittest.TestCase):
     def test_returns_cached_data(self, mock_open_python_file: Mock):
         """`get_bytecode` caches its results."""
         mock_open_python_file.side_effect = source_util.open_python_file
-        cache = UserScriptCache("mock/main/script/path.py")
 
         # The first time we get a script's bytecode, the script is loaded from disk.
-        result = cache.get_bytecode(_get_script_path("good_script.py"))
+        result = self.cache.get_bytecode(_get_script_path("good_script.py"))
         self.assertIsNotNone(result)
         mock_open_python_file.assert_called_once()
 
         # Subsequent calls don't reload the script from disk and return the same object.
         mock_open_python_file.reset_mock()
-        self.assertIs(cache.get_bytecode(_get_script_path("good_script.py")), result)
+        self.assertIs(
+            self.cache.get_bytecode(_get_script_path("good_script.py")), result
+        )
         mock_open_python_file.assert_not_called()
 
     def test_clear(self):
         """`clear` removes cached entries."""
-        cache = UserScriptCache("mock/main/script/path.py")
-        cache.get_bytecode(_get_script_path("good_script.py"))
-        self.assertEquals(1, len(cache._cache))
+        # Add an item to the cache
+        self.cache.get_bytecode(_get_script_path("good_script.py"))
+        self.assertEquals(1, len(self.cache._cache))
 
-        cache.clear()
-        self.assertEquals(0, len(cache._cache))
+        # Assert that `clear` removes it
+        self.cache.clear()
+        self.assertEquals(0, len(self.cache._cache))
 
     def test_file_not_found_error(self):
         """An exception is thrown when a script file doesn't exist."""
-        cache = UserScriptCache("mock/main/script/path.py")
         with self.assertRaises(FileNotFoundError):
-            cache.get_bytecode(_get_script_path("not_a_valid_path.py"))
+            self.cache.get_bytecode(_get_script_path("not_a_valid_path.py"))
 
     def test_syntax_error(self):
         """An exception is thrown when a script has a compile error."""
-        cache = UserScriptCache("mock/main/script/path.py")
         with self.assertRaises(SyntaxError):
-            cache.get_bytecode(_get_script_path("compile_error.py.txt"))
+            self.cache.get_bytecode(_get_script_path("compile_error.py.txt"))
+
+    def test_clear_when_local_source_changes(self):
+        """When a local source file changes, the cache should be automatically cleared."""
+        # Add an item to the cache
+        self.cache.get_bytecode(self.main_script_path)
+        self.assertEquals(1, len(self.cache._cache))
+
+        # Pretend that a source file has changed
+        self.cache._sources_watcher.on_file_changed(self.main_script_path)
+
+        # The cache should be empty
+        self.assertEquals(0, len(self.cache._cache))
