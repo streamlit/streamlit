@@ -47,7 +47,7 @@ from streamlit.runtime.media_file_storage import MediaFileStorage
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.runtime.script_data import ScriptData
-from streamlit.runtime.scriptrunner.user_script_cache import UserScriptCache
+from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
     ActiveSessionInfo,
     SessionClient,
@@ -192,7 +192,11 @@ class Runtime:
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._cache_storage_manager = config.cache_storage_manager
 
-        self._script_cache = UserScriptCache(self._main_script_path)
+        self._script_cache = ScriptCache()
+        source_watcher = LocalSourcesWatcher(self._main_script_path)
+        source_watcher.register_file_change_callback(
+            lambda _: self._script_cache.clear()
+        )
 
         self._session_mgr = config.session_manager_class(
             session_storage=config.session_storage,

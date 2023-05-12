@@ -24,7 +24,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 )
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.script_data import ScriptData
-from streamlit.runtime.scriptrunner.user_script_cache import UserScriptCache
+from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
     SessionClient,
     SessionInfo,
@@ -46,7 +46,7 @@ class MockSessionManager(SessionManager):
         self,
         session_storage: SessionStorage,
         uploaded_file_manager: UploadedFileManager,
-        script_cache: UserScriptCache,
+        script_cache: ScriptCache,
         message_enqueued_callback: Optional[Callable[[], None]],
     ) -> None:
         self._uploaded_file_mgr = uploaded_file_manager

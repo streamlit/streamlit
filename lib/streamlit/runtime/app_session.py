@@ -37,7 +37,7 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
-from streamlit.runtime.scriptrunner.user_script_cache import UserScriptCache
+from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.secrets import secrets_singleton
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.version import STREAMLIT_VERSION_STRING
@@ -75,7 +75,7 @@ class AppSession:
         self,
         script_data: ScriptData,
         uploaded_file_manager: UploadedFileManager,
-        script_cache: UserScriptCache,
+        script_cache: ScriptCache,
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
         user_info: Dict[str, Optional[str]],
