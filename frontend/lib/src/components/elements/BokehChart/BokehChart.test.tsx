@@ -88,6 +88,7 @@ describe("BokehChart element", () => {
   })
 
   afterEach(() => {
+    // @ts-expect-error
     mockBokehEmbed.embed.embed_item.mockClear() // clear so embed item calls don't add up
     document.body.removeChild(div)
   })
