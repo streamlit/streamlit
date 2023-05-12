@@ -28,15 +28,6 @@ LOGGER = get_logger(__name__)
 class UploadedFileRec(NamedTuple):
     """Metadata and raw bytes for an uploaded file. Immutable."""
 
-    id: int
-    name: str
-    type: str
-    data: bytes
-
-
-class NewUploadedFileRec(NamedTuple):
-    """Metadata and raw bytes for an uploaded file. Immutable."""
-
     id: str
     name: str
     type: str
@@ -70,38 +61,11 @@ class UploadedFile(io.BytesIO):
         return util.repr_(self)
 
 
-class NewUploadedFile(io.BytesIO):
-    """A mutable uploaded file.
-
-    This class extends BytesIO, which has copy-on-write semantics when
-    initialized with `bytes`.
-    """
-
-    def __init__(self, record: NewUploadedFileRec):
-        # BytesIO's copy-on-write semantics doesn't seem to be mentioned in
-        # the Python docs - possibly because it's a CPython-only optimization
-        # and not guaranteed to be in other Python runtimes. But it's detailed
-        # here: https://hg.python.org/cpython/rev/79a5fbe2c78f
-        super(NewUploadedFile, self).__init__(record.data)
-        self.id = record.id
-        self.name = record.name
-        self.type = record.type
-        self.size = len(record.data)
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, UploadedFile):
-            return NotImplemented
-        return self.id == other.id
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-
 class UploadedFileStorage:  # THIS CLASS CODE SHOULD NOT LIVE IN SiS, just for prototype
     def __init__(self):
         self._files: Dict[Tuple[str, str], NewUploadedFileRec] = {}
 
-    def add_file(self, session_id: str, file: NewUploadedFileRec):
+    def add_file(self, session_id: str, file: UploadedFileRec):
         print("AAAAAAAAA FILE ADDED TO UPLOADED_FILE_STORAGE!!!")
         print(session_id)
         print("---------")
@@ -109,7 +73,7 @@ class UploadedFileStorage:  # THIS CLASS CODE SHOULD NOT LIVE IN SiS, just for p
         self._files[session_id, str(file.id)] = file
 
     def get_file(self, session_id, file_id) -> IO[bytes]:
-        return NewUploadedFile(record=self._files[session_id, file_id])
+        return UploadedFile(record=self._files[session_id, file_id])
 
 
 class UploadedFileManager(CacheStatsProvider):

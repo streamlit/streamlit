@@ -543,6 +543,7 @@ class Runtime:
         session = AppSession(
             script_data=ScriptData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
+            uploaded_file_storage=self._uploaded_file_storage,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=LocalSourcesWatcher(self._main_script_path),
             user_info={"email": "test@test.com"},

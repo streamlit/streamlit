@@ -48,5 +48,6 @@ message WidgetState {
     ArrowTable arrow_value = 11;
     bytes bytes_value = 12;
     FileUploaderState file_uploader_state_value = 13;
+    NewFileUploaderState new_file_uploader_state_value = 14;
   }
 }

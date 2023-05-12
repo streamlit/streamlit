@@ -52,7 +52,18 @@ message UploadedFileInfo {
   uint32 size = 3;
 }
 
+message NewUploadedFileInfo {
+  string id = 1;
+  string name = 2;
+  uint32 size = 3;
+  string url = 4;
+}
+
 message FileUploaderState {
   sint64 max_file_id = 1;
   repeated UploadedFileInfo uploaded_file_info = 2;
+}
+
+message NewFileUploaderState {
+  repeated NewUploadedFileInfo uploaded_file_info = 1;
 }

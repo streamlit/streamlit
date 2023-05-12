@@ -20,7 +20,6 @@ import tornado.web
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.runtime.uploaded_file_manager import (
-    NewUploadedFileRec,
     UploadedFileManager,
     UploadedFileRec,
     UploadedFileStorage,
@@ -138,12 +137,12 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
         # We assign an initial, invalid file_id to each file in this loop.
         # The file_mgr will assign unique file IDs and return in `add_file`,
         # below.
-        uploaded_files: List[NewUploadedFileRec] = []
+        uploaded_files: List[UploadedFileRec] = []
 
         for _, flist in files.items():
             for file in flist:
                 uploaded_files.append(
-                    NewUploadedFileRec(
+                    UploadedFileRec(
                         id=file_id,
                         name=file["filename"],
                         type=file["content_type"],

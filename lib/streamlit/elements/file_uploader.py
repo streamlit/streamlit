@@ -27,6 +27,8 @@ from streamlit.elements.utils import (
     get_label_visibility_proto_value,
 )
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
+from streamlit.proto.Common_pb2 import NewFileUploaderState as NewFileUploaderStateProto
+from streamlit.proto.Common_pb2 import NewUploadedFileInfo as NewUploadedFileInfoProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -81,7 +83,7 @@ class FileUploaderSerde:
     accept_multiple_files: bool
 
     def deserialize(
-        self, ui_value: Optional[FileUploaderStateProto], widget_id: str
+        self, ui_value: Optional[NewFileUploaderStateProto], widget_id: str
     ) -> SomeUploadedFiles:
         file_recs = _get_file_recs(widget_id, ui_value)
         if len(file_recs) == 0:

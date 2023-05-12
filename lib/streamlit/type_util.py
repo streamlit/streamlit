@@ -98,6 +98,7 @@ ValueFieldName: TypeAlias = Literal[
     "bytes_value",
     "double_value",
     "file_uploader_state_value",
+    "new_file_uploader_state_value",
     "int_value",
     "json_value",
     "string_value",
