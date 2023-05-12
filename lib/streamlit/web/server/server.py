@@ -321,7 +321,10 @@ class Server:
                     NEW_UPLOAD_FILE_ROUTE,
                 ),
                 NewUploadFileRequestHandler,
-                # TODO[Karen] PASS NEW file_mgr instance, to abstract file storage handling
+                dict(
+                    file_storage=self._runtime.uploaded_file_storage,
+                    is_active_session=self._runtime.is_active_session,
+                ),
             ),
             (
                 make_url_path_regex(
