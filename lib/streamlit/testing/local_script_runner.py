@@ -54,7 +54,7 @@ class LocalScriptRunner(ScriptRunner):
             client_state=ClientState(),
             session_state=self.session_state,
             uploaded_file_mgr=UploadedFileManager(),
-            script_cache=UserScriptCache("mock/script/path.py"),
+            script_cache=UserScriptCache(),
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
         )
