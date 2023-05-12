@@ -28,17 +28,17 @@ def _get_script_path(name: str) -> str:
 class ScriptCacheTest(unittest.TestCase):
     def test_load_valid_script(self):
         """`get_bytecode` works as expected."""
-        cache = UserScriptCache()
+        cache = UserScriptCache("mock/main/script/path.py")
         result = cache.get_bytecode(_get_script_path("good_script.py"))
         self.assertIsNotNone(result)
         # Execing the code shouldn't raise an error
         exec(result)
 
-    @mock.patch("streamlit.runtime.scriptrunner.script_cache.open_python_file")
+    @mock.patch("streamlit.runtime.scriptrunner.user_script_cache.open_python_file")
     def test_returns_cached_data(self, mock_open_python_file: Mock):
         """`get_bytecode` caches its results."""
         mock_open_python_file.side_effect = source_util.open_python_file
-        cache = UserScriptCache()
+        cache = UserScriptCache("mock/main/script/path.py")
 
         # The first time we get a script's bytecode, the script is loaded from disk.
         result = cache.get_bytecode(_get_script_path("good_script.py"))
@@ -52,7 +52,7 @@ class ScriptCacheTest(unittest.TestCase):
 
     def test_clear(self):
         """`clear` removes cached entries."""
-        cache = UserScriptCache()
+        cache = UserScriptCache("mock/main/script/path.py")
         cache.get_bytecode(_get_script_path("good_script.py"))
         self.assertEquals(1, len(cache._cache))
 
@@ -61,12 +61,12 @@ class ScriptCacheTest(unittest.TestCase):
 
     def test_file_not_found_error(self):
         """An exception is thrown when a script file doesn't exist."""
-        cache = UserScriptCache()
+        cache = UserScriptCache("mock/main/script/path.py")
         with self.assertRaises(FileNotFoundError):
             cache.get_bytecode(_get_script_path("not_a_valid_path.py"))
 
     def test_syntax_error(self):
         """An exception is thrown when a script has a compile error."""
-        cache = UserScriptCache()
+        cache = UserScriptCache("mock/main/script/path.py")
         with self.assertRaises(SyntaxError):
             cache.get_bytecode(_get_script_path("compile_error.py.txt"))
