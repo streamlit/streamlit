@@ -23,7 +23,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
-from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+from streamlit.runtime.scriptrunner.user_script_cache import UserScriptCache
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.testing.element_tree import ElementTree, parse_tree_from_messages
@@ -54,7 +54,7 @@ class LocalScriptRunner(ScriptRunner):
             client_state=ClientState(),
             session_state=self.session_state,
             uploaded_file_mgr=UploadedFileManager(),
-            script_cache=ScriptCache(),
+            script_cache=UserScriptCache(),
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
         )

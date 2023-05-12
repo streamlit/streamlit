@@ -20,15 +20,26 @@ from typing import Any
 from streamlit import config
 from streamlit.runtime.scriptrunner import magic
 from streamlit.source_util import open_python_file
+from streamlit.watcher import LocalSourcesWatcher
 
 
-class ScriptCache:
-    """Thread-safe cache of Python script bytecode."""
+class UserScriptCache:
+    """Thread-safe cache of Python script bytecode.
 
-    def __init__(self):
+    The cache is automatically cleared when a user script changes on disk.
+    """
+
+    def __init__(self, main_script_path: str):
         # Mapping of script_path: bytecode
         self._cache: dict[str, Any] = {}
         self._lock = threading.Lock()
+        self._sources_watcher = LocalSourcesWatcher(main_script_path)
+        self._sources_watcher.register_file_change_callback(
+            self._on_local_source_changed
+        )
+
+    def _on_local_source_changed(self, _):
+        self.clear()
 
     def clear(self) -> None:
         """Remove all entries from the cache.

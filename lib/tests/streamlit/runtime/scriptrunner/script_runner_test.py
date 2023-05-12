@@ -43,12 +43,12 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunnerEvent,
     StopException,
 )
-from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_requests import (
     ScriptRequest,
     ScriptRequests,
     ScriptRequestType,
 )
+from streamlit.runtime.scriptrunner.user_script_cache import UserScriptCache
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests import testutil
@@ -1070,7 +1070,7 @@ class TestScriptRunner(ScriptRunner):
             client_state=ClientState(),
             session_state=SessionState(),
             uploaded_file_mgr=UploadedFileManager(),
-            script_cache=ScriptCache(),
+            script_cache=UserScriptCache(),
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
         )

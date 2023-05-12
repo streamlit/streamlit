@@ -28,7 +28,6 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_requests import (
     RerunData,
     ScriptRequests,
@@ -39,6 +38,7 @@ from streamlit.runtime.scriptrunner.script_run_context import (
     add_script_run_ctx,
     get_script_run_ctx,
 )
+from streamlit.runtime.scriptrunner.user_script_cache import UserScriptCache
 from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SafeSessionState,
@@ -102,7 +102,7 @@ class ScriptRunner:
         client_state: ClientState,
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
-        script_cache: ScriptCache,
+        script_cache: UserScriptCache,
         initial_rerun_data: RerunData,
         user_info: Dict[str, Optional[str]],
     ):
