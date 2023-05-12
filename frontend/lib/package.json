@@ -16,7 +16,11 @@
         "build:assets": "cp -R ./src/assets ./dist",
         "build:proto": "cp ./src/proto* ./dist",
         "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src",
-        "typecheck": "tsc"
+        "typecheck": "tsc",
+        "test": "env NODE_OPTIONS=--max_old_space_size=8192 jest --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
+        "testWatch": "env NODE_OPTIONS=--max_old_space_size=8192 jest --watchAll --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
+        "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 jest --env=../jest/jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
+        "jestCacheClear": "jest --clearCache"
     },
     "dependencies": {
         "@deck.gl/core": "^8.8.23",
@@ -111,15 +115,20 @@
         "@babel/core": "^7.21.4",
         "@emotion/babel-plugin": "^11.7.2",
         "@testing-library/dom": "^8.19.0",
+        "@testing-library/jest-dom": "^5.16.5",
         "@testing-library/react": "^12.1.4",
         "@testing-library/react-hooks": "^8.0.1",
         "@testing-library/user-event": "^14.4.3",
         "@types/enzyme": "^3.10.12",
+        "@types/jest": "^27.4.3",
         "@types/react": "^17.0.7",
         "@types/react-dom": "^17.0.5",
         "@types/testing-library__jest-dom": "^5.14.5",
         "axios-mock-adapter": "^1.21.4",
+        "babel-jest": "^29.5.0",
         "babel-plugin-emotion": "^11.0.0",
+        "jest": "^27.4.3",
+        "jest-environment-jsdom": "^27.4.3",
         "jest-fetch-mock": "^3.0.3",
         "timezone-mock": "^1.3.6",
         "tsc-alias": "^1.8.5"

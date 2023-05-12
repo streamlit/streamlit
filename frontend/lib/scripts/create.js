@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// this is copied from here: https://github.com/facebook/create-react-app/blob/main/packages/babel-preset-react-app/create.js
+// this is copied from here and modified: https://github.com/facebook/create-react-app/blob/main/packages/babel-preset-react-app/create.js
 
 console.log("Using custom babel plugin. This is needed for glide data grid.")
 
@@ -26,8 +26,6 @@ module.exports = function (api, opts, env) {
   var isEnvDevelopment = env === "development"
   var isEnvProduction = env === "production"
   var isEnvTest = env === "test"
-
-  var isTypeScriptEnabled = true
 
   if (!isEnvDevelopment && !isEnvProduction && !isEnvTest) {
     throw new Error(
@@ -73,17 +71,14 @@ module.exports = function (api, opts, env) {
           runtime: "automatic",
         },
       ],
-      isTypeScriptEnabled && [require("@babel/preset-typescript").default],
+      [require("@babel/preset-typescript").default],
     ].filter(Boolean),
     plugins: [
       // Experimental macros support. Will be documented after it's had some time
       // in the wild.
       require("babel-plugin-macros"),
       // Turn on legacy decorators for TypeScript files
-      isTypeScriptEnabled && [
-        require("@babel/plugin-proposal-decorators").default,
-        false,
-      ],
+      [require("@babel/plugin-proposal-decorators").default, false],
       // class { handleClick = () => { } }
       // Enable loose mode to use assignment instead of defineProperty
       // See discussion in https://github.com/facebook/create-react-app/issues/4263
@@ -120,7 +115,7 @@ module.exports = function (api, opts, env) {
       ],
     ].filter(Boolean),
     overrides: [
-      isTypeScriptEnabled && {
+      {
         test: /\.tsx?$/,
         plugins: [
           [
