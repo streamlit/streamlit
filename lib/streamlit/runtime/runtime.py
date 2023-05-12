@@ -191,10 +191,11 @@ class Runtime:
         self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._cache_storage_manager = config.cache_storage_manager
-
         self._script_cache = ScriptCache()
-        source_watcher = LocalSourcesWatcher(self._main_script_path)
-        source_watcher.register_file_change_callback(
+
+        # Clear the ScriptCache when a user script file changes
+        self._sources_watcher = LocalSourcesWatcher(self._main_script_path)
+        self._sources_watcher.register_file_change_callback(
             lambda _: self._script_cache.clear()
         )
 

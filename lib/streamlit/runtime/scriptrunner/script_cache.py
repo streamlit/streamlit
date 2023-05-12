@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import os.path
 import threading
 from typing import Any
 
@@ -54,6 +55,8 @@ class ScriptCache:
         -----
         Threading: SAFE. May be called on any thread.
         """
+
+        script_path = os.path.abspath(script_path)
 
         with self._lock:
             bytecode = self._cache.get(script_path, None)
