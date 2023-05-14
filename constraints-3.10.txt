@@ -27,7 +27,7 @@ gitdb==4.0.10
 GitPython==3.1.31
 graphviz==0.20.1
 greenlet==2.0.2
-hypothesis==6.75.2
+hypothesis==6.75.3
 identify==2.5.24
 idna==3.4
 importlib-metadata==6.6.0
@@ -78,7 +78,6 @@ pytest==7.3.1
 pytest-cov==4.0.0
 python-dateutil==2.8.2
 pytz==2023.3
-pytz-deprecation-shim==0.1.0.post0
 PyYAML==6.0
 readme-renderer==37.3
 requests==2.30.0
@@ -101,7 +100,7 @@ testfixtures==7.1.0
 toml==0.10.2
 tomli==2.0.1
 toolz==0.12.0
-tornado==6.3.1
+tornado==6.3.2
 twine==4.0.2
 types-click==7.1.8
 types-protobuf==4.23.0.1
@@ -114,7 +113,7 @@ types-typed-ast==1.5.8.6
 types-urllib3==1.26.25.13
 typing_extensions==4.5.0
 tzdata==2023.3
-tzlocal==4.3
+tzlocal==5.0
 urllib3==2.0.2
 validators==0.20.0
 virtualenv==20.23.0
