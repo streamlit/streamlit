@@ -197,7 +197,7 @@ def _fix_pydeck_mapbox_api_warning() -> None:
     os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
 
 
-def _fix_pydantic_validators():
+def _fix_pydantic_duplicate_validators_error():
     try:
         from pydantic import class_validators
 
@@ -390,7 +390,7 @@ def run(
     _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)
     _fix_pydeck_mapbox_api_warning()
-    _fix_pydantic_validators()
+    _fix_pydantic_duplicate_validators_error()
     _install_config_watchers(flag_options)
     _install_pages_watcher(main_script_path)
 
