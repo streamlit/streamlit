@@ -55,7 +55,7 @@ TYPE_PAIRS = [
 
 
 def _get_file_recs(
-    widget_id: str, widget_value: Optional[NewFileUploaderStateProto]
+    widget_id: str, widget_value: Optional[FileUploaderStateProto]
 ) -> List[UploadedFileRec]:
     if widget_value is None:
         return []
@@ -83,7 +83,7 @@ class FileUploaderSerde:
     accept_multiple_files: bool
 
     def deserialize(
-        self, ui_value: Optional[NewFileUploaderStateProto], widget_id: str
+        self, ui_value: Optional[FileUploaderStateProto], widget_id: str
     ) -> SomeUploadedFiles:
         file_recs = _get_file_recs(widget_id, ui_value)
         if len(file_recs) == 0:

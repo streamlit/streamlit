@@ -451,19 +451,19 @@ export class WidgetStateManager {
 
   public setFileUploaderStateValue(
     widget: WidgetInfo,
-    value: INewFileUploaderState,
+    value: IFileUploaderState,
     source: Source
   ): void {
-    this.createWidgetState(widget, source).newFileUploaderStateValue = value
+    this.createWidgetState(widget, source).fileUploaderStateValue = value
     this.onWidgetValueChanged(widget.formId, source)
   }
 
   public getFileUploaderStateValue(
     widget: WidgetInfo
-  ): INewFileUploaderState | undefined {
+  ): IFileUploaderState | undefined {
     const state = this.getWidgetState(widget)
-    if (state != null && state.value === "newFileUploaderStateValue") {
-      return state.newFileUploaderStateValue as INewFileUploaderState
+    if (state != null && state.value === "fileUploaderStateValue") {
+      return state.fileUploaderStateValue as IFileUploaderState
     }
 
     return undefined

@@ -28,7 +28,7 @@ LOGGER = get_logger(__name__)
 class UploadedFileRec(NamedTuple):
     """Metadata and raw bytes for an uploaded file. Immutable."""
 
-    id: str
+    id: int
     name: str
     type: str
     data: bytes
