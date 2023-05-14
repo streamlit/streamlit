@@ -55,7 +55,7 @@ TYPE_PAIRS = [
 
 
 def _get_file_recs(
-    widget_id: str, widget_value: Optional[FileUploaderStateProto]
+    widget_id: str, widget_value: Optional[NewFileUploaderStateProto]
 ) -> List[UploadedFileRec]:
     if widget_value is None:
         return []

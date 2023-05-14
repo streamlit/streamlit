@@ -198,6 +198,7 @@ class Runtime:
         self._session_mgr = config.session_manager_class(
             session_storage=config.session_storage,
             uploaded_file_manager=self._uploaded_file_mgr,
+            uploaded_file_storage=self._uploaded_file_storage,
             message_enqueued_callback=self._enqueued_some_message,
         )
 

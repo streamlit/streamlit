@@ -21,7 +21,10 @@ from typing_extensions import Protocol
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.script_data import ScriptData
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import (
+    UploadedFileManager,
+    UploadedFileStorage,
+)
 
 
 class SessionClientDisconnectedError(Exception):
@@ -208,6 +211,7 @@ class SessionManager(Protocol):
         self,
         session_storage: SessionStorage,
         uploaded_file_manager: UploadedFileManager,
+        uploaded_file_storage: UploadedFileStorage,
         message_enqueued_callback: Optional[Callable[[], None]],
     ) -> None:
         """Initialize a SessionManager with the given SessionStorage.

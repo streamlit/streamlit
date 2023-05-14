@@ -26,7 +26,10 @@ from streamlit.runtime.session_manager import (
     SessionManager,
     SessionStorage,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import (
+    UploadedFileManager,
+    UploadedFileStorage,
+)
 from streamlit.watcher import LocalSourcesWatcher
 
 LOGGER: Final = get_logger(__name__)
@@ -46,10 +49,12 @@ class WebsocketSessionManager(SessionManager):
         self,
         session_storage: SessionStorage,
         uploaded_file_manager: UploadedFileManager,
+        uploaded_file_storage: UploadedFileStorage,
         message_enqueued_callback: Optional[Callable[[], None]],
     ) -> None:
         self._session_storage = session_storage
         self._uploaded_file_mgr = uploaded_file_manager
+        self._uploaded_file_storage = uploaded_file_storage
         self._message_enqueued_callback = message_enqueued_callback
 
         # Mapping of AppSession.id -> ActiveSessionInfo.
@@ -90,6 +95,7 @@ class WebsocketSessionManager(SessionManager):
         session = AppSession(
             script_data=script_data,
             uploaded_file_manager=self._uploaded_file_mgr,
+            uploaded_file_storage=self._uploaded_file_storage,
             message_enqueued_callback=self._message_enqueued_callback,
             local_sources_watcher=LocalSourcesWatcher(script_data.main_script_path),
             user_info=user_info,

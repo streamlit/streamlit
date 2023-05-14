@@ -213,8 +213,8 @@ class WStates(MutableMapping[str, Any]):
             arr.data.extend(serialized)
         elif field == "json_value":
             setattr(widget, field, json.dumps(serialized))
-        elif field == "file_uploader_state_value":
-            widget.file_uploader_state_value.CopyFrom(serialized)
+        elif field == "new_file_uploader_state_value":
+            widget.new_file_uploader_state_value.CopyFrom(serialized)
         else:
             setattr(widget, field, serialized)
 

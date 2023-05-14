@@ -44,7 +44,10 @@ from streamlit.runtime.state import (
     SafeSessionState,
     SessionState,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import (
+    UploadedFileManager,
+    UploadedFileStorage,
+)
 from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
 
 _LOGGER = get_logger(__name__)
@@ -102,6 +105,7 @@ class ScriptRunner:
         client_state: ClientState,
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
+        uploaded_file_storage: UploadedFileStorage,
         initial_rerun_data: RerunData,
         user_info: Dict[str, Optional[str]],
     ):
@@ -138,6 +142,7 @@ class ScriptRunner:
         self._session_id = session_id
         self._main_script_path = main_script_path
         self._uploaded_file_mgr = uploaded_file_mgr
+        self._uploaded_file_storage = uploaded_file_storage
         self._user_info = user_info
 
         # Initialize SessionState with the latest widget states
@@ -284,6 +289,7 @@ class ScriptRunner:
             query_string=self._client_state.query_string,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            uploaded_file_storage=self._uploaded_file_storage,
             page_script_hash=self._client_state.page_script_hash,
             user_info=self._user_info,
             gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),

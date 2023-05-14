@@ -21,6 +21,7 @@ import {
   DoubleArray,
   IArrowTable,
   IFileUploaderState,
+  INewFileUploaderState,
   SInt64Array,
   StringArray,
   WidgetState,
@@ -450,19 +451,19 @@ export class WidgetStateManager {
 
   public setFileUploaderStateValue(
     widget: WidgetInfo,
-    value: IFileUploaderState,
+    value: INewFileUploaderState,
     source: Source
   ): void {
-    this.createWidgetState(widget, source).fileUploaderStateValue = value
+    this.createWidgetState(widget, source).newFileUploaderStateValue = value
     this.onWidgetValueChanged(widget.formId, source)
   }
 
   public getFileUploaderStateValue(
     widget: WidgetInfo
-  ): IFileUploaderState | undefined {
+  ): INewFileUploaderState | undefined {
     const state = this.getWidgetState(widget)
-    if (state != null && state.value === "fileUploaderStateValue") {
-      return state.fileUploaderStateValue as IFileUploaderState
+    if (state != null && state.value === "newFileUploaderStateValue") {
+      return state.newFileUploaderStateValue as INewFileUploaderState
     }
 
     return undefined

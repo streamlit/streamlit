@@ -63,14 +63,14 @@ class UploadedFile(io.BytesIO):
 
 class UploadedFileStorage:  # THIS CLASS CODE SHOULD NOT LIVE IN SiS, just for prototype
     def __init__(self):
-        self._files: Dict[Tuple[str, str], NewUploadedFileRec] = {}
+        self._files: Dict[Tuple[str, str], UploadedFileRec] = {}
 
     def add_file(self, session_id: str, file: UploadedFileRec):
         print("AAAAAAAAA FILE ADDED TO UPLOADED_FILE_STORAGE!!!")
         print(session_id)
         print("---------")
         print(file.name)
-        self._files[session_id, str(file.id)] = file
+        self._files[session_id, file.id] = file
 
     def get_file(self, session_id, file_id) -> IO[bytes]:
         return UploadedFile(record=self._files[session_id, file_id])

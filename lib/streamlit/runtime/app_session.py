@@ -38,7 +38,10 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.secrets import secrets_singleton
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import (
+    UploadedFileManager,
+    UploadedFileStorage,
+)
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
@@ -74,6 +77,7 @@ class AppSession:
         self,
         script_data: ScriptData,
         uploaded_file_manager: UploadedFileManager,
+        uploaded_file_storage: UploadedFileStorage,
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
         user_info: Dict[str, Optional[str]],
@@ -112,6 +116,7 @@ class AppSession:
         self._event_loop = asyncio.get_running_loop()
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
+        self._uploaded_file_storage = uploaded_file_storage
 
         # The browser queue contains messages that haven't yet been
         # delivered to the browser. Periodically, the server flushes
@@ -378,6 +383,7 @@ class AppSession:
             client_state=self._client_state,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            uploaded_file_storage=self._uploaded_file_storage,
             initial_rerun_data=initial_rerun_data,
             user_info=self._user_info,
         )
