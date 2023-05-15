@@ -601,6 +601,9 @@ def marshall(
     alt.data_transformers.register("id", id_transform)
 
     if alt.themes.active == "default":
+        # The default altair theme has some width/height defaults defined
+        # that are not useful for Streamlit. Therefore, we change the theme to
+        # "none" to avoid those defaults.
         alt.themes.enable("none")
 
     with alt.data_transformers.enable("id"):
