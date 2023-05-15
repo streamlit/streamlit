@@ -8,7 +8,7 @@
     "sideEffects": false,
     "scripts": {
         "build": "yarn build:src && yarn build:lib-type && yarn build:vendor && yarn build:assets && yarn build:proto",
-        "build:lib-type": "yarn build:tsc && yarn build:tsc-alias",
+        "build:lib-type": "tsc -P tsconfig.json && tsc-alias -p tsconfig.json",
         "build:tsc": "tsc -P tsconfig.json",
         "build:tsc-alias": "tsc-alias -p tsconfig.json",
         "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --root-mode=upward --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src",
