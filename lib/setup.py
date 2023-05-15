@@ -68,11 +68,11 @@ INSTALL_REQUIRES = [
 # and PyPI builds (that is, for people installing streamlit using either
 # `pip install streamlit` or `conda install -c conda-forge streamlit`)
 SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
-    "gitpython!=3.1.19",
-    "pydeck>=0.1.dev5",
+    "gitpython>=3, <4, !=3.1.19",
+    "pydeck>=0.1.dev5, <1",
     # Tornado 6.0.3 was the current Tornado version when Python 3.8, our earliest supported Python version,
     # was released (Oct 14, 2019).
-    "tornado>=6.0.3",
+    "tornado>=6.0.3, <7",
 ]
 
 if not os.getenv("SNOWPARK_CONDA_BUILD"):
