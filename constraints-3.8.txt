@@ -151,7 +151,7 @@ types-typed-ast==1.5.8.6
 types-urllib3==1.26.25.13
 typing_extensions==4.5.0
 tzdata==2023.3
-tzlocal==5.0
+tzlocal==5.0.1
 urllib3==1.26.15
 validators==0.20.0
 virtualenv==20.23.0
