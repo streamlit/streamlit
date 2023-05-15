@@ -89,7 +89,9 @@ export interface DataFrameProps {
  * This is done by providing a custom cell renderer.
  */
 const drawMissingCells: DrawCustomCellCallback = args => {
-  const { cell, theme } = args
+  const { cell, theme, ctx, rect } = args
+  // TODO: make exceptions here for checkbox and a few other cells
+  // useCustomRenderer
   if (isMissingValueCell(cell)) {
     drawTextCell(
       {
@@ -107,6 +109,17 @@ const drawMissingCells: DrawCustomCellCallback = args => {
       NULL_VALUE_TOKEN,
       cell.contentAlign
     )
+
+    // only if column is editable, required and missing value
+    // TODO: Draw red triangle for required cells (and error cells?)
+    ctx.save()
+    ctx.beginPath()
+    ctx.moveTo(rect.x + rect.width - 8, rect.y + 1)
+    ctx.lineTo(rect.x + rect.width, rect.y + 1)
+    ctx.lineTo(rect.x + rect.width, rect.y + 1 + 8)
+    ctx.fillStyle = theme.accentColor
+    ctx.fill()
+    ctx.restore()
     return true
   }
 

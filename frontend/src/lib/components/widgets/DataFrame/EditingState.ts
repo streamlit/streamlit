@@ -18,7 +18,7 @@ import { GridCell } from "@glideapps/glide-data-grid"
 
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/util/utils"
 
-import { BaseColumn } from "./columns"
+import { BaseColumn, isMissingValueCell } from "./columns"
 
 /**
  * The editing state keeps track of all table edits applied by the user.
@@ -82,16 +82,23 @@ class EditingState {
     // List of column index -> edited value
     this.addedRows.forEach((row: Map<number, GridCell>) => {
       const addedRow: Record<number, any> = {}
+      let isInvalid = false
       row.forEach((cell: GridCell, colIndex: number, _map) => {
         const column = columnsByIndex.get(colIndex)
         if (column) {
           const cellValue = column.getCellValue(cell)
+          if (column.isRequired && isMissingValueCell(cell)) {
+            isInvalid = true
+          }
+
           if (notNullOrUndefined(cellValue)) {
             addedRow[colIndex] = cellValue
           }
         }
       })
-      currentState.added_rows.push(addedRow)
+      if (!isInvalid) {
+        currentState.added_rows.push(addedRow)
+      }
     })
 
     // The deleted rows don't need to be transformed
