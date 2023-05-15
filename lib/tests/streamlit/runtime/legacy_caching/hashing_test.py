@@ -889,10 +889,10 @@ class CodeHashTest(unittest.TestCase):
         # will need to be updated!
 
         def call_altair_concat():
-            return altair.vegalite.api.concat()
+            return altair.concat()
 
         def call_altair_layer():
-            return altair.vegalite.api.layer()
+            return altair.layer()
 
         self.assertNotEqual(get_hash(call_altair_concat), get_hash(call_altair_layer))
 
