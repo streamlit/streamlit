@@ -23,4 +23,4 @@ configure({ adapter: new Adapter() })
 
 // delete MessageChannel in tests as scheduler doesn't close their MessageChannel
 // https://github.com/facebook/react/issues/20756
-delete global.MessageChannel;
+delete global.MessageChannel
