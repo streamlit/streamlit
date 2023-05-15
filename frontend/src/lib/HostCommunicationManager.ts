@@ -21,10 +21,12 @@ import {
   IGuestToHostMessage,
   IHostToGuestMessage,
   VersionedMessage,
+  IMenuItem,
+  IToolbarItem,
+  DeployedAppMetadata,
 } from "src/lib/hocs/withHostCommunication/types"
 import { isValidOrigin } from "src/lib/util/UriUtil"
 import Resolver from "src/lib/util/Resolver"
-import { Dictionary } from "apache-arrow"
 
 export const HOST_COMM_VERSION = 1
 
@@ -38,26 +40,43 @@ interface Props {
   clearCache: () => void
 }
 
-// interface ConnectionState {
-//     allowedOrigins: string[]
-//     useExternalAuthToken: boolean | null
-//     deferredAuthToken: Resolver<string | undefined>
-// }
+interface ConnectionState {
+  allowedOrigins: string[]
+  deployedAppMetadata: DeployedAppMetadata
+  deferredAuthToken: Resolver<string | undefined>
+  hideSidebarNav: boolean
+  isOwner: boolean
+  menuItems: IMenuItem[]
+  pageLinkBaseUrl: string
+  queryParams: string
+  requestedPageScriptHash: string | null
+  sidebarChevronDownshift: number
+  toolbarItems: IToolbarItem[]
+}
 
 /**
  * Manages host communication & messaging
  */
 export class HostCommunicationManager {
   private props: Props
-  private allowedOrigins: string[]
-  private useExternalAuthToken: boolean | null
-  private deferredAuthToken: Resolver<string | undefined>
+  public state: ConnectionState
 
   constructor(props: Props) {
     this.props = props
-    this.allowedOrigins = []
-    this.useExternalAuthToken = null
-    this.deferredAuthToken = new Resolver()
+
+    this.state = {
+      allowedOrigins: [],
+      deferredAuthToken: new Resolver(),
+      deployedAppMetadata: {},
+      hideSidebarNav: false,
+      isOwner: false,
+      menuItems: [],
+      pageLinkBaseUrl: "",
+      queryParams: "",
+      requestedPageScriptHash: null,
+      sidebarChevronDownshift: 0,
+      toolbarItems: [],
+    }
   }
 
   /**
@@ -89,13 +108,12 @@ export class HostCommunicationManager {
   public setAllowedOriginsResp(resp: IAllowedMessageOriginsResponse): void {
     const { allowedOrigins, useExternalAuthToken } = resp
     if (!useExternalAuthToken) {
-      this.deferredAuthToken.resolve(undefined)
+      this.state.deferredAuthToken.resolve(undefined)
     }
     if (!allowedOrigins.length) {
       return
     }
-    this.allowedOrigins = allowedOrigins
-    this.useExternalAuthToken = useExternalAuthToken
+    this.state.allowedOrigins = allowedOrigins
 
     this.openHostCommunication()
   }
@@ -119,9 +137,16 @@ export class HostCommunicationManager {
   public receiveHostMessage(event: MessageEvent): void {
     const message: VersionedMessage<IHostToGuestMessage> | any = event.data
 
+    // Messages coming from the parent frame of a deployed Streamlit app
+    // may not be coming from a trusted source (even if we've set the CSP
+    // frame-anscestors header, it doesn't hurt to be extra safe). We avoid
+    // processing messages received from origins we haven't explicitly
+    // labeled as trusted here to lower the probability that we end up
+    // processing malicious input.
+
     if (
       message.stCommVersion !== HOST_COMM_VERSION ||
-      !this.allowedOrigins.find(allowed =>
+      !this.state.allowedOrigins.find(allowed =>
         isValidOrigin(allowed, event.origin)
       )
     ) {
@@ -139,6 +164,54 @@ export class HostCommunicationManager {
     }
     if (message.type === "CLEAR_CACHE") {
       this.props.clearCache()
+    }
+    if (message.type === "REQUEST_PAGE_CHANGE") {
+      this.state.requestedPageScriptHash = message.pageScriptHash
+    }
+    if (message.type === "SET_AUTH_TOKEN") {
+      // NOTE: The edge case (that should technically never happen) where
+      // useExternalAuthToken is false but we still receive this message
+      // type isn't an issue here because resolving a promise a second time
+      // is a no-op, and we already resolved the promise to undefined
+      // above.
+      this.state.deferredAuthToken.resolve(message.authToken)
+    }
+    if (message.type === "SET_IS_OWNER") {
+      this.state.isOwner = message.isOwner
+    }
+    if (message.type === "SET_MENU_ITEMS") {
+      this.state.menuItems = message.items
+    }
+
+    if (message.type === "SET_METADATA") {
+      this.state.deployedAppMetadata = message.metadata
+    }
+
+    if (message.type === "SET_PAGE_LINK_BASE_URL") {
+      this.state.pageLinkBaseUrl = message.pageLinkBaseUrl
+    }
+
+    if (message.type === "SET_SIDEBAR_CHEVRON_DOWNSHIFT") {
+      this.state.sidebarChevronDownshift = message.sidebarChevronDownshift
+    }
+
+    if (message.type === "SET_SIDEBAR_NAV_VISIBILITY") {
+      this.state.hideSidebarNav = message.hidden
+    }
+
+    if (message.type === "SET_TOOLBAR_ITEMS") {
+      this.state.toolbarItems = message.items
+    }
+
+    if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
+      this.state.queryParams = message.queryParams
+    }
+
+    if (message.type === "UPDATE_HASH") {
+      window.location.hash = message.hash
+    }
+    if (message.type === "SET_CUSTOM_THEME_CONFIG") {
+      this.props.theme.setImportedTheme(message.themeInfo)
     }
   }
 }
