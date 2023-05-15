@@ -48,12 +48,12 @@ exports[`SettingsDialog renders without crashing 1`] = `
           value={0}
         />
         <div>
-          <Button
+          <BaseButton
             kind="secondary"
             onClick={[MockFunction]}
           >
             Edit active theme
-          </Button>
+          </BaseButton>
         </div>
       </StyledFullRow>
     </StyledDialogBody>
@@ -162,12 +162,12 @@ exports[`SettingsDialog should show theme creator button if in developer mode 1`
           value={0}
         />
         <div>
-          <Button
+          <BaseButton
             kind="secondary"
             onClick={[MockFunction]}
           >
             Edit active theme
-          </Button>
+          </BaseButton>
         </div>
       </StyledFullRow>
     </StyledDialogBody>
