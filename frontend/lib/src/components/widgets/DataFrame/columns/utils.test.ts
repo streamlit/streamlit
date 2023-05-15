@@ -521,7 +521,7 @@ describe("truncateDecimals", () => {
 
 describe("formatMoment", () => {
   beforeAll(() => {
-    jest.useFakeTimers()
+    jest.useFakeTimers("modern")
     jest.setSystemTime(new Date("2022-04-28T00:00:00Z"))
     timezoneMock.register("UTC")
   })
