@@ -26,7 +26,6 @@ import {
 import Button, { ButtonProps } from "src/lib/components/shared/Button"
 import merge from "lodash/merge"
 import { EmotionTheme } from "src/lib/theme"
-import { LibContext } from "src/lib/components/core/LibContext"
 import { StyledModalButton } from "./styled-components"
 
 export interface ModalHeaderProps {
@@ -125,10 +124,15 @@ const ModalButton: FunctionComponent<ButtonProps> = buttonProps => (
 
 function Modal(props: ModalProps): ReactElement {
   const { spacing, radii, colors }: EmotionTheme = useTheme()
-  const { activeTheme } = React.useContext(LibContext)
-  const isDarkTheme = activeTheme.name === "Dark"
+
+  console.log(colors)
 
   const defaultOverrides = {
+    Root: {
+      style: {
+        background: colors.darkenedBgMix25,
+      },
+    },
     DialogContainer: {
       style: {
         alignItems: "start",
@@ -138,7 +142,6 @@ function Modal(props: ModalProps): ReactElement {
     Dialog: {
       style: {
         borderRadius: radii.xl,
-        background: isDarkTheme ? colors.bgMix : colors.bgColor,
       },
     },
     Close: {
