@@ -141,7 +141,7 @@ def set_page_config(
         How the page content should be laid out. Defaults to "centered",
         which constrains the elements into a centered column of fixed width;
         "wide" uses the entire screen.
-    initial_sidebar_state: "auto" or "expanded" or "collapsed"
+    initial_sidebar_state: "auto", "expanded", or "collapsed"
         How the sidebar should start out. Defaults to "auto",
         which hides the sidebar on mobile-sized devices, and shows it otherwise.
         "expanded" shows the sidebar initially; "collapsed" hides it.
@@ -226,7 +226,6 @@ def set_page_config(
 
 
 def get_random_emoji() -> str:
-
     # Weigh our emojis 10x, cuz we're awesome!
     # TODO: fix the random seed with a hash of the user's app code, for stability?
     return random.choice(RANDOM_EMOJIS + 10 * ENG_EMOJIS)

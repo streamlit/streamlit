@@ -4,7 +4,7 @@ exports[`ActionButton does not render icon if not provided 1`] = `
 <div
   className="stActionButton"
 >
-  <Button
+  <BaseButton
     kind="header"
     onClick={[MockFunction]}
   >
@@ -13,7 +13,7 @@ exports[`ActionButton does not render icon if not provided 1`] = `
         the label
       </span>
     </StyledActionButtonContainer>
-  </Button>
+  </BaseButton>
 </div>
 `;
 
@@ -21,7 +21,7 @@ exports[`ActionButton does not render label if not provided 1`] = `
 <div
   className="stActionButton"
 >
-  <Button
+  <BaseButton
     kind="header"
     onClick={[MockFunction]}
   >
@@ -30,7 +30,7 @@ exports[`ActionButton does not render label if not provided 1`] = `
         icon="star.svg"
       />
     </StyledActionButtonContainer>
-  </Button>
+  </BaseButton>
 </div>
 `;
 
@@ -38,7 +38,7 @@ exports[`ActionButton renders without crashing and matches snapshot 1`] = `
 <div
   className="stActionButton"
 >
-  <Button
+  <BaseButton
     kind="header"
     onClick={[MockFunction]}
   >
@@ -50,7 +50,7 @@ exports[`ActionButton renders without crashing and matches snapshot 1`] = `
         the label
       </span>
     </StyledActionButtonContainer>
-  </Button>
+  </BaseButton>
 </div>
 `;
 

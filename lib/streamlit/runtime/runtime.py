@@ -411,7 +411,10 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        self._session_mgr.close_session(session_id)
+        session_info = self._session_mgr.get_session_info(session_id)
+        if session_info:
+            self._message_cache.remove_refs_for_session(session_info.session)
+            self._session_mgr.close_session(session_id)
         self._on_session_disconnected()
 
     def disconnect_session(self, session_id: str) -> None:
@@ -433,7 +436,17 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        self._session_mgr.disconnect_session(session_id)
+        session_info = self._session_mgr.get_active_session_info(session_id)
+        if session_info:
+            # NOTE: Ideally, we'd like to keep ForwardMsgCache refs for a session around
+            # when a session is disconnected (and defer their cleanup until the session
+            # is garbage collected), but this would be difficult to do as the
+            # ForwardMsgCache is not thread safe, and we have no guarantee that the
+            # garbage collector will only run on the eventloop thread. Because of this,
+            # we clean up refs now and accept the risk that we're deleting cache entries
+            # that will be useful once the browser tab reconnects.
+            self._message_cache.remove_refs_for_session(session_info.session)
+            self._session_mgr.disconnect_session(session_id)
         self._on_session_disconnected()
 
     def handle_backmsg(self, session_id: str, msg: BackMsg) -> None:
@@ -687,7 +700,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 config.get_option("global.maxCachedMessageAge"),
             )
             session_info.script_run_count += 1
-            self._message_cache.remove_expired_session_entries(
+            self._message_cache.remove_expired_entries_for_session(
                 session_info.session, session_info.script_run_count
             )
 

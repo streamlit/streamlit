@@ -21,7 +21,9 @@ import { RERUN_PROMPT_MODAL_DIALOG } from "src/lib/baseconsts"
 import React, { PureComponent, ReactNode } from "react"
 import { HotKeys } from "react-hotkeys"
 import { CSSTransition } from "react-transition-group"
-import Button, { Kind } from "src/lib/components/shared/Button"
+import BaseButton, {
+  BaseButtonKind,
+} from "src/lib/components/shared/BaseButton"
 import Tooltip, { Placement } from "src/lib/components/shared/Tooltip"
 import { SignalConnection } from "typed-signals"
 
@@ -435,14 +437,14 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
   ): ReactNode {
     return (
       <StyledAppButtonContainer isMinimized={isMinimized}>
-        <Button
-          kind={Kind.HEADER_BUTTON}
+        <BaseButton
+          kind={BaseButtonKind.HEADER_BUTTON}
           disabled={disabled}
           fluidWidth
           onClick={onClick}
         >
           {title}
-        </Button>
+        </BaseButton>
       </StyledAppButtonContainer>
     )
   }

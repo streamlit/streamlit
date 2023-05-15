@@ -85,6 +85,14 @@ describe("getEmptyCell", () => {
     const emptyCell = getEmptyCell()
     expect(emptyCell.kind).toEqual(GridCellKind.Loading)
     expect(emptyCell.allowOverlay).toEqual(false)
+    expect(isMissingValueCell(emptyCell)).toEqual(false)
+  })
+
+  it("creates a valid empty cell with missing placeholder", () => {
+    const emptyCell = getEmptyCell(true)
+    expect(emptyCell.kind).toEqual(GridCellKind.Loading)
+    expect(emptyCell.allowOverlay).toEqual(false)
+    expect(isMissingValueCell(emptyCell)).toEqual(true)
   })
 })
 
