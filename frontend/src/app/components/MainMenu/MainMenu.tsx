@@ -28,7 +28,9 @@ import { Menu } from "@emotion-icons/material-outlined"
 
 import { useTheme } from "@emotion/react"
 import { EmotionTheme } from "src/lib/theme"
-import Button, { Kind } from "src/lib/components/shared/Button"
+import BaseButton, {
+  BaseButtonKind,
+} from "src/lib/components/shared/BaseButton"
 import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import {
   DetachedHead,
@@ -598,9 +600,9 @@ function MainMenu(props: Props): ReactElement {
       }}
     >
       <span id="MainMenu">
-        <Button kind={Kind.HEADER_BUTTON}>
+        <BaseButton kind={BaseButtonKind.HEADER_BUTTON}>
           <Icon content={Menu} size="lg" />
-        </Button>
+        </BaseButton>
         {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}
       </span>
     </StatefulPopover>

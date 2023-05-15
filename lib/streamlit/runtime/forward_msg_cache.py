@@ -217,7 +217,28 @@ class ForwardMsgCache(CacheStatsProvider):
         age = entry.get_session_ref_age(session, script_run_count)
         return age <= int(config.get_option("global.maxCachedMessageAge"))
 
-    def remove_expired_session_entries(
+    def remove_refs_for_session(self, session: "AppSession") -> None:
+        """Remove refs for all entries for the given session.
+
+        This should be called when an AppSession is disconnected or closed.
+
+        Parameters
+        ----------
+        session : AppSession
+        """
+
+        # Operate on a copy of our entries dict.
+        # We may be deleting from it.
+        for msg_hash, entry in self._entries.copy().items():
+            if entry.has_session_ref(session):
+                entry.remove_session_ref(session)
+
+            if not entry.has_refs():
+                # The entry has no more references. Remove it from
+                # the cache completely.
+                del self._entries[msg_hash]
+
+    def remove_expired_entries_for_session(
         self, session: "AppSession", script_run_count: int
     ) -> None:
         """Remove any cached messages that have expired from the given session.

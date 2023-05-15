@@ -16,7 +16,9 @@
 
 import React, { ReactElement } from "react"
 
-import Button, { Kind } from "src/lib/components/shared/Button"
+import BaseButton, {
+  BaseButtonKind,
+} from "src/lib/components/shared/BaseButton"
 import {
   IGuestToHostMessage,
   IToolbarItem,
@@ -39,12 +41,12 @@ export function ActionButton({
 }: ActionButtonProps): ReactElement {
   return (
     <div className="stActionButton">
-      <Button onClick={onClick} kind={Kind.HEADER_BUTTON}>
+      <BaseButton onClick={onClick} kind={BaseButtonKind.HEADER_BUTTON}>
         <StyledActionButtonContainer>
           {icon && <StyledActionButtonIcon icon={icon} />}
           {label && <span>{label}</span>}
         </StyledActionButtonContainer>
-      </Button>
+      </BaseButton>
     </div>
   )
 }
