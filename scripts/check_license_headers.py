@@ -36,7 +36,7 @@ IGNORE_PATTERN = re.compile(
     # Exclude images.
     r"|\.(?:png|jpg|jpeg|gif|ttf|woff|otf|eot|woff2|ico|svg)$"
     # Exclude files, because they make it obvious which product they relate to.
-    r"|(LICENSE|NOTICES|CODE_OF_CONDUCT\.md|README\.md|CONTRIBUTING\.md)$"
+    r"|(LICENSE|NOTICES|CODE_OF_CONDUCT\.md|README\.md|CONTRIBUTING\.md|SECURITY.md)$"
     # Exclude files, because they do not support comments
     r"|\.(json|prettierrc|nvmrc)$"
     # Exclude generated files, because they don't have any degree of creativity.
@@ -52,9 +52,9 @@ IGNORE_PATTERN = re.compile(
     r"|\.isort\.cfg$"
     r"|\.credentials/\.gitignore$"
     # Excluding test files, because adding headers may cause tests to fail.
-    r"|/(fixtures|__snapshots__|vendor|test_data|data)/"
+    r"|/(fixtures|__snapshots__|test_data|data)/"
     # Exclude vendored files.
-    r"|/vendor/|^component-lib/declarations/apache-arrow"
+    r"|/vendor/|^vendor/|^component-lib/declarations/apache-arrow"
     r"|proto/streamlit/proto/openmetrics_data_model\.proto"
     r"|lib/tests/isolated_asyncio_test_case\.py",
     re.IGNORECASE,

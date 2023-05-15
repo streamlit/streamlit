@@ -110,6 +110,7 @@ class AppSessionTest(unittest.TestCase):
         # A 2nd shutdown call should have no effect.
         session.shutdown()
         self.assertEqual(AppSessionState.SHUTDOWN_REQUESTED, session._state)
+
         mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
 
     def test_shutdown_with_running_scriptrunner(self):

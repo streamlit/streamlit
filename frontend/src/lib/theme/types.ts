@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { LightTheme, lightThemePrimitives } from "baseui"
+import { lightThemePrimitives } from "baseui"
 
 import { CustomThemeConfig } from "src/lib/proto"
 
@@ -26,9 +26,6 @@ export type EmotionTheme = typeof emotionBaseTheme
 export type ThemeConfig = {
   name: string
   emotion: EmotionTheme
-  // For use with the BaseProvider that adds a LayersManager and ThemeProvider.
-  // Unfortunately Theme is required.
-  baseweb: typeof LightTheme
   // For use with Baseweb's ThemeProvider. This is required in order for us to
   // create separate themes for in the children. Currently required to accommodate
   // sidebar theming.

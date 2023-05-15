@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, ReactNode, CSSProperties } from "react"
-import { Kind } from "src/lib/components/shared/Button"
+import { BaseButtonKind } from "src/lib/components/shared/BaseButton"
 import Modal, {
   ModalHeader,
   ModalBody,
@@ -222,12 +222,15 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
             </div>
           </ModalBody>
           <ModalFooter>
-            <ModalButton kind={Kind.TERTIARY} onClick={props.onClose}>
+            <ModalButton
+              kind={BaseButtonKind.TERTIARY}
+              onClick={props.onClose}
+            >
               Cancel
             </ModalButton>
             <ModalButton
               autoFocus
-              kind={Kind.SECONDARY}
+              kind={BaseButtonKind.SECONDARY}
               onClick={props.confirmCallback}
             >
               Clear caches
@@ -283,11 +286,11 @@ function rerunScriptDialog(props: RerunScriptProps): ReactElement {
           </div>
         </ModalBody>
         <ModalFooter>
-          <ModalButton kind={Kind.TERTIARY} onClick={props.onClose}>
+          <ModalButton kind={BaseButtonKind.TERTIARY} onClick={props.onClose}>
             Cancel
           </ModalButton>
           <ModalButton
-            kind={Kind.SECONDARY}
+            kind={BaseButtonKind.SECONDARY}
             onClick={() => props.rerunCallback()}
           >
             Rerun
@@ -320,7 +323,7 @@ function scriptCompileErrorDialog(
         </div>
       </ModalBody>
       <ModalFooter>
-        <ModalButton kind={Kind.SECONDARY} onClick={props.onClose}>
+        <ModalButton kind={BaseButtonKind.SECONDARY} onClick={props.onClose}>
           Close
         </ModalButton>
       </ModalFooter>
@@ -388,10 +391,13 @@ function deployErrorDialog({
         <StyledDeployErrorContent>{msg}</StyledDeployErrorContent>
       </ModalBody>
       <ModalFooter>
-        <ModalButton kind={Kind.TERTIARY} onClick={onTryAgain}>
+        <ModalButton kind={BaseButtonKind.TERTIARY} onClick={onTryAgain}>
           Try again
         </ModalButton>
-        <ModalButton kind={Kind.SECONDARY} onClick={handlePrimaryButton}>
+        <ModalButton
+          kind={BaseButtonKind.SECONDARY}
+          onClick={handlePrimaryButton}
+        >
           {onContinue ? "Continue anyway" : "Close"}
         </ModalButton>
       </ModalFooter>

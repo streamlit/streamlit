@@ -19,20 +19,19 @@ import { useTheme } from "@emotion/react"
 import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
 
 import { BlockNode, AppNode } from "src/lib/AppNode"
-import VerticalBlock, {
-  BlockPropsWithoutWidth,
-} from "src/lib/components/core/Block"
+import { BlockPropsWithoutWidth } from "src/lib/components/core/Block"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 
 import { StyledTabContainer } from "./styled-components"
 
-export interface Props extends BlockPropsWithoutWidth {
+export interface TabProps extends BlockPropsWithoutWidth {
   widgetsDisabled: boolean
   node: BlockNode
   isStale: boolean
+  renderTabContent: (childProps: any) => ReactElement
 }
 
-function Tabs(props: Props): ReactElement {
+function Tabs(props: TabProps): ReactElement {
   const { widgetsDisabled, node, isStale } = props
 
   const [activeKey, setActiveKey] = useState<React.Key>(0)
@@ -50,7 +49,6 @@ function Tabs(props: Props): ReactElement {
 
   const TAB_HEIGHT = "2.5rem"
   const TAB_BORDER_HEIGHT = theme.spacing.threeXS
-
   return (
     <StyledTabContainer
       isOverflowing={isOverflowing}
@@ -181,7 +179,7 @@ function Tabs(props: Props): ReactElement {
                 },
               }}
             >
-              <VerticalBlock {...childProps}></VerticalBlock>
+              {props.renderTabContent(childProps)}
             </UITab>
           )
         })}
