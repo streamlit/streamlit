@@ -21,9 +21,6 @@ import React, {
   ReactNode,
 } from "react"
 import { ThemeConfig } from "src/lib/theme"
-import BaseButton, {
-  BaseButtonKind,
-} from "src/lib/components/shared/BaseButton"
 import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
 import UISelectbox from "src/lib/components/shared/Dropdown"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
