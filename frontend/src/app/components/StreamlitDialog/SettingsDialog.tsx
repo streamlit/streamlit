@@ -22,6 +22,9 @@ import React, {
 } from "react"
 import { ThemeConfig } from "src/lib/theme"
 import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
+import BaseButton, {
+  BaseButtonKind,
+} from "src/lib/components/shared/BaseButton"
 import UISelectbox from "src/lib/components/shared/Dropdown"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import {
@@ -72,9 +75,12 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   private renderThemeCreatorButton = (): ReactElement | false =>
     this.props.developerMode && (
       <StyledButtonContainer>
-        <Button onClick={this.props.openThemeCreator} kind={Kind.SECONDARY}>
+        <BaseButton
+          onClick={this.props.openThemeCreator}
+          kind={BaseButtonKind.SECONDARY}
+        >
           Edit active theme
-        </Button>
+        </BaseButton>
       </StyledButtonContainer>
     )
 
