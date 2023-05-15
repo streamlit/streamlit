@@ -600,6 +600,9 @@ def marshall(
 
     alt.data_transformers.register("id", id_transform)
 
+    if alt.themes.active == "default":
+        alt.themes.enable("none")
+
     with alt.data_transformers.enable("id"):
         chart_dict = altair_chart.to_dict()
 
