@@ -74,12 +74,13 @@ export const StyledHeader = styled.h2(({ theme }) => ({
   },
 }))
 
-export const StyledLabel = styled.label(() => ({
+export const StyledLabel = styled.label(({ theme }) => ({
   paddingBottom: 0,
   paddingTop: 0,
   marginBottom: 0,
   marginTop: 0,
   lineHeight: 1.25,
+  fontSize: theme.fontSizes.sm,
 }))
 
 export const StyledSmall = styled(Small)(() => ({

@@ -135,8 +135,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
 
             {this.context.availableThemes.length && (
               <StyledFullRow>
-                <StyledLabel>Theme</StyledLabel>
-                <StyledSmall>Choose app and font colors/styles</StyledSmall>
+                <StyledLabel>Choose app theme, colors and fonts</StyledLabel>
                 <UISelectbox
                   options={this.context.availableThemes.map(
                     (theme: ThemeConfig) => theme.name
