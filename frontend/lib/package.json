@@ -125,7 +125,7 @@
         "@types/react-dom": "^17.0.5",
         "@types/testing-library__jest-dom": "^5.14.5",
         "axios-mock-adapter": "^1.21.4",
-        "babel-jest": "^29.5.0",
+        "babel-jest": "^27.4.3",
         "babel-plugin-emotion": "^11.0.0",
         "jest": "^27.4.3",
         "jest-environment-jsdom": "^27.4.3",
