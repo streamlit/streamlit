@@ -300,7 +300,9 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
               <code>[theme]</code> section of your{" "}
               <code>.streamlit/config.toml</code> file.
             </StyledSmall>
+          </StyledFullRow>
 
+          <StyledFullRow>
             <div>
               <BaseButton onClick={copyConfig} kind={BaseButtonKind.SECONDARY}>
                 {copied ? (
