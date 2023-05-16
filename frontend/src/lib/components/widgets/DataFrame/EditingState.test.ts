@@ -37,6 +37,14 @@ const MOCK_TEXT_CELL_2: TextCell = {
   allowOverlay: true,
 }
 
+const MOCK_TEXT_MISSING_CELL = {
+  kind: GridCellKind.Text,
+  displayData: "",
+  data: "",
+  isMissingValue: true,
+  allowOverlay: true,
+} as TextCell
+
 describe("EditingState class", () => {
   it("allows to set edited cells", () => {
     const NUM_OF_ROWS = 3
@@ -131,6 +139,53 @@ describe("EditingState class", () => {
       editingState.getOriginalRowIndex(2),
     ])
     expect(editingState.getNumRows()).toEqual(0)
+  })
+
+  it("ignores rows with required empty values in toJson", () => {
+    const NUM_OF_ROWS = 3
+    const editingState = new EditingState(NUM_OF_ROWS)
+
+    const rowCells: Map<number, GridCell> = new Map()
+    rowCells.set(0, MOCK_TEXT_CELL_1)
+    rowCells.set(1, MOCK_TEXT_MISSING_CELL)
+
+    // Add a row and check values
+    editingState.addRow(rowCells)
+    expect(editingState.getNumRows()).toEqual(NUM_OF_ROWS + 1)
+
+    const baseColumnProps = {
+      id: "column_1",
+      title: "column_1",
+      indexNumber: 0,
+      arrowType: {
+        pandas_type: "unicode",
+        numpy_type: "object",
+      },
+      isEditable: true,
+      isRequired: true,
+      isHidden: false,
+      isIndex: false,
+      isStretched: false,
+    } as BaseColumnProps
+
+    // Convert to JSON
+    const json = editingState.toJson([
+      TextColumn({
+        ...baseColumnProps,
+        indexNumber: 0,
+        id: "column_1",
+      }),
+      TextColumn({
+        ...baseColumnProps,
+        indexNumber: 1,
+        id: "column_2",
+      }),
+    ])
+
+    // Row should npt be included in the JSON:
+    expect(json).toEqual(
+      '{"edited_cells":{},"added_rows":[],"deleted_rows":[]}'
+    )
   })
 
   it("converts editing state to JSON", () => {

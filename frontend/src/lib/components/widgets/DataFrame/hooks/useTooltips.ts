@@ -26,10 +26,13 @@ import { notNullOrUndefined } from "src/lib/util/utils"
 import {
   BaseColumn,
   hasTooltip,
+  isMissingValueCell,
 } from "src/lib/components/widgets/DataFrame/columns"
 
 // Debounce time for triggering the tooltip on hover.
 export const DEBOUNCE_TIME_MS = 600
+// Tooltip message for required cells that are empty.
+export const REQUIRED_CELL_TOOLTIP = "⚠️ Please fill out this cell."
 
 export type TooltipsReturn = {
   // The tooltip to show (if any):
@@ -71,22 +74,27 @@ function useTooltips(
         const rowIdx = args.location[1]
         let tooltipContent: string | undefined
 
-        if (colIdx < 0) {
-          // Ignore negative column index.
-          // This is used for the row selection column.
+        if (colIdx < 0 || colIdx >= columns.length) {
+          // Ignore negative column index (Row index column)
+          // and column index that is out of bounds
           return
         }
 
-        if (
-          args.kind === "header" &&
-          columns.length > colIdx &&
-          notNullOrUndefined(columns[colIdx])
-        ) {
-          tooltipContent = columns[colIdx].help
+        const column = columns[colIdx]
+
+        if (args.kind === "header" && notNullOrUndefined(column)) {
+          tooltipContent = column.help
         } else if (args.kind === "cell") {
-          const cell = getCellContent([colIdx, rowIdx])
           // TODO(lukasmasuch): Ignore the last row if num_rows=dynamic (trailing row).
-          if (hasTooltip(cell)) {
+
+          const cell = getCellContent([colIdx, rowIdx])
+          if (
+            column.isRequired &&
+            column.isEditable &&
+            isMissingValueCell(cell)
+          ) {
+            tooltipContent = REQUIRED_CELL_TOOLTIP
+          } else if (hasTooltip(cell)) {
             tooltipContent = cell.tooltip
           }
         }
