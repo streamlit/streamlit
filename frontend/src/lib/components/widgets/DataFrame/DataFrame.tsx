@@ -273,7 +273,11 @@ function DataFrame({
     getCellContent
   )
 
-  const { drawCell, customRenderers } = useCustomRenderer(columns)
+  const { drawCell, customRenderers } = useCustomRenderer(
+    columns,
+    // TODO(lukasmasuch): if we add row selections, we need to set it to true here as well:
+    element.editingMode === DYNAMIC
+  )
 
   const { columns: glideColumns, onColumnResize } = useColumnSizer(
     columns.map(column => toGlideColumn(column))
