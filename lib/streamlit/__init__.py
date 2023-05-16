@@ -166,12 +166,14 @@ text_area = _main.text_area
 text_input = _main.text_input
 time_input = _main.time_input
 title = _main.title
-toast = event.toast
 vega_lite_chart = _main.vega_lite_chart
 video = _main.video
 warning = _main.warning
 write = _main.write
 color_picker = _main.color_picker
+
+# Events - Note: these methods cannot be called directly on sidebar (ex: st.sidebar.toast)
+toast = event.toast
 
 # Legacy
 _legacy_dataframe = _main._legacy_dataframe
