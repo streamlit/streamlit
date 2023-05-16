@@ -404,6 +404,32 @@ def _apply_data_specific_configs(
         data_df.rename(columns={0: "value"}, inplace=True)
 
 
+def _is_supported_index(df_index: pd.Index) -> bool:
+    """Check if the index is supported by the data editor component.
+    Parameters
+    ----------
+    df_index : pd.Index
+        The index to check.
+    Returns
+    -------
+    bool
+        True if the index is supported, False otherwise.
+    """
+
+    return (
+        type(df_index)
+        in [
+            pd.RangeIndex,
+            pd.Index,
+        ]
+        # We need to check these index types without importing, since they are deprecated
+        # and planned to be removed soon.
+        or is_type(df_index, "pandas.core.indexes.numeric.Int64Index")
+        or is_type(df_index, "pandas.core.indexes.numeric.Float64Index")
+        or is_type(df_index, "pandas.core.indexes.numeric.UInt64Index")
+    )
+
+
 class DataEditorMixin:
     @overload
     def experimental_data_editor(
@@ -489,18 +515,14 @@ class DataEditorMixin:
             This takes precedence over the width argument. Defaults to False.
 
         hide_index : bool or None
-            Determines whether to hide the index column(s). If set to True, the
-            index column(s) will be hidden. If None (default), the visibility of
-            the index column(s) is automatically determined based on the index
-            type and input data format.
+            Whether to hide the index column(s). If None (default), they will be hidden
+            automatically based on the data.
 
         column_order : iterable of str or None
-            Specifies the display order of all non-index columns, affecting both
-            the order and visibility of columns to the user. For example,
-            specifying `column_order=("col2", "col1")` will display 'col2' first,
-            followed by 'col1', and all other non-index columns in the data will
-            be hidden. If None (default), the order is inherited from the
-            original data structure.
+            Specifies the display order of columns. This also affects which columns are
+            visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
+            first, followed by 'col1', and will hide all other non-index columns. If
+            None (default), the order is inherited from the original data structure.
 
         num_rows : "fixed" or "dynamic"
             Specifies if the user can add and delete rows in the data editor.
@@ -508,12 +530,11 @@ class DataEditorMixin:
             add and delete rows in the data editor, but column sorting is disabled.
             Defaults to "fixed".
 
-        disabled : bool
-            Controls the editing of columns. If set to True, editing
-            is disabled for all columns. If an iterable of column names is provided
-            (e.g., `disabled=("col1", "col2")`), only the specified columns will be
-            disabled for editing. By default, all columns that support editing
-            are editable.
+        disabled : bool or iterable of str
+            Controls the editing of columns. If True, editing is disabled for all columns.
+            If an iterable of column names is provided (e.g., ``disabled=("col1", "col2"))``,
+            only the specified columns will be disabled for editing. If False (default),
+            all columns that support editing are editable.
 
         key : str
             An optional string to use as the unique key for this widget. If this
@@ -585,7 +606,7 @@ class DataEditorMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
-        columns_config: ColumnConfigMapping = {}
+        column_config_mapping: ColumnConfigMapping = {}
 
         data_format = type_util.determine_data_format(data)
         if data_format == DataFormat.UNKNOWN:
@@ -599,40 +620,31 @@ class DataEditorMixin:
         data_df = type_util.convert_anything_to_df(data, ensure_copy=True)
 
         # Check if the index is supported.
-        if not (
-            type(data_df.index)
-            in [
-                pd.RangeIndex,
-                pd.Index,
-            ]
-            # We need to check these index types without importing, since they are deprecated
-            # and planned to be removed soon.
-            or is_type(data_df.index, "pandas.core.indexes.numeric.Int64Index")
-            or is_type(data_df.index, "pandas.core.indexes.numeric.Float64Index")
-            or is_type(data_df.index, "pandas.core.indexes.numeric.UInt64Index")
-        ):
+        if not _is_supported_index(data_df.index):
             raise StreamlitAPIException(
                 f"The type of the dataframe index - {type(data_df.index).__name__} - is not "
                 "yet supported by the data editor."
             )
 
-        _apply_data_specific_configs(columns_config, data_df, data_format)
+        _apply_data_specific_configs(column_config_mapping, data_df, data_format)
 
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.
         if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
-            update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
+            update_column_config(
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+            )
 
         if hide_index is not None:
             update_column_config(
-                columns_config, INDEX_IDENTIFIER, {"hidden": hide_index}
+                column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
             )
 
         # If disabled not a boolean, we assume it is a list of columns to disable.
         # This gets translated into the columns configuration:
         if not isinstance(disabled, bool):
             for column in disabled:
-                update_column_config(columns_config, column, {"disabled": True})
+                update_column_config(column_config_mapping, column, {"disabled": True})
 
         # Convert the dataframe to an arrow table which is used as the main
         # serialization format for sending the data to the frontend.
@@ -675,7 +687,7 @@ class DataEditorMixin:
 
         proto.data = type_util.pyarrow_table_to_bytes(arrow_table)
 
-        marshall_column_config(proto, columns_config)
+        marshall_column_config(proto, column_config_mapping)
 
         serde = DataEditorSerde()
 
