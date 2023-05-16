@@ -21,7 +21,10 @@ import {
   NumberColumn,
 } from "src/lib/components/widgets/DataFrame/columns"
 
-import useTooltips, { DEBOUNCE_TIME_MS } from "./useTooltips"
+import useTooltips, {
+  DEBOUNCE_TIME_MS,
+  REQUIRED_CELL_TOOLTIP,
+} from "./useTooltips"
 import { GridMouseEventArgs } from "@glideapps/glide-data-grid"
 
 const TOOLTIP_CONTENT = "This is a **number** column."
@@ -36,6 +39,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
       numpy_type: "int64",
     },
     isEditable: true,
+    isRequired: true,
     isHidden: false,
     isIndex: false,
     isStretched: false,
@@ -51,6 +55,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
       numpy_type: "object",
     },
     isEditable: true,
+    isRequired: false,
     isHidden: false,
     isIndex: false,
     isStretched: false,
@@ -65,6 +70,13 @@ const getCellContentMock = jest
       return { ...column.getCell(123), tooltip: "Cell tooltip 1" }
     }
     return { ...column.getCell("foo"), tooltip: "Cell tooltip 2" }
+  })
+
+const getEmptyCellContentMock = jest
+  .fn()
+  .mockImplementation(([col]: readonly [number]) => {
+    const column = MOCK_COLUMNS[col]
+    return column.getCell(null)
   })
 
 describe("useTooltips hook", () => {
@@ -119,6 +131,29 @@ describe("useTooltips hook", () => {
 
     expect(result.current.tooltip).toMatchObject({
       content: "Cell tooltip 1",
+      left: 50,
+      top: 30,
+    })
+  })
+
+  it("renders a tooltip on hovering a required cell", () => {
+    const { result } = renderHook(() => {
+      return useTooltips(MOCK_COLUMNS, getEmptyCellContentMock)
+    })
+
+    act(() => {
+      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
+      result.current.onItemHovered!({
+        kind: "cell",
+        location: [0, 1],
+        bounds: { x: 0, y: 30, width: 100, height: 30 },
+      } as object as GridMouseEventArgs)
+
+      jest.advanceTimersByTime(DEBOUNCE_TIME_MS)
+    })
+
+    expect(result.current.tooltip).toMatchObject({
+      content: REQUIRED_CELL_TOOLTIP,
       left: 50,
       top: 30,
     })
