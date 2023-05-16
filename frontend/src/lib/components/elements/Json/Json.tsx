@@ -69,6 +69,7 @@ export default function Json({ width, element }: JsonProps): ReactElement {
           fontFamily: theme.genericFonts.codeFont,
           fontSize: theme.fontSizes.sm,
           backgroundColor: theme.colors.bgColor,
+          whiteSpace: "pre-wrap", // preserve whitespace
         }}
       />
     </div>

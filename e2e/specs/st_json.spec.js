@@ -28,4 +28,14 @@ describe("st.json", () => {
   it("displays collapsed json", () => {
     cy.getIndexed("[data-testid='stJson']", 1).should("contain", "...");
   });
+
+  it("preserves multiple white spaces", () => {
+    cy.getIndexed("[data-testid='stJson']", 2)
+      .should("contain", "Hello     World")
+      .and("contain", "Foo    Bar");
+  });
+
+  it('matches snapshot', () => {
+    cy.getIndexed("[data-testid='stJson']", 2).matchThemedSnapshots("json-white-spaces")
+  });
 });
