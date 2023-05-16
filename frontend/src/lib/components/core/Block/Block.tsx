@@ -16,13 +16,15 @@
 
 import React, { ReactElement } from "react"
 import { AutoSizer } from "react-virtualized"
+import { ToasterContainer, PLACEMENT } from "baseui/toast"
 
-import { Block as BlockProto } from "src/lib/proto"
+import { Block as BlockProto, Toast as ToastProto } from "src/lib/proto"
 import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/util/utils"
 import withExpandable from "src/lib/hocs/withExpandable"
 import { Form } from "src/lib/components/widgets/Form"
 import Tabs, { TabProps } from "src/lib/components/elements/Tabs"
+import Toast from "src/lib/components/elements/Toast"
 
 import {
   BaseBlockProps,
@@ -47,6 +49,42 @@ export interface BlockPropsWithoutWidth extends BaseBlockProps {
 interface BlockPropsWithWidth extends BaseBlockProps {
   node: BlockNode
   width: number
+}
+
+export const ToastRenderer = (
+  toasts: ElementNode[],
+  communityCloud?: boolean
+): ReactElement => {
+  return (
+    <>
+      <ToasterContainer
+        placement={PLACEMENT.bottomRight}
+        autoHideDuration={4000}
+        overrides={{
+          Root: {
+            style: {
+              // If deployed in Community Cloud, move toasts up to avoid blocking Manage App button
+              bottom: communityCloud ? "45px" : "0px",
+            },
+            props: {
+              "data-testid": "toastContainer",
+            },
+          },
+        }}
+      />
+      {toasts.map((node: ElementNode, i) => {
+        const toastProto = node.element.toast as ToastProto
+        return (
+          <Toast
+            key={node.scriptRunId + i}
+            text={toastProto.text}
+            icon={toastProto.icon}
+            type={toastProto.type}
+          />
+        )
+      })}
+    </>
+  )
 }
 
 // Render BlockNodes (i.e. container nodes).

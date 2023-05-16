@@ -104,6 +104,7 @@ _config.on_config_parsed(_update_logger, True)
 
 _main = _DeltaGenerator(root_container=_RootContainer.MAIN)
 sidebar = _DeltaGenerator(root_container=_RootContainer.SIDEBAR, parent=_main)
+event = _DeltaGenerator(root_container=_RootContainer.EVENT, parent=_main)
 
 secrets = _secrets_singleton
 
@@ -165,6 +166,7 @@ text_area = _main.text_area
 text_input = _main.text_input
 time_input = _main.time_input
 title = _main.title
+toast = event.toast
 vega_lite_chart = _main.vega_lite_chart
 video = _main.video
 warning = _main.warning
