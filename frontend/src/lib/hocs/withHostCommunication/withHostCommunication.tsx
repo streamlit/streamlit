@@ -280,22 +280,22 @@ function withHostCommunication<P extends InjectedProps>(
             resetAuthToken: () => {
               setDeferredAuthToken(new Resolver())
             },
-            onModalReset: () => {
-              setForcedModalClose(false)
-            },
-            onScriptStop: () => {
-              setScriptStopRequested(false)
-            },
-            onScriptRerun: () => {
-              setScriptRerunRequested(false)
-            },
-            onCacheClear: () => {
-              setCacheClearRequested(false)
-            },
-            onPageChanged: () => {
-              setRequestedPageScriptHash(null)
-            },
-            sendMessage: sendMessageToHost,
+            // onModalReset: () => {
+            //   setForcedModalClose(false)
+            // },
+            // onScriptStop: () => {
+            //   setScriptStopRequested(false)
+            // },
+            // onScriptRerun: () => {
+            //   setScriptRerunRequested(false)
+            // },
+            // onCacheClear: () => {
+            //   setCacheClearRequested(false)
+            // },
+            // onPageChanged: () => {
+            //   setRequestedPageScriptHash(null)
+            // },
+            // sendMessage: sendMessageToHost,
             setAllowedOriginsResp,
           } as HostCommunicationHOC
         }

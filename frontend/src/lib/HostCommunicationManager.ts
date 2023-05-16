@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ICustomThemeConfig } from "src/lib/proto"
+import { ICustomThemeConfig, WidgetStates } from "src/lib/proto"
 
 import {
   IAllowedMessageOriginsResponse,
@@ -34,6 +34,10 @@ interface Props {
   theme: {
     setImportedTheme: (themeInfo: ICustomThemeConfig) => void
   }
+  sendRerunBackMsg: (
+    widgetStates?: WidgetStates,
+    pageScriptHash?: string
+  ) => void
   closeModal: () => void
   stopScript: () => void
   rerunScript: () => void
@@ -49,7 +53,6 @@ interface ConnectionState {
   menuItems: IMenuItem[]
   pageLinkBaseUrl: string
   queryParams: string
-  requestedPageScriptHash: string | null
   sidebarChevronDownshift: number
   toolbarItems: IToolbarItem[]
 }
@@ -73,7 +76,6 @@ export class HostCommunicationManager {
       menuItems: [],
       pageLinkBaseUrl: "",
       queryParams: "",
-      requestedPageScriptHash: null,
       sidebarChevronDownshift: 0,
       toolbarItems: [],
     }
@@ -96,12 +98,22 @@ export class HostCommunicationManager {
   }
 
   /**
+   * Function to reset deferredAuthToken once the resource waiting on the token
+   * (that is, the WebsocketConnection singleton) has successfully received it.
+   *
+   * This should be called in a .then() handler attached to deferredAuthToken.promise.
+   */
+  public resetAuthToken(): void {
+    this.state.deferredAuthToken = new Resolver()
+  }
+
+  /**
    * Function to set the response body received from hitting the Streamlit
    * server's /st-allowed-message-origins endpoint. The response contains
    *   - allowedOrigins: A list of origins that we're allowed to receive
    *     cross-iframe messages from via the browser's window.postMessage API.
    *   - useExternalAuthToken: Whether to wait until we've received a
-   *     SET_AUTH_TOKEN message before resolving authTokenPromise. The
+   *     SET_AUTH_TOKEN message before resolving deferredAuthToken.promise. The
    *     WebsocketConnection class waits for this promise to resolve before
    *     attempting to establish a connection with the Streamlit server.
    */
@@ -166,7 +178,7 @@ export class HostCommunicationManager {
       this.props.clearCache()
     }
     if (message.type === "REQUEST_PAGE_CHANGE") {
-      this.state.requestedPageScriptHash = message.pageScriptHash
+      this.props.sendRerunBackMsg(undefined, message.pageScriptHash)
     }
     if (message.type === "SET_AUTH_TOKEN") {
       // NOTE: The edge case (that should technically never happen) where
@@ -205,6 +217,7 @@ export class HostCommunicationManager {
 
     if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
       this.state.queryParams = message.queryParams
+      this.props.sendRerunBackMsg()
     }
 
     if (message.type === "UPDATE_HASH") {
