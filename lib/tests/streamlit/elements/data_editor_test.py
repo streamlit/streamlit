@@ -64,6 +64,7 @@ class DataEditorUtilTest(unittest.TestCase):
             (None, ColumnDataKind.STRING, None),
             ("hello", ColumnDataKind.STRING, "hello"),
             (123, ColumnDataKind.STRING, "123"),
+            (123.1234, ColumnDataKind.STRING, "123.1234"),
             (None, ColumnDataKind.INTEGER, None),
             ("123", ColumnDataKind.INTEGER, 123),
             (123, ColumnDataKind.INTEGER, 123),
@@ -103,6 +104,7 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.DATETIME,
                 pd.Timestamp("2021-01-01T10:20:30.123456Z"),
             ),
+            (None, ColumnDataKind.TIME, None),
             ("10:20:30", ColumnDataKind.TIME, datetime.time(10, 20, 30)),
             ("10:20:30.123456", ColumnDataKind.TIME, datetime.time(10, 20, 30, 123456)),
             (
@@ -115,6 +117,7 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.TIME,
                 datetime.time(10, 20, 30, 123456),
             ),
+            (None, ColumnDataKind.DATE, None),
             ("2021-01-01", ColumnDataKind.DATE, datetime.date(2021, 1, 1)),
             (
                 "2021-01-01T10:20:30.123456Z",
