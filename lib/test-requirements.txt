@@ -28,3 +28,4 @@ pyodbc>=4.0.32
 # SQLAlchemy 2.0 causes hashing tests to fail (and we're deliberately
 # choosing not to support it.)
 sqlalchemy[mypy]>=1.4.25, <2.0
+tornado>=6.3.2 # not directly required, pinned by Snyk to avoid a vulnerability
