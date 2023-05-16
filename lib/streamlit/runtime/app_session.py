@@ -91,7 +91,9 @@ class AppSession:
             Used to manage files uploaded by users via the Streamlit web client.
 
         script_cache
-            ScriptCache instance.
+            The app's ScriptCache instance. Stores cached user scripts. ScriptRunner
+            uses the ScriptCache to avoid having to reload user scripts from disk
+            on each rerun.
 
         message_enqueued_callback
             After enqueuing a message, this callable notification will be invoked.
