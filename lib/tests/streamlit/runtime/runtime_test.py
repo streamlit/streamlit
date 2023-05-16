@@ -22,6 +22,7 @@ from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 
+from streamlit import source_util
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import (
     Runtime,
@@ -29,6 +30,9 @@ from streamlit.runtime import (
     RuntimeState,
     SessionClient,
     SessionClientDisconnectedError,
+)
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    MemoryCacheStorageManager,
 )
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
@@ -44,7 +48,10 @@ from tests.streamlit.message_mocks import (
     create_dataframe_msg,
     create_script_finished_message,
 )
-from tests.streamlit.runtime.runtime_test_case import RuntimeTestCase
+from tests.streamlit.runtime.runtime_test_case import (
+    MockSessionManager,
+    RuntimeTestCase,
+)
 from tests.testutil import patch_config_options
 
 
@@ -71,6 +78,7 @@ class RuntimeConfigTests(unittest.TestCase):
         self.assertIsInstance(config.session_storage, MemorySessionStorage)
 
 
+@patch("streamlit.runtime.runtime.LocalSourcesWatcher", MagicMock())
 class RuntimeSingletonTest(unittest.TestCase):
     def tearDown(self) -> None:
         Runtime._instance = None
@@ -680,3 +688,44 @@ time.sleep(5)
         event_based_path_watcher._MultiPathWatcher._singleton = None
         self.assertEqual(expected_loads, ok)
         self.assertEqual(expected_msg, msg)
+
+
+class RuntimeScriptCacheTest(unittest.TestCase):
+    def setUp(self) -> None:
+        # This global is initialized the first time a LocalSourcesWatcher is created.
+        # Ensure that it's unset so that our Runtime instance's LocalSourcesWatcher actually
+        # watches the test script's directory.
+        source_util._cached_pages = None
+
+    def tearDown(self) -> None:
+        Runtime._instance = None
+
+    def test_clear_script_cache_when_user_script_changes(self):
+        """The Runtime's ScriptCache instance should have its `clear` function called
+        when a user script changes.
+        """
+
+        main_script_path = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__), "scriptrunner/test_data/good_script.py"
+            )
+        )
+
+        config = RuntimeConfig(
+            script_path=main_script_path,
+            command_line="",
+            media_file_storage=MemoryMediaFileStorage("/mock/media"),
+            session_manager_class=MockSessionManager,
+            session_storage=MagicMock(),
+            cache_storage_manager=MemoryCacheStorageManager(),
+        )
+
+        runtime = Runtime(config)
+
+        # Add a mock entry to our ScriptCache
+        runtime._script_cache._cache["mock_script_path"] = b"1234"
+        self.assertEqual(1, len(runtime._script_cache._cache))
+
+        # Pretend a user script has changed. Our cache should get cleared.
+        runtime._sources_watcher.on_file_changed(main_script_path)
+        self.assertEqual(0, len(runtime._script_cache._cache))
