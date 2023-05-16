@@ -21,8 +21,10 @@ import humanizeString from "humanize-string"
 import mapValues from "lodash/mapValues"
 
 import { CustomThemeConfig } from "src/lib/proto"
-import Button, { Kind } from "src/lib/components/shared/Button"
-import ColorPicker from "src/lib/components/shared/ColorPicker"
+import BaseButton, {
+  BaseButtonKind,
+} from "src/lib/components/shared/BaseButton"
+import BaseColorPicker from "src/lib/components/shared/BaseColorPicker"
 import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
 import UISelectbox from "src/lib/components/shared/Dropdown"
 import Icon from "src/lib/components/shared/Icon"
@@ -66,25 +68,25 @@ const themeBuilder: Record<string, ThemeOptionBuilder> = {
   primaryColor: {
     help: "Primary accent color for interactive elements.",
     title: "Primary color",
-    component: ColorPicker,
+    component: BaseColorPicker,
     getValue: valueToColor,
   },
   backgroundColor: {
     help: "Background color for the main content area.",
     title: "Background color",
-    component: ColorPicker,
+    component: BaseColorPicker,
     getValue: valueToColor,
   },
   secondaryBackgroundColor: {
     help: "Background color used for the sidebar and most interactive widgets.",
     title: "Secondary background color",
-    component: ColorPicker,
+    component: BaseColorPicker,
     getValue: valueToColor,
   },
   textColor: {
     help: "Color used for almost all text.",
     title: "Text color",
-    component: ColorPicker,
+    component: BaseColorPicker,
     getValue: valueToColor,
   },
   font: {
@@ -221,7 +223,7 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
     value: string
   }): ReactElement | null => {
     const themeOptionConfig = themeBuilder[name]
-    const isColor = themeOptionConfig.component === ColorPicker
+    const isColor = themeOptionConfig.component === BaseColorPicker
     // Props that vary based on component type
     const variableProps = {
       options: themeOptionConfig.options || undefined,
@@ -305,7 +307,7 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
             </StyledSmall>
 
             <div>
-              <Button onClick={copyConfig} kind={Kind.SECONDARY}>
+              <BaseButton onClick={copyConfig} kind={BaseButtonKind.SECONDARY}>
                 {copied ? (
                   <React.Fragment>
                     {"Copied to clipboard "}
@@ -318,7 +320,7 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
                 ) : (
                   "Copy theme to clipboard"
                 )}
-              </Button>
+              </BaseButton>
             </div>
           </StyledFullRow>
         </StyledDialogBody>

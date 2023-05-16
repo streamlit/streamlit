@@ -19,7 +19,7 @@ import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 import { EmotionTheme } from "src/lib/theme"
 
-export enum Kind {
+export enum BaseButtonKind {
   PRIMARY = "primary",
   SECONDARY = "secondary",
   TERTIARY = "tertiary",
@@ -32,16 +32,16 @@ export enum Kind {
   HEADER_BUTTON = "header",
 }
 
-export enum Size {
+export enum BaseButtonSize {
   XSMALL = "xsmall",
   SMALL = "small",
   MEDIUM = "medium",
   LARGE = "large",
 }
 
-export interface ButtonProps {
-  kind: Kind
-  size?: Size
+export interface BaseButtonProps {
+  kind: BaseButtonKind
+  size?: BaseButtonSize
   onClick?: (event: MouseEvent<HTMLButtonElement>) => any
   disabled?: boolean
   fluidWidth?: boolean
@@ -49,20 +49,20 @@ export interface ButtonProps {
   autoFocus?: boolean
 }
 
-type RequiredButtonProps = Required<ButtonProps>
+type RequiredBaseButtonProps = Required<BaseButtonProps>
 
-function getSizeStyle(size: Size, theme: EmotionTheme): CSSObject {
+function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   switch (size) {
-    case Size.XSMALL:
+    case BaseButtonSize.XSMALL:
       return {
         padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
         fontSize: theme.fontSizes.sm,
       }
-    case Size.SMALL:
+    case BaseButtonSize.SMALL:
       return {
         padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
       }
-    case Size.LARGE:
+    case BaseButtonSize.LARGE:
       return {
         padding: `${theme.spacing.md} ${theme.spacing.md}`,
       }
@@ -73,7 +73,7 @@ function getSizeStyle(size: Size, theme: EmotionTheme): CSSObject {
   }
 }
 
-export const StyledBaseButton = styled.button<RequiredButtonProps>(
+export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
   ({ fluidWidth, size, theme }) => ({
     display: "inline-flex",
     alignItems: "center",
@@ -98,7 +98,7 @@ export const StyledBaseButton = styled.button<RequiredButtonProps>(
 
 export const StyledPrimaryButton = styled(
   StyledBaseButton
-)<RequiredButtonProps>(({ theme }) => ({
+)<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.primary,
   color: theme.colors.white,
   border: `1px solid ${theme.colors.primary}`,
@@ -119,7 +119,7 @@ export const StyledPrimaryButton = styled(
 
 export const StyledSecondaryButton = styled(
   StyledBaseButton
-)<RequiredButtonProps>(({ theme }) => ({
+)<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
   border: `1px solid ${theme.colors.fadedText10}`,
   "&:hover": {
@@ -145,7 +145,7 @@ export const StyledSecondaryButton = styled(
 
 export const StyledTertiaryButton = styled(
   StyledBaseButton
-)<RequiredButtonProps>(({ theme }) => ({
+)<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
   border: `1px solid ${theme.colors.transparent}`,
   "&:hover": {
@@ -168,31 +168,31 @@ export const StyledTertiaryButton = styled(
   },
 }))
 
-export const StyledLinkButton = styled(StyledBaseButton)<RequiredButtonProps>(
-  ({ theme }) => ({
+export const StyledLinkButton = styled(
+  StyledBaseButton
+)<RequiredBaseButtonProps>(({ theme }) => ({
+  backgroundColor: theme.colors.transparent,
+  padding: 0,
+  border: "none",
+  color: theme.colors.primary,
+  "&:hover": {
+    textDecoration: "underline",
+  },
+  "&:active": {
     backgroundColor: theme.colors.transparent,
-    padding: 0,
-    border: "none",
     color: theme.colors.primary,
-    "&:hover": {
-      textDecoration: "underline",
-    },
-    "&:active": {
-      backgroundColor: theme.colors.transparent,
-      color: theme.colors.primary,
-      textDecoration: "underline",
-    },
-    "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.lightGray,
-      borderColor: theme.colors.transparent,
-      color: theme.colors.gray,
-    },
-  })
-)
+    textDecoration: "underline",
+  },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    backgroundColor: theme.colors.lightGray,
+    borderColor: theme.colors.transparent,
+    color: theme.colors.gray,
+  },
+}))
 
 export const StyledMinimalButton = styled(
   StyledBaseButton
-)<RequiredButtonProps>(({ theme }) => ({
+)<RequiredBaseButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.transparent,
   border: "none",
   boxShadow: "none",
@@ -203,49 +203,49 @@ export const StyledMinimalButton = styled(
 }))
 
 export const StyledPrimaryFormSubmitButton =
-  styled(StyledPrimaryButton)<RequiredButtonProps>()
+  styled(StyledPrimaryButton)<RequiredBaseButtonProps>()
 
 export const StyledSecondaryFormSubmitButton = styled(
   StyledSecondaryButton
-)<RequiredButtonProps>()
+)<RequiredBaseButtonProps>()
 
-export const StyledIconButton = styled(StyledBaseButton)<RequiredButtonProps>(
-  ({ size, theme }) => {
-    const iconPadding: Record<Size, string> = {
-      [Size.XSMALL]: theme.spacing.threeXS,
-      [Size.SMALL]: theme.spacing.twoXS,
-      [Size.MEDIUM]: theme.spacing.md,
-      [Size.LARGE]: theme.spacing.lg,
-    }
-    return {
-      backgroundColor: theme.colors.transparent,
-      border: `1px solid ${theme.colors.transparent}`,
-      padding: iconPadding[size],
-
-      "&:hover": {
-        borderColor: theme.colors.primary,
-        color: theme.colors.primary,
-      },
-      "&:active": {
-        backgroundColor: theme.colors.primary,
-        borderColor: theme.colors.primary,
-        color: theme.colors.white,
-      },
-      "&:not(:active)": {
-        boxShadow: "none",
-      },
-      "&:disabled, &:disabled:hover, &:disabled:active": {
-        backgroundColor: theme.colors.lightGray,
-        borderColor: theme.colors.transparent,
-        color: theme.colors.gray,
-      },
-    }
+export const StyledIconButton = styled(
+  StyledBaseButton
+)<RequiredBaseButtonProps>(({ size, theme }) => {
+  const iconPadding: Record<BaseButtonSize, string> = {
+    [BaseButtonSize.XSMALL]: theme.spacing.threeXS,
+    [BaseButtonSize.SMALL]: theme.spacing.twoXS,
+    [BaseButtonSize.MEDIUM]: theme.spacing.md,
+    [BaseButtonSize.LARGE]: theme.spacing.lg,
   }
-)
+  return {
+    backgroundColor: theme.colors.transparent,
+    border: `1px solid ${theme.colors.transparent}`,
+    padding: iconPadding[size],
+
+    "&:hover": {
+      borderColor: theme.colors.primary,
+      color: theme.colors.primary,
+    },
+    "&:active": {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+      color: theme.colors.white,
+    },
+    "&:not(:active)": {
+      boxShadow: "none",
+    },
+    "&:disabled, &:disabled:hover, &:disabled:active": {
+      backgroundColor: theme.colors.lightGray,
+      borderColor: theme.colors.transparent,
+      color: theme.colors.gray,
+    },
+  }
+})
 
 export const StyledHeaderButton = styled(
   StyledBaseButton
-)<RequiredButtonProps>(({ theme }) => {
+)<RequiredBaseButtonProps>(({ theme }) => {
   return {
     backgroundColor: theme.colors.transparent,
     border: "none",
@@ -274,12 +274,12 @@ export const StyledHeaderButton = styled(
 
 export const StyledBorderlessIconButton = styled(
   StyledBaseButton
-)<RequiredButtonProps>(({ size, theme }) => {
-  const iconPadding: Record<Size, string> = {
-    [Size.XSMALL]: theme.spacing.threeXS,
-    [Size.SMALL]: theme.spacing.twoXS,
-    [Size.MEDIUM]: theme.spacing.md,
-    [Size.LARGE]: theme.spacing.lg,
+)<RequiredBaseButtonProps>(({ size, theme }) => {
+  const iconPadding: Record<BaseButtonSize, string> = {
+    [BaseButtonSize.XSMALL]: theme.spacing.threeXS,
+    [BaseButtonSize.SMALL]: theme.spacing.twoXS,
+    [BaseButtonSize.MEDIUM]: theme.spacing.md,
+    [BaseButtonSize.LARGE]: theme.spacing.lg,
   }
 
   return {
