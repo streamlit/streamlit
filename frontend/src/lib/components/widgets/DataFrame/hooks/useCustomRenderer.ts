@@ -38,7 +38,7 @@ const NULL_VALUE_TOKEN = "None"
  * Draw a red indicator in the top right corner of the cell
  * to indicate that the cell is required.
  */
-function drawRequiredIndicator(
+export function drawRequiredIndicator(
   ctx: CanvasRenderingContext2D,
   rect: Rectangle,
   theme: GlideTheme
@@ -51,6 +51,30 @@ function drawRequiredIndicator(
   ctx.fillStyle = theme.accentColor
   ctx.fill()
   ctx.restore()
+}
+
+/**
+ * If a cell is marked as missing, we draw a placeholder symbol with a faded text color.
+ */
+export const drawMissingPlaceholder: DrawCustomCellCallback = args => {
+  const { cell, theme } = args
+  drawTextCell(
+    {
+      ...args,
+      theme: {
+        ...theme,
+        textDark: theme.textLight,
+        textMedium: theme.textLight,
+      },
+      // The following props are just added for technical reasons:
+      // @ts-expect-error
+      spriteManager: {},
+      hyperWrapping: false,
+    },
+    NULL_VALUE_TOKEN,
+    cell.contentAlign
+  )
+  return true
 }
 
 /**
@@ -86,26 +110,8 @@ function useCustomRenderer(
       const colPos = hasSelectionRow ? args.col - 1 : args.col
       if (isMissingValueCell(cell) && colPos < columns.length) {
         const column = columns[colPos]
-        /**
-         * If a cell is marked as missing, we draw a placeholder symbol with a faded text color.
-         * This is done by providing a custom cell renderer.
-         */
-        drawTextCell(
-          {
-            ...args,
-            theme: {
-              ...theme,
-              textDark: theme.textLight,
-              textMedium: theme.textLight,
-            },
-            // The following props are just added for technical reasons:
-            // @ts-expect-error
-            spriteManager: {},
-            hyperWrapping: false,
-          },
-          NULL_VALUE_TOKEN,
-          cell.contentAlign
-        )
+
+        drawMissingPlaceholder(args)
 
         if (column.isRequired && column.isEditable) {
           // If the cell value is missing, and it is configured as required & editable,

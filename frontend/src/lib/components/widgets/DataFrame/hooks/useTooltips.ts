@@ -32,7 +32,7 @@ import {
 // Debounce time for triggering the tooltip on hover.
 export const DEBOUNCE_TIME_MS = 600
 // Tooltip message for required cells that are empty.
-const REQUIRED_CELL_TOOLTIP = "⚠️ Please fill out this cell."
+export const REQUIRED_CELL_TOOLTIP = "⚠️ Please fill out this cell."
 
 export type TooltipsReturn = {
   // The tooltip to show (if any):
