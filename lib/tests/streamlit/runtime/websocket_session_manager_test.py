@@ -57,6 +57,7 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         self.session_mgr = WebsocketSessionManager(
             session_storage=MockSessionStorage(),
             uploaded_file_manager=MagicMock(),
+            script_cache=MagicMock(),
             message_enqueued_callback=MagicMock(),
         )
 

@@ -28,7 +28,7 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner import magic
+from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_requests import (
     RerunData,
     ScriptRequests,
@@ -102,6 +102,7 @@ class ScriptRunner:
         client_state: ClientState,
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
+        script_cache: ScriptCache,
         initial_rerun_data: RerunData,
         user_info: Dict[str, Optional[str]],
     ):
@@ -111,19 +112,22 @@ class ScriptRunner:
 
         Parameters
         ----------
-        session_id : str
+        session_id
             The AppSession's id.
 
-        main_script_path : str
+        main_script_path
             Path to our main app script.
 
-        client_state : ClientState
+        client_state
             The current state from the client (widgets and query params).
 
-        uploaded_file_mgr : UploadedFileManager
+        uploaded_file_mgr
             The File manager to store the data uploaded by the file_uploader widget.
 
-        user_info: Dict
+        script_cache
+            A ScriptCache instance.
+
+        user_info
             A dict that contains information about the current user. For now,
             it only contains the user's email address.
 
@@ -138,6 +142,7 @@ class ScriptRunner:
         self._session_id = session_id
         self._main_script_path = main_script_path
         self._uploaded_file_mgr = uploaded_file_mgr
+        self._script_cache = script_cache
         self._user_info = user_info
 
         # Initialize SessionState with the latest widget states
@@ -486,25 +491,7 @@ class ScriptRunner:
                 msg.page_not_found.page_name = rerun_data.page_name
                 ctx.enqueue(msg)
 
-            with source_util.open_python_file(script_path) as f:
-                filebody = f.read()
-
-            if config.get_option("runner.magicEnabled"):
-                filebody = magic.add_magic(filebody, script_path)
-
-            code = compile(  # type: ignore
-                filebody,
-                # Pass in the file path so it can show up in exceptions.
-                script_path,
-                # We're compiling entire blocks of Python, so we need "exec"
-                # mode (as opposed to "eval" or "single").
-                mode="exec",
-                # Don't inherit any flags or "future" statements.
-                flags=0,
-                dont_inherit=1,
-                # Use the default optimization options.
-                optimize=-1,
-            )
+            code = self._script_cache.get_bytecode(script_path)
 
         except Exception as ex:
             # We got a compile error. Send an error event and bail immediately.

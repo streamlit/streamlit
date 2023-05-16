@@ -47,6 +47,7 @@ from streamlit.runtime.media_file_storage import MediaFileStorage
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.runtime.script_data import ScriptData
+from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
     ActiveSessionInfo,
     SessionClient,
@@ -190,10 +191,18 @@ class Runtime:
         self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._cache_storage_manager = config.cache_storage_manager
+        self._script_cache = ScriptCache()
+
+        # Clear the ScriptCache when a user script file changes
+        self._sources_watcher = LocalSourcesWatcher(self._main_script_path)
+        self._sources_watcher.register_file_change_callback(
+            lambda _: self._script_cache.clear()
+        )
 
         self._session_mgr = config.session_manager_class(
             session_storage=config.session_storage,
             uploaded_file_manager=self._uploaded_file_mgr,
+            script_cache=self._script_cache,
             message_enqueued_callback=self._enqueued_some_message,
         )
 
@@ -535,6 +544,7 @@ class Runtime:
         session = AppSession(
             script_data=ScriptData(self._main_script_path, self._command_line),
             uploaded_file_manager=self._uploaded_file_mgr,
+            script_cache=self._script_cache,
             message_enqueued_callback=self._enqueued_some_message,
             local_sources_watcher=LocalSourcesWatcher(self._main_script_path),
             user_info={"email": "test@test.com"},
