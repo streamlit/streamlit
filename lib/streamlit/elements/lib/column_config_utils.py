@@ -402,14 +402,14 @@ def determine_dataframe_schema(
 
 
 class ColumnConfig(TypedDict, total=False):
-    """Configuration options for columns in `st.dataframe` and `st.data_editor`.
+    """Configuration options for columns in ``st.dataframe`` and ``st.data_editor``.
 
     Parameters
     ----------
     title: str
         The title of the column, shown at the top in the column header.
         If None, the column name is used.
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column.
         If None, the column will be sized to fit its contents.
     help: str or None
@@ -420,7 +420,7 @@ class ColumnConfig(TypedDict, total=False):
        An optional boolean, which disables the editing if set to True.
     required: bool or None
         If True, a cell can only be submitted by the user if it has a value.
-    default: str or bool or int or float or None
+    default: str, bool, int, float, or None
         The default value in a cell when the user adds a new row.
         Defaults to None.
     type: str or None

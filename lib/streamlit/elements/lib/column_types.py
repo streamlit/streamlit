@@ -1,3 +1,17 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import datetime
@@ -25,7 +39,7 @@ def NumberColumn(
     """Rendering and editing of numerical values.
 
     This needs to be used as input to the column_config parameter of st.dataframe
-    or st.data_editor. When used with `st.data_editor`, editing will be enabled with
+    or st.data_editor. When used with ``st.data_editor``, editing will be enabled with
     a numeric input widget.
 
     Parameters
@@ -35,7 +49,7 @@ def NumberColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
@@ -50,15 +64,15 @@ def NumberColumn(
         This configuration option does not have any effect
         if used with a disabled column.
 
-    default: int or float or None
+    default: int, float, or None
         Specifies the default value for a new cell in this column when a new row is
         added by the user. If None (default), the value added to the column will be None.
 
-    min_value : int or float or None
+    min_value : int, float, or None
         The minimum value that can be entered by the user.
         If None (default), there will be no minimum.
 
-    max_value : int or float or None
+    max_value : int, float, or None
         The maximum value that can be entered by the user.
         If None (default), there will be no maximum.
 
@@ -67,7 +81,7 @@ def NumberColumn(
         displayed. This can be used for adding prefix or suffix, or changing the number
         of decimals of the display value.
 
-    step: int or float or None
+    step: int, float, or None
         Specifies the value granularity and precision that can be entered by the user.
         If None, defaults to 1 for integers. Float numbers will be unrestricted by default.
     """
@@ -100,7 +114,7 @@ def TextColumn(
 ) -> ColumnConfig:
     """Rendering and editing of text values.
 
-    When used with `st.data_editor`, editing will be enabled with a text input widget.
+    When used with ``st.data_editor``, editing will be enabled with a text input widget.
 
     Parameters
     ----------
@@ -109,7 +123,7 @@ def TextColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
@@ -124,7 +138,7 @@ def TextColumn(
         This configuration option does not have any effect
         if used with a disabled column.
 
-    default: int or float or None
+    default: int, float, or None
         Specifies the default value for a new cell in this column when a new row is
         added by the user. If None (default), the value added to the column will be None.
 
@@ -163,7 +177,7 @@ def LinkColumn(
 ) -> ColumnConfig:
     """Rendering and editing of clickable URL values.
 
-    When used with `st.data_editor`, editing will be enabled with a text input widget.
+    When used with ``st.data_editor``, editing will be enabled with a text input widget.
 
     Parameters
     ----------
@@ -172,7 +186,7 @@ def LinkColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
@@ -224,7 +238,7 @@ def CheckboxColumn(
 ) -> ColumnConfig:
     """Rendering and editing of boolean values using checkboxes.
 
-    When used with `st.data_editor`, editing will be enabled with a checkbox widget.
+    When used with ``st.data_editor``, editing will be enabled with a checkbox widget.
 
     Parameters
     ----------
@@ -233,7 +247,7 @@ def CheckboxColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
@@ -283,7 +297,7 @@ def SelectboxColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
@@ -330,7 +344,7 @@ def BarChartColumn(
 ) -> ColumnConfig:
     """Visualizes a list of numbers in a cell as a bar chart.
 
-    This is a read-only type. It can be used with `st.data_editor`,
+    This is a read-only type. It can be used with ``st.data_editor``,
     but users will not be able to edit the cell values.
 
     Parameters
@@ -340,18 +354,18 @@ def BarChartColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
 
-    y_min: int or float or None
+    y_min: int, float, or None
         The minimum value of the y-axis of the chart.
         If None (default), the scales will be normalized individually for each column.
 
-    y_max: int or float or None
+    y_max: int, float, or None
         The maximum value of the y-axis of the chart.
         If None (default), the scales will be normalized individually for each column.
     """
@@ -378,7 +392,7 @@ def LineChartColumn(
 ) -> ColumnConfig:
     """Visualizes a list of numbers in a cell as a line chart.
 
-    This is a read-only type. It can be used with `st.data_editor`,
+    This is a read-only type. It can be used with ``st.data_editor``,
     but users will not be able to edit the cell values.
 
     Parameters
@@ -388,18 +402,18 @@ def LineChartColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column header.
 
-    y_min: int or float or None
+    y_min: int, float, or None
         The minimum value of the y-axis of the chart.
         If None (default), the scales will be normalized individually for each column.
 
-    y_max: int or float or None
+    y_max: int, float, or None
         The maximum value of the y-axis of the chart.
         If None (default), the scales will be normalized individually for each column.
     """
@@ -424,7 +438,7 @@ def ImageColumn(
 ):
     """Rendering of cell values as images, given valid image URLs or binary data.
 
-    This is a read-only type. It can be used with `st.data_editor`, but users will not
+    This is a read-only type. It can be used with ``st.data_editor``, but users will not
     be able to edit the cell values.
 
     Parameters
@@ -434,7 +448,7 @@ def ImageColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
@@ -457,7 +471,7 @@ def ListColumn(
 ):
     """Rendering of list-values as a list of tags.
 
-    This is a read-only type. It can be used with `st.data_editor`,
+    This is a read-only type. It can be used with ``st.data_editor``,
     but users will not be able to edit the cell values.
 
     Parameters
@@ -467,7 +481,7 @@ def ListColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
@@ -497,7 +511,7 @@ def DatetimeColumn(
 ) -> ColumnConfig:
     """Rendering and editing of datetime values.
 
-    When used with `st.data_editor`, editing will be enabled with a datetime picker widget.
+    When used with ``st.data_editor``, editing will be enabled with a datetime picker widget.
 
     Parameters
     ----------
@@ -506,7 +520,7 @@ def DatetimeColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
@@ -541,7 +555,7 @@ def DatetimeColumn(
         The timezone of this column. If None (default), the timezone is inferred
         from the underlying data.
 
-    step: int or float or None
+    step: int, float, or None
         Specifies the value granularity in seconds that can be entered by the user.
         If None (default), the step will be 1 second.
     """
@@ -581,7 +595,7 @@ def TimeColumn(
 ) -> ColumnConfig:
     """Rendering and editing of time values.
 
-    When used with `st.data_editor`, editing will be enabled with a time picker widget.
+    When used with ``st.data_editor``, editing will be enabled with a time picker widget.
 
     Parameters
     ----------
@@ -590,7 +604,7 @@ def TimeColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
@@ -621,7 +635,7 @@ def TimeColumn(
         The maximum time that can be entered by the user.
         If None (default), there will be no maximum.
 
-    step: int or float or None
+    step: int, float, or None
         Specifies the value granularity in seconds that can be entered by the user.
         If None (default), the step will be set to 0.1 seconds.
     """
@@ -660,7 +674,7 @@ def DateColumn(
 ) -> ColumnConfig:
     """Rendering and editing of date values.
 
-    When used with `st.data_editor`, editing will be enabled with a date picker widget.
+    When used with ``st.data_editor``, editing will be enabled with a date picker widget.
 
     Parameters
     ----------
@@ -668,7 +682,7 @@ def DateColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
@@ -737,7 +751,7 @@ def ProgressColumn(
 ) -> ColumnConfig:
     """Visualizes a numeric value using a progress bar-like element.
 
-    This is a read-only type. It can be used with `st.data_editor`,
+    This is a read-only type. It can be used with ``st.data_editor``,
     but users will not be able to edit the cell values.
 
     Parameters
@@ -747,7 +761,7 @@ def ProgressColumn(
         The title of the column shown at the top in the column header.
         If None (default), the column name is used.
 
-    width: "small" or "medium" or "large" or None
+    width: "small", "medium", "large", or None
         The display width of the column. Can be either small, medium, or large.
         If None (default), the column will be sized to fit its contents.
 
@@ -762,15 +776,15 @@ def ProgressColumn(
         This configuration option does not have any effect
         if used with a disabled column.
 
-    default: int or float or None
+    default: int, float, or None
         The default value in a cell when the user adds a new row.
         Defaults to None.
 
-    min_value : int or float or None
+    min_value : int, float, or None
         The minimum value of the progress bar.
         Defaults to 0.
 
-    max_value : int or float or None
+    max_value : int, float, or None
         The maximum permitted value. Defaults to 100 if the underlying data is integer
         or 1 in all other cases.
 
@@ -797,7 +811,7 @@ def ProgressColumn(
 
 
 class ColumnConfigAPI:
-    """Configure options for columns in `st.dataframe` and `st.data_editor`."""
+    """Configure options for columns in ``st.dataframe`` and `st.data_editor`."""
 
     def __call__(
         self,
@@ -812,8 +826,8 @@ class ColumnConfigAPI:
 
         This needs to be used as input to the column_config parameter of st.dataframe
         or st.data_editor. For more type-specific configuration options, use one of
-        the column types available in `st.column_config.` namespace, e.g.
-        `st.column_config.NumberColumn`.
+        the column types available in ``st.column_config.`` namespace, e.g.
+        ``st.column_config.NumberColumn``.
 
         Parameters
         ----------
@@ -821,7 +835,7 @@ class ColumnConfigAPI:
             The title of the column shown at the top in the column header.
             If None (default), the column name is used.
 
-        width: "small" or "medium" or "large" or None
+        width: "small", "medium", "large", or None
             The display width of the column. Can be either small, medium, or large.
             If None (default), the column will be sized to fit its contents.
 
