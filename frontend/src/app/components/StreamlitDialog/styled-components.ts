@@ -60,7 +60,7 @@ export const StyledHeader = styled.h2(({ theme }) => ({
   paddingTop: 0,
   marginBottom: theme.spacing.md,
   marginTop: "0",
-  fontWeight: 600,
+  fontWeight: theme.fontWeights.bold,
   fontSize: theme.fontSizes.md,
   lineHeight: theme.lineHeights.tight,
   color: theme.colors.bodyText,
