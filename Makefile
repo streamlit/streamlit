@@ -218,7 +218,7 @@ clean:
 	rm -f lib/streamlit/proto/*_pb2.py*
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock
-	rm -rf frontend/build
+	rm -rf frontend/app/build
 	rm -rf frontend/node_modules
 	rm -rf frontend/test_results
 	rm -f frontend/lib/src/proto.js
@@ -281,14 +281,14 @@ react-init:
 react-build:
 	cd frontend/ ; yarn run build
 	rsync -av --delete --delete-excluded --exclude=reports \
-		frontend/build/ lib/streamlit/static/
+		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-fast
 # Build frontend into static files faster by setting BUILD_AS_FAST_AS_POSSIBLE=true flag, which disables eslint and typechecking.
 frontend-fast:
 	cd frontend/ ; yarn run buildFast
 	rsync -av --delete --delete-excluded --exclude=reports \
-		frontend/build/ lib/streamlit/static/
+		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-lib
 # Build the frontend library

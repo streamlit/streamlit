@@ -14,9 +14,19 @@
  * limitations under the License.
  */
 
-const create = require("./create")
+"use strict"
 
-// use custom babel-preset-react-app transpiler to transform from typescript to browser compatible js
-module.exports = function (api, opts) {
-  return create(api, Object.assign({ helpers: false }, opts), "development")
+// This is a custom Jest transformer turning css imports into empty objects
+// as css aren't really helpful for testing so we can safely mock them out
+// Without this, we try to import css and jest tries to parse them as javascript
+// https://jestjs.io/docs/webpack#handling-static-assets
+
+module.exports = {
+  process() {
+    return "module.exports = {};"
+  },
+  getCacheKey() {
+    // The output is always the same.
+    return "cssTransform"
+  },
 }

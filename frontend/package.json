@@ -14,7 +14,10 @@
     "lint": "yarn lintApp && yarn lintLib",
     "lintApp": "yarn workspace @streamlit/app lint",
     "lintLib": "yarn workspace @streamlit/lib lint",
-    "prettier": "prettier --write --config .prettierrc app/src && prettier --write --config .prettierrc lib/src"
+    "prettier": "prettier --write --config .prettierrc app/src && prettier --write --config .prettierrc lib/src",
+    "test": "yarn workspace @streamlit/lib test && yarn workspace @streamlit/app test",
+    "testLib": "yarn workspace @streamlit/lib testWatch",
+    "testApp": "yarn workspace @streamlit/app testWatch"
   },
   "browserslist": [
     ">0.2%",
