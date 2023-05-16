@@ -21,7 +21,7 @@ module.exports = {
   collectCoverageFrom: [
     "src/**/*.{js,jsx,ts,tsx}",
     "!src/**/*.d.ts",
-    "!src/**/bokeh/*.esm.min.js",
+    "!src/**/*.min.js",
   ],
   // needed for vegalite tests as vega uses canvas
   setupFiles: ["jest-canvas-mock"],
