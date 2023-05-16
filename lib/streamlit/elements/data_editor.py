@@ -515,18 +515,14 @@ class DataEditorMixin:
             This takes precedence over the width argument. Defaults to False.
 
         hide_index : bool or None
-            Determines whether to hide the index column(s). If set to True, the
-            index column(s) will be hidden. If None (default), the visibility of
-            the index column(s) is automatically determined based on the index
-            type and input data format.
+            Whether to hide the index column(s). If None (default), they will be hidden
+            automatically based on the data.
 
         column_order : iterable of str or None
-            Specifies the display order of all non-index columns, affecting both
-            the order and visibility of columns to the user. For example,
-            specifying ``column_order=("col2", "col1")`` will display 'col2' first,
-            followed by 'col1', and all other non-index columns in the data will
-            be hidden. If None (default), the order is inherited from the
-            original data structure.
+            Specifies the display order of columns. This also affects which columns are
+            visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
+            first, followed by 'col1', and will hide all other non-index columns. If
+            None (default), the order is inherited from the original data structure.
 
         num_rows : "fixed" or "dynamic"
             Specifies if the user can add and delete rows in the data editor.
@@ -535,11 +531,10 @@ class DataEditorMixin:
             Defaults to "fixed".
 
         disabled : bool or iterable of str
-            Controls the editing of columns. If set to True, editing
-            is disabled for all columns. If an iterable of column names is provided
-            (e.g., ``disabled=("col1", "col2")``), only the specified columns will be
-            disabled for editing. By default, all columns that support editing
-            are editable.
+            Controls the editing of columns. If True, editing is disabled for all columns.
+            If an iterable of column names is provided (e.g., ``disabled=("col1", "col2"))``,
+            only the specified columns will be disabled for editing. If False (default),
+            all columns that support editing are editable.
 
         key : str
             An optional string to use as the unique key for this widget. If this
