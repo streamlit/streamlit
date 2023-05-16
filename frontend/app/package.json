@@ -11,9 +11,6 @@
     "test": "env NODE_OPTIONS=\"--experimental-worker --max_old_space_size=8192\" craco test --watchAll=false --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "testWatch": "env NODE_OPTIONS=\"--experimental-worker --max_old_space_size=8192\" craco test --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=../jest/jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
-    "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
-    "cy:run": "unset NODE_OPTIONS && cypress run",
-    "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 --cache src"
   },
