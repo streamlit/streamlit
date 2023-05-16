@@ -32,9 +32,9 @@ module.exports = {
   // transpilation for jest since we use typescript
   // transform files copied from here: https://github.com/facebook/create-react-app/tree/main/packages/react-scripts/config/jest
   transform: {
-    // use babelTransform.js for all (js|jsx|mjs|cjs|ts|tsx) files
+    // use babelTransform.js for all (js|jsx|mjs|cjs|ts|tsx) files to transform to browser-compatible-js
     "^.+\\.(js|jsx|mjs|cjs|ts|tsx)$": "<rootDir>/../jest/babelTransform.js",
-    // transform our css with cssTransform.js
+    // transform our css with cssTransform.js to empty css since css is not necessary to test
     "^.+\\.css$": "<rootDir>/../jest/cssTransform.js",
     // Importing images is a way to include them in your browser bundle, but they are not valid JavaScript.
     // One way of handling it in Jest is to replace the imported value with its filename.

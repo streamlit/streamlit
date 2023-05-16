@@ -16,7 +16,8 @@
 
 // this is copied from here and modified: https://github.com/facebook/create-react-app/blob/main/packages/babel-preset-react-app/create.js
 
-console.log("Using custom babel plugin. This is needed for glide data grid.")
+// Using custom babel plugin. This is needed for preserving es modules for glide data grid
+// glide-data-grid has an exports field that points to cjs when it’s imported using require()
 
 module.exports = function (api, opts, env) {
   if (!opts) {

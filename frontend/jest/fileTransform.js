@@ -20,7 +20,9 @@ const path = require("path")
 const camelcase = require("camelcase")
 
 // This is a custom Jest transformer turning file imports into filenames.
-// http://facebook.github.io/jest/docs/en/webpack.html
+// Usually, these files aren't particularly useful in tests so we can safely mock them out
+// Without this, we try to import pngs or other such things and jest tries to parse them as javascript
+// https://jestjs.io/docs/webpack#handling-static-assets
 
 module.exports = {
   process(src, filename) {

@@ -16,8 +16,10 @@
 
 "use strict"
 
-// This is a custom Jest transformer turning style imports into empty objects.
-// http://facebook.github.io/jest/docs/en/webpack.html
+// This is a custom Jest transformer turning css imports into empty objects
+// as css aren't really helpful for testing so we can safely mock them out
+// Without this, we try to import css and jest tries to parse them as javascript
+// https://jestjs.io/docs/webpack#handling-static-assets
 
 module.exports = {
   process() {
