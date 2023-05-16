@@ -54,7 +54,6 @@ import {
   getCellFromArrow,
 } from "./arrowUtils"
 import { isIntegerType } from "./isIntegerType"
-import { TextCell } from "@glideapps/glide-data-grid"
 
 const MOCK_TEXT_COLUMN = TextColumn({
   id: "1",
