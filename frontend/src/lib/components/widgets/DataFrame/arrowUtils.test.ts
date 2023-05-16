@@ -493,6 +493,49 @@ describe("getCellFromArrow", () => {
     })
   })
 
+  it("applies display content overwrite to time cells", () => {
+    const MOCK_TIME_COLUMN = {
+      ...TimeColumn({
+        id: "1",
+        name: "time_column",
+        title: "Time column",
+        indexNumber: 0,
+        isEditable: false,
+        isHidden: false,
+        isIndex: false,
+        isStretched: false,
+        arrowType: {
+          pandas_type: "time",
+          numpy_type: "object",
+        },
+      }),
+    }
+
+    // Create a mock arrowCell object with time data
+    const arrowCell = {
+      // Unix timestamp in microseconds Wed Sep 29 2021 21:13:20
+      // Our default unit is seconds, so it needs to be adjusted internally
+      content: BigInt(1632950000123000),
+      contentType: null,
+      field: {
+        type: {
+          unit: 2, // Microseconds
+        },
+      },
+      displayContent: "FOOO",
+      cssId: null,
+      cssClass: null,
+      type: "columns",
+    } as object as DataFrameCell
+
+    // Call the getCellFromArrow function
+    const cell = getCellFromArrow(MOCK_TIME_COLUMN, arrowCell)
+
+    // non-editable time cells just fall back to text cells
+    // So we expect the display content to be in displayData
+    expect((cell as any).displayData).toEqual("FOOO")
+  })
+
   it("parses numeric timestamps for time columns into valid Date values", () => {
     const MOCK_TIME_COLUMN = {
       ...TimeColumn({

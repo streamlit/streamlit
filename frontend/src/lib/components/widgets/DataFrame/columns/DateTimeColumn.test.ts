@@ -423,7 +423,7 @@ describe("TimeColumn", () => {
 
     const mockCell = mockColumn.getCell(EXAMPLE_DATE)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect((mockCell as DateTimeCell).copyData).toEqual("10:30:00.000")
+    expect((mockCell as DateTimeCell).copyData).toEqual("10:30:00")
   })
 
   it.each([

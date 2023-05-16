@@ -400,6 +400,8 @@ export function getCellFromArrow(
       const displayData = processDisplayData(arrowCell.displayContent)
       // If the display content is set, use that instead of the content.
       // This is only supported for text, object, date, datetime, time and number cells.
+      // Non-editable datetime cells will use the text cell kind
+      // so we don't need to handle date-time-cell cells extra here.
       if (cellTemplate.kind === GridCellKind.Text) {
         cellTemplate = {
           ...cellTemplate,
@@ -411,7 +413,6 @@ export function getCellFromArrow(
           displayData,
         } as NumberCell
       }
-      // TODO (lukasmasuch): Also support datetime formatting here
     }
 
     if (cssStyles && arrowCell.cssId) {

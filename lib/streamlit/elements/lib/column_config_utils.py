@@ -31,7 +31,7 @@ INDEX_IDENTIFIER: IndexIdentifierType = "index"
 # This is used as prefix for columns that are configured via the numerical position.
 # The integer value is converted into a string key with this prefix.
 # This needs to match with the prefix configured in the frontend.
-_NUMERICAL_POSITION_PREFIX = "col:"
+_NUMERICAL_POSITION_PREFIX = "_pos:"
 
 ColumnWidth = Literal["small", "medium", "large"]
 
@@ -338,12 +338,13 @@ def determine_dataframe_schema(
 
 class ColumnConfig(TypedDict, total=False):
     title: Optional[str]
-    width: Optional[Literal["small", "medium", "large"]]
+    width: Optional[ColumnWidth]
+    help: Optional[str]
     hidden: Optional[bool]
     disabled: Optional[bool]
     required: Optional[bool]
+    default: Optional[str | bool | int | float]
     alignment: Optional[Literal["left", "center", "right"]]
-    help: Optional[str]
     type: Optional[ColumnType]
     type_options: Optional[Dict[str, Any]]
 
