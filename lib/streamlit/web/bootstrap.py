@@ -199,9 +199,9 @@ def _fix_pydeck_mapbox_api_warning() -> None:
 
 def _fix_pydantic_duplicate_validators_error():
     try:
-        from pydantic import class_validators
+        from pydantic import class_validators  # type: ignore
 
-        class_validators.in_ipython = lambda: True  # type: ignore[attr-defined]
+        class_validators.in_ipython = lambda: True
     except ImportError:
         pass
 
