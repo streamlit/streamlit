@@ -22,7 +22,7 @@ import { EmojiIcon } from "src/lib/components/shared/Icon"
 import AlertContainer, { Kind } from "src/lib/components/shared/AlertContainer"
 import { StyledIconAlertContent } from "./styled-components"
 
-export function getAlertKind(format: AlertProto.Format): Kind {
+export function getAlertElementKind(format: AlertProto.Format): Kind {
   switch (format) {
     case AlertProto.Format.ERROR:
       return Kind.ERROR
@@ -37,7 +37,7 @@ export function getAlertKind(format: AlertProto.Format): Kind {
   }
 }
 
-export interface AlertProps {
+export interface AlertElementProps {
   body: string
   icon?: string
   kind: Kind
@@ -47,12 +47,12 @@ export interface AlertProps {
 /**
  * Display an (error|warning|info|success) box with a Markdown-formatted body.
  */
-export default function Alert({
+export default function AlertElement({
   icon,
   body,
   kind,
   width,
-}: AlertProps): ReactElement {
+}: AlertElementProps): ReactElement {
   return (
     <div className="stAlert">
       <AlertContainer width={width} kind={kind}>

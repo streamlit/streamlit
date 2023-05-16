@@ -29,7 +29,7 @@ import {
 } from "src/lib/proto"
 import { AppRoot } from "./AppNode"
 import VerticalBlock from "./components/core/Block"
-import Alert from "./components/elements/Alert"
+import AlertElement from "./components/elements/AlertElement"
 import TextElement from "./components/elements/TextElement"
 import { ComponentRegistry } from "./components/widgets/CustomComponent"
 import { FileUploadClient } from "./FileUploadClient"
@@ -219,7 +219,7 @@ describe("StreamlitLibExample", () => {
 
     // Before any Elements are explicitly added, our example class
     // will show a placeholder "Please wait..." info message
-    const alert = wrapper.find(Alert)
+    const alert = wrapper.find(AlertElement)
     expect(alert.text()).toBe("Please wait...")
   })
 
@@ -249,7 +249,7 @@ describe("StreamlitLibExample", () => {
 
     // our "Please wait..." alert should be gone, because it
     // belonged to a previous "script run"
-    const alert = wrapper.find(Alert)
+    const alert = wrapper.find(AlertElement)
     expect(alert.exists()).toBe(false)
 
     // And we should have the single Text element we created

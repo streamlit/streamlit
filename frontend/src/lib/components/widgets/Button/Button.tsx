@@ -16,11 +16,11 @@
 
 import React, { ReactElement } from "react"
 import { Button as ButtonProto } from "src/lib/proto"
-import UIButton, {
-  ButtonTooltip,
-  Kind,
-  Size,
-} from "src/lib/components/shared/Button"
+import BaseButton, {
+  BaseButtonTooltip,
+  BaseButtonKind,
+  BaseButtonSize,
+} from "src/lib/components/shared/BaseButton"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 
@@ -35,14 +35,17 @@ function Button(props: Props): ReactElement {
   const { disabled, element, widgetMgr, width } = props
   const style = { width }
 
-  const kind = element.type === "primary" ? Kind.PRIMARY : Kind.SECONDARY
+  const kind =
+    element.type === "primary"
+      ? BaseButtonKind.PRIMARY
+      : BaseButtonKind.SECONDARY
 
   return (
     <div className="row-widget stButton" style={style}>
-      <ButtonTooltip help={element.help}>
-        <UIButton
+      <BaseButtonTooltip help={element.help}>
+        <BaseButton
           kind={kind}
-          size={Size.SMALL}
+          size={BaseButtonSize.SMALL}
           disabled={disabled}
           fluidWidth={element.useContainerWidth || false}
           onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}
@@ -53,8 +56,8 @@ function Button(props: Props): ReactElement {
             isLabel
             isButton
           />
-        </UIButton>
-      </ButtonTooltip>
+        </BaseButton>
+      </BaseButtonTooltip>
     </div>
   )
 }

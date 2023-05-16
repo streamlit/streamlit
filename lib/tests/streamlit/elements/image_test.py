@@ -93,7 +93,7 @@ def create_gif(size):
         frame = im.copy()
         draw = ImageDraw.Draw(frame)
         pos = (random.randrange(0, size), random.randrange(0, size))
-        circle_size = random.randrange(10, size / 2)
+        circle_size = random.randrange(10, int(size / 2))
         draw.ellipse([pos, tuple(p + circle_size for p in pos)], "black")
         images.append(frame.copy())
 

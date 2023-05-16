@@ -58,12 +58,12 @@ exports[`Renders ThemeCreatorDialog renders theme creator dialog 1`] = `
            file.
         </StyledSmall>
         <div>
-          <Button
+          <BaseButton
             kind="secondary"
             onClick={[Function]}
           >
             Copy theme to clipboard
-          </Button>
+          </BaseButton>
         </div>
       </StyledFullRow>
     </StyledDialogBody>
