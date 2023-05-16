@@ -160,7 +160,7 @@ function aboutDialog(props: AboutProps): ReactElement {
   }
   return (
     <Modal isOpen onClose={props.onClose}>
-      <ModalHeader>Powered by</ModalHeader>
+      <ModalHeader>Made with</ModalHeader>
       <ModalBody>
         <div>
           {/* Show our version string only if SessionInfo has been created. If Streamlit
@@ -210,7 +210,7 @@ function clearCacheDialog(props: ClearCacheProps): ReactElement {
     <HotKeys handlers={keyHandlers} attach={window}>
       <div data-testid="stClearCacheDialog">
         <Modal isOpen onClose={props.onClose}>
-          <ModalHeader>Clear Caches</ModalHeader>
+          <ModalHeader>Clear caches</ModalHeader>
           <ModalBody>
             <div>
               <b>Are you sure you want to clear the app's function caches?</b>
