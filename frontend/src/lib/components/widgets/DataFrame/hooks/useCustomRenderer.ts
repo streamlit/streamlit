@@ -45,9 +45,15 @@ export function drawRequiredIndicator(
 ): void {
   ctx.save()
   ctx.beginPath()
+  // We are first moving the drawing position under the top right corner
+  // 8 pixels from left side (this is the size triangle)
+  // and 1 pixel from top side (to be under the cell border).
   ctx.moveTo(rect.x + rect.width - 8, rect.y + 1)
+  // We draw the first line to the top right corner.
   ctx.lineTo(rect.x + rect.width, rect.y + 1)
+  // We draw the second line 8 pixel down on the right cell border
   ctx.lineTo(rect.x + rect.width, rect.y + 1 + 8)
+  // And now its enough to just fill it with a color to get a triangle.
   ctx.fillStyle = theme.accentColor
   ctx.fill()
   ctx.restore()
@@ -109,9 +115,20 @@ function useCustomRenderer(
       const { cell, theme, ctx, rect } = args
       const colPos = hasSelectionRow ? args.col - 1 : args.col
       if (isMissingValueCell(cell) && colPos < columns.length) {
+        let contentRendered = false
         const column = columns[colPos]
 
-        drawMissingPlaceholder(args)
+        // We explicitly ignore some cell types here (e.g. checkbox, progress...) since
+        // they are taking care of rendering their missing value state themselves (usually as empty cell).
+        // All other cell types are rendered with a placeholder symbol and a faded text color via drawMissingPlaceholder.
+        if (
+          !["checkbox", "line_chart", "bar_chart", "progress"].includes(
+            column.kind
+          )
+        ) {
+          drawMissingPlaceholder(args)
+          contentRendered = true
+        }
 
         if (column.isRequired && column.isEditable) {
           // If the cell value is missing, and it is configured as required & editable,
@@ -119,7 +136,7 @@ function useCustomRenderer(
           drawRequiredIndicator(ctx, rect, theme)
         }
 
-        return true
+        return contentRendered
       }
 
       return false

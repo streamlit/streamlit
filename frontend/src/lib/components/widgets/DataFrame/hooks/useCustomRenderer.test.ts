@@ -22,6 +22,8 @@ import {
   NumberColumn,
 } from "src/lib/components/widgets/DataFrame/columns"
 
+import useCustomRenderer from "./useCustomRenderer"
+
 const MOCK_COLUMNS: BaseColumn[] = [
   NumberColumn({
     id: "column_1",
@@ -56,11 +58,6 @@ const MOCK_COLUMNS: BaseColumn[] = [
 ]
 
 describe("useCustomRenderer hook", () => {
-  let useCustomRenderer: any
-  beforeEach(() => {
-    useCustomRenderer = require("./useCustomRenderer").default
-  })
-
   it("returns correct initial state", () => {
     const { result } = renderHook(() => {
       return useCustomRenderer(MOCK_COLUMNS, false)
