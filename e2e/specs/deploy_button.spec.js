@@ -27,7 +27,7 @@ describe("displays deploy button correctly", () => {
 
   it("deploy dialog matches the snapshot", () => {
     cy.get("div[class='stDeployButton'] > button").click({force: true})
-    cy.get("div[role='dialog']").matchImageSnapshot(
+    cy.get("div[role='dialog']").matchThemedSnapshots(
       "deploy_dialog_opened"
     );
   })
