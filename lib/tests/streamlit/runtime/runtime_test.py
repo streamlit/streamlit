@@ -78,25 +78,23 @@ class RuntimeConfigTests(unittest.TestCase):
         self.assertIsInstance(config.session_storage, MemorySessionStorage)
 
 
+@patch("streamlit.runtime.runtime.LocalSourcesWatcher", MagicMock())
 class RuntimeSingletonTest(unittest.TestCase):
     def tearDown(self) -> None:
         Runtime._instance = None
 
-    @patch("streamlit.runtime.runtime.LocalSourcesWatcher", MagicMock())
     def test_runtime_constructor_sets_instance(self):
         """Creating a Runtime instance sets Runtime.instance"""
         self.assertIsNone(Runtime._instance)
         _ = Runtime(MagicMock())
         self.assertIsNotNone(Runtime._instance)
 
-    @patch("streamlit.runtime.runtime.LocalSourcesWatcher", MagicMock())
     def test_multiple_runtime_error(self):
         """Creating multiple Runtimes raises an error."""
         Runtime(MagicMock())
         with self.assertRaises(RuntimeError):
             Runtime(MagicMock())
 
-    @patch("streamlit.runtime.runtime.LocalSourcesWatcher", MagicMock())
     def test_instance_class_method(self):
         """Runtime.instance() returns our singleton instance."""
         with self.assertRaises(RuntimeError):
@@ -107,7 +105,6 @@ class RuntimeSingletonTest(unittest.TestCase):
         _ = Runtime(MagicMock())
         Runtime.instance()
 
-    @patch("streamlit.runtime.runtime.LocalSourcesWatcher", MagicMock())
     def test_exists(self):
         """Runtime.exists() returns True iff the Runtime singleton exists."""
         self.assertFalse(Runtime.exists())
