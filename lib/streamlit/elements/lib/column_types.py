@@ -811,7 +811,41 @@ def ProgressColumn(
 
 
 class ColumnConfigAPI:
-    """Configure options for columns in ``st.dataframe`` and `st.data_editor`."""
+    """Configure options for columns in ``st.dataframe`` and `st.data_editor`.
+
+    This needs to be used as input to the column_config parameter of st.dataframe
+    or st.data_editor. For more type-specific configuration options, use one of
+    the column types available in ``st.column_config.`` namespace, e.g.
+    ``st.column_config.NumberColumn``.
+
+    Parameters
+    ----------
+    title: str
+        The title of the column shown at the top in the column header.
+        If None (default), the column name is used.
+
+    width: "small", "medium", "large", or None
+        The display width of the column. Can be either small, medium, or large.
+        If None (default), the column will be sized to fit its contents.
+
+    help: str or None
+        An optional tooltip that gets displayed when hovering over the column header.
+
+    required: bool or None
+        If True, a cell can only be submitted by the user if it has a value.
+        This will ensure that the data_editor never returns None as a value in this
+        column. Defaults to False.
+
+        This configuration option does not have any effect
+        if used with a disabled column.
+
+    type: "text", "number", "checkbox", "select", “list”,“datetime”, “date”, “time”, “url”, “image”, “line_chart”, “bar_chart”, “range” or None
+        The type name for the column. If None, infers the type from the underlying
+        data in the column. Defaults to None. To apply any type-specific configuration
+        options, use one of the column types available in the ``st.column_config.``
+        namespace - e.g. ``st.column_config.NumberColumn`` - as replacement for the
+        ``st.column_config`` command.
+    """
 
     def __call__(
         self,
@@ -853,9 +887,9 @@ class ColumnConfigAPI:
         type: "text", "number", "checkbox", "select", “list”,“datetime”, “date”, “time”, “url”, “image”, “line_chart”, “bar_chart”, “range” or None
             The type name for the column. If None, infers the type from the underlying
             data in the column. Defaults to None. To apply any type-specific configuration
-            options, use one of the column types available in the `st.column_config.`
-            namespace - e.g. `st.column_config.NumberColumn` - as replacement for the
-            `st.column_config` command.
+            options, use one of the column types available in the ``st.column_config.``
+            namespace - e.g. ``st.column_config.NumberColumn`` - as replacement for the
+            ``st.column_config`` command.
         """
 
         return ColumnConfig(
