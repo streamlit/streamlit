@@ -54,6 +54,8 @@ exports[`Renders ThemeCreatorDialog renders theme creator dialog 1`] = `
           </code>
            file.
         </StyledSmall>
+      </StyledFullRow>
+      <StyledFullRow>
         <div>
           <BaseButton
             kind="secondary"
