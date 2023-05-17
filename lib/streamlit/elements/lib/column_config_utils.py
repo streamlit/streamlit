@@ -406,25 +406,34 @@ class ColumnConfig(TypedDict, total=False):
 
     Parameters
     ----------
-    title: str
-        The title of the column, shown at the top in the column header.
-        If None, the column name is used.
+
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
+
     width: "small", "medium", "large", or None
-        The display width of the column.
-        If None, the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
+
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
-    hidden: bool or None
-        An optional boolean, which hides the column if set to True.
+        An optional tooltip that gets displayed when hovering over the column label.
+
     disabled: bool or None
-       An optional boolean, which disables the editing if set to True.
+        Whether editing should be disabled for this column. Defaults to False.
+
     required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+
     default: str, bool, int, float, or None
-        The default value in a cell when the user adds a new row.
-        Defaults to None.
+        Specifies the default value in this column when a new row is added by the user.
+
+    hidden: bool or None
+        Whether to hide the column. Defaults to False.
+
     type: str or None
         The type of the column. If None, the column will be inferred from the data.
+
     type_options: dict or None
         Additional configuration options specific to the selected column type.
     """
