@@ -217,14 +217,14 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [
-                datetime.datetime(2021, 1, 1, 1, 0, 0, 123),
-                datetime.datetime(2022, 1, 2, 2, 0, 0, 234),
-                datetime.datetime(2023, 1, 3, 3, 0, 0, 345),
+                datetime.datetime(2021, 1, 1, 1, 0, 0, 123000),
+                datetime.datetime(2022, 1, 2, 2, 0, 0, 234000),
+                datetime.datetime(2023, 1, 3, 3, 0, 0, 345000),
                 None,
             ],
             "col_1": [
-                "2021-01-01T01:00:00",
-                "2022-01-02T02:00:00",
+                "2021-01-01T01:00:00.123",
+                "2022-01-02T02:00:00.234",
                 "invalid",
                 None,
             ],
@@ -243,7 +243,9 @@ st.dataframe(
             step=0.01,
             format="yyy-MM-dd HH:mm:ss.SSS",
         ),
-        "col_1": st.column_config.DatetimeColumn(),
+        "col_1": st.column_config.DatetimeColumn(
+            step=0.01,
+        ),
     },
 )
 
@@ -288,9 +290,9 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [
-                datetime.time(1, 2, 0, 123),
-                datetime.time(2, 3, 0, 234),
-                datetime.time(3, 4, 0, 345),
+                datetime.time(1, 2, 0, 123000),
+                datetime.time(2, 3, 0, 234000),
+                datetime.time(3, 4, 0, 345000),
                 None,
             ],
             "col_1": [
@@ -364,7 +366,7 @@ st.header("Bar chart column:")
 st.dataframe(
     pd.DataFrame(
         {
-            "col_0": [[1, 5, 2], [2, 3, 4, 5, 6], [], None],
+            "col_0": [[1, 5, 2], [2, 3, 5, -4, -5], [], None],
             "col_1": ["1,2,3,4", "6, 5, 1, 10", "invalid", None],
         }
     ),
@@ -373,8 +375,8 @@ st.dataframe(
             "Bar chart column",
             width="medium",
             help="This is a bar chart column",
-            y_min=0,
-            y_max=10,
+            y_min=-5,
+            y_max=5,
         ),
         "col_1": st.column_config.BarChartColumn(),
     },
@@ -386,7 +388,7 @@ st.header("Line chart column:")
 st.dataframe(
     pd.DataFrame(
         {
-            "col_0": [[1, 5, 2], [2, 3, 4, 5, 6], [], None],
+            "col_0": [[1, 5, 2], [2, 3, 5, -4, -5], [], None],
             "col_1": ["1,2,3,4", "6, 5, 1, 10", "invalid", None],
         }
     ),
@@ -395,8 +397,8 @@ st.dataframe(
             "Line chart column",
             width="medium",
             help="This is a line chart column",
-            y_min=0,
-            y_max=10,
+            y_min=-5,
+            y_max=5,
         ),
         "col_1": st.column_config.LineChartColumn(),
     },
