@@ -22,7 +22,7 @@ describe("modals", () => {
   it("displays settings modal correctly", () => {
     cy.get("#MainMenu > button").click();
 
-    cy.get('[data-testid="main-menu-list"] > ul', 2).click();
+    cy.get('[data-testid="main-menu-list"] > ul').eq(1).click();
 
     cy.get('div[data-baseweb="modal" div div]').matchThemedSnapshots(
       "settings"
