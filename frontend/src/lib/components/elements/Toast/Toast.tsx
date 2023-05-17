@@ -113,6 +113,7 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
           <StreamlitMarkdown
             source={expanded ? fullMessage : displayMessage}
             allowHTML={false}
+            isToast
           />
         </StyledToastMessage>
         {shortened && (
