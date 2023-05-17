@@ -26,10 +26,10 @@ describe("modals", () => {
 
     cy.get("#MainMenu > button").click();
 
-    cy.get('[data-testid="main-menu-list"] ul', 2).click();
+    cy.getIndexed('[data-testid="main-menu-list"] ul', 2).click();
 
     cy.getIndexed('div[data-baseweb="modal" div div]').matchImageSnapshot(
-      "settings_light"
+      "settings-light"
     );
   });
 
@@ -38,10 +38,10 @@ describe("modals", () => {
 
     cy.get("#MainMenu > button").click();
 
-    cy.get('[data-testid="main-menu-list"] ul', 2).click();
+    cy.getIndexed('[data-testid="main-menu-list"] ul', 2).click();
 
-    cy.getIndexed('div[data-baseweb="modal" div div]').matchImageSnapshot(
-      "settings_dark"
+    cy.gey('div[data-baseweb="modal" div div]').matchImageSnapshot(
+      "settings-dark"
     );
   });
 });
