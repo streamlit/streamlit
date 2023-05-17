@@ -26,6 +26,7 @@ from streamlit.elements.lib.column_config_utils import (
     _EDITING_COMPATIBILITY_MAPPING,
     ColumnConfig,
     ColumnConfigMapping,
+    ColumnConfigMappingInput,
     ColumnDataKind,
     _determine_data_kind,
     _determine_data_kind_via_arrow,
@@ -33,8 +34,10 @@ from streamlit.elements.lib.column_config_utils import (
     _determine_data_kind_via_pandas_dtype,
     determine_dataframe_schema,
     is_type_compatible,
+    process_config_mapping,
     update_column_config,
 )
+from streamlit.errors import StreamlitAPIException
 
 
 class TestObject(object):
@@ -354,6 +357,62 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                 is_type_compatible("list", data_kind),
                 f"Expected list to be compatible with {data_kind}",
             )
+
+    def test_process_config_mapping(self):
+        """Test that the process_config_mapping function correctly processes a config mapping."""
+        config_1: ColumnConfigMappingInput = {
+            "index": {"label": "Index", "width": "medium"},
+            "col1": {
+                "label": "Column 1",
+                "width": "small",
+                "required": True,
+                "type_config": {"type": "link"},
+            },
+        }
+        self.assertEqual(
+            process_config_mapping(config_1),
+            config_1,
+            "Expected no changes to config mapping.",
+        )
+
+        config_2: ColumnConfigMappingInput = {
+            "index": {"label": "Index", "width": "medium"},
+            "col1": "Column 1",
+        }
+
+        self.assertEqual(
+            process_config_mapping(config_2),
+            {
+                "index": {"label": "Index", "width": "medium"},
+                "col1": {"label": "Column 1"},
+            },
+            "Expected string to be converted to valid column config dict with string as label.",
+        )
+
+        config_3: ColumnConfigMappingInput = {
+            "index": {"label": "Index", "width": "medium"},
+            "col1": None,
+        }
+        # The None should be converted to a valid column config dict:
+        self.assertEqual(
+            process_config_mapping(config_3),
+            {
+                "index": {"label": "Index", "width": "medium"},
+                "col1": {"hidden": True},
+            },
+            "Expected None to be converted to valid column config dict with hidden=True.",
+        )
+
+        config_4: ColumnConfigMappingInput = None  # type: ignore
+
+        self.assertEqual(
+            process_config_mapping(config_4),
+            {},
+            "Expected None to be converted to empty dict.",
+        )
+
+        with self.assertRaises(StreamlitAPIException):
+            process_config_mapping({"col1": ["a", "b"]})  # type: ignore
 
     def test_update_column_config(self):
         """Test that the update_column_config function correctly updates a column's configuration."""
