@@ -725,7 +725,7 @@ def DatetimeColumn(
     format: str | None = None,
     min_value: datetime.datetime | None = None,
     max_value: datetime.datetime | None = None,
-    step: int | float | None = None,
+    step: int | float | datetime.timedelta | None = None,
     timezone: str | None = None,
 ) -> ColumnConfig:
     """Configure a datetime column in ``st.dataframe`` or ``st.data_editor``.
@@ -772,7 +772,7 @@ def DatetimeColumn(
         The maximum datetime that can be entered.
         If None (default), there will be no minimum.
 
-    step: int, float, or None
+    step: int, float, datetime.timedelta, or None
         The stepping interval in seconds. If None (default), the step will be 1 second.
 
     timezone: str or None
@@ -795,7 +795,7 @@ def DatetimeColumn(
             format=format,
             min_value=_format_datetime(min_value),
             max_value=_format_datetime(max_value),
-            step=step,
+            step=step.total_seconds() if isinstance(step, datetime.timedelta) else step,
             timezone=timezone,
         ),
     )
@@ -813,7 +813,7 @@ def TimeColumn(
     format: str | None = None,
     min_value: datetime.time | None = None,
     max_value: datetime.time | None = None,
-    step: int | float | None = None,
+    step: int | float | datetime.timedelta | None = None,
 ) -> ColumnConfig:
     """Configure a time column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -858,7 +858,7 @@ def TimeColumn(
         The maximum time that can be entered.
         If None (default), there will be no minimum.
 
-    step: int, float or None
+    step: int, float, datetime.timedelta, or None
         The stepping interval in seconds. If None (default), the step will be 1 second.
     """
 
@@ -877,7 +877,7 @@ def TimeColumn(
             format=format,
             min_value=_format_time(min_value),
             max_value=_format_time(max_value),
-            step=step,
+            step=step.total_seconds() if isinstance(step, datetime.timedelta) else step,
         ),
     )
 
