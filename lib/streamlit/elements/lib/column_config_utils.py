@@ -16,11 +16,11 @@ from __future__ import annotations
 
 import json
 from enum import Enum
-from typing import Dict, Final, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import pandas as pd
 import pyarrow as pa
-from typing_extensions import Literal, TypeAlias
+from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
 from streamlit.elements.lib.dicttools import remove_none_values
