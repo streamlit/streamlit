@@ -24,7 +24,7 @@ describe("modals", () => {
 
     cy.get('[data-testid="main-menu-list"] > ul').eq(1).click();
 
-    cy.get('div[data-baseweb="modal" > div > div]').matchThemedSnapshots(
+    cy.get("div[role='dialog']").matchThemedSnapshots(
       "settings"
     );
   });
