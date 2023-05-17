@@ -227,7 +227,7 @@ describe("DateTimeColumn", () => {
     const MOCK_DATETIME_COLUMN_CUSTOM_FORMAT = {
       ...MOCK_DATETIME_COLUMN_TEMPLATE,
       columnTypeOptions: {
-        format: "MMM do, yyyy - HH:mm",
+        format: "MMM Do, YYYY - HH:mm",
       },
     }
 
@@ -403,7 +403,7 @@ describe("DateColumn", () => {
     const MOCK_DATE_COLUMN_CUSTOM_FORMAT = {
       ...MOCK_DATE_COLUMN_TEMPLATE,
       columnTypeOptions: {
-        format: "MMM do, yyyy",
+        format: "MMM Do, YYYY",
       },
     }
 
