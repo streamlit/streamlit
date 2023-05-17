@@ -16,12 +16,13 @@ from __future__ import annotations
 
 import json
 from enum import Enum
-from typing import Any, Dict, Final, List, Literal, Optional, Union
+from typing import Any, Dict, Final, List, Optional, Union
 
 import pandas as pd
 import pyarrow as pa
-from typing_extensions import Literal, NotRequired, TypeAlias, TypedDict
+from typing_extensions import Literal, TypeAlias
 
+from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
@@ -33,27 +34,6 @@ INDEX_IDENTIFIER: IndexIdentifierType = "index"
 # The integer value is converted into a string key with this prefix.
 # This needs to match with the prefix configured in the frontend.
 _NUMERICAL_POSITION_PREFIX = "_pos:"
-
-ColumnWidth = Literal["small", "medium", "large"]
-
-# Type alias that represents all available column types
-# which are configurable by the user.
-ColumnType: TypeAlias = Literal[
-    "object",
-    "text",
-    "number",
-    "checkbox",
-    "selectbox",
-    "list",
-    "datetime",
-    "date",
-    "time",
-    "link",
-    "line_chart",
-    "bar_chart",
-    "image",
-    "progress",
-]
 
 
 # The column data kind is used to describe the type of the data within the column.
@@ -396,147 +376,6 @@ def determine_dataframe_schema(
             _determine_data_kind(column_data, arrow_schema.field(i))
         )
     return dataframe_schema
-
-
-class NumberColumnConfig(TypedDict):
-    type: Literal["number"]
-    format: NotRequired[str | None]
-    min_value: NotRequired[int | float | None]
-    max_value: NotRequired[int | float | None]
-    step: NotRequired[int | float | None]
-
-
-class TextColumnConfig(TypedDict):
-    type: Literal["text"]
-    max_chars: NotRequired[int | None]
-    validate: NotRequired[str | None]
-
-
-class CheckboxColumnConfig(TypedDict):
-    type: Literal["checkbox"]
-
-
-class SelectboxColumnConfig(TypedDict):
-    type: Literal["selectbox"]
-    options: NotRequired[List[str | int | float] | None]
-
-
-class LinkColumnConfig(TypedDict):
-    type: Literal["link"]
-    max_chars: NotRequired[int | None]
-    validate: NotRequired[str | None]
-
-
-class BarChartColumnConfig(TypedDict):
-    type: Literal["bar_chart"]
-    y_min: NotRequired[int | float | None]
-    y_max: NotRequired[int | float | None]
-
-
-class LineChartColumnConfig(TypedDict):
-    type: Literal["line_chart"]
-    y_min: NotRequired[int | float | None]
-    y_max: NotRequired[int | float | None]
-
-
-class ImageColumnConfig(TypedDict):
-    type: Literal["image"]
-
-
-class ListColumnConfig(TypedDict):
-    type: Literal["list"]
-
-
-class DatetimeColumnConfig(TypedDict):
-    type: Literal["datetime"]
-    format: NotRequired[str | None]
-    min_value: NotRequired[str | None]
-    max_value: NotRequired[str | None]
-    step: NotRequired[int | float | None]
-    timezone: NotRequired[str | None]
-
-
-class TimeColumnConfig(TypedDict):
-    type: Literal["time"]
-    format: NotRequired[str | None]
-    min_value: NotRequired[str | None]
-    max_value: NotRequired[str | None]
-    step: NotRequired[int | float | None]
-
-
-class DateColumnConfig(TypedDict):
-    type: Literal["date"]
-    format: NotRequired[str | None]
-    min_value: NotRequired[str | None]
-    max_value: NotRequired[str | None]
-    step: NotRequired[int | None]
-
-
-class ProgressColumnConfig(TypedDict):
-    type: Literal["progress"]
-    format: NotRequired[str]
-    min_value: NotRequired[int | float | None]
-    max_value: NotRequired[int | float | None]
-
-
-class ColumnConfig(TypedDict, total=False):
-    """Configuration options for columns in ``st.dataframe`` and ``st.data_editor``.
-
-    Parameters
-    ----------
-
-    label: str or None
-        The label shown at the top of the column. If None (default),
-        the column name is used.
-
-    width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
-        If None (default), the column will be sized to fit the cell contents.
-
-    help: str or None
-        An optional tooltip that gets displayed when hovering over the column label.
-
-    disabled: bool or None
-        Whether editing should be disabled for this column. Defaults to False.
-
-    required: bool or None
-        Whether edited cells in the column need to have a value. If True, an edited cell
-        can only be submitted if it has a value other than None. Defaults to False.
-
-    default: str, bool, int, float, or None
-        Specifies the default value in this column when a new row is added by the user.
-
-    hidden: bool or None
-        Whether to hide the column. Defaults to False.
-
-    type_config: dict or str or None
-        Configure a column type and type specific options.
-    """
-
-    label: str | None
-    width: ColumnWidth | None
-    help: str | None
-    hidden: bool | None
-    disabled: bool | None
-    required: bool | None
-    default: str | bool | int | float | None
-    alignment: Literal["left", "center", "right"] | None
-    type_config: Union[
-        NumberColumnConfig,
-        TextColumnConfig,
-        CheckboxColumnConfig,
-        SelectboxColumnConfig,
-        LinkColumnConfig,
-        ListColumnConfig,
-        DatetimeColumnConfig,
-        DateColumnConfig,
-        TimeColumnConfig,
-        ProgressColumnConfig,
-        LineChartColumnConfig,
-        BarChartColumnConfig,
-        ImageColumnConfig,
-        None,
-    ]
 
 
 # A mapping of column names/IDs to column configs.
