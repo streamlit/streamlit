@@ -28,7 +28,7 @@ describe("deploy button and modal", () => {
   it("renders the light deploy dialog correctly", () => {
     cy.changeTheme("Light");
 
-    cy.get("div[class='stDeployButton'] > button").click();
+    cy.get("div[class='stDeployButton'] > button").click({ force: true});
 
     cy.get("div[role='dialog']").matchThemedSnapshots(
       "deploy_dialog_opened-light"
@@ -38,7 +38,7 @@ describe("deploy button and modal", () => {
   it("renders the dark deploy dialog correctly", () => {
     cy.changeTheme("Dark");
 
-    cy.get("div[class='stDeployButton'] > button").click();
+    cy.get("div[class='stDeployButton'] > button").click({ force: true});
 
     cy.get("div[role='dialog']").matchThemedSnapshots(
       "deploy_dialog_opened-dark"

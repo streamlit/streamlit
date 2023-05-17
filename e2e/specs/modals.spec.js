@@ -26,7 +26,7 @@ describe("modals", () => {
 
     cy.get("#MainMenu > button").click();
 
-    cy.getIndexed('[data-testid="main-menu-list"] ul', 2).click();
+    cy.getIndexed('[data-testid="main-menu-list"] > ul', 2).click();
 
     cy.getIndexed('div[data-baseweb="modal" div div]').matchImageSnapshot(
       "settings-light"
@@ -38,7 +38,7 @@ describe("modals", () => {
 
     cy.get("#MainMenu > button").click();
 
-    cy.getIndexed('[data-testid="main-menu-list"] ul', 2).click();
+    cy.getIndexed('[data-testid="main-menu-list"] > ul', 2).click();
 
     cy.gey('div[data-baseweb="modal" div div]').matchImageSnapshot(
       "settings-dark"
