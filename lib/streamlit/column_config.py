@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Column types for `st.dataframe` and `st.experimental_data_editor`."""
+"""Column types that can be configured via the ``column_config`` parameter of ``st.dataframe`` and ``st.data_editor``."""
 
 __all__ = [
     "Column",
