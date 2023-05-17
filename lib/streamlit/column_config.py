@@ -15,6 +15,7 @@
 """Column types for `st.dataframe` and `st.experimental_data_editor`."""
 
 __all__ = [
+    "Column",
     "TextColumn",
     "NumberColumn",
     "BarChartColumn",
@@ -34,6 +35,7 @@ __all__ = [
 from streamlit.elements.lib.column_types import (
     BarChartColumn,
     CheckboxColumn,
+    Column,
     DateColumn,
     DatetimeColumn,
     ImageColumn,

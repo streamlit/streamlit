@@ -182,6 +182,50 @@ class ColumnConfig(TypedDict, total=False):
     ]
 
 
+def Column(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+) -> ColumnConfig:
+    """Configure a generic column in ```st.dataframe``` or ```st.data_editor```.
+
+    The type of the column will be automatically inferred from the data type.
+    This command needs to be used in the ``column_config`` parameter of ``st.dataframe``
+    or ``st.data_editor``.
+
+    To change the type of the column and enable type-specific configuration options,
+    use one of the column types in the ``st.column_config`` namespace,
+    e.g. ``st.column_config.NumberColumn``.
+
+    Parameters
+    ----------
+
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
+
+    width: "small", "medium", "large", or None
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
+
+    help: str or None
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+    """
+    return ColumnConfig(
+        label=label, width=width, help=help, disabled=disabled, required=required
+    )
+
+
 def NumberColumn(
     label: str | None = None,
     *,
@@ -597,12 +641,12 @@ def ImageColumn(
 
     The cell values need to be one of:
 
-    - A URL to fetch the image from. This can also be a relative URL of an image
+    * A URL to fetch the image from. This can also be a relative URL of an image
       deployed via `static file serving <https://docs.streamlit.io/library/advanced-features/static-file-serving>`_.
       Note that you can NOT use an arbitrary local image if it is not available through
       a public URL.
-    - An SVG XML data URL like ``data:image/svg+xml;utf8,<svg xmlns=...</svg>``.
-    - A string containing a Base64 encoded image like ``data:image/png;base64,iVBO...``.
+    * An SVG XML data URL like ``data:image/svg+xml;utf8,<svg xmlns=...</svg>``.
+    * A string containing a Base64 encoded image like ``data:image/png;base64,iVBO...``.
 
     Image columns are not editable at the moment. This command needs to be used in the
     ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
