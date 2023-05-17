@@ -17,10 +17,19 @@
 describe("modals", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
+
+    cy.get("#MainMenu > button").click();
+
+    // Cypress cuts the popover off due to the transform property, so we move
+    // the main menu to a location to show it clearly for snapshots.
+    cy.get('[data-testid="main-menu-popover"]').invoke(
+      "attr",
+      "style",
+      "transform: translate3d(20px, 20px, 0px)"
+    );
   });
 
   it("displays settings modal correctly", () => {
-    cy.get("#MainMenu > button").click({ force: true });
 
     cy.get('[data-testid="main-menu-list"] > ul').eq(1).click({ force: true });
 
