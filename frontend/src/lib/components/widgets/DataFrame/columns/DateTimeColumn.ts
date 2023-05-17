@@ -300,6 +300,14 @@ function BaseDateTimeColumn(
  * @returns The new column.
  */
 export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
+  // Do a smart selection of the default format based on the step size
+  let defaultFormat = "yyyy-MM-dd HH:mm:ss"
+  if (props.columnTypeOptions?.step >= 60) {
+    defaultFormat = "yyyy-MM-dd HH:mm"
+  } else if (props.columnTypeOptions?.step < 1) {
+    defaultFormat = "yyyy-MM-dd HH:mm:ss.SSS"
+  }
+
   const timezone: string | undefined = props.arrowType?.meta?.timezone
   const hasTimezone: boolean =
     notNullOrUndefined(timezone) ||
@@ -309,7 +317,7 @@ export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
   return BaseDateTimeColumn(
     "datetime",
     props,
-    hasTimezone ? "yyyy-MM-dd HH:mm:ssxxx" : "yyyy-MM-dd HH:mm:ss",
+    hasTimezone ? defaultFormat + "xxx" : defaultFormat,
     1,
     "datetime-local",
     (date: Date): string => {
