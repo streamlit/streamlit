@@ -241,7 +241,7 @@ st.dataframe(
             min_value=datetime.datetime(2021, 1, 1, 1, 0, 0),  # Should be ignored
             max_value=datetime.datetime(2022, 1, 1, 1, 0, 0),  # Should be ignored
             step=0.01,
-            format="yyy-MM-dd HH:mm:ss.SSS",
+            format="yyyy-MM-dd HH:mm:ss.SSS",
         ),
         "col_1": st.column_config.DatetimeColumn(
             step=0.01,
