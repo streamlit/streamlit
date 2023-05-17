@@ -17,8 +17,6 @@
 describe("modals", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
-
-    cy.prepForElementSnapshots();
   });
 
   it("displays light settings modal correctly", () => {
@@ -40,7 +38,7 @@ describe("modals", () => {
 
     cy.getIndexed('[data-testid="main-menu-list"] > ul', 2).click();
 
-    cy.gey('div[data-baseweb="modal" div div]').matchImageSnapshot(
+    cy.get('div[data-baseweb="modal" div div]').matchImageSnapshot(
       "settings-dark"
     );
   });
