@@ -63,6 +63,13 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.column_order, ["a", "b"])
 
+    def test_empty_column_order_parameter(self):
+        """Test that an empty column_order is correctly added."""
+        st._arrow_dataframe(pd.DataFrame(), column_order=[])
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(proto.column_order, [])
+
     def test_pyarrow_table_data(self):
         df = mock_data_frame()
         table = pa.Table.from_pandas(df)
