@@ -333,11 +333,11 @@ DateTimeColumn.isEditableType = true
  */
 export function TimeColumn(props: BaseColumnProps): BaseColumn {
   // Do a smart selection of the default format based on the step size
-  let defaultFormat = "HH:mm:ss.SSS"
+  let defaultFormat = "HH:mm:ss"
   if (props.columnTypeOptions?.step >= 60) {
     defaultFormat = "HH:mm"
-  } else if (props.columnTypeOptions?.step >= 1) {
-    defaultFormat = "HH:mm:ss"
+  } else if (props.columnTypeOptions?.step < 1) {
+    defaultFormat = "HH:mm:ss.SSS"
   }
 
   return BaseDateTimeColumn(

@@ -77,18 +77,14 @@ class ArrowMixin:
             This argument can only be supplied by keyword.
 
         hide_index : bool or None
-            Determines whether to hide the index column(s). If set to True, the
-            index column(s) will be hidden. If None (default), the visibility of
-            the index column(s) is automatically determined based on the index
-            type and input data format.
+            Whether to hide the index column(s). If None (default), they will be hidden
+            automatically based on the data.
 
         column_order : iterable of str or None
-            Specifies the display order of all non-index columns, affecting both
-            the order and visibility of columns to the user. For example,
-            specifying `column_order=("col2", "col1")` will display 'col2' first,
-            followed by 'col1', and all other non-index columns in the data will
-            be hidden. If None (default), the order is inherited from the
-            original data structure.
+            Specifies the display order of columns. This also affects which columns are
+            visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
+            first, followed by 'col1', and will hide all other non-index columns. If
+            None (default), the order is inherited from the original data structure.
 
         Examples
         --------
