@@ -49,6 +49,7 @@ import {
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
   Text as TextProto,
+  Toast as ToastProto,
   Video as VideoProto,
   Heading as HeadingProto,
 } from "src/lib/proto"
@@ -99,6 +100,7 @@ const ArrowDataFrame = React.lazy(
 const ArrowVegaLiteChart = React.lazy(
   () => import("src/lib/components/elements/ArrowVegaLiteChart")
 )
+const Toast = React.lazy(() => import("src/lib/components/elements/Toast"))
 
 // BokehChart render function is sluggish. If the component is not debounced,
 // AutoSizer causes it to rerender multiple times for different widths
@@ -666,6 +668,21 @@ const RawElementNodeRenderer = (
         </StreamlitSyntaxHighlighter>
       )
     }
+
+    // Events:
+    case "toast": {
+      const toastProto = node.element.toast as ToastProto
+      console.log("SCRIPT RUN ID:", node.scriptRunId, toastProto.icon)
+      return (
+        <Toast
+          key={node.scriptRunId}
+          text={toastProto.text}
+          icon={toastProto.icon}
+          type={toastProto.type}
+        />
+      )
+    }
+
     default:
       throw new Error(`Unrecognized Element type ${node.element.type}`)
   }

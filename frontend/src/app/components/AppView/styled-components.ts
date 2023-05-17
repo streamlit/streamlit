@@ -75,11 +75,12 @@ export interface StyledAppViewBlockContainerProps {
   isWideMode: boolean
   showPadding: boolean
   addPaddingForHeader: boolean
+  events: boolean
 }
 
 export const StyledAppViewBlockContainer =
   styled.div<StyledAppViewBlockContainerProps>(
-    ({ isWideMode, showPadding, addPaddingForHeader, theme }) => {
+    ({ isWideMode, showPadding, addPaddingForHeader, events, theme }) => {
       let topEmbedPadding: string = showPadding ? "6rem" : "1rem"
       if (addPaddingForHeader && !showPadding) {
         topEmbedPadding = "3rem"
@@ -87,6 +88,7 @@ export const StyledAppViewBlockContainer =
       const bottomEmbedPadding = showPadding ? "10rem" : "1rem"
       const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
       return {
+        display: events ? "none" : "",
         width: theme.sizes.full,
         paddingLeft: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
         paddingRight: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,

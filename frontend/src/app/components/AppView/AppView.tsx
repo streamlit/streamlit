@@ -18,15 +18,16 @@ import React, { ReactElement } from "react"
 
 import { IAppPage } from "src/lib/proto"
 
-import VerticalBlock, { ToastRenderer } from "src/lib/components/core/Block"
+import VerticalBlock from "src/lib/components/core/Block"
 import { ThemedSidebar } from "src/app/components/Sidebar"
+import EventContainer from "src/app/components/EventContainer"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { FormsData, WidgetStateManager } from "src/lib/WidgetStateManager"
 import { FileUploadClient } from "src/lib/FileUploadClient"
 import { ComponentRegistry } from "src/lib/components/widgets/CustomComponent"
 
 import { AppContext } from "src/app/components/AppContext"
-import { BlockNode, AppRoot, ElementNode } from "src/lib/AppNode"
+import { BlockNode, AppRoot } from "src/lib/AppNode"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { IGuestToHostMessage } from "src/lib/hocs/withHostCommunication/types"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
@@ -123,12 +124,16 @@ function AppView(props: AppViewProps): ReactElement {
     communityCloud,
   } = React.useContext(AppContext)
 
-  const renderBlock = (node: BlockNode): ReactElement => (
+  const renderBlock = (
+    node: BlockNode,
+    events: boolean = false
+  ): ReactElement => (
     <StyledAppViewBlockContainer
       className="block-container"
       isWideMode={wideMode}
       showPadding={showPadding}
       addPaddingForHeader={showToolbar || showColoredLine}
+      events={events}
     >
       <VerticalBlock
         node={node}
@@ -144,16 +149,6 @@ function AppView(props: AppViewProps): ReactElement {
       />
     </StyledAppViewBlockContainer>
   )
-
-  const renderAppEvents = (node: BlockNode): ReactElement => {
-    const toasts = node.children.filter(
-      child => child instanceof ElementNode && child.element.type === "toast"
-    )
-    if (toasts.length > 0) {
-      return ToastRenderer(toasts as ElementNode[], communityCloud)
-    }
-    return <></>
-  }
 
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
@@ -188,7 +183,6 @@ function AppView(props: AppViewProps): ReactElement {
         className="main"
       >
         {renderBlock(elements.main)}
-        {renderAppEvents(elements.event)}
         {/* Anchor indicates to the iframe resizer that this is the lowest
         possible point to determine height */}
         <StyledIFrameResizerAnchor
@@ -207,6 +201,12 @@ function AppView(props: AppViewProps): ReactElement {
           </StyledAppViewFooter>
         )}
       </StyledAppViewMain>
+      <EventContainer
+        communityCloud={communityCloud}
+        scriptRunId={elements.event.scriptRunId}
+      >
+        {renderBlock(elements.event, true)}
+      </EventContainer>
     </StyledAppViewContainer>
   )
 }
