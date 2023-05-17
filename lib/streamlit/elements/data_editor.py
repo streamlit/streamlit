@@ -509,13 +509,13 @@ class DataEditorMixin:
         use_container_width: bool = False,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool | Iterable[str] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        column_config: ColumnConfigMappingInput | None = None,
     ) -> EditableData:
         pass
 
@@ -529,13 +529,13 @@ class DataEditorMixin:
         use_container_width: bool = False,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool | Iterable[str] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        column_config: ColumnConfigMappingInput | None = None,
     ) -> pd.DataFrame:
         pass
 
@@ -549,13 +549,13 @@ class DataEditorMixin:
         use_container_width: bool = False,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool | Iterable[str] = False,
         key: Key | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        column_config: ColumnConfigMappingInput | None = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -594,6 +594,23 @@ class DataEditorMixin:
             visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
             first, followed by 'col1', and will hide all other non-index columns. If
             None (default), the order is inherited from the original data structure.
+
+        column_config : dict or None
+            Configures how columns are displayed, e.g. their title, visibility, type, or
+            format, as well as editing properties such as min/max value or step.
+            This needs to be a dictionary where each key is a column name and the value
+            is one of:
+
+            * ``None`` to hide the column.
+
+            * A string to set the display label of the column.
+
+            * One of the column types defined under ``st.column_config``, e.g.
+              ``st.column_config.NumberColumn(”Dollar values”, format=”$ %d”)`` to show
+              a column as dollar amounts. See more info on the available column types
+              and config options `here <TBD>`_.
+
+            To configure the index column(s), use ``index`` as the column name.
 
         num_rows : "fixed" or "dynamic"
             Specifies if the user can add and delete rows in the data editor.
@@ -697,6 +714,7 @@ class DataEditorMixin:
                 "yet supported by the data editor."
             )
 
+        # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
         _apply_data_specific_configs(column_config_mapping, data_df, data_format)
 

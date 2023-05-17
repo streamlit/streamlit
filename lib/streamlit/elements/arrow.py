@@ -23,8 +23,9 @@ from pandas import DataFrame
 from streamlit import type_util
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
-    ColumnConfigMapping,
+    ColumnConfigMappingInput,
     marshall_column_config,
+    process_config_mapping,
     update_column_config,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
@@ -52,6 +53,7 @@ class ArrowMixin:
         use_container_width: bool = False,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -86,6 +88,22 @@ class ArrowMixin:
             first, followed by 'col1', and will hide all other non-index columns. If
             None (default), the order is inherited from the original data structure.
 
+        column_config : dict or None
+            Configures how columns are displayed, e.g. their title, visibility, type, or
+            format. This needs to be a dictionary where each key is a column name and
+            the value is one of:
+
+            * ``None`` to hide the column.
+
+            * A string to set the display label of the column.
+
+            * One of the column types defined under ``st.column_config``, e.g.
+              ``st.column_config.NumberColumn(”Dollar values”, format=”$ %d”)`` to show
+              a column as dollar amounts. See more info on the available column types
+              and config options `here <TBD>`_.
+
+            To configure the index column(s), use ``index`` as the column name.
+
         Examples
         --------
         >>> import streamlit as st
@@ -111,7 +129,9 @@ class ArrowMixin:
 
         """
 
-        column_config_mapping: ColumnConfigMapping = {}
+        # Convert the user provided column config into the frontend compatible format:
+        column_config_mapping = process_config_mapping(column_config)
+
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
         # when the position of the element is changed.
