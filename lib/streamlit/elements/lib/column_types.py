@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import List
+from typing import Iterable
 
 from streamlit.elements.lib.column_config_utils import (
     ColumnConfig,
@@ -26,70 +26,70 @@ from streamlit.elements.lib.column_config_utils import (
 
 def NumberColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    disabled: bool | None = None,
     required: bool | None = None,
     default: int | float | None = None,
+    format: str | None = None,
     min_value: int | float | None = None,
     max_value: int | float | None = None,
-    format: str | None = None,
     step: int | float | None = None,
 ) -> ColumnConfig:
-    """Rendering and editing of numerical values.
+    """Configure a number column in ``st.dataframe`` or ``st.data_editor``.
 
-    This needs to be used as input to the column_config parameter of st.dataframe
-    or st.data_editor. When used with ``st.data_editor``, editing will be enabled with
-    a numeric input widget.
+    This is the default column type for integer and float values. This command needs to
+    be used in the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
+    When used with ``st.data_editor``, editing will be enabled with a numeric input widget.
 
     Parameters
     ----------
 
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
 
     required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
-        This will ensure that the data_editor never returns None as a value in this
-        column. Defaults to False.
-
-        This configuration option does not have any effect
-        if used with a disabled column.
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
 
     default: int, float, or None
-        Specifies the default value for a new cell in this column when a new row is
-        added by the user. If None (default), the value added to the column will be None.
+        Specifies the default value in this column when a new row is added by the user.
+
+    format : str or None
+        A printf-style format string controlling how numbers are displayed.
+        This does not impact the return value. Valid formatters: %d %e %f %g %i %u.
+        You can also add prefixes and suffixes.
 
     min_value : int, float, or None
-        The minimum value that can be entered by the user.
+        The minimum value that can be entered.
         If None (default), there will be no minimum.
 
     max_value : int, float, or None
-        The maximum value that can be entered by the user.
+        The maximum value that can be entered.
         If None (default), there will be no maximum.
 
-    format : str or None
-        A sprintf format string (printf-like) controlling how the cell value is
-        displayed. This can be used for adding prefix or suffix, or changing the number
-        of decimals of the display value.
-
     step: int, float, or None
-        Specifies the value granularity and precision that can be entered by the user.
-        If None, defaults to 1 for integers. Float numbers will be unrestricted by default.
+        The stepping interval. Specifies the precision of numbers that can be entered.
+        If None (default), uses 1 for integers and unrestricted precision for floats.
     """
 
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
+        disabled=disabled,
         required=required,
         type="number",
         default=default,
@@ -104,57 +104,59 @@ def NumberColumn(
 
 def TextColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    disabled: bool | None = None,
     required: bool | None = None,
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
 ) -> ColumnConfig:
-    """Rendering and editing of text values.
+    """Configure a text column in ``st.dataframe`` or ``st.data_editor``.
 
-    When used with ``st.data_editor``, editing will be enabled with a text input widget.
+    This is the default column type for string values. This command needs to be used in the
+    ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``. When used with
+    ``st.data_editor``, editing will be enabled with a text input widget.
 
     Parameters
     ----------
 
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
 
     required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
-        This will ensure that the data_editor never returns None as a value in this
-        column. Defaults to False.
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
 
-        This configuration option does not have any effect
-        if used with a disabled column.
-
-    default: int, float, or None
-        Specifies the default value for a new cell in this column when a new row is
-        added by the user. If None (default), the value added to the column will be None.
+    default: str or None
+        Specifies the default value in this column when a new row is added by the user.
 
     max_chars: int or None
-        The maximum number of characters that can be entered by the user.
-        If None (default), there will be no maximum.
+        The maximum number of characters that can be entered. If None (default),
+        there will be no maximum.
 
     validate: str or None
-        A regular expression that edited values should be validated against.
-        If the input is invalid, it will not be submitted by the user.
+        A regular expression (JS flavor) that edited values are validated against.
+        If the input is invalid, it will not be submitted.
     """
 
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
+        disabled=disabled,
         required=required,
         default=default,
         type="text",
@@ -167,57 +169,60 @@ def TextColumn(
 
 def LinkColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    disabled: bool | None = None,
     required: bool | None = None,
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
 ) -> ColumnConfig:
-    """Rendering and editing of clickable URL values.
+    """Configure a link column in ``st.dataframe`` or ``st.data_editor``.
 
-    When used with ``st.data_editor``, editing will be enabled with a text input widget.
+    The cell values need to be string and will be shown as clickable links.
+    This command needs to be used in the column_config parameter of ``st.dataframe``
+    or ``st.data_editor``. When used with ``st.data_editor``, editing will be enabled
+    with a text input widget.
 
     Parameters
     ----------
 
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
 
     required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
-        This will ensure that the data_editor never returns None as a value in this
-        column. Defaults to False.
-
-        This configuration option does not have any effect
-        if used with a disabled column.
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
 
     default: str or None
-        Specifies the default value for a new cell in this column when a new row is
-        added by the user. If None (default), the value added to the column will be None.
+        Specifies the default value in this column when a new row is added by the user.
 
     max_chars: int or None
-        The maximum number of characters that can be entered by the user.
-        If None, there will be no maximum.
+        The maximum number of characters that can be entered. If None (default),
+        there will be no maximum.
 
     validate: str or None
-        A regular expression that edited values should be validated against.
-        If the input is invalid, it will not be submitted by the user.
+        A regular expression (JS flavor) that edited values are validated against.
+        If the input is invalid, it will not be submitted.
     """
 
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
+        disabled=disabled,
         required=required,
         default=default,
         type="link",
@@ -230,47 +235,49 @@ def LinkColumn(
 
 def CheckboxColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    disabled: bool | None = None,
     required: bool | None = None,
     default: bool | None = None,
 ) -> ColumnConfig:
-    """Rendering and editing of boolean values using checkboxes.
+    """Configure a checkbox column in ``st.dataframe`` or ``st.data_editor``.
 
+    This is the default column type for boolean values. This command needs to be used in
+    the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
     When used with ``st.data_editor``, editing will be enabled with a checkbox widget.
 
     Parameters
     ----------
 
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
 
     required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
-        This will ensure that the data_editor never returns None as a value in this
-        column. Defaults to False.
-
-        This configuration option does not have any effect
-        if used with a disabled column.
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
 
     default: bool or None
-        Specifies the default value for a new cell in this column when a new row is
-        added by the user. If None (default), the value added to the column will be None.
+        Specifies the default value in this column when a new row is added by the user.
     """
 
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
+        disabled=disabled,
         required=required,
         default=default,
         type="checkbox",
@@ -279,99 +286,103 @@ def CheckboxColumn(
 
 def SelectboxColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    disabled: bool | None = None,
     required: bool | None = None,
     default: str | int | float | None = None,
-    options: List[str | int | float] | None = None,
+    options: Iterable[str | int | float] | None = None,
 ) -> ColumnConfig:
-    """Rendering and editing of categorical values using selectboxes.
+    """Configure a selectbox column in ``st.dataframe`` or ``st.data_editor``.
 
-    When used with st.data_editor, editing will be enabled with a selectbox widget.
+    This is the default column type for Pandas categorical values. This command needs to
+    be used in the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
+    When used with ``st.data_editor``, editing will be enabled with a selectbox widget.
 
     Parameters
     ----------
 
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
 
     required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
-        This will ensure that the data_editor never returns None as a value in this
-        column. Defaults to False.
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
 
-        This configuration option does not have any effect
-        if used with a disabled column.
+    default: str, int, float, bool, or None
+        Specifies the default value in this column when a new row is added by the user.
 
-    default: str or None
-        Specifies the default value for a new cell in this column when a new row is
-        added by the user. If None (default), the value added to the column will be None.
-
-    options: list of str or None
-        A list of options to choose from. If None (default), uses the categories from the
-        underlying column in case it is configured as dtype "category".
+    options: iterable of str or None
+        The options that can be selected during editing. If None (default), this will be
+        inferred from the underlying dataframe column if its dtype is “category”
+        (`see Pandas docs on categorical data <https://pandas.pydata.org/docs/user_guide/categorical.html>`_).
     """
 
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
+        disabled=disabled,
         required=required,
         default=default,
         type="selectbox",
         type_options={
-            "options": options,
+            "options": list(options) if options is not None else None,
         },
     )
 
 
 def BarChartColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
 ) -> ColumnConfig:
-    """Visualizes a list of numbers in a cell as a bar chart.
+    """Configure a bar chart column in ``st.dataframe`` or ``st.data_editor``.
 
-    This is a read-only type. It can be used with ``st.data_editor``,
-    but users will not be able to edit the cell values.
+    Cells need to contain a list of numbers. Chart columns are not editable
+    at the moment. This command needs to be used in the ``column_config`` parameter
+    of ``st.dataframe`` or ``st.data_editor``.
 
     Parameters
     ----------
 
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
 
     y_min: int, float, or None
-        The minimum value of the y-axis of the chart.
-        If None (default), the scales will be normalized individually for each column.
+        The minimum value on the y-axis for all cells in the column.
+        If None (default), every cell will use the minimum of its data.
 
     y_max: int, float, or None
-        The maximum value of the y-axis of the chart.
-        If None (default), the scales will be normalized individually for each column.
+        The maximum value on the y-axis for all cells in the column. If None (default),
+        every cell will use the maximum of its data.
     """
 
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
         type="bar_chart",
@@ -384,42 +395,43 @@ def BarChartColumn(
 
 def LineChartColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
 ) -> ColumnConfig:
-    """Visualizes a list of numbers in a cell as a line chart.
+    """Configure a line chart column in ``st.dataframe`` or ``st.data_editor``.
 
-    This is a read-only type. It can be used with ``st.data_editor``,
-    but users will not be able to edit the cell values.
+    Cells need to contain a list of numbers. Chart columns are not editable
+    at the moment. This command needs to be used in the ``column_config`` parameter
+    of ``st.dataframe`` or ``st.data_editor``.
 
     Parameters
     ----------
 
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
 
     y_min: int, float, or None
-        The minimum value of the y-axis of the chart.
-        If None (default), the scales will be normalized individually for each column.
+        The minimum value on the y-axis for all cells in the column.
+        If None (default), every cell will use the minimum of its data.
 
     y_max: int, float, or None
-        The maximum value of the y-axis of the chart.
-        If None (default), the scales will be normalized individually for each column.
+        The maximum value on the y-axis for all cells in the column. If None (default),
+        every cell will use the maximum of its data.
     """
 
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
         type="line_chart",
@@ -432,31 +444,40 @@ def LineChartColumn(
 
 def ImageColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
 ):
-    """Rendering of cell values as images, given valid image URLs or binary data.
+    """Configure an image column in ``st.dataframe`` or ``st.data_editor``.
 
-    This is a read-only type. It can be used with ``st.data_editor``, but users will not
-    be able to edit the cell values.
+    The cell values need to be one of:
+
+    - A URL to fetch the image from. This can also be a relative URL of an image
+      deployed via `static file serving <https://docs.streamlit.io/library/advanced-features/static-file-serving>`_.
+      Note that you can NOT use an arbitrary local image if it is not available through
+      a public URL.
+    - An SVG XML data URL like ``data:image/svg+xml;utf8,<svg xmlns=...</svg>``.
+    - A string containing a Base64 encoded image like ``data:image/png;base64,iVBO...``.
+
+    Image columns are not editable at the moment. This command needs to be used in the
+    ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
 
     Parameters
     ----------
 
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
     """
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
         type="image",
@@ -465,31 +486,32 @@ def ImageColumn(
 
 def ListColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
 ):
-    """Rendering of list-values as a list of tags.
+    """Configure a list column in ``st.dataframe`` or ``st.data_editor``.
 
-    This is a read-only type. It can be used with ``st.data_editor``,
-    but users will not be able to edit the cell values.
+    This is the default column type for list-like values. List columns are not editable
+    at the moment. This command needs to be used in the ``column_config`` parameter of
+    ``st.dataframe`` or ``st.data_editor``.
 
     Parameters
     ----------
 
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
     """
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
         type="list",
@@ -498,9 +520,10 @@ def ListColumn(
 
 def DatetimeColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    disabled: bool | None = None,
     required: bool | None = None,
     default: datetime.datetime | None = None,
     format: str | None = None,
@@ -509,65 +532,66 @@ def DatetimeColumn(
     step: int | float | None = None,
     timezone: str | None = None,
 ) -> ColumnConfig:
-    """Rendering and editing of datetime values.
+    """Configure a datetime column in ``st.dataframe`` or ``st.data_editor``.
 
-    When used with ``st.data_editor``, editing will be enabled with a datetime picker widget.
+    This is the default column type for datetime values. This command needs to be
+    used in the ``column_config`` parameter of ``st.dataframe`` or
+    ``st.data_editor``. When used with ``st.data_editor``, editing will be enabled
+    with a datetime picker widget.
 
     Parameters
     ----------
 
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
 
     required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
-        This will ensure that the data_editor never returns None as a value in this
-        column. Defaults to False.
-
-        This configuration option does not have any effect
-        if used with a disabled column.
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
 
     default: datetime.datetime or None
-        The default value in a cell when the user adds a new row.
-        Defaults to None.
+        Specifies the default value in this column when a new row is added by the user.
 
     format: str or None
-        A date-fns format string (Unicode Technical Standard #35) controlling
-        how the cell value is displayed.
+        A date-fns format string controlling how datetimes are displayed. See
+        `date-fns docs <hhttps://date-fns.org/docs/format>`_ for available formats.
+        If None (default), uses ``yyyy-MM-dd HH:mm:ss``.
 
     min_value: datetime.datetime or None
-        The minimum datetime that can be entered by the user.
+        The minimum datetime that can be entered.
         If None (default), there will be no minimum.
 
     max_value: datetime.datetime or None
-        The maximum datetime that can be entered by the user.
-        If None (default), there will be no maximum.
-
-    timezone: str or None
-        The timezone of this column. If None (default), the timezone is inferred
-        from the underlying data.
+        The maximum datetime that can be entered.
+        If None (default), there will be no minimum.
 
     step: int, float, or None
-        Specifies the value granularity in seconds that can be entered by the user.
-        If None (default), the step will be 1 second.
+        The stepping interval in seconds. If None (default), the step will be 1 second.
+
+    timezone: str or None
+        The timezone of this column. If None (default),
+        the timezone is inferred from the underlying data.
     """
 
-    # TODO: Check if this code is correct:
     def _format_datetime(value: datetime.datetime | None) -> str | None:
         return None if value is None else value.isoformat()
 
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
+        disabled=disabled,
         required=required,
         default=_format_datetime(default),
         type="datetime",
@@ -583,9 +607,10 @@ def DatetimeColumn(
 
 def TimeColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    disabled: bool | None = None,
     required: bool | None = None,
     default: datetime.time | None = None,
     format: str | None = None,
@@ -593,68 +618,69 @@ def TimeColumn(
     max_value: datetime.time | None = None,
     step: int | float | None = None,
 ) -> ColumnConfig:
-    """Rendering and editing of time values.
+    """Configure a time column in ``st.dataframe`` or ``st.data_editor``.
 
-    When used with ``st.data_editor``, editing will be enabled with a time picker widget.
+    This is the default column type for time values. This command needs to be used in
+    the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``. When
+    used with ``st.data_editor``, editing will be enabled with a time picker widget.
 
     Parameters
     ----------
 
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
 
     required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
-        This will ensure that the data_editor never returns None as a value in this
-        column. Defaults to False.
-
-        This configuration option does not have any effect
-        if used with a disabled column.
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
 
     default: datetime.time or None
-        The default value in a cell when the user adds a new row.
-        Defaults to None.
+        Specifies the default value in this column when a new row is added by the user.
 
     format: str or None
-        A date-fns format string (Unicode Technical Standard #35) controlling
-        how the cell value is displayed.
+        A date-fns format string controlling how times are displayed. See
+        `date-fns docs <hhttps://date-fns.org/docs/format>`_ for available formats.
+        If None (default), uses ``HH:mm:ss``.
 
     min_value: datetime.time or None
-        The minimum time that can be entered by the user.
+        The minimum time that can be entered.
         If None (default), there will be no minimum.
 
     max_value: datetime.time or None
-        The maximum time that can be entered by the user.
-        If None (default), there will be no maximum.
+        The maximum time that can be entered.
+        If None (default), there will be no minimum.
 
-    step: int, float, or None
-        Specifies the value granularity in seconds that can be entered by the user.
-        If None (default), the step will be set to 0.1 seconds.
+    step: int, float or None
+        The stepping interval in seconds. If None (default), the step will be 1 second.
     """
 
     # TODO: Check if this code is correct:
-    def _format_datetime(value: datetime.time | None) -> str | None:
+    def _format_time(value: datetime.time | None) -> str | None:
         return None if value is None else value.isoformat()
 
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
+        disabled=disabled,
         required=required,
-        default=_format_datetime(default),
+        default=_format_time(default),
         type="time",
         type_options={
             "format": format,
-            "min_value": _format_datetime(min_value),
-            "max_value": _format_datetime(max_value),
+            "min_value": _format_time(min_value),
+            "max_value": _format_time(max_value),
             "step": step,
         },
     )
@@ -662,9 +688,10 @@ def TimeColumn(
 
 def DateColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    disabled: bool | None = None,
     required: bool | None = None,
     default: datetime.date | None = None,
     format: str | None = None,
@@ -672,67 +699,69 @@ def DateColumn(
     max_value: datetime.date | None = None,
     step: int | None = None,
 ) -> ColumnConfig:
-    """Rendering and editing of date values.
+    """Configure a date column in ``st.dataframe`` or ``st.data_editor``.
 
-    When used with ``st.data_editor``, editing will be enabled with a date picker widget.
+    This is the default column type for date values. This command needs to be used in
+    the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``. When used
+    with ``st.data_editor``, editing will be enabled with a date picker widget.
 
     Parameters
     ----------
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
 
     required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
-        This will ensure that the data_editor never returns None as a value in this
-        column. Defaults to False.
-
-        This configuration option does not have any effect
-        if used with a disabled column.
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
 
     default: datetime.date or None
-        The default value in a cell when the user adds a new row.
-        Defaults to None.
+        Specifies the default value in this column when a new row is added by the user.
 
     format: str or None
-        A date-fns format string (Unicode Technical Standard #35) controlling
-        how the cell value is displayed.
+        A date-fns format string controlling how dates are displayed. See
+        `date-fns docs <hhttps://date-fns.org/docs/format>`_ for available formats.
+        If None (default), uses ``yyyy-MM-dd``.
 
     min_value: datetime.date or None
-        The minimum date that can be entered by the user.
+        The minimum date that can be entered.
         If None (default), there will be no minimum.
 
     max_value: datetime.date or None
-        The maximum date that can be entered by the user.
-        If None (default), there will be no maximum.
+        The maximum date that can be entered.
+        If None (default), there will be no minimum.
 
     step: int or None
-        Specifies the value granularity in days that can be entered by the user.
-        If None (default), the step will be set to 1 day.
+        The stepping interval in days. If None (default), the step will be 1 day.
     """
 
     # TODO: Check if this code is correct:
-    def _format_datetime(value: datetime.date | None) -> str | None:
+    def _format_date(value: datetime.date | None) -> str | None:
         return None if value is None else value.isoformat()
 
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
+        disabled=disabled,
         required=required,
-        default=_format_datetime(default),
+        default=_format_date(default),
         type="date",
         type_options={
             "format": format,
-            "min_value": _format_datetime(min_value),
-            "max_value": _format_datetime(max_value),
+            "min_value": _format_date(min_value),
+            "max_value": _format_date(max_value),
             "step": step,
         },
     )
@@ -740,68 +769,51 @@ def DateColumn(
 
 def ProgressColumn(
     *,
-    title: str | None = None,
+    label: str | None = None,
     width: ColumnWidth | None = None,
     help: str | None = None,
-    required: bool | None = None,
-    default: int | float | None = None,
+    format: str | None = None,
     min_value: int | float | None = None,
     max_value: int | float | None = None,
-    format: str | None = None,
 ) -> ColumnConfig:
-    """Visualizes a numeric value using a progress bar-like element.
+    """Configure a progress column in ``st.dataframe`` or ``st.data_editor``.
 
-    This is a read-only type. It can be used with ``st.data_editor``,
-    but users will not be able to edit the cell values.
+    Cells need to contain a number. Progress columns are not editable at the moment.
+    This command needs to be used in the ``column_config`` parameter of ``st.dataframe``
+    or ``st.data_editor``.
 
     Parameters
     ----------
 
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
+        An optional tooltip that gets displayed when hovering over the column label.
 
-    required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
-        This will ensure that the data_editor never returns None as a value in this
-        column. Defaults to False.
-
-        This configuration option does not have any effect
-        if used with a disabled column.
-
-    default: int, float, or None
-        The default value in a cell when the user adds a new row.
-        Defaults to None.
+    format : str or None
+        A printf-style format string controlling how numbers are displayed.
+        Valid formatters: %d %e %f %g %i %u. You can also add prefixes and suffixes.
 
     min_value : int, float, or None
         The minimum value of the progress bar.
-        Defaults to 0.
+        If None (default), will be 0.
 
     max_value : int, float, or None
-        The maximum permitted value. Defaults to 100 if the underlying data is integer
-        or 1 in all other cases.
-
-    format : str or None
-        A sprintf format string (printf-like) controlling how the number next to
-        the progress bar should be formatted. This can be used for adding prefix or
-        suffix, or changing the number of decimals of the display value.
-        Defaults to percentage formatting.
+        The minimum value of the progress bar. If None (default), will be 100 for
+        integer values and 1 for float values.
     """
 
     return ColumnConfig(
-        title=title,
+        title=label,
         width=width,
         help=help,
-        required=required,
         type="progress",
-        default=default,
         type_options={
             "min_value": min_value,
             "max_value": max_value,
