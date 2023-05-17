@@ -24,7 +24,6 @@ from parameterized import parameterized
 
 from streamlit.elements.lib.column_config_utils import (
     _EDITING_COMPATIBILITY_MAPPING,
-    ColumnConfig,
     ColumnConfigMapping,
     ColumnConfigMappingInput,
     ColumnDataKind,
@@ -37,6 +36,7 @@ from streamlit.elements.lib.column_config_utils import (
     process_config_mapping,
     update_column_config,
 )
+from streamlit.elements.lib.column_types import ColumnConfig
 from streamlit.errors import StreamlitAPIException
 
 

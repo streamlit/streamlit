@@ -848,7 +848,6 @@ def TimeColumn(
         The stepping interval in seconds. If None (default), the step will be 1 second.
     """
 
-    # TODO: Check if this code is correct:
     def _format_time(value: datetime.time | None) -> str | None:
         return None if value is None else value.isoformat()
 
@@ -929,7 +928,6 @@ def DateColumn(
         The stepping interval in days. If None (default), the step will be 1 day.
     """
 
-    # TODO: Check if this code is correct:
     def _format_date(value: datetime.date | None) -> str | None:
         return None if value is None else value.isoformat()
 
