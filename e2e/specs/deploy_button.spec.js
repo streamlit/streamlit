@@ -30,7 +30,7 @@ describe("deploy button and modal", () => {
 
     cy.get("div[class='stDeployButton'] > button").click();
 
-    cy.get("div[role='dialog']").matchThemedSnapshots(
+    cy.get("div[role='dialog']").matchImageSnapshot(
       "deploy_dialog_opened-light"
     );
   });
@@ -40,7 +40,7 @@ describe("deploy button and modal", () => {
 
     cy.get("div[class='stDeployButton'] > button").click();
 
-    cy.get("div[role='dialog']").matchThemedSnapshots(
+    cy.get("div[role='dialog']").matchImageSnapshot(
       "deploy_dialog_opened-dark"
     );
   });
