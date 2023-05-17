@@ -16,17 +16,14 @@ from __future__ import annotations
 
 import json
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, Union
+from typing import Any, Dict, Final, List, Literal, Optional, Union
 
 import pandas as pd
 import pyarrow as pa
-from typing_extensions import Literal, TypeAlias, TypedDict
+from typing_extensions import Literal, NotRequired, TypeAlias, TypedDict
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
-
-if TYPE_CHECKING:
-    import builtins
 
 # The index identifier can be used to apply configuration options
 IndexIdentifierType = Literal["index"]
@@ -401,6 +398,87 @@ def determine_dataframe_schema(
     return dataframe_schema
 
 
+class NumberColumnConfig(TypedDict):
+    type: Literal["number"]
+    format: NotRequired[str | None]
+    min_value: NotRequired[int | float | None]
+    max_value: NotRequired[int | float | None]
+    step: NotRequired[int | float | None]
+
+
+class TextColumnConfig(TypedDict):
+    type: Literal["text"]
+    max_chars: NotRequired[int | None]
+    validate: NotRequired[str | None]
+
+
+class CheckboxColumnConfig(TypedDict):
+    type: Literal["checkbox"]
+
+
+class SelectboxColumnConfig(TypedDict):
+    type: Literal["selectbox"]
+    options: NotRequired[List[str | int | float] | None]
+
+
+class LinkColumnConfig(TypedDict):
+    type: Literal["link"]
+    max_chars: NotRequired[int | None]
+    validate: NotRequired[str | None]
+
+
+class BarChartColumnConfig(TypedDict):
+    type: Literal["bar_chart"]
+    y_min: NotRequired[int | float | None]
+    y_max: NotRequired[int | float | None]
+
+
+class LineChartColumnConfig(TypedDict):
+    type: Literal["line_chart"]
+    y_min: NotRequired[int | float | None]
+    y_max: NotRequired[int | float | None]
+
+
+class ImageColumnConfig(TypedDict):
+    type: Literal["image"]
+
+
+class ListColumnConfig(TypedDict):
+    type: Literal["list"]
+
+
+class DatetimeColumnConfig(TypedDict):
+    type: Literal["datetime"]
+    format: NotRequired[str | None]
+    min_value: NotRequired[str | None]
+    max_value: NotRequired[str | None]
+    step: NotRequired[int | float | None]
+    timezone: NotRequired[str | None]
+
+
+class TimeColumnConfig(TypedDict):
+    type: Literal["time"]
+    format: NotRequired[str | None]
+    min_value: NotRequired[str | None]
+    max_value: NotRequired[str | None]
+    step: NotRequired[int | float | None]
+
+
+class DateColumnConfig(TypedDict):
+    type: Literal["date"]
+    format: NotRequired[str | None]
+    min_value: NotRequired[str | None]
+    max_value: NotRequired[str | None]
+    step: NotRequired[int | None]
+
+
+class ProgressColumnConfig(TypedDict):
+    type: Literal["progress"]
+    format: NotRequired[str]
+    min_value: NotRequired[int | float | None]
+    max_value: NotRequired[int | float | None]
+
+
 class ColumnConfig(TypedDict, total=False):
     """Configuration options for columns in ``st.dataframe`` and ``st.data_editor``.
 
@@ -431,36 +509,60 @@ class ColumnConfig(TypedDict, total=False):
     hidden: bool or None
         Whether to hide the column. Defaults to False.
 
-    type: str or None
-        The type of the column. If None, the column will be inferred from the data.
-
-    type_options: dict or None
-        Additional configuration options specific to the selected column type.
+    type_config: dict or str or None
+        Configure a column type and type specific options.
     """
 
-    title: Optional[str]
-    width: Optional[ColumnWidth]
-    help: Optional[str]
-    hidden: Optional[bool]
-    disabled: Optional[bool]
-    required: Optional[bool]
-    default: Optional[str | bool | int | float]
-    alignment: Optional[Literal["left", "center", "right"]]
-    type: Optional[ColumnType]
-    type_options: Optional[Dict[str, Any]]
+    label: str | None
+    width: ColumnWidth | None
+    help: str | None
+    hidden: bool | None
+    disabled: bool | None
+    required: bool | None
+    default: str | bool | int | float | None
+    alignment: Literal["left", "center", "right"] | None
+    type_config: Union[
+        NumberColumnConfig,
+        TextColumnConfig,
+        CheckboxColumnConfig,
+        SelectboxColumnConfig,
+        LinkColumnConfig,
+        ListColumnConfig,
+        DatetimeColumnConfig,
+        DateColumnConfig,
+        TimeColumnConfig,
+        ProgressColumnConfig,
+        LineChartColumnConfig,
+        BarChartColumnConfig,
+        ImageColumnConfig,
+        None,
+    ]
 
 
 # A mapping of column names/IDs to column configs.
 ColumnConfigMapping: TypeAlias = Dict[Union[IndexIdentifierType, str], ColumnConfig]
 ColumnConfigMappingInput: TypeAlias = Dict[
     Union[IndexIdentifierType, str],
-    Union[ColumnConfig, None, str, "builtins.ellipsis"],
+    Union[ColumnConfig, None, str],
 ]
 
 
 def process_config_mapping(
     column_config: ColumnConfigMappingInput | None = None,
 ) -> ColumnConfigMapping:
+    """Transforms a user-provided column config mapping into a valid column config mapping
+    that can be used by the frontend.
+
+    Parameters
+    ----------
+    column_config: dict or None
+        The user-provided column config mapping.
+
+    Returns
+    -------
+    dict
+        The transformed column config mapping.
+    """
     if column_config is None:
         return {}
 
@@ -468,11 +570,8 @@ def process_config_mapping(
     for column, config in column_config.items():
         if config is None:
             transformed_column_config[column] = ColumnConfig(hidden=True)
-        elif config is ...:
-            # Just add an empty config mapping for the column
-            transformed_column_config[column] = ColumnConfig()
         elif isinstance(config, str):
-            transformed_column_config[column] = ColumnConfig(title=config)
+            transformed_column_config[column] = ColumnConfig(label=config)
         elif isinstance(config, dict):
             transformed_column_config[column] = config
         else:

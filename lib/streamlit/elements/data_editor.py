@@ -478,13 +478,17 @@ def _check_type_compatibilities(
                 # This might change in the future.
                 continue
 
-            configured_column_type = column_config.get("type")
+            type_config = column_config.get("type_config")
+
+            if type_config is None:
+                continue
+
+            configured_column_type = type_config.get("type")
 
             if configured_column_type is None:
                 continue
 
             if is_type_compatible(configured_column_type, column_data_kind) is False:
-                # TODO: Put on top as constant?
                 raise StreamlitAPIException(
                     f"The configured column type `{configured_column_type}` for column "
                     f"`{column_name}` is not compatible for editing the underlying "
@@ -500,18 +504,18 @@ class DataEditorMixin:
         self,
         data: EditableData,
         *,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
         use_container_width: bool = False,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool | Iterable[str] = False,
-        key: Optional[Key] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
-        column_config: Optional[ColumnConfigMappingInput] = None,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
     ) -> EditableData:
         pass
 
@@ -520,18 +524,18 @@ class DataEditorMixin:
         self,
         data: Any,
         *,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
         use_container_width: bool = False,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool | Iterable[str] = False,
-        key: Optional[Key] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
-        column_config: Optional[ColumnConfigMappingInput] = None,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
     ) -> pd.DataFrame:
         pass
 
@@ -540,18 +544,18 @@ class DataEditorMixin:
         self,
         data: DataTypes,
         *,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
         use_container_width: bool = False,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         num_rows: Literal["fixed", "dynamic"] = "fixed",
         disabled: bool | Iterable[str] = False,
-        key: Optional[Key] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
-        column_config: Optional[ColumnConfigMappingInput] = None,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
     ) -> DataTypes:
         """Display a data editor widget.
 

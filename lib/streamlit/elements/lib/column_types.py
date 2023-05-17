@@ -18,15 +18,28 @@ import datetime
 from typing import Iterable
 
 from streamlit.elements.lib.column_config_utils import (
+    BarChartColumnConfig,
+    CheckboxColumnConfig,
     ColumnConfig,
     ColumnType,
     ColumnWidth,
+    DateColumnConfig,
+    DatetimeColumnConfig,
+    ImageColumnConfig,
+    LineChartColumnConfig,
+    LinkColumnConfig,
+    ListColumnConfig,
+    NumberColumnConfig,
+    ProgressColumnConfig,
+    SelectboxColumnConfig,
+    TextColumnConfig,
+    TimeColumnConfig,
 )
 
 
 def NumberColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
     disabled: bool | None = None,
@@ -86,25 +99,25 @@ def NumberColumn(
     """
 
     return ColumnConfig(
-        title=label,
+        label=label,
         width=width,
         help=help,
         disabled=disabled,
         required=required,
-        type="number",
         default=default,
-        type_options={
-            "min_value": min_value,
-            "max_value": max_value,
-            "format": format,
-            "step": step,
-        },
+        type_config=NumberColumnConfig(
+            type="number",
+            min_value=min_value,
+            max_value=max_value,
+            format=format,
+            step=step,
+        ),
     )
 
 
 def TextColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
     disabled: bool | None = None,
@@ -153,23 +166,21 @@ def TextColumn(
     """
 
     return ColumnConfig(
-        title=label,
+        label=label,
         width=width,
         help=help,
         disabled=disabled,
         required=required,
         default=default,
-        type="text",
-        type_options={
-            "max_chars": max_chars,
-            "validate": validate,
-        },
+        type_config=TextColumnConfig(
+            type="text", max_chars=max_chars, validate=validate
+        ),
     )
 
 
 def LinkColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
     disabled: bool | None = None,
@@ -219,23 +230,21 @@ def LinkColumn(
     """
 
     return ColumnConfig(
-        title=label,
+        label=label,
         width=width,
         help=help,
         disabled=disabled,
         required=required,
         default=default,
-        type="link",
-        type_options={
-            "max_chars": max_chars,
-            "validate": validate,
-        },
+        type_config=LinkColumnConfig(
+            type="link", max_chars=max_chars, validate=validate
+        ),
     )
 
 
 def CheckboxColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
     disabled: bool | None = None,
@@ -274,19 +283,19 @@ def CheckboxColumn(
     """
 
     return ColumnConfig(
-        title=label,
+        label=label,
         width=width,
         help=help,
         disabled=disabled,
         required=required,
         default=default,
-        type="checkbox",
+        type_config=CheckboxColumnConfig(type="checkbox"),
     )
 
 
 def SelectboxColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
     disabled: bool | None = None,
@@ -331,22 +340,21 @@ def SelectboxColumn(
     """
 
     return ColumnConfig(
-        title=label,
+        label=label,
         width=width,
         help=help,
         disabled=disabled,
         required=required,
         default=default,
-        type="selectbox",
-        type_options={
-            "options": list(options) if options is not None else None,
-        },
+        type_config=SelectboxColumnConfig(
+            type="selectbox", options=list(options) if options is not None else None
+        ),
     )
 
 
 def BarChartColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
     y_min: int | float | None = None,
@@ -382,20 +390,16 @@ def BarChartColumn(
     """
 
     return ColumnConfig(
-        title=label,
+        label=label,
         width=width,
         help=help,
-        type="bar_chart",
-        type_options={
-            "y_min": y_min,
-            "y_max": y_max,
-        },
+        type_config=BarChartColumnConfig(type="bar_chart", y_min=y_min, y_max=y_max),
     )
 
 
 def LineChartColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
     y_min: int | float | None = None,
@@ -431,20 +435,16 @@ def LineChartColumn(
     """
 
     return ColumnConfig(
-        title=label,
+        label=label,
         width=width,
         help=help,
-        type="line_chart",
-        type_options={
-            "y_min": y_min,
-            "y_max": y_max,
-        },
+        type_config=LineChartColumnConfig(type="line_chart", y_min=y_min, y_max=y_max),
     )
 
 
 def ImageColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
 ):
@@ -477,16 +477,13 @@ def ImageColumn(
         An optional tooltip that gets displayed when hovering over the column label.
     """
     return ColumnConfig(
-        title=label,
-        width=width,
-        help=help,
-        type="image",
+        label=label, width=width, help=help, type_config=ImageColumnConfig(type="image")
     )
 
 
 def ListColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
 ):
@@ -511,16 +508,13 @@ def ListColumn(
         An optional tooltip that gets displayed when hovering over the column label.
     """
     return ColumnConfig(
-        title=label,
-        width=width,
-        help=help,
-        type="list",
+        label=label, width=width, help=help, type_config=ListColumnConfig(type="list")
     )
 
 
 def DatetimeColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
     disabled: bool | None = None,
@@ -588,26 +582,26 @@ def DatetimeColumn(
         return None if value is None else value.isoformat()
 
     return ColumnConfig(
-        title=label,
+        label=label,
         width=width,
         help=help,
         disabled=disabled,
         required=required,
         default=_format_datetime(default),
-        type="datetime",
-        type_options={
-            "format": format,
-            "min_value": _format_datetime(min_value),
-            "max_value": _format_datetime(max_value),
-            "step": step,
-            "timezone": timezone,
-        },
+        type_config=DatetimeColumnConfig(
+            type="datetime",
+            format=format,
+            min_value=_format_datetime(min_value),
+            max_value=_format_datetime(max_value),
+            step=step,
+            timezone=timezone,
+        ),
     )
 
 
 def TimeColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
     disabled: bool | None = None,
@@ -670,25 +664,25 @@ def TimeColumn(
         return None if value is None else value.isoformat()
 
     return ColumnConfig(
-        title=label,
+        label=label,
         width=width,
         help=help,
         disabled=disabled,
         required=required,
         default=_format_time(default),
-        type="time",
-        type_options={
-            "format": format,
-            "min_value": _format_time(min_value),
-            "max_value": _format_time(max_value),
-            "step": step,
-        },
+        type_config=TimeColumnConfig(
+            type="time",
+            format=format,
+            min_value=_format_time(min_value),
+            max_value=_format_time(max_value),
+            step=step,
+        ),
     )
 
 
 def DateColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
     disabled: bool | None = None,
@@ -751,25 +745,25 @@ def DateColumn(
         return None if value is None else value.isoformat()
 
     return ColumnConfig(
-        title=label,
+        label=label,
         width=width,
         help=help,
         disabled=disabled,
         required=required,
         default=_format_date(default),
-        type="date",
-        type_options={
-            "format": format,
-            "min_value": _format_date(min_value),
-            "max_value": _format_date(max_value),
-            "step": step,
-        },
+        type_config=DateColumnConfig(
+            type="date",
+            format=format,
+            min_value=_format_date(min_value),
+            max_value=_format_date(max_value),
+            step=step,
+        ),
     )
 
 
 def ProgressColumn(
-    *,
     label: str | None = None,
+    *,
     width: ColumnWidth | None = None,
     help: str | None = None,
     format: str | None = None,
@@ -810,58 +804,22 @@ def ProgressColumn(
     """
 
     return ColumnConfig(
-        title=label,
+        label=label,
         width=width,
         help=help,
-        type="progress",
-        type_options={
-            "min_value": min_value,
-            "max_value": max_value,
-            "format": format,
-        },
+        type_config=ProgressColumnConfig(
+            type="progress",
+            format=format,
+            min_value=min_value,
+            max_value=max_value,
+        ),
     )
 
 
 class ColumnConfigAPI:
-    """Configure options for columns in ``st.dataframe`` and `st.data_editor`.
-
-    This needs to be used as input to the column_config parameter of st.dataframe
-    or st.data_editor. For more type-specific configuration options, use one of
-    the column types available in ``st.column_config.`` namespace, e.g.
-    ``st.column_config.NumberColumn``.
-
-    Parameters
-    ----------
-    title: str
-        The title of the column shown at the top in the column header.
-        If None (default), the column name is used.
-
-    width: "small", "medium", "large", or None
-        The display width of the column. Can be either small, medium, or large.
-        If None (default), the column will be sized to fit its contents.
-
-    help: str or None
-        An optional tooltip that gets displayed when hovering over the column header.
-
-    required: bool or None
-        If True, a cell can only be submitted by the user if it has a value.
-        This will ensure that the data_editor never returns None as a value in this
-        column. Defaults to False.
-
-        This configuration option does not have any effect
-        if used with a disabled column.
-
-    type: "text", "number", "checkbox", "select", “list”,“datetime”, “date”, “time”, “url”, “image”, “line_chart”, “bar_chart”, “range” or None
-        The type name for the column. If None, infers the type from the underlying
-        data in the column. Defaults to None. To apply any type-specific configuration
-        options, use one of the column types available in the ``st.column_config.``
-        namespace - e.g. ``st.column_config.NumberColumn`` - as replacement for the
-        ``st.column_config`` command.
-    """
-
     def __call__(
         self,
-        title: str | None = None,
+        label: str | None = None,
         *,
         width: ColumnWidth | None = None,
         help: str | None = None,
@@ -906,7 +864,7 @@ class ColumnConfigAPI:
 
         return ColumnConfig(
             type=type,
-            title=title,
+            label=label,
             width=width,
             help=help,
             required=required,

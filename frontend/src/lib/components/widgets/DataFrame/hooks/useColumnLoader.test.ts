@@ -93,7 +93,9 @@ describe("applyColumnConfig", () => {
         {
           width: "small",
           disabled: false,
-          type: "text",
+          type_config: {
+            type: "text",
+          },
         } as ColumnConfigProps,
       ],
       [

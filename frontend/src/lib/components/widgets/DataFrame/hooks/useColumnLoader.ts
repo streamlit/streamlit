@@ -52,7 +52,7 @@ export const COLUMN_WIDTH_MAPPING = {
  * This will be eventually replaced with a proto message.
  */
 export interface ColumnConfigProps {
-  title?: string
+  label?: string
   width?: "small" | "medium" | "large"
   help?: string
   hidden?: boolean
@@ -60,9 +60,8 @@ export interface ColumnConfigProps {
   required?: boolean
   default?: number | string | boolean
   alignment?: "left" | "center" | "right"
-  type?: string
   // uses snake_case to match the property names in the backend:
-  type_options?: Record<string, unknown>
+  type_config?: Record<string, unknown>
 }
 
 /**
@@ -114,19 +113,19 @@ export function applyColumnConfig(
   // This will update all column props with the user-defined config for all
   // configuration options that are not undefined:
   return merge({ ...columnProps }, {
-    title: columnConfig.title,
+    title: columnConfig.label,
     width:
       notNullOrUndefined(columnConfig.width) &&
       columnConfig.width in COLUMN_WIDTH_MAPPING
         ? COLUMN_WIDTH_MAPPING[columnConfig.width]
         : undefined,
-    customType: columnConfig.type?.toLowerCase().trim(),
+    customType: (columnConfig.type_config?.type as string)?.toLowerCase(),
     isEditable: notNullOrUndefined(columnConfig.disabled)
       ? !columnConfig.disabled
       : undefined,
     isHidden: columnConfig.hidden,
     isRequired: columnConfig.required,
-    columnTypeOptions: columnConfig.type_options,
+    columnTypeOptions: columnConfig.type_config,
     contentAlignment: columnConfig.alignment,
     defaultValue: columnConfig.default,
     help: columnConfig.help,
