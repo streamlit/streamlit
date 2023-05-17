@@ -45,6 +45,7 @@ from streamlit.elements.lib.column_config_utils import (
     ColumnConfigMappingInput,
     ColumnDataKind,
     DataframeSchema,
+    apply_data_specific_configs,
     determine_dataframe_schema,
     is_type_compatible,
     marshall_column_config,
@@ -351,60 +352,6 @@ def _apply_dataframe_edits(
 
     if data_editor_state.get("deleted_rows"):
         _apply_row_deletions(df, data_editor_state["deleted_rows"])
-
-
-def _apply_data_specific_configs(
-    columns_config: ColumnConfigMapping, data_df: pd.DataFrame, data_format: DataFormat
-) -> None:
-    """Apply data specific configurations to the provided dataframe.
-
-    This will apply inplace changes to the dataframe and the column configurations
-    depending on the data format.
-
-    Parameters
-    ----------
-    columns_config : ColumnConfigMapping
-        A mapping of column names/ids to column configurations.
-
-    data_df : pd.DataFrame
-        The dataframe to apply the configurations to.
-
-    data_format : DataFormat
-        The format of the data.
-    """
-    # Deactivate editing for columns that are not compatible with arrow
-    for column_name, column_data in data_df.items():
-        if type_util.is_colum_type_arrow_incompatible(column_data):
-            update_column_config(columns_config, column_name, {"disabled": True})
-            # Convert incompatible type to string
-            data_df[column_name] = column_data.astype(str)
-
-    # Pandas adds a range index as default to all datastructures
-    # but for most of the non-pandas data objects it is unnecessary
-    # to show this index to the user. Therefore, we will hide it as default.
-    if data_format in [
-        DataFormat.SET_OF_VALUES,
-        DataFormat.TUPLE_OF_VALUES,
-        DataFormat.LIST_OF_VALUES,
-        DataFormat.NUMPY_LIST,
-        DataFormat.NUMPY_MATRIX,
-        DataFormat.LIST_OF_RECORDS,
-        DataFormat.LIST_OF_ROWS,
-        DataFormat.COLUMN_VALUE_MAPPING,
-    ]:
-        update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
-
-    # Rename the first column to "value" for some of the data formats
-    if data_format in [
-        DataFormat.SET_OF_VALUES,
-        DataFormat.TUPLE_OF_VALUES,
-        DataFormat.LIST_OF_VALUES,
-        DataFormat.NUMPY_LIST,
-        DataFormat.KEY_VALUE_DICT,
-    ]:
-        # Pandas automatically names the first column "0"
-        # We rename it to "value" in selected cases to make it more descriptive
-        data_df.rename(columns={0: "value"}, inplace=True)
 
 
 def _is_supported_index(df_index: pd.Index) -> bool:
@@ -716,7 +663,9 @@ class DataEditorMixin:
 
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
-        _apply_data_specific_configs(column_config_mapping, data_df, data_format)
+        apply_data_specific_configs(
+            column_config_mapping, data_df, data_format, check_arrow_compatibility=True
+        )
 
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.

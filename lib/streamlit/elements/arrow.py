@@ -24,6 +24,7 @@ from streamlit import type_util
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
+    apply_data_specific_configs,
     marshall_column_config,
     process_config_mapping,
     update_column_config,
@@ -132,12 +133,6 @@ class ArrowMixin:
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
 
-        # If pandas.Styler uuid is not provided, a hash of the position
-        # of the element will be used. This will cause a rerender of the table
-        # when the position of the element is changed.
-        delta_path = self.dg._get_delta_path_str()
-        default_uuid = str(hash(delta_path))
-
         proto = ArrowProto()
         proto.use_container_width = use_container_width
         if width:
@@ -150,7 +145,39 @@ class ArrowMixin:
 
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
-        marshall(proto, data, default_uuid)
+        if isinstance(data, pa.Table):
+            # For pyarrow tables, we can just serialize the table directly
+            proto.data = type_util.pyarrow_table_to_bytes(data)
+        else:
+            # For all other data formats, we need to convert them to a pandas.DataFrame
+            # thereby, we also apply some data specific configs
+
+            # Determine the input data format
+            data_format = type_util.determine_data_format(data)
+
+            if type_util.is_pandas_styler(data):
+                # If pandas.Styler uuid is not provided, a hash of the position
+                # of the element will be used. This will cause a rerender of the table
+                # when the position of the element is changed.
+                delta_path = self.dg._get_delta_path_str()
+                default_uuid = str(hash(delta_path))
+                # default_uuid is a string only if the data is a `Styler`,
+                # and `None` otherwise.
+                assert isinstance(
+                    default_uuid, str
+                ), "Default UUID must be a string for Styler data."
+                marshall_styler(proto, data, default_uuid)
+
+            # Convert the input data into a pandas.DataFrame
+            data_df = type_util.convert_anything_to_df(data, ensure_copy=False)
+            apply_data_specific_configs(
+                column_config_mapping,
+                data_df,
+                data_format,
+                check_arrow_compatibility=False,
+            )
+            # Serialize the data to bytes:
+            proto.data = type_util.data_frame_to_bytes(data_df)
 
         if hide_index is not None:
             update_column_config(

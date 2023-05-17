@@ -24,6 +24,7 @@ from parameterized import parameterized
 
 from streamlit.elements.lib.column_config_utils import (
     _EDITING_COMPATIBILITY_MAPPING,
+    INDEX_IDENTIFIER,
     ColumnConfigMapping,
     ColumnConfigMappingInput,
     ColumnDataKind,
@@ -31,6 +32,7 @@ from streamlit.elements.lib.column_config_utils import (
     _determine_data_kind_via_arrow,
     _determine_data_kind_via_inferred_type,
     _determine_data_kind_via_pandas_dtype,
+    apply_data_specific_configs,
     determine_dataframe_schema,
     is_type_compatible,
     process_config_mapping,
@@ -38,6 +40,7 @@ from streamlit.elements.lib.column_config_utils import (
 )
 from streamlit.elements.lib.column_types import ColumnConfig
 from streamlit.errors import StreamlitAPIException
+from streamlit.type_util import DataFormat
 
 
 class TestObject(object):
@@ -449,3 +452,103 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
         # Check if the new column config was added correctly
         self.assertEqual(initial_column_config[column_to_update], new_column_config)
+
+    @parameterized.expand(
+        [
+            (DataFormat.SET_OF_VALUES, True),
+            (DataFormat.TUPLE_OF_VALUES, True),
+            (DataFormat.LIST_OF_VALUES, True),
+            (DataFormat.NUMPY_LIST, True),
+            (DataFormat.NUMPY_MATRIX, True),
+            (DataFormat.LIST_OF_RECORDS, True),
+            (DataFormat.LIST_OF_ROWS, True),
+            (DataFormat.COLUMN_VALUE_MAPPING, True),
+            # Some data formats which should not hide the index:
+            (DataFormat.PANDAS_DATAFRAME, False),
+            (DataFormat.PANDAS_SERIES, False),
+            (DataFormat.PANDAS_INDEX, False),
+            (DataFormat.KEY_VALUE_DICT, False),
+            (DataFormat.PYARROW_TABLE, False),
+            (DataFormat.PANDAS_STYLER, False),
+            (DataFormat.COLUMN_INDEX_MAPPING, False),
+            (DataFormat.COLUMN_SERIES_MAPPING, False),
+        ]
+    )
+    def test_apply_data_specific_configs_hides_index(
+        self, data_format: DataFormat, hidden: bool
+    ):
+        """Test that the index is hidden for some data formats."""
+        columns_config: ColumnConfigMapping = {}
+        data_df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        apply_data_specific_configs(columns_config, data_df, data_format)
+
+        if hidden:
+            self.assertEqual(
+                columns_config[INDEX_IDENTIFIER]["hidden"],
+                hidden,
+                f"Data of type {data_format} should be hidden.",
+            )
+        else:
+            self.assertNotIn(INDEX_IDENTIFIER, columns_config)
+
+    @parameterized.expand(
+        [
+            (DataFormat.SET_OF_VALUES, True),
+            (DataFormat.TUPLE_OF_VALUES, True),
+            (DataFormat.LIST_OF_VALUES, True),
+            (DataFormat.NUMPY_LIST, True),
+            (DataFormat.KEY_VALUE_DICT, True),
+            # Most other data formats which should not rename the first column:
+            (DataFormat.PANDAS_DATAFRAME, False),
+            (DataFormat.PANDAS_SERIES, False),
+            (DataFormat.PANDAS_INDEX, False),
+            (DataFormat.PYARROW_TABLE, False),
+            (DataFormat.PANDAS_STYLER, False),
+            (DataFormat.COLUMN_INDEX_MAPPING, False),
+            (DataFormat.COLUMN_SERIES_MAPPING, False),
+            (DataFormat.LIST_OF_RECORDS, False),
+            (DataFormat.LIST_OF_ROWS, False),
+            (DataFormat.COLUMN_VALUE_MAPPING, False),
+        ]
+    )
+    def test_apply_data_specific_configs_renames_column(
+        self, data_format: DataFormat, renames: bool
+    ):
+        """Test that the column names are changed for some data formats."""
+        data_df = pd.DataFrame([1, 2, 3])
+        apply_data_specific_configs({}, data_df, data_format)
+        if renames:
+            self.assertEqual(
+                data_df.columns[0],
+                "value",
+                f"Data of type {data_format} should be renamed to 'value'",
+            )
+        else:
+            self.assertEqual(
+                data_df.columns[0],
+                0,
+                f"Data of type {data_format} should not be renamed.",
+            )
+
+    def test_apply_data_specific_configs_disables_columns(self):
+        """Test that Arrow incompatible columns are disabled (configured as non-editable)."""
+        columns_config: ColumnConfigMapping = {}
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+                "c": pd.Series([1, "foo"]),  # Incompatible
+                "d": pd.Series([1 + 2j, 3 + 4j]),  # Incompatible
+            }
+        )
+
+        apply_data_specific_configs(
+            columns_config,
+            data_df,
+            DataFormat.PANDAS_DATAFRAME,
+            check_arrow_compatibility=True,
+        )
+        self.assertNotIn("a", columns_config)
+        self.assertNotIn("b", columns_config)
+        self.assertTrue(columns_config["c"]["disabled"])
+        self.assertTrue(columns_config["d"]["disabled"])
