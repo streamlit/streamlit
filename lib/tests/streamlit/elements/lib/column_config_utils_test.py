@@ -419,8 +419,8 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
         # Create an initial column config mapping
         initial_column_config: ColumnConfigMapping = {
-            "index": {"title": "Index", "width": "medium"},
-            "col1": {"title": "Column 1", "width": "small"},
+            "index": {"label": "Index", "width": "medium"},
+            "col1": {"label": "Column 1", "width": "small"},
         }
 
         # Define the column and new column config to update
@@ -432,7 +432,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
         # Check if the column config was updated correctly
         expected_column_config: ColumnConfig = {
-            "title": "Column 1",
+            "label": "Column 1",
             "width": "large",
             "disabled": True,
         }
@@ -442,7 +442,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
         # Test updating a column that doesn't exist in the initial column config mapping
         column_to_update = "col2"
-        new_column_config: ColumnConfig = {"title": "Column 2", "width": "medium"}
+        new_column_config: ColumnConfig = {"label": "Column 2", "width": "medium"}
 
         # Call the update_column_config method
         update_column_config(initial_column_config, column_to_update, new_column_config)
