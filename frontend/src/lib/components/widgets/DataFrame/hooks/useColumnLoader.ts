@@ -119,7 +119,6 @@ export function applyColumnConfig(
       columnConfig.width in COLUMN_WIDTH_MAPPING
         ? COLUMN_WIDTH_MAPPING[columnConfig.width]
         : undefined,
-    customType: (columnConfig.type_config?.type as string)?.toLowerCase(),
     isEditable: notNullOrUndefined(columnConfig.disabled)
       ? !columnConfig.disabled
       : undefined,
@@ -165,14 +164,15 @@ type ColumnLoaderReturn = {
  * @returns the column creator of the corresponding column type.
  */
 export function getColumnType(column: BaseColumnProps): ColumnCreator {
+  const customType = column.columnTypeOptions?.type as string
   // Create a column instance based on the column properties
   let ColumnType: ColumnCreator | undefined
-  if (notNullOrUndefined(column.customType)) {
-    if (ColumnTypes.has(column.customType)) {
-      ColumnType = ColumnTypes.get(column.customType)
+  if (notNullOrUndefined(customType)) {
+    if (ColumnTypes.has(customType)) {
+      ColumnType = ColumnTypes.get(customType)
     } else {
       logWarning(
-        `Unknown column type configured in column configuration: ${column.customType}`
+        `Unknown column type configured in column configuration: ${customType}`
       )
     }
   }

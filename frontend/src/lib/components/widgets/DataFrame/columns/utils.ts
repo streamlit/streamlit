@@ -64,9 +64,7 @@ export interface BaseColumnProps {
   readonly width?: number
   // A help text that is displayed on hovering the column header.
   readonly help?: string
-  // Column type selected via column config:
-  readonly customType?: string
-  // Additional metadata related to the column type:
+  // Configuration options related to the column type:
   readonly columnTypeOptions?: Record<string, any>
   // The content alignment of the column:
   readonly contentAlignment?: "left" | "center" | "right"
