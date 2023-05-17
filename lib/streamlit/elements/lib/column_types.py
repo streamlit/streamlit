@@ -19,6 +19,8 @@ from typing import Iterable, List, Union
 
 from typing_extensions import Literal, NotRequired, TypeAlias, TypedDict
 
+from streamlit.runtime.metrics_util import gather_metrics
+
 ColumnWidth: TypeAlias = Literal["small", "medium", "large"]
 
 # Type alias that represents all available column types
@@ -182,6 +184,7 @@ class ColumnConfig(TypedDict, total=False):
     ]
 
 
+@gather_metrics("Column")
 def Column(
     label: str | None = None,
     *,
@@ -226,6 +229,7 @@ def Column(
     )
 
 
+@gather_metrics("NumberColumn")
 def NumberColumn(
     label: str | None = None,
     *,
@@ -304,6 +308,7 @@ def NumberColumn(
     )
 
 
+@gather_metrics("TextColumn")
 def TextColumn(
     label: str | None = None,
     *,
@@ -367,6 +372,7 @@ def TextColumn(
     )
 
 
+@gather_metrics("LinkColumn")
 def LinkColumn(
     label: str | None = None,
     *,
@@ -431,6 +437,7 @@ def LinkColumn(
     )
 
 
+@gather_metrics("CheckboxColumn")
 def CheckboxColumn(
     label: str | None = None,
     *,
@@ -482,6 +489,7 @@ def CheckboxColumn(
     )
 
 
+@gather_metrics("SelectboxColumn")
 def SelectboxColumn(
     label: str | None = None,
     *,
@@ -541,6 +549,7 @@ def SelectboxColumn(
     )
 
 
+@gather_metrics("BarChartColumn")
 def BarChartColumn(
     label: str | None = None,
     *,
@@ -586,6 +595,7 @@ def BarChartColumn(
     )
 
 
+@gather_metrics("LineChartColumn")
 def LineChartColumn(
     label: str | None = None,
     *,
@@ -631,6 +641,7 @@ def LineChartColumn(
     )
 
 
+@gather_metrics("ImageColumn")
 def ImageColumn(
     label: str | None = None,
     *,
@@ -670,6 +681,7 @@ def ImageColumn(
     )
 
 
+@gather_metrics("ListColumn")
 def ListColumn(
     label: str | None = None,
     *,
@@ -701,6 +713,7 @@ def ListColumn(
     )
 
 
+@gather_metrics("DatetimeColumn")
 def DatetimeColumn(
     label: str | None = None,
     *,
@@ -788,6 +801,7 @@ def DatetimeColumn(
     )
 
 
+@gather_metrics("TimeColumn")
 def TimeColumn(
     label: str | None = None,
     *,
@@ -868,6 +882,7 @@ def TimeColumn(
     )
 
 
+@gather_metrics("DateColumn")
 def DateColumn(
     label: str | None = None,
     *,
@@ -948,6 +963,7 @@ def DateColumn(
     )
 
 
+@gather_metrics("ProgressColumn")
 def ProgressColumn(
     label: str | None = None,
     *,
