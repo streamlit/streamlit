@@ -11,10 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Optional, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -53,17 +54,20 @@ class RadioSerde(Generic[T]):
     index: int
 
     def serialize(self, v: object) -> int:
+        if v is None or v == -1:
+            return -1
         if len(self.options) == 0:
             return 0
         return index_(self.options, v)
 
     def deserialize(
         self,
-        ui_value: Optional[int],
+        ui_value: int | None,
         widget_id: str = "",
-    ) -> Optional[T]:
+    ) -> T | None:
         idx = ui_value if ui_value is not None else self.index
-
+        if idx == -1:
+            return None
         return (
             self.options[idx]
             if len(self.options) > 0 and self.options[idx] is not None
@@ -77,18 +81,18 @@ class RadioMixin:
         self,
         label: str,
         options: OptionSequence[T],
-        index: int = 0,
+        index: int | None = 0,
         format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only args:
         disabled: bool = False,
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[T]:
+    ) -> T | None:
         r"""Display a radio button widget.
 
         Parameters
@@ -201,31 +205,33 @@ class RadioMixin:
         self,
         label: str,
         options: OptionSequence[T],
-        index: int = 0,
+        index: int | None = 0,
         format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only args:
         disabled: bool = False,
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext],
-    ) -> Optional[T]:
+        ctx: ScriptRunContext | None,
+    ) -> T | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
         maybe_raise_label_warnings(label, label_visibility)
         opt = ensure_indexable(options)
 
+        index = -1 if index is None else index
+
         if not isinstance(index, int):
             raise StreamlitAPIException(
                 "Radio Value has invalid type: %s" % type(index).__name__
             )
 
-        if len(opt) > 0 and not 0 <= index < len(opt):
+        if index != -1 and len(opt) > 0 and not 0 <= index < len(opt):
             raise StreamlitAPIException(
                 "Radio index must be between 0 and length of options"
             )

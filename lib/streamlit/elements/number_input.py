@@ -15,7 +15,7 @@
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Optional, Union, cast
+from typing import TYPE_CHECKING, Optional, Union, cast
 
 import streamlit
 from streamlit.elements.form import current_form_id
@@ -40,26 +40,32 @@ from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings
 
 Number = Union[int, float]
 
+if TYPE_CHECKING:
+    import builtins
+
 
 @dataclass
 class NumberInputSerde:
-    value: Union[int, float]
+    value: Union[int, float, None, str]
     data_type: int
 
-    def serialize(self, v: Number) -> Number:
+    def serialize(self, v: Optional[Number]) -> Optional[Number]:
         return v
 
-    def deserialize(self, ui_value: Optional[Number], widget_id: str = "") -> Number:
-        if ui_value is not None:
-            val = ui_value
-        else:
-            # Widget has not been used; fallback to the original value,
+    def deserialize(
+        self, ui_value: Optional[Number], widget_id: str = ""
+    ) -> Optional[Number]:
+        if ui_value is None:
             val = self.value
+        else:
+            val = ui_value
 
-        if self.data_type == NumberInputProto.INT:
+        if val is not None and self.data_type == NumberInputProto.INT:
             val = int(val)
 
-        return val
+        if not isinstance(val, str):
+            return val
+        return float(val)
 
 
 class NumberInputMixin:
@@ -69,7 +75,7 @@ class NumberInputMixin:
         label: str,
         min_value: Optional[Number] = None,
         max_value: Optional[Number] = None,
-        value: Union[NoValue, Number, None] = NoValue(),
+        value: Union[NoValue, Number, "builtins.ellipsis"] = Ellipsis,
         step: Optional[Number] = None,
         format: Optional[str] = None,
         key: Optional[Key] = None,
@@ -80,7 +86,7 @@ class NumberInputMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Number:
+    ) -> Optional[Number]:
         r"""Display a numeric input widget.
 
         Parameters
@@ -192,7 +198,7 @@ class NumberInputMixin:
         label: str,
         min_value: Optional[Number] = None,
         max_value: Optional[Number] = None,
-        value: Union[NoValue, Number, None] = NoValue(),
+        value: Union[NoValue, Number, "builtins.ellipsis"] = Ellipsis,
         step: Optional[Number] = None,
         format: Optional[str] = None,
         key: Optional[Key] = None,
@@ -204,35 +210,50 @@ class NumberInputMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
-    ) -> Number:
+    ) -> Optional[Number]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
+        clearable = value is None
+        is_default_value = isinstance(value, NoValue) or value is Ellipsis
         check_session_state_rules(
-            default_value=None if isinstance(value, NoValue) else value, key=key
+            default_value=None if is_default_value else value, key=key
         )
         maybe_raise_label_warnings(label, label_visibility)
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]
 
-        int_args = all(
-            isinstance(a, (numbers.Integral, type(None), NoValue))
-            for a in number_input_args
-        )
-
-        float_args = all(
-            isinstance(a, (float, type(None), NoValue)) for a in number_input_args
-        )
-
-        if not int_args and not float_args:
-            raise StreamlitAPIException(
-                "All numerical arguments must be of the same type."
-                f"\n`value` has {type(value).__name__} type."
-                f"\n`min_value` has {type(min_value).__name__} type."
-                f"\n`max_value` has {type(max_value).__name__} type."
-                f"\n`step` has {type(step).__name__} type."
+        if not is_default_value:
+            int_args = all(
+                isinstance(a, (numbers.Integral, type(None), NoValue, str))
+                for a in number_input_args
             )
 
-        if isinstance(value, NoValue):
+            float_args = all(
+                isinstance(a, (float, type(None), NoValue, str))
+                for a in number_input_args
+            )
+        else:
+            int_args = all(
+                isinstance(a, (numbers.Integral, type(None), NoValue, str))
+                for a in [min_value, max_value, step]
+            )
+
+            float_args = all(
+                isinstance(a, (float, type(None), NoValue, str))
+                for a in [min_value, max_value, step]
+            )
+
+        if value is not Ellipsis:
+            if not int_args and not float_args:
+                raise StreamlitAPIException(
+                    "All numerical arguments must be of the same type."
+                    f"\n`value` has {type(value).__name__} type."
+                    f"\n`min_value` has {type(min_value).__name__} type."
+                    f"\n`max_value` has {type(max_value).__name__} type."
+                    f"\n`step` has {type(step).__name__} type."
+                )
+
+        if isinstance(value, NoValue) or value is Ellipsis:
             if min_value is not None:
                 value = min_value
             elif int_args and float_args:
@@ -245,29 +266,24 @@ class NumberInputMixin:
         int_value = isinstance(value, numbers.Integral)
         float_value = isinstance(value, float)
 
-        if value is None:
-            raise StreamlitAPIException(
-                "Default value for number_input should be an int or a float."
+        if format is None:
+            format = "%d" if int_value else "%0.2f"
+
+        # Warn user if they format an int type as a float or vice versa.
+        if format in ["%d", "%u", "%i"] and float_value:
+            import streamlit as st
+
+            st.warning(
+                "Warning: NumberInput value below has type float,"
+                f" but format {format} displays as integer."
             )
-        else:
-            if format is None:
-                format = "%d" if int_value else "%0.2f"
+        elif format[-1] == "f" and int_value:
+            import streamlit as st
 
-            # Warn user if they format an int type as a float or vice versa.
-            if format in ["%d", "%u", "%i"] and float_value:
-                import streamlit as st
-
-                st.warning(
-                    "Warning: NumberInput value below has type float,"
-                    f" but format {format} displays as integer."
-                )
-            elif format[-1] == "f" and int_value:
-                import streamlit as st
-
-                st.warning(
-                    "Warning: NumberInput value below has type int so is"
-                    f" displayed as int despite format string {format}."
-                )
+            st.warning(
+                "Warning: NumberInput value below has type int so is"
+                f" displayed as int despite format string {format}."
+            )
 
         if step is None:
             step = 1 if int_value else 0.01
@@ -283,7 +299,9 @@ class NumberInputMixin:
         # Ensure that the value matches arguments' types.
         all_ints = int_value and int_args
 
-        if (min_value and min_value > value) or (max_value and max_value < value):
+        if (value and min_value and min_value > value) or (
+            value and max_value and max_value < value
+        ):
             raise StreamlitAPIException(
                 "The default `value` of %(value)s "
                 "must lie between the `min_value` of %(min)s "
@@ -294,7 +312,7 @@ class NumberInputMixin:
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
         try:
-            if all_ints:
+            if all_ints or clearable:
                 if min_value is not None:
                     JSNumber.validate_int_bounds(
                         min_value, "`min_value`"  # type: ignore
@@ -305,7 +323,8 @@ class NumberInputMixin:
                     )
                 if step is not None:
                     JSNumber.validate_int_bounds(step, "`step`")  # type: ignore
-                JSNumber.validate_int_bounds(value, "`value`")  # type: ignore
+                if not clearable:
+                    JSNumber.validate_int_bounds(value, "`value`")  # type: ignore
             else:
                 if min_value is not None:
                     JSNumber.validate_float_bounds(min_value, "`min_value`")
@@ -313,7 +332,8 @@ class NumberInputMixin:
                     JSNumber.validate_float_bounds(max_value, "`max_value`")
                 if step is not None:
                     JSNumber.validate_float_bounds(step, "`step`")
-                JSNumber.validate_float_bounds(value, "`value`")
+                if isinstance(value, int) or isinstance(value, float):
+                    JSNumber.validate_float_bounds(value, "`value`")
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
 
@@ -322,7 +342,8 @@ class NumberInputMixin:
         number_input_proto = NumberInputProto()
         number_input_proto.data_type = data_type
         number_input_proto.label = label
-        number_input_proto.default = value
+        if value is not None:
+            number_input_proto.default = value
         number_input_proto.form_id = current_form_id(self.dg)
         if help is not None:
             number_input_proto.help = dedent(help)
@@ -341,7 +362,7 @@ class NumberInputMixin:
         if format is not None:
             number_input_proto.format = format
 
-        serde = NumberInputSerde(value, data_type)
+        serde = NumberInputSerde(value if not clearable else None, data_type)
         widget_state = register_widget(
             "number_input",
             number_input_proto,
@@ -357,12 +378,14 @@ class NumberInputMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         number_input_proto.disabled = disabled
+        number_input_proto.clearable = clearable
         number_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
 
         if widget_state.value_changed:
-            number_input_proto.value = widget_state.value
+            if widget_state.value is not None:
+                number_input_proto.value = widget_state.value
             number_input_proto.set_value = True
 
         self.dg._enqueue("number_input", number_input_proto)

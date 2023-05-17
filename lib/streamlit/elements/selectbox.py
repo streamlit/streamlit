@@ -11,10 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Optional, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -50,21 +51,22 @@ if TYPE_CHECKING:
 @dataclass
 class SelectboxSerde(Generic[T]):
     options: Sequence[T]
-    index: int
+    index: int | None
 
     def serialize(self, v: object) -> int:
+        if v is None:
+            return -1
         if len(self.options) == 0:
             return 0
         return index_(self.options, v)
 
     def deserialize(
         self,
-        ui_value: Optional[int],
+        ui_value: int | None,
         widget_id: str = "",
-    ) -> Optional[T]:
-        idx: int = ui_value if ui_value is not None else self.index
-
-        return self.options[idx] if len(self.options) > 0 else None
+    ) -> T | None:
+        idx = ui_value if ui_value is not None else self.index
+        return self.options[idx] if len(self.options) > 0 and idx is not None else None
 
 
 class SelectboxMixin:
@@ -73,17 +75,17 @@ class SelectboxMixin:
         self,
         label: str,
         options: OptionSequence[T],
-        index: int = 0,
+        index: int | None = 0,
         format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[T]:
+    ) -> T | None:
         r"""Display a select widget.
 
         Parameters
@@ -184,18 +186,18 @@ class SelectboxMixin:
         self,
         label: str,
         options: OptionSequence[T],
-        index: int = 0,
+        index: int | None = 0,
         format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
-    ) -> Optional[T]:
+        ctx: ScriptRunContext | None = None,
+    ) -> T | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
@@ -204,19 +206,20 @@ class SelectboxMixin:
 
         opt = ensure_indexable(options)
 
-        if not isinstance(index, int):
+        clearable = index is None
+        if not isinstance(index, int) and index is not None:
             raise StreamlitAPIException(
                 "Selectbox Value has invalid type: %s" % type(index).__name__
             )
 
-        if len(opt) > 0 and not 0 <= index < len(opt):
+        if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
             raise StreamlitAPIException(
                 "Selectbox index must be between 0 and length of options"
             )
 
         selectbox_proto = SelectboxProto()
         selectbox_proto.label = label
-        selectbox_proto.default = index
+        selectbox_proto.default = -1 if index is None else index
         selectbox_proto.options[:] = [str(format_func(option)) for option in opt]
         selectbox_proto.form_id = current_form_id(self.dg)
         if help is not None:
@@ -239,6 +242,7 @@ class SelectboxMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         selectbox_proto.disabled = disabled
+        selectbox_proto.clearable = clearable
         selectbox_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )

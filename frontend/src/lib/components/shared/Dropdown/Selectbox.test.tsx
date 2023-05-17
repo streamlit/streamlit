@@ -17,10 +17,11 @@
 import React from "react"
 import { ShallowWrapper } from "enzyme"
 import { shallow, mount } from "src/lib/test_util"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 
 import { Select as UISelect } from "baseui/select"
 import { LabelVisibilityOptions } from "src/lib/util/utils"
-import Selectbox, { Props, fuzzyFilterSelectOptions } from "./Selectbox"
+import { Selectbox, Props, fuzzyFilterSelectOptions } from "./Selectbox"
 
 jest.mock("src/lib/WidgetStateManager")
 
@@ -30,6 +31,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   options: ["a", "b", "c"],
   width: 0,
   disabled: false,
+  theme: mockTheme.emotion,
   onChange: jest.fn(),
   ...props,
 })

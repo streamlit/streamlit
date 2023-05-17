@@ -23,7 +23,8 @@ import {
   TextInput as TextInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "src/lib/proto"
-import TextInput, { Props } from "./TextInput"
+import { TextInput, Props } from "./TextInput"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 
 const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
   element: TextInputProto.create({
@@ -39,6 +40,7 @@ const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  theme: mockTheme.emotion,
 })
 
 describe("TextInput widget", () => {

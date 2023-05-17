@@ -125,6 +125,7 @@ class RegisterWidgetResult(Generic[T_co]):
 
     value: T_co
     value_changed: bool
+    widget_id: Optional[str] = None
 
     @classmethod
     def failure(
@@ -133,7 +134,7 @@ class RegisterWidgetResult(Generic[T_co]):
         """The canonical way to construct a RegisterWidgetResult in cases
         where the true widget value could not be determined.
         """
-        return cls(value=deserializer(None, ""), value_changed=False)
+        return cls(value=deserializer(None, ""), value_changed=False, widget_id=None)
 
 
 def compute_widget_id(

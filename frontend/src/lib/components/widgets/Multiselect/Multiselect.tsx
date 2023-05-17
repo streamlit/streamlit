@@ -17,7 +17,6 @@
 import React from "react"
 import { isMobile } from "react-device-detect"
 import without from "lodash/without"
-import { withTheme } from "@emotion/react"
 import { FormClearHelper } from "src/lib/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "src/lib/proto"
@@ -37,6 +36,7 @@ import { Placement } from "src/lib/components/shared/Tooltip"
 import { VirtualDropdown } from "src/lib/components/shared/Dropdown"
 import { fuzzyFilterSelectOptions } from "src/lib/components/shared/Dropdown/Selectbox"
 import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
+import { withTheme } from "@emotion/react"
 import { EmotionTheme } from "src/lib/theme"
 
 export interface Props {

@@ -29,4 +29,5 @@ message TimeInput {
   bool disabled = 8;
   LabelVisibilityMessage label_visibility = 9;
   int64 step = 10;
+  bool clearable = 11;
 }

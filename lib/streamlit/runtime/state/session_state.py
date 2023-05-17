@@ -112,7 +112,11 @@ class WStates(MutableMapping[str, Any]):
             ValueFieldName,
             wstate.value.WhichOneof("value"),
         )
-        value = wstate.value.__getattribute__(value_field_name)
+        value = (
+            wstate.value.__getattribute__(value_field_name)
+            if value_field_name
+            else None
+        )
 
         if is_array_value_field_name(value_field_name):
             # Array types are messages with data in a `data` field
@@ -215,7 +219,7 @@ class WStates(MutableMapping[str, Any]):
             setattr(widget, field, json.dumps(serialized))
         elif field == "file_uploader_state_value":
             widget.file_uploader_state_value.CopyFrom(serialized)
-        else:
+        elif serialized is not None and field is not None:
             setattr(widget, field, serialized)
 
         return widget
@@ -600,7 +604,7 @@ class SessionState:
             user_key
         )
 
-        return RegisterWidgetResult(widget_value, widget_value_changed)
+        return RegisterWidgetResult(widget_value, widget_value_changed, widget_id)
 
     def __contains__(self, key: str) -> bool:
         try:

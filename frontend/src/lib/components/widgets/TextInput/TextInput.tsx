@@ -28,12 +28,15 @@ import TooltipIcon from "src/lib/components/shared/TooltipIcon"
 import { Placement } from "src/lib/components/shared/Tooltip"
 import { isInForm, labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
 import { StyledTextInput } from "./styled-components"
+import { withTheme } from "@emotion/react"
+import { EmotionTheme } from "src/lib/theme"
 
 export interface Props {
   disabled: boolean
   element: TextInputProto
   widgetMgr: WidgetStateManager
   width: number
+  theme: EmotionTheme
 }
 
 interface State {
@@ -49,7 +52,7 @@ interface State {
   value: string
 }
 
-class TextInput extends React.PureComponent<Props, State> {
+export class TextInput extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
   public state: State = {
@@ -247,4 +250,4 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 }
 
-export default TextInput
+export default withTheme(TextInput)

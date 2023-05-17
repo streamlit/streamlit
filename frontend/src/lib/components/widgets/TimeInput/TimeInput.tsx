@@ -25,14 +25,17 @@ import {
 } from "src/lib/components/widgets/BaseWidget"
 import TooltipIcon from "src/lib/components/shared/TooltipIcon"
 import { Placement } from "src/lib/components/shared/Tooltip"
-
+import { StyledClearIcon } from "baseui/input/styled-components"
 import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
+import { withTheme } from "@emotion/react"
+import { EmotionTheme } from "src/lib/theme"
 
 export interface Props {
   disabled: boolean
   element: TimeInputProto
   widgetMgr: WidgetStateManager
   width: number
+  theme: EmotionTheme
 }
 
 interface State {
@@ -113,15 +116,24 @@ class TimeInput extends PureComponent<Props, State> {
   private handleChange = (newDate: Date | null): void => {
     let value: string
     if (newDate === null) {
-      // This case is not supposed to happen since time picker cannot be cleared.
-      value = this.initialValue
+      value = ""
     } else {
       value = this.dateToString(newDate)
     }
     this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
   }
 
-  private stringToDate = (value: string): Date => {
+  private stringToDate = (value: string): Date | null => {
+    if (value.length < 1) {
+      return null
+    }
+    if (value === "NaN" || value === "NaN:NaN") {
+      return null
+    }
+    if (!value.includes(":")) {
+      return null
+    }
+
     const [hours, minutes] = value.split(":").map(Number)
     const date = new Date()
 
@@ -139,7 +151,7 @@ class TimeInput extends PureComponent<Props, State> {
   }
 
   public render(): ReactNode {
-    const { disabled, width, element, widgetMgr } = this.props
+    const { disabled, width, element, widgetMgr, theme } = this.props
     const style = { width }
 
     const selectOverrides = {
@@ -230,12 +242,46 @@ class TimeInput extends PureComponent<Props, State> {
             </StyledWidgetLabelHelp>
           )}
         </WidgetLabel>
+        {element.clearable && this.stringToDate(this.state.value) && (
+          <div
+            style={{
+              position: "absolute",
+              top: "2.45em",
+              right: "2em",
+              zIndex: 1000,
+            }}
+            onClick={() => {
+              this.handleChange(null)
+            }}
+          >
+            <StyledClearIcon
+              overrides={{
+                Svg: {
+                  style: {
+                    color: theme.colors.darkGray,
+                    // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
+                    // Let's use a scale transform effect to make it bigger.
+                    // The width property only enlarges its bounding box, so it's easier to click.
+                    transform: "scale(1.41)",
+                    width: theme.spacing.twoXL,
+
+                    ":hover": {
+                      fill: theme.colors.bodyText,
+                    },
+                  },
+                },
+              }}
+              $isFocusVisible={false}
+            />
+          </div>
+        )}
         <UITimePicker
           format="24"
           step={element.step ? Number(element.step) : 900} // step in seconds, defaults to 900s (15 minutes)
           value={this.stringToDate(this.state.value)}
           onChange={this.handleChange}
           overrides={selectOverrides}
+          nullable={!this.stringToDate(this.state.value) || element.clearable}
           creatable
           aria-label={element.label}
         />
@@ -244,4 +290,4 @@ class TimeInput extends PureComponent<Props, State> {
   }
 }
 
-export default TimeInput
+export default withTheme(TimeInput)

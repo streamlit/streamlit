@@ -23,7 +23,6 @@ import { NumberInput as NumberInputProto } from "src/lib/proto"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import TooltipIcon from "src/lib/components/shared/TooltipIcon"
 import { Placement } from "src/lib/components/shared/Tooltip"
-
 import Icon from "src/lib/components/shared/Icon"
 import { Input as UIInput } from "baseui/input"
 import InputInstructions from "src/lib/components/shared/InputInstructions/InputInstructions"
@@ -32,7 +31,12 @@ import {
   StyledWidgetLabelHelp,
 } from "src/lib/components/widgets/BaseWidget"
 
-import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
+import {
+  labelVisibilityProtoValueToEnum,
+  isNullOrUndefined,
+} from "src/lib/util/utils"
+import { withTheme } from "@emotion/react"
+import { EmotionTheme } from "src/lib/theme"
 
 import {
   StyledInputContainer,
@@ -46,6 +50,7 @@ export interface Props {
   element: NumberInputProto
   widgetMgr: WidgetStateManager
   width: number
+  theme: EmotionTheme
 }
 
 export interface State {
@@ -58,12 +63,12 @@ export interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: number
+  value?: number | null
 
   /**
    * The value with applied format that is going to be shown to the user
    */
-  formattedValue: string
+  formattedValue?: string
 
   /**
    * True if the input is selected
@@ -71,7 +76,7 @@ export interface State {
   isFocused: boolean
 }
 
-class NumberInput extends React.PureComponent<Props, State> {
+export class NumberInput extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
   private inputRef = React.createRef<HTMLInputElement | HTMLTextAreaElement>()
@@ -82,18 +87,22 @@ class NumberInput extends React.PureComponent<Props, State> {
     this.state = {
       dirty: false,
       value: this.initialValue,
-      formattedValue: this.formatValue(this.initialValue),
+      formattedValue: this.initialValue
+        ? this.formatValue(this.initialValue)
+        : undefined,
       isFocused: false,
     }
   }
 
-  get initialValue(): number {
+  get initialValue(): number | null {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf
+    if (this.props.element.clearable) {
+      return null
+    }
     const storedValue = this.isIntData()
       ? this.props.widgetMgr.getIntValue(this.props.element)
       : this.props.widgetMgr.getDoubleValue(this.props.element)
-
     return storedValue !== undefined ? storedValue : this.props.element.default
   }
 
@@ -121,11 +130,17 @@ class NumberInput extends React.PureComponent<Props, State> {
   }
 
   private updateFromProtobuf(): void {
-    const { value } = this.props.element
     this.props.element.setValue = false
-    this.setState({ value, formattedValue: this.formatValue(value) }, () => {
-      this.commitWidgetValue({ fromUi: false })
-    })
+    const value = this.props.element.value
+    if (isNullOrUndefined(value)) {
+      this.setState({ value, formattedValue: "" }, () => {
+        this.commitWidgetValue({ fromUi: false })
+      })
+    } else {
+      this.setState({ value, formattedValue: this.formatValue(value) }, () => {
+        this.commitWidgetValue({ fromUi: false })
+      })
+    }
   }
 
   private formatValue = (value: number): string => {
@@ -169,32 +184,55 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    const { value } = this.state
+    let value = this.state.value
+    if (this.state.value === undefined || this.state.value === null) {
+      value = null
+    }
     const { element, widgetMgr } = this.props
     const data = this.props.element
 
     const min = this.getMin()
     const max = this.getMax()
 
-    if (min > value || value > max) {
+    if (value && (min > value || value > max)) {
       const node = this.inputRef.current
       if (node) {
         node.reportValidity()
       }
     } else {
       const valueToBeSaved = value || value === 0 ? value : data.default
-
-      if (this.isIntData()) {
+      if (value === null || Number.isNaN(value)) {
+        widgetMgr.clearIntValue(element, source)
+      } else if (this.isIntData()) {
         widgetMgr.setIntValue(element, valueToBeSaved, source)
       } else {
         widgetMgr.setDoubleValue(element, valueToBeSaved, source)
       }
 
-      this.setState({
-        dirty: false,
-        value: valueToBeSaved,
-        formattedValue: this.formatValue(valueToBeSaved),
-      })
+      if (value === null || Number.isNaN(value)) {
+        const { clearable } = this.props.element
+        if (!clearable) {
+          this.setState({
+            dirty: false,
+            value: this.initialValue,
+            formattedValue: this.formatValue(
+              this.initialValue ? this.initialValue : 0
+            ),
+          })
+        } else {
+          this.setState({
+            dirty: false,
+            value: undefined,
+            formattedValue: this.formatValue(valueToBeSaved),
+          })
+        }
+      } else {
+        this.setState({
+          dirty: false,
+          value: valueToBeSaved,
+          formattedValue: this.formatValue(valueToBeSaved),
+        })
+      }
     }
   }
 
@@ -273,12 +311,14 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   /** True if the input's current value can be decremented by its step. */
   private get canDecrement(): boolean {
-    return this.state.value - this.getStep() >= this.getMin()
+    const value = this.state.value ? this.state.value : 0
+    return value - this.getStep() >= this.getMin()
   }
 
   /** True if the input's current value can be incremented by its step. */
   private get canIncrement(): boolean {
-    return this.state.value + this.getStep() <= this.getMax()
+    const value = this.state.value ? this.state.value : 0
+    return value + this.getStep() <= this.getMax()
   }
 
   private modifyValueUsingStep =
@@ -293,7 +333,7 @@ class NumberInput extends React.PureComponent<Props, State> {
             this.setState(
               {
                 dirty: true,
-                value: value + step,
+                value: value ? value + step : step,
               },
               () => {
                 this.commitWidgetValue({ fromUi: true })
@@ -306,7 +346,7 @@ class NumberInput extends React.PureComponent<Props, State> {
             this.setState(
               {
                 dirty: true,
-                value: value - step,
+                value: value ? value - step : 0 - step,
               },
               () => {
                 this.commitWidgetValue({ fromUi: true })
@@ -319,7 +359,7 @@ class NumberInput extends React.PureComponent<Props, State> {
     }
 
   public render(): React.ReactNode {
-    const { element, width, disabled, widgetMgr } = this.props
+    const { element, width, disabled, widgetMgr, theme } = this.props
     const { formattedValue, dirty, isFocused } = this.state
 
     const style = { width }
@@ -356,15 +396,42 @@ class NumberInput extends React.PureComponent<Props, State> {
           <UIInput
             type="number"
             inputRef={this.inputRef}
-            value={formattedValue}
+            value={
+              this.state.value === null || this.state.value === undefined
+                ? undefined
+                : formattedValue
+            }
             onBlur={this.onBlur}
             onFocus={this.onFocus}
             onChange={this.onChange}
             onKeyPress={this.onKeyPress}
             onKeyDown={this.onKeyDown}
+            clearable={element.clearable}
+            clearOnEscape={element.clearable}
             disabled={disabled}
             aria-label={element.label}
             overrides={{
+              ClearIcon: {
+                props: {
+                  overrides: {
+                    Svg: {
+                      style: {
+                        color: theme.colors.darkGray,
+                        // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
+                        // Let's use a scale transform effect to make it bigger.
+                        // The width property only enlarges its bounding box, so it's easier to click.
+                        transform: "scale(1.41)",
+                        width: theme.spacing.twoXL,
+                        marginRight: "-1em",
+
+                        ":hover": {
+                          fill: theme.colors.bodyText,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
               Input: {
                 props: {
                   step: this.getStep(),
@@ -427,7 +494,7 @@ class NumberInput extends React.PureComponent<Props, State> {
         <StyledInstructionsContainer>
           <InputInstructions
             dirty={dirty}
-            value={formattedValue}
+            value={formattedValue ? formattedValue : ""}
             className="input-instructions"
           />
         </StyledInstructionsContainer>
@@ -446,4 +513,4 @@ function getNonEmptyString(
   return value == null || value === "" ? undefined : value
 }
 
-export default NumberInput
+export default withTheme(NumberInput)

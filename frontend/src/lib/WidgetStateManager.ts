@@ -278,6 +278,11 @@ export class WidgetStateManager {
     return undefined
   }
 
+  public clearIntValue(widget: WidgetInfo, source: Source): void {
+    this.createWidgetState(widget, source).intValue = undefined
+    this.onWidgetValueChanged(widget.formId, source)
+  }
+
   public setIntValue(widget: WidgetInfo, value: number, source: Source): void {
     this.createWidgetState(widget, source).intValue = value
     this.onWidgetValueChanged(widget.formId, source)

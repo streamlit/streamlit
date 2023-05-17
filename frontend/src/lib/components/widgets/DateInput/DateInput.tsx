@@ -45,7 +45,7 @@ interface State {
    * An array with start and end date specified by the user via the UI. If the user
    * didn't touch this widget's UI, the default value is used. End date is optional.
    */
-  values: Date[]
+  values: Date[] | null | undefined
   /**
    * Boolean to toggle between single-date picker and range date picker.
    */
@@ -62,7 +62,10 @@ function stringsToDates(strings: string[]): Date[] {
 }
 
 /** Convert an array of dates to an array of strings. */
-function datesToStrings(dates: Date[]): string[] {
+function datesToStrings(dates: Date[] | null | undefined): string[] {
+  if (dates === null || dates === undefined) {
+    return []
+  }
   return dates.map((value: Date) => moment(value as Date).format(DATE_FORMAT))
 }
 
@@ -75,12 +78,15 @@ class DateInput extends React.PureComponent<Props, State> {
     isEmpty: false,
   }
 
-  get initialValue(): Date[] {
+  get initialValue(): Date[] | null | undefined {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
     const storedValue = this.props.widgetMgr.getStringArrayValue(
       this.props.element
     )
+    if (storedValue === undefined && this.props.element.default.length === 0) {
+      return null
+    }
     const stringArray =
       storedValue !== undefined ? storedValue : this.props.element.default
     return stringsToDates(stringArray)
@@ -328,6 +334,27 @@ class DateInput extends React.PureComponent<Props, State> {
                     },
                   },
 
+                  ClearIcon: {
+                    props: {
+                      overrides: {
+                        Svg: {
+                          style: {
+                            color: theme.colors.darkGray,
+                            // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
+                            // Let's use a scale transform effect to make it bigger.
+                            // The width property only enlarges its bounding box, so it's easier to click.
+                            transform: "scale(1.41)",
+                            width: theme.spacing.twoXL,
+                            marginRight: "-13px",
+                            ":hover": {
+                              fill: theme.colors.bodyText,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+
                   Input: {
                     style: {
                       // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
@@ -345,6 +372,7 @@ class DateInput extends React.PureComponent<Props, State> {
           minDate={minDate}
           maxDate={maxDate}
           range={isRange}
+          clearable={element.clearable}
         />
       </div>
     )

@@ -36,7 +36,7 @@ exports[`SettingsDialog renders without crashing 1`] = `
         <StyledSmall>
           Choose app and font colors/styles
         </StyledSmall>
-        <Selectbox
+        <WithTheme(Selectbox)
           disabled={false}
           onChange={[Function]}
           options={
@@ -97,7 +97,7 @@ exports[`SettingsDialog should hide the theme creator button if not in developer
         <StyledSmall>
           Choose app and font colors/styles
         </StyledSmall>
-        <Selectbox
+        <WithTheme(Selectbox)
           disabled={false}
           onChange={[Function]}
           options={
@@ -150,7 +150,7 @@ exports[`SettingsDialog should show theme creator button if in developer mode 1`
         <StyledSmall>
           Choose app and font colors/styles
         </StyledSmall>
-        <Selectbox
+        <WithTheme(Selectbox)
           disabled={false}
           onChange={[Function]}
           options={

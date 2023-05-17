@@ -23,8 +23,9 @@ import React from "react"
 import { mount, shallow } from "src/lib/test_util"
 import { Input as UIInput } from "baseui/input"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 
-import NumberInput, { Props, State } from "./NumberInput"
+import { NumberInput, Props, State } from "./NumberInput"
 
 const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
   element: NumberInputProto.create({
@@ -34,6 +35,7 @@ const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
     ...elementProps,
   }),
   width: 0,
+  theme: mockTheme.emotion,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),

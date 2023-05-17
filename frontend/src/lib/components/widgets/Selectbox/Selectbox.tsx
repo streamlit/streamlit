@@ -20,12 +20,15 @@ import { FormClearHelper } from "src/lib/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import UISelectbox from "src/lib/components/shared/Dropdown"
 import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
+import { withTheme } from "@emotion/react"
+import { EmotionTheme } from "src/lib/theme"
 
 export interface Props {
   disabled: boolean
   element: SelectboxProto
   widgetMgr: WidgetStateManager
   width: number
+  theme: EmotionTheme
 }
 
 interface State {
@@ -36,7 +39,7 @@ interface State {
   value: number
 }
 
-class Selectbox extends React.PureComponent<Props, State> {
+export class Selectbox extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
   public state: State = {
@@ -83,11 +86,19 @@ class Selectbox extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setIntValue(
-      this.props.element,
-      this.state.value,
-      source
-    )
+    if (
+      this.state.value === -1 ||
+      this.state.value === undefined ||
+      this.state.value === null
+    ) {
+      this.props.widgetMgr.clearIntValue(this.props.element, source)
+    } else {
+      this.props.widgetMgr.setIntValue(
+        this.props.element,
+        this.state.value,
+        source
+      )
+    }
   }
 
   /**
@@ -103,14 +114,22 @@ class Selectbox extends React.PureComponent<Props, State> {
     )
   }
 
-  private onChange = (value: number): void => {
-    this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
+  private onChange = (value?: number): void => {
+    if (value === undefined) {
+      this.setState({ value: -1 }, () =>
+        this.props.widgetMgr.clearIntValue(this.props.element, {
+          fromUi: true,
+        })
+      )
+    } else {
+      this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
+    }
   }
 
   public render(): React.ReactNode {
-    const { options, help, label, labelVisibility, formId } =
+    const { options, help, label, labelVisibility, formId, clearable } =
       this.props.element
-    const { disabled, widgetMgr } = this.props
+    const { disabled, widgetMgr, theme } = this.props
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -125,15 +144,17 @@ class Selectbox extends React.PureComponent<Props, State> {
         labelVisibility={labelVisibilityProtoValueToEnum(
           labelVisibility?.value
         )}
+        theme={theme}
         options={options}
+        clearable={clearable}
         disabled={disabled}
         width={this.props.width}
         onChange={this.onChange}
-        value={this.state.value}
+        value={this.state.value !== -1 ? this.state.value : undefined}
         help={help}
       />
     )
   }
 }
 
-export default Selectbox
+export default withTheme(Selectbox)

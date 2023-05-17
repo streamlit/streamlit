@@ -49,10 +49,10 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
-        "Value 3: ()" +
+        "Value 3: None" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 6: ()" +
+        "Value 6: None" +
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
@@ -81,10 +81,10 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-02" +
         "Value 2: 2019-07-06" +
-        "Value 3: ()" +
+        "Value 3: None" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 6: ()" +
+        "Value 6: None" +
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
@@ -105,10 +105,10 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
-        "Value 3: ()" +
+        "Value 3: None" +
         "Value 4: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 10))" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 6: ()" +
+        "Value 6: None" +
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
@@ -129,10 +129,10 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
-        "Value 3: ()" +
+        "Value 3: None" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 10),)" +
-        "Value 6: ()" +
+        "Value 6: None" +
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
@@ -148,10 +148,10 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
-        "Value 3: ()" +
+        "Value 3: None" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))" +
-        "Value 6: ()" +
+        "Value 6: None" +
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
@@ -194,10 +194,10 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-02" +
         "Value 2: 2019-07-06" +
-        "Value 3: ()" +
+        "Value 3: None" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 6: ()" +
+        "Value 6: None" +
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
@@ -218,10 +218,10 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
-        "Value 3: ()" +
+        "Value 3: None" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 6: ()" +
+        "Value 6: None" +
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
@@ -242,10 +242,10 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
-        "Value 3: ()" +
+        "Value 3: None" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 10),)" +
-        "Value 6: ()" +
+        "Value 6: None" +
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
@@ -261,10 +261,10 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
-        "Value 3: ()" +
+        "Value 3: None" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
         "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))" +
-        "Value 6: ()" +
+        "Value 6: None" +
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
@@ -284,10 +284,10 @@ describe("st.date_input", () => {
       "have.text",
       "Value 1: 1970-01-01" +
         "Value 2: 2019-07-06" +
-        "Value 3: ()" +
+        "Value 3: None" +
         "Value 4: (datetime.date(2019, 7, 6),)" +
-        "Value 5: ()" +
-        "Value 6: ()" +
+        "Value 5: None" +
+        "Value 6: None" +
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +

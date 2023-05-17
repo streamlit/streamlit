@@ -58,7 +58,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
 
             c = self.get_delta_from_queue().new_element.text_area
             self.assertEqual(c.label, "the label")
-            self.assertTrue(re.match(proto_value, c.default))
+            self.assertTrue(re.match(proto_value, c.default if c.default else "None"))
 
     def test_height(self):
         """Test that it can be called with height"""

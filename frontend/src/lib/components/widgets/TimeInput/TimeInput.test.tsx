@@ -25,6 +25,7 @@ import {
   TimeInput as TimeInputProto,
 } from "src/lib/proto"
 import TimeInput, { Props } from "./TimeInput"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 
 const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
   element: TimeInputProto.create({
@@ -34,6 +35,7 @@ const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
     step: 900,
     ...elementProps,
   }),
+  theme: mockTheme.emotion,
   width: 0,
   disabled: false,
   widgetMgr: new WidgetStateManager({

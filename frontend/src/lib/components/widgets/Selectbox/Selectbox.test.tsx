@@ -17,10 +17,11 @@
 import React from "react"
 import { mount } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 
 import { Select as UISelect } from "baseui/select"
 import { Selectbox as SelectboxProto } from "src/lib/proto"
-import Selectbox, { Props } from "./Selectbox"
+import { Selectbox, Props } from "./Selectbox"
 
 const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
   element: SelectboxProto.create({
@@ -30,6 +31,7 @@ const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
     options: ["a", "b", "c"],
     ...elementProps,
   }),
+  theme: mockTheme.emotion,
   width: 0,
   disabled: false,
   widgetMgr: new WidgetStateManager({
