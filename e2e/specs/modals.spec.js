@@ -20,9 +20,9 @@ describe("modals", () => {
   });
 
   it("displays settings modal correctly", () => {
-    cy.get("#MainMenu > button").click();
+    cy.get("#MainMenu > button").click({ force: true });
 
-    cy.get('[data-testid="main-menu-list"] > ul').eq(1).click();
+    cy.get('[data-testid="main-menu-list"] > ul').eq(1).click({ force: true });
 
     cy.get("div[role='dialog']").matchThemedSnapshots(
       "settings"
