@@ -23,7 +23,7 @@ cx-Oracle==7.3.0
 cycler==0.11.0
 decorator==5.1.1
 distlib==0.3.6
-docutils==0.20
+docutils==0.20.1
 entrypoints==0.4
 exceptiongroup==1.1.1
 filelock==3.12.0
