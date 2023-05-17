@@ -19,27 +19,13 @@ describe("modals", () => {
     cy.loadApp("http://localhost:3000/");
   });
 
-  it("displays light settings modal correctly", () => {
-    cy.changeTheme("Light");
-
+  it("displays settings modal correctly", () => {
     cy.get("#MainMenu > button").click();
 
-    cy.getIndexed('[data-testid="main-menu-list"] > ul', 2).click();
+    cy.get('[data-testid="main-menu-list"] > ul', 2).click();
 
-    cy.getIndexed('div[data-baseweb="modal" div div]').matchImageSnapshot(
-      "settings-light"
-    );
-  });
-
-  it("displays dark settings modal correctly", () => {
-    cy.changeTheme("Dark");
-
-    cy.get("#MainMenu > button").click();
-
-    cy.getIndexed('[data-testid="main-menu-list"] > ul', 2).click();
-
-    cy.get('div[data-baseweb="modal" div div]').matchImageSnapshot(
-      "settings-dark"
+    cy.get('div[data-baseweb="modal" div div]').matchThemedSnapshots(
+      "settings"
     );
   });
 });
