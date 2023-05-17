@@ -465,13 +465,13 @@ export function formatNumber(
  *
  * @param momentDate The moment date to format.
  * @param format The format to use.
- *   If the format is `localized` the date will be formatted according to the user's locale.
+ *   If the format is `locale` the date will be formatted according to the user's locale.
  *   If the format is `relative` the date will be formatted as a relative time (e.g. "2 hours ago").
  *   Otherwise, it is interpreted as momentJS format string: https://momentjs.com/docs/#/displaying/format/
  * @returns The formatted date as a string.
  */
 export function formatMoment(momentDate: Moment, format: string): string {
-  if (format === "localized") {
+  if (format === "locale") {
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
       timeStyle: "medium",
