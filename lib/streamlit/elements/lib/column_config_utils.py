@@ -23,6 +23,7 @@ import pyarrow as pa
 from typing_extensions import Literal, TypeAlias
 
 from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
+from streamlit.elements.lib.dicttools import remove_none_values
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
@@ -459,16 +460,7 @@ def marshall_column_config(
         The column config to marshall.
     """
 
-    # Ignore all None values and prefix columns specified by numerical index
-    def remove_none_values(input_dict: Dict[Any, Any]) -> Dict[Any, Any]:
-        new_dict = {}
-        for key, val in input_dict.items():
-            if isinstance(val, dict):
-                val = remove_none_values(val)
-            if val is not None:
-                new_dict[key] = val
-        return new_dict
-
+    # Ignore all None values and prefix columns specified by numerical index:
     proto.columns = json.dumps(
         {
             (f"{_NUMERICAL_POSITION_PREFIX}{str(k)}" if isinstance(k, int) else k): v
