@@ -760,9 +760,9 @@ def DatetimeColumn(
         Specifies the default value in this column when a new row is added by the user.
 
     format: str or None
-        A date-fns format string controlling how datetimes are displayed. See
-        `date-fns docs <hhttps://date-fns.org/docs/format>`_ for available formats.
-        If None (default), uses ``yyyy-MM-dd HH:mm:ss``.
+        A momentJS format string controlling how datetimes are displayed. See
+        `momentJS docs <https://momentjs.com/docs/#/displaying/format/>`_ for available
+        formats. If None (default), uses ``YYYY-MM-DD HH:mm:ss``.
 
     min_value: datetime.datetime or None
         The minimum datetime that can be entered.
@@ -846,9 +846,9 @@ def TimeColumn(
         Specifies the default value in this column when a new row is added by the user.
 
     format: str or None
-        A date-fns format string controlling how times are displayed. See
-        `date-fns docs <hhttps://date-fns.org/docs/format>`_ for available formats.
-        If None (default), uses ``HH:mm:ss``.
+        A momentJS format string controlling how times are displayed. See
+        `momentJS docs <https://momentjs.com/docs/#/displaying/format/>`_ for available
+        formats. If None (default), uses ``HH:mm:ss``.
 
     min_value: datetime.time or None
         The minimum time that can be entered.
@@ -927,9 +927,9 @@ def DateColumn(
         Specifies the default value in this column when a new row is added by the user.
 
     format: str or None
-        A date-fns format string controlling how dates are displayed. See
-        `date-fns docs <hhttps://date-fns.org/docs/format>`_ for available formats.
-        If None (default), uses ``yyyy-MM-dd``.
+        A momentJS format string controlling how times are displayed. See
+        `momentJS docs <https://momentjs.com/docs/#/displaying/format/>`_ for available
+        formats. If None (default), uses ``YYYY-MM-DD``.
 
     min_value: datetime.date or None
         The minimum date that can be entered.
