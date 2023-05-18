@@ -70,7 +70,7 @@ class UploadFilePresignedUrlRequestHandler(tornado.web.RequestHandler):
             presigned_url = (
                 f"http://localhost:8501/_stcore/upload_fileZZ/{session_id}/{file_id}"
             )
-            response_body.append({"file_id": file_id, "presigned_url": presigned_url})
+            response_body.append({"presigned_url": presigned_url})
 
         self.write(tornado.escape.json_encode(response_body))
         self.set_status(201)

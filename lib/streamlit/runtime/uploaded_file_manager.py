@@ -38,7 +38,7 @@ class UploadedFileRec(NamedTuple):
 class NewUploadedFileRec(NamedTuple):
     """Metadata and raw bytes for an uploaded file. Immutable."""
 
-    id: str
+    file_url: str
     name: str
     type: str
     data: bytes
@@ -84,15 +84,15 @@ class NewUploadedFile(io.BytesIO):
         # and not guaranteed to be in other Python runtimes. But it's detailed
         # here: https://hg.python.org/cpython/rev/79a5fbe2c78f
         super(NewUploadedFile, self).__init__(record.data)
-        self.id = record.id
+        self.file_url = record.file_url
         self.name = record.name
         self.type = record.type
         self.size = len(record.data)
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, UploadedFile):
+        if not isinstance(other, NewUploadedFile):
             return NotImplemented
-        return self.id == other.id
+        return self.file_url == other.file_url
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -138,23 +138,20 @@ class UploadedFileManager(CacheStatsProvider):
         print(session_id)
         print("---------")
         print(file.name)
-        self._modern_files[session_id][file.id] = file
+        self._modern_files[session_id][file.file_url] = file
 
-    def get_file_modern(self, session_id, file_id) -> IO[bytes]:
-        return NewUploadedFile(record=self._modern_files[session_id][file_id])
+    def get_file_modern(self, session_id, file_url) -> IO[bytes]:
+        return NewUploadedFile(record=self._modern_files[session_id][file_url])
 
-    def delete_file_modern(self, session_id, file_id):
+    def delete_file_modern(self, session_id, file_url):
         print("IN DELETE!!!")
-        self._modern_files[session_id].pop(file_id, None)
+        self._modern_files[session_id].pop(file_url, None)
 
     def delete_session_files_modern(self, session_id):
         del self._modern_files[session_id]
 
-    def get_files_modern(self, session_id, file_ids):
-        return [
-            NewUploadedFile(record=self._modern_files[session_id][file_id])
-            for file_id in file_ids
-        ]
+    def get_files_modern(self, session_id, file_urls) -> List[NewUploadedFileRec]:
+        return [self._modern_files[session_id][file_url] for file_url in file_urls]
 
     def add_file(
         self,

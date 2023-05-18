@@ -22,13 +22,12 @@ from streamlit.logger import get_logger
 from streamlit.runtime.uploaded_file_manager import (
     NewUploadedFileRec,
     UploadedFileManager,
-    UploadedFileRec,
 )
 from streamlit.web.server import routes, server_util
 
 # /_stcore/upload_file/(optional session id)/(optional widget id)
 NEW_UPLOAD_FILE_ROUTE = (
-    r"/_stcore/upload_fileZZ/(?P<session_id>[^/]*)/(?P<file_id>[^/]*)"
+    r"/_stcore/upload_fileZZ/(?P<session_id>[^/]*)/(?P<file_url>[^/]*)"
 )
 LOGGER = get_logger(__name__)
 
@@ -103,7 +102,7 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
         files: Dict[str, List[Any]] = {}
         #
         session_id = self.path_kwargs["session_id"]
-        file_id = self.path_kwargs["file_id"]
+        file_url = self.path_kwargs["file_url"]
 
         tornado.httputil.parse_body_arguments(
             content_type=self.request.headers["Content-Type"],
@@ -124,7 +123,7 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
             for file in flist:
                 uploaded_files.append(
                     NewUploadedFileRec(
-                        id=file_id,
+                        file_url=file_url,
                         name=file["filename"],
                         type=file["content_type"],
                         data=file["body"],
@@ -143,7 +142,7 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
     def delete(self, **kwargs):
         """DELETE FILE"""
         session_id = self.path_kwargs["session_id"]
-        file_id = self.path_kwargs["file_id"]
+        file_url = self.path_kwargs["file_url"]
 
-        self._file_mgr.delete_file_modern(session_id=session_id, file_id=file_id)
+        self._file_mgr.delete_file_modern(session_id=session_id, file_url=file_url)
         self.set_status(204)

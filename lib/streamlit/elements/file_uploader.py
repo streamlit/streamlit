@@ -45,9 +45,7 @@ from streamlit.runtime.uploaded_file_manager import (
 )
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
-SomeUploadedFiles = Optional[
-    Union[UploadedFile, List[UploadedFile], NewUploadedFile, List[NewUploadedFile]]
-]
+SomeUploadedFiles = Union[NewUploadedFile, List[NewUploadedFile], None]
 
 TYPE_PAIRS = [
     (".jpg", ".jpeg"),
@@ -72,12 +70,12 @@ def _get_file_recs(
     if len(uploaded_file_info) == 0:
         return []
 
-    active_file_ids = [f.id for f in uploaded_file_info]
+    active_file_urls = [f.file_url for f in uploaded_file_info]
 
     # Grab the files that correspond to our active file IDs.
     return ctx.uploaded_file_mgr.get_files_modern(
         session_id=ctx.session_id,
-        file_ids=active_file_ids,
+        file_urls=active_file_urls,
     )
 
 
@@ -106,19 +104,23 @@ class FileUploaderSerde:
         # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
         # the *next* uploaded file, so the current highest file id is the
         # counter minus 1.
-        state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
+
+        # TODO [KAREN] Try to remove all max_file_id
+        state_proto.max_file_id = 42
+
+        files_for_proto: List[NewUploadedFile] = []
 
         if not files:
             return state_proto
         elif not isinstance(files, list):
-            files = [files]
+            files_for_proto = [files]
 
-        for f in files:
+        for f in files_for_proto:
             file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
             file_info.id = 42
             file_info.name = f.name
             file_info.size = f.size
-            file_info.file_url = f.id
+            file_info.file_url = f.file_url
 
         return state_proto
 
@@ -150,7 +152,7 @@ class FileUploaderMixin:
         *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[List[UploadedFile]]:
+    ) -> Optional[List[NewUploadedFile]]:
         ...
 
     # 1. type is given as not a keyword-only argument
@@ -169,7 +171,7 @@ class FileUploaderMixin:
         *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[UploadedFile]:
+    ) -> Optional[NewUploadedFile]:
         ...
 
     # The following 2 overloads represent the cases where
@@ -193,7 +195,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[List[UploadedFile]]:
+    ) -> Optional[List[NewUploadedFile]]:
         ...
 
     # 1. type is skipped or a keyword argument
@@ -212,7 +214,7 @@ class FileUploaderMixin:
         kwargs: Optional[WidgetKwargs] = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[UploadedFile]:
+    ) -> Optional[NewUploadedFile]:
         ...
 
     @gather_metrics("file_uploader")
