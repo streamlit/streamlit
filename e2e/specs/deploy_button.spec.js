@@ -15,8 +15,10 @@
  */
 
 describe("deploy button and modal", () => {
-  before(() => {
+  beforeEach(() => {
     cy.loadApp("http://localhost:3000/?_stcore_testing=true");
+
+    cy.prepForElementSnapshots();
   });
 
   it("renders the deploy button correctly", () => {
@@ -26,10 +28,22 @@ describe("deploy button and modal", () => {
   });
 
   it("renders the light deploy dialog correctly", () => {
+    cy.changeTheme("Light");
+
     cy.get("div[class='stDeployButton'] > button").click({ force: true });
 
-    cy.get("div[role='dialog']").matchThemedSnapshots(
+    cy.get("div[role='dialog']").matchImageSnapshot(
       "deploy_dialog_opened"
+    );
+  });
+
+  it("renders the dark deploy dialog correctly", () => {
+    cy.changeTheme("Dark");
+
+    cy.get("div[class='stDeployButton'] > button").click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "deploy_dialog_opened-dark"
     );
   });
 });
