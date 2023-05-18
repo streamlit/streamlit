@@ -15,26 +15,33 @@
  */
 
 describe("modals", () => {
-  before(() => {
+  beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
+
+    cy.prepForElementSnapshots();
+  });
+
+  it("renders the light settings dialog correctly", () => {
+    cy.changeTheme("Light");
 
     cy.get("#MainMenu > button").click();
 
-    // Cypress cuts the popover off due to the transform property, so we move
-    // the main menu to a location to show it clearly for snapshots.
-    cy.get('[data-testid="main-menu-popover"]').invoke(
-      "attr",
-      "style",
-      "transform: translate3d(20px, 20px, 0px)"
+    cy.get('[data-testid="main-menu-list"] > ul').eq(1).click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "settings"
     );
   });
 
-  it("displays settings modal correctly", () => {
+  it("renders the dark settings dialog correctly", () => {
+    cy.changeTheme("Dark");
+
+    cy.get("#MainMenu > button").click();
 
     cy.get('[data-testid="main-menu-list"] > ul').eq(1).click({ force: true });
 
-    cy.get("div[role='dialog']").matchThemedSnapshots(
-      "settings"
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "settings-dark"
     );
   });
 });
