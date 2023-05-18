@@ -29,7 +29,7 @@ fonttools==4.39.4
 gast==0.4.0
 gitdb==4.0.10
 GitPython==3.1.31
-google-auth==2.18.0
+google-auth==2.18.1
 google-auth-oauthlib==1.0.0
 google-pasta==0.2.0
 graphviz==0.20.1
@@ -76,7 +76,7 @@ pkginfo==1.9.6
 platformdirs==3.5.1
 plotly==5.14.1
 pluggy==1.0.0
-pre-commit==3.3.1
+pre-commit==3.3.2
 protobuf==3.20.3
 psycopg2-binary==2.9.6
 py4j==0.10.9.7
