@@ -780,21 +780,18 @@ def DatetimeColumn(
         the timezone is inferred from the underlying data.
     """
 
-    def _format_datetime(value: datetime.datetime | None) -> str | None:
-        return None if value is None else value.isoformat()
-
     return ColumnConfig(
         label=label,
         width=width,
         help=help,
         disabled=disabled,
         required=required,
-        default=_format_datetime(default),
+        default=None if default is None else default.isoformat(),
         type_config=DatetimeColumnConfig(
             type="datetime",
             format=format,
-            min_value=_format_datetime(min_value),
-            max_value=_format_datetime(max_value),
+            min_value=None if min_value is None else min_value.isoformat(),
+            max_value=None if max_value is None else max_value.isoformat(),
             step=step.total_seconds() if isinstance(step, datetime.timedelta) else step,
             timezone=timezone,
         ),
@@ -862,21 +859,18 @@ def TimeColumn(
         The stepping interval in seconds. If None (default), the step will be 1 second.
     """
 
-    def _format_time(value: datetime.time | None) -> str | None:
-        return None if value is None else value.isoformat()
-
     return ColumnConfig(
         label=label,
         width=width,
         help=help,
         disabled=disabled,
         required=required,
-        default=_format_time(default),
+        default=None if default is None else default.isoformat(),
         type_config=TimeColumnConfig(
             type="time",
             format=format,
-            min_value=_format_time(min_value),
-            max_value=_format_time(max_value),
+            min_value=None if min_value is None else min_value.isoformat(),
+            max_value=None if max_value is None else max_value.isoformat(),
             step=step.total_seconds() if isinstance(step, datetime.timedelta) else step,
         ),
     )
@@ -942,22 +936,18 @@ def DateColumn(
     step: int or None
         The stepping interval in days. If None (default), the step will be 1 day.
     """
-
-    def _format_date(value: datetime.date | None) -> str | None:
-        return None if value is None else value.isoformat()
-
     return ColumnConfig(
         label=label,
         width=width,
         help=help,
         disabled=disabled,
         required=required,
-        default=_format_date(default),
+        default=None if default is None else default.isoformat(),
         type_config=DateColumnConfig(
             type="date",
             format=format,
-            min_value=_format_date(min_value),
-            max_value=_format_date(max_value),
+            min_value=None if min_value is None else min_value.isoformat(),
+            max_value=None if max_value is None else max_value.isoformat(),
             step=step,
         ),
     )
