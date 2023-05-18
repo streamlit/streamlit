@@ -14,7 +14,7 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, List, Optional, Union, cast
+from typing import TYPE_CHECKING, List, Optional, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -44,11 +44,11 @@ from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-SomeUploadedSnapshotFile = Optional[Union[UploadedFile, NewUploadedFile]]
+SomeUploadedSnapshotFile = Optional[NewUploadedFile]
 
 
 def _get_file_recs_for_camera_input_widget(
-    widget_id: str, widget_value: Optional[FileUploaderStateProto]
+    widget_value: Optional[FileUploaderStateProto],
 ) -> List[NewUploadedFileRec]:
     if widget_value is None:
         return []
@@ -61,12 +61,12 @@ def _get_file_recs_for_camera_input_widget(
     if len(uploaded_file_info) == 0:
         return []
 
-    active_file_ids = [f.id for f in uploaded_file_info]
+    active_file_urls = [f.file_url for f in uploaded_file_info]
 
     # Grab the files that correspond to our active file IDs.
     return ctx.uploaded_file_mgr.get_files_modern(
         session_id=ctx.session_id,
-        file_ids=active_file_ids,
+        file_urls=active_file_urls,
     )
 
 
@@ -94,14 +94,14 @@ class CameraInputSerde:
         file_info.id = 42
         file_info.name = snapshot.name
         file_info.size = snapshot.size
-        file_info.file_url = snapshot.id
+        file_info.file_url = snapshot.file_url
 
         return state_proto
 
     def deserialize(
         self, ui_value: Optional[FileUploaderStateProto], widget_id: str
     ) -> SomeUploadedSnapshotFile:
-        file_recs = _get_file_recs_for_camera_input_widget(widget_id, ui_value)
+        file_recs = _get_file_recs_for_camera_input_widget(ui_value)
 
         if len(file_recs) == 0:
             return_value = None
