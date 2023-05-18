@@ -184,7 +184,7 @@ class ColumnConfig(TypedDict, total=False):
     ]
 
 
-@gather_metrics("Column")
+@gather_metrics("column_config.Column")
 def Column(
     label: str | None = None,
     *,
@@ -229,7 +229,7 @@ def Column(
     )
 
 
-@gather_metrics("NumberColumn")
+@gather_metrics("column_config.NumberColumn")
 def NumberColumn(
     label: str | None = None,
     *,
@@ -308,7 +308,7 @@ def NumberColumn(
     )
 
 
-@gather_metrics("TextColumn")
+@gather_metrics("column_config.TextColumn")
 def TextColumn(
     label: str | None = None,
     *,
@@ -372,7 +372,7 @@ def TextColumn(
     )
 
 
-@gather_metrics("LinkColumn")
+@gather_metrics("column_config.LinkColumn")
 def LinkColumn(
     label: str | None = None,
     *,
@@ -437,7 +437,7 @@ def LinkColumn(
     )
 
 
-@gather_metrics("CheckboxColumn")
+@gather_metrics("column_config.CheckboxColumn")
 def CheckboxColumn(
     label: str | None = None,
     *,
@@ -489,7 +489,7 @@ def CheckboxColumn(
     )
 
 
-@gather_metrics("SelectboxColumn")
+@gather_metrics("column_config.SelectboxColumn")
 def SelectboxColumn(
     label: str | None = None,
     *,
@@ -549,7 +549,7 @@ def SelectboxColumn(
     )
 
 
-@gather_metrics("BarChartColumn")
+@gather_metrics("column_config.BarChartColumn")
 def BarChartColumn(
     label: str | None = None,
     *,
@@ -595,7 +595,7 @@ def BarChartColumn(
     )
 
 
-@gather_metrics("LineChartColumn")
+@gather_metrics("column_config.LineChartColumn")
 def LineChartColumn(
     label: str | None = None,
     *,
@@ -641,7 +641,7 @@ def LineChartColumn(
     )
 
 
-@gather_metrics("ImageColumn")
+@gather_metrics("column_config.ImageColumn")
 def ImageColumn(
     label: str | None = None,
     *,
@@ -681,7 +681,7 @@ def ImageColumn(
     )
 
 
-@gather_metrics("ListColumn")
+@gather_metrics("column_config.ListColumn")
 def ListColumn(
     label: str | None = None,
     *,
@@ -713,7 +713,7 @@ def ListColumn(
     )
 
 
-@gather_metrics("DatetimeColumn")
+@gather_metrics("column_config.DatetimeColumn")
 def DatetimeColumn(
     label: str | None = None,
     *,
@@ -801,7 +801,7 @@ def DatetimeColumn(
     )
 
 
-@gather_metrics("TimeColumn")
+@gather_metrics("column_config.TimeColumn")
 def TimeColumn(
     label: str | None = None,
     *,
@@ -882,7 +882,7 @@ def TimeColumn(
     )
 
 
-@gather_metrics("DateColumn")
+@gather_metrics("column_config.DateColumn")
 def DateColumn(
     label: str | None = None,
     *,
@@ -963,7 +963,7 @@ def DateColumn(
     )
 
 
-@gather_metrics("ProgressColumn")
+@gather_metrics("column_config.ProgressColumn")
 def ProgressColumn(
     label: str | None = None,
     *,
