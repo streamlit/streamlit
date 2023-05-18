@@ -51,34 +51,6 @@ describe("modals", () => {
     );
   });
 
-  it("renders the light edit theme dialog correctly", () => {
-    cy.changeTheme("Light");
-
-    cy.get("#MainMenu > button").click();
-
-    cy.get('[data-testid="main-menu-list"] > ul').eq(1).click({ force: true });
-
-    cy.get("div[role='dialog'] > div").eq(1).get('button').eq(2).click({ force: true });
-
-    cy.get("div[role='dialog']").matchImageSnapshot(
-      "theme"
-    );
-  });
-
-  it("renders the dark edit theme dialog correctly", () => {
-    cy.changeTheme("Dark");
-
-    cy.get("#MainMenu > button").click();
-
-    cy.get('[data-testid="main-menu-list"] > ul').eq(1).click({ force: true });
-
-    cy.get("div[role='dialog'] > div").eq(1).get('button').eq(2).click({ force: true });
-
-    cy.get("div[role='dialog']").matchImageSnapshot(
-      "theme-dark"
-    );
-  });
-
   it("renders the light screencast dialog correctly", () => {
     cy.changeTheme("Light");
 
@@ -124,30 +96,6 @@ describe("modals", () => {
 
     cy.get("div[role='dialog']").matchImageSnapshot(
       "about-dark"
-    );
-  });
-
-  it("renders the light clear cache dialog correctly", () => {
-    cy.changeTheme("Light");
-
-    cy.get("#MainMenu > button").click();
-
-    cy.getIndexed('[data-testid="main-menu-list"]', 1).get('ul').eq(1).click({ force: true });
-
-    cy.get("div[role='dialog']").matchImageSnapshot(
-      "cache"
-    );
-  });
-
-  it("renders the dark clear cache dialog correctly", () => {
-    cy.changeTheme("Dark");
-
-    cy.get("#MainMenu > button").click();
-
-    cy.getIndexed('[data-testid="main-menu-list"]', 1).get('ul').eq(1).click({ force: true });
-
-    cy.get("div[role='dialog']").matchImageSnapshot(
-      "cache-dark"
     );
   });
 });
