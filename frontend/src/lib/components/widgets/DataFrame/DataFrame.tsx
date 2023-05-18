@@ -477,7 +477,7 @@ function DataFrame({
             element.editingMode !== READ_ONLY &&
             !disabled && {
               // Support fill handle for bulk editing:
-              fillHandle: !isTouchDevice ? true : false,
+              fillHandle: !isTouchDevice,
               // Support editing:
               onCellEdited,
               // Support pasting data for bulk editing:
