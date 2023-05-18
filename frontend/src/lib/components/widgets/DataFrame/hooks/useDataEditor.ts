@@ -283,7 +283,7 @@ function useDataEditor(
       fixedNumRows,
       getOriginalIndex,
       getCellContent,
-      onRowAppended,
+      appendEmptyRow,
       applyEdits,
       refreshCells,
     ]
