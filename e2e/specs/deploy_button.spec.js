@@ -27,11 +27,23 @@ describe("deploy button and modal", () => {
     );
   });
 
-  it("renders the deploy dialog correctly", () => {
+  it("renders the light deploy dialog correctly", () => {
+    cy.changeTheme("Light");
+
     cy.get("div[class='stDeployButton'] > button").click({ force: true });
 
-    cy.get("div[role='dialog']").matchThemedSnapshots(
+    cy.get("div[role='dialog']").matchImageSnapshot(
       "deploy_dialog_opened"
+    );
+  });
+
+  it("renders the dark deploy dialog correctly", () => {
+    cy.changeTheme("Dark");
+
+    cy.get("div[class='stDeployButton'] > button").click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "deploy_dialog_opened-dark"
     );
   });
 });

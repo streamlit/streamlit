@@ -21,6 +21,12 @@ describe("modals", () => {
     cy.prepForElementSnapshots();
   });
 
+  // Unfortunately, it seems like matchThemedSnapshots doesn't work for modals,
+  // and leads to a CypressError: cy.click() failed because this element:
+  // <button>...</button> is being covered by another element: <div>...</div>.
+  // I assume it's related to how we internally make the theme change in matchThemedSnapshots,
+  // so duplicating tests here a bit to make the theme change, and get the screenshot with matchImageSnapshot
+
   it("renders the light settings dialog correctly", () => {
     cy.changeTheme("Light");
 
@@ -42,6 +48,106 @@ describe("modals", () => {
 
     cy.get("div[role='dialog']").matchImageSnapshot(
       "settings-dark"
+    );
+  });
+
+  it("renders the light edit theme dialog correctly", () => {
+    cy.changeTheme("Light");
+
+    cy.get("#MainMenu > button").click();
+
+    cy.get('[data-testid="main-menu-list"] > ul').eq(4).click({ force: true });
+
+    cy.get("div[role='dialog'] > button").eq(1).click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "theme"
+    );
+  });
+
+  it("renders the dark edit theme dialog correctly", () => {
+    cy.changeTheme("Dark");
+
+    cy.get("#MainMenu > button").click();
+
+    cy.get('[data-testid="main-menu-list"] > ul').eq(4).click({ force: true });
+
+    cy.get("div[role='dialog'] > button").eq(1).click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "theme-dark"
+    );
+  });
+
+  it("renders the light screencast dialog correctly", () => {
+    cy.changeTheme("Light");
+
+    cy.get("#MainMenu > button").click();
+
+    cy.get('[data-testid="main-menu-list"] > ul').eq(3).click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "screencast"
+    );
+  });
+
+  it("renders the dark screencast dialog correctly", () => {
+    cy.changeTheme("Dark");
+
+    cy.get("#MainMenu > button").click();
+
+    cy.get('[data-testid="main-menu-list"] > ul').eq(3).click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "screencast-dark"
+    );
+  });
+
+  it("renders the light about dialog correctly", () => {
+    cy.changeTheme("Light");
+
+    cy.get("#MainMenu > button").click();
+
+    cy.get('[data-testid="main-menu-list"] > ul').eq(4).click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "about"
+    );
+  });
+
+  it("renders the dark about dialog correctly", () => {
+    cy.changeTheme("Dark");
+
+    cy.get("#MainMenu > button").click();
+
+    cy.get('[data-testid="main-menu-list"] > ul').eq(4).click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "about-dark"
+    );
+  });
+
+  it("renders the light clear cache dialog correctly", () => {
+    cy.changeTheme("Light");
+
+    cy.get("#MainMenu > button").click();
+
+    cy.get('[data-testid="main-menu-list"] > ul').eq(5).click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "cache"
+    );
+  });
+
+  it("renders the dark clear cache dialog correctly", () => {
+    cy.changeTheme("Dark");
+
+    cy.get("#MainMenu > button").click();
+
+    cy.get('[data-testid="main-menu-list"] > ul').eq(5).click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "cache-dark"
     );
   });
 });
