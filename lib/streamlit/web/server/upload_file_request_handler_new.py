@@ -40,6 +40,7 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
     def initialize(
         self,
         file_storage: UploadedFileStorage,
+        file_mgr: UploadedFileManager,
         is_active_session: Callable[[str], bool],
     ):
         """
@@ -53,6 +54,7 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
             session.
         """
         self._file_storage = file_storage
+        self._file_mgr = file_mgr
         self._is_active_session = is_active_session
 
     def set_default_headers(self):
