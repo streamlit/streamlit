@@ -35,7 +35,7 @@ function DeployCard(
           style: {
             borderWidth: "1px",
             borderStyle: "solid",
-            borderColor: colors.gray40,
+            borderColor: colors.fadedText10,
             borderRadius: radii.lg,
           },
         },
