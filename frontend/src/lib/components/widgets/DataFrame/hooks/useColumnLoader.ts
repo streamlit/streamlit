@@ -65,6 +65,27 @@ export interface ColumnConfigProps {
 }
 
 /**
+ * Parse the user-defined width configuration and return the width in pixels.
+ */
+function parseWidthConfig(
+  width?: "small" | "medium" | "large" | number
+): number | undefined {
+  if (isNullOrUndefined(width)) {
+    return undefined
+  }
+
+  if (typeof width === "number") {
+    return width
+  }
+
+  if (width in COLUMN_WIDTH_MAPPING) {
+    return COLUMN_WIDTH_MAPPING[width]
+  }
+
+  return undefined
+}
+
+/**
  * Apply the user-defined column configuration if supplied.
  *
  * @param columnProps - The column properties to apply the config to.
@@ -114,11 +135,7 @@ export function applyColumnConfig(
   // configuration options that are not undefined:
   return merge({ ...columnProps }, {
     title: columnConfig.label,
-    width:
-      notNullOrUndefined(columnConfig.width) &&
-      columnConfig.width in COLUMN_WIDTH_MAPPING
-        ? COLUMN_WIDTH_MAPPING[columnConfig.width]
-        : undefined,
+    width: parseWidthConfig(columnConfig.width),
     isEditable: notNullOrUndefined(columnConfig.disabled)
       ? !columnConfig.disabled
       : undefined,
