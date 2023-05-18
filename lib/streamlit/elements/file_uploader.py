@@ -37,11 +37,17 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import (
+    NewUploadedFile,
+    NewUploadedFileRec,
+    UploadedFile,
+    UploadedFileRec,
+)
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
-SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
-
+SomeUploadedFiles = Optional[
+    Union[UploadedFile, List[UploadedFile], NewUploadedFile, List[NewUploadedFile]]
+]
 
 TYPE_PAIRS = [
     (".jpg", ".jpeg"),
@@ -53,8 +59,8 @@ TYPE_PAIRS = [
 
 
 def _get_file_recs(
-    widget_id: str, widget_value: Optional[FileUploaderStateProto]
-) -> List[UploadedFileRec]:
+    widget_value: Optional[FileUploaderStateProto],
+) -> List[NewUploadedFileRec]:
     if widget_value is None:
         return []
 
@@ -69,9 +75,8 @@ def _get_file_recs(
     active_file_ids = [f.id for f in uploaded_file_info]
 
     # Grab the files that correspond to our active file IDs.
-    return ctx.uploaded_file_mgr.get_files(
+    return ctx.uploaded_file_mgr.get_files_modern(
         session_id=ctx.session_id,
-        widget_id=widget_id,
         file_ids=active_file_ids,
     )
 
@@ -83,13 +88,11 @@ class FileUploaderSerde:
     def deserialize(
         self, ui_value: Optional[FileUploaderStateProto], widget_id: str
     ) -> SomeUploadedFiles:
-        file_recs = _get_file_recs(widget_id, ui_value)
+        file_recs = _get_file_recs(ui_value)
         if len(file_recs) == 0:
-            return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
-                [] if self.accept_multiple_files else None
-            )
+            return_value: SomeUploadedFiles = [] if self.accept_multiple_files else None
         else:
-            files = [UploadedFile(rec) for rec in file_recs]
+            files = [NewUploadedFile(rec) for rec in file_recs]
             return_value = files if self.accept_multiple_files else files[0]
         return return_value
 
@@ -112,9 +115,10 @@ class FileUploaderSerde:
 
         for f in files:
             file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
-            file_info.id = f.id
+            file_info.id = 42
             file_info.name = f.name
             file_info.size = f.size
+            file_info.file_url = f.id
 
         return state_proto
 
@@ -441,19 +445,6 @@ class FileUploaderMixin:
         file_uploader_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
-
-        file_uploader_state = serde.serialize(widget_state.value)
-        uploaded_file_info = file_uploader_state.uploaded_file_info
-        if ctx is not None and len(uploaded_file_info) != 0:
-            newest_file_id = file_uploader_state.max_file_id
-            active_file_ids = [f.id for f in uploaded_file_info]
-
-            ctx.uploaded_file_mgr.remove_orphaned_files(
-                session_id=ctx.session_id,
-                widget_id=file_uploader_proto.id,
-                newest_file_id=newest_file_id,
-                active_file_ids=active_file_ids,
-            )
 
         self.dg._enqueue("file_uploader", file_uploader_proto)
         return widget_state.value

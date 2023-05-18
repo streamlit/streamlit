@@ -44,15 +44,21 @@ message UInt32Array {
 
 // Information on a file uploaded via the file_uploader widget.
 message UploadedFileInfo {
+  // TO DEPRECATE:
   sint64 id = 1;
 
   string name = 2;
 
   // The size of this file in bytes.
   uint32 size = 3;
+
+  // presigned URL where
+  // this file will be uploaded.
+  string file_url = 4;
 }
 
 message FileUploaderState {
+  // TO DEPRECATE:
   sint64 max_file_id = 1;
   repeated UploadedFileInfo uploaded_file_info = 2;
 }

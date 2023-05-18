@@ -150,6 +150,12 @@ class UploadedFileManager(CacheStatsProvider):
     def delete_session_files_modern(self, session_id):
         del self._modern_files[session_id]
 
+    def get_files_modern(self, session_id, file_ids):
+        return [
+            NewUploadedFile(record=self._modern_files[session_id][file_id])
+            for file_id in file_ids
+        ]
+
     def add_file(
         self,
         session_id: str,
