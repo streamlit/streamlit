@@ -53,7 +53,7 @@ export const COLUMN_WIDTH_MAPPING = {
  */
 export interface ColumnConfigProps {
   label?: string
-  width?: "small" | "medium" | "large"
+  width?: "small" | "medium" | "large" | number
   help?: string
   hidden?: boolean
   disabled?: boolean
