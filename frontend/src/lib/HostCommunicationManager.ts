@@ -79,6 +79,14 @@ export class HostCommunicationManager {
       sidebarChevronDownshift: 0,
       toolbarItems: [],
     }
+
+    // Bind methods for state access - TODO: Remove unnecessary bind functions
+    this.setAllowedOriginsResp = this.setAllowedOriginsResp.bind(this)
+    this.openHostCommunication = this.openHostCommunication.bind(this)
+    this.closeHostCommunication = this.closeHostCommunication.bind(this)
+    this.resetAuthToken = this.resetAuthToken.bind(this)
+    this.receiveHostMessage = this.receiveHostMessage.bind(this)
+    this.sendMessageToHost = this.sendMessageToHost.bind(this)
   }
 
   /**
@@ -134,6 +142,9 @@ export class HostCommunicationManager {
    * Register a function to deliver a message to the Host
    */
   public sendMessageToHost(message: IGuestToHostMessage): void {
+    console.log("Sending message to host:", message.type)
+    console.log("CURRENT STATE:", this.state)
+
     window.parent.postMessage(
       {
         stCommVersion: HOST_COMM_VERSION,
@@ -148,6 +159,8 @@ export class HostCommunicationManager {
    */
   public receiveHostMessage(event: MessageEvent): void {
     const message: VersionedMessage<IHostToGuestMessage> | any = event.data
+
+    console.log("Received message from host:", message.type)
 
     // Messages coming from the parent frame of a deployed Streamlit app
     // may not be coming from a trusted source (even if we've set the CSP

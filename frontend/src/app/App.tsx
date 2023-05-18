@@ -118,10 +118,6 @@ import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 import { StyledApp } from "src/app/styled-components"
 
-// import withHostCommunication, {
-//   HostCommunicationHOC,
-// } from "src/lib/hocs/withHostCommunication"
-
 import withScreencast, {
   ScreenCastHOC,
 } from "src/app/hocs/withScreencast/withScreencast"
@@ -133,7 +129,6 @@ import { LibContext } from "src/lib/components/core/LibContext"
 
 export interface Props {
   screenCast: ScreenCastHOC
-  // hostCommunication: HostCommunicationHOC
   theme: {
     activeTheme: ThemeConfig
     availableThemes: ThemeConfig[]
@@ -331,7 +326,6 @@ export class App extends PureComponent<Props, State> {
     CLEAR_CACHE: () => {
       if (
         showDevelopmentOptions(
-          // this.props.hostCommunication.currentState.isOwner,
           this.hostCommunicationMgr.state.isOwner,
           this.state.toolbarMode
         )
@@ -352,13 +346,9 @@ export class App extends PureComponent<Props, State> {
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
       claimHostAuthToken: () =>
-        // this.props.hostCommunication.currentState.authTokenPromise,
         this.hostCommunicationMgr.state.deferredAuthToken.promise,
-      // resetHostAuthToken: this.props.hostCommunication.resetAuthToken,
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
-      setAllowedOriginsResp:
-        // this.props.hostCommunication.setAllowedOriginsResp,
-        this.hostCommunicationMgr.setAllowedOriginsResp,
+      setAllowedOriginsResp: this.hostCommunicationMgr.setAllowedOriginsResp,
     })
 
     if (isScrollingHidden()) {
@@ -387,8 +377,6 @@ export class App extends PureComponent<Props, State> {
       import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
-    // this.hostCommunicationMgr.openHostCommunication()
-
     this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
@@ -399,16 +387,6 @@ export class App extends PureComponent<Props, State> {
       scriptRunState: this.state.scriptRunState,
     })
 
-    // this.props.hostCommunication.sendMessage({
-    //   type: "SET_THEME_CONFIG",
-    //   themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
-    // })
-
-    // this.props.hostCommunication.sendMessage({
-    //   type: "SCRIPT_RUN_STATE_CHANGED",
-    //   scriptRunState: this.state.scriptRunState,
-    // })
-
     this.metricsMgr.enqueue("viewReport")
 
     window.addEventListener("popstate", this.onHistoryChange, false)
@@ -418,25 +396,6 @@ export class App extends PureComponent<Props, State> {
     prevProps: Readonly<Props>,
     prevState: Readonly<State>
   ): void {
-    // if (
-    //   prevProps.hostCommunication.currentState.queryParams !==
-    //   this.props.hostCommunication.currentState.queryParams
-    // ) {
-    //   this.sendRerunBackMsg()
-    // }
-    // if (this.props.hostCommunication.currentState.forcedModalClose) {
-    //   this.closeDialog()
-    // }
-    // if (this.props.hostCommunication.currentState.scriptRerunRequested) {
-    //   this.rerunScript()
-    // }
-    // if (this.props.hostCommunication.currentState.scriptStopRequested) {
-    //   this.stopScript()
-    // }
-    // if (this.props.hostCommunication.currentState.cacheClearRequested) {
-    //   this.clearCache()
-    // }
-
     // const { requestedPageScriptHash } = this.hostCommunicationMgr.state
     // if (requestedPageScriptHash !== null) {
     //   this.onPageChange(requestedPageScriptHash)
@@ -1094,7 +1053,6 @@ export class App extends PureComponent<Props, State> {
    */
   closeDialog = (): void => {
     this.setState({ dialog: undefined })
-    // this.props.hostCommunication.onModalReset()
   }
 
   /**
@@ -1221,7 +1179,6 @@ export class App extends PureComponent<Props, State> {
       this.saveSettings({ ...this.state.userSettings, runOnSave: true })
     }
 
-    // this.props.hostCommunication.onScriptRerun()
     this.widgetMgr.sendUpdateWidgetsMessage()
   }
 
@@ -1322,7 +1279,6 @@ export class App extends PureComponent<Props, State> {
     backMsg.type = "stopScript"
     this.sendBackMsg(backMsg)
     this.setState({ scriptRunState: ScriptRunState.STOP_REQUESTED })
-    // this.props.hostCommunication.onScriptStop()
   }
 
   /**
@@ -1381,7 +1337,6 @@ export class App extends PureComponent<Props, State> {
     } else {
       logError("Cannot clear cache: disconnected from server")
     }
-    // this.props.hostCommunication.onCacheClear()
   }
 
   /**
