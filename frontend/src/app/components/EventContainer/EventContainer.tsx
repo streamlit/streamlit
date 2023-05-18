@@ -15,20 +15,15 @@
  */
 
 import React, { ReactElement, ReactNode, useEffect } from "react"
-import { withTheme } from "@emotion/react"
 import { ToasterContainer, toaster, PLACEMENT } from "baseui/toast"
 
-import { EmotionTheme } from "src/lib/theme"
-
 export interface EventContainerProps {
-  theme: EmotionTheme
   communityCloud: boolean
   scriptRunId?: string
   children: ReactNode
 }
 
 function EventContainer({
-  theme,
   communityCloud,
   scriptRunId,
   children,
@@ -48,7 +43,6 @@ function EventContainer({
             style: {
               // If deployed in Community Cloud, move toasts up to avoid blocking Manage App button
               bottom: communityCloud ? "45px" : "0px",
-              zIndex: theme.zIndices.balloons - 2,
             },
             props: {
               "data-testid": "toastContainer",
@@ -61,4 +55,4 @@ function EventContainer({
   )
 }
 
-export default withTheme(EventContainer)
+export default EventContainer
