@@ -322,7 +322,6 @@ class Server:
                 ),
                 NewUploadFileRequestHandler,
                 dict(
-                    file_storage=self._runtime.uploaded_file_storage,
                     file_mgr=self._runtime.uploaded_file_mgr,
                     is_active_session=self._runtime.is_active_session,
                 ),

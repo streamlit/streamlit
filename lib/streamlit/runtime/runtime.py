@@ -59,10 +59,7 @@ from streamlit.runtime.state import (
     SessionStateStatProvider,
 )
 from streamlit.runtime.stats import StatsManager
-from streamlit.runtime.uploaded_file_manager import (
-    UploadedFileManager,
-    UploadedFileStorage,
-)
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.watcher import LocalSourcesWatcher
 
@@ -191,7 +188,6 @@ class Runtime:
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = UploadedFileManager()
         self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
-        self._uploaded_file_storage = UploadedFileStorage()
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._cache_storage_manager = config.cache_storage_manager
 
@@ -220,10 +216,6 @@ class Runtime:
     @property
     def uploaded_file_mgr(self) -> UploadedFileManager:
         return self._uploaded_file_mgr
-
-    @property
-    def uploaded_file_storage(self) -> UploadedFileStorage:
-        return self._uploaded_file_storage
 
     @property
     def cache_storage_manager(self) -> CacheStorageManager:

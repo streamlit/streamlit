@@ -23,7 +23,6 @@ from streamlit.runtime.uploaded_file_manager import (
     NewUploadedFileRec,
     UploadedFileManager,
     UploadedFileRec,
-    UploadedFileStorage,
 )
 from streamlit.web.server import routes, server_util
 
@@ -39,7 +38,6 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
 
     def initialize(
         self,
-        file_storage: UploadedFileStorage,
         file_mgr: UploadedFileManager,
         is_active_session: Callable[[str], bool],
     ):
@@ -53,7 +51,6 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
             A function that returns true if a session_id belongs to an active
             session.
         """
-        self._file_storage = file_storage
         self._file_mgr = file_mgr
         self._is_active_session = is_active_session
 
@@ -90,25 +87,6 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
         """
         self.set_status(204)
         self.finish()
-
-    @staticmethod
-    def _require_arg(args: Dict[str, List[bytes]], name: str) -> str:
-        """Return the value of the argument with the given name.
-
-        A human-readable exception will be raised if the argument doesn't
-        exist. This will be used as the body for the error response returned
-        from the request.
-        """
-        try:
-            arg = args[name]
-        except KeyError:
-            raise Exception(f"Missing '{name}'")
-
-        if len(arg) != 1:
-            raise Exception(f"Expected 1 '{name}' arg, but got {len(arg)}")
-
-        # Convert bytes to string
-        return arg[0].decode("utf-8")
 
     def post(self, **kwargs):
         """
@@ -159,5 +137,13 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
             )
             return
 
-        self._file_storage.add_file(session_id=session_id, file=uploaded_files[0])
+        self._file_mgr.add_file_modern(session_id=session_id, file=uploaded_files[0])
+        self.set_status(204)
+
+    def delete(self, **kwargs):
+        """DELETE FILE"""
+        session_id = self.path_kwargs["session_id"]
+        file_id = self.path_kwargs["file_id"]
+
+        self._file_mgr.delete_file_modern(session_id=session_id, file_id=file_id)
         self.set_status(204)

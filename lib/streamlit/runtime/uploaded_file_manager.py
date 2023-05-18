@@ -14,6 +14,7 @@
 
 import io
 import threading
+from collections import defaultdict
 from typing import IO, Dict, List, NamedTuple, Tuple
 
 from blinker import Signal
@@ -97,21 +98,6 @@ class NewUploadedFile(io.BytesIO):
         return util.repr_(self)
 
 
-class UploadedFileStorage:  # THIS CLASS CODE SHOULD NOT LIVE IN SiS, just for prototype
-    def __init__(self):
-        self._files: Dict[Tuple[str, str], NewUploadedFileRec] = {}
-
-    def add_file(self, session_id: str, file: NewUploadedFileRec):
-        print("AAAAAAAAA FILE ADDED TO UPLOADED_FILE_STORAGE!!!")
-        print(session_id)
-        print("---------")
-        print(file.name)
-        self._files[session_id, str(file.id)] = file
-
-    def get_file(self, session_id, file_id) -> IO[bytes]:
-        return NewUploadedFile(record=self._files[session_id, file_id])
-
-
 class UploadedFileManager(CacheStatsProvider):
     """Holds files uploaded by users of the running Streamlit app,
     and emits an event signal when a file is added.
@@ -122,6 +108,7 @@ class UploadedFileManager(CacheStatsProvider):
     def __init__(self):
         # List of files for a given widget in a given session.
         self._files_by_id: Dict[Tuple[str, str], List[UploadedFileRec]] = {}
+        self._modern_files: Dict[str, Dict[str, NewUploadedFileRec]] = defaultdict(dict)
 
         # A counter that generates unique file IDs. Each file ID is greater
         # than the previous ID, which means we can use IDs to compare files
@@ -145,6 +132,23 @@ class UploadedFileManager(CacheStatsProvider):
 
     def __repr__(self) -> str:
         return util.repr_(self)
+
+    def add_file_modern(self, session_id: str, file: NewUploadedFileRec):
+        print("AAAAAAAAA FILE ADDED TO UPLOADED_FILE_STORAGE!!!")
+        print(session_id)
+        print("---------")
+        print(file.name)
+        self._modern_files[session_id][file.id] = file
+
+    def get_file_modern(self, session_id, file_id) -> IO[bytes]:
+        return NewUploadedFile(record=self._modern_files[session_id][file_id])
+
+    def delete_file_modern(self, session_id, file_id):
+        print("IN DELETE!!!")
+        self._modern_files[session_id].pop(file_id, None)
+
+    def delete_session_files_modern(self, session_id):
+        del self._modern_files[session_id]
 
     def add_file(
         self,
