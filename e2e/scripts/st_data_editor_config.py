@@ -250,7 +250,7 @@ st.experimental_data_editor(
             min_value=datetime.datetime(2021, 1, 1, 1, 0, 0),
             max_value=datetime.datetime(2022, 1, 1, 1, 0, 0),
             step=0.01,
-            format="yyyy-MM-dd HH:mm:ss.SSS",
+            format="YYYY-MM-DD HH:mm:ss.SSS",
         ),
     },
 )
