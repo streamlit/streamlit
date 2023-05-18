@@ -161,11 +161,6 @@ class ArrowMixin:
                 # when the position of the element is changed.
                 delta_path = self.dg._get_delta_path_str()
                 default_uuid = str(hash(delta_path))
-                # default_uuid is a string only if the data is a `Styler`,
-                # and `None` otherwise.
-                assert isinstance(
-                    default_uuid, str
-                ), "Default UUID must be a string for Styler data."
                 marshall_styler(proto, data, default_uuid)
 
             # Convert the input data into a pandas.DataFrame
