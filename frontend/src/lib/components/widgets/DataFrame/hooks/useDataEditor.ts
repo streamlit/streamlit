@@ -143,7 +143,7 @@ function useDataEditor(
 
     appendEmptyRow()
     applyEdits()
-  }, [appendEmptyRow, applyEdits])
+  }, [appendEmptyRow, applyEdits, fixedNumRows])
 
   /**
    * Callback used by glide-data-grid when the user deletes a row or cell value in the table UI.
