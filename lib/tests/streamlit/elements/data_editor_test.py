@@ -33,6 +33,7 @@ from streamlit.elements.data_editor import (
     _apply_dataframe_edits,
     _apply_row_additions,
     _apply_row_deletions,
+    _check_type_compatibilities,
     _parse_value,
 )
 from streamlit.elements.lib.column_config_utils import (
@@ -476,6 +477,42 @@ class DataEditorTest(DeltaGeneratorTestCase):
         # This should run without an issue and return a valid dataframe
         return_df = st.experimental_data_editor(df)
         self.assertIsInstance(return_df, pd.DataFrame)
+
+    def test_check_type_compatibilities(self):
+        """Test that _check_type_compatibilities raises an exception when called with incompatible data."""
+        df = pd.DataFrame({"col1": [1, 2, 3], "col2": ["a", "b", "c"]})
+
+        schema = [ColumnDataKind.INTEGER, ColumnDataKind.INTEGER, ColumnDataKind.STRING]
+
+        with self.assertRaises(StreamlitAPIException):
+            _check_type_compatibilities(
+                df,
+                {
+                    "col1": {"type_config": {"type": "text"}},
+                    "col2": {"type_config": {"type": "text"}},
+                },
+                schema,
+            )
+
+        with self.assertRaises(StreamlitAPIException):
+            _check_type_compatibilities(
+                df,
+                {
+                    "col1": {"type_config": {"type": "date"}},
+                    "col2": {"type_config": {"type": "text"}},
+                },
+                schema,
+            )
+
+        # This one should work
+        _check_type_compatibilities(
+            df,
+            {
+                "col1": {"type_config": {"type": "checkbox"}},
+                "col2": {"type_config": {"type": "text"}},
+            },
+            schema,
+        )
 
     @unittest.skipIf(
         is_pandas_version_less_than("2.0.0") is False,
