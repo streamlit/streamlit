@@ -228,6 +228,12 @@ st.dataframe(
                 "invalid",
                 None,
             ],
+            "col_2": [
+                datetime.date(2021, 1, 1),
+                datetime.date(2022, 1, 2),
+                datetime.date(2023, 1, 3),
+                None,
+            ],
         }
     ),
     column_config={
@@ -246,6 +252,7 @@ st.dataframe(
         "col_1": st.column_config.DatetimeColumn(
             step=0.01,
         ),
+        "col_2": st.column_config.DatetimeColumn(),
     },
 )
 
@@ -266,6 +273,12 @@ st.dataframe(
                 "invalid",
                 None,
             ],
+            "col_2": [
+                datetime.datetime(2021, 1, 1, 1, 0, 0, 123000),
+                datetime.datetime(2022, 1, 2, 2, 0, 0, 234000),
+                datetime.datetime(2023, 1, 3, 3, 0, 0, 345000),
+                None,
+            ],
         }
     ),
     column_config={
@@ -281,6 +294,7 @@ st.dataframe(
             step=2,  # Should be ignored
         ),
         "col_1": st.column_config.DateColumn(),
+        "col_2": st.column_config.DateColumn(),
     },
 )
 
@@ -301,6 +315,12 @@ st.dataframe(
                 "invalid",
                 None,
             ],
+            "col_2": [
+                datetime.datetime(2021, 1, 1, 1, 0, 0, 123000),
+                datetime.datetime(2022, 1, 2, 2, 0, 0, 234000),
+                datetime.datetime(2023, 1, 3, 3, 0, 0, 345000),
+                None,
+            ],
         }
     ),
     column_config={
@@ -318,6 +338,7 @@ st.dataframe(
         "col_1": st.column_config.TimeColumn(
             format="HH:mm",
         ),
+        "col_2": st.column_config.TimeColumn(),
     },
 )
 
