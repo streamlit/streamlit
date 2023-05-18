@@ -58,7 +58,7 @@ describe("modals", () => {
 
     cy.get('[data-testid="main-menu-list"] > ul').eq(1).click({ force: true });
 
-    cy.get("div[role='dialog'] > button").eq(1).click({ force: true });
+    cy.get("div[role='dialog'] > div").eq(1).get('button').click({ force: true });
 
     cy.get("div[role='dialog']").matchImageSnapshot(
       "theme"
@@ -72,7 +72,7 @@ describe("modals", () => {
 
     cy.get('[data-testid="main-menu-list"] > ul').eq(1).click({ force: true });
 
-    cy.get("div[role='dialog'] > button").eq(1).click({ force: true });
+    cy.get("div[role='dialog'] > div").eq(1).get('button').click({ force: true });
 
     cy.get("div[role='dialog']").matchImageSnapshot(
       "theme-dark"
@@ -132,7 +132,7 @@ describe("modals", () => {
 
     cy.get("#MainMenu > button").click();
 
-    cy.get('[data-testid="main-menu-list"]').eq(1).get('ul').eq(1).click({ force: true });
+    cy.getIndexed('[data-testid="main-menu-list"]', 1).get('> ul').eq(1).click({ force: true });
 
     cy.get("div[role='dialog']").matchImageSnapshot(
       "cache"
@@ -144,7 +144,7 @@ describe("modals", () => {
 
     cy.get("#MainMenu > button").click();
 
-    cy.get('[data-testid="main-menu-list"]').eq(1).get('ul').eq(1).click({ force: true });
+    cy.getIndexed('[data-testid="main-menu-list"]', 1).get('> ul').eq(1).click({ force: true });
 
     cy.get("div[role='dialog']").matchImageSnapshot(
       "cache-dark"
