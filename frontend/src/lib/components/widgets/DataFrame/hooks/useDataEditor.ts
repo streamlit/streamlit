@@ -136,6 +136,11 @@ function useDataEditor(
    * Callback used by glide-data-grid when the user adds a new row in the table UI.
    */
   const onRowAppended = React.useCallback(() => {
+    if (fixedNumRows) {
+      // Appending rows is not supported
+      return
+    }
+
     appendEmptyRow()
     applyEdits()
   }, [appendEmptyRow, applyEdits])
