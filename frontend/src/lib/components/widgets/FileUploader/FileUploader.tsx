@@ -276,7 +276,6 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.props.uploadClient
       .getFileUploadUrls(acceptedFiles.length)
       .then(urls => {
-        // TODO: Use the presigned URL!!!!!
         // Upload each accepted file.
         _.zip(urls, acceptedFiles).forEach(
           // @ts-ignore
