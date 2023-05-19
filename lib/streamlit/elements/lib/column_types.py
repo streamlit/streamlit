@@ -251,7 +251,7 @@ def Column(
 
     .. output::
         https://doc-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
     return ColumnConfig(
         label=label, width=width, help=help, disabled=disabled, required=required
@@ -348,7 +348,7 @@ def NumberColumn(
 
     .. output::
         https://doc-number-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
 
     return ColumnConfig(
@@ -446,7 +446,7 @@ def TextColumn(
 
     .. output::
         https://doc-text-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
 
     return ColumnConfig(
@@ -545,7 +545,7 @@ def LinkColumn(
 
     .. output::
         https://doc-link-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
 
     return ColumnConfig(
@@ -629,7 +629,7 @@ def CheckboxColumn(
 
     .. output::
         https://doc-checkbox-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
 
     return ColumnConfig(
@@ -725,7 +725,7 @@ def SelectboxColumn(
 
     .. output::
         https://doc-selectbox-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
 
     return ColumnConfig(
@@ -810,7 +810,7 @@ def BarChartColumn(
 
     .. output::
         https://doc-barchart-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
 
     return ColumnConfig(
@@ -891,7 +891,7 @@ def LineChartColumn(
 
     .. output::
         https://doc-linechart-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
 
     return ColumnConfig(
@@ -966,7 +966,7 @@ def ImageColumn(
 
     .. output::
         https://doc-image-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
     return ColumnConfig(
         label=label, width=width, help=help, type_config=ImageColumnConfig(type="image")
@@ -1031,7 +1031,7 @@ def ListColumn(
 
     .. output::
         https://doc-list-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
     return ColumnConfig(
         label=label, width=width, help=help, type_config=ListColumnConfig(type="list")
@@ -1138,7 +1138,7 @@ def DatetimeColumn(
 
     .. output::
         https://doc-datetime-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
 
     return ColumnConfig(
@@ -1253,7 +1253,7 @@ def TimeColumn(
 
     .. output::
         https://doc-time-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
 
     return ColumnConfig(
@@ -1367,7 +1367,7 @@ def DateColumn(
 
     .. output::
         https://doc-date-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
     return ColumnConfig(
         label=label,
@@ -1456,7 +1456,7 @@ def ProgressColumn(
 
     .. output::
         https://doc-progress-column.streamlit.app/
-        height: 350px
+        height: 300px
     """
 
     return ColumnConfig(
