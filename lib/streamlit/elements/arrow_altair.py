@@ -16,6 +16,7 @@
 Altair is a Python visualization library based on Vega-Lite,
 a nice JSON schema for expressing graphs and charts.
 """
+from __future__ import annotations
 
 from datetime import date
 from enum import Enum
@@ -68,7 +69,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a line chart.
 
         This is syntax-sugar around st._arrow_altair_chart. The main difference
@@ -141,7 +142,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display an area chart.
 
         This is just syntax-sugar around st._arrow_altair_chart. The main difference
@@ -214,7 +215,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a bar chart.
 
         This is just syntax-sugar around st._arrow_altair_chart. The main difference
@@ -281,10 +282,10 @@ class ArrowAltairMixin:
     @gather_metrics("_arrow_altair_chart")
     def _arrow_altair_chart(
         self,
-        altair_chart: "Chart",
+        altair_chart: Chart,
         use_container_width: bool = False,
         theme: Union[None, Literal["streamlit"]] = "streamlit",
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a chart using the Altair library.
 
         Parameters
@@ -335,7 +336,7 @@ class ArrowAltairMixin:
         return self.dg._enqueue("arrow_vega_lite_chart", proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -489,7 +490,7 @@ def _generate_chart(
     y: Union[str, Sequence[str], None] = None,
     width: int = 0,
     height: int = 0,
-) -> "Chart":
+) -> Chart:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
 
@@ -576,7 +577,7 @@ def _generate_chart(
 
 def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
-    altair_chart: "Chart",
+    altair_chart: Chart,
     use_container_width: bool = False,
     theme: Union[None, Literal["streamlit"]] = "streamlit",
     **kwargs: Any,
