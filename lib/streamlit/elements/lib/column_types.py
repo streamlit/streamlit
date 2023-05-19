@@ -289,6 +289,33 @@ def NumberColumn(
     step: int, float, or None
         The stepping interval. Specifies the precision of numbers that can be entered.
         If None (default), uses 1 for integers and unrestricted precision for floats.
+
+    Examples
+    --------
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "price": [20, 950, 250, 500],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "price": st.column_config.NumberColumn(
+    >>>             "Price (in USD)",
+    >>>             help="The price of the product in USD",
+    >>>             min_value=0,
+    >>>             max_value=1000,
+    >>>             step=1,
+    >>>             format="$%d",
+    >>>         )
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
     """
 
     return ColumnConfig(
@@ -357,6 +384,32 @@ def TextColumn(
     validate: str or None
         A regular expression (JS flavor) that edited values are validated against.
         If the input is invalid, it will not be submitted.
+
+    Examples
+    --------
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "widgets": ["st.selectbox", "st.number_input", "st.text_area", "st.button"],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "widgets": st.column_config.TextColumn(
+    >>>             "Widgets",
+    >>>             help="Streamlit **widget** commands 🎈",
+    >>>             default="st.",
+    >>>             max_chars=50,
+    >>>             validate="^st\.[a-z_]+$",
+    >>>         )
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
     """
 
     return ColumnConfig(
@@ -422,6 +475,10 @@ def LinkColumn(
     validate: str or None
         A regular expression (JS flavor) that edited values are validated against.
         If the input is invalid, it will not be submitted.
+
+    Examples
+    --------
+
     """
 
     return ColumnConfig(
@@ -476,6 +533,32 @@ def CheckboxColumn(
 
     default: bool or None
         Specifies the default value in this column when a new row is added by the user.
+
+    Examples
+    --------
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "widgets": ["st.selectbox", "st.number_input", "st.text_area", "st.button"],
+    >>>         "favorite": [True, False, False, True],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "favorite": st.column_config.CheckboxColumn(
+    >>>             "Your favorite?",
+    >>>             help="Select your **favorite** widgets",
+    >>>             default=False,
+    >>>         )
+    >>>     },
+    >>>     disabled=["widgets"],
+    >>>     hide_index=True,
+    >>> )
     """
 
     return ColumnConfig(
@@ -534,6 +617,10 @@ def SelectboxColumn(
         The options that can be selected during editing. If None (default), this will be
         inferred from the underlying dataframe column if its dtype is “category”
         (`see Pandas docs on categorical data <https://pandas.pydata.org/docs/user_guide/categorical.html>`_).
+
+    Examples
+    --------
+
     """
 
     return ColumnConfig(
@@ -585,6 +672,10 @@ def BarChartColumn(
     y_max: int, float, or None
         The maximum value on the y-axis for all cells in the column. If None (default),
         every cell will use the maximum of its data.
+
+    Examples
+    --------
+
     """
 
     return ColumnConfig(
@@ -631,6 +722,10 @@ def LineChartColumn(
     y_max: int, float, or None
         The maximum value on the y-axis for all cells in the column. If None (default),
         every cell will use the maximum of its data.
+
+    Examples
+    --------
+
     """
 
     return ColumnConfig(
@@ -675,6 +770,10 @@ def ImageColumn(
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column label.
+
+    Examples
+    --------
+
     """
     return ColumnConfig(
         label=label, width=width, help=help, type_config=ImageColumnConfig(type="image")
@@ -707,6 +806,10 @@ def ListColumn(
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column label.
+
+    Examples
+    --------
+
     """
     return ColumnConfig(
         label=label, width=width, help=help, type_config=ListColumnConfig(type="list")
@@ -778,6 +881,38 @@ def DatetimeColumn(
     timezone: str or None
         The timezone of this column. If None (default),
         the timezone is inferred from the underlying data.
+
+    Examples
+    --------
+
+    >>> from datetime import datetime
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "appointment": [
+    >>>             datetime(2024, 2, 5, 12, 30),
+    >>>             datetime(2023, 11, 10, 18, 0),
+    >>>             datetime(2024, 3, 11, 20, 10),
+    >>>             datetime(2023, 9, 12, 3, 0),
+    >>>         ]
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "appointment": st.column_config.DatetimeColumn(
+    >>>             "Appointment",
+    >>>             min_value=datetime(2023, 6, 1),
+    >>>             max_value=datetime(2025, 1, 1),
+    >>>             format="D MMM YYYY, h:mm a",
+    >>>             step=60,
+    >>>         ),
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
     """
 
     return ColumnConfig(
@@ -857,6 +992,38 @@ def TimeColumn(
 
     step: int, float, datetime.timedelta, or None
         The stepping interval in seconds. If None (default), the step will be 1 second.
+
+    Examples
+    --------
+
+    >>> from datetime import time
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "appointment": [
+    >>>             time(12, 30),
+    >>>             time(18, 0),
+    >>>             time(9, 10),
+    >>>             time(16, 25),
+    >>>         ]
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "appointment": st.column_config.TimeColumn(
+    >>>             "Appointment",
+    >>>             min_value=time(8, 0, 0),
+    >>>             max_value=time(19, 0, 0),
+    >>>             format="hh:mm a",
+    >>>             step=60,
+    >>>         ),
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
     """
 
     return ColumnConfig(
@@ -935,6 +1102,38 @@ def DateColumn(
 
     step: int or None
         The stepping interval in days. If None (default), the step will be 1 day.
+
+    Examples
+    --------
+
+    >>> from datetime import date
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "birthday": [
+    >>>             date(1980, 1, 1),
+    >>>             date(1990, 5, 3),
+    >>>             date(1974, 5, 19),
+    >>>             date(2001, 8, 17),
+    >>>         ]
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "birthday": st.column_config.DateColumn(
+    >>>             "Birthday",
+    >>>             min_value=date(1900, 1, 1),
+    >>>             max_value=date(2005, 1, 1),
+    >>>             format="DD.MM.YYYY",
+    >>>             step=1,
+    >>>         ),
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
     """
     return ColumnConfig(
         label=label,
@@ -994,6 +1193,34 @@ def ProgressColumn(
     max_value : int, float, or None
         The minimum value of the progress bar. If None (default), will be 100 for
         integer values and 1 for float values.
+
+    Examples
+    --------
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "progress": [0.14, 0.49, 0.9, 0.231],
+    >>>         "volume": [200, 550, 1000, 80],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "progress": st.column_config.ProgressColumn("Progress"),
+    >>>         "volume": st.column_config.ProgressColumn(
+    >>>             "Sales volume",
+    >>>             help="The sales volume in USD",
+    >>>             format="$%f",
+    >>>             min_value=0,
+    >>>             max_value=1000,
+    >>>         ),
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
     """
 
     return ColumnConfig(
