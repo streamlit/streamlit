@@ -62,9 +62,7 @@ export interface BaseColumnProps {
   readonly width?: number
   // A help text that is displayed on hovering the column header.
   readonly help?: string
-  // Column type selected via column config:
-  readonly customType?: string
-  // Additional metadata related to the column type:
+  // Configuration options related to the column type:
   readonly columnTypeOptions?: Record<string, any>
   // The content alignment of the column:
   readonly contentAlignment?: "left" | "center" | "right"
@@ -615,4 +613,18 @@ export function truncateDecimals(value: number, decimals: number): number {
   return decimals === 0
     ? Math.trunc(value)
     : Math.trunc(value * 10 ** decimals) / 10 ** decimals
+}
+
+const LINE_BREAK_REGEX = new RegExp(/(\r\n|\n|\r)/gm)
+
+/**
+ * Removes all line breaks from the given text.
+ * @param text - The text to remove line breaks from.
+ * @returns The text without line breaks.
+ */
+export function removeLineBreaks(text: string): string {
+  if (text.indexOf("\n") !== -1) {
+    return text.replace(LINE_BREAK_REGEX, " ")
+  }
+  return text
 }

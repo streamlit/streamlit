@@ -24,6 +24,7 @@ import {
   getErrorCell,
   ColumnCreator,
   toSafeString,
+  removeLineBreaks,
 } from "./utils"
 
 export interface TextColumnParams {
@@ -77,12 +78,9 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
     // But we still run all other validations on the corrected value below.
     let corrected = false
 
-    if (parameters.max_chars) {
-      if (cellData.length > parameters.max_chars) {
-        // Correct the value
-        cellData = cellData.slice(0, parameters.max_chars)
-        corrected = true
-      }
+    if (parameters.max_chars && cellData.length > parameters.max_chars) {
+      cellData = cellData.slice(0, parameters.max_chars)
+      corrected = true
     }
 
     if (
@@ -124,7 +122,9 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
 
       try {
         const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
-        const displayData = notNullOrUndefined(cellData) ? cellData : ""
+        const displayData = notNullOrUndefined(cellData)
+          ? removeLineBreaks(cellData) // Remove line breaks to show all content in the cell
+          : ""
         return {
           ...cellTemplate,
           isMissingValue: isNullOrUndefined(cellData),

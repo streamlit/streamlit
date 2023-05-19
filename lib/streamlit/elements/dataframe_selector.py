@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Sequence, Union
 from typing_extensions import Literal
 
 from streamlit import config
+from streamlit.elements.lib.column_config_utils import ColumnConfigMappingInput
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -49,6 +50,7 @@ class DataFrameSelectorMixin:
         use_container_width: bool = False,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -90,6 +92,22 @@ class DataFrameSelectorMixin:
             first, followed by 'col1', and will hide all other non-index columns. If
             None (default), the order is inherited from the original data structure.
 
+        column_config : dict or None
+            Configures how columns are displayed, e.g. their title, visibility, type, or
+            format. This needs to be a dictionary where each key is a column name and
+            the value is one of:
+
+            * ``None`` to hide the column.
+
+            * A string to set the display label of the column.
+
+            * One of the column types defined under ``st.column_config``, e.g.
+              ``st.column_config.NumberColumn(”Dollar values”, format=”$ %d”)`` to show
+              a column as dollar amounts. See more info on the available column types
+              and config options `here <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
+
+            To configure the index column(s), use ``index`` as the column name.
+
         Examples
         --------
         >>> import streamlit as st
@@ -125,6 +143,41 @@ class DataFrameSelectorMixin:
            https://doc-dataframe1.streamlitapp.com/
            height: 410px
 
+        Or you can customize the dataframe via ``column_config``, ``hide_index``, or ``column_order``:
+
+        >>> import random
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>>
+        >>> df = pd.DataFrame(
+        >>>     {
+        >>>         "name": ["Roadmap", "Extras", "Issues"],
+        >>>         "url": ["https://roadmap.streamlit.app", "https://extras.streamlit.app", "https://issues.streamlit.app"],
+        >>>         "stars": [random.randint(0, 1000) for _ in range(3)],
+        >>>         "views_history": [[random.randint(0, 5000) for _ in range(30)] for _ in range(3)],
+        >>>     }
+        >>> )
+        >>> st.dataframe(
+        >>>     df,
+        >>>     column_config={
+        >>>         "name": "App name",
+        >>>         "stars": st.column_config.NumberColumn(
+        >>>             "Github Stars",
+        >>>             help="Number of stars on GitHub",
+        >>>             format="%d ⭐",
+        >>>         ),
+        >>>         "url": st.column_config.LinkColumn("App URL"),
+        >>>         "views_history": st.column_config.LineChartColumn(
+        >>>             "Views (past 30 days)", y_min=0, y_max=5000
+        >>>         ),
+        >>>     },
+        >>>     hide_index=True,
+        >>> )
+
+        .. output::
+           https://doc-dataframe-config.streamlitapp.com/
+           height: 350px
+
         """
         if _use_arrow():
             return self.dg._arrow_dataframe(
@@ -134,6 +187,7 @@ class DataFrameSelectorMixin:
                 use_container_width=use_container_width,
                 hide_index=hide_index,
                 column_order=column_order,
+                column_config=column_config,
             )
         else:
             return self.dg._legacy_dataframe(data, width, height)

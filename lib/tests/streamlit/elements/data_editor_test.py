@@ -30,15 +30,13 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.data_editor import (
     _apply_cell_edits,
-    _apply_data_specific_configs,
     _apply_dataframe_edits,
     _apply_row_additions,
     _apply_row_deletions,
+    _check_type_compatibilities,
     _parse_value,
 )
 from streamlit.elements.lib.column_config_utils import (
-    INDEX_IDENTIFIER,
-    ColumnConfigMapping,
     ColumnDataKind,
     determine_dataframe_schema,
 )
@@ -245,103 +243,6 @@ class DataEditorUtilTest(unittest.TestCase):
                 "col3": [False, False, True],
             },
         )
-
-    @parameterized.expand(
-        [
-            (DataFormat.SET_OF_VALUES, True),
-            (DataFormat.TUPLE_OF_VALUES, True),
-            (DataFormat.LIST_OF_VALUES, True),
-            (DataFormat.NUMPY_LIST, True),
-            (DataFormat.NUMPY_MATRIX, True),
-            (DataFormat.LIST_OF_RECORDS, True),
-            (DataFormat.LIST_OF_ROWS, True),
-            (DataFormat.COLUMN_VALUE_MAPPING, True),
-            # Some data formats which should not hide the index:
-            (DataFormat.PANDAS_DATAFRAME, False),
-            (DataFormat.PANDAS_SERIES, False),
-            (DataFormat.PANDAS_INDEX, False),
-            (DataFormat.KEY_VALUE_DICT, False),
-            (DataFormat.PYARROW_TABLE, False),
-            (DataFormat.PANDAS_STYLER, False),
-            (DataFormat.COLUMN_INDEX_MAPPING, False),
-            (DataFormat.COLUMN_SERIES_MAPPING, False),
-        ]
-    )
-    def test_apply_data_specific_configs_hides_index(
-        self, data_format: DataFormat, hidden: bool
-    ):
-        """Test that the index is hidden for some data formats."""
-        columns_config: ColumnConfigMapping = {}
-        data_df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-        _apply_data_specific_configs(columns_config, data_df, data_format)
-
-        if hidden:
-            self.assertEqual(
-                columns_config[INDEX_IDENTIFIER]["hidden"],
-                hidden,
-                f"Data of type {data_format} should be hidden.",
-            )
-        else:
-            self.assertNotIn(INDEX_IDENTIFIER, columns_config)
-
-    @parameterized.expand(
-        [
-            (DataFormat.SET_OF_VALUES, True),
-            (DataFormat.TUPLE_OF_VALUES, True),
-            (DataFormat.LIST_OF_VALUES, True),
-            (DataFormat.NUMPY_LIST, True),
-            (DataFormat.KEY_VALUE_DICT, True),
-            # Most other data formats which should not rename the first column:
-            (DataFormat.PANDAS_DATAFRAME, False),
-            (DataFormat.PANDAS_SERIES, False),
-            (DataFormat.PANDAS_INDEX, False),
-            (DataFormat.PYARROW_TABLE, False),
-            (DataFormat.PANDAS_STYLER, False),
-            (DataFormat.COLUMN_INDEX_MAPPING, False),
-            (DataFormat.COLUMN_SERIES_MAPPING, False),
-            (DataFormat.LIST_OF_RECORDS, False),
-            (DataFormat.LIST_OF_ROWS, False),
-            (DataFormat.COLUMN_VALUE_MAPPING, False),
-        ]
-    )
-    def test_apply_data_specific_configs_renames_column(
-        self, data_format: DataFormat, renames: bool
-    ):
-        """Test that the column names are changed for some data formats."""
-        data_df = pd.DataFrame([1, 2, 3])
-        _apply_data_specific_configs({}, data_df, data_format)
-        if renames:
-            self.assertEqual(
-                data_df.columns[0],
-                "value",
-                f"Data of type {data_format} should be renamed to 'value'",
-            )
-        else:
-            self.assertEqual(
-                data_df.columns[0],
-                0,
-                f"Data of type {data_format} should not be renamed.",
-            )
-
-    def test_apply_data_specific_configs_disables_columns(self):
-        """Test that Arrow incompatible columns are disabled (configured as non-editable)."""
-        columns_config: ColumnConfigMapping = {}
-        data_df = pd.DataFrame(
-            {
-                "a": pd.Series([1, 2]),
-                "b": pd.Series(["foo", "bar"]),
-                "c": pd.Series([1, "foo"]),  # Incompatible
-                "d": pd.Series([1 + 2j, 3 + 4j]),  # Incompatible
-            }
-        )
-
-        _apply_data_specific_configs(
-            columns_config, data_df, DataFormat.PANDAS_DATAFRAME
-        )
-        self.assertNotIn("a", columns_config)
-        self.assertNotIn("b", columns_config)
-        self.assertTrue(columns_config["c"]["disabled"])
-        self.assertTrue(columns_config["d"]["disabled"])
 
 
 class DataEditorTest(DeltaGeneratorTestCase):
@@ -576,6 +477,42 @@ class DataEditorTest(DeltaGeneratorTestCase):
         # This should run without an issue and return a valid dataframe
         return_df = st.experimental_data_editor(df)
         self.assertIsInstance(return_df, pd.DataFrame)
+
+    def test_check_type_compatibilities(self):
+        """Test that _check_type_compatibilities raises an exception when called with incompatible data."""
+        df = pd.DataFrame({"col1": [1, 2, 3], "col2": ["a", "b", "c"]})
+
+        schema = [ColumnDataKind.INTEGER, ColumnDataKind.INTEGER, ColumnDataKind.STRING]
+
+        with self.assertRaises(StreamlitAPIException):
+            _check_type_compatibilities(
+                df,
+                {
+                    "col1": {"type_config": {"type": "text"}},
+                    "col2": {"type_config": {"type": "text"}},
+                },
+                schema,
+            )
+
+        with self.assertRaises(StreamlitAPIException):
+            _check_type_compatibilities(
+                df,
+                {
+                    "col1": {"type_config": {"type": "date"}},
+                    "col2": {"type_config": {"type": "text"}},
+                },
+                schema,
+            )
+
+        # This one should work
+        _check_type_compatibilities(
+            df,
+            {
+                "col1": {"type_config": {"type": "checkbox"}},
+                "col2": {"type_config": {"type": "text"}},
+            },
+            schema,
+        )
 
     @unittest.skipIf(
         is_pandas_version_less_than("2.0.0") is False,
