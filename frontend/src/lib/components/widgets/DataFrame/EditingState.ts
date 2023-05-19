@@ -143,7 +143,7 @@ class EditingState {
       if (column) {
         const cell = column.getCell(editingState.edited_cells[key])
         if (cell) {
-          if (this.editedCells.has(rowIndex) == false) {
+          if (!this.editedCells.has(rowIndex)) {
             this.editedCells.set(rowIndex, new Map())
           }
           this.editedCells.get(rowIndex)?.set(colIndex, cell)
