@@ -70,6 +70,7 @@ export class FileUploadClient {
    */
   public async uploadFile(
     widget: WidgetInfo,
+    fileUploadUrl: string,
     file: File,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
@@ -77,6 +78,7 @@ export class FileUploadClient {
     this.offsetPendingRequestCount(widget.formId, 1)
     return this.endpoints
       .uploadFileUploaderFile(
+        fileUploadUrl,
         file,
         widget.id,
         this.sessionInfo.current.sessionId,
@@ -84,6 +86,13 @@ export class FileUploadClient {
         cancelToken
       )
       .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
+  }
+
+  public async getFileUploadUrls(numUrls: number): Promise<any> {
+    return this.endpoints.getFileUploadUrls(
+      numUrls,
+      this.sessionInfo.current.sessionId
+    )
   }
 
   private getFormIdSet(): Set<string> {

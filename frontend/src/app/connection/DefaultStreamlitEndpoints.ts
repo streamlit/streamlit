@@ -31,6 +31,7 @@ interface Props {
 }
 
 const MEDIA_ENDPOINT = "/media"
+const UPLOAD_URLS_ENDPOINT = "/_stcore/upload_urls"
 const UPLOAD_FILE_ENDPOINT = "/_stcore/upload_file"
 const COMPONENT_ENDPOINT_BASE = "/component"
 const FORWARD_MSG_CACHE_ENDPOINT = "/_stcore/message"
@@ -94,7 +95,24 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     return `${protocol}//${host}${portSection}/${basePathSection}${navigateTo}`
   }
 
+  public async getFileUploadUrls(
+    numUrls: number,
+    sessionId: string
+  ): Promise<any> {
+    return this.csrfRequest<number>(UPLOAD_URLS_ENDPOINT, {
+      method: "POST",
+      data: {
+        numberOfFiles: numUrls,
+        sessionId,
+      },
+      responseType: "json",
+    }).then(response => {
+      return response.data
+    })
+  }
+
   public async uploadFileUploaderFile(
+    fileUploadUrl: string,
     file: File,
     widgetId: string,
     sessionId: string,
@@ -106,7 +124,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     form.append("widgetId", widgetId)
     form.append(file.name, file)
 
-    return this.csrfRequest<number>(UPLOAD_FILE_ENDPOINT, {
+    return this.csrfRequest<number>(fileUploadUrl, {
       cancelToken,
       method: "POST",
       data: form,
@@ -118,9 +136,10 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
         return response.data
       }
 
-      throw new Error(
-        `Bad uploadFile response: expected a number but got '${response.data}'`
-      )
+      return 1
+      // throw new Error(
+      // `Bad uploadFile response: expected a number but got '${response.data}'`
+      // )
     })
   }
 
@@ -165,8 +184,14 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     url: string,
     params: AxiosRequestConfig
   ): Promise<R> {
-    const serverURI = this.requireServerUri()
-    params.url = buildHttpUri(serverURI, url)
+    // HACK: Don't build a relative URL if the given url
+    //       starts with http://
+    if (url.startsWith("http://")) {
+      params.url = url
+    } else {
+      const serverURI = this.requireServerUri()
+      params.url = buildHttpUri(serverURI, url)
+    }
 
     if (this.csrfEnabled) {
       const xsrfCookie = getCookie("_xsrf")

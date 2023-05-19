@@ -107,10 +107,12 @@ class FileUploader extends React.PureComponent<Props, State> {
         const name = f.name as string
         const size = f.size as number
         const serverFileId = f.id as number
+        const fileUrl = f.fileUrl as string
 
         return new UploadFileInfo(name, size, this.nextLocalFileId(), {
           type: "uploaded",
           serverFileId,
+          fileUrl,
         })
       }),
       newestServerFileId: Number(maxFileId),
@@ -202,25 +204,20 @@ class FileUploader extends React.PureComponent<Props, State> {
    * deleted when the script is re-run.
    */
   private createWidgetValue(): FileUploaderStateProto | undefined {
-    if (this.state.newestServerFileId === 0) {
-      // If newestServerFileId is 0, we've had no transaction with the server,
-      // and therefore no widget value.
-      return undefined
-    }
-
     const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
       .filter(f => f.status.type === "uploaded")
       .map(f => {
         const { name, size, status } = f
         return new UploadedFileInfoProto({
           id: (status as UploadedStatus).serverFileId,
+          fileUrl: (status as UploadedStatus).fileUrl,
           name,
           size,
         })
       })
 
     return new FileUploaderStateProto({
-      maxFileId: this.state.newestServerFileId,
+      // maxFileId: this.state.newestServerFileId,
       uploadedFileInfo,
     })
   }
@@ -276,32 +273,43 @@ class FileUploader extends React.PureComponent<Props, State> {
       this.removeFile(this.state.files[0].id)
     }
 
-    // Upload each accepted file.
-    acceptedFiles.forEach(this.uploadFile)
-
-    // Create an UploadFileInfo for each of our rejected files, and add them to
-    // our state.
-    if (rejectedFiles.length > 0) {
-      const rejectedInfos = rejectedFiles.map(rejected => {
-        const { file } = rejected
-        return new UploadFileInfo(
-          file.name,
-          file.size,
-          this.nextLocalFileId(),
-          {
-            type: "error",
-            errorMessage: this.getErrorMessage(
-              rejected.errors[0].code,
-              rejected.file
-            ),
+    this.props.uploadClient
+      .getFileUploadUrls(acceptedFiles.length)
+      .then(urls => {
+        // TODO: Use the presigned URL!!!!!
+        // Upload each accepted file.
+        _.zip(urls, acceptedFiles).forEach(
+          // @ts-ignore
+          ([{ presigned_url: fileUploadUrl }, file]) => {
+            // @ts-ignore
+            this.uploadFile(fileUploadUrl, file)
           }
         )
+
+        // Create an UploadFileInfo for each of our rejected files, and add them to
+        // our state.
+        if (rejectedFiles.length > 0) {
+          const rejectedInfos = rejectedFiles.map(rejected => {
+            const { file } = rejected
+            return new UploadFileInfo(
+              file.name,
+              file.size,
+              this.nextLocalFileId(),
+              {
+                type: "error",
+                errorMessage: this.getErrorMessage(
+                  rejected.errors[0].code,
+                  rejected.file
+                ),
+              }
+            )
+          })
+          this.addFiles(rejectedInfos)
+        }
       })
-      this.addFiles(rejectedInfos)
-    }
   }
 
-  public uploadFile = (file: File): void => {
+  public uploadFile = (fileUploadUrl: string, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     const cancelToken = axios.CancelToken.source()
     const uploadingFileInfo = new UploadFileInfo(
@@ -319,12 +327,13 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.props.uploadClient
       .uploadFile(
         this.props.element,
+        fileUploadUrl,
         file,
         e => this.onUploadProgress(e, uploadingFileInfo.id),
         cancelToken.token
       )
       .then(newFileId =>
-        this.onUploadComplete(uploadingFileInfo.id, newFileId)
+        this.onUploadComplete(uploadingFileInfo.id, fileUploadUrl)
       )
       .catch(err => {
         // If this was a cancel error, we don't show the user an error -
@@ -345,16 +354,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    * Called when an upload has completed. Updates the file's status, and
    * assigns it the new file ID returned from the server.
    */
-  private onUploadComplete = (
-    localFileId: number,
-    serverFileId: number
-  ): void => {
-    // "state.newestServerFileId" must always hold the max fileID
-    // returned from the server.
-    this.setState(state => ({
-      newestServerFileId: Math.max(state.newestServerFileId, serverFileId),
-    }))
-
+  private onUploadComplete = (localFileId: number, fileUrl: string): void => {
     const curFile = this.getFile(localFileId)
     if (curFile == null || curFile.status.type !== "uploading") {
       // The file may have been canceled right before the upload
@@ -364,7 +364,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     this.updateFile(
       curFile.id,
-      curFile.setStatus({ type: "uploaded", serverFileId })
+      curFile.setStatus({ type: "uploaded", fileUrl, serverFileId: 0 })
     )
   }
 
@@ -410,6 +410,7 @@ class FileUploader extends React.PureComponent<Props, State> {
       file.status.cancelToken.cancel()
     }
 
+    // TODO(vdonato): Call the endpoint to delete this file.
     this.removeFile(fileId)
   }
 

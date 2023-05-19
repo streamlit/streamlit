@@ -58,12 +58,15 @@ export interface StreamlitEndpoints {
    * @return a Promise<number> that resolves with the file's unique ID, as assigned by the server.
    */
   uploadFileUploaderFile(
+    fileUploadUrl: string,
     file: File,
     widgetId: string,
     sessionId: string,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
   ): Promise<number>
+
+  getFileUploadUrls(numUrls: number, sessionId: string): Promise<any>
 
   /**
    * Fetch a cached ForwardMsg from the server.
