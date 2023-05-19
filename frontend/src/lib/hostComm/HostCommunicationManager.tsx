@@ -30,7 +30,7 @@ import Resolver from "src/lib/util/Resolver"
 
 export const HOST_COMM_VERSION = 1
 
-interface Props {
+export interface HostCommunicationProps {
   theme: {
     setImportedTheme: (themeInfo: ICustomThemeConfig) => void
   }
@@ -38,13 +38,14 @@ interface Props {
     widgetStates?: WidgetStates,
     pageScriptHash?: string
   ) => void
+  onPageChange: (pageScriptHash: string) => void
   closeModal: () => void
   stopScript: () => void
   rerunScript: () => void
   clearCache: () => void
 }
 
-interface ConnectionState {
+export interface HostCommunicationState {
   allowedOrigins: string[]
   deployedAppMetadata: DeployedAppMetadata
   deferredAuthToken: Resolver<string | undefined>
@@ -61,10 +62,11 @@ interface ConnectionState {
  * Manages host communication & messaging
  */
 export class HostCommunicationManager {
-  private props: Props
-  public state: ConnectionState
+  public props: HostCommunicationProps
 
-  constructor(props: Props) {
+  public state: HostCommunicationState
+
+  constructor(props: HostCommunicationProps) {
     this.props = props
 
     this.state = {
@@ -127,6 +129,14 @@ export class HostCommunicationManager {
    */
   public setAllowedOriginsResp(resp: IAllowedMessageOriginsResponse): void {
     const { allowedOrigins, useExternalAuthToken } = resp
+
+    // Uncomment this code if testing out host communication with
+    // frontend/hostframe.html:
+    //
+    // if (IS_DEV_ENV) {
+    //   allowedOrigins.push("http://localhost:8000")
+    // }
+
     if (!useExternalAuthToken) {
       this.state.deferredAuthToken.resolve(undefined)
     }
@@ -142,9 +152,6 @@ export class HostCommunicationManager {
    * Register a function to deliver a message to the Host
    */
   public sendMessageToHost(message: IGuestToHostMessage): void {
-    console.log("Sending message to host:", message.type)
-    console.log("CURRENT STATE:", this.state)
-
     window.parent.postMessage(
       {
         stCommVersion: HOST_COMM_VERSION,
@@ -159,8 +166,6 @@ export class HostCommunicationManager {
    */
   public receiveHostMessage(event: MessageEvent): void {
     const message: VersionedMessage<IHostToGuestMessage> | any = event.data
-
-    console.log("Received message from host:", message.type)
 
     // Messages coming from the parent frame of a deployed Streamlit app
     // may not be coming from a trusted source (even if we've set the CSP
@@ -181,18 +186,23 @@ export class HostCommunicationManager {
     if (message.type === "CLOSE_MODAL") {
       this.props.closeModal()
     }
+
     if (message.type === "STOP_SCRIPT") {
       this.props.stopScript()
     }
+
     if (message.type === "RERUN_SCRIPT") {
       this.props.rerunScript()
     }
+
     if (message.type === "CLEAR_CACHE") {
       this.props.clearCache()
     }
+
     if (message.type === "REQUEST_PAGE_CHANGE") {
-      this.props.sendRerunBackMsg(undefined, message.pageScriptHash)
+      this.props.onPageChange(message.pageScriptHash)
     }
+
     if (message.type === "SET_AUTH_TOKEN") {
       // NOTE: The edge case (that should technically never happen) where
       // useExternalAuthToken is false but we still receive this message
@@ -201,9 +211,11 @@ export class HostCommunicationManager {
       // above.
       this.state.deferredAuthToken.resolve(message.authToken)
     }
+
     if (message.type === "SET_IS_OWNER") {
       this.state.isOwner = message.isOwner
     }
+
     if (message.type === "SET_MENU_ITEMS") {
       this.state.menuItems = message.items
     }
@@ -236,6 +248,7 @@ export class HostCommunicationManager {
     if (message.type === "UPDATE_HASH") {
       window.location.hash = message.hash
     }
+
     if (message.type === "SET_CUSTOM_THEME_CONFIG") {
       this.props.theme.setImportedTheme(message.themeInfo)
     }

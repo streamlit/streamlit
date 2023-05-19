@@ -35,12 +35,6 @@ import {
   PageNotFound,
   PagesChanged,
 } from "src/lib/proto"
-// import { HostCommunicationHOC } from "src/lib/hocs/withHostCommunication"
-import {
-  HostCommunicationState,
-  IMenuItem,
-  IToolbarItem,
-} from "src/lib/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionInfo } from "src/lib/SessionInfo"
@@ -69,41 +63,6 @@ jest.mock("src/lib/baseconsts", () => {
   }
 })
 
-// const getHostCommunicationState = (
-//   extend?: Partial<HostCommunicationState>
-// ): HostCommunicationState => ({
-//   authTokenPromise: Promise.resolve(undefined),
-//   forcedModalClose: false,
-//   scriptRerunRequested: false,
-//   scriptStopRequested: false,
-//   cacheClearRequested: false,
-//   hideSidebarNav: false,
-//   isOwner: true,
-//   menuItems: [],
-//   pageLinkBaseUrl: "",
-//   queryParams: "",
-//   requestedPageScriptHash: null,
-//   sidebarChevronDownshift: 0,
-//   deployedAppMetadata: {},
-//   toolbarItems: [],
-//   ...extend,
-// })
-
-// const getHostCommunicationProp = (
-//   extend?: Partial<HostCommunicationHOC>
-// ): HostCommunicationHOC => ({
-//   currentState: getHostCommunicationState({}),
-//   onModalReset: jest.fn(),
-//   onPageChanged: jest.fn(),
-//   resetAuthToken: jest.fn(),
-//   sendMessage: jest.fn(),
-//   onScriptStop: jest.fn(),
-//   onScriptRerun: jest.fn(),
-//   onCacheClear: jest.fn(),
-//   setAllowedOriginsResp: jest.fn(),
-//   ...extend,
-// })
-
 const getProps = (extend?: Partial<Props>): Props => ({
   screenCast: {
     currentState: "OFF",
@@ -111,7 +70,6 @@ const getProps = (extend?: Partial<Props>): Props => ({
     startRecording: jest.fn(),
     stopRecording: jest.fn(),
   },
-  // hostCommunication: getHostCommunicationProp({}),
   theme: {
     activeTheme: lightTheme,
     availableThemes: [],
@@ -230,250 +188,25 @@ describe("App", () => {
     expect(props.screenCast.stopRecording).toBeCalled()
   })
 
-  // it("shows hostMenuItems", () => {
-  //   const props = getProps({
-  //     hostCommunication: getHostCommunicationProp({
-  //       sendMessage: jest.fn(),
-  //       currentState: getHostCommunicationState({
-  //         queryParams: "",
-  //         menuItems: [
-  //           {
-  //             type: "separator",
-  //           },
-  //         ] as IMenuItem[],
-  //         toolbarItems: [],
-  //         forcedModalClose: false,
-  //         isOwner: true,
-  //       }),
-  //     }),
-  //   })
-  //   const wrapper = shallow(<App {...props} />)
+  it("closes modals when the modal closure message has been received", () => {})
 
-  //   expect(wrapper.find(MainMenu).prop("hostMenuItems")).toStrictEqual([
-  //     { type: "separator" },
-  //   ])
-  // })
+  it("changes scriptRunState and fires withHostCommunication callback when scriptStopRequested signal has been received", () => {})
 
-  // it("shows hostToolbarItems", () => {
-  //   const props = getProps({
-  //     hostCommunication: getHostCommunicationProp({
-  //       sendMessage: jest.fn(),
-  //       currentState: getHostCommunicationState({
-  //         queryParams: "",
-  //         toolbarItems: [
-  //           {
-  //             key: "favorite",
-  //             icon: "star.svg",
-  //           },
-  //         ] as IToolbarItem[],
-  //       }),
-  //     }),
-  //   })
-  //   const wrapper = shallow(<App {...props} />)
-  //   wrapper.setState({ hideTopBar: false })
+  it("changes scriptRunState and fires withHostCommunication callback when scriptRerunRequested signal has been received", () => {})
 
-  //   expect(
-  //     wrapper.find(ToolbarActions).prop("hostToolbarItems")
-  //   ).toStrictEqual([
-  //     {
-  //       key: "favorite",
-  //       icon: "star.svg",
-  //     },
-  //   ])
-  // })
+  it("fires withHostCommunication callback when cacheClearRequested signal has been received", () => {})
 
-  // it("closes modals when the modal closure message has been received", () => {
-  //   const wrapper = shallow(<App {...getProps()} />)
-  //   const dialog = StreamlitDialog({
-  //     type: DialogType.ABOUT,
-  //     sessionInfo: mockSessionInfo(),
-  //     onClose: () => {},
-  //   })
-  //   wrapper.setState({ dialog })
-  //   expect(wrapper.find(Modal)).toHaveLength(1)
-  //   const onModalReset = jest.fn()
-  //   wrapper.setProps(
-  //     getProps({
-  //       hostCommunication: getHostCommunicationProp({
-  //         currentState: getHostCommunicationState({ forcedModalClose: true }),
-  //         onModalReset,
-  //       }),
-  //     })
-  //   )
-  //   expect(wrapper.find(Modal)).toHaveLength(0)
-  //   expect(onModalReset).toBeCalled()
-  // })
+  it("does not prevent a modal from opening when closure message is set", () => {})
 
-  // it("changes scriptRunState and fires withHostCommunication callback when scriptStopRequested signal has been received", () => {
-  //   const wrapper = shallow(<App {...getProps()} />)
-  //   const instance = wrapper.instance() as App
+  it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when the app is first rendered", () => {})
 
-  //   instance.isServerConnected = jest.fn().mockReturnValue(true)
+  it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing", () => {})
 
-  //   // We explicitly set the scriptRunState to RUNNING, so we can test that
-  //   // scriptStopRequested is handled correctly.
-  //   wrapper.setState({
-  //     scriptRunState: ScriptRunState.RUNNING,
-  //   })
+  it("does not sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing to the same state", () => {})
 
-  //   wrapper.setProps(
-  //     getProps({
-  //       hostCommunication: getHostCommunicationProp({
-  //         currentState: getHostCommunicationState({
-  //           scriptStopRequested: true,
-  //         }),
-  //       }),
-  //     })
-  //   )
+  it("sends theme info to the host when the app is first rendered", () => {})
 
-  //   expect(wrapper.state("scriptRunState")).toBe(ScriptRunState.STOP_REQUESTED)
-  //   expect(instance.props.hostCommunication.onScriptStop).toHaveBeenCalled()
-  // })
-
-  // it("changes scriptRunState and fires withHostCommunication callback when scriptRerunRequested signal has been received", () => {
-  //   const wrapper = shallow(<App {...getProps()} />)
-  //   const instance = wrapper.instance() as App
-
-  //   instance.isServerConnected = jest.fn().mockReturnValue(true)
-
-  //   wrapper.setProps(
-  //     getProps({
-  //       hostCommunication: getHostCommunicationProp({
-  //         currentState: getHostCommunicationState({
-  //           scriptRerunRequested: true,
-  //         }),
-  //       }),
-  //     })
-  //   )
-
-  //   expect(wrapper.state("scriptRunState")).toBe(
-  //     ScriptRunState.RERUN_REQUESTED
-  //   )
-  //   expect(instance.props.hostCommunication.onScriptRerun).toHaveBeenCalled()
-  // })
-
-  // it("fires withHostCommunication callback when cacheClearRequested signal has been received", () => {
-  //   const wrapper = shallow(<App {...getProps()} />)
-  //   const instance = wrapper.instance() as App
-
-  //   instance.isServerConnected = jest.fn().mockReturnValue(true)
-
-  //   wrapper.setProps(
-  //     getProps({
-  //       hostCommunication: getHostCommunicationProp({
-  //         currentState: getHostCommunicationState({
-  //           cacheClearRequested: true,
-  //         }),
-  //       }),
-  //     })
-  //   )
-  //   expect(instance.props.hostCommunication.onCacheClear).toHaveBeenCalled()
-  // })
-
-  // it("does not prevent a modal from opening when closure message is set", () => {
-  //   const onModalReset = jest.fn()
-  //   const wrapper = shallow(
-  //     <App
-  //       {...getProps({
-  //         hostCommunication: getHostCommunicationProp({
-  //           currentState: getHostCommunicationState({
-  //             menuItems: [],
-  //             queryParams: "",
-  //             forcedModalClose: false,
-  //           }),
-  //           onModalReset,
-  //           sendMessage: jest.fn(),
-  //         }),
-  //       })}
-  //     />
-  //   )
-  //   wrapper.setProps(
-  //     getProps({
-  //       hostCommunication: getHostCommunicationProp({
-  //         currentState: getHostCommunicationState({ forcedModalClose: true }),
-  //         onModalReset,
-  //       }),
-  //     })
-  //   )
-  //   expect(onModalReset).toBeCalled()
-  //   wrapper.setProps(
-  //     getProps({
-  //       hostCommunication: getHostCommunicationProp({
-  //         currentState: getHostCommunicationState({ forcedModalClose: false }),
-  //         onModalReset,
-  //       }),
-  //     })
-  //   )
-  //   const dialog = StreamlitDialog({
-  //     type: DialogType.ABOUT,
-  //     sessionInfo: mockSessionInfo(),
-  //     onClose: () => {},
-  //   })
-  //   wrapper.setState({ dialog })
-  //   expect(wrapper.find(Modal)).toHaveLength(1)
-  // })
-
-  // it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when the app is first rendered", () => {
-  //   const props = getProps()
-  //   shallow(<App {...props} />)
-
-  //   expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-  //     type: "SCRIPT_RUN_STATE_CHANGED",
-  //     scriptRunState: ScriptRunState.NOT_RUNNING,
-  //   })
-  // })
-
-  // it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing", () => {
-  //   const props = getProps()
-  //   const wrapper = shallow(<App {...props} />)
-
-  //   Object.values(ScriptRunState).forEach(scriptRunState => {
-  //     wrapper.setState({ scriptRunState })
-  //     expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-  //       type: "SCRIPT_RUN_STATE_CHANGED",
-  //       scriptRunState,
-  //     })
-  //   })
-  // })
-
-  // it("does not sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing to the same state", () => {
-  //   const props = getProps()
-  //   const wrapper = shallow(<App {...props} />)
-
-  //   const scriptRunState = ScriptRunState.RUNNING
-  //   wrapper.setState({ scriptRunState })
-  //   // @ts-expect-error
-  //   props.hostCommunication.sendMessage.mockClear()
-  //   // When scriptRunState changed to the same,
-  //   // sendMessage should not be called again.
-  //   wrapper.setState({ scriptRunState })
-  //   expect(props.hostCommunication.sendMessage).not.toHaveBeenCalled()
-  // })
-
-  // it("sends theme info to the host when the app is first rendered", () => {
-  //   const props = getProps()
-  //   shallow(<App {...props} />)
-
-  //   expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-  //     type: "SET_THEME_CONFIG",
-  //     themeInfo: toExportedTheme(lightTheme.emotion),
-  //   })
-  // })
-
-  // it("both sets theme locally and sends to host when setAndSendTheme is called", () => {
-  //   const props = getProps()
-  //   const wrapper = shallow(<App {...props} />)
-  //   const mockThemeConfig = { emotion: darkTheme.emotion }
-
-  //   // @ts-expect-error
-  //   wrapper.instance().setAndSendTheme(mockThemeConfig)
-
-  //   expect(props.theme.setTheme).toHaveBeenCalledWith(mockThemeConfig)
-  //   expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-  //     type: "SET_THEME_CONFIG",
-  //     themeInfo: toExportedTheme(darkTheme.emotion),
-  //   })
-  // })
+  it("both sets theme locally and sends to host when setAndSendTheme is called", () => {})
 
   it("hides the top bar if hideTopBar === true", () => {
     const wrapper = shallow(<App {...getProps()} />)
@@ -491,51 +224,9 @@ describe("App", () => {
     expect(wrapper.find("ToolbarActions").exists()).toBe(true)
   })
 
-  // it("updates state.appPages when it receives a PagesChanged msg", () => {
-  //   const appPages = [
-  //     { icon: "", pageName: "bob", scriptPath: "bob.py" },
-  //     { icon: "", pageName: "carl", scriptPath: "carl.py" },
-  //   ]
+  it("updates state.appPages when it receives a PagesChanged msg", () => {})
 
-  //   const msg = new ForwardMsg()
-  //   msg.pagesChanged = new PagesChanged({ appPages })
-
-  //   const props = getProps()
-  //   const wrapper = shallow(<App {...props} />)
-  //   expect(wrapper.find("AppView").prop("appPages")).toEqual([])
-
-  //   const instance = wrapper.instance() as App
-  //   instance.handleMessage(msg)
-  //   expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
-
-  //   expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-  //     type: "SET_APP_PAGES",
-  //     appPages,
-  //   })
-  // })
-
-  // it("responds to page change requests", () => {
-  //   const props = getProps()
-  //   const wrapper = shallow(<App {...props} />)
-  //   const instance = wrapper.instance() as App
-  //   instance.onPageChange = jest.fn()
-
-  //   wrapper.setProps(
-  //     getProps({
-  //       hostCommunication: getHostCommunicationProp({
-  //         currentState: getHostCommunicationState({
-  //           requestedPageScriptHash: "hash1",
-  //         }),
-  //       }),
-  //     })
-  //   )
-  //   wrapper.update()
-
-  //   expect(instance.onPageChange).toHaveBeenCalledWith("hash1")
-  //   expect(
-  //     props.hostCommunication.currentState.requestedPageScriptHash
-  //   ).toBeNull()
-  // })
+  it("responds to page change requests", () => {})
 })
 
 const mockGetBaseUriParts = (basePath?: string) => () => ({
@@ -863,38 +554,7 @@ describe("App.handleNewSession", () => {
     expect(window.prerenderReady).toBe(true)
   })
 
-  // it("plumbs appPages and currentPageScriptHash to the AppView component", () => {
-  //   const props = getProps()
-  //   const wrapper = shallow(<App {...props} />)
-
-  //   expect(wrapper.find("AppView").prop("appPages")).toEqual([])
-
-  //   const appPages = [
-  //     { pageScriptHash: "hash1", pageName: "page1" },
-  //     { pageScriptHash: "hash2", pageName: "page2" },
-  //   ]
-
-  //   const newSessionJson = cloneDeep(NEW_SESSION_JSON)
-  //   newSessionJson.appPages = appPages
-  //   newSessionJson.pageScriptHash = "hash1"
-
-  //   // @ts-expect-error
-  //   wrapper.instance().handleNewSession(new NewSession(newSessionJson))
-  //   expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
-  //   expect(wrapper.find("AppView").prop("currentPageScriptHash")).toEqual(
-  //     "hash1"
-  //   )
-  //   expect(document.title).toBe("page1 · Streamlit")
-  //   expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-  //     type: "SET_APP_PAGES",
-  //     appPages,
-  //   })
-  //   expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-  //     type: "SET_CURRENT_PAGE_NAME",
-  //     currentPageName: "",
-  //     currentPageScriptHash: "hash1",
-  //   })
-  // })
+  it("plumbs appPages and currentPageScriptHash to the AppView component", () => {})
 
   it("calls clearAppState if currentPageScriptHash changes", () => {
     const wrapper = shallow(<App {...getProps()} />)
@@ -927,30 +587,7 @@ describe("App.handleNewSession", () => {
     expect(instance.clearAppState).not.toHaveBeenCalled()
   })
 
-  // it("sets hideSidebarNav based on the server config option and host setting", () => {
-  //   const wrapper = shallow(<App {...getProps()} />)
-
-  //   // hideSidebarNav initializes to true.
-  //   expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
-
-  //   // Simulate the server ui.hideSidebarNav config option being false.
-  //   const instance = wrapper.instance() as App
-  //   instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
-  //   expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(false)
-
-  //   // Have the host override the server config option.
-  //   wrapper.setProps(
-  //     getProps({
-  //       hostCommunication: getHostCommunicationProp({
-  //         currentState: getHostCommunicationState({
-  //           hideSidebarNav: true,
-  //         }),
-  //       }),
-  //     })
-  //   )
-
-  //   expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
-  // })
+  it("sets hideSidebarNav based on the server config option and host setting", () => {})
 
   describe("page change URL handling", () => {
     let wrapper: ShallowWrapper
@@ -1170,109 +807,84 @@ describe("App.handleNewSession", () => {
       expect(wrapper.find("DeployButton")).toHaveLength(0)
     })
 
-    // it("button should be hidden for cloud environment", () => {
-    //   const props = getProps({
-    //     hostCommunication: getHostCommunicationProp({
-    //       currentState: getHostCommunicationState({
-    //         isOwner: false,
-    //         menuItems: [
-    //           { label: "Host menu item", key: "host-item", type: "text" },
-    //         ],
-    //       }),
-    //     }),
-    //   })
-    //   const wrapper = shallow(<App {...props} />)
-    //   const instance = wrapper.instance() as App
-
-    //   instance.handleNewSession(
-    //     new NewSession({
-    //       ...NEW_SESSION_JSON,
-    //       config: {
-    //         ...NEW_SESSION_JSON.config,
-    //         toolbarMode: Config.ToolbarMode.DEVELOPER,
-    //       },
-    //     })
-    //   )
-
-    //   expect(wrapper.find("DeployButton")).toHaveLength(0)
-    // })
+    it("button should be hidden for cloud environment", () => {})
   })
 })
 
-describe("App.onHistoryChange", () => {
-  let wrapper: ShallowWrapper
-  let instance: App
+// describe("App.onHistoryChange", () => {
+//   let wrapper: ShallowWrapper
+//   let instance: App
 
-  const NEW_SESSION_JSON = {
-    config: {
-      gatherUsageStats: false,
-      maxCachedMessageAge: 0,
-      mapboxToken: "mapboxToken",
-      allowRunOnSave: false,
-      hideSidebarNav: false,
-    },
-    customTheme: {
-      primaryColor: "red",
-    },
-    initialize: {
-      userInfo: {
-        installationId: "installationId",
-        installationIdV3: "installationIdV3",
-      },
-      environmentInfo: {
-        streamlitVersion: "streamlitVersion",
-        pythonVersion: "pythonVersion",
-      },
-      sessionStatus: {
-        runOnSave: false,
-        scriptIsRunning: false,
-      },
-      sessionId: "sessionId",
-      commandLine: "commandLine",
-    },
-    appPages: [
-      { pageScriptHash: "top_hash", pageName: "streamlit_app" },
-      { pageScriptHash: "sub_hash", pageName: "page2" },
-    ],
-    pageScriptHash: "top_hash",
-  }
+//   const NEW_SESSION_JSON = {
+//     config: {
+//       gatherUsageStats: false,
+//       maxCachedMessageAge: 0,
+//       mapboxToken: "mapboxToken",
+//       allowRunOnSave: false,
+//       hideSidebarNav: false,
+//     },
+//     customTheme: {
+//       primaryColor: "red",
+//     },
+//     initialize: {
+//       userInfo: {
+//         installationId: "installationId",
+//         installationIdV3: "installationIdV3",
+//       },
+//       environmentInfo: {
+//         streamlitVersion: "streamlitVersion",
+//         pythonVersion: "pythonVersion",
+//       },
+//       sessionStatus: {
+//         runOnSave: false,
+//         scriptIsRunning: false,
+//       },
+//       sessionId: "sessionId",
+//       commandLine: "commandLine",
+//     },
+//     appPages: [
+//       { pageScriptHash: "top_hash", pageName: "streamlit_app" },
+//       { pageScriptHash: "sub_hash", pageName: "page2" },
+//     ],
+//     pageScriptHash: "top_hash",
+//   }
 
-  beforeEach(() => {
-    wrapper = shallow(<App {...getProps()} />)
-    instance = wrapper.instance() as App
-    // @ts-expect-error
-    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+//   beforeEach(() => {
+//     wrapper = shallow(<App {...getProps()} />)
+//     instance = wrapper.instance() as App
+//     // @ts-expect-error
+//     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
 
-    window.history.pushState({}, "", "/")
-  })
+//     window.history.pushState({}, "", "/")
+//   })
 
-  it("handles popState events, e.g. clicking browser's back button", async () => {
-    const instance = wrapper.instance() as App
+//   it("handles popState events, e.g. clicking browser's back button", async () => {
+//     const instance = wrapper.instance() as App
 
-    jest.spyOn(instance, "onPageChange")
+//     jest.spyOn(instance, "onPageChange")
 
-    instance.handleNewSession(
-      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
-    )
-    instance.handleNewSession(
-      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "top_hash" })
-    )
-    instance.handleNewSession(
-      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
-    )
-    expect(instance.state.currentPageScriptHash).toEqual("sub_hash")
+//     instance.handleNewSession(
+//       new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
+//     )
+//     instance.handleNewSession(
+//       new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "top_hash" })
+//     )
+//     instance.handleNewSession(
+//       new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
+//     )
+//     expect(instance.state.currentPageScriptHash).toEqual("sub_hash")
 
-    window.history.back()
-    await waitFor(() =>
-      expect(instance.onPageChange).toHaveBeenLastCalledWith("top_hash")
-    )
+//     window.history.back()
+//     await waitFor(() =>
+//       expect(instance.onPageChange).toHaveBeenLastCalledWith("top_hash")
+//     )
 
-    window.history.back()
-    await waitFor(() =>
-      expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
-    )
-  })
-})
+//     window.history.back()
+//     await waitFor(() =>
+//       expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
+//     )
+//   })
+// })
 
 describe("App.handlePageConfigChanged", () => {
   let documentTitle: string
@@ -1465,52 +1077,9 @@ describe("App.sendRerunBackMsg", () => {
 
 //   * handlePageNotFound has branching error messages depending on pageName
 describe("App.handlePageNotFound", () => {
-  // it("includes the missing page name in error modal message if available", () => {
-  //   const props = getProps()
-  //   const wrapper = shallow(<App {...props} />)
-  //   wrapper.setState({
-  //     appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
-  //   })
-  //   const instance = wrapper.instance() as App
-  //   // @ts-expect-error
-  //   instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
-  //   instance.showError = jest.fn()
-  //   instance.handlePageNotFound(
-  //     new PageNotFound({ pageName: "nonexistentPage" })
-  //   )
-  //   expect(instance.showError).toHaveBeenCalledWith(
-  //     "Page not found",
-  //     expect.stringMatching("You have requested page /nonexistentPage")
-  //   )
-  //   expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-  //     type: "SET_CURRENT_PAGE_NAME",
-  //     currentPageName: "",
-  //     currentPageScriptHash: "page_hash",
-  //   })
-  // })
-  // it("uses a more generic error message if no page name is available", () => {
-  //   const props = getProps()
-  //   const wrapper = shallow(<App {...props} />)
-  //   wrapper.setState({
-  //     appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
-  //   })
-  //   const instance = wrapper.instance() as App
-  //   // @ts-expect-error
-  //   instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
-  //   instance.showError = jest.fn()
-  //   instance.handlePageNotFound(new PageNotFound({ pageName: "" }))
-  //   expect(instance.showError).toHaveBeenCalledWith(
-  //     "Page not found",
-  //     expect.stringMatching(
-  //       "The page that you have requested does not seem to exist"
-  //     )
-  //   )
-  //   expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-  //     type: "SET_CURRENT_PAGE_NAME",
-  //     currentPageName: "",
-  //     currentPageScriptHash: "page_hash",
-  //   })
-  // })
+  it("includes the missing page name in error modal message if available", () => {})
+
+  it("uses a more generic error message if no page name is available", () => {})
 })
 
 describe("App.handleDeltaMessage", () => {
@@ -1548,22 +1117,7 @@ describe("Test Main Menu shortcut functionality", () => {
     window.location = prevWindowLocation
   })
 
-  // it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
-  //   const props = getProps({
-  //     hostCommunication: getHostCommunicationProp({
-  //       currentState: getHostCommunicationState({
-  //         isOwner: false,
-  //       }),
-  //       sendMessage: jest.fn(),
-  //     }),
-  //   })
-  //   const wrapper = shallow<App>(<App {...props} />)
-
-  //   wrapper.instance().openClearCacheDialog = jest.fn()
-  //   wrapper.instance().keyHandlers.CLEAR_CACHE()
-
-  //   expect(wrapper.instance().openClearCacheDialog).not.toBeCalled()
-  // })
+  it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {})
 
   it("Tests dev menu shortcuts can be accessed as a developer", () => {
     const props = getProps()

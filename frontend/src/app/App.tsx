@@ -40,7 +40,7 @@ import {
   FormsData,
   WidgetStateManager,
 } from "src/lib/WidgetStateManager"
-import { HostCommunicationManager } from "src/lib/HostCommunicationManager"
+import { HostCommunicationManager } from "src/lib/hostComm/HostCommunicationManager"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
@@ -274,6 +274,7 @@ export class App extends PureComponent<Props, State> {
     this.hostCommunicationMgr = new HostCommunicationManager({
       theme: this.props.theme,
       sendRerunBackMsg: this.sendRerunBackMsg,
+      onPageChange: this.onPageChange,
       closeModal: this.closeDialog,
       stopScript: this.stopScript,
       rerunScript: this.rerunScript,
@@ -396,11 +397,6 @@ export class App extends PureComponent<Props, State> {
     prevProps: Readonly<Props>,
     prevState: Readonly<State>
   ): void {
-    // const { requestedPageScriptHash } = this.hostCommunicationMgr.state
-    // if (requestedPageScriptHash !== null) {
-    //   this.onPageChange(requestedPageScriptHash)
-    //   this.hostCommunicationMgr.onPageChanged()
-    // }
     // @ts-expect-error
     if (window.prerenderReady === false && this.isAppInReadyState(prevState)) {
       // @ts-expect-error
