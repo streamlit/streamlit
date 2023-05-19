@@ -67,6 +67,7 @@ class UploadFilePresignedUrlRequestHandler(tornado.web.RequestHandler):
 
         for i in range(number_of_files):
             file_id = str(uuid.uuid4())
+            # TODO [Karen] use PORT variable instead of hardcoded 8501
             presigned_url = (
                 f"http://localhost:8501/_stcore/upload_fileZZ/{session_id}/{file_id}"
             )
