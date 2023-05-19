@@ -33,12 +33,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.uploaded_file_manager import (
-    NewUploadedFile,
-    NewUploadedFileRec,
-    UploadedFile,
-    UploadedFileRec,
-)
+from streamlit.runtime.uploaded_file_manager import NewUploadedFile, NewUploadedFileRec
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:

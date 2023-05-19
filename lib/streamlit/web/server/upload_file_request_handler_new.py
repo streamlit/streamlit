@@ -27,7 +27,7 @@ from streamlit.web.server import routes, server_util
 
 # /_stcore/upload_file/(optional session id)/(optional widget id)
 NEW_UPLOAD_FILE_ROUTE = (
-    r"/_stcore/upload_fileZZ/(?P<session_id>[^/]*)/(?P<file_url>[^/]*)"
+    r"/_stcore/upload_fileZZ/(?P<session_id>[^/]*)/(?P<file_id>[^/]*)"
 )
 LOGGER = get_logger(__name__)
 
@@ -102,7 +102,7 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
         files: Dict[str, List[Any]] = {}
         #
         session_id = self.path_kwargs["session_id"]
-        file_url = self.path_kwargs["file_url"]
+        file_url = self.request.full_url()
 
         tornado.httputil.parse_body_arguments(
             content_type=self.request.headers["Content-Type"],
@@ -142,7 +142,7 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
     def delete(self, **kwargs):
         """DELETE FILE"""
         session_id = self.path_kwargs["session_id"]
-        file_url = self.path_kwargs["file_url"]
+        file_url = self.request.full_url()
 
         self._file_mgr.remove_file_modern(session_id=session_id, file_url=file_url)
         self.set_status(204)
