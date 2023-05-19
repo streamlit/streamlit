@@ -34,10 +34,12 @@ from streamlit.elements.data_editor import (
     _apply_dataframe_edits,
     _apply_row_additions,
     _apply_row_deletions,
+    _parse_value,
 )
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
+    ColumnDataKind,
     determine_dataframe_schema,
 )
 from streamlit.errors import StreamlitAPIException
@@ -57,9 +59,82 @@ def _get_arrow_schema(df: pd.DataFrame) -> pa.Schema:
 
 
 class DataEditorUtilTest(unittest.TestCase):
-    def test_parse_value(self):
-        # TODO: test parse_value
-        pass
+    @parameterized.expand(
+        [
+            (None, ColumnDataKind.STRING, None),
+            ("hello", ColumnDataKind.STRING, "hello"),
+            (123, ColumnDataKind.STRING, "123"),
+            (123.1234, ColumnDataKind.STRING, "123.1234"),
+            (None, ColumnDataKind.INTEGER, None),
+            ("123", ColumnDataKind.INTEGER, 123),
+            (123, ColumnDataKind.INTEGER, 123),
+            (123.1234, ColumnDataKind.INTEGER, 123),
+            (None, ColumnDataKind.FLOAT, None),
+            ("123.45", ColumnDataKind.FLOAT, 123.45),
+            (123.45, ColumnDataKind.FLOAT, 123.45),
+            (123, ColumnDataKind.FLOAT, 123),
+            (None, ColumnDataKind.BOOLEAN, None),
+            (True, ColumnDataKind.BOOLEAN, True),
+            ("true", ColumnDataKind.BOOLEAN, True),
+            (None, ColumnDataKind.DATETIME, None),
+            (
+                "2021-01-01T10:20:30",
+                ColumnDataKind.DATETIME,
+                pd.Timestamp(
+                    "2021-01-01T10:20:30",
+                ),
+            ),
+            (
+                "2021-01-01",
+                ColumnDataKind.DATETIME,
+                pd.Timestamp("2021-01-01T00:00:00"),
+            ),
+            (
+                "2021-01-01T10:20:30Z",
+                ColumnDataKind.DATETIME,
+                pd.Timestamp("2021-01-01T10:20:30Z"),
+            ),
+            (
+                "2021-01-01T10:20:30.123456",
+                ColumnDataKind.DATETIME,
+                pd.Timestamp("2021-01-01T10:20:30.123456"),
+            ),
+            (
+                "2021-01-01T10:20:30.123456Z",
+                ColumnDataKind.DATETIME,
+                pd.Timestamp("2021-01-01T10:20:30.123456Z"),
+            ),
+            (None, ColumnDataKind.TIME, None),
+            ("10:20:30", ColumnDataKind.TIME, datetime.time(10, 20, 30)),
+            ("10:20:30.123456", ColumnDataKind.TIME, datetime.time(10, 20, 30, 123456)),
+            (
+                "2021-01-01T10:20:30.123456Z",
+                ColumnDataKind.TIME,
+                datetime.time(10, 20, 30, 123456),
+            ),
+            (
+                "1970-01-01T10:20:30.123456Z",
+                ColumnDataKind.TIME,
+                datetime.time(10, 20, 30, 123456),
+            ),
+            (None, ColumnDataKind.DATE, None),
+            ("2021-01-01", ColumnDataKind.DATE, datetime.date(2021, 1, 1)),
+            (
+                "2021-01-01T10:20:30.123456Z",
+                ColumnDataKind.DATE,
+                datetime.date(2021, 1, 1),
+            ),
+        ]
+    )
+    def test_parse_value(
+        self,
+        value: str | int | float | bool | None,
+        column_data_kind: ColumnDataKind,
+        expected: Any,
+    ):
+        """Test that _parse_value parses the input to the correct type."""
+        result = _parse_value(value, column_data_kind)
+        self.assertEqual(result, expected)
 
     def test_apply_cell_edits(self):
         """Test applying cell edits to a DataFrame."""

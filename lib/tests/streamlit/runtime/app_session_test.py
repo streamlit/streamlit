@@ -68,6 +68,7 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
         return AppSession(
             script_data=ScriptData("/fake/script_path.py", "fake_command_line"),
             uploaded_file_manager=MagicMock(),
+            script_cache=MagicMock(),
             message_enqueued_callback=None,
             local_sources_watcher=MagicMock(),
             user_info={"email": "test@test.com"},
@@ -264,6 +265,7 @@ class AppSessionTest(unittest.TestCase):
             client_state=session._client_state,
             session_state=session._session_state,
             uploaded_file_mgr=session._uploaded_file_mgr,
+            script_cache=session._script_cache,
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
         )
