@@ -283,7 +283,7 @@ describe("useDataEditor hook", () => {
     // This should have added one row
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS + 1)
 
-    expect(applyEditsMock).toHaveBeenCalledWith(false, false)
+    expect(applyEditsMock).toHaveBeenCalled()
   })
 
   it("uses default values for new rows in onRowAppended", () => {

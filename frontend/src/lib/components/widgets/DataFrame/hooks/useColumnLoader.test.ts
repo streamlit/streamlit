@@ -93,7 +93,9 @@ describe("applyColumnConfig", () => {
         {
           width: "small",
           disabled: false,
-          type: "text",
+          type_config: {
+            type: "text",
+          },
         } as ColumnConfigProps,
       ],
       [
@@ -111,12 +113,14 @@ describe("applyColumnConfig", () => {
     const column1 = applyColumnConfig(MOCK_COLUMNS[1], columnConfig)
     expect(column1.isEditable).toBe(true)
     expect(column1.width).toBe(COLUMN_WIDTH_MAPPING.small)
-    expect(column1.customType).toBe("text")
+    expect((column1.columnTypeOptions as any).type).toBe("text")
     expect(column1).toEqual({
       ...MOCK_COLUMNS[1],
       width: COLUMN_WIDTH_MAPPING.small,
       isEditable: true,
-      customType: "text",
+      columnTypeOptions: {
+        type: "text",
+      },
     })
 
     const column2 = applyColumnConfig(MOCK_COLUMNS[2], columnConfig)
@@ -239,7 +243,9 @@ describe("getColumnType", () => {
         isHidden: false,
         isIndex: false,
         isStretched: false,
-        customType: typeName,
+        columnTypeOptions: {
+          type: typeName,
+        },
       })
       expect(columnType).toEqual(columnCreator)
     }

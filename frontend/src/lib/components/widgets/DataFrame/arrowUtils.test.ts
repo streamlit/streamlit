@@ -45,7 +45,6 @@ import {
 } from "./columns"
 import {
   extractCssProperty,
-  processDisplayData,
   applyPandasStylerCss,
   getColumnTypeFromArrow,
   getIndexFromArrow,
@@ -179,11 +178,6 @@ describe("extractCssProperty", () => {
       "#f1f1f1"
     )
   })
-})
-
-test("processDisplayData should remove line breaks", () => {
-  expect(processDisplayData("\n")).toBe(" ")
-  expect(processDisplayData("\nhello\n\nworld")).toBe(" hello  world")
 })
 
 describe("applyPandasStylerCss", () => {

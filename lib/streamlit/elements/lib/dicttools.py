@@ -14,7 +14,7 @@
 
 """Tools for working with dicts."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional
 
 
 def _unflatten_single_dict(flat_dict):
@@ -134,3 +134,14 @@ def unflatten(flat_dict, encodings=None):
             out_dict.pop(k)
 
     return out_dict
+
+
+def remove_none_values(input_dict: Mapping[Any, Any]) -> Dict[Any, Any]:
+    """Remove all keys with None values from a dict."""
+    new_dict = {}
+    for key, val in input_dict.items():
+        if isinstance(val, dict):
+            val = remove_none_values(val)
+        if val is not None:
+            new_dict[key] = val
+    return new_dict

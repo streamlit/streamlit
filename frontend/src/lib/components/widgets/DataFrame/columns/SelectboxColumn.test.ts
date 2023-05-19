@@ -37,7 +37,7 @@ const SELECTBOX_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
   name: "selectbox_column",
   title: "Selectbox column",
   indexNumber: 0,
-  isEditable: false,
+  isEditable: true,
   isHidden: false,
   isIndex: false,
   isStretched: false,
