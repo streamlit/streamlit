@@ -140,16 +140,20 @@ class UploadedFileManager(CacheStatsProvider):
         print(file.name)
         self._modern_files[session_id][file.file_url] = file
 
+    # PROTOCOL METHOD
     def get_file_modern(self, session_id, file_url) -> IO[bytes]:
         return NewUploadedFile(record=self._modern_files[session_id][file_url])
 
-    def delete_file_modern(self, session_id, file_url):
+    # PROTOCOL METHOD
+    def remove_file_modern(self, session_id, file_url):
         print("IN DELETE!!!")
         self._modern_files[session_id].pop(file_url, None)
 
-    def delete_session_files_modern(self, session_id):
+    # PROTOCOL METHOD
+    def remove_session_files_modern(self, session_id):
         del self._modern_files[session_id]
 
+    # PROTOCOL METHOD
     def get_files_modern(self, session_id, file_urls) -> List[NewUploadedFileRec]:
         return [self._modern_files[session_id][file_url] for file_url in file_urls]
 

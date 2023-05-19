@@ -144,5 +144,5 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
         session_id = self.path_kwargs["session_id"]
         file_url = self.path_kwargs["file_url"]
 
-        self._file_mgr.delete_file_modern(session_id=session_id, file_url=file_url)
+        self._file_mgr.remove_file_modern(session_id=session_id, file_url=file_url)
         self.set_status(204)
