@@ -493,6 +493,33 @@ def LinkColumn(
     Examples
     --------
 
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "apps": [
+    >>>             "https://roadmap.streamlit.app",
+    >>>             "https://extras.streamlit.app",
+    >>>             "https://issues.streamlit.app",
+    >>>             "https://30days.streamlit.app",
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "apps": st.column_config.LinkColumn(
+    >>>             "Trending apps",
+    >>>             help="The top trending Streamlit apps",
+    >>>             validate="^https://[a-z]+\.streamlit\.app$",
+    >>>             max_chars=100,
+    >>>         )
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
+
     .. output::
         https://doc-link-column.streamlit.app/
         height: 350px
@@ -700,6 +727,33 @@ def BarChartColumn(
     Examples
     --------
 
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "sales": [
+    >>>             [0, 4, 26, 80, 100, 40],
+    >>>             [80, 20, 80, 35, 40, 100],
+    >>>             [10, 20, 80, 80, 70, 0],
+    >>>             [10, 100, 20, 100, 30, 100],
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "sales": st.column_config.BarChartColumn(
+    >>>             "Sales (last 6 months)",
+    >>>             help="The sales volume in the last 6 months",
+    >>>             y_min=0,
+    >>>             y_max=100,
+    >>>         ),
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
+
     .. output::
         https://doc-barchart-column.streamlit.app/
         height: 350px
@@ -753,6 +807,34 @@ def LineChartColumn(
     Examples
     --------
 
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "sales": [
+    >>>             [0, 4, 26, 80, 100, 40],
+    >>>             [80, 20, 80, 35, 40, 100],
+    >>>             [10, 20, 80, 80, 70, 0],
+    >>>             [10, 100, 20, 100, 30, 100],
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "sales": st.column_config.LineChartColumn(
+    >>>             "Sales (last 6 months)",
+    >>>             width="medium",
+    >>>             help="The sales volume in the last 6 months",
+    >>>             y_min=0,
+    >>>             y_max=100,
+    >>>          ),
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
+
     .. output::
         https://doc-linechart-column.streamlit.app/
         height: 350px
@@ -804,6 +886,30 @@ def ImageColumn(
     Examples
     --------
 
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "apps": [
+    >>>             "https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_image/5435b8cb-6c6c-490b-9608-799b543655d3/Home_Page.png",
+    >>>             "https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_image/ef9a7627-13f2-47e5-8f65-3f69bb38a5c2/Home_Page.png",
+    >>>             "https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_image/31b99099-8eae-4ff8-aa89-042895ed3843/Home_Page.png",
+    >>>             "https://storage.googleapis.com/s4a-prod-share-preview/default/st_app_screenshot_image/6a399b09-241e-4ae7-a31f-7640dc1d181e/Home_Page.png",
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "apps": st.column_config.ImageColumn(
+    >>>             "App Previews", help="Streamlit app preview screenshots"
+    >>>         )
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
+
     .. output::
         https://doc-image-column.streamlit.app/
         height: 350px
@@ -842,6 +948,32 @@ def ListColumn(
 
     Examples
     --------
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "sales": [
+    >>>             [0, 4, 26, 80, 100, 40],
+    >>>             [80, 20, 80, 35, 40, 100],
+    >>>             [10, 20, 80, 80, 70, 0],
+    >>>             [10, 100, 20, 100, 30, 100],
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "sales": st.column_config.ListColumn(
+    >>>             "Sales (last 6 months)",
+    >>>             help="The sales volume in the last 6 months",
+    >>>             width="medium",
+    >>>         ),
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
 
     .. output::
         https://doc-list-column.streamlit.app/
