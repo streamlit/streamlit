@@ -174,6 +174,10 @@ class DataFrameSelectorMixin:
         >>>     hide_index=True,
         >>> )
 
+        .. output::
+           https://doc-dataframe-config.streamlitapp.com/
+           height: 350px
+
         """
         if _use_arrow():
             return self.dg._arrow_dataframe(
