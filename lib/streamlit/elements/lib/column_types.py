@@ -223,6 +223,12 @@ def Column(
     required: bool or None
         Whether edited cells in the column need to have a value. If True, an edited cell
         can only be submitted if it has a value other than None. Defaults to False.
+    Examples
+    --------
+
+    .. output::
+        https://doc-column.streamlit.app/
+        height: 350px
     """
     return ColumnConfig(
         label=label, width=width, help=help, disabled=disabled, required=required
@@ -316,6 +322,10 @@ def NumberColumn(
     >>>     },
     >>>     hide_index=True,
     >>> )
+
+    .. output::
+        https://doc-number-column.streamlit.app/
+        height: 350px
     """
 
     return ColumnConfig(
@@ -410,6 +420,10 @@ def TextColumn(
     >>>     },
     >>>     hide_index=True,
     >>> )
+
+    .. output::
+        https://doc-text-column.streamlit.app/
+        height: 350px
     """
 
     return ColumnConfig(
@@ -479,6 +493,9 @@ def LinkColumn(
     Examples
     --------
 
+    .. output::
+        https://doc-link-column.streamlit.app/
+        height: 350px
     """
 
     return ColumnConfig(
@@ -559,6 +576,10 @@ def CheckboxColumn(
     >>>     disabled=["widgets"],
     >>>     hide_index=True,
     >>> )
+
+    .. output::
+        https://doc-checkbox-column.streamlit.app/
+        height: 350px
     """
 
     return ColumnConfig(
@@ -621,6 +642,9 @@ def SelectboxColumn(
     Examples
     --------
 
+    .. output::
+        https://doc-selectbox-column.streamlit.app/
+        height: 350px
     """
 
     return ColumnConfig(
@@ -676,6 +700,9 @@ def BarChartColumn(
     Examples
     --------
 
+    .. output::
+        https://doc-barchart-column.streamlit.app/
+        height: 350px
     """
 
     return ColumnConfig(
@@ -726,6 +753,9 @@ def LineChartColumn(
     Examples
     --------
 
+    .. output::
+        https://doc-linechart-column.streamlit.app/
+        height: 350px
     """
 
     return ColumnConfig(
@@ -774,6 +804,9 @@ def ImageColumn(
     Examples
     --------
 
+    .. output::
+        https://doc-image-column.streamlit.app/
+        height: 350px
     """
     return ColumnConfig(
         label=label, width=width, help=help, type_config=ImageColumnConfig(type="image")
@@ -810,6 +843,9 @@ def ListColumn(
     Examples
     --------
 
+    .. output::
+        https://doc-list-column.streamlit.app/
+        height: 350px
     """
     return ColumnConfig(
         label=label, width=width, help=help, type_config=ListColumnConfig(type="list")
@@ -913,6 +949,10 @@ def DatetimeColumn(
     >>>     },
     >>>     hide_index=True,
     >>> )
+
+    .. output::
+        https://doc-datetime-column.streamlit.app/
+        height: 350px
     """
 
     return ColumnConfig(
@@ -1024,6 +1064,10 @@ def TimeColumn(
     >>>     },
     >>>     hide_index=True,
     >>> )
+
+    .. output::
+        https://doc-time-column.streamlit.app/
+        height: 350px
     """
 
     return ColumnConfig(
@@ -1134,6 +1178,10 @@ def DateColumn(
     >>>     },
     >>>     hide_index=True,
     >>> )
+
+    .. output::
+        https://doc-date-column.streamlit.app/
+        height: 350px
     """
     return ColumnConfig(
         label=label,
@@ -1221,6 +1269,10 @@ def ProgressColumn(
     >>>     },
     >>>     hide_index=True,
     >>> )
+
+    .. output::
+        https://doc-progress-column.streamlit.app/
+        height: 350px
     """
 
     return ColumnConfig(
