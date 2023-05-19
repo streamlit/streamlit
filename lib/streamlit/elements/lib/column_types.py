@@ -692,6 +692,37 @@ def SelectboxColumn(
     Examples
     --------
 
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "category": [
+    >>>             "📊 Data Exploration",
+    >>>             "📈 Data Visualization",
+    >>>             "🤖 LLM",
+    >>>             "📊 Data Exploration",
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.experimental_data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "category": st.column_config.SelectboxColumn(
+    >>>             "App Category",
+    >>>             help="The category of the app",
+    >>>             width="medium",
+    >>>             options=[
+    >>>                 "📊 Data Exploration",
+    >>>                 "📈 Data Visualization",
+    >>>                 "🤖 LLM",
+    >>>             ],
+    >>>         )
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
+
     .. output::
         https://doc-selectbox-column.streamlit.app/
         height: 350px
@@ -927,7 +958,7 @@ def ImageColumn(
     >>>     data_df,
     >>>     column_config={
     >>>         "apps": st.column_config.ImageColumn(
-    >>>             "App Previews", help="Streamlit app preview screenshots"
+    >>>             "Preview Image", help="Streamlit app preview screenshots"
     >>>         )
     >>>     },
     >>>     hide_index=True,
@@ -1405,16 +1436,14 @@ def ProgressColumn(
     >>>
     >>> data_df = pd.DataFrame(
     >>>     {
-    >>>         "progress": [0.14, 0.49, 0.9, 0.231],
-    >>>         "volume": [200, 550, 1000, 80],
+    >>>         "sales": [200, 550, 1000, 80],
     >>>     }
     >>> )
     >>>
     >>> st.experimental_data_editor(
     >>>     data_df,
     >>>     column_config={
-    >>>         "progress": st.column_config.ProgressColumn("Progress"),
-    >>>         "volume": st.column_config.ProgressColumn(
+    >>>         "sales": st.column_config.ProgressColumn(
     >>>             "Sales volume",
     >>>             help="The sales volume in USD",
     >>>             format="$%f",
