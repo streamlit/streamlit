@@ -151,6 +151,8 @@ function DataFrame({
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
   const originalNumRows = Math.max(0, dataDimensions.rows - 1)
+  // Number of index columns in the original data:
+  const originalNumIndices = dataDimensions.headerColumns
 
   // For empty tables, we show an extra row that
   // contains "empty" as a way to indicate that the table is empty.
@@ -182,7 +184,6 @@ function DataFrame({
   }, [originalNumRows])
 
   const { columns: originalColumns } = useColumnLoader(element, data, disabled)
-
   // On the first rendering, try to load initial widget state if
   // it exist. This is required in the case that other elements
   // are inserted before this widget.
@@ -191,7 +192,11 @@ function DataFrame({
       if (element.editingMode !== READ_ONLY) {
         const initialWidgetValue = widgetMgr.getStringValue(element)
         if (initialWidgetValue) {
-          editingState.current.fromJson(initialWidgetValue, originalColumns)
+          editingState.current.fromJson(
+            initialWidgetValue,
+            originalColumns,
+            originalNumIndices
+          )
           setNumRows(editingState.current.getNumRows())
         }
       }
@@ -232,14 +237,17 @@ function DataFrame({
 
       // Use debounce to prevent rapid updates to the widget state.
       debounce(DEBOUNCE_TIME_MS, () => {
-        const currentEditingState = editingState.current.toJson(columns)
+        const currentEditingState = editingState.current.toJson(
+          columns,
+          originalNumIndices
+        )
         let currentWidgetState = widgetMgr.getStringValue(
           element as WidgetInfo
         )
 
         if (currentWidgetState === undefined) {
           // Create an empty widget state
-          currentWidgetState = new EditingState(0).toJson([])
+          currentWidgetState = new EditingState(0).toJson([], 0)
         }
 
         // Only update if there is actually a difference between editing and widget state

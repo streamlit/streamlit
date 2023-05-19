@@ -47,8 +47,12 @@ class EditingState {
    * @param columns - The columns of the table
    * @returns JSON string
    */
-  toJson(columns: BaseColumn[]): string {
+  toJson(columns: BaseColumn[], numIndices: number): string {
     const columnsByIndex = new Map<number, BaseColumn>()
+    columns.forEach(column => {
+      columnsByIndex.set(column.indexNumber, column)
+    })
+
     columns.forEach(column => {
       columnsByIndex.set(column.indexNumber, column)
     })
@@ -70,7 +74,10 @@ class EditingState {
         row.forEach((cell: GridCell, colIndex: number, _map) => {
           const column = columnsByIndex.get(colIndex)
           if (column) {
-            currentState.edited_cells[`${rowIndex}:${colIndex}`] =
+            // We need to adjust the column index by the number of index columns
+            // since we want to use negative values for the index columns.
+            // so that the numerical position matches with the position in Pandas.
+            currentState.edited_cells[`${rowIndex}:${colIndex - numIndices}`] =
               column.getCellValue(cell)
           }
         })
@@ -100,7 +107,10 @@ class EditingState {
           }
 
           if (notNullOrUndefined(cellValue)) {
-            addedRow[colIndex] = cellValue
+            // We need to adjust the column index by the number of index columns
+            // since we want to use negative values for the index columns.
+            // so that the numerical position matches with the position in Pandas.
+            addedRow[colIndex - numIndices] = cellValue
           }
         }
       })
@@ -126,7 +136,11 @@ class EditingState {
    * @param columns - The columns of the table
    * @returns JSON string
    */
-  fromJson(editingStateJson: string, columns: BaseColumn[]): void {
+  fromJson(
+    editingStateJson: string,
+    columns: BaseColumn[],
+    numIndices: number
+  ): void {
     const editingState = JSON.parse(editingStateJson)
     // Map columns to column index
     const columnsByIndex = new Map<number, BaseColumn>()
@@ -139,14 +153,20 @@ class EditingState {
     // row -> column -> GridCell
     Object.keys(editingState.edited_cells).forEach(key => {
       const [rowIndex, colIndex] = key.split(":").map(Number)
-      const column = columnsByIndex.get(colIndex)
+
+      // We use a different numerical position for the widget state and
+      // the state of the frontend component. The widget state has all indexes using negative numbers
+      // to that the column positions better align with the positions in Pandas.
+      // The frontend component starts at 0 with the first index column.
+      const colIndexAdjusted = colIndex + numIndices
+      const column = columnsByIndex.get(colIndexAdjusted)
       if (column) {
         const cell = column.getCell(editingState.edited_cells[key])
         if (cell) {
           if (!this.editedCells.has(rowIndex)) {
             this.editedCells.set(rowIndex, new Map())
           }
-          this.editedCells.get(rowIndex)?.set(colIndex, cell)
+          this.editedCells.get(rowIndex)?.set(colIndexAdjusted, cell)
         }
       }
     })
@@ -164,12 +184,13 @@ class EditingState {
 
       // Set the cells that were actually edited in the row
       Object.keys(row).forEach(colIndex => {
-        const column = columnsByIndex.get(Number(colIndex))
+        const colIndexAdjusted = colIndex + numIndices
+        const column = columnsByIndex.get(Number(colIndexAdjusted))
 
         if (column) {
-          const cell = column.getCell(row[Number(colIndex)])
+          const cell = column.getCell(row[Number(colIndexAdjusted)])
           if (cell) {
-            addedRow.set(Number(colIndex), cell)
+            addedRow.set(Number(colIndexAdjusted), cell)
           }
         }
       })

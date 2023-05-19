@@ -233,17 +233,16 @@ def _apply_cell_edits(
     for cell, value in edited_cells.items():
         row_pos, col_pos = map(int, cell.split(":"))
 
-        if col_pos < index_count:
+        if col_pos < 0:  # Index columns use negative column positions
             # The edited cell is part of the index
             # To support multi-index in the future: use a tuple of values here
             # instead of a single value
-            df.index.values[row_pos] = _parse_value(value, dataframe_schema[col_pos])
+            df.index.values[row_pos] = _parse_value(
+                value, dataframe_schema[col_pos + index_count]
+            )
         else:
-            # We need to subtract the number of index levels from col_pos
-            # to get the correct column position for Pandas DataFrames
-            mapped_column = col_pos - index_count
-            df.iat[row_pos, mapped_column] = _parse_value(
-                value, dataframe_schema[col_pos]
+            df.iat[row_pos, col_pos] = _parse_value(
+                value, dataframe_schema[col_pos + index_count]
             )
 
 
@@ -286,15 +285,16 @@ def _apply_row_additions(
         for col in added_row.keys():
             value = added_row[col]
             col_pos = int(col)
-            if col_pos < index_count:
+            if col_pos < 0:  # Index columns use negative column positions
                 # To support multi-index in the future: use a tuple of values here
                 # instead of a single value
-                index_value = _parse_value(value, dataframe_schema[col_pos])
+                index_value = _parse_value(
+                    value, dataframe_schema[col_pos + index_count]
+                )
             else:
-                # We need to subtract the number of index levels from the col_pos
-                # to get the correct column position for Pandas DataFrames
-                mapped_column = col_pos - index_count
-                new_row[mapped_column] = _parse_value(value, dataframe_schema[col_pos])
+                new_row[col_pos] = _parse_value(
+                    value, dataframe_schema[col_pos + index_count]
+                )
         # Append the new row to the dataframe
         if range_index_stop is not None:
             df.loc[range_index_stop, :] = new_row

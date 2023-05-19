@@ -169,18 +169,21 @@ describe("EditingState class", () => {
     } as BaseColumnProps
 
     // Convert to JSON
-    const json = editingState.toJson([
-      TextColumn({
-        ...baseColumnProps,
-        indexNumber: 0,
-        id: "column_1",
-      }),
-      TextColumn({
-        ...baseColumnProps,
-        indexNumber: 1,
-        id: "column_2",
-      }),
-    ])
+    const json = editingState.toJson(
+      [
+        TextColumn({
+          ...baseColumnProps,
+          indexNumber: 0,
+          id: "column_1",
+        }),
+        TextColumn({
+          ...baseColumnProps,
+          indexNumber: 1,
+          id: "column_2",
+        }),
+      ],
+      0
+    )
 
     // Row should npt be included in the JSON:
     expect(json).toEqual(
@@ -219,18 +222,21 @@ describe("EditingState class", () => {
     } as BaseColumnProps
 
     // Convert to JSON
-    const json = editingState.toJson([
-      TextColumn({
-        ...baseColumnProps,
-        indexNumber: 0,
-        id: "column_1",
-      }),
-      TextColumn({
-        ...baseColumnProps,
-        indexNumber: 1,
-        id: "column_2",
-      }),
-    ])
+    const json = editingState.toJson(
+      [
+        TextColumn({
+          ...baseColumnProps,
+          indexNumber: 0,
+          id: "column_1",
+        }),
+        TextColumn({
+          ...baseColumnProps,
+          indexNumber: 1,
+          id: "column_2",
+        }),
+      ],
+      0
+    )
 
     expect(json).toEqual(
       `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`
@@ -277,8 +283,8 @@ describe("EditingState class", () => {
         id: "column_2",
       }),
     ]
-    editingState.fromJson(editingStateJson, MOCK_COLUMNS)
+    editingState.fromJson(editingStateJson, MOCK_COLUMNS, 0)
     // Test again if the edits were applied correctly:
-    expect(editingState.toJson(MOCK_COLUMNS)).toEqual(editingStateJson)
+    expect(editingState.toJson(MOCK_COLUMNS, 0)).toEqual(editingStateJson)
   })
 })
