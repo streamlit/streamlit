@@ -151,7 +151,7 @@ class UploadedFileManager(CacheStatsProvider):
 
     # PROTOCOL METHOD
     def remove_session_files_modern(self, session_id):
-        del self._modern_files[session_id]
+        self._modern_files.pop(session_id, None)
 
     # PROTOCOL METHOD
     def get_files_modern(self, session_id, file_urls) -> List[NewUploadedFileRec]:
