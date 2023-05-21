@@ -286,6 +286,20 @@ _create_option(
 
 
 _create_option(
+    "global.disableWidgetStateDuplicationWarning",
+    description="""
+        By default, Streamlit displays a warning when a user sets both a widget
+        default value in the function defining the widget and a widget value via
+        the widget's key in `st.session_state`.
+
+        If you'd like to turn off this warning, set this to True.
+        """,
+    default_val=False,
+    type_=bool,
+)
+
+
+_create_option(
     "global.showWarningOnDirectExecution",
     description="""
         If True, will show a warning when you run a Streamlit-enabled script

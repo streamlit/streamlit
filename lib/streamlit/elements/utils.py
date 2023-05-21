@@ -15,7 +15,7 @@
 from typing import TYPE_CHECKING, Any, Hashable, Optional, Union, cast
 
 import streamlit
-from streamlit import runtime, type_util
+from streamlit import config, runtime, type_util
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
@@ -69,7 +69,11 @@ def check_session_state_rules(
             " and st.form cannot be set using st.session_state."
         )
 
-    if default_value is not None and not _shown_default_value_warning:
+    if (
+        default_value is not None
+        and not _shown_default_value_warning
+        and not config.get_option("global.disableWidgetStateDuplicationWarning")
+    ):
         streamlit.warning(
             f'The widget with key "{key}" was created with a default value but'
             " also had its value set via the Session State API."
