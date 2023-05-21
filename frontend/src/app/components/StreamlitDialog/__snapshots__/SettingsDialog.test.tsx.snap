@@ -44,7 +44,9 @@ exports[`SettingsDialog renders without crashing 1`] = `
           }
           value={0}
         />
-        <StyledButtonContainer>
+        <StyledButtonContainer
+          data-testid="edit-theme"
+        >
           <BaseButton
             kind="secondary"
             onClick={[MockFunction]}
@@ -152,7 +154,9 @@ exports[`SettingsDialog should show theme creator button if in developer mode 1`
           }
           value={0}
         />
-        <StyledButtonContainer>
+        <StyledButtonContainer
+          data-testid="edit-theme"
+        >
           <BaseButton
             kind="secondary"
             onClick={[MockFunction]}
