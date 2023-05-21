@@ -74,7 +74,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
 
   private renderThemeCreatorButton = (): ReactElement | false =>
     this.props.developerMode && (
-      <StyledButtonContainer>
+      <StyledButtonContainer data-testid="edit-theme">
         <BaseButton
           onClick={this.props.openThemeCreator}
           kind={BaseButtonKind.SECONDARY}
