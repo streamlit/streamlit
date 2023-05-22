@@ -235,7 +235,7 @@ def Column(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "widgets": st.column_config.Column(
@@ -331,7 +331,7 @@ def NumberColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "price": st.column_config.NumberColumn(
@@ -430,7 +430,7 @@ def TextColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "widgets": st.column_config.TextColumn(
@@ -530,7 +530,7 @@ def LinkColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "apps": st.column_config.LinkColumn(
@@ -614,7 +614,7 @@ def CheckboxColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "favorite": st.column_config.CheckboxColumn(
@@ -706,7 +706,7 @@ def SelectboxColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "category": st.column_config.SelectboxColumn(
@@ -795,7 +795,7 @@ def BarChartColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "sales": st.column_config.BarChartColumn(
@@ -875,7 +875,7 @@ def LineChartColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "sales": st.column_config.LineChartColumn(
@@ -954,7 +954,7 @@ def ImageColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "apps": st.column_config.ImageColumn(
@@ -1017,7 +1017,7 @@ def ListColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "sales": st.column_config.ListColumn(
@@ -1122,7 +1122,7 @@ def DatetimeColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "appointment": st.column_config.DatetimeColumn(
@@ -1237,7 +1237,7 @@ def TimeColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "appointment": st.column_config.TimeColumn(
@@ -1351,7 +1351,7 @@ def DateColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "birthday": st.column_config.DateColumn(
@@ -1440,7 +1440,7 @@ def ProgressColumn(
     >>>     }
     >>> )
     >>>
-    >>> st.experimental_data_editor(
+    >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
     >>>         "sales": st.column_config.ProgressColumn(
