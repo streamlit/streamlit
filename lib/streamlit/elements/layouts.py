@@ -103,6 +103,7 @@ class LayoutsMixin:
               one takes up 70% of the available with and the second one takes up 30%.
               Or `[1, 2, 3]` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
+
         gap : "small", "medium", or "large"
             The size of the gap between the columns. Defaults to "small". This
             argument can only be supplied by keyword.
