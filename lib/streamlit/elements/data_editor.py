@@ -229,8 +229,6 @@ def _apply_cell_edits(
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
     """
-    index_count = df.index.nlevels or 0
-
     for cell, value in edited_cells.items():
         row_pos, col_pos = map(int, cell.split(":"))
 
@@ -238,13 +236,9 @@ def _apply_cell_edits(
             # The edited cell is part of the index
             # To support multi-index in the future: use a tuple of values here
             # instead of a single value
-            df.index.values[row_pos] = _parse_value(
-                value, dataframe_schema[col_pos + index_count]
-            )
+            df.index.values[row_pos] = _parse_value(value, dataframe_schema[col_pos])
         else:
-            df.iat[row_pos, col_pos] = _parse_value(
-                value, dataframe_schema[col_pos + index_count]
-            )
+            df.iat[row_pos, col_pos] = _parse_value(value, dataframe_schema[col_pos])
 
 
 def _apply_row_additions(
@@ -269,8 +263,6 @@ def _apply_row_additions(
     if not added_rows:
         return
 
-    index_count = df.index.nlevels or 0
-
     # This is only used if the dataframe has a range index:
     # There seems to be a bug in older pandas versions with RangeIndex in
     # combination with loc. As a workaround, we manually track the values here:
@@ -289,13 +281,9 @@ def _apply_row_additions(
             if col_pos < 0:  # Index columns use negative column positions
                 # To support multi-index in the future: use a tuple of values here
                 # instead of a single value
-                index_value = _parse_value(
-                    value, dataframe_schema[col_pos + index_count]
-                )
+                index_value = _parse_value(value, dataframe_schema[col_pos])
             else:
-                new_row[col_pos] = _parse_value(
-                    value, dataframe_schema[col_pos + index_count]
-                )
+                new_row[col_pos] = _parse_value(value, dataframe_schema[col_pos])
         # Append the new row to the dataframe
         if range_index_stop is not None:
             df.loc[range_index_stop, :] = new_row
@@ -412,11 +400,13 @@ def _check_type_compatibilities(
         If a configured column type is editable and not compatible with the
         underlying data type.
     """
+    num_indices = data_df.index.nlevels or 0
+
     for i, column in enumerate(
         [(INDEX_IDENTIFIER, data_df.index)] + list(data_df.items())
     ):
         column_name, _ = column
-        column_data_kind = dataframe_schema[i]
+        column_data_kind = dataframe_schema[i - num_indices]
 
         # TODO: support column config by numerical index
         if column_name in columns_config:
@@ -799,4 +789,5 @@ class DataEditorMixin:
         gather_metrics("experimental_data_editor", data_editor),
         "experimental_data_editor",
         "2023-08-20",
+        "**Breaking change:** The session state format has been slightly changed to better align with numerical positions in Pandas.",
     )

@@ -329,14 +329,14 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
         self.assertEqual(
             determine_dataframe_schema(df, arrow_schema),
-            [
-                ColumnDataKind.INTEGER,  # This is the type of the index
-                ColumnDataKind.INTEGER,
-                ColumnDataKind.FLOAT,
-                ColumnDataKind.BOOLEAN,
-                ColumnDataKind.STRING,
-                ColumnDataKind.EMPTY,
-            ],
+            {
+                -1: ColumnDataKind.INTEGER,  # This is the type of the index
+                0: ColumnDataKind.INTEGER,
+                1: ColumnDataKind.FLOAT,
+                2: ColumnDataKind.BOOLEAN,
+                3: ColumnDataKind.STRING,
+                4: ColumnDataKind.EMPTY,
+            },
         )
 
     def test_is_type_compatible(self):

@@ -59,10 +59,10 @@ class ColumnDataKind(str, Enum):
     UNKNOWN = "unknown"
 
 
-# The dataframe schema is just a list of column data kinds
-# based on the order of the columns in the underlying dataframe.
-# The index column(s) are attached at the beginning of the list.
-DataframeSchema: TypeAlias = List[ColumnDataKind]
+# The dataframe schema is a mapping from the numerical position of the column
+# in the underlying dataframe to the column data kind.
+# The index column(s) use negative positions (e.g -1 for the first index column).
+DataframeSchema: TypeAlias = Dict[int, ColumnDataKind]
 
 # This mapping contains all editable column types mapped to the data kinds
 # that the column type is compatible for editing.
@@ -362,21 +362,22 @@ def determine_dataframe_schema(
     -------
 
     DataframeSchema
-        A list that contains the detected data type for the index and columns.
-        It starts with the index and then contains the columns in the original order.
+        A mapping that contains the detected data type for the index and columns.
+        The key is the numerical position of the column in the underlying dataframe,
+        or negative positions for index columns.
     """
 
-    dataframe_schema: DataframeSchema = []
+    dataframe_schema: DataframeSchema = {}
 
     # Add type of index:
-    dataframe_schema.append(_determine_data_kind(data_df.index))
+    # TODO(lukasmasuch): To support multi-index dataframes,
+    # iterate or indices here instead
+    dataframe_schema[-1] = _determine_data_kind(data_df.index)
 
     # Add types for all columns:
     for i, column in enumerate(data_df.items()):
         _, column_data = column
-        dataframe_schema.append(
-            _determine_data_kind(column_data, arrow_schema.field(i))
-        )
+        dataframe_schema[i] = _determine_data_kind(column_data, arrow_schema.field(i))
     return dataframe_schema
 
 

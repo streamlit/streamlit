@@ -150,11 +150,11 @@ class DataEditorUtilTest(unittest.TestCase):
         )
 
         edited_cells: Mapping[str, str | int | float | bool | None] = {
-            "0:1": 10,
-            "0:2": "foo",
-            "1:2": None,
-            "0:3": False,
-            # TODO: "3:1": "2020-03-20T14:28:23",
+            "0:0": 10,
+            "0:1": "foo",
+            "1:1": None,
+            "0:2": False,
+            "0:3": "2020-03-20T14:28:23",
         }
 
         _apply_cell_edits(
@@ -165,7 +165,7 @@ class DataEditorUtilTest(unittest.TestCase):
         self.assertEqual(df.iat[0, 1], "foo")
         self.assertEqual(df.iat[1, 1], None)
         self.assertEqual(df.iat[0, 2], False)
-        # TODO: self.assertEqual(df.iat[3, 0], None)
+        self.assertEqual(df.iat[0, 3], pd.Timestamp("2020-03-20T14:28:23"))
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""
@@ -174,13 +174,17 @@ class DataEditorUtilTest(unittest.TestCase):
                 "col1": [1, 2, 3],
                 "col2": ["a", "b", "c"],
                 "col3": [True, False, True],
-                # TODO: Add datetime column
+                "col4": [
+                    datetime.datetime.now(),
+                    datetime.datetime.now(),
+                    datetime.datetime.now(),
+                ],
             }
         )
 
         added_rows: List[Dict[str, Any]] = [
-            {"1": 10, "2": "foo", "3": False},
-            {"1": 11, "2": "bar", "3": True},
+            {"0": 10, "1": "foo", "2": False, "3": "2020-03-20T14:28:23"},
+            {"0": 11, "1": "bar", "2": True, "3": "2023-03-20T14:28:23"},
         ]
 
         _apply_row_additions(
@@ -218,11 +222,11 @@ class DataEditorUtilTest(unittest.TestCase):
 
         deleted_rows: List[int] = [0, 2]
         added_rows: List[Dict[str, Any]] = [
-            {"1": 10, "2": "foo", "3": False},
-            {"1": 11, "2": "bar", "3": True},
+            {"0": 10, "1": "foo", "2": False},
+            {"0": 11, "1": "bar", "2": True},
         ]
         edited_cells: Mapping[str, str | int | float | bool | None] = {
-            "1:1": 123,
+            "1:0": 123,
         }
 
         _apply_dataframe_edits(
@@ -482,7 +486,11 @@ class DataEditorTest(DeltaGeneratorTestCase):
         """Test that _check_type_compatibilities raises an exception when called with incompatible data."""
         df = pd.DataFrame({"col1": [1, 2, 3], "col2": ["a", "b", "c"]})
 
-        schema = [ColumnDataKind.INTEGER, ColumnDataKind.INTEGER, ColumnDataKind.STRING]
+        schema = {
+            -1: ColumnDataKind.INTEGER,
+            0: ColumnDataKind.INTEGER,
+            1: ColumnDataKind.STRING,
+        }
 
         with self.assertRaises(StreamlitAPIException):
             _check_type_compatibilities(
