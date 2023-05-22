@@ -1,0 +1,5 @@
+# Ignore everything in this directory
+*
+# Except this file
+# This file is so that lib/proto can exist so github actions virtual env doesn't fail
+!.gitignore

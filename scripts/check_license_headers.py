@@ -56,7 +56,9 @@ IGNORE_PATTERN = re.compile(
     # Exclude vendored files.
     r"|/vendor/|^vendor/|^component-lib/declarations/apache-arrow"
     r"|proto/streamlit/proto/openmetrics_data_model\.proto"
-    r"|lib/tests/isolated_asyncio_test_case\.py",
+    r"|lib/tests/isolated_asyncio_test_case\.py"
+    # exclude lib/proto
+    r"^|(?!.*frontend/lib/proto).*",
     re.IGNORECASE,
 )
 
