@@ -203,7 +203,7 @@ export class App extends PureComponent<Props, State> {
 
   private readonly widgetMgr: WidgetStateManager
 
-  private hostCommunicationMgr: HostCommunicationManager
+  public hostCommunicationMgr: HostCommunicationManager
 
   private readonly uploadClient: FileUploadClient
 

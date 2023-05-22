@@ -244,16 +244,16 @@ function withHostCommunication<P extends InjectedProps>(
         }
       }
 
-      // if (!allowedOrigins.length) {
-      //   return () => {}
-      // }
+      if (!allowedOrigins.length) {
+        return () => {}
+      }
 
-      // window.addEventListener("message", receiveMessage)
-      // sendMessageToHost({ type: "GUEST_READY" })
+      window.addEventListener("message", receiveMessage)
+      sendMessageToHost({ type: "GUEST_READY" })
 
-      // return () => {
-      //   window.removeEventListener("message", receiveMessage)
-      // }
+      return () => {
+        window.removeEventListener("message", receiveMessage)
+      }
     }, [allowedOriginsResp, deferredAuthToken, props.theme])
 
     return (
@@ -280,22 +280,22 @@ function withHostCommunication<P extends InjectedProps>(
             resetAuthToken: () => {
               setDeferredAuthToken(new Resolver())
             },
-            // onModalReset: () => {
-            //   setForcedModalClose(false)
-            // },
-            // onScriptStop: () => {
-            //   setScriptStopRequested(false)
-            // },
-            // onScriptRerun: () => {
-            //   setScriptRerunRequested(false)
-            // },
-            // onCacheClear: () => {
-            //   setCacheClearRequested(false)
-            // },
-            // onPageChanged: () => {
-            //   setRequestedPageScriptHash(null)
-            // },
-            // sendMessage: sendMessageToHost,
+            onModalReset: () => {
+              setForcedModalClose(false)
+            },
+            onScriptStop: () => {
+              setScriptStopRequested(false)
+            },
+            onScriptRerun: () => {
+              setScriptRerunRequested(false)
+            },
+            onCacheClear: () => {
+              setCacheClearRequested(false)
+            },
+            onPageChanged: () => {
+              setRequestedPageScriptHash(null)
+            },
+            sendMessage: sendMessageToHost,
             setAllowedOriginsResp,
           } as HostCommunicationHOC
         }

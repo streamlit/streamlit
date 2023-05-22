@@ -54,6 +54,10 @@ import { App, Props, showDevelopmentOptions } from "./App"
 import MainMenu from "src/app/components/MainMenu"
 import ToolbarActions from "src/app/components/ToolbarActions"
 import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
+import {
+  HostCommunicationManager,
+  HOST_COMM_VERSION,
+} from "src/lib/hostComm/HostCommunicationManager"
 
 jest.mock("src/app/connection/ConnectionManager")
 jest.mock("src/lib/baseconsts", () => {
@@ -89,6 +93,18 @@ const getWrapper = (): ReactWrapper => {
   return mount(<App {...props} />, { attachTo: mountPoint })
 }
 
+function mockEventListeners(): (type: string, event: any) => void {
+  const listeners: { [name: string]: ((event: Event) => void)[] } = {}
+
+  window.addEventListener = jest.fn((event: string, cb: any) => {
+    listeners[event] = listeners[event] || []
+    listeners[event].push(cb)
+  })
+
+  return (type: string, event: Event): void =>
+    listeners[type].forEach(cb => cb(event))
+}
+
 // Prevent "moment-timezone requires moment" exception when mocking "moment".
 jest.mock("moment-timezone", () => jest.fn())
 jest.mock("moment", () =>
@@ -121,7 +137,9 @@ describe("App", () => {
 
   describe("streamlit server version changes", () => {
     let prevWindowLocation: Location
-    beforeEach(() => (prevWindowLocation = window.location))
+    beforeEach(() => {
+      prevWindowLocation = window.location
+    })
     afterEach(() => (window.location = prevWindowLocation))
 
     it("triggers page reload", () => {
@@ -188,26 +206,6 @@ describe("App", () => {
     expect(props.screenCast.stopRecording).toBeCalled()
   })
 
-  it("closes modals when the modal closure message has been received", () => {})
-
-  it("changes scriptRunState and fires withHostCommunication callback when scriptStopRequested signal has been received", () => {})
-
-  it("changes scriptRunState and fires withHostCommunication callback when scriptRerunRequested signal has been received", () => {})
-
-  it("fires withHostCommunication callback when cacheClearRequested signal has been received", () => {})
-
-  it("does not prevent a modal from opening when closure message is set", () => {})
-
-  it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when the app is first rendered", () => {})
-
-  it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing", () => {})
-
-  it("does not sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing to the same state", () => {})
-
-  it("sends theme info to the host when the app is first rendered", () => {})
-
-  it("both sets theme locally and sends to host when setAndSendTheme is called", () => {})
-
   it("hides the top bar if hideTopBar === true", () => {
     const wrapper = shallow(<App {...getProps()} />)
     // hideTopBar is true by default
@@ -224,9 +222,310 @@ describe("App", () => {
     expect(wrapper.find("ToolbarActions").exists()).toBe(true)
   })
 
-  it("updates state.appPages when it receives a PagesChanged msg", () => {})
+  describe("handles hostCommunicationMgr messaging", () => {
+    let dispatchEvent: any
+    let props: any
+    let wrapper: any
+    let instance: any
+    let sendMessageFunc: any
 
-  it("responds to page change requests", () => {})
+    beforeEach(() => {
+      dispatchEvent = mockEventListeners()
+      props = getProps()
+      wrapper = shallow(<App {...props} />)
+      instance = wrapper.instance() as App
+
+      instance.hostCommunicationMgr.setAllowedOriginsResp({
+        allowedOrigins: ["https://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
+
+      sendMessageFunc = jest.spyOn(
+        instance.hostCommunicationMgr,
+        "sendMessageToHost"
+      )
+    })
+
+    it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when the app is first rendered", () => {
+      instance.componentDidMount()
+
+      expect(sendMessageFunc).toHaveBeenCalledWith({
+        type: "SCRIPT_RUN_STATE_CHANGED",
+        scriptRunState: ScriptRunState.NOT_RUNNING,
+      })
+    })
+
+    it("sends theme info to the host when the app is first rendered", () => {
+      instance.componentDidMount()
+
+      expect(sendMessageFunc).toHaveBeenCalledWith({
+        type: "SET_THEME_CONFIG",
+        themeInfo: toExportedTheme(lightTheme.emotion),
+      })
+    })
+
+    it("closes modals when the modal closure message has been received", () => {
+      const dialog = StreamlitDialog({
+        type: DialogType.ABOUT,
+        sessionInfo: mockSessionInfo(),
+        onClose: () => {},
+      })
+
+      wrapper.setState({ dialog })
+      expect(wrapper.find(Modal)).toHaveLength(1)
+
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "CLOSE_MODAL",
+          },
+          origin: "https://devel.streamlit.test",
+        })
+      )
+
+      expect(wrapper.find(Modal)).toHaveLength(0)
+    })
+
+    it("changes scriptRunState and triggers stopScript when STOP_SCRIPT message has been received", () => {
+      instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+      // We explicitly set the scriptRunState to RUNNING, so we can test that
+      // scriptStopRequested is handled correctly.
+      wrapper.setState({
+        scriptRunState: ScriptRunState.RUNNING,
+      })
+
+      const stopScriptFunc = jest.spyOn(
+        instance.hostCommunicationMgr.props,
+        "stopScript"
+      )
+
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "STOP_SCRIPT",
+          },
+          origin: "https://devel.streamlit.test",
+        })
+      )
+
+      expect(stopScriptFunc).toHaveBeenCalled()
+      expect(wrapper.state("scriptRunState")).toBe(
+        ScriptRunState.STOP_REQUESTED
+      )
+    })
+
+    it("changes scriptRunState and triggers rerunScript when scriptRerunRequested message has been received", () => {
+      instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+      const rerunScriptFunc = jest.spyOn(
+        instance.hostCommunicationMgr.props,
+        "rerunScript"
+      )
+
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "RERUN_SCRIPT",
+          },
+          origin: "https://devel.streamlit.test",
+        })
+      )
+
+      expect(rerunScriptFunc).toHaveBeenCalled()
+      expect(wrapper.state("scriptRunState")).toBe(
+        ScriptRunState.RERUN_REQUESTED
+      )
+    })
+
+    it("fires clearCache function when cacheClearRequested message has been received", () => {
+      instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+      const clearCacheFunc = jest.spyOn(
+        instance.hostCommunicationMgr.props,
+        "clearCache"
+      )
+      const closeDialogFunc = jest.spyOn(instance, "closeDialog")
+
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "CLEAR_CACHE",
+          },
+          origin: "https://devel.streamlit.test",
+        })
+      )
+
+      expect(clearCacheFunc).toHaveBeenCalled()
+      expect(closeDialogFunc).toHaveBeenCalled()
+    })
+
+    it("does not prevent a modal from opening when closure message is set", () => {
+      const dialog = StreamlitDialog({
+        type: DialogType.ABOUT,
+        sessionInfo: mockSessionInfo(),
+        onClose: () => {},
+      })
+
+      // Open a dialog
+      wrapper.setState({ dialog })
+      expect(wrapper.find(Modal)).toHaveLength(1)
+
+      // Send close message
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "CLOSE_MODAL",
+          },
+          origin: "https://devel.streamlit.test",
+        })
+      )
+      expect(wrapper.find(Modal)).toHaveLength(0)
+
+      // Open a dialog again - make sure it works
+      wrapper.setState({ dialog })
+      expect(wrapper.find(Modal)).toHaveLength(1)
+    })
+
+    it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing", () => {
+      for (let scriptRunState in ScriptRunState) {
+        wrapper.setState({ scriptRunState })
+        expect(sendMessageFunc).toHaveBeenCalledWith({
+          type: "SCRIPT_RUN_STATE_CHANGED",
+          scriptRunState,
+        })
+      }
+    })
+
+    it("does not sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing to the same state", () => {
+      const scriptRunState = ScriptRunState.RUNNING
+      wrapper.setState({ scriptRunState })
+      expect(sendMessageFunc).toHaveBeenCalledWith({
+        type: "SCRIPT_RUN_STATE_CHANGED",
+        scriptRunState: scriptRunState,
+      })
+      expect(sendMessageFunc).toHaveBeenCalledTimes(1)
+      // When scriptRunState changed to the same,
+      // sendMessage should not be called again.
+      wrapper.setState({ scriptRunState })
+      expect(sendMessageFunc).toHaveBeenCalledTimes(1)
+    })
+
+    it("both sets theme locally and sends to host when setAndSendTheme is called", () => {
+      const mockThemeConfig = { emotion: darkTheme.emotion }
+
+      instance.setAndSendTheme(mockThemeConfig)
+      expect(props.theme.setTheme).toHaveBeenCalledWith(mockThemeConfig)
+
+      expect(sendMessageFunc).toHaveBeenCalledWith({
+        type: "SET_THEME_CONFIG",
+        themeInfo: toExportedTheme(darkTheme.emotion),
+      })
+    })
+
+    it("updates state.appPages when it receives a PagesChanged msg", () => {
+      const appPages = [
+        { icon: "", pageName: "bob", scriptPath: "bob.py" },
+        { icon: "", pageName: "carl", scriptPath: "carl.py" },
+      ]
+
+      const msg = new ForwardMsg()
+      msg.pagesChanged = new PagesChanged({ appPages })
+
+      expect(wrapper.find("AppView").prop("appPages")).toEqual([])
+      instance.handleMessage(msg)
+      expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+
+      expect(sendMessageFunc).toHaveBeenCalledWith({
+        type: "SET_APP_PAGES",
+        appPages,
+      })
+    })
+
+    it("responds to page change request messages", () => {
+      const onPageChangeFunc = jest.spyOn(
+        instance.hostCommunicationMgr.props,
+        "onPageChange"
+      )
+
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "REQUEST_PAGE_CHANGE",
+            pageScriptHash: "hash1",
+          },
+          origin: "https://devel.streamlit.test",
+        })
+      )
+
+      expect(onPageChangeFunc).toHaveBeenCalledWith("hash1")
+    })
+
+    it("shows hostMenuItems", () => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "SET_MENU_ITEMS",
+            items: [{ type: "separator" }],
+          },
+          origin: "https://devel.streamlit.test",
+        })
+      )
+
+      // TODO: double check Main Menu re-renders based on prop change
+      wrapper.setState({ hideTopBar: false })
+
+      expect(instance.hostCommunicationMgr.state.menuItems).toStrictEqual([
+        { type: "separator" },
+      ])
+      expect(wrapper.find(MainMenu).prop("hostMenuItems")).toStrictEqual([
+        { type: "separator" },
+      ])
+    })
+
+    it("shows hostToolbarItems", () => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "SET_TOOLBAR_ITEMS",
+            items: [
+              {
+                key: "favorite",
+                icon: "star.svg",
+              },
+            ],
+          },
+          origin: "https://devel.streamlit.test",
+        })
+      )
+
+      wrapper.setState({ hideTopBar: false })
+      expect(
+        wrapper.find(ToolbarActions).prop("hostToolbarItems")
+      ).toStrictEqual([
+        {
+          key: "favorite",
+          icon: "star.svg",
+        },
+      ])
+    })
+  })
 })
 
 const mockGetBaseUriParts = (basePath?: string) => () => ({
@@ -587,7 +886,7 @@ describe("App.handleNewSession", () => {
     expect(instance.clearAppState).not.toHaveBeenCalled()
   })
 
-  it("sets hideSidebarNav based on the server config option and host setting", () => {})
+  //   it("sets hideSidebarNav based on the server config option and host setting", () => {})
 
   describe("page change URL handling", () => {
     let wrapper: ShallowWrapper
@@ -807,84 +1106,86 @@ describe("App.handleNewSession", () => {
       expect(wrapper.find("DeployButton")).toHaveLength(0)
     })
 
-    it("button should be hidden for cloud environment", () => {})
+    //     it("button should be hidden for cloud environment", () => {})
   })
 })
 
-// describe("App.onHistoryChange", () => {
-//   let wrapper: ShallowWrapper
-//   let instance: App
+describe("App.onHistoryChange", () => {
+  let wrapper: ShallowWrapper
+  let instance: App
 
-//   const NEW_SESSION_JSON = {
-//     config: {
-//       gatherUsageStats: false,
-//       maxCachedMessageAge: 0,
-//       mapboxToken: "mapboxToken",
-//       allowRunOnSave: false,
-//       hideSidebarNav: false,
-//     },
-//     customTheme: {
-//       primaryColor: "red",
-//     },
-//     initialize: {
-//       userInfo: {
-//         installationId: "installationId",
-//         installationIdV3: "installationIdV3",
-//       },
-//       environmentInfo: {
-//         streamlitVersion: "streamlitVersion",
-//         pythonVersion: "pythonVersion",
-//       },
-//       sessionStatus: {
-//         runOnSave: false,
-//         scriptIsRunning: false,
-//       },
-//       sessionId: "sessionId",
-//       commandLine: "commandLine",
-//     },
-//     appPages: [
-//       { pageScriptHash: "top_hash", pageName: "streamlit_app" },
-//       { pageScriptHash: "sub_hash", pageName: "page2" },
-//     ],
-//     pageScriptHash: "top_hash",
-//   }
+  const NEW_SESSION_JSON = {
+    config: {
+      gatherUsageStats: false,
+      maxCachedMessageAge: 0,
+      mapboxToken: "mapboxToken",
+      allowRunOnSave: false,
+      hideSidebarNav: false,
+    },
+    customTheme: {
+      primaryColor: "red",
+    },
+    initialize: {
+      userInfo: {
+        installationId: "installationId",
+        installationIdV3: "installationIdV3",
+      },
+      environmentInfo: {
+        streamlitVersion: "streamlitVersion",
+        pythonVersion: "pythonVersion",
+      },
+      sessionStatus: {
+        runOnSave: false,
+        scriptIsRunning: false,
+      },
+      sessionId: "sessionId",
+      commandLine: "commandLine",
+    },
+    appPages: [
+      { pageScriptHash: "top_hash", pageName: "streamlit_app" },
+      { pageScriptHash: "sub_hash", pageName: "page2" },
+    ],
+    pageScriptHash: "top_hash",
+  }
 
-//   beforeEach(() => {
-//     wrapper = shallow(<App {...getProps()} />)
-//     instance = wrapper.instance() as App
-//     // @ts-expect-error
-//     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+  beforeEach(() => {
+    wrapper = shallow(<App {...getProps()} />)
+    instance = wrapper.instance() as App
+    // @ts-expect-error
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
 
-//     window.history.pushState({}, "", "/")
-//   })
+    window.history.pushState({}, "", "/")
+  })
 
-//   it("handles popState events, e.g. clicking browser's back button", async () => {
-//     const instance = wrapper.instance() as App
+  it("handles popState events, e.g. clicking browser's back button", async () => {
+    const instance = wrapper.instance() as App
 
-//     jest.spyOn(instance, "onPageChange")
+    jest.spyOn(instance, "onPageChange")
 
-//     instance.handleNewSession(
-//       new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
-//     )
-//     instance.handleNewSession(
-//       new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "top_hash" })
-//     )
-//     instance.handleNewSession(
-//       new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
-//     )
-//     expect(instance.state.currentPageScriptHash).toEqual("sub_hash")
+    instance.handleNewSession(
+      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
+    )
+    instance.handleNewSession(
+      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "top_hash" })
+    )
+    instance.handleNewSession(
+      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
+    )
+    expect(instance.state.currentPageScriptHash).toEqual("sub_hash")
 
-//     window.history.back()
-//     await waitFor(() =>
-//       expect(instance.onPageChange).toHaveBeenLastCalledWith("top_hash")
-//     )
+    window.history.back()
+    waitFor(() => {
+      expect(instance.onPageChange).toHaveBeenCalledTimes(2)
+      expect(instance.onPageChange).toHaveBeenLastCalledWith("top_hash")
+    })
 
-//     window.history.back()
-//     await waitFor(() =>
-//       expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
-//     )
-//   })
-// })
+    window.history.back()
+    waitFor(() => {
+      expect(instance.onPageChange).toHaveBeenCalledTimes(3)
+      expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
+    })
+  })
+})
 
 describe("App.handlePageConfigChanged", () => {
   let documentTitle: string
@@ -1077,9 +1378,68 @@ describe("App.sendRerunBackMsg", () => {
 
 //   * handlePageNotFound has branching error messages depending on pageName
 describe("App.handlePageNotFound", () => {
-  it("includes the missing page name in error modal message if available", () => {})
+  it("includes the missing page name in error modal message if available", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    wrapper.setState({
+      appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
+    })
+    const instance = wrapper.instance() as App
+    const sendMessageFunc = jest.spyOn(
+      instance.hostCommunicationMgr,
+      "sendMessageToHost"
+    )
 
-  it("uses a more generic error message if no page name is available", () => {})
+    // @ts-expect-error
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+    instance.showError = jest.fn()
+
+    instance.handlePageNotFound(
+      new PageNotFound({ pageName: "nonexistentPage" })
+    )
+
+    expect(instance.showError).toHaveBeenCalledWith(
+      "Page not found",
+      expect.stringMatching("You have requested page /nonexistentPage")
+    )
+
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "",
+      currentPageScriptHash: "page_hash",
+    })
+  })
+
+  it("uses a more generic error message if no page name is available", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    wrapper.setState({
+      appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
+    })
+    const instance = wrapper.instance() as App
+    const sendMessageFunc = jest.spyOn(
+      instance.hostCommunicationMgr,
+      "sendMessageToHost"
+    )
+
+    // @ts-expect-error
+    instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
+    instance.showError = jest.fn()
+
+    instance.handlePageNotFound(new PageNotFound({ pageName: "" }))
+
+    expect(instance.showError).toHaveBeenCalledWith(
+      "Page not found",
+      expect.stringMatching(
+        "The page that you have requested does not seem to exist"
+      )
+    )
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "",
+      currentPageScriptHash: "page_hash",
+    })
+  })
 })
 
 describe("App.handleDeltaMessage", () => {
