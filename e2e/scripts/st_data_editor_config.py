@@ -32,18 +32,18 @@ df = pd.DataFrame(
 )
 
 st.header("Disabled parameter:")
-st.experimental_data_editor(df, disabled=True)
-st.experimental_data_editor(df, disabled=["col_4", "col_1"])
+st.data_editor(df, disabled=True)
+st.data_editor(df, disabled=["col_4", "col_1"])
 
 st.header("Hide index parameter:")
-st.experimental_data_editor(df, hide_index=True)
-st.experimental_data_editor(df, hide_index=False)
+st.data_editor(df, hide_index=True)
+st.data_editor(df, hide_index=False)
 
 st.header("Column order parameter:")
-st.experimental_data_editor(df, column_order=["col_4", "col_3", "col_0"])
+st.data_editor(df, column_order=["col_4", "col_3", "col_0"])
 
 st.header("Set column labels:")
-st.experimental_data_editor(
+st.data_editor(
     df,
     column_config={
         "index": "Index column",
@@ -53,12 +53,10 @@ st.experimental_data_editor(
 )
 
 st.header("Hide columns:")
-st.experimental_data_editor(
-    df, column_config={"col_1": None, "col_3": {"hidden": True}}
-)
+st.data_editor(df, column_config={"col_1": None, "col_3": {"hidden": True}})
 
 st.header("Set column width:")
-st.experimental_data_editor(
+st.data_editor(
     df,
     column_config={
         "col_0": st.column_config.Column(width="small"),
@@ -69,7 +67,7 @@ st.experimental_data_editor(
 
 st.header("Set help tooltips:")
 st.caption("Hover over the column headers to see the tooltips.")
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": ["a", "b", "c", None],
@@ -83,7 +81,7 @@ st.experimental_data_editor(
 
 
 st.header("Ignore editing-only config options:")
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": ["a", "b", "c", None],
@@ -97,7 +95,7 @@ st.header("Text column:")
 st.caption(
     "Editing the first column should only allow 5 characters. The second column should only allow numerical characters."
 )
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": ["Hello World", "Lorem ipsum", "", None],
@@ -124,7 +122,7 @@ st.header("Number column:")
 st.caption(
     "Editing the first column should only allow to submit numbers between 0 and 5. And only a maximum of 2 decimals."
 )
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": [1, 2, 3, None],
@@ -150,7 +148,7 @@ st.experimental_data_editor(
 )
 
 st.header("Checkbox column:")
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": [True, False, False, None],
@@ -172,7 +170,7 @@ st.experimental_data_editor(
 
 st.header("Selectbox column:")
 
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": [1, 2, 3, None],
@@ -197,7 +195,7 @@ st.header("Link column:")
 st.caption(
     "Editing the first column should only submitting values starting with http and a maximum of 50 characters."
 )
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": [
@@ -228,7 +226,7 @@ st.header("Datetime column:")
 st.caption(
     "Editing the first column should only allow datetime values between 2021-01-01 and 2022-01-01."
 )
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": [
@@ -259,7 +257,7 @@ st.header("Date column:")
 st.caption(
     "Editing the first column should only allow picking every second day and between 2021-01-01 and 2022-01-01."
 )
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": [
@@ -289,7 +287,7 @@ st.header("Time column:")
 st.caption(
     "Editing the first column should only allow datetime values between 01:02 and 01:03."
 )
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": [
@@ -317,7 +315,7 @@ st.experimental_data_editor(
 
 st.header("Progress column:")
 
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": [0.1, 0.4, 1.1, None],
@@ -338,7 +336,7 @@ st.experimental_data_editor(
 
 st.header("List column:")
 
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": [[1, 2], [2, 3, 4], [], None],
@@ -357,7 +355,7 @@ st.experimental_data_editor(
 
 st.header("Bar chart column:")
 
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": [[1, 5, 2], [2, 3, 5, -4, -5], [], None],
@@ -379,7 +377,7 @@ st.experimental_data_editor(
 
 st.header("Line chart column:")
 
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": [[1, 5, 2], [2, 3, 5, -4, -5], [], None],
@@ -400,7 +398,7 @@ st.experimental_data_editor(
 
 st.header("Image column:")
 
-st.experimental_data_editor(
+st.data_editor(
     pd.DataFrame(
         {
             "col_0": [

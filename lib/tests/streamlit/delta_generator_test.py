@@ -102,6 +102,7 @@ class RunWarningTest(unittest.TestCase):
                 "columns",
                 "container",
                 "dataframe",
+                "data_editor",
                 "date_input",
                 "dg",
                 "divider",
