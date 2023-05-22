@@ -24,7 +24,7 @@ import {
   IMenuItem,
   IToolbarItem,
   DeployedAppMetadata,
-} from "src/lib/hocs/withHostCommunication/types"
+} from "./types"
 import { isValidOrigin } from "src/lib/util/UriUtil"
 import Resolver from "src/lib/util/Resolver"
 
@@ -61,7 +61,7 @@ export interface HostCommunicationState {
 /**
  * Manages host communication & messaging
  */
-export class HostCommunicationManager {
+export default class HostCommunicationManager {
   public props: HostCommunicationProps
 
   public state: HostCommunicationState

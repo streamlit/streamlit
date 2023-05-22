@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  HostCommunicationManager,
+import HostCommunicationManager, {
   HOST_COMM_VERSION,
 } from "src/lib/hostComm/HostCommunicationManager"
 

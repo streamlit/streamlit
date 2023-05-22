@@ -54,10 +54,7 @@ import { App, Props, showDevelopmentOptions } from "./App"
 import MainMenu from "src/app/components/MainMenu"
 import ToolbarActions from "src/app/components/ToolbarActions"
 import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
-import {
-  HostCommunicationManager,
-  HOST_COMM_VERSION,
-} from "src/lib/hostComm/HostCommunicationManager"
+import { HOST_COMM_VERSION } from "src/lib/hostComm/HostCommunicationManager"
 
 jest.mock("src/app/connection/ConnectionManager")
 jest.mock("src/lib/baseconsts", () => {
@@ -103,6 +100,40 @@ function mockEventListeners(): (type: string, event: any) => void {
 
   return (type: string, event: Event): void =>
     listeners[type].forEach(cb => cb(event))
+}
+
+const NEW_SESSION_JSON: INewSession = {
+  config: {
+    gatherUsageStats: false,
+    maxCachedMessageAge: 0,
+    mapboxToken: "mapboxToken",
+    allowRunOnSave: false,
+    hideSidebarNav: false,
+  },
+  customTheme: {
+    primaryColor: "red",
+    fontFaces: [],
+  },
+  initialize: {
+    userInfo: {
+      installationId: "installationId",
+      installationIdV3: "installationIdV3",
+    },
+    environmentInfo: {
+      streamlitVersion: "streamlitVersion",
+      pythonVersion: "pythonVersion",
+    },
+    sessionStatus: {
+      runOnSave: false,
+      scriptIsRunning: false,
+    },
+    sessionId: "sessionId",
+    commandLine: "commandLine",
+  },
+  appPages: [
+    { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
+  ],
+  pageScriptHash: "page_script_hash",
 }
 
 // Prevent "moment-timezone requires moment" exception when mocking "moment".
@@ -222,7 +253,7 @@ describe("App", () => {
     expect(wrapper.find("ToolbarActions").exists()).toBe(true)
   })
 
-  describe("handles hostCommunicationMgr messaging", () => {
+  describe("handles HostCommunication messaging", () => {
     let dispatchEvent: any
     let props: any
     let wrapper: any
@@ -398,13 +429,13 @@ describe("App", () => {
     })
 
     it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing", () => {
-      for (let scriptRunState in ScriptRunState) {
+      Object.keys(ScriptRunState).forEach(scriptRunState => {
         wrapper.setState({ scriptRunState })
         expect(sendMessageFunc).toHaveBeenCalledWith({
           type: "SCRIPT_RUN_STATE_CHANGED",
           scriptRunState,
         })
-      }
+      })
     })
 
     it("does not sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing to the same state", () => {
@@ -525,6 +556,58 @@ describe("App", () => {
         },
       ])
     })
+
+    it("sets hideSidebarNav based on the server config option and host setting", () => {
+      // hideSidebarNav initializes to true.
+      expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
+
+      // Simulate the server ui.hideSidebarNav config option being false.
+      instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
+      expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(false)
+
+      // Have the host override the server config option.
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "SET_SIDEBAR_NAV_VISIBILITY",
+            hidden: true,
+          },
+          origin: "https://devel.streamlit.test",
+        })
+      )
+
+      expect(instance.hostCommunicationMgr.state.hideSidebarNav).toEqual(true)
+    })
+
+    it("Deploy button should be hidden for cloud environment", () => {
+      dispatchEvent(
+        "message",
+        new MessageEvent("message", {
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "SET_MENU_ITEMS",
+            items: [
+              { label: "Host menu item", key: "host-item", type: "text" },
+            ],
+          },
+          origin: "https://devel.streamlit.test",
+        })
+      )
+
+      instance.handleNewSession(
+        new NewSession({
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
+      )
+
+      expect(wrapper.find("DeployButton")).toHaveLength(0)
+    })
   })
 })
 
@@ -533,39 +616,6 @@ const mockGetBaseUriParts = (basePath?: string) => () => ({
 })
 
 describe("App.handleNewSession", () => {
-  const NEW_SESSION_JSON: INewSession = {
-    config: {
-      gatherUsageStats: false,
-      maxCachedMessageAge: 0,
-      mapboxToken: "mapboxToken",
-      allowRunOnSave: false,
-      hideSidebarNav: false,
-    },
-    customTheme: {
-      primaryColor: "red",
-      fontFaces: [],
-    },
-    initialize: {
-      userInfo: {
-        installationId: "installationId",
-        installationIdV3: "installationIdV3",
-      },
-      environmentInfo: {
-        streamlitVersion: "streamlitVersion",
-        pythonVersion: "pythonVersion",
-      },
-      sessionStatus: {
-        runOnSave: false,
-        scriptIsRunning: false,
-      },
-      sessionId: "sessionId",
-      commandLine: "commandLine",
-    },
-    appPages: [
-      { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
-    ],
-    pageScriptHash: "page_script_hash",
-  }
   const NEW_SESSION = new NewSession(NEW_SESSION_JSON)
 
   afterEach(() => {
@@ -886,8 +936,6 @@ describe("App.handleNewSession", () => {
     expect(instance.clearAppState).not.toHaveBeenCalled()
   })
 
-  //   it("sets hideSidebarNav based on the server config option and host setting", () => {})
-
   describe("page change URL handling", () => {
     let wrapper: ShallowWrapper
     let instance: App
@@ -1105,8 +1153,6 @@ describe("App.handleNewSession", () => {
 
       expect(wrapper.find("DeployButton")).toHaveLength(0)
     })
-
-    //     it("button should be hidden for cloud environment", () => {})
   })
 })
 

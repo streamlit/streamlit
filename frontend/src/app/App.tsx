@@ -40,7 +40,7 @@ import {
   FormsData,
   WidgetStateManager,
 } from "src/lib/WidgetStateManager"
-import { HostCommunicationManager } from "src/lib/hostComm/HostCommunicationManager"
+import HostCommunicationManager from "src/lib/hostComm/HostCommunicationManager"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
@@ -1519,6 +1519,9 @@ export class App extends PureComponent<Props, State> {
 
     const { hideSidebarNav: hostHideSidebarNav } =
       this.hostCommunicationMgr.state
+
+    console.log("-------------------------")
+    console.log("hideSidebarNav", hostHideSidebarNav)
 
     const outerDivClass = classNames(
       "stApp",

@@ -19,10 +19,7 @@ import React, { ReactElement } from "react"
 import BaseButton, {
   BaseButtonKind,
 } from "src/lib/components/shared/BaseButton"
-import {
-  IGuestToHostMessage,
-  IToolbarItem,
-} from "src/lib/hocs/withHostCommunication/types"
+import { IGuestToHostMessage, IToolbarItem } from "src/lib/hostComm/types"
 import {
   StyledActionButtonContainer,
   StyledActionButtonIcon,
