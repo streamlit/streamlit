@@ -28,8 +28,6 @@ describe("deploy button and modal", () => {
   });
 
   it("renders the light deploy dialog correctly", () => {
-    cy.changeTheme("Light");
-
     cy.get("div[class='stDeployButton'] > button").click({ force: true });
 
     cy.get("div[role='dialog']").matchImageSnapshot(
