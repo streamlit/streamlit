@@ -26,8 +26,6 @@ import {
 import { toString, merge, isArray } from "lodash"
 import numbro from "numbro"
 import { sprintf } from "sprintf-js"
-import { intlFormatDistance, formatRelative } from "date-fns"
-import { formatInTimeZone } from "date-fns-tz"
 import moment, { Moment } from "moment"
 import "moment-duration-format"
 import "moment-timezone"
@@ -64,9 +62,7 @@ export interface BaseColumnProps {
   readonly width?: number
   // A help text that is displayed on hovering the column header.
   readonly help?: string
-  // Column type selected via column config:
-  readonly customType?: string
-  // Additional metadata related to the column type:
+  // Configuration options related to the column type:
   readonly columnTypeOptions?: Record<string, any>
   // The content alignment of the column:
   readonly contentAlignment?: "left" | "center" | "right"
@@ -467,38 +463,23 @@ export function formatNumber(
  *
  * @param momentDate The moment date to format.
  * @param format The format to use.
- *   If the format is `localized` the date will be formatted according to the user's locale.
+ *   If the format is `locale` the date will be formatted according to the user's locale.
  *   If the format is `relative` the date will be formatted as a relative time (e.g. "2 hours ago").
- *   Otherwise, it is interpreted as date-fns format string: https://date-fns.org/v2.29.3/docs/format
+ *   Otherwise, it is interpreted as momentJS format string: https://momentjs.com/docs/#/displaying/format/
  * @returns The formatted date as a string.
  */
 export function formatMoment(momentDate: Moment, format: string): string {
-  if (format === "localized") {
+  if (format === "locale") {
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
       timeStyle: "medium",
     }).format(momentDate.toDate())
   } else if (format === "distance") {
-    return intlFormatDistance(momentDate.toDate(), new Date())
+    return momentDate.fromNow()
   } else if (format === "relative") {
-    return formatRelative(momentDate.toDate(), new Date())
+    return momentDate.calendar()
   }
-  const timezone = momentDate.tz()
-  if (notNullOrUndefined(timezone)) {
-    // Format based on the timezone IANA name:
-    return formatInTimeZone(momentDate.toDate(), timezone, format)
-  }
-
-  const utcOffset = momentDate.utcOffset()
-  if (utcOffset !== 0) {
-    // Format based on the UTC offset:
-    return formatInTimeZone(
-      momentDate.toDate(),
-      momentDate.format("Z"),
-      format
-    )
-  }
-  return formatInTimeZone(momentDate.toDate(), "UTC", format)
+  return momentDate.format(format)
 }
 
 /**
@@ -632,4 +613,18 @@ export function truncateDecimals(value: number, decimals: number): number {
   return decimals === 0
     ? Math.trunc(value)
     : Math.trunc(value * 10 ** decimals) / 10 ** decimals
+}
+
+const LINE_BREAK_REGEX = new RegExp(/(\r\n|\n|\r)/gm)
+
+/**
+ * Removes all line breaks from the given text.
+ * @param text - The text to remove line breaks from.
+ * @returns The text without line breaks.
+ */
+export function removeLineBreaks(text: string): string {
+  if (text.indexOf("\n") !== -1) {
+    return text.replace(LINE_BREAK_REGEX, " ")
+  }
+  return text
 }

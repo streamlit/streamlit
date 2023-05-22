@@ -58,6 +58,7 @@ class DataFrameSelectorTest(unittest.TestCase):
             use_container_width=False,
             hide_index=None,
             column_order=None,
+            column_config=None,
         )
 
     @patch.object(DeltaGenerator, "_legacy_dataframe")
@@ -76,6 +77,7 @@ class DataFrameSelectorTest(unittest.TestCase):
             use_container_width=False,
             hide_index=None,
             column_order=None,
+            column_config=None,
         )
 
     @pytest.mark.skipif(
@@ -99,6 +101,7 @@ class DataFrameSelectorTest(unittest.TestCase):
             use_container_width=False,
             hide_index=None,
             column_order=None,
+            column_config=None,
         )
 
     @patch.object(DeltaGenerator, "_legacy_dataframe")
@@ -117,6 +120,7 @@ class DataFrameSelectorTest(unittest.TestCase):
             use_container_width=False,
             hide_index=None,
             column_order=None,
+            column_config=None,
         )
 
     @patch.object(DeltaGenerator, "_legacy_table")

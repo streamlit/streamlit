@@ -1592,27 +1592,27 @@
     minimatch "^3.1.2"
     strip-json-comments "^3.1.1"
 
-"@glideapps/glide-data-grid-cells@5.2.1":
-  version "5.2.1"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-cells/-/glide-data-grid-cells-5.2.1.tgz#13329dbbe2522a6abe4750d615a67a248e8eb87b"
-  integrity sha512-o4gA8U3mwOMZTAszKAkm6tcP0aYsi1YQNpg/Ie8U0czpUvApPaBbhZM0bNBstVhzlB9IIgWatfOJEk2rnxA76w==
+"@glideapps/glide-data-grid-cells@5.2.2-beta2":
+  version "5.2.2-beta2"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-cells/-/glide-data-grid-cells-5.2.2-beta2.tgz#cb5993d3832ce0d4c3b51d0edbcd9ca85d8d3a7e"
+  integrity sha512-sfQpbY0XuT4wA8gbMS6fFNMYNDvTR8OFshnBgDp5pBJgxXn4ly6HSKq7fSTtjo2T9Zi0xE0C104Az8AsyBPvYw==
   dependencies:
-    "@glideapps/glide-data-grid" "5.2.1"
+    "@glideapps/glide-data-grid" "5.2.2-beta2"
     "@toast-ui/editor" "3.1.10"
     "@toast-ui/react-editor" "3.1.10"
     react-select "^5.2.2"
 
-"@glideapps/glide-data-grid-source@5.2.1":
-  version "5.2.1"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-source/-/glide-data-grid-source-5.2.1.tgz#e4d4aae56bcf7e67a0740e1d8cd2f6cb35a200f4"
-  integrity sha512-AJkIqlJVBWXG46pM51lI1SRrRTDSKx2PYNDsyRrW8krZsV/6RpgCCIij/HfgxHBOJF16n0Clu/+ljDaz9RM8nw==
+"@glideapps/glide-data-grid-source@5.2.2-beta2":
+  version "5.2.2-beta2"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-source/-/glide-data-grid-source-5.2.2-beta2.tgz#70763543a8dde3914c7e67abf2010f035e8d6703"
+  integrity sha512-qE33RcRMWac/CcV/WeQ2i1q0iczYMc2QuD4+lqzI/Wd/BkmNgxe5BBy2sDz9xhqAi9FrLnsgUv0TAEv4cPoSSw==
   dependencies:
-    "@glideapps/glide-data-grid" "5.2.1"
+    "@glideapps/glide-data-grid" "5.2.2-beta2"
 
-"@glideapps/glide-data-grid@5.2.1":
-  version "5.2.1"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-5.2.1.tgz#73036b3f7c17faad4bf418246afbcec5a91c8480"
-  integrity sha512-2ds1xwYZkoJil7OyoHJHMtjq/MTwIFBRLx2VPAP5d6XaJRbuni3UCjtpUH51qf8o1qHeZsSE/dg3hJZZ2I86SQ==
+"@glideapps/glide-data-grid@5.2.2-beta2":
+  version "5.2.2-beta2"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-5.2.2-beta2.tgz#846091241d55cc756ff31470350b7200ac5cc690"
+  integrity sha512-5/gMvSETaIcd+04bDEr5QIGizEq3+SxHernkjv3+4cEDhF2j0238hsImmiefVecl2nhHAEuMOuX3pcGEaAzp1Q==
   dependencies:
     canvas-hypertxt "^0.0.7"
     react-number-format "^5.0.0"
@@ -6605,16 +6605,6 @@ date-fns-tz@^1.2.2:
   version "1.3.6"
   resolved "https://registry.yarnpkg.com/date-fns-tz/-/date-fns-tz-1.3.6.tgz#4195a58a2f86eda55ea69fb477f3ed8a6e2188ac"
   integrity sha512-C8q7mErvG4INw1ZwAFmPlGjEo5Sv4udjKVbTc03zpP9cu6cp5AemFzKhz0V68LGcWEtX5mJudzzg3G04emIxLA==
-
-date-fns-tz@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/date-fns-tz/-/date-fns-tz-2.0.0.tgz#1b14c386cb8bc16fc56fe333d4fc34ae1d1099d5"
-  integrity sha512-OAtcLdB9vxSXTWHdT8b398ARImVwQMyjfYGkKD2zaGpHseG2UPHbHjXELReErZFxWdSLph3c2zOaaTyHfOhERQ==
-
-date-fns@^2.29.3:
-  version "2.29.3"
-  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-2.29.3.tgz#27402d2fc67eb442b511b70bbdf98e6411cd68a8"
-  integrity sha512-dDCnyH2WnnKusqvZZ6+jA1O51Ibt8ZMRNkDZdyAyK4YfbDwa/cEmuztzG5pk6hqlp9aSBPYcjOlktquahGwGeA==
 
 date-fns@^2.6.0:
   version "2.16.1"
