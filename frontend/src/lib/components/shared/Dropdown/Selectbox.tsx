@@ -161,7 +161,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
       },
     ]
 
-    if (this.state.isEmpty || this.state.value === undefined) {
+    if (this.state.isEmpty || isNullOrUndefined(this.state.value)) {
       value = []
     }
 

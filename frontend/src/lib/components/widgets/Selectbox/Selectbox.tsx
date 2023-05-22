@@ -19,7 +19,10 @@ import { Selectbox as SelectboxProto } from "src/lib/proto"
 import { FormClearHelper } from "src/lib/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import UISelectbox from "src/lib/components/shared/Dropdown"
-import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
+import {
+  labelVisibilityProtoValueToEnum,
+  isNullOrUndefined,
+} from "src/lib/util/utils"
 import { withTheme } from "@emotion/react"
 import { EmotionTheme } from "src/lib/theme"
 
@@ -86,11 +89,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    if (
-      this.state.value === -1 ||
-      this.state.value === undefined ||
-      this.state.value === null
-    ) {
+    if (this.state.value === -1 || isNullOrUndefined(this.state.value)) {
       this.props.widgetMgr.clearIntValue(this.props.element, source)
     } else {
       this.props.widgetMgr.setIntValue(

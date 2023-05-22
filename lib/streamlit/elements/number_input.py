@@ -221,37 +221,26 @@ class NumberInputMixin:
         maybe_raise_label_warnings(label, label_visibility)
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]
+        if is_default_value:
+            number_input_args = [min_value, max_value, step]
 
-        if not is_default_value:
-            int_args = all(
-                isinstance(a, (numbers.Integral, type(None), NoValue, str))
-                for a in number_input_args
-            )
+        int_args = all(
+            isinstance(a, (numbers.Integral, type(None), NoValue, str))
+            for a in number_input_args
+        )
 
-            float_args = all(
-                isinstance(a, (float, type(None), NoValue, str))
-                for a in number_input_args
-            )
-        else:
-            int_args = all(
-                isinstance(a, (numbers.Integral, type(None), NoValue, str))
-                for a in [min_value, max_value, step]
-            )
+        float_args = all(
+            isinstance(a, (float, type(None), NoValue, str)) for a in number_input_args
+        )
 
-            float_args = all(
-                isinstance(a, (float, type(None), NoValue, str))
-                for a in [min_value, max_value, step]
+        if not int_args and not float_args:
+            raise StreamlitAPIException(
+                "All numerical arguments must be of the same type."
+                f"\n`value` has {type(value).__name__} type."
+                f"\n`min_value` has {type(min_value).__name__} type."
+                f"\n`max_value` has {type(max_value).__name__} type."
+                f"\n`step` has {type(step).__name__} type."
             )
-
-        if value is not Ellipsis:
-            if not int_args and not float_args:
-                raise StreamlitAPIException(
-                    "All numerical arguments must be of the same type."
-                    f"\n`value` has {type(value).__name__} type."
-                    f"\n`min_value` has {type(min_value).__name__} type."
-                    f"\n`max_value` has {type(max_value).__name__} type."
-                    f"\n`step` has {type(step).__name__} type."
-                )
 
         if isinstance(value, NoValue) or value is Ellipsis:
             if min_value is not None:

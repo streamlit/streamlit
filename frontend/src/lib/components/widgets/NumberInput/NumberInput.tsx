@@ -185,7 +185,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
     let value = this.state.value
-    if (this.state.value === undefined || this.state.value === null) {
+    if (isNullOrUndefined(value)) {
       value = null
     }
     const { element, widgetMgr } = this.props
@@ -201,7 +201,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
       }
     } else {
       const valueToBeSaved = value || value === 0 ? value : data.default
-      if (value === null || Number.isNaN(value)) {
+      if (Number.isNaN(value)) {
         widgetMgr.clearIntValue(element, source)
       } else if (this.isIntData()) {
         widgetMgr.setIntValue(element, valueToBeSaved, source)
@@ -209,7 +209,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
         widgetMgr.setDoubleValue(element, valueToBeSaved, source)
       }
 
-      if (value === null || Number.isNaN(value)) {
+      if (Number.isNaN(value)) {
         const { clearable } = this.props.element
         if (!clearable) {
           this.setState({
@@ -396,11 +396,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
           <UIInput
             type="number"
             inputRef={this.inputRef}
-            value={
-              this.state.value === null || this.state.value === undefined
-                ? undefined
-                : formattedValue
-            }
+            value={this.state.value ?? formattedValue}
             onBlur={this.onBlur}
             onFocus={this.onFocus}
             onChange={this.onChange}

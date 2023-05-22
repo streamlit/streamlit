@@ -311,11 +311,7 @@ class TextWidgetsMixin:
         nullable = False
         if ctx and ctx.session_state:
             try:
-                nullable = (
-                    True
-                    if clearable and ctx.session_state[not_nullable_key] is False
-                    else False
-                )
+                nullable = clearable and not ctx.session_state[not_nullable_key]
             except KeyError:
                 nullable = True if clearable else False
 

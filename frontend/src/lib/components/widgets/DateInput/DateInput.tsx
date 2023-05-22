@@ -30,7 +30,10 @@ import { EmotionTheme } from "src/lib/theme"
 import TooltipIcon from "src/lib/components/shared/TooltipIcon"
 import { Placement } from "src/lib/components/shared/Tooltip"
 
-import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
+import {
+  labelVisibilityProtoValueToEnum,
+  isNullOrUndefined,
+} from "src/lib/util/utils"
 
 export interface Props {
   disabled: boolean
@@ -63,7 +66,7 @@ function stringsToDates(strings: string[]): Date[] {
 
 /** Convert an array of dates to an array of strings. */
 function datesToStrings(dates: Date[] | null | undefined): string[] {
-  if (dates === null || dates === undefined) {
+  if (isNullOrUndefined(dates)) {
     return []
   }
   return dates.map((value: Date) => moment(value as Date).format(DATE_FORMAT))
