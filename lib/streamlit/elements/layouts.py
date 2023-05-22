@@ -14,6 +14,7 @@
 
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 
+from streamlit.deprecation_util import deprecate_func_name
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -297,7 +298,7 @@ class LayoutsMixin:
                 "The input argument to st.tabs must contain at least one tab label."
             )
 
-        if any(isinstance(tab, str) is False for tab in tabs):
+        if any(isinstance(tab, str) == False for tab in tabs):
             raise StreamlitAPIException(
                 "The tabs input list to st.tabs is only allowed to contain strings."
             )
