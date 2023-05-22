@@ -185,7 +185,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
     let value = this.state.value
-    if (isNullOrUndefined(value)) {
+    if (isNullOrUndefined(value) || Number.isNaN(value)) {
       value = null
     }
     const { element, widgetMgr } = this.props
@@ -200,8 +200,8 @@ export class NumberInput extends React.PureComponent<Props, State> {
         node.reportValidity()
       }
     } else {
-      const valueToBeSaved = value || value === 0 ? value : data.default
-      if (Number.isNaN(value)) {
+      let valueToBeSaved = value || value === 0 ? value : data.default
+      if (isNullOrUndefined(value)) {
         widgetMgr.clearIntValue(element, source)
       } else if (this.isIntData()) {
         widgetMgr.setIntValue(element, valueToBeSaved, source)
@@ -209,21 +209,19 @@ export class NumberInput extends React.PureComponent<Props, State> {
         widgetMgr.setDoubleValue(element, valueToBeSaved, source)
       }
 
-      if (Number.isNaN(value)) {
+      if (isNullOrUndefined(value)) {
         const { clearable } = this.props.element
         if (!clearable) {
           this.setState({
             dirty: false,
             value: this.initialValue,
-            formattedValue: this.formatValue(
-              this.initialValue ? this.initialValue : 0
-            ),
+            formattedValue: this.formatValue(this.initialValue || 0),
           })
         } else {
           this.setState({
             dirty: false,
             value: undefined,
-            formattedValue: this.formatValue(valueToBeSaved),
+            formattedValue: "",
           })
         }
       } else {
