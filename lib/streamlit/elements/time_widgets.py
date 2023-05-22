@@ -58,7 +58,7 @@ DEFAULT_STEP_MINUTES = 15
 
 
 def _parse_date_value(
-    value: DateValue | str | None | "builtins.ellipsis",
+    value: DateValue | None | "builtins.ellipsis",
 ) -> Tuple[List[date] | None, bool]:
     parsed_dates: List[date]
     range_value: bool = False
@@ -228,7 +228,7 @@ class TimeWidgetsMixin:
     def time_input(
         self,
         label: str,
-        value: TimeValue | None | str | "builtins.ellipsis" = Ellipsis,
+        value: TimeValue | None | "builtins.ellipsis" = Ellipsis,
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -238,7 +238,7 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
-    ) -> Union[time, None]:
+    ) -> time | None:
         r"""Display a time input widget.
 
         Parameters
@@ -351,7 +351,7 @@ class TimeWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
-        parsed_time: Union[time, None]
+        parsed_time: time | None
         if value is Ellipsis:
             value = datetime.now().time().replace(second=0, microsecond=0)
         clearable = value is None
@@ -418,7 +418,7 @@ class TimeWidgetsMixin:
     def date_input(
         self,
         label: str,
-        value: DateValue | str | None | "builtins.ellipsis" = Ellipsis,
+        value: DateValue | None | "builtins.ellipsis" = Ellipsis,
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
@@ -531,7 +531,7 @@ class TimeWidgetsMixin:
     def _date_input(
         self,
         label: str,
-        value: DateValue | str | None | "builtins.ellipsis" = Ellipsis,
+        value: DateValue | None | "builtins.ellipsis" = Ellipsis,
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
@@ -564,12 +564,9 @@ class TimeWidgetsMixin:
 
         date_input_proto.label = label
 
-        clearable = parsed_values.value is None
-        if clearable:
+        if parsed_values.value is None:
             date_input_proto.default[:] = []
-        elif isinstance(parsed_values.value, Iterable) or isinstance(
-            parsed_values.value, Sequence
-        ):
+        elif isinstance(parsed_values.value, Iterable):
             date_input_proto.default[:] = [
                 date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
             ]
