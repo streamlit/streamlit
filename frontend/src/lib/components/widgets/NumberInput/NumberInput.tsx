@@ -200,7 +200,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
         node.reportValidity()
       }
     } else {
-      let valueToBeSaved = value || value === 0 ? value : data.default
+      const valueToBeSaved = value || value === 0 ? value : data.default
       if (isNullOrUndefined(value)) {
         widgetMgr.clearIntValue(element, source)
       } else if (this.isIntData()) {
