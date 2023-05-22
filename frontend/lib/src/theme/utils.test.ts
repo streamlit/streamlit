@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { CustomThemeConfig } from "src/proto"
+import { CustomThemeConfig } from "../../proto/proto"
 import { LocalStore } from "src/util/storageUtils"
 import {
   baseTheme,

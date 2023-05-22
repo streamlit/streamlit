@@ -16,7 +16,7 @@
 
 import React from "react"
 import { mount } from "src/test_util"
-import { BokehChart as BokehChartProto } from "src/proto"
+import { BokehChart as BokehChartProto } from "../../../../proto/proto"
 
 import Figure from "./mock"
 

@@ -20,7 +20,7 @@ import decamelize from "decamelize"
 import cloneDeep from "lodash/cloneDeep"
 import merge from "lodash/merge"
 
-import { CustomThemeConfig, ICustomThemeConfig } from "src/proto"
+import { CustomThemeConfig, ICustomThemeConfig } from "../../proto/proto"
 import { logError } from "src/util/log"
 import { LocalStore, localStorageAvailable } from "src/util/storageUtils"
 import {

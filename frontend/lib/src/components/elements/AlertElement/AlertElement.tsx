@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 
-import { Alert as AlertProto } from "src/proto"
+import { Alert as AlertProto } from "../../../../proto/proto"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import { EmojiIcon } from "src/components/shared/Icon"
 import AlertContainer, { Kind } from "src/components/shared/AlertContainer"

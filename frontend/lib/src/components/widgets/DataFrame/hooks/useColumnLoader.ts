@@ -16,7 +16,7 @@
 import { merge } from "lodash"
 
 import { Quiver } from "src/dataframes/Quiver"
-import { Arrow as ArrowProto } from "src/proto"
+import { Arrow as ArrowProto } from "../../../../../proto/proto"
 import { notNullOrUndefined, isNullOrUndefined } from "src/util/utils"
 import { logWarning, logError } from "src/util/log"
 

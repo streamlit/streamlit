@@ -21,7 +21,7 @@ import React from "react"
 
 import { Size as ResizableSize } from "re-resizable"
 
-import { Arrow as ArrowProto } from "src/proto"
+import { Arrow as ArrowProto } from "../../../../../proto/proto"
 import { notNullOrUndefined } from "src/util/utils"
 
 const ROW_HEIGHT = 35

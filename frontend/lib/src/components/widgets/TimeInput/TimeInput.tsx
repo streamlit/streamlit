@@ -15,7 +15,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { TimeInput as TimeInputProto } from "src/proto"
+import { TimeInput as TimeInputProto } from "../../../../proto/proto"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/WidgetStateManager"

@@ -20,7 +20,7 @@ import { WidgetStateManager } from "src/WidgetStateManager"
 import {
   DateInput as DateInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "src/proto"
+} from "../../../../proto/proto"
 
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import { mockTheme } from "src/mocks/mockTheme"

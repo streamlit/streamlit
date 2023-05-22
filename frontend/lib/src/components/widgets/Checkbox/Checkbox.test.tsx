@@ -24,7 +24,7 @@ import { Checkbox as UICheckbox } from "baseui/checkbox"
 import {
   Checkbox as CheckboxProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "src/proto"
+} from "../../../../proto/proto"
 import Checkbox, { OwnProps } from "./Checkbox"
 
 const getProps = (elementProps: Partial<CheckboxProto> = {}): OwnProps => ({

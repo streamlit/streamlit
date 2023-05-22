@@ -22,7 +22,7 @@ import { Select as UISelect, TYPE } from "baseui/select"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   MultiSelect as MultiSelectProto,
-} from "src/proto"
+} from "../../../../proto/proto"
 import { mockTheme } from "src/mocks/mockTheme"
 import Multiselect, { Props } from "./Multiselect"
 

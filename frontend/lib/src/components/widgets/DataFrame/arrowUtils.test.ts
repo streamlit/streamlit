@@ -19,7 +19,7 @@ import {
   Type as ArrowType,
   DataFrameCell,
 } from "src/dataframes/Quiver"
-import { Arrow as ArrowProto } from "src/proto"
+import { Arrow as ArrowProto } from "../../../../proto/proto"
 import {
   UNICODE,
   MULTI,

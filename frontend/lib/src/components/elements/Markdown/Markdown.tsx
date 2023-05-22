@@ -16,7 +16,7 @@
 
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
 import React, { ReactElement } from "react"
-import { Markdown as MarkdownProto } from "src/proto"
+import { Markdown as MarkdownProto } from "../../../../proto/proto"
 import {
   InlineTooltipIcon,
   StyledLabelHelpWrapper,

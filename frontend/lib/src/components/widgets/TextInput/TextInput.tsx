@@ -16,7 +16,7 @@
 
 import React from "react"
 import { Input as UIInput } from "baseui/input"
-import { TextInput as TextInputProto } from "src/proto"
+import { TextInput as TextInputProto } from "../../../../proto/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/WidgetStateManager"
 import InputInstructions from "src/components/shared/InputInstructions/InputInstructions"

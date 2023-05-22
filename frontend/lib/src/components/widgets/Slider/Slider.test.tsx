@@ -21,7 +21,7 @@ import TimezoneMock from "timezone-mock"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Slider as SliderProto,
-} from "src/proto"
+} from "../../../../proto/proto"
 import { mount } from "src/test_util"
 import { WidgetStateManager } from "src/WidgetStateManager"
 import { mockTheme } from "src/mocks/mockTheme"

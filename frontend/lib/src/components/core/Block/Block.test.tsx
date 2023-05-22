@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { Block as BlockProto } from "src/proto"
+import { Block as BlockProto } from "../../../../proto/proto"
 import { mount } from "src/test_util"
 import { BlockNode } from "src/AppNode"
 import { ScriptRunState } from "src/ScriptRunState"

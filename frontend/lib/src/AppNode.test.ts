@@ -22,7 +22,7 @@ import {
   ForwardMsgMetadata,
   IArrowVegaLiteChart,
   NamedDataSet,
-} from "src/proto"
+} from "../proto/proto"
 import { IndexTypeName } from "src/dataframes/Quiver"
 import { mockDataFrame as mockDataFrameData } from "src/components/elements/DataFrame/mock"
 import { Writer } from "protobufjs"

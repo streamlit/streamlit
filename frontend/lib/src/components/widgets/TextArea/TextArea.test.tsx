@@ -19,7 +19,7 @@ import { mount, shallow } from "src/test_util"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextArea as TextAreaProto,
-} from "src/proto"
+} from "../../../../proto/proto"
 
 import { WidgetStateManager } from "src/WidgetStateManager"
 

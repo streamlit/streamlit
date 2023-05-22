@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { TextArea as TextAreaProto } from "src/proto"
+import { TextArea as TextAreaProto } from "../../../../proto/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/WidgetStateManager"
 

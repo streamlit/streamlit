@@ -24,7 +24,7 @@ import {
   FileUploaderState as FileUploaderStateProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "src/proto"
+} from "../../../../proto/proto"
 import { WidgetStateManager } from "src/WidgetStateManager"
 import { notUndefined } from "src/util/utils"
 import FileDropzone from "./FileDropzone"

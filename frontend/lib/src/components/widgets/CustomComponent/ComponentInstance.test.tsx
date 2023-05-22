@@ -17,7 +17,7 @@
 import {
   ComponentInstance as ComponentInstanceProto,
   SpecialArg,
-} from "src/proto"
+} from "../../../../proto/proto"
 import AlertElement from "src/components/elements/AlertElement"
 import ErrorElement from "src/components/shared/ErrorElement"
 import { ReactWrapper } from "enzyme"

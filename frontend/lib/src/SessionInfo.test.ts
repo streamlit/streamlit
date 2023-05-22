@@ -15,7 +15,7 @@
  */
 
 import { SessionInfo } from "src/SessionInfo"
-import { NewSession } from "src/proto"
+import { NewSession } from "../proto/proto"
 import { mockSessionInfoProps } from "./mocks/mocks"
 
 test("Throws an error when used before initialization", () => {

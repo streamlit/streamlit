@@ -21,7 +21,7 @@ import { DataEditor as GlideDataEditor } from "@glideapps/glide-data-grid"
 import { TEN_BY_TEN } from "src/mocks/arrow"
 import { mount } from "src/test_util"
 import { Quiver } from "src/dataframes/Quiver"
-import { Arrow as ArrowProto } from "src/proto"
+import { Arrow as ArrowProto } from "../../../../proto/proto"
 
 import { Resizable } from "re-resizable"
 import DataFrame, { DataFrameProps } from "./DataFrame"

@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { Progress as ProgressProto } from "src/proto"
+import { Progress as ProgressProto } from "../../../../proto/proto"
 import ProgressBar from "src/components/shared/ProgressBar"
 import { StyledCaptionText } from "src/components/elements/Progress/styled-components"
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"

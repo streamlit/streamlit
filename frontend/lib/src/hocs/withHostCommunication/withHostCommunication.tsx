@@ -17,7 +17,7 @@
 import React, { ComponentType, useState, useEffect, ReactElement } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import { ICustomThemeConfig } from "src/proto"
+import { ICustomThemeConfig } from "../../../proto/proto"
 
 import Resolver from "src/util/Resolver"
 import { isValidOrigin } from "src/util/UriUtil"

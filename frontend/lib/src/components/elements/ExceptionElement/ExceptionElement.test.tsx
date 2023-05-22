@@ -18,7 +18,7 @@ import React from "react"
 import { mount } from "src/test_util"
 
 import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
-import { Exception as ExceptionProto } from "src/proto"
+import { Exception as ExceptionProto } from "../../../../proto/proto"
 import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
 
 const getProps = (

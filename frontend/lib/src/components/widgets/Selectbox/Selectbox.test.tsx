@@ -19,7 +19,7 @@ import { mount } from "src/test_util"
 import { WidgetStateManager } from "src/WidgetStateManager"
 
 import { Select as UISelect } from "baseui/select"
-import { Selectbox as SelectboxProto } from "src/proto"
+import { Selectbox as SelectboxProto } from "../../../../proto/proto"
 import Selectbox, { Props } from "./Selectbox"
 
 const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({

@@ -15,7 +15,7 @@
  */
 
 import React, { Fragment, ReactElement } from "react"
-import { Heading as HeadingProto } from "src/proto"
+import { Heading as HeadingProto } from "../../../../proto/proto"
 import IsSidebarContext from "src/components/core/IsSidebarContext"
 
 import {

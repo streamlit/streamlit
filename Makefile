@@ -221,8 +221,8 @@ clean:
 	rm -rf frontend/app/build
 	rm -rf frontend/node_modules
 	rm -rf frontend/test_results
-	rm -f frontend/lib/src/proto.js
-	rm -f frontend/lib/src/proto.d.ts
+	rm -f frontend/lib/proto/proto.js
+	rm -f frontend/lib/proto/proto.d.ts
 	rm -rf frontend/public/reports
 	rm -rf ~/.cache/pre-commit
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
@@ -264,14 +264,14 @@ protobuf: check-protoc
 		yarn --silent pbjs \
 			../proto/streamlit/proto/*.proto \
 			-t static-module --wrap es6 \
-	) > ./lib/src/proto.js
+	) > ./lib/proto/proto.js
 
 	@# Typescript type declarations for our generated protobufs
 	cd frontend/ ; ( \
 		echo "/* eslint-disable */" ; \
 		echo ; \
-		yarn --silent pbts ./lib/src/proto.js \
-	) > ./lib/src/proto.d.ts
+		yarn --silent pbts ./lib/../proto/proto.js \
+	) > ./lib/proto/proto.d.ts
 
 .PHONY: react-init
 react-init:

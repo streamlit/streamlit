@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { DownloadButton as DownloadButtonProto } from "src/proto"
+import { DownloadButton as DownloadButtonProto } from "../../../../proto/proto"
 import BaseButton, {
   BaseButtonTooltip,
   BaseButtonKind,

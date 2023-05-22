@@ -17,7 +17,7 @@
 import React from "react"
 import { mount } from "src/test_util"
 import { fromJS, Map as ImmutableMap } from "immutable"
-import { VegaLiteChart as VegaLiteChartProto } from "src/proto"
+import { VegaLiteChart as VegaLiteChartProto } from "../../../../proto/proto"
 import { tableGetRowsAndCols } from "src/dataframes/dataFrameProto"
 import { mockTheme } from "src/mocks/mockTheme"
 

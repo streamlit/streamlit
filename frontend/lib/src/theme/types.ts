@@ -16,7 +16,7 @@
 
 import { lightThemePrimitives } from "baseui"
 
-import { CustomThemeConfig } from "src/proto"
+import { CustomThemeConfig } from "../../proto/proto"
 
 import emotionBaseTheme from "./emotionBaseTheme"
 import { baseuiLightTheme } from "./baseui"

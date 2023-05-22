@@ -38,7 +38,7 @@ import withMapboxToken from "src/hocs/withMapboxToken"
 
 import { notNullOrUndefined } from "src/util/utils"
 
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/proto"
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "../../../../proto/proto"
 import {
   StyledDeckGlChart,
   StyledNavigationControlContainer,

@@ -27,7 +27,7 @@ import Protobuf, {
   IArrow,
   IArrowNamedDataSet,
   NamedDataSet,
-} from "./proto"
+} from "../proto/proto"
 import {
   VegaLiteChartElement,
   WrappedNamedDataset,

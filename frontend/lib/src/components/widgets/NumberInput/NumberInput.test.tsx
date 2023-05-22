@@ -18,7 +18,7 @@ import { ShallowWrapper } from "enzyme"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   NumberInput as NumberInputProto,
-} from "src/proto"
+} from "../../../../proto/proto"
 import React from "react"
 import { mount, shallow } from "src/test_util"
 import { Input as UIInput } from "baseui/input"

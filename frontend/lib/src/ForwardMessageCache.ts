@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ForwardMsg } from "src/proto"
+import { ForwardMsg } from "../proto/proto"
 import { logMessage } from "src/util/log"
 import { ensureError } from "./util/ErrorHandling"
 import { StreamlitEndpoints } from "./StreamlitEndpoints"

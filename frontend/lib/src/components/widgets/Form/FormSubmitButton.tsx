@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, useEffect } from "react"
-import { Button as ButtonProto } from "src/proto"
+import { Button as ButtonProto } from "../../../../proto/proto"
 import BaseButton, {
   BaseButtonTooltip,
   BaseButtonKind,

@@ -17,7 +17,7 @@
 import React from "react"
 import "@testing-library/jest-dom"
 import { mount } from "src/test_util"
-import { Heading as HeadingProto } from "src/proto"
+import { Heading as HeadingProto } from "../../../../proto/proto"
 import Heading, { HeadingProtoProps } from "./Heading"
 
 import {

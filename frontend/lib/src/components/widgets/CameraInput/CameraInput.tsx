@@ -23,7 +23,7 @@ import {
   CameraInput as CameraInputProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "src/proto"
+} from "../../../../proto/proto"
 import Icon from "src/components/shared/Icon"
 import { Placement } from "src/components/shared/Tooltip"
 import TooltipIcon from "src/components/shared/TooltipIcon"

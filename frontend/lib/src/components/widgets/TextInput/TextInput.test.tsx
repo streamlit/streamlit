@@ -22,7 +22,7 @@ import { Input as UIInput } from "baseui/input"
 import {
   TextInput as TextInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "src/proto"
+} from "../../../../proto/proto"
 import TextInput, { Props } from "./TextInput"
 
 const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({

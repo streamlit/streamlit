@@ -17,7 +17,7 @@
 import React, { ReactElement } from "react"
 import { AutoSizer } from "react-virtualized"
 
-import { Block as BlockProto } from "src/proto"
+import { Block as BlockProto } from "../../../../proto/proto"
 import { BlockNode, AppNode, ElementNode } from "src/AppNode"
 import { getElementWidgetID } from "src/util/utils"
 import withExpandable from "src/hocs/withExpandable"

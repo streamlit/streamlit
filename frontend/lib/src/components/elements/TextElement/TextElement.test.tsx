@@ -16,7 +16,7 @@
 
 import React from "react"
 import { shallow, mount } from "src/test_util"
-import { Text as TextProto } from "src/proto"
+import { Text as TextProto } from "../../../../proto/proto"
 import TextElement, { TextProps } from "./TextElement"
 
 import { InlineTooltipIcon } from "src/components/shared/TooltipIcon"

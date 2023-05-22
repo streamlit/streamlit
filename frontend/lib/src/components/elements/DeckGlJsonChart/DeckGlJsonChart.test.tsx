@@ -18,7 +18,7 @@ import React from "react"
 import { DeckGL } from "deck.gl"
 import { shallow } from "src/test_util"
 
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/proto"
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "../../../../proto/proto"
 import { NavigationControl } from "react-map-gl"
 import { mockTheme } from "src/mocks/mockTheme"
 import { DeckGlJsonChart, PropsWithHeight } from "./DeckGlJsonChart"

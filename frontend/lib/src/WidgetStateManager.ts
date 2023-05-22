@@ -25,7 +25,7 @@ import {
   StringArray,
   WidgetState,
   WidgetStates,
-} from "src/proto"
+} from "../proto/proto"
 import { Signal, SignalConnection } from "typed-signals"
 import { isValidFormId } from "./util/utils"
 

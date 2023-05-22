@@ -16,7 +16,7 @@
 
 import React from "react"
 import { mount } from "src/test_util"
-import { Json as JsonProto } from "src/proto"
+import { Json as JsonProto } from "../../../../proto/proto"
 import * as themeUtils from "src/theme/utils"
 import Json, { JsonProps } from "./Json"
 

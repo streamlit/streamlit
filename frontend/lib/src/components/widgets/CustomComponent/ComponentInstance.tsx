@@ -19,7 +19,7 @@ import {
   ComponentInstance as ComponentInstanceProto,
   ISpecialArg,
   SpecialArg as SpecialArgProto,
-} from "src/proto"
+} from "../../../../proto/proto"
 import AlertElement from "src/components/elements/AlertElement"
 import { Kind } from "src/components/shared/AlertContainer"
 import ErrorElement from "src/components/shared/ErrorElement"

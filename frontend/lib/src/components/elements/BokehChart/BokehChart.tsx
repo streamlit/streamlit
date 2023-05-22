@@ -16,7 +16,7 @@
 
 import React, { ReactElement, useEffect, useCallback } from "react"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
-import { BokehChart as BokehChartProto } from "src/proto"
+import { BokehChart as BokehChartProto } from "../../../../proto/proto"
 
 // We import Bokeh from a vendored source file, because it doesn't play well with Babel (https://github.com/bokeh/bokeh/issues/10658)
 // Importing these files will cause global Bokeh to be mutated

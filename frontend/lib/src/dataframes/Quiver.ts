@@ -33,7 +33,7 @@ import { range, unzip, zip } from "lodash"
 import moment from "moment-timezone"
 import numbro from "numbro"
 
-import { IArrow, Styler as StylerProto } from "src/proto"
+import { IArrow, Styler as StylerProto } from "../../proto/proto"
 import { notNullOrUndefined } from "src/util/utils"
 
 /** Data types used by ArrowJS. */

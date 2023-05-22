@@ -16,7 +16,7 @@
 
 import { renderHook, act } from "@testing-library/react-hooks"
 
-import { Arrow as ArrowProto } from "src/proto"
+import { Arrow as ArrowProto } from "../../../../../proto/proto"
 import { TEN_BY_TEN, UNICODE, VERY_TALL } from "src/mocks/arrow"
 
 import useTableSizer, { calculateMaxHeight } from "./useTableSizer"

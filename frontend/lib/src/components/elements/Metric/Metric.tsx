@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { Metric as MetricProto } from "src/proto"
+import { Metric as MetricProto } from "../../../../proto/proto"
 import { EmotionTheme } from "src/theme"
 import { labelVisibilityProtoValueToEnum } from "src/util/utils"
 import Icon from "src/components/shared/Icon"

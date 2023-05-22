@@ -22,7 +22,7 @@ import {
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "src/util/IFrameUtil"
 
-import { IFrame as IFrameProto } from "src/proto"
+import { IFrame as IFrameProto } from "../../../../proto/proto"
 import IFrame, { IFrameProps } from "./IFrame"
 
 const getProps = (elementProps: Partial<IFrameProto> = {}): IFrameProps => ({

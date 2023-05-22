@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { IFrame as IFrameProto } from "src/proto"
+import { IFrame as IFrameProto } from "../../../../proto/proto"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,

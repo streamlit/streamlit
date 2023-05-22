@@ -20,7 +20,7 @@ import JSON5 from "json5"
 import ReactJson from "react-json-view"
 import ErrorElement from "src/components/shared/ErrorElement"
 
-import { Json as JsonProto } from "src/proto"
+import { Json as JsonProto } from "../../../../proto/proto"
 import { hasLightBackgroundColor, EmotionTheme } from "src/theme"
 import { ensureError } from "src/util/ErrorHandling"
 

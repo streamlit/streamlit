@@ -23,7 +23,7 @@ import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "src/proto"
+} from "../../../../proto/proto"
 import { FormClearHelper } from "src/components/widgets/Form"
 
 import { FileSize, getSizeDisplay, sizeConverter } from "src/util/FileHelper"

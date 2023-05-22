@@ -20,7 +20,7 @@ import {
   Initialize,
   NewSession,
   UserInfo,
-} from "src/proto"
+} from "../proto/proto"
 
 import { hashString } from "src/util/utils"
 

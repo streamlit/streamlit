@@ -21,7 +21,7 @@ import {
   IImage,
   Image as ImageProto,
   ImageList as ImageListProto,
-} from "src/proto"
+} from "../../../../proto/proto"
 import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
 import { xssSanitizeSvg } from "src/util/UriUtil"
 import { StreamlitEndpoints } from "src/StreamlitEndpoints"
