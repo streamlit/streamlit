@@ -595,7 +595,7 @@ class TimeWidgetsMixin:
         # This needs to be done after register_widget because we don't want
         # the following proto fields to affect a widget's ID.
         date_input_proto.disabled = disabled
-        date_input_proto.clearable = clearable
+        date_input_proto.clearable = parsed_values.value is None
         date_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
