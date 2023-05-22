@@ -34,6 +34,8 @@ export interface StreamlitEndpoints {
    */
   buildMediaURL(url: string): string
 
+  buildUploadFileURL(url: string): string
+
   /**
    * Construct a URL for an app page in a multi-page app.
    * @param pageLinkBaseURL the optional pageLinkBaseURL set by the host communication layer.

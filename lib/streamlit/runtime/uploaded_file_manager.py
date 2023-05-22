@@ -14,6 +14,7 @@
 
 import io
 import threading
+import uuid
 from collections import defaultdict
 from typing import IO, Dict, List, NamedTuple, Tuple
 
@@ -105,10 +106,12 @@ class UploadedFileManager(CacheStatsProvider):
     This class can be used safely from multiple threads simultaneously.
     """
 
-    def __init__(self):
+    def __init__(self, endpoint: str):
         # List of files for a given widget in a given session.
         self._files_by_id: Dict[Tuple[str, str], List[UploadedFileRec]] = {}
         self._modern_files: Dict[str, Dict[str, NewUploadedFileRec]] = defaultdict(dict)
+
+        self.endpoint = endpoint
 
         # A counter that generates unique file IDs. Each file ID is greater
         # than the previous ID, which means we can use IDs to compare files
@@ -148,6 +151,16 @@ class UploadedFileManager(CacheStatsProvider):
     def remove_file_modern(self, session_id, file_url):
         print("IN DELETE!!!")
         self._modern_files[session_id].pop(file_url, None)
+
+    # PROTOCOL METHOD
+    def get_presigned_urls_modern(self, session_id: str, number_of_files: int):
+        presigned_urls = []
+
+        for i in range(number_of_files):
+            file_id = str(uuid.uuid4())
+            presigned_url = f"{self.endpoint}/{session_id}/{file_id}"
+            presigned_urls.append({"presigned_url": presigned_url})
+        return presigned_urls
 
     # PROTOCOL METHOD
     def remove_session_files_modern(self, session_id):

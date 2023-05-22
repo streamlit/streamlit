@@ -32,7 +32,7 @@ interface Props {
 
 const MEDIA_ENDPOINT = "/media"
 const UPLOAD_URLS_ENDPOINT = "/_stcore/upload_urls"
-const UPLOAD_FILE_ENDPOINT = "/_stcore/upload_file"
+const UPLOAD_FILE_ENDPOINT = "/_stcore/upload_fileZZ"
 const COMPONENT_ENDPOINT_BASE = "/component"
 const FORWARD_MSG_CACHE_ENDPOINT = "/_stcore/message"
 
@@ -70,6 +70,15 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       : url
   }
 
+  /**
+   * Construct a URL for a upload file.
+   */
+  public buildUploadFileURL(url: string): string {
+    return url.startsWith(UPLOAD_FILE_ENDPOINT)
+      ? buildHttpUri(this.requireServerUri(), url)
+      : url
+  }
+
   /** Construct a URL for an app page in a multi-page app. */
   public buildAppPageURL(
     pageLinkBaseURL: string | undefined,
@@ -99,7 +108,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     numUrls: number,
     sessionId: string
   ): Promise<any> {
-    return this.csrfRequest<number>(UPLOAD_URLS_ENDPOINT, {
+    return this.csrfRequest<any>(UPLOAD_URLS_ENDPOINT, {
       method: "POST",
       data: {
         numberOfFiles: numUrls,
@@ -107,7 +116,11 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       },
       responseType: "json",
     }).then(response => {
-      return response.data
+      // We need to use full (not relative) url (like http://localhost:8501/_stcore/upload_fileZZ/(?P<session_id>[^/]*)/(?P<file_id>[^/]*))
+      // since this URL used as key in our UploadMenegar
+      return response.data.map(obj => ({
+        presigned_url: this.buildUploadFileURL(obj.presigned_url),
+      }))
     })
   }
 

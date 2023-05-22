@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import uuid
 
 import tornado.httputil
 import tornado.web
@@ -28,6 +27,13 @@ LOGGER = get_logger(__name__)
 
 class UploadFilePresignedUrlRequestHandler(tornado.web.RequestHandler):
     """Implements the POST /upload_urls/ endpoint to get upload urls."""
+
+    def initialize(
+        self,
+        file_mgr: UploadedFileManager,
+    ):
+
+        self._file_mgr = file_mgr
 
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Methods", "POST, OPTIONS")
@@ -71,16 +77,11 @@ class UploadFilePresignedUrlRequestHandler(tornado.web.RequestHandler):
         json_data = tornado.escape.json_decode(self.request.body)
         number_of_files = int(json_data["numberOfFiles"])
         session_id = json_data["sessionId"]
-        response_body = []
 
-        for i in range(number_of_files):
-            file_id = str(uuid.uuid4())
-            # TODO [Karen] use PORT variable instead of hardcoded 8501
-            presigned_url = (
-                f"http://localhost:8501/_stcore/upload_fileZZ/{session_id}/{file_id}"
-            )
-            response_body.append({"presigned_url": presigned_url})
+        presigned_urls = self._file_mgr.get_presigned_urls_modern(
+            session_id, number_of_files
+        )
 
-        self.write(tornado.escape.json_encode(response_body))
+        self.write(tornado.escape.json_encode(presigned_urls))
         self.set_status(201)
         self.finish()

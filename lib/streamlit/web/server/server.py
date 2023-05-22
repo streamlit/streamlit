@@ -37,6 +37,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
+from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.web.cache_storage_manager_config import (
     create_default_cache_storage_manager,
 )
@@ -62,7 +63,6 @@ from streamlit.web.server.upload_file_request_handler import (
     UploadFileRequestHandler,
 )
 from streamlit.web.server.upload_file_request_handler_new import (
-    NEW_UPLOAD_FILE_ROUTE,
     NewUploadFileRequestHandler,
 )
 
@@ -91,6 +91,7 @@ MAX_PORT_SEARCH_RETRIES = 100
 UNIX_SOCKET_PREFIX = "unix://"
 
 MEDIA_ENDPOINT: Final = "/media"
+UPLOAD_FILE_ENDPOINT: Final = "/_stcore/upload_fileZZ"
 STREAM_ENDPOINT: Final = r"_stcore/stream"
 METRIC_ENDPOINT: Final = r"(?:st-metrics|_stcore/metrics)"
 MESSAGE_ENDPOINT: Final = r"_stcore/message"
@@ -236,11 +237,14 @@ class Server:
         media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
         MediaFileHandler.initialize_storage(media_file_storage)
 
+        uploaded_file_mgr = UploadedFileManager(UPLOAD_FILE_ENDPOINT)
+
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
                 command_line=command_line,
                 media_file_storage=media_file_storage,
+                uploaded_file_manager=uploaded_file_mgr,
                 cache_storage_manager=create_default_cache_storage_manager(),
             ),
         )
@@ -318,7 +322,7 @@ class Server:
             (
                 make_url_path_regex(
                     base,
-                    NEW_UPLOAD_FILE_ROUTE,
+                    rf"{UPLOAD_FILE_ENDPOINT}/(?P<session_id>[^/]*)/(?P<file_id>[^/]*)",
                 ),
                 NewUploadFileRequestHandler,
                 dict(
@@ -332,7 +336,9 @@ class Server:
                     UPLOAD_FILE_PRESIGNED_URL_ROUTE,
                 ),
                 UploadFilePresignedUrlRequestHandler,
-                # TODO[Karen] PASS NEW file_mgr instance, to abstract presigned url generation
+                dict(
+                    file_mgr=self._runtime.uploaded_file_mgr,
+                ),
             ),
             (
                 make_url_path_regex(base, f"{MEDIA_ENDPOINT}/(.*)"),

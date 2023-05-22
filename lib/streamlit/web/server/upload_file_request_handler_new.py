@@ -25,10 +25,6 @@ from streamlit.runtime.uploaded_file_manager import (
 )
 from streamlit.web.server import routes, server_util
 
-# /_stcore/upload_file/(optional session id)/(optional widget id)
-NEW_UPLOAD_FILE_ROUTE = (
-    r"/_stcore/upload_fileZZ/(?P<session_id>[^/]*)/(?P<file_id>[^/]*)"
-)
 LOGGER = get_logger(__name__)
 
 
@@ -93,14 +89,9 @@ class NewUploadFileRequestHandler(tornado.web.RequestHandler):
         Return the file's ID, so that the client can refer to it.
         """
 
-        print("AAAAAAAAAA")
-        print(self.path_args)
-        print("------------")
-        print(self.path_kwargs)
-
         args: Dict[str, List[bytes]] = {}
         files: Dict[str, List[Any]] = {}
-        #
+
         session_id = self.path_kwargs["session_id"]
         file_url = self.request.full_url()
 

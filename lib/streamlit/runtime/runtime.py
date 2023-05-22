@@ -90,6 +90,8 @@ class RuntimeConfig:
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
 
+    uploaded_file_manager: UploadedFileManager
+
     # The cache storage backend for Streamlit's st.cache_data.
     cache_storage_manager: CacheStorageManager = field(
         default_factory=LocalDiskCacheStorageManager
@@ -186,7 +188,8 @@ class Runtime:
 
         # Initialize managers
         self._message_cache = ForwardMsgCache()
-        self._uploaded_file_mgr = UploadedFileManager()
+        self._uploaded_file_mgr = config.uploaded_file_manager
+        # TODO[KAREN] REMOVE on_files_updated signal
         self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._cache_storage_manager = config.cache_storage_manager
