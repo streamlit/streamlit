@@ -34,25 +34,25 @@ random.seed(0)
 st.set_page_config(layout="wide")
 
 st.subheader("Base types")
-st.experimental_data_editor(BASE_TYPES_DF, use_container_width=True)
+st.data_editor(BASE_TYPES_DF, use_container_width=True)
 
 st.subheader("Number types")
-st.experimental_data_editor(NUMBER_TYPES_DF, use_container_width=True)
+st.data_editor(NUMBER_TYPES_DF, use_container_width=True)
 
 st.subheader("Date, time and datetime types")
-st.experimental_data_editor(DATETIME_TYPES_DF, use_container_width=True)
+st.data_editor(DATETIME_TYPES_DF, use_container_width=True)
 
 st.subheader("List types")
-st.experimental_data_editor(LIST_TYPES_DF, use_container_width=True)
+st.data_editor(LIST_TYPES_DF, use_container_width=True)
 
 st.subheader("Interval dtypes in pd.DataFrame")
-st.experimental_data_editor(INTERVAL_TYPES_DF, use_container_width=True)
+st.data_editor(INTERVAL_TYPES_DF, use_container_width=True)
 
 st.subheader("Special types")
-st.experimental_data_editor(SPECIAL_TYPES_DF, use_container_width=True)
+st.data_editor(SPECIAL_TYPES_DF, use_container_width=True)
 
 st.subheader("Period dtypes in pd.DataFrame")
-st.experimental_data_editor(PERIOD_TYPES_DF, use_container_width=True)
+st.data_editor(PERIOD_TYPES_DF, use_container_width=True)
 
 st.subheader("Unsupported types")
-st.experimental_data_editor(UNSUPPORTED_TYPES_DF, use_container_width=True)
+st.data_editor(UNSUPPORTED_TYPES_DF, use_container_width=True)

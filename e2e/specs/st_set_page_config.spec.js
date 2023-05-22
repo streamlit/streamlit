@@ -71,7 +71,7 @@ describe("st.set_page_config", () => {
       cy.getIndexed(".stButton button", 2).click();
 
       cy.get(".stException")
-        .contains("set_page_config() can only be called once per app")
+        .contains("set_page_config() can only be called once per app page")
         .should("exist");
       // Ensure that the first set_page_config worked
       cy.title().should("eq", "Change 1");
@@ -81,7 +81,7 @@ describe("st.set_page_config", () => {
       cy.getIndexed(".stButton button", 3).click();
 
       cy.get(".stException")
-        .contains("set_page_config() can only be called once per app")
+        .contains("set_page_config() can only be called once per app page")
         .should("exist");
       // Ensure that the first set_page_config worked
       cy.title().should("eq", "Change 3");

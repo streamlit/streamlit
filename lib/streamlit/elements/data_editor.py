@@ -38,6 +38,7 @@ from typing_extensions import Literal, TypeAlias, TypedDict
 
 from streamlit import logger as _logger
 from streamlit import type_util
+from streamlit.deprecation_util import deprecate_func_name
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
@@ -447,7 +448,7 @@ def _check_type_compatibilities(
 
 class DataEditorMixin:
     @overload
-    def experimental_data_editor(
+    def data_editor(
         self,
         data: EditableData,
         *,
@@ -467,7 +468,7 @@ class DataEditorMixin:
         pass
 
     @overload
-    def experimental_data_editor(
+    def data_editor(
         self,
         data: Any,
         *,
@@ -486,8 +487,8 @@ class DataEditorMixin:
     ) -> pd.DataFrame:
         pass
 
-    @gather_metrics("experimental_data_editor")
-    def experimental_data_editor(
+    @gather_metrics("data_editor")
+    def data_editor(
         self,
         data: DataTypes,
         *,
@@ -605,7 +606,7 @@ class DataEditorMixin:
         >>>        {"command": "st.time_input", "rating": 3, "is_widget": True},
         >>>    ]
         >>> )
-        >>> edited_df = st.experimental_data_editor(df)
+        >>> edited_df = st.data_editor(df)
         >>>
         >>> favorite_command = edited_df.loc[edited_df["rating"].idxmax()]["command"]
         >>> st.markdown(f"Your favorite command is **{favorite_command}** 🎈")
@@ -626,7 +627,7 @@ class DataEditorMixin:
         >>>        {"command": "st.time_input", "rating": 3, "is_widget": True},
         >>>    ]
         >>> )
-        >>> edited_df = st.experimental_data_editor(df, num_rows="dynamic")
+        >>> edited_df = st.data_editor(df, num_rows="dynamic")
         >>>
         >>> favorite_command = edited_df.loc[edited_df["rating"].idxmax()]["command"]
         >>> st.markdown(f"Your favorite command is **{favorite_command}** 🎈")
@@ -647,7 +648,7 @@ class DataEditorMixin:
         >>>         {"command": "st.time_input", "rating": 3, "is_widget": True},
         >>>     ]
         >>> )
-        >>> edited_df = st.experimental_data_editor(
+        >>> edited_df = st.data_editor(
         >>>     df,
         >>>     column_config={
         >>>         "command": "Streamlit Command",
@@ -792,3 +793,10 @@ class DataEditorMixin:
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+    # TODO(lukasmasuch): Remove the deprecated function name after 2023-08-20:
+    experimental_data_editor = deprecate_func_name(
+        gather_metrics("experimental_data_editor", data_editor),
+        "experimental_data_editor",
+        "2023-08-20",
+    )

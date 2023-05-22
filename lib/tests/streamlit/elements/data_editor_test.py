@@ -248,21 +248,21 @@ class DataEditorUtilTest(unittest.TestCase):
 class DataEditorTest(DeltaGeneratorTestCase):
     def test_just_disabled_true(self):
         """Test that it can be called with disabled=True param."""
-        st.experimental_data_editor(pd.DataFrame(), disabled=True)
+        st.data_editor(pd.DataFrame(), disabled=True)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.disabled, True)
 
     def test_just_disabled_false(self):
         """Test that it can be called with disabled=False param."""
-        st.experimental_data_editor(pd.DataFrame(), disabled=False)
+        st.data_editor(pd.DataFrame(), disabled=False)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.disabled, False)
 
     def test_just_width_height(self):
         """Test that it can be called with width and height."""
-        st.experimental_data_editor(pd.DataFrame(), width=300, height=400)
+        st.data_editor(pd.DataFrame(), width=300, height=400)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.width, 300)
@@ -270,28 +270,28 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
     def test_num_rows_fixed(self):
         """Test that it can be called with num_rows fixed."""
-        st.experimental_data_editor(pd.DataFrame(), num_rows="fixed")
+        st.data_editor(pd.DataFrame(), num_rows="fixed")
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.editing_mode, ArrowProto.EditingMode.FIXED)
 
     def test_num_rows_dynamic(self):
         """Test that it can be called with num_rows dynamic."""
-        st.experimental_data_editor(pd.DataFrame(), num_rows="dynamic")
+        st.data_editor(pd.DataFrame(), num_rows="dynamic")
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.editing_mode, ArrowProto.EditingMode.DYNAMIC)
 
     def test_column_order_parameter(self):
         """Test that it can be called with column_order."""
-        st.experimental_data_editor(pd.DataFrame(), column_order=["a", "b"])
+        st.data_editor(pd.DataFrame(), column_order=["a", "b"])
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.column_order, ["a", "b"])
 
     def test_just_use_container_width(self):
         """Test that it can be called with use_container_width."""
-        st.experimental_data_editor(pd.DataFrame(), use_container_width=True)
+        st.data_editor(pd.DataFrame(), use_container_width=True)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.use_container_width, True)
@@ -307,7 +307,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
             }
         )
 
-        st.experimental_data_editor(data_df, disabled=["a", "b"])
+        st.data_editor(data_df, disabled=["a", "b"])
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.disabled, False)
@@ -318,7 +318,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
-        st.experimental_data_editor(pd.DataFrame())
+        st.data_editor(pd.DataFrame())
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(proto.form_id, "")
@@ -332,7 +332,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
             }
         )
 
-        st.experimental_data_editor(data_df, hide_index=True)
+        st.data_editor(data_df, hide_index=True)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(
@@ -349,7 +349,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
             }
         )
 
-        st.experimental_data_editor(data_df, hide_index=False)
+        st.data_editor(data_df, hide_index=False)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(
@@ -361,7 +361,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
     def test_inside_form(self):
         """Test that form id is marshalled correctly inside of a form."""
         with st.form("form"):
-            st.experimental_data_editor(pd.DataFrame())
+            st.data_editor(pd.DataFrame())
 
         # 2 elements will be created: form block, widget
         self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
@@ -380,7 +380,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
             }
         )
 
-        return_df = st.experimental_data_editor(df)
+        return_df = st.data_editor(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
@@ -393,7 +393,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         metadata: TestCaseMetadata,
     ):
         """Test that it can be called with compatible data."""
-        return_data = st.experimental_data_editor(input_data)
+        return_data = st.data_editor(input_data)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         reconstructed_df = bytes_to_data_frame(proto.data)
@@ -430,7 +430,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
     def test_with_invalid_data(self, input_data: Any):
         """Test that it raises an exception when called with invalid data."""
         with self.assertRaises(StreamlitAPIException):
-            st.experimental_data_editor(input_data)
+            st.data_editor(input_data)
 
     @parameterized.expand(
         [
@@ -453,7 +453,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         df.set_index(index, inplace=True)
 
         with self.assertRaises(StreamlitAPIException):
-            st.experimental_data_editor(df)
+            st.data_editor(df)
 
     @parameterized.expand(
         [
@@ -475,7 +475,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         )
         df.set_index(index, inplace=True)
         # This should run without an issue and return a valid dataframe
-        return_df = st.experimental_data_editor(df)
+        return_df = st.data_editor(df)
         self.assertIsInstance(return_df, pd.DataFrame)
 
     def test_check_type_compatibilities(self):
@@ -539,7 +539,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
             )
             df.set_index(index, inplace=True)
             # This should run without an issue and return a valid dataframe
-            return_df = st.experimental_data_editor(df)
+            return_df = st.data_editor(df)
             self.assertIsInstance(return_df, pd.DataFrame)
 
     def test_pandas_styler_support(self):
@@ -553,7 +553,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         # NOTE: If UUID is not set - a random UUID will be generated.
         styler.set_uuid("FAKE_UUID")
         styler.highlight_max(axis=None)
-        st.experimental_data_editor(styler)
+        st.data_editor(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(
