@@ -281,7 +281,7 @@ describe("NumberInput widget", () => {
       const props = getIntProps({ default: 10 })
       const wrapper = shallow(<NumberInput {...props} />)
 
-      expect(wrapper.find(UIInput).props().value).toBe("10")
+      expect(wrapper.find(UIInput).props().value).toBe(10)
     })
 
     it("sets widget value on mount", () => {
