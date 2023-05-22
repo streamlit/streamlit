@@ -26,6 +26,8 @@ import {
   DeployedAppMetadata,
 } from "./types"
 import { isValidOrigin } from "src/lib/util/UriUtil"
+import { IS_DEV_ENV } from "src/lib/baseconsts"
+
 import Resolver from "src/lib/util/Resolver"
 
 export const HOST_COMM_VERSION = 1
@@ -133,9 +135,9 @@ export default class HostCommunicationManager {
     // Uncomment this code if testing out host communication with
     // frontend/hostframe.html:
     //
-    // if (IS_DEV_ENV) {
-    //   allowedOrigins.push("http://localhost:8000")
-    // }
+    if (IS_DEV_ENV) {
+      allowedOrigins.push("http://localhost:8000")
+    }
 
     if (!useExternalAuthToken) {
       this.state.deferredAuthToken.resolve(undefined)

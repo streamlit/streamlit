@@ -557,6 +557,7 @@ describe("App", () => {
       ])
     })
 
+    // TODO: Fix this test
     it("sets hideSidebarNav based on the server config option and host setting", () => {
       // hideSidebarNav initializes to true.
       expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)

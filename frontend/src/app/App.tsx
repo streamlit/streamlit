@@ -1520,9 +1520,6 @@ export class App extends PureComponent<Props, State> {
     const { hideSidebarNav: hostHideSidebarNav } =
       this.hostCommunicationMgr.state
 
-    console.log("-------------------------")
-    console.log("hideSidebarNav", hostHideSidebarNav)
-
     const outerDivClass = classNames(
       "stApp",
       getEmbeddingIdClassName(this.embeddingId),
