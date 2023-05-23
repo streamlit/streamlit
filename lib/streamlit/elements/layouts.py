@@ -100,9 +100,9 @@ class LayoutsMixin:
             * An integer that specifies the number of columns. All columns have equal
               width in this case.
             * An iterable of numbers (int or float) that specify the relative width of
-              each column. E.g. `[0.7, 0.3]` creates two columns where the first
+              each column. E.g. ``[0.7, 0.3]`` creates two columns where the first
               one takes up 70% of the available with and the second one takes up 30%.
-              Or `[1, 2, 3]` creates three columns where the second one is two times
+              Or ``[1, 2, 3]`` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
 
         gap : "small", "medium", or "large"
