@@ -409,8 +409,9 @@ class FileUploader extends React.PureComponent<Props, State> {
       file.status.cancelToken.cancel()
     }
 
-    // TODO(vdonato): Call the endpoint to delete this file.
-    this.removeFile(fileId)
+    this.props.uploadClient.deleteFile(file.status.fileUrl).then(() => {
+      this.removeFile(fileId)
+    })
   }
 
   /** Append the given file to `state.files`. */

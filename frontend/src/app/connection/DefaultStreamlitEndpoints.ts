@@ -118,7 +118,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     }).then(response => {
       // We need to use full (not relative) url (like http://localhost:8501/_stcore/upload_fileZZ/(?P<session_id>[^/]*)/(?P<file_id>[^/]*))
       // since this URL used as key in our UploadMenegar
-      return response.data.map(obj => ({
+      return response.data.map((obj: any) => ({
         presigned_url: this.buildUploadFileURL(obj.presigned_url),
       }))
     })
@@ -154,6 +154,15 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       // `Bad uploadFile response: expected a number but got '${response.data}'`
       // )
     })
+  }
+
+  public async deleteFileAtUrl(
+    fileUploadUrl: string,
+    sessionId: string
+  ): Promise<void> {
+    return this.csrfRequest<number>(fileUploadUrl, {
+      method: "DELETE",
+    }).then(() => undefined)
   }
 
   public async fetchCachedForwardMsg(hash: string): Promise<Uint8Array> {

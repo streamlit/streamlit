@@ -70,6 +70,8 @@ export interface StreamlitEndpoints {
 
   getFileUploadUrls(numUrls: number, sessionId: string): Promise<any>
 
+  deleteFileAtUrl(fileUploadUrl: string, sessionId: string): Promise<void>
+
   /**
    * Fetch a cached ForwardMsg from the server.
    *

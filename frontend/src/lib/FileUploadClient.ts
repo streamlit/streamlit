@@ -88,6 +88,13 @@ export class FileUploadClient {
       .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
   }
 
+  public async deleteFile(fileUploadUrl: string): Promise<void> {
+    return this.endpoints.deleteFileAtUrl(
+      fileUploadUrl,
+      this.sessionInfo.current.sessionId
+    )
+  }
+
   public async getFileUploadUrls(numUrls: number): Promise<any> {
     return this.endpoints.getFileUploadUrls(
       numUrls,
