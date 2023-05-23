@@ -201,3 +201,23 @@ export function isValidOrigin(
     return el === splitHostname[index]
   })
 }
+
+/**
+ * Add new query params, or replace existing params
+ * with key-value pairs in `queryParams` object.
+ *
+ * NOTE: URL.searchParams already encodes passing params,
+ * so we don't need to do this for `queryParams` object
+ * to avoid double enconding
+ */
+export function extendUrlQueryParams(
+  url: string,
+  queryParams: Record<string, string>
+): string {
+  const parsedUrl = new URL(url)
+
+  Object.entries(queryParams).forEach(([param, value]) => {
+    parsedUrl.searchParams.set(param, value)
+  })
+  return parsedUrl.toString()
+}

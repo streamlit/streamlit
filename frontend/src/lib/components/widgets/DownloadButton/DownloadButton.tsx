@@ -24,6 +24,7 @@ import BaseButton, {
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
+import { extendUrlQueryParams } from "src/lib/util/UriUtil"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -42,9 +43,11 @@ function DownloadButton(props: Props): ReactElement {
     // for the user.
     widgetMgr.setTriggerValue(element, { fromUi: true })
     const link = document.createElement("a")
-    const uri = `${endpoints.buildMediaURL(
-      element.url
-    )}?title=${encodeURIComponent(document.title)}`
+
+    const uri = extendUrlQueryParams(endpoints.buildMediaURL(element.url), {
+      title: document.title,
+    })
+
     link.setAttribute("href", uri)
     link.setAttribute("target", "_blank")
     link.click()

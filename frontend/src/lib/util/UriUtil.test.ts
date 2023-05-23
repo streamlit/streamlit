@@ -21,6 +21,7 @@ import {
   getWindowBaseUriParts,
   isValidOrigin,
   xssSanitizeSvg,
+  extendUrlQueryParams,
 } from "./UriUtil"
 
 const location: Partial<Location> = {}
@@ -264,5 +265,43 @@ describe("getPossibleBaseUris", () => {
         expectedBasePaths
       )
     })
+  })
+})
+
+describe("extendUrlQueryParams", () => {
+  it("should add non-existent query param to url", () => {
+    expect(
+      extendUrlQueryParams("http://devel.streamlit.io", {
+        title: "streamlit",
+      })
+    ).toEqual("http://devel.streamlit.io/?title=streamlit")
+  })
+  it("should override existent query param in url", () => {
+    expect(
+      extendUrlQueryParams("http://devel.streamlit.io/?title=random", {
+        title: "streamlit",
+      })
+    ).toEqual("http://devel.streamlit.io/?title=streamlit")
+  })
+  it("should add new query param in url with query params", () => {
+    expect(
+      extendUrlQueryParams("http://devel.streamlit.io/?title=Streamlit", {
+        subtitle: "A faster way to build and share data apps",
+      })
+    ).toEqual(
+      "http://devel.streamlit.io/?title=Streamlit&subtitle=A+faster+way+to+build+and+share+data+apps"
+    )
+  })
+  it("should not affect exiting encoded uri components", () => {
+    expect(
+      extendUrlQueryParams(
+        "http://devel.streamlit.io/?title=A+faster%2F+way+to+build",
+        {
+          subtitle: "Streamlit",
+        }
+      )
+    ).toEqual(
+      "http://devel.streamlit.io/?title=A+faster%2F+way+to+build&subtitle=Streamlit"
+    )
   })
 })
