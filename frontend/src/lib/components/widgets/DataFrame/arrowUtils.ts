@@ -44,6 +44,7 @@ import {
   DateTimeColumn,
   TimeColumn,
   DateColumn,
+  removeLineBreaks,
 } from "./columns"
 
 /**
@@ -76,12 +77,6 @@ export function extractCssProperty(
 
   return undefined
 }
-
-export function processDisplayData(displayData: string): string {
-  // Remove all line breaks
-  return displayData.replace(/(\r\n|\n|\r)/gm, " ")
-}
-
 /**
  * Applies pandas styler CSS to style the cell.
  *
@@ -350,7 +345,7 @@ export function getCellFromArrow(
     // these are special types that the dataframe only support in read-only mode.
     cellTemplate = column.getCell(
       notNullOrUndefined(arrowCell.content)
-        ? processDisplayData(
+        ? removeLineBreaks(
             Quiver.format(
               arrowCell.content,
               arrowCell.contentType,
@@ -397,7 +392,7 @@ export function getCellFromArrow(
   if (!column.isEditable) {
     // Only apply display content and css styles to non-editable cells.
     if (notNullOrUndefined(arrowCell.displayContent)) {
-      const displayData = processDisplayData(arrowCell.displayContent)
+      const displayData = removeLineBreaks(arrowCell.displayContent)
       // If the display content is set, use that instead of the content.
       // This is only supported for text, object, date, datetime, time and number cells.
       // Non-editable datetime cells will use the text cell kind

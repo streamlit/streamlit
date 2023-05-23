@@ -35,6 +35,7 @@ import {
   countDecimals,
   truncateDecimals,
   formatMoment,
+  removeLineBreaks,
 } from "./utils"
 import { TextColumn } from "./index"
 
@@ -584,4 +585,9 @@ describe("formatMoment", () => {
       expect(formatMoment(momentDate, format)).toBe(expected)
     }
   )
+})
+
+test("removeLineBreaks should remove line breaks", () => {
+  expect(removeLineBreaks("\n")).toBe(" ")
+  expect(removeLineBreaks("\nhello\n\nworld")).toBe(" hello  world")
 })

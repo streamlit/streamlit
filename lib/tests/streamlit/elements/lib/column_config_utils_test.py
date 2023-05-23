@@ -23,16 +23,24 @@ import pyarrow as pa
 from parameterized import parameterized
 
 from streamlit.elements.lib.column_config_utils import (
-    ColumnConfig,
+    _EDITING_COMPATIBILITY_MAPPING,
+    INDEX_IDENTIFIER,
     ColumnConfigMapping,
+    ColumnConfigMappingInput,
     ColumnDataKind,
     _determine_data_kind,
     _determine_data_kind_via_arrow,
     _determine_data_kind_via_inferred_type,
     _determine_data_kind_via_pandas_dtype,
+    apply_data_specific_configs,
     determine_dataframe_schema,
+    is_type_compatible,
+    process_config_mapping,
     update_column_config,
 )
+from streamlit.elements.lib.column_types import ColumnConfig
+from streamlit.errors import StreamlitAPIException
+from streamlit.type_util import DataFormat
 
 
 class TestObject(object):
@@ -331,13 +339,91 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             ],
         )
 
+    def test_is_type_compatible(self):
+        """Test that the is_type_compatible function correctly checks for compatibility
+        based on the _EDITING_COMPATIBILITY_MAPPING.
+        """
+        for column_type, data_kinds in _EDITING_COMPATIBILITY_MAPPING.items():
+            for data_kind in data_kinds:
+                self.assertTrue(
+                    is_type_compatible(column_type, data_kind),
+                    f"Expected {column_type} to be compatible with {data_kind}",
+                )
+            self.assertFalse(
+                is_type_compatible(column_type, ColumnDataKind.UNKNOWN),
+                f"Expected {column_type} to not be compatible with {data_kind}",
+            )
+
+        # Check that non-editable column types are compatible to all data kinds:
+        for data_kind in ColumnDataKind:
+            self.assertTrue(
+                is_type_compatible("list", data_kind),
+                f"Expected list to be compatible with {data_kind}",
+            )
+
+    def test_process_config_mapping(self):
+        """Test that the process_config_mapping function correctly processes a config mapping."""
+        config_1: ColumnConfigMappingInput = {
+            "index": {"label": "Index", "width": "medium"},
+            "col1": {
+                "label": "Column 1",
+                "width": "small",
+                "required": True,
+                "type_config": {"type": "link"},
+            },
+        }
+        self.assertEqual(
+            process_config_mapping(config_1),
+            config_1,
+            "Expected no changes to config mapping.",
+        )
+
+        config_2: ColumnConfigMappingInput = {
+            "index": {"label": "Index", "width": "medium"},
+            "col1": "Column 1",
+        }
+
+        self.assertEqual(
+            process_config_mapping(config_2),
+            {
+                "index": {"label": "Index", "width": "medium"},
+                "col1": {"label": "Column 1"},
+            },
+            "Expected string to be converted to valid column config dict with string as label.",
+        )
+
+        config_3: ColumnConfigMappingInput = {
+            "index": {"label": "Index", "width": "medium"},
+            "col1": None,
+        }
+        # The None should be converted to a valid column config dict:
+        self.assertEqual(
+            process_config_mapping(config_3),
+            {
+                "index": {"label": "Index", "width": "medium"},
+                "col1": {"hidden": True},
+            },
+            "Expected None to be converted to valid column config dict with hidden=True.",
+        )
+
+        config_4: ColumnConfigMappingInput = None  # type: ignore
+
+        self.assertEqual(
+            process_config_mapping(config_4),
+            {},
+            "Expected None to be converted to empty dict.",
+        )
+
+        with self.assertRaises(StreamlitAPIException):
+            process_config_mapping({"col1": ["a", "b"]})  # type: ignore
+
     def test_update_column_config(self):
         """Test that the update_column_config function correctly updates a column's configuration."""
 
         # Create an initial column config mapping
         initial_column_config: ColumnConfigMapping = {
-            "index": {"title": "Index", "width": "medium"},
-            "col1": {"title": "Column 1", "width": "small"},
+            "index": {"label": "Index", "width": "medium"},
+            "col1": {"label": "Column 1", "width": "small"},
         }
 
         # Define the column and new column config to update
@@ -349,7 +435,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
         # Check if the column config was updated correctly
         expected_column_config: ColumnConfig = {
-            "title": "Column 1",
+            "label": "Column 1",
             "width": "large",
             "disabled": True,
         }
@@ -359,10 +445,110 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
         # Test updating a column that doesn't exist in the initial column config mapping
         column_to_update = "col2"
-        new_column_config: ColumnConfig = {"title": "Column 2", "width": "medium"}
+        new_column_config: ColumnConfig = {"label": "Column 2", "width": "medium"}
 
         # Call the update_column_config method
         update_column_config(initial_column_config, column_to_update, new_column_config)
 
         # Check if the new column config was added correctly
         self.assertEqual(initial_column_config[column_to_update], new_column_config)
+
+    @parameterized.expand(
+        [
+            (DataFormat.SET_OF_VALUES, True),
+            (DataFormat.TUPLE_OF_VALUES, True),
+            (DataFormat.LIST_OF_VALUES, True),
+            (DataFormat.NUMPY_LIST, True),
+            (DataFormat.NUMPY_MATRIX, True),
+            (DataFormat.LIST_OF_RECORDS, True),
+            (DataFormat.LIST_OF_ROWS, True),
+            (DataFormat.COLUMN_VALUE_MAPPING, True),
+            # Some data formats which should not hide the index:
+            (DataFormat.PANDAS_DATAFRAME, False),
+            (DataFormat.PANDAS_SERIES, False),
+            (DataFormat.PANDAS_INDEX, False),
+            (DataFormat.KEY_VALUE_DICT, False),
+            (DataFormat.PYARROW_TABLE, False),
+            (DataFormat.PANDAS_STYLER, False),
+            (DataFormat.COLUMN_INDEX_MAPPING, False),
+            (DataFormat.COLUMN_SERIES_MAPPING, False),
+        ]
+    )
+    def test_apply_data_specific_configs_hides_index(
+        self, data_format: DataFormat, hidden: bool
+    ):
+        """Test that the index is hidden for some data formats."""
+        columns_config: ColumnConfigMapping = {}
+        data_df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        apply_data_specific_configs(columns_config, data_df, data_format)
+
+        if hidden:
+            self.assertEqual(
+                columns_config[INDEX_IDENTIFIER]["hidden"],
+                hidden,
+                f"Data of type {data_format} should be hidden.",
+            )
+        else:
+            self.assertNotIn(INDEX_IDENTIFIER, columns_config)
+
+    @parameterized.expand(
+        [
+            (DataFormat.SET_OF_VALUES, True),
+            (DataFormat.TUPLE_OF_VALUES, True),
+            (DataFormat.LIST_OF_VALUES, True),
+            (DataFormat.NUMPY_LIST, True),
+            (DataFormat.KEY_VALUE_DICT, True),
+            # Most other data formats which should not rename the first column:
+            (DataFormat.PANDAS_DATAFRAME, False),
+            (DataFormat.PANDAS_SERIES, False),
+            (DataFormat.PANDAS_INDEX, False),
+            (DataFormat.PYARROW_TABLE, False),
+            (DataFormat.PANDAS_STYLER, False),
+            (DataFormat.COLUMN_INDEX_MAPPING, False),
+            (DataFormat.COLUMN_SERIES_MAPPING, False),
+            (DataFormat.LIST_OF_RECORDS, False),
+            (DataFormat.LIST_OF_ROWS, False),
+            (DataFormat.COLUMN_VALUE_MAPPING, False),
+        ]
+    )
+    def test_apply_data_specific_configs_renames_column(
+        self, data_format: DataFormat, renames: bool
+    ):
+        """Test that the column names are changed for some data formats."""
+        data_df = pd.DataFrame([1, 2, 3])
+        apply_data_specific_configs({}, data_df, data_format)
+        if renames:
+            self.assertEqual(
+                data_df.columns[0],
+                "value",
+                f"Data of type {data_format} should be renamed to 'value'",
+            )
+        else:
+            self.assertEqual(
+                data_df.columns[0],
+                0,
+                f"Data of type {data_format} should not be renamed.",
+            )
+
+    def test_apply_data_specific_configs_disables_columns(self):
+        """Test that Arrow incompatible columns are disabled (configured as non-editable)."""
+        columns_config: ColumnConfigMapping = {}
+        data_df = pd.DataFrame(
+            {
+                "a": pd.Series([1, 2]),
+                "b": pd.Series(["foo", "bar"]),
+                "c": pd.Series([1, "foo"]),  # Incompatible
+                "d": pd.Series([1 + 2j, 3 + 4j]),  # Incompatible
+            }
+        )
+
+        apply_data_specific_configs(
+            columns_config,
+            data_df,
+            DataFormat.PANDAS_DATAFRAME,
+            check_arrow_compatibility=True,
+        )
+        self.assertNotIn("a", columns_config)
+        self.assertNotIn("b", columns_config)
+        self.assertTrue(columns_config["c"]["disabled"])
+        self.assertTrue(columns_config["d"]["disabled"])

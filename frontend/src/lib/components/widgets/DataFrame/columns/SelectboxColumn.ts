@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind, TextCell } from "@glideapps/glide-data-grid"
 import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 
 import { Quiver } from "src/lib/dataframes/Quiver"
@@ -104,6 +104,27 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
           `The value is not part of the allowed options.`
         )
       }
+
+      if (!props.isEditable) {
+        // TODO (lukasmasuch): This is a temporary workaround until the following PR is merged:
+        // https://github.com/glideapps/glide-data-grid/pull/657
+        // The issue is that measuring dropdown cells is not supported yet.
+        // This results in dropdown columns not correctly adapting the width to the content.
+        // Therefore, we use a text cell here so that we are not affecting the behavior
+        // for read-only cells.
+
+        return {
+          kind: GridCellKind.Text,
+          isMissingValue: cellData === "",
+          data: cellData !== "" ? cellData : null,
+          displayData: cellData,
+          allowOverlay: true,
+          contentAlignment: props.contentAlignment,
+          readonly: true,
+          style: props.isIndex ? "faded" : "normal",
+        } as TextCell
+      }
+
       return {
         ...cellTemplate,
         isMissingValue: cellData === "",
@@ -114,7 +135,13 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
         },
       } as DropdownCellType
     },
-    getCellValue(cell: DropdownCellType): string | number | boolean | null {
+    getCellValue(
+      cell: DropdownCellType | TextCell
+    ): string | number | boolean | null {
+      if (cell.kind === GridCellKind.Text) {
+        return cell.data === undefined ? null : cell.data
+      }
+
       if (cell.data?.value === undefined || cell.data?.value === "") {
         return null
       }

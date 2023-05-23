@@ -52,17 +52,37 @@ export const COLUMN_WIDTH_MAPPING = {
  * This will be eventually replaced with a proto message.
  */
 export interface ColumnConfigProps {
-  title?: string
-  width?: "small" | "medium" | "large"
+  label?: string
+  width?: "small" | "medium" | "large" | number
   help?: string
   hidden?: boolean
   disabled?: boolean
   required?: boolean
   default?: number | string | boolean
   alignment?: "left" | "center" | "right"
-  type?: string
   // uses snake_case to match the property names in the backend:
-  type_options?: Record<string, unknown>
+  type_config?: Record<string, unknown>
+}
+
+/**
+ * Parse the user-defined width configuration and return the width in pixels.
+ */
+function parseWidthConfig(
+  width?: "small" | "medium" | "large" | number
+): number | undefined {
+  if (isNullOrUndefined(width)) {
+    return undefined
+  }
+
+  if (typeof width === "number") {
+    return width
+  }
+
+  if (width in COLUMN_WIDTH_MAPPING) {
+    return COLUMN_WIDTH_MAPPING[width]
+  }
+
+  return undefined
 }
 
 /**
@@ -114,19 +134,14 @@ export function applyColumnConfig(
   // This will update all column props with the user-defined config for all
   // configuration options that are not undefined:
   return merge({ ...columnProps }, {
-    title: columnConfig.title,
-    width:
-      notNullOrUndefined(columnConfig.width) &&
-      columnConfig.width in COLUMN_WIDTH_MAPPING
-        ? COLUMN_WIDTH_MAPPING[columnConfig.width]
-        : undefined,
-    customType: columnConfig.type?.toLowerCase().trim(),
+    title: columnConfig.label,
+    width: parseWidthConfig(columnConfig.width),
     isEditable: notNullOrUndefined(columnConfig.disabled)
       ? !columnConfig.disabled
       : undefined,
     isHidden: columnConfig.hidden,
     isRequired: columnConfig.required,
-    columnTypeOptions: columnConfig.type_options,
+    columnTypeOptions: columnConfig.type_config,
     contentAlignment: columnConfig.alignment,
     defaultValue: columnConfig.default,
     help: columnConfig.help,
@@ -166,14 +181,15 @@ type ColumnLoaderReturn = {
  * @returns the column creator of the corresponding column type.
  */
 export function getColumnType(column: BaseColumnProps): ColumnCreator {
+  const customType = column.columnTypeOptions?.type as string
   // Create a column instance based on the column properties
   let ColumnType: ColumnCreator | undefined
-  if (notNullOrUndefined(column.customType)) {
-    if (ColumnTypes.has(column.customType)) {
-      ColumnType = ColumnTypes.get(column.customType)
+  if (notNullOrUndefined(customType)) {
+    if (ColumnTypes.has(customType)) {
+      ColumnType = ColumnTypes.get(customType)
     } else {
       logWarning(
-        `Unknown column type configured in column configuration: ${column.customType}`
+        `Unknown column type configured in column configuration: ${customType}`
       )
     }
   }
