@@ -18,6 +18,7 @@ a nice JSON schema for expressing graphs and charts.
 """
 from __future__ import annotations
 
+from contextlib import nullcontext
 from datetime import date
 from enum import Enum
 from typing import (
@@ -601,23 +602,21 @@ def marshall(
 
     alt.data_transformers.register("id", id_transform)
 
-    if alt.themes.active == "default":
-        # The default altair theme has some width/height defaults defined
-        # that are not useful for Streamlit. Therefore, we change the theme to
-        # "none" to avoid those defaults.
-        alt.themes.enable("none")
+    # The default altair theme has some width/height defaults defined
+    # which are not useful for Streamlit. Therefore, we change the theme to
+    # "none" to avoid those defaults.
+    with alt.themes.enable("none") if alt.themes.active == "default" else nullcontext():
+        with alt.data_transformers.enable("id"):
+            chart_dict = altair_chart.to_dict()
 
-    with alt.data_transformers.enable("id"):
-        chart_dict = altair_chart.to_dict()
+            # Put datasets back into the chart dict but note how they weren't
+            # transformed.
+            chart_dict["datasets"] = datasets
 
-        # Put datasets back into the chart dict but note how they weren't
-        # transformed.
-        chart_dict["datasets"] = datasets
-
-        arrow_vega_lite.marshall(
-            vega_lite_chart,
-            chart_dict,
-            use_container_width=use_container_width,
-            theme=theme,
-            **kwargs,
-        )
+            arrow_vega_lite.marshall(
+                vega_lite_chart,
+                chart_dict,
+                use_container_width=use_container_width,
+                theme=theme,
+                **kwargs,
+            )
