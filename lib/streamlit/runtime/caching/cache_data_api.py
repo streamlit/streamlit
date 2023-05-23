@@ -403,19 +403,23 @@ class CacheDataAPI:
             The function to cache. Streamlit hashes the function's source code.
 
         ttl : float, timedelta, str, or None
-            The maximum time to keep an entry in the cache, or None if cache
-            entries should not expire. The default is None. Note that ttl is
-            incompatible with ``persist="disk"`` - ``ttl`` will be ignored if
-            ``persist`` is specified.
+            The maximum time to keep an entry in the cache. Can be one of:
 
-            If ttl is a str, then it should be in a format supported by `Pandas's
-            Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_.
-            Examples of valid strings are: "1d", "1.5 days", and "1h23s".
+            * ``None`` if cache entries should never expire (default).
+            * A number specifying the time in seconds.
+            * A string specifying the time in a format supported by `Pandas's
+              Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
+              e.g. ``"1d"``, ``"1.5 days"``, or ``"1h23s"``.
+            * A ``timedelta`` object from `Python's built-in datetime library
+              <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
+              e.g. ``timedelta(days=1)``.
+
+            Note that ``ttl`` will be ignored if ``persist="disk"`` or ``persist=True``.
 
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None
-            for an unbounded cache. (When a new entry is added to a full cache,
-            the oldest cached entry will be removed.) The default is None.
+            for an unbounded cache. When a new entry is added to a full cache,
+            the oldest cached entry will be removed. Defaults to None.
 
         show_spinner : boolean or string
             Enable the spinner. Default is True to show a spinner when there is
