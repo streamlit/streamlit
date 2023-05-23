@@ -28,6 +28,8 @@ import DownloadButton, { Props } from "./DownloadButton"
 jest.mock("src/lib/WidgetStateManager")
 jest.mock("src/lib/StreamlitEndpoints")
 
+const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
+
 const getProps = (elementProps: Partial<DownloadButtonProto> = {}): Props => ({
   element: DownloadButtonProto.create({
     id: "1",
@@ -41,7 +43,7 @@ const getProps = (elementProps: Partial<DownloadButtonProto> = {}): Props => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
-  endpoints: mockEndpoints(),
+  endpoints: mockEndpoints({ buildMediaURL }),
 })
 
 describe("DownloadButton widget", () => {
