@@ -158,7 +158,7 @@ interface State {
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
-  themeHash: string | null
+  themeHash: string
   gitInfo: IGitInfo | null
   formsData: FormsData
   hideTopBar: boolean
@@ -249,7 +249,7 @@ export class App extends PureComponent<Props, State> {
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
-      themeHash: null,
+      themeHash: this.createThemeHash(),
       gitInfo: null,
       formsData: createFormsData(),
       appPages: [],
@@ -921,7 +921,7 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
-  createThemeHash = (themeInput: CustomThemeConfig): string => {
+  createThemeHash = (themeInput?: CustomThemeConfig): string => {
     if (!themeInput) {
       // If themeInput is null, then we didn't receive a custom theme for this
       // app from the server. We use a hardcoded string literal for the
