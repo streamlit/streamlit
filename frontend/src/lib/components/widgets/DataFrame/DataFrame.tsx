@@ -186,6 +186,7 @@ function DataFrame({
   }, [originalNumRows])
 
   const { columns: originalColumns } = useColumnLoader(element, data, disabled)
+
   // On the first rendering, try to load initial widget state if
   // it exist. This is required in the case that other elements
   // are inserted before this widget.

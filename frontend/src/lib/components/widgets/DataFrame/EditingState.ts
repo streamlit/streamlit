@@ -105,8 +105,7 @@ class EditingState {
 
           if (notNullOrUndefined(cellValue)) {
             // We need to adjust the column index by the number of index columns
-            // since we want to use negative values for the index columns.
-            // so that the numerical position matches with the position in Pandas.
+            // since we want to use negative values for the index columns in the widget state format.
             addedRow[colIndex - numIndices] = cellValue
           }
         }
@@ -121,7 +120,7 @@ class EditingState {
 
     // Convert undefined values to null, otherwise this is removed here since
     // undefined does not exist in JSON.
-    const json = JSON.stringify(currentState, (k, v) =>
+    const json = JSON.stringify(currentState, (_k, v) =>
       v === undefined ? null : v
     )
     return json
@@ -159,7 +158,7 @@ class EditingState {
 
       // We use a different numerical position for the widget state and
       // the state of the frontend component. The widget state has all indexes using negative numbers
-      // to that the column positions better align with the positions in Pandas.
+      // so that the column positions better align with the positions in Pandas.
       // The frontend component starts at 0 with the first index column.
       const colIndexAdjusted = colIndex + numIndices
       const column = columnsByIndex.get(colIndexAdjusted)
