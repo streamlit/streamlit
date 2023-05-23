@@ -42,9 +42,6 @@ exports[`Renders ThemeCreatorDialog renders theme creator dialog 1`] = `
         />
       </StyledFullRow>
       <StyledFullRow>
-        <StyledHr />
-      </StyledFullRow>
-      <StyledFullRow>
         <StyledSmall>
           To save your changes, copy your custom theme into the clipboard and paste it into the
           <code>
@@ -57,6 +54,8 @@ exports[`Renders ThemeCreatorDialog renders theme creator dialog 1`] = `
           </code>
            file.
         </StyledSmall>
+      </StyledFullRow>
+      <StyledFullRow>
         <div>
           <BaseButton
             kind="secondary"
