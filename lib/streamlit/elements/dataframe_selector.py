@@ -124,8 +124,6 @@ class DataFrameSelectorMixin:
            https://doc-dataframe.streamlitapp.com/
            height: 410px
 
-        >>> st.dataframe(df, 200, 100)
-
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
 
