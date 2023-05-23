@@ -204,11 +204,10 @@ class SliderMixin:
         set of options.
 
         .. note::
-            Integer values larger in magnitude than `+/- (1<<53) - 1` cannot be
-            stored or returned correctly by the widget due to limitations when
-            serializing values between the Python server and JavaScript client.
-            Numbers larger than this must be represented as floats and will
-            consequently lose precision.
+            Integer values exceeding +/- ``(1<<53) - 1`` cannot be accurately
+            stored or returned by the widget due to serialization contstraints
+            between the Python server and JavaScript client. You must handle
+            such numbers as floats, leading to a loss in precision.
 
         Parameters
         ----------
