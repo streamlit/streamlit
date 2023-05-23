@@ -24,6 +24,7 @@ import {
   getErrorCell,
   ColumnCreator,
   toSafeString,
+  removeLineBreaks,
 } from "./utils"
 
 /**
@@ -48,7 +49,9 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
     getCell(data?: any): GridCell {
       try {
         const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
-        const displayData = notNullOrUndefined(cellData) ? cellData : ""
+        const displayData = notNullOrUndefined(cellData)
+          ? removeLineBreaks(cellData) // Remove line breaks to show all content in the cell
+          : ""
         return {
           ...cellTemplate,
           data: cellData,

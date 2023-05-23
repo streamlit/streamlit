@@ -294,4 +294,43 @@ describe("st.date_input", () => {
         "Date Input Changed: False"
     );
   });
+
+  it("renders the calendar component correctly", () => {
+    // Get dark mode snapshot first. Taking light mode snapshot first
+    // for some reason ends up comparing dark with light
+    cy.changeTheme("Dark");
+
+    cy.get(".stDateInput").each((el, idx) => {
+      if (idx === 5) {
+        // Disabled one cannot be clicked
+        return;
+      }
+      const testName = `date_input_calendar_${idx}`;
+      cy.getIndexed(".stDateInput", idx).click();
+      cy.get('[data-baseweb="calendar"]').matchImageSnapshot(
+        `${testName}-dark`,
+        {
+          force: false,
+        }
+      );
+    });
+
+    // Revert back to light mode
+    cy.changeTheme("Light");
+    cy.get(".stDateInput").each((el, idx) => {
+      if (idx === 5) {
+        // Disabled one cannot be clicked
+        return;
+      }
+      const testName = `date_input_calendar_${idx}`;
+      cy.getIndexed(".stDateInput", idx).click();
+      cy.get('[data-baseweb="calendar"]').matchImageSnapshot(
+        testName,
+        {
+          force: false,
+        }
+      );
+      cy.screenshot();
+    });
+  });
 });

@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Sequence, Union
 from typing_extensions import Literal
 
 from streamlit import config
+from streamlit.elements.lib.column_config_utils import ColumnConfigMappingInput
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -49,6 +50,7 @@ class DataFrameSelectorMixin:
         use_container_width: bool = False,
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
@@ -63,9 +65,9 @@ class DataFrameSelectorMixin:
             pandas styling features, like bar charts, hovering, and captions.)
             Styler support is experimental!
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with `config.dataFrameSerialization = "legacy"`).
+            (i.e. with ``config.dataFrameSerialization = "legacy"``).
             To use pyarrow tables, please enable pyarrow by changing the config setting,
-            `config.dataFrameSerialization = "arrow"`.
+            ``config.dataFrameSerialization = "arrow"``.
 
         width : int or None
             Desired width of the dataframe expressed in pixels. If None, the width
@@ -81,18 +83,30 @@ class DataFrameSelectorMixin:
             This argument can only be supplied by keyword.
 
         hide_index : bool or None
-            Determines whether to hide the index column(s). If set to True, the
-            index column(s) will be hidden. If None (default), the visibility of
-            the index column(s) is automatically determined based on the index
-            type and input data format.
+            Whether to hide the index column(s). If None (default), they will be hidden
+            automatically based on the data.
 
         column_order : iterable of str or None
-            Specifies the display order of all non-index columns, affecting both
-            the order and visibility of columns to the user. For example,
-            specifying `column_order=("col2", "col1")` will display 'col2' first,
-            followed by 'col1', and all other non-index columns in the data will
-            be hidden. If None (default), the order is inherited from the
-            original data structure.
+            Specifies the display order of columns. This also affects which columns are
+            visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
+            first, followed by 'col1', and will hide all other non-index columns. If
+            None (default), the order is inherited from the original data structure.
+
+        column_config : dict or None
+            Configures how columns are displayed, e.g. their title, visibility, type, or
+            format. This needs to be a dictionary where each key is a column name and
+            the value is one of:
+
+            * ``None`` to hide the column.
+
+            * A string to set the display label of the column.
+
+            * One of the column types defined under ``st.column_config``, e.g.
+              ``st.column_config.NumberColumn(”Dollar values”, format=”$ %d”)`` to show
+              a column as dollar amounts. See more info on the available column types
+              and config options `here <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
+
+            To configure the index column(s), use ``index`` as the column name.
 
         Examples
         --------
@@ -109,8 +123,6 @@ class DataFrameSelectorMixin:
         .. output::
            https://doc-dataframe.streamlitapp.com/
            height: 410px
-
-        >>> st.dataframe(df, 200, 100)
 
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
@@ -129,6 +141,41 @@ class DataFrameSelectorMixin:
            https://doc-dataframe1.streamlitapp.com/
            height: 410px
 
+        Or you can customize the dataframe via ``column_config``, ``hide_index``, or ``column_order``:
+
+        >>> import random
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>>
+        >>> df = pd.DataFrame(
+        >>>     {
+        >>>         "name": ["Roadmap", "Extras", "Issues"],
+        >>>         "url": ["https://roadmap.streamlit.app", "https://extras.streamlit.app", "https://issues.streamlit.app"],
+        >>>         "stars": [random.randint(0, 1000) for _ in range(3)],
+        >>>         "views_history": [[random.randint(0, 5000) for _ in range(30)] for _ in range(3)],
+        >>>     }
+        >>> )
+        >>> st.dataframe(
+        >>>     df,
+        >>>     column_config={
+        >>>         "name": "App name",
+        >>>         "stars": st.column_config.NumberColumn(
+        >>>             "Github Stars",
+        >>>             help="Number of stars on GitHub",
+        >>>             format="%d ⭐",
+        >>>         ),
+        >>>         "url": st.column_config.LinkColumn("App URL"),
+        >>>         "views_history": st.column_config.LineChartColumn(
+        >>>             "Views (past 30 days)", y_min=0, y_max=5000
+        >>>         ),
+        >>>     },
+        >>>     hide_index=True,
+        >>> )
+
+        .. output::
+           https://doc-dataframe-config.streamlitapp.com/
+           height: 350px
+
         """
         if _use_arrow():
             return self.dg._arrow_dataframe(
@@ -138,6 +185,7 @@ class DataFrameSelectorMixin:
                 use_container_width=use_container_width,
                 hide_index=hide_index,
                 column_order=column_order,
+                column_config=column_config,
             )
         else:
             return self.dg._legacy_dataframe(data, width, height)
@@ -154,9 +202,9 @@ class DataFrameSelectorMixin:
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
             The table data.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with `config.dataFrameSerialization = "legacy"`).
+            (i.e. with ``config.dataFrameSerialization = "legacy"``).
             To use pyarrow tables, please enable pyarrow by changing the config setting,
-            `config.dataFrameSerialization = "arrow"`.
+            ``config.dataFrameSerialization = "arrow"``.
 
         Example
         -------
@@ -206,9 +254,9 @@ class DataFrameSelectorMixin:
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict or None
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with `config.dataFrameSerialization = "legacy"`).
+            (i.e. with ``config.dataFrameSerialization = "legacy"``).
             To use pyarrow tables, please enable pyarrow by changing the config setting,
-            `config.dataFrameSerialization = "arrow"`.
+            ``config.dataFrameSerialization = "arrow"``.
 
         x : str or None
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
@@ -293,9 +341,9 @@ class DataFrameSelectorMixin:
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with `config.dataFrameSerialization = "legacy"`).
+            (i.e. with ``config.dataFrameSerialization = "legacy"``).
             To use pyarrow tables, please enable pyarrow by changing the config setting,
-            `config.dataFrameSerialization = "arrow"`.
+            ``config.dataFrameSerialization = "arrow"``.
 
         x : str or None
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
@@ -380,9 +428,9 @@ class DataFrameSelectorMixin:
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with `config.dataFrameSerialization = "legacy"`).
+            (i.e. with ``config.dataFrameSerialization = "legacy"``).
             To use pyarrow tables, please enable pyarrow by changing the config setting,
-            `config.dataFrameSerialization = "arrow"`.
+            ``config.dataFrameSerialization = "arrow"``.
 
         x : str or None
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
@@ -512,9 +560,9 @@ class DataFrameSelectorMixin:
             Either the data to be plotted or a Vega-Lite spec containing the
             data (which more closely follows the Vega-Lite API).
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with `config.dataFrameSerialization = "legacy"`).
+            (i.e. with ``config.dataFrameSerialization = "legacy"``).
             To use pyarrow tables, please enable pyarrow by changing the config setting,
-            `config.dataFrameSerialization = "arrow"`.
+            ``config.dataFrameSerialization = "arrow"``.
 
         spec : dict or None
             The Vega-Lite spec for the chart. If the spec was already passed in
@@ -579,9 +627,9 @@ class DataFrameSelectorMixin:
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
             Table to concat. Optional.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with `config.dataFrameSerialization = "legacy"`).
+            (i.e. with ``config.dataFrameSerialization = "legacy"``).
             To use pyarrow tables, please enable pyarrow by changing the config setting,
-            `config.dataFrameSerialization = "arrow"`.
+            ``config.dataFrameSerialization = "arrow"``.
 
         **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
             The named dataset to concat. Optional. You can only pass in 1
