@@ -152,7 +152,9 @@ function DataFrame({
   const dataDimensions = data.dimensions
   const originalNumRows = Math.max(0, dataDimensions.rows - 1)
   // Number of index columns in the original data:
-  const originalNumIndices = dataDimensions.headerColumns
+  // TODO(lukasmasuch): use data.dimensions.headerColumns instead here?
+  // Should be also adapt in arrow utils.
+  const originalNumIndices = data.types?.index?.length ?? 0
 
   // For empty tables, we show an extra row that
   // contains "empty" as a way to indicate that the table is empty.
