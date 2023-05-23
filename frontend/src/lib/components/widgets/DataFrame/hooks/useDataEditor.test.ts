@@ -129,6 +129,48 @@ describe("useDataEditor hook", () => {
     )
   })
 
+  it("correctly handles indices on editing", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+
+    const { result } = renderHook(() => {
+      return useDataEditor(
+        [{ ...MOCK_COLUMNS[0], isIndex: true }, MOCK_COLUMNS[1]],
+        false,
+        editingState,
+        getCellContentMock,
+        getOriginalIndexMock,
+        refreshCellsMock,
+        applyEditsMock
+      )
+    })
+
+    if (typeof result.current.onCellEdited !== "function") {
+      throw new Error("onCellEdited is expected to be a function")
+    }
+
+    const columnToEdit = MOCK_COLUMNS[1]
+    result.current.onCellEdited(
+      [1, 0],
+      columnToEdit.getCell("bar") as TextCell
+    )
+    expect(applyEditsMock).toHaveBeenCalled()
+    expect(getCellContentMock).toHaveBeenCalled()
+    const editedCell = editingState.current.getCell(1, 0)
+
+    expect(notNullOrUndefined(editedCell)).toBe(true)
+
+    if (notNullOrUndefined(editedCell)) {
+      expect(columnToEdit.getCellValue(editedCell)).toEqual("bar")
+    }
+
+    // Check with full editing state
+    expect(editingState.current.toJson(MOCK_COLUMNS, 1)).toEqual(
+      `{"edited_cells":{"0:0":"bar"},"added_rows":[],"deleted_rows":[]}`
+    )
+  })
+
   it("applies cell edits from pasted data via onPaste", () => {
     const editingState = {
       current: new EditingState(INITIAL_NUM_ROWS),
