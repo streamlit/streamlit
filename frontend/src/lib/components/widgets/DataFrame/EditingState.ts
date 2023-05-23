@@ -53,10 +53,6 @@ class EditingState {
       columnsByIndex.set(column.indexNumber, column)
     })
 
-    columns.forEach(column => {
-      columnsByIndex.set(column.indexNumber, column)
-    })
-
     const currentState = {
       // We use snake case here since this is the widget state
       // that is sent and used in the backend. Therefore, it should
@@ -97,6 +93,7 @@ class EditingState {
         const column = columnsByIndex.get(colIndex)
         if (column) {
           const cellValue = column.getCellValue(cell)
+
           if (
             column.isRequired &&
             column.isEditable &&
@@ -141,6 +138,12 @@ class EditingState {
     columns: BaseColumn[],
     numIndices: number
   ): void {
+    // Clear existing state:
+    this.editedCells = new Map()
+    this.addedRows = []
+    this.deletedRows = []
+
+    // Parse JSON editing string:
     const editingState = JSON.parse(editingStateJson)
     // Map columns to column index
     const columnsByIndex = new Map<number, BaseColumn>()
@@ -177,18 +180,15 @@ class EditingState {
     editingState.added_rows.forEach((row: Record<number, any>) => {
       const addedRow: Map<number, GridCell> = new Map()
 
-      // Initialize all cells in row with undefined (empty)
-      columns.forEach(column => {
-        addedRow.set(column.indexNumber, column.getCell(undefined))
-      })
-
       // Set the cells that were actually edited in the row
       Object.keys(row).forEach(colIndex => {
         const colIndexAdjusted = Number(colIndex) + numIndices
+        const cellValue = row[Number(colIndex)]
+
         const column = columnsByIndex.get(colIndexAdjusted)
 
         if (column) {
-          const cell = column.getCell(row[colIndexAdjusted])
+          const cell = column.getCell(cellValue)
           if (cell) {
             addedRow.set(colIndexAdjusted, cell)
           }

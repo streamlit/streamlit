@@ -266,6 +266,7 @@ describe("EditingState class", () => {
         numpy_type: "object",
       },
       isEditable: false,
+      isRequired: false,
       isHidden: false,
       isIndex: false,
       isStretched: false,
@@ -286,5 +287,30 @@ describe("EditingState class", () => {
     editingState.fromJson(editingStateJson, MOCK_COLUMNS, 0)
     // Test again if the edits were applied correctly:
     expect(editingState.toJson(MOCK_COLUMNS, 0)).toEqual(editingStateJson)
+
+    const MOCK_COLUMNS_WITH_INDEX = [
+      TextColumn({
+        ...MOCK_COLUMN_PROPS,
+        isIndex: true,
+        indexNumber: 0,
+        id: "column_1",
+      }),
+      TextColumn({
+        ...MOCK_COLUMN_PROPS,
+        indexNumber: 1,
+        id: "column_2",
+      }),
+      TextColumn({
+        ...MOCK_COLUMN_PROPS,
+        indexNumber: 2,
+        id: "column_3",
+      }),
+    ]
+
+    editingState.fromJson(editingStateJson, MOCK_COLUMNS_WITH_INDEX, 1)
+    // Test again if the edits were applied correctly:
+    expect(editingState.toJson(MOCK_COLUMNS_WITH_INDEX, 1)).toEqual(
+      editingStateJson
+    )
   })
 })
