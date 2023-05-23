@@ -223,6 +223,7 @@ clean:
 	rm -rf frontend/test_results
 	rm -f frontend/lib/proto/proto.js
 	rm -f frontend/lib/proto/proto.d.ts
+	rf -rf frontend/lib/dist
 	rm -rf frontend/public/reports
 	rm -rf ~/.cache/pre-commit
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
