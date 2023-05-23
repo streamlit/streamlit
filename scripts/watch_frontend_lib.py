@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+# This script watches for files changes and files created with the .ts, .tsx, .js, and .jsx
+# extensions. If any of those events occurs, this will automatically rebuild the frontend streamlit library.
+# This script is useful if you're mainly changing code within frontend/lib/src and you don't want to constantly
+# run yarn buildLib and this will automatically "hot reload" your code by rebuilding the library.
+
 import os
 import subprocess
 
@@ -19,10 +25,10 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 # Directory to monitor
-directory = "../frontend/lib"
+DIRECTORY = os.path.dirname(__file__).join("../frontend/lib")
 
 # Command to run on file change
-command = "cd ../frontend/lib && yarn build"
+command = f"cd {DIRECTORY} && yarn build"
 
 # File extensions to monitor
 extensions = [".ts", ".tsx", ".js", ".jsx"]
@@ -61,11 +67,11 @@ class FileChangeHandler(FileSystemEventHandler):
 if __name__ == "__main__":
     event_handler = FileChangeHandler()
     observer = Observer()
-    observer.schedule(event_handler, directory, recursive=True)
+    observer.schedule(event_handler, DIRECTORY, recursive=True)
     observer.start()
 
     try:
-        print(f"Watching directory '{directory}' for file changes...")
+        print(f"Watching directory '{DIRECTORY}' for file changes...")
         observer.join()
     except KeyboardInterrupt:
         observer.stop()
