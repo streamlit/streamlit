@@ -22,7 +22,7 @@ from watchdog.observers import Observer
 directory = "../frontend/lib"
 
 # Command to run on file change
-command = "cd ../frontend && yarn buildLib"
+command = "cd ../frontend/lib && yarn build"
 
 # File extensions to monitor
 extensions = [".ts", ".tsx", ".js", ".jsx"]
