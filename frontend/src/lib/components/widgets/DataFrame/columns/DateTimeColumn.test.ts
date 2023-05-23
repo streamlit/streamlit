@@ -227,7 +227,7 @@ describe("DateTimeColumn", () => {
     const MOCK_DATETIME_COLUMN_CUSTOM_FORMAT = {
       ...MOCK_DATETIME_COLUMN_TEMPLATE,
       columnTypeOptions: {
-        format: "MMM do, yyyy - HH:mm",
+        format: "MMM Do, YYYY - HH:mm",
       },
     }
 
@@ -403,7 +403,7 @@ describe("DateColumn", () => {
     const MOCK_DATE_COLUMN_CUSTOM_FORMAT = {
       ...MOCK_DATE_COLUMN_TEMPLATE,
       columnTypeOptions: {
-        format: "MMM do, yyyy",
+        format: "MMM Do, YYYY",
       },
     }
 
@@ -423,7 +423,7 @@ describe("TimeColumn", () => {
 
     const mockCell = mockColumn.getCell(EXAMPLE_DATE)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect((mockCell as DateTimeCell).copyData).toEqual("10:30:00.000")
+    expect((mockCell as DateTimeCell).copyData).toEqual("10:30:00")
   })
 
   it.each([

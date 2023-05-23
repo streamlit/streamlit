@@ -76,6 +76,7 @@ class StreamlitTest(unittest.TestCase):
                 "tabs",
                 "container",
                 "dataframe",
+                "data_editor",
                 "date_input",
                 "divider",
                 "download_button",

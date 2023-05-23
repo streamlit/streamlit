@@ -351,6 +351,7 @@ class ConfigTest(unittest.TestCase):
                 "deprecation.showPyplotGlobalUse",
                 "global.developmentMode",
                 "global.disableWatchdogWarning",
+                "global.disableWidgetStateDuplicationWarning",
                 "global.logLevel",
                 "global.maxCachedMessageAge",
                 "global.minCachedMessageSize",

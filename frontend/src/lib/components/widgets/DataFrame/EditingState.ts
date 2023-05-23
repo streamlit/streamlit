@@ -18,7 +18,7 @@ import { GridCell } from "@glideapps/glide-data-grid"
 
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/util/utils"
 
-import { BaseColumn } from "./columns"
+import { BaseColumn, isMissingValueCell } from "./columns"
 
 /**
  * The editing state keeps track of all table edits applied by the user.
@@ -82,16 +82,31 @@ class EditingState {
     // List of column index -> edited value
     this.addedRows.forEach((row: Map<number, GridCell>) => {
       const addedRow: Record<number, any> = {}
+      // This flags is used to check if the row is incomplete
+      // (i.e. missing required values) and should therefore not be included in
+      // the current state version.
+      let isIncomplete = false
       row.forEach((cell: GridCell, colIndex: number, _map) => {
         const column = columnsByIndex.get(colIndex)
         if (column) {
           const cellValue = column.getCellValue(cell)
+          if (
+            column.isRequired &&
+            column.isEditable &&
+            isMissingValueCell(cell)
+          ) {
+            // If the cell is missing a required value, the row is incomplete
+            isIncomplete = true
+          }
+
           if (notNullOrUndefined(cellValue)) {
             addedRow[colIndex] = cellValue
           }
         }
       })
-      currentState.added_rows.push(addedRow)
+      if (!isIncomplete) {
+        currentState.added_rows.push(addedRow)
+      }
     })
 
     // The deleted rows don't need to be transformed
@@ -128,7 +143,7 @@ class EditingState {
       if (column) {
         const cell = column.getCell(editingState.edited_cells[key])
         if (cell) {
-          if (this.editedCells.has(rowIndex) == false) {
+          if (!this.editedCells.has(rowIndex)) {
             this.editedCells.set(rowIndex, new Map())
           }
           this.editedCells.get(rowIndex)?.set(colIndex, cell)

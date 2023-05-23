@@ -19,15 +19,29 @@ import styled from "@emotion/styled"
 export const StyledSubheader = styled.div(({ theme }) => ({
   fontFamily: theme.fonts.sansSerif,
   fontWeight: theme.fontWeights.bold,
-  fontSize: theme.fontSizes.xl,
+  fontSize: theme.fontSizes.lg,
   color: theme.colors.grey90,
   marginTop: theme.spacing.twoXL,
   marginBottom: theme.spacing.md,
+
+  [`@media (max-width: ${theme.breakpoints.md})`]: {
+    marginTop: theme.spacing.md,
+  },
 }))
 
 interface StyledElementProps {
   extraSpacing?: boolean
 }
+
+export const StyledCardContainer = styled.div(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gridGap: theme.spacing.twoXL,
+
+  [`@media (max-width: ${theme.breakpoints.md})`]: {
+    gridTemplateColumns: "1fr",
+  },
+}))
 
 export const StyledElement = styled.div<StyledElementProps>(
   ({ theme, extraSpacing }) => ({
@@ -49,10 +63,14 @@ export const StyledElement = styled.div<StyledElementProps>(
 )
 
 export const StyledActionsWrapper = styled.div(({ theme }) => ({
+  display: "flex",
   marginTop: theme.spacing.threeXL,
+
   "& > button": {
-    height: "40px",
-    minWidth: "100px",
-    marginRight: "24px",
+    marginRight: theme.spacing.twoXL,
+  },
+
+  [`@media (max-width: ${theme.breakpoints.md})`]: {
+    marginTop: theme.spacing.xl,
   },
 }))

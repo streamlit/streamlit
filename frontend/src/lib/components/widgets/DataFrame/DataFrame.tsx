@@ -21,11 +21,8 @@ import {
   GridSelection,
   CompactSelection,
   GridMouseEventArgs,
-  drawTextCell,
-  DrawCustomCellCallback,
   GridCell,
 } from "@glideapps/glide-data-grid"
-import { useExtraCells } from "@glideapps/glide-data-grid-cells"
 import { Resizable } from "re-resizable"
 
 import { FormClearHelper } from "src/lib/components/widgets/Form"
@@ -45,13 +42,12 @@ import {
   useColumnSort,
   useColumnLoader,
   useTooltips,
+  useCustomRenderer,
 } from "./hooks"
 import {
   BaseColumn,
   toGlideColumn,
-  isMissingValueCell,
   getTextCell,
-  CustomCells,
   ImageCellEditor,
 } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
@@ -68,8 +64,6 @@ const MAX_COLUMN_AUTO_WIDTH = 500
 // Debounce time for triggering a widget state update
 // This prevents to rapid updates to the widget state.
 const DEBOUNCE_TIME_MS = 100
-// Token used for missing values (null, NaN, etc.)
-const NULL_VALUE_TOKEN = "None"
 // Number of rows that triggers some optimization features
 // for large tables.
 const LARGE_TABLE_ROWS_THRESHOLD = 150000
@@ -82,35 +76,6 @@ export interface DataFrameProps {
   disabled: boolean
   widgetMgr: WidgetStateManager
   isFullScreen?: boolean
-}
-
-/**
- * If a cell is marked as missing, we draw a placeholder symbol with a faded text color.
- * This is done by providing a custom cell renderer.
- */
-const drawMissingCells: DrawCustomCellCallback = args => {
-  const { cell, theme } = args
-  if (isMissingValueCell(cell)) {
-    drawTextCell(
-      {
-        ...args,
-        theme: {
-          ...theme,
-          textDark: theme.textLight,
-          textMedium: theme.textLight,
-        },
-        // The following props are just added for technical reasons:
-        // @ts-expect-error
-        spriteManager: {},
-        hyperWrapping: false,
-      },
-      NULL_VALUE_TOKEN,
-      cell.contentAlign
-    )
-    return true
-  }
-
-  return false
 }
 
 /**
@@ -136,7 +101,6 @@ function DataFrame({
   const resizableRef = React.useRef<Resizable>(null)
   const dataEditorRef = React.useRef<DataEditorRef>(null)
 
-  const extraCellArgs = useExtraCells()
   const theme = useCustomTheme()
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
@@ -309,6 +273,12 @@ function DataFrame({
     getCellContent
   )
 
+  const { drawCell, customRenderers } = useCustomRenderer(
+    columns,
+    // TODO(lukasmasuch): if we add row selections, we need to set it to true here as well:
+    element.editingMode === DYNAMIC
+  )
+
   const { columns: glideColumns, onColumnResize } = useColumnSizer(
     columns.map(column => toGlideColumn(column))
   )
@@ -474,8 +444,6 @@ function DataFrame({
               }
             }
           }}
-          // Apply different styling to missing cells:
-          drawCell={drawMissingCells}
           theme={theme}
           onMouseMove={(args: GridMouseEventArgs) => {
             // Determine if the dataframe is focused or not
@@ -492,8 +460,10 @@ function DataFrame({
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
             scrollbarWidthOverride: 1,
           }}
+          // Apply custom rendering (e.g. for missing or required cells):
+          drawCell={drawCell}
           // Add support for additional cells:
-          customRenderers={[...extraCellArgs.customRenderers, ...CustomCells]}
+          customRenderers={customRenderers}
           // Custom image editor to render single images:
           imageEditorOverride={ImageCellEditor}
           // Add our custom SVG header icons:
@@ -507,7 +477,7 @@ function DataFrame({
             element.editingMode !== READ_ONLY &&
             !disabled && {
               // Support fill handle for bulk editing:
-              fillHandle: !isTouchDevice ? true : false,
+              fillHandle: !isTouchDevice,
               // Support editing:
               onCellEdited,
               // Support pasting data for bulk editing:
