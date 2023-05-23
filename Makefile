@@ -410,6 +410,6 @@ pre-commit-install:
 	pre-commit install
 
 # Watch the frontend lib for changes and run yarn buildLib whenever a change is detected
-.PHONY: watch-lib
-watch-lib:
+.PHONY: watch-fe-lib
+watch-fe-lib:
 	python scripts/watch_frontend_lib.py
