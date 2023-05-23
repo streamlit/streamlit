@@ -19,7 +19,7 @@ import { EmotionTheme } from "src/lib/theme"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.md,
-  fontFamily: theme.fonts.sansSerif,
+  fontFamily: theme.genericFonts.bodyFont,
   padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
   lineHeight: theme.lineHeights.table,
   overflow: ["auto", "overlay"],

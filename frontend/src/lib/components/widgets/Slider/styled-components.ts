@@ -49,7 +49,7 @@ export const StyledThumb = styled.div<StyledSliderProps>(
 
 export const StyledThumbValue = styled.div<StyledSliderProps>(
   ({ disabled, theme }) => ({
-    fontFamily: theme.fonts.monospace,
+    fontFamily: theme.genericFonts.codeFont,
     fontSize: theme.fontSizes.sm,
     paddingBottom: theme.spacing.twoThirdsSmFont,
     color: disabled ? theme.colors.gray : theme.colors.primary,
@@ -77,7 +77,7 @@ export const StyledTickBarItem = styled.div<StyledSliderProps>(
     lineHeight: theme.lineHeights.base,
     fontWeight: "normal",
     fontSize: theme.fontSizes.sm,
-    fontFamily: theme.fonts.monospace,
+    fontFamily: theme.genericFonts.codeFont,
     color: disabled ? theme.colors.fadedText40 : "inherit",
   })
 )
