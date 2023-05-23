@@ -15,7 +15,6 @@
 from typing import TYPE_CHECKING, Any, List, Mapping, TypeVar
 
 from pandas import DataFrame
-from pandas.io.formats.style import Styler
 
 from streamlit import type_util
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
