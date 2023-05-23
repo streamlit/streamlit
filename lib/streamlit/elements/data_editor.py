@@ -510,9 +510,8 @@ class DataEditorMixin:
             When going from ``st.experimental_data_editor`` to ``st.data_editor`` in
             1.23.0, the format of the data editor's representation in ``st.session_state``
             was changed so that the first column is denoted by 0, not 1. The index column
-            is now denoted by -1. If your app uses ``st.experimental_data_editor`` in
-            combination with ``st.session_state``, you may need to adjust the code when
-            migrating to ``st.data_editor``.
+            is now denoted by -1. You may need to adjust the code if your app uses
+            ``st.experimental_data_editor`` in combination with ``st.session_state``.
 
         Parameters
         ----------
@@ -800,7 +799,7 @@ class DataEditorMixin:
         "2023-09-01",
         "**Breaking change:** The format of the data editor's representation in "
         + "`st.session_state` was changed so that the first column is denoted by 0,"
-        + "not 1. The index column is now denoted by -1. If your app uses "
-        + "`st.experimental_data_editor` in combination with `st.session_state`, you "
-        + "may need to adjust the code. ",
+        + "not 1. The index column is now denoted by -1. You may need to adjust "
+        + "the code if your app uses `st.experimental_data_editor` in combination "
+        + "with `st.session_state`.",
     )
