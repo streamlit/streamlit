@@ -20,8 +20,7 @@
     "testApp": "yarn workspace @streamlit/app testWatch",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
-    "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
-    "watchLib": "cd ..; python scripts/rebuild_frontend_lib.py"
+    "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs"
   },
   "browserslist": [
     ">0.2%",

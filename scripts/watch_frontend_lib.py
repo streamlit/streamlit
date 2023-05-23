@@ -25,7 +25,7 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 # Directory to monitor
-DIRECTORY = os.path.dirname(__file__).join("../frontend/lib")
+DIRECTORY = os.path.dirname(__file__).join(["./frontend/lib"])
 
 # Command to run on file change
 command = f"cd {DIRECTORY} && yarn build"

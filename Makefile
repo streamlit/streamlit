@@ -270,7 +270,7 @@ protobuf: check-protoc
 	cd frontend/ ; ( \
 		echo "/* eslint-disable */" ; \
 		echo ; \
-		yarn --silent pbts ./lib/src/proto.js \
+		yarn --silent pbts ../proto/streamlit/proto/*.proto -t \
 	) > ./lib/src/proto.d.ts
 
 .PHONY: react-init
@@ -408,3 +408,7 @@ connect-test-env:
 .PHONY: pre-commit-install
 pre-commit-install:
 	pre-commit install
+
+.PHONY: watch-lib
+watch-lib:
+	python scripts/watch_frontend_lib.py
