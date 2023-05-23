@@ -270,7 +270,7 @@ protobuf: check-protoc
 	cd frontend/ ; ( \
 		echo "/* eslint-disable */" ; \
 		echo ; \
-		yarn --silent pbts ../proto/streamlit/proto/*.proto -t \
+		yarn --silent pbts ./lib/src/proto.js \
 	) > ./lib/src/proto.d.ts
 
 .PHONY: react-init
