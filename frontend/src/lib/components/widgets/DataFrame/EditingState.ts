@@ -184,13 +184,13 @@ class EditingState {
 
       // Set the cells that were actually edited in the row
       Object.keys(row).forEach(colIndex => {
-        const colIndexAdjusted = colIndex + numIndices
-        const column = columnsByIndex.get(Number(colIndexAdjusted))
+        const colIndexAdjusted = Number(colIndex) + numIndices
+        const column = columnsByIndex.get(colIndexAdjusted)
 
         if (column) {
-          const cell = column.getCell(row[Number(colIndexAdjusted)])
+          const cell = column.getCell(row[colIndexAdjusted])
           if (cell) {
-            addedRow.set(Number(colIndexAdjusted), cell)
+            addedRow.set(colIndexAdjusted, cell)
           }
         }
       })
