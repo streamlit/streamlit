@@ -26,7 +26,7 @@ from streamlit.elements.lib.column_config_utils import ColumnConfigMappingInput
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from altair.vegalite.v4.api import Chart
+    from altair import Chart
 
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.arrow import Data
@@ -501,7 +501,7 @@ class DataFrameSelectorMixin:
 
         Parameters
         ----------
-        altair_chart : altair.vegalite.v2.api.Chart
+        altair_chart : altair.Chart
             The Altair chart object to display.
 
         use_container_width : bool

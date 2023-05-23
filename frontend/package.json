@@ -115,10 +115,10 @@
     "styletron-react": "^6.1.0",
     "typed-signals": "^2.5.0",
     "unist-util-visit": "^4.1.2",
-    "vega": "^5.23.0",
-    "vega-embed": "^6.21.2",
-    "vega-interpreter": "^1.0.4",
-    "vega-lite": "^5.6.1",
+    "vega": "^5.25.0",
+    "vega-embed": "^6.22.1",
+    "vega-interpreter": "^1.0.5",
+    "vega-lite": "^5.9.3",
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
@@ -250,7 +250,7 @@
     "static-eval": "^2.0.5",
     "terser": "^5.16.2",
     "ua-parser-js": "^1.0.33",
-    "vega-tooltip": "^0.30.0",
+    "vega-tooltip": "^0.32.0",
     "websocket-extensions": "^0.1.4",
     "ws": "^8.11.0",
     "y18n": "^5.0.8"

@@ -27,7 +27,7 @@ import urllib
 from io import BytesIO, StringIO
 from unittest.mock import MagicMock, Mock, patch
 
-import altair.vegalite.v3
+import altair.vegalite
 import cffi
 import numpy as np
 import pandas as pd
@@ -68,6 +68,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRe
 from streamlit.type_util import get_fqn_type, is_type
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
+
 
 # Get code hasher and mock the main script directory.
 def get_hash(f, context=None, hash_funcs=None):
@@ -888,10 +889,10 @@ class CodeHashTest(unittest.TestCase):
         # will need to be updated!
 
         def call_altair_concat():
-            return altair.vegalite.v4.api.concat()
+            return altair.concat()
 
         def call_altair_layer():
-            return altair.vegalite.v4.api.layer()
+            return altair.layer()
 
         self.assertNotEqual(get_hash(call_altair_concat), get_hash(call_altair_layer))
 
@@ -1145,7 +1146,6 @@ class CodeHashTest(unittest.TestCase):
 
 
 class MainScriptDirectoryDetectionTest(unittest.TestCase):
-
     relative_path = "app.py"
     abs_path = "/path/to/app.py"
 

@@ -20,7 +20,6 @@ a nice JSON schema for expressing graphs and charts.
 from datetime import date
 from typing import TYPE_CHECKING, Hashable, cast
 
-import altair as alt
 import pandas as pd
 import pyarrow as pa
 
@@ -31,7 +30,7 @@ from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProt
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from altair.vegalite.v4.api import Chart
+    from altair import Chart
 
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.arrow import Data
@@ -227,7 +226,7 @@ class LegacyAltairMixin:
 
         Parameters
         ----------
-        altair_chart : altair.vegalite.v4.api.Chart
+        altair_chart : altair.Chart
             The Altair chart object to display.
 
         use_container_width : bool
@@ -298,6 +297,8 @@ def _is_date_column(df: pd.DataFrame, name: Hashable) -> bool:
 
 
 def generate_chart(chart_type, data, width: int = 0, height: int = 0):
+    import altair as alt
+
     if data is None:
         # Use an empty-ish dict because if we use None the x axis labels rotate
         # 90 degrees. No idea why. Need to debug.

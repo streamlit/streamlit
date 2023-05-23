@@ -59,7 +59,7 @@ class LegacyAltairTest(DeltaGeneratorTestCase):
             },
         )
         self.assertEqual(spec_dict["data"], {"name": c.datasets[0].name})
-        self.assertEqual(spec_dict["mark"], "bar")
+        self.assertIn(spec_dict["mark"], ["bar", {"type": "bar"}])
         self.assertTrue("encoding" in spec_dict)
 
     def test_date_column_utc_scale(self):
@@ -94,7 +94,7 @@ class LegacyChartsTest(DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
-        self.assertEqual(chart_spec["mark"], "line")
+        self.assertIn(chart_spec["mark"], ["line", {"type": "line"}])
         self.assertEqual(chart_spec["width"], 640)
         self.assertEqual(chart_spec["height"], 480)
 
@@ -111,7 +111,7 @@ class LegacyChartsTest(DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
-        self.assertEqual(chart_spec["mark"], "line")
+        self.assertIn(chart_spec["mark"], ["line", {"type": "line"}])
         self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 30)
 
     def test_legacy_line_chart_add_rows_with_generic_index(self):
@@ -124,7 +124,7 @@ class LegacyChartsTest(DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
-        self.assertEqual(chart_spec["mark"], "line")
+        self.assertIn(chart_spec["mark"], ["line", {"type": "line"}])
         self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 30)
 
     def test_legacy_area_chart(self):
@@ -135,7 +135,7 @@ class LegacyChartsTest(DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
-        self.assertEqual(chart_spec["mark"], "area")
+        self.assertIn(chart_spec["mark"], ["area", {"type": "area"}])
         self.assertEqual(chart_spec["width"], 640)
         self.assertEqual(chart_spec["height"], 480)
         self.assertEqual(
@@ -155,7 +155,7 @@ class LegacyChartsTest(DeltaGeneratorTestCase):
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
 
-        self.assertEqual(chart_spec["mark"], "bar")
+        self.assertIn(chart_spec["mark"], ["bar", {"type": "bar"}])
         self.assertEqual(chart_spec["width"], 640)
         self.assertEqual(chart_spec["height"], 480)
         self.assertEqual(
