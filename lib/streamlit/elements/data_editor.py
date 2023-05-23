@@ -496,14 +496,7 @@ class DataEditorMixin:
     ) -> DataTypes:
         """Display a data editor widget.
 
-        Display a data editor widget that allows you to edit DataFrames and
-        many other data structures in a table-like UI.
-
-        Mixing data types within a column can make the column uneditable.
-        Additionally, the following types are not supported for editing as values
-        within your data structure: complex, list, tuple, bytes, bytearray,
-        memoryview, dict, set, frozenset, datetime.timedelta, decimal.Decimal,
-        fractions.Fraction, pandas.Interval, pandas.Period, pandas.Timedelta
+        The data editor widget allows you to edit DataFrames and many other data structures in a table-like UI
 
         .. warning::
             When going from ``st.experimental_data_editor`` to ``st.data_editor`` in
@@ -516,6 +509,13 @@ class DataEditorMixin:
         ----------
         data : pandas.DataFrame, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
             The data to edit in the data editor.
+
+            .. note::
+                Mixing data types within a column can make the column uneditable.
+                Additionally, the following data types are not yet supported for editing:
+                complex, list, tuple, bytes, bytearray, memoryview, dict, set, frozenset,
+                datetime.timedelta, decimal.Decimal, fractions.Fraction, pandas.Interval,
+                pandas.Period, pandas.Timedelta
 
         width : int or None
             Desired width of the data editor expressed in pixels. If None, the width will
