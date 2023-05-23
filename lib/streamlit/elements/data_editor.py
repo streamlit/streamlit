@@ -792,7 +792,8 @@ class DataEditorMixin:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
-    # TODO(lukasmasuch): Remove the deprecated function name after 2023-08-20:
+    # TODO(lukasmasuch): Remove the deprecated function name after 2023-09-01:
+    # Also remove the warning message in the `st.data_editor` docstring.
     experimental_data_editor = deprecate_func_name(
         gather_metrics("experimental_data_editor", data_editor),
         "experimental_data_editor",
