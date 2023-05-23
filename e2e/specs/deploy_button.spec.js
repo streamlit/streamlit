@@ -14,21 +14,34 @@
  * limitations under the License.
  */
 
-describe("displays deploy button correctly", () => {
-  before(() => {
+describe("deploy button and modal", () => {
+  beforeEach(() => {
     cy.loadApp("http://localhost:3000/?_stcore_testing=true");
+
+    cy.prepForElementSnapshots();
   });
 
-  it("deploy button matches the snapshot", () => {
+  it("renders the deploy button correctly", () => {
     cy.get("div[class='stDeployButton']").matchThemedSnapshots(
       "deploy_button"
     );
   });
 
-  it("deploy dialog matches the snapshot", () => {
-    cy.get("div[class='stDeployButton'] > button").click({force: true})
+  it("renders the light deploy dialog correctly", () => {
+    cy.get("div[class='stDeployButton'] > button").click({ force: true });
+
     cy.get("div[role='dialog']").matchImageSnapshot(
       "deploy_dialog_opened"
     );
-  })
+  });
+
+  it("renders the dark deploy dialog correctly", () => {
+    cy.changeTheme("Dark");
+
+    cy.get("div[class='stDeployButton'] > button").click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "deploy_dialog_opened-dark"
+    );
+  });
 });

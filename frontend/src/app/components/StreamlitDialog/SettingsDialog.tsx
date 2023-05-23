@@ -21,10 +21,10 @@ import React, {
   ReactNode,
 } from "react"
 import { ThemeConfig } from "src/lib/theme"
+import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
 import BaseButton, {
   BaseButtonKind,
 } from "src/lib/components/shared/BaseButton"
-import Modal, { ModalHeader, ModalBody } from "src/lib/components/shared/Modal"
 import UISelectbox from "src/lib/components/shared/Dropdown"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"
 import {
@@ -37,7 +37,7 @@ import {
   StyledDialogBody,
   StyledFullRow,
   StyledHeader,
-  StyledHr,
+  StyledButtonContainer,
   StyledLabel,
   StyledSmall,
 } from "./styled-components"
@@ -74,14 +74,14 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
 
   private renderThemeCreatorButton = (): ReactElement | false =>
     this.props.developerMode && (
-      <div>
+      <StyledButtonContainer data-testid="edit-theme">
         <BaseButton
           onClick={this.props.openThemeCreator}
           kind={BaseButtonKind.SECONDARY}
         >
           Edit active theme
         </BaseButton>
-      </div>
+      </StyledButtonContainer>
     )
 
   public render(): ReactNode {
@@ -119,10 +119,6 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
                     updated.
                   </StyledSmall>
                 </StyledFullRow>
-
-                <StyledFullRow>
-                  <StyledHr />
-                </StyledFullRow>
               </React.Fragment>
             )}
 
@@ -144,8 +140,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
 
             {this.context.availableThemes.length && (
               <StyledFullRow>
-                <StyledLabel>Theme</StyledLabel>
-                <StyledSmall>Choose app and font colors/styles</StyledSmall>
+                <StyledLabel>Choose app theme, colors and fonts</StyledLabel>
                 <UISelectbox
                   options={this.context.availableThemes.map(
                     (theme: ThemeConfig) => theme.name

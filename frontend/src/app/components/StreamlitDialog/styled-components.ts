@@ -42,7 +42,7 @@ export const StyledBackButton = styled(ChevronLeft)(({ theme }) => ({
 
 export const StyledDialogBody = styled.div(({ theme }) => ({
   display: "grid",
-  gap: theme.spacing.xl,
+  gap: theme.spacing.twoXL,
   gridTemplateColumns: "1fr 1fr",
   margin: 0,
   padding: 0,
@@ -52,22 +52,21 @@ export const StyledFullRow = styled.div(({ theme }) => ({
   gridColumnStart: 1,
   gridColumnEnd: -1,
   display: "grid",
-  gap: theme.spacing.sm,
+  gap: theme.spacing.xs,
 }))
 
 export const StyledHeader = styled.h2(({ theme }) => ({
   paddingBottom: 0,
   paddingTop: 0,
-  marginBottom: 0,
+  marginBottom: theme.spacing.md,
   marginTop: "0",
-  fontWeight: theme.fontWeights.normal,
-  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.bold,
+  fontSize: theme.fontSizes.md,
   lineHeight: theme.lineHeights.tight,
-  textTransform: "uppercase",
-  color: theme.colors.fadedText60,
+  color: theme.colors.bodyText,
   display: "grid",
   gridAutoFlow: "row",
-  gap: theme.spacing.sm,
+  gap: theme.spacing.xs,
 
   // Override the default global style for a h2:first-of-type
   "&:first-of-type": {
@@ -75,12 +74,13 @@ export const StyledHeader = styled.h2(({ theme }) => ({
   },
 }))
 
-export const StyledLabel = styled.label(() => ({
+export const StyledLabel = styled.label(({ theme }) => ({
   paddingBottom: 0,
   paddingTop: 0,
   marginBottom: 0,
   marginTop: 0,
   lineHeight: 1.25,
+  fontSize: theme.fontSizes.sm,
 }))
 
 export const StyledSmall = styled(Small)(() => ({
@@ -98,6 +98,10 @@ export const StyledHr = styled.hr(({ theme }) => ({
   marginLeft: `-${theme.spacing.xl}`,
   marginRight: `-${theme.spacing.xl}`,
   marginTop: 0,
+}))
+
+export const StyledButtonContainer = styled.div(({ theme }) => ({
+  marginTop: theme.spacing.md,
 }))
 
 export const StyledCheckbox = styled.input(({ theme }) => ({
