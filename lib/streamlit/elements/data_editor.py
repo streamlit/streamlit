@@ -400,15 +400,14 @@ def _check_type_compatibilities(
         If a configured column type is editable and not compatible with the
         underlying data type.
     """
-    num_indices = data_df.index.nlevels or 0
+    # TODO(lukasmasuch): Update this here to support multi-index in the future:
+    indices = [(INDEX_IDENTIFIER, data_df.index)]
 
-    for i, column in enumerate(
-        [(INDEX_IDENTIFIER, data_df.index)] + list(data_df.items())
-    ):
+    for i, column in enumerate(indices + list(data_df.items())):
         column_name, _ = column
-        column_data_kind = dataframe_schema[i - num_indices]
+        column_data_kind = dataframe_schema[i - len(indices)]
 
-        # TODO: support column config by numerical index
+        # TODO(lukasmasuch): support column config via numerical index here?
         if column_name in columns_config:
             column_config = columns_config[column_name]
             if column_config.get("disabled") is True:
