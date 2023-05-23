@@ -7,7 +7,7 @@
     "start": "yarn workspace @streamlit/app start",
     "build": "yarn workspace @streamlit/lib build && yarn workspace @streamlit/app build",
     "buildFast": "yarn buildLib && yarn workspace @streamlit/app buildFast",
-    "buildLib": "echo If you want to hot reload lib code, from the frontend dir, run: \n echo \"cd ..; python scripts/rebuild_frontend_lib.py\" && yarn workspace @streamlit/lib build",
+    "buildLib": "echo If you want to hot reload lib code, from the frontend dir, run: \n echo \"yarn watchLib\" && yarn workspace @streamlit/lib build",
     "buildApp": "yarn workspace @streamlit/app build",
     "buildAppFast": "yarn workspace @streamlit/app buildFast",
     "typecheck": "yarn workspace @streamlit/lib typecheck && yarn workspace @streamlit/app typecheck",
@@ -20,7 +20,8 @@
     "testApp": "yarn workspace @streamlit/app testWatch",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
-    "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs"
+    "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs",
+    "watchLib": "cd ..; python scripts/rebuild_frontend_lib.py"
   },
   "browserslist": [
     ">0.2%",
