@@ -45,6 +45,8 @@ module.exports = {
   },
   webpack: {
     configure: webpackConfig => {
+      // ignore webpack warnings by source-map-loader https://github.com/facebook/create-react-app/pull/11752
+      webpackConfig.ignoreWarnings = [/Failed to parse source map from/]
       webpackConfig.resolve.mainFields = ["module", "main"]
       // Webpack 5 requires polyfills. We don't need them, so resolve to an empty module
       webpackConfig.resolve.fallback ||= {}

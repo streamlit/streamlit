@@ -224,6 +224,7 @@ clean:
 	rm -f frontend/lib/src/proto.js
 	rm -f frontend/lib/src/proto.d.ts
 	rm -rf frontend/public/reports
+	rm -rf frontend/lib/dist
 	rm -rf ~/.cache/pre-commit
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
