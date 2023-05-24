@@ -36,8 +36,9 @@ import {
 // Using this ID for column config will apply the config to all index columns
 export const INDEX_IDENTIFIER = "index"
 // Prefix used in the config column mapping when referring to a column via the numeric position
-export const COLUMN_POSITION_PREFIX = "col:"
+export const COLUMN_POSITION_PREFIX = "_pos:"
 
+// Predefined column widths configurable by the user
 export const COLUMN_WIDTH_MAPPING = {
   small: 75,
   medium: 200,
@@ -51,17 +52,37 @@ export const COLUMN_WIDTH_MAPPING = {
  * This will be eventually replaced with a proto message.
  */
 export interface ColumnConfigProps {
-  title?: string
-  width?: "small" | "medium" | "large"
+  label?: string
+  width?: "small" | "medium" | "large" | number
+  help?: string
   hidden?: boolean
   disabled?: boolean
   required?: boolean
   default?: number | string | boolean
-  type?: string
-  // uses snake_case to match the property names in the backend:
-  type_options?: Record<string, unknown>
   alignment?: "left" | "center" | "right"
-  help?: string
+  // uses snake_case to match the property names in the backend:
+  type_config?: Record<string, unknown>
+}
+
+/**
+ * Parse the user-defined width configuration and return the width in pixels.
+ */
+function parseWidthConfig(
+  width?: "small" | "medium" | "large" | number
+): number | undefined {
+  if (isNullOrUndefined(width)) {
+    return undefined
+  }
+
+  if (typeof width === "number") {
+    return width
+  }
+
+  if (width in COLUMN_WIDTH_MAPPING) {
+    return COLUMN_WIDTH_MAPPING[width]
+  }
+
+  return undefined
 }
 
 /**
@@ -82,7 +103,10 @@ export function applyColumnConfig(
   }
 
   let columnConfig
-  if (columnConfigMapping.has(columnProps.name)) {
+  if (
+    columnConfigMapping.has(columnProps.name) &&
+    columnProps.name !== INDEX_IDENTIFIER // "index" is not supported as name for normal columns
+  ) {
     // Config is configured based on the column name
     columnConfig = columnConfigMapping.get(columnProps.name)
   } else if (
@@ -110,19 +134,14 @@ export function applyColumnConfig(
   // This will update all column props with the user-defined config for all
   // configuration options that are not undefined:
   return merge({ ...columnProps }, {
-    title: columnConfig.title,
-    width:
-      notNullOrUndefined(columnConfig.width) &&
-      columnConfig.width in COLUMN_WIDTH_MAPPING
-        ? COLUMN_WIDTH_MAPPING[columnConfig.width]
-        : undefined,
-    customType: columnConfig.type?.toLowerCase().trim(),
+    title: columnConfig.label,
+    width: parseWidthConfig(columnConfig.width),
     isEditable: notNullOrUndefined(columnConfig.disabled)
       ? !columnConfig.disabled
       : undefined,
     isHidden: columnConfig.hidden,
     isRequired: columnConfig.required,
-    columnTypeOptions: columnConfig.type_options,
+    columnTypeOptions: columnConfig.type_config,
     contentAlignment: columnConfig.alignment,
     defaultValue: columnConfig.default,
     help: columnConfig.help,
@@ -162,14 +181,15 @@ type ColumnLoaderReturn = {
  * @returns the column creator of the corresponding column type.
  */
 export function getColumnType(column: BaseColumnProps): ColumnCreator {
+  const customType = column.columnTypeOptions?.type as string
   // Create a column instance based on the column properties
   let ColumnType: ColumnCreator | undefined
-  if (notNullOrUndefined(column.customType)) {
-    if (ColumnTypes.has(column.customType)) {
-      ColumnType = ColumnTypes.get(column.customType)
+  if (notNullOrUndefined(customType)) {
+    if (ColumnTypes.has(customType)) {
+      ColumnType = ColumnTypes.get(customType)
     } else {
       logWarning(
-        `Unknown column type configured in column configuration: ${column.customType}`
+        `Unknown column type configured in column configuration: ${customType}`
       )
     }
   }

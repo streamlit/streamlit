@@ -61,7 +61,7 @@ const StyledDataFrameCell = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.colors.fadedText05}`,
   borderRight: `1px solid ${theme.colors.fadedText05}`,
   fontSize: theme.fontSizes.md,
-  fontFamily: theme.fonts.sansSerif,
+  fontFamily: theme.genericFonts.bodyFont,
   lineHeight: theme.lineHeights.table,
   display: "flex",
   alignItems: "center",
@@ -130,7 +130,7 @@ export const StyledFixup = styled.div<StyledFixupProps>(
 )
 
 export const StyledEmptyDataframe = styled.div(({ theme }) => ({
-  fontFamily: theme.fonts.monospace,
+  fontFamily: theme.genericFonts.codeFont,
   color: theme.colors.fadedText60,
   fontStyle: "italic",
   fontSize: theme.fontSizes.md,

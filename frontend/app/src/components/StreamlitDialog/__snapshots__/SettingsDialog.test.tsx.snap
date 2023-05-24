@@ -31,11 +31,8 @@ exports[`SettingsDialog renders without crashing 1`] = `
       </StyledFullRow>
       <StyledFullRow>
         <StyledLabel>
-          Theme
+          Choose app theme, colors and fonts
         </StyledLabel>
-        <StyledSmall>
-          Choose app and font colors/styles
-        </StyledSmall>
         <Selectbox
           disabled={false}
           onChange={[Function]}
@@ -47,14 +44,16 @@ exports[`SettingsDialog renders without crashing 1`] = `
           }
           value={0}
         />
-        <div>
+        <StyledButtonContainer
+          data-testid="edit-theme"
+        >
           <BaseButton
             kind="secondary"
             onClick={[MockFunction]}
           >
             Edit active theme
           </BaseButton>
-        </div>
+        </StyledButtonContainer>
       </StyledFullRow>
     </StyledDialogBody>
   </ModalBody>
@@ -92,11 +91,8 @@ exports[`SettingsDialog should hide the theme creator button if not in developer
       </StyledFullRow>
       <StyledFullRow>
         <StyledLabel>
-          Theme
+          Choose app theme, colors and fonts
         </StyledLabel>
-        <StyledSmall>
-          Choose app and font colors/styles
-        </StyledSmall>
         <Selectbox
           disabled={false}
           onChange={[Function]}
@@ -145,11 +141,8 @@ exports[`SettingsDialog should show theme creator button if in developer mode 1`
       </StyledFullRow>
       <StyledFullRow>
         <StyledLabel>
-          Theme
+          Choose app theme, colors and fonts
         </StyledLabel>
-        <StyledSmall>
-          Choose app and font colors/styles
-        </StyledSmall>
         <Selectbox
           disabled={false}
           onChange={[Function]}
@@ -161,14 +154,16 @@ exports[`SettingsDialog should show theme creator button if in developer mode 1`
           }
           value={0}
         />
-        <div>
+        <StyledButtonContainer
+          data-testid="edit-theme"
+        >
           <BaseButton
             kind="secondary"
             onClick={[MockFunction]}
           >
             Edit active theme
           </BaseButton>
-        </div>
+        </StyledButtonContainer>
       </StyledFullRow>
     </StyledDialogBody>
   </ModalBody>

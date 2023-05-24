@@ -26,7 +26,7 @@ interface IDeployCardProps {
 function DeployCard(
   props: React.PropsWithChildren<IDeployCardProps>
 ): ReactElement {
-  const { colors, spacing }: EmotionTheme = useTheme()
+  const { colors, spacing, radii, breakpoints }: EmotionTheme = useTheme()
   const { children } = props
   return (
     <Card
@@ -35,18 +35,23 @@ function DeployCard(
           style: {
             borderWidth: "1px",
             borderStyle: "solid",
-            borderColor: colors.gray40,
-            borderRadius: "8px",
-            minHeight: "330px",
-            marginTop: spacing.xl,
-            marginLeft: spacing.xl,
-            marginRight: spacing.xl,
-            marginBottom: spacing.xl,
+            borderColor: colors.fadedText10,
+            borderRadius: radii.lg,
+          },
+        },
+        Contents: {
+          style: {
+            margin: 0,
           },
         },
         Body: {
           style: {
-            padding: spacing.twoXL,
+            padding: spacing.threeXL,
+            margin: 0,
+
+            [`@media (max-width: ${breakpoints.md})`]: {
+              padding: spacing.xl,
+            },
           },
         },
       }}

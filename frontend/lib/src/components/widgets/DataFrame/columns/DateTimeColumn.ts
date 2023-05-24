@@ -51,7 +51,7 @@ function applyTimezone(momentDate: Moment, timezone: string): Moment {
 }
 
 export interface DateTimeColumnParams {
-  // A date-fns formatting syntax to format the display value.
+  // A momentJS formatting syntax to format the display value.
   readonly format?: string
   // Specifies the granularity that the value must adhere.
   // For time and datetime, this is the number of seconds between each allowed value.
@@ -300,6 +300,14 @@ function BaseDateTimeColumn(
  * @returns The new column.
  */
 export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
+  // Do a smart selection of the default format based on the step size
+  let defaultFormat = "YYYY-MM-DD HH:mm:ss"
+  if (props.columnTypeOptions?.step >= 60) {
+    defaultFormat = "YYYY-MM-DD HH:mm"
+  } else if (props.columnTypeOptions?.step < 1) {
+    defaultFormat = "YYYY-MM-DD HH:mm:ss.SSS"
+  }
+
   const timezone: string | undefined = props.arrowType?.meta?.timezone
   const hasTimezone: boolean =
     notNullOrUndefined(timezone) ||
@@ -309,7 +317,7 @@ export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
   return BaseDateTimeColumn(
     "datetime",
     props,
-    hasTimezone ? "yyyy-MM-dd HH:mm:ssxxx" : "yyyy-MM-dd HH:mm:ss",
+    hasTimezone ? defaultFormat + "Z" : defaultFormat,
     1,
     "datetime-local",
     (date: Date): string => {
@@ -333,18 +341,18 @@ DateTimeColumn.isEditableType = true
  */
 export function TimeColumn(props: BaseColumnProps): BaseColumn {
   // Do a smart selection of the default format based on the step size
-  let defaultFormat = "HH:mm:ss.SSS"
+  let defaultFormat = "HH:mm:ss"
   if (props.columnTypeOptions?.step >= 60) {
     defaultFormat = "HH:mm"
-  } else if (props.columnTypeOptions?.step >= 1) {
-    defaultFormat = "HH:mm:ss"
+  } else if (props.columnTypeOptions?.step < 1) {
+    defaultFormat = "HH:mm:ss.SSS"
   }
 
   return BaseDateTimeColumn(
     "time",
     props,
     defaultFormat,
-    0.1,
+    1,
     "time",
     (date: Date): string => {
       // Only return the time part of the ISO string:
@@ -366,7 +374,7 @@ export function DateColumn(props: BaseColumnProps): BaseColumn {
   return BaseDateTimeColumn(
     "date",
     props,
-    "yyyy-MM-dd",
+    "YYYY-MM-DD",
     1,
     "date",
     (date: Date): string => {

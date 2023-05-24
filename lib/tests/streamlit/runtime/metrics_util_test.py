@@ -310,6 +310,46 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
                 ),
             )
 
+    def test_column_config_commands(self):
+        """All commands of the public column config API should be tracked with the correct name."""
+        # Create a list of all public API names in the `st` module (minus
+        # the ignored commands from above).
+        public_api_names = sorted(
+            [
+                k
+                for k, v in st.column_config.__dict__.items()
+                if not k.startswith("_") and not isinstance(v, type(st.column_config))
+            ]
+        )
+
+        for api_name in public_api_names:
+            st_func = getattr(st.column_config, api_name)
+            if not callable(st_func):
+                continue
+
+            # Reset tracked stats from previous calls.
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.reset()
+            ctx.gather_usage_stats = True
+
+            # Call the API. This will often throw an exception due to missing
+            # arguments. But that's fine: the command will still be tracked.
+            with contextlib.suppress(Exception):
+                st_func()
+
+            # Assert that the API name is in the list of tracked commands.
+            # (It's possible for multiple tracked commands to be issued as
+            # the result of a single API call.)
+            self.assertIn(
+                "column_config." + api_name,
+                [cmd.name for cmd in ctx.tracked_commands],
+                (
+                    f"When executing `st.{api_name}()`, we expect the string "
+                    f'"{api_name}" to be in the list of tracked commands.',
+                ),
+            )
+
     def test_command_tracking_limits(self):
         """Command tracking limits should be respected.
 

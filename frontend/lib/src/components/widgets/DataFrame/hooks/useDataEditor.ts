@@ -114,7 +114,10 @@ function useDataEditor(
     [columns, editingState, getOriginalIndex, getCellContent, applyEdits]
   )
 
-  const onRowAppended = React.useCallback(() => {
+  /**
+   * Appends a new empty row to the end of the table.
+   */
+  const appendEmptyRow = React.useCallback(() => {
     if (fixedNumRows) {
       // Appending rows is not supported
       return
@@ -127,9 +130,24 @@ function useDataEditor(
       newRow.set(column.indexNumber, column.getCell(column.defaultValue))
     })
     editingState.current.addRow(newRow)
-    applyEdits(false, false)
-  }, [columns, editingState, fixedNumRows, applyEdits])
+  }, [columns, editingState, fixedNumRows])
 
+  /**
+   * Callback used by glide-data-grid when the user adds a new row in the table UI.
+   */
+  const onRowAppended = React.useCallback(() => {
+    if (fixedNumRows) {
+      // Appending rows is not supported
+      return
+    }
+
+    appendEmptyRow()
+    applyEdits()
+  }, [appendEmptyRow, applyEdits, fixedNumRows])
+
+  /**
+   * Callback used by glide-data-grid when the user deletes a row or cell value in the table UI.
+   */
   const onDelete = React.useCallback(
     (selection: GridSelection): GridSelection | boolean => {
       if (selection.rows.length > 0) {
@@ -196,6 +214,9 @@ function useDataEditor(
     ]
   )
 
+  /**
+   * Callback used by glide-data-grid when the user pastes data into the table.
+   */
   const onPaste = React.useCallback(
     (target: Item, values: readonly (readonly string[])[]): boolean => {
       const [targetCol, targetRow] = target
@@ -211,7 +232,7 @@ function useDataEditor(
           }
           // Adding rows during paste would not work currently. However, we already disallow
           // sorting in dynamic mode, so we don't have to do anything here.
-          onRowAppended()
+          appendEmptyRow()
         }
         for (let col = 0; col < rowData.length; col++) {
           const pasteDataValue = rowData[col]
@@ -267,12 +288,15 @@ function useDataEditor(
       fixedNumRows,
       getOriginalIndex,
       getCellContent,
-      onRowAppended,
+      appendEmptyRow,
       applyEdits,
       refreshCells,
     ]
   )
 
+  /**
+   * Callback used by glide-data-grid to validate the data inputted into a cell by the user.
+   */
   const validateCell = React.useCallback(
     (cell: Item, newValue: EditableGridCell) => {
       const col = cell[0]
