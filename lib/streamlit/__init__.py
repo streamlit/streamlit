@@ -75,6 +75,7 @@ from streamlit.commands.query_params import (
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
 
+import streamlit.column_config as _column_config
 from streamlit.echo import echo as echo
 from streamlit.runtime.legacy_caching import cache as _cache
 from streamlit.elements.spinner import spinner as spinner
@@ -123,6 +124,7 @@ columns = _main.columns
 tabs = _main.tabs
 container = _main.container
 dataframe = _main.dataframe
+data_editor = _main.data_editor
 date_input = _main.date_input
 divider = _main.divider
 download_button = _main.download_button
@@ -199,6 +201,9 @@ session_state = _SessionStateProxy()
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
+
+# Namespaces
+column_config = _column_config
 
 # Experimental APIs
 experimental_user = _UserInfoProxy()

@@ -12,18 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import altair as alt
-import numpy as np
-import pandas as pd
-
 import streamlit as st
-
-alt.themes.enable("streamlit")
-
-np.random.seed(0)
-
-data = np.random.randn(200, 3)
-df = pd.DataFrame(data, columns=["a", "b", "c"])
-chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c")
-
-st._arrow_altair_chart(chart, theme=None)

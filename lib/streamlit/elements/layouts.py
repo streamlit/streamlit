@@ -94,23 +94,20 @@ class LayoutsMixin:
 
         Parameters
         ----------
-        spec : int or list of numbers
-            If an int
-                Specifies the number of columns to insert, and all columns
-                have equal width.
+        spec : int or iterable of numbers
+            Controls the number and width of columns to insert. Can be one of:
 
-            If a list of numbers
-                Creates a column for each number, and each
-                column's width is proportional to the number provided. Numbers can
-                be ints or floats, but they must be positive.
+            * An integer that specifies the number of columns. All columns have equal
+              width in this case.
+            * An iterable of numbers (int or float) that specify the relative width of
+              each column. E.g. ``[0.7, 0.3]`` creates two columns where the first
+              one takes up 70% of the available with and the second one takes up 30%.
+              Or ``[1, 2, 3]`` creates three columns where the second one is two times
+              the width of the first one, and the third one is three times that width.
 
-                For example, `st.columns([3, 1, 2])` creates 3 columns where
-                the first column is 3 times the width of the second, and the last
-                column is 2 times that width.
         gap : "small", "medium", or "large"
-            An optional string, which indicates the size of the gap between each column.
-            The default is a small gap between columns. This argument can only be supplied by
-            keyword.
+            The size of the gap between the columns. Defaults to "small". This
+            argument can only be supplied by keyword.
 
         Returns
         -------

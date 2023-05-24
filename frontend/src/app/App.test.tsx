@@ -640,6 +640,7 @@ describe("App.handleNewSession", () => {
   it("removes the custom theme from theme options if one is not received from the server", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
+    wrapper.setState({ themeHash: "customThemeHash" })
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
 
@@ -655,6 +656,7 @@ describe("App.handleNewSession", () => {
   it("Does not change dark/light/auto user preferences when removing a custom theme", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
+    wrapper.setState({ themeHash: "customThemeHash" })
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
 
@@ -678,6 +680,7 @@ describe("App.handleNewSession", () => {
       name: CUSTOM_THEME_NAME,
     }
     const wrapper = shallow(<App {...props} />)
+    wrapper.setState({ themeHash: "customThemeHash" })
 
     const newSessionJson = cloneDeep(NEW_SESSION_JSON)
     newSessionJson.customTheme = null
