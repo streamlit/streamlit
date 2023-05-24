@@ -33,7 +33,7 @@ google-auth-oauthlib==1.0.0
 google-pasta==0.2.0
 graphviz==0.20.1
 greenlet==2.0.2
-grpcio==1.55.0
+grpcio==1.54.2
 h5py==3.8.0
 hypothesis==6.75.3
 identify==2.5.24
