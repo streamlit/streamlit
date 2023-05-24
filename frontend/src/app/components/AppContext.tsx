@@ -69,10 +69,10 @@ export interface Props {
   showColoredLine: boolean
 
   /**
-   * True if the app is hosted on Community Cloud.
+   * Adjustment to positioning of the app's toasts
    * @see ToastRenderer
    */
-  communityCloud: boolean
+  toastAdjustment: boolean
 
   /**
    * If non-zero, this is the number of pixels that the sidebar's
@@ -92,6 +92,6 @@ export const AppContext = React.createContext<Props>({
   showFooter: false,
   showToolbar: false,
   showColoredLine: false,
-  communityCloud: false,
+  toastAdjustment: false,
   sidebarChevronDownshift: 0,
 })

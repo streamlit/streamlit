@@ -18,13 +18,13 @@ import React, { ReactElement, ReactNode, useEffect } from "react"
 import { ToasterContainer, toaster, PLACEMENT } from "baseui/toast"
 
 export interface EventContainerProps {
-  communityCloud: boolean
+  toastAdjustment: boolean
   scriptRunId?: string
   children: ReactNode
 }
 
 function EventContainer({
-  communityCloud,
+  toastAdjustment,
   scriptRunId,
   children,
 }: EventContainerProps): ReactElement {
@@ -42,7 +42,7 @@ function EventContainer({
           Root: {
             style: {
               // If deployed in Community Cloud, move toasts up to avoid blocking Manage App button
-              bottom: communityCloud ? "45px" : "0px",
+              bottom: toastAdjustment ? "45px" : "0px",
             },
             props: {
               "data-testid": "toastContainer",

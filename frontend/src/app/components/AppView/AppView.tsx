@@ -121,13 +121,10 @@ function AppView(props: AppViewProps): ReactElement {
     showFooter,
     showToolbar,
     showColoredLine,
-    communityCloud,
+    toastAdjustment,
   } = React.useContext(AppContext)
 
-  const renderBlock = (
-    node: BlockNode,
-    events: boolean = false
-  ): ReactElement => (
+  const renderBlock = (node: BlockNode, events = false): ReactElement => (
     <StyledAppViewBlockContainer
       className="block-container"
       isWideMode={wideMode}
@@ -202,7 +199,7 @@ function AppView(props: AppViewProps): ReactElement {
         )}
       </StyledAppViewMain>
       <EventContainer
-        communityCloud={communityCloud}
+        toastAdjustment={toastAdjustment}
         scriptRunId={elements.event.scriptRunId}
       >
         {renderBlock(elements.event, true)}

@@ -1565,7 +1565,7 @@ export class App extends PureComponent<Props, State> {
         value={{
           initialSidebarState,
           wideMode: userSettings.wideMode,
-          communityCloud:
+          toastAdjustment:
             this.props.hostCommunication.currentState.toolbarItems.length > 0,
           sidebarChevronDownshift:
             this.props.hostCommunication.currentState.sidebarChevronDownshift,

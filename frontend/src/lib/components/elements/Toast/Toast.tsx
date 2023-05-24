@@ -104,7 +104,10 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
     setExpanded(!expanded)
   }, [expanded])
 
-  const styleOverrides = generateToastOverrides(expanded, type, theme)
+  const styleOverrides = useMemo(
+    () => generateToastOverrides(expanded, type, theme),
+    [expanded, type, theme]
+  )
 
   const toastContent = useMemo(
     () => (
@@ -159,7 +162,7 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
       toaster.clear(newKey)
     }
 
-    // Array must be empty to prevent infinite loop
+    // Array must be empty to run as mount/cleanup
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
