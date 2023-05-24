@@ -16,16 +16,20 @@
 
 import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
+import "@testing-library/jest-dom"
+import { render } from "src/lib/test_util"
 
-import { mount } from "src/lib/test_util"
 import Modal from "./Modal"
 
 describe("Modal component", () => {
   it("renders without crashing", () => {
-    mount(
+    render(
       <BaseProvider theme={LightTheme}>
         <Modal isOpen />
       </BaseProvider>
     )
+
+    const modalElement = document.body.querySelector('[role="dialog"]')
+    expect(modalElement).toBeInTheDocument()
   })
 })
