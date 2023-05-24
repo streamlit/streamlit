@@ -408,3 +408,8 @@ connect-test-env:
 .PHONY: pre-commit-install
 pre-commit-install:
 	pre-commit install
+
+# Watch the frontend lib for changes and run yarn buildLib whenever a change is detected
+.PHONY: watch-frontend-lib
+watch-frontend-lib:
+	python scripts/watch_frontend_lib.py
