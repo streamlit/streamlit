@@ -26,6 +26,7 @@ import { notNullOrUndefined } from "src/util/utils"
 import {
   BaseColumn,
   hasTooltip,
+  isMissingValueCell,
 } from "src/components/widgets/DataFrame/columns"
 
 // Debounce time for triggering the tooltip on hover.
