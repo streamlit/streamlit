@@ -152,7 +152,12 @@
     },
     // Check for import violation in all JS-like files
     "import/resolver": {
-      "typescript": true
+      "typescript": true,
+      // tell eslint to look at these tsconfigs for import statements
+      "project": [
+        "lib/tsconfig.json",
+        "app/tsconfig.json"
+      ]
     }
   }
 }
