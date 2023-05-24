@@ -203,6 +203,12 @@ class SliderMixin:
         input, while `select_slider` accepts any datatype and takes an iterable
         set of options.
 
+        .. note::
+            Integer values exceeding +/- ``(1<<53) - 1`` cannot be accurately
+            stored or returned by the widget due to serialization contstraints
+            between the Python server and JavaScript client. You must handle
+            such numbers as floats, leading to a loss in precision.
+
         Parameters
         ----------
         label : str
