@@ -33,10 +33,12 @@ from streamlit.elements.data_editor import (
     _apply_dataframe_edits,
     _apply_row_additions,
     _apply_row_deletions,
+    _check_column_names,
     _check_type_compatibilities,
     _parse_value,
 )
 from streamlit.elements.lib.column_config_utils import (
+    INDEX_IDENTIFIER,
     ColumnDataKind,
     determine_dataframe_schema,
 )
@@ -149,12 +151,14 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         )
 
-        edited_cells: Mapping[str, str | int | float | bool | None] = {
-            "0:0": 10,
-            "0:1": "foo",
-            "1:1": None,
-            "0:2": False,
-            "0:3": "2020-03-20T14:28:23",
+        edited_cells: Mapping[int, Mapping[str, str | int | float | bool | None]] = {
+            0: {
+                "col1": 10,
+                "col2": "foo",
+                "col3": False,
+                "col4": "2020-03-20T14:28:23",
+            },
+            1: {"col2": None},
         }
 
         _apply_cell_edits(
@@ -183,8 +187,8 @@ class DataEditorUtilTest(unittest.TestCase):
         )
 
         added_rows: List[Dict[str, Any]] = [
-            {"0": 10, "1": "foo", "2": False, "3": "2020-03-20T14:28:23"},
-            {"0": 11, "1": "bar", "2": True, "3": "2023-03-20T14:28:23"},
+            {"col1": 10, "col2": "foo", "col3": False, "col4": "2020-03-20T14:28:23"},
+            {"col1": 11, "col2": "bar", "col3": True, "col4": "2023-03-20T14:28:23"},
         ]
 
         _apply_row_additions(
@@ -222,11 +226,14 @@ class DataEditorUtilTest(unittest.TestCase):
 
         deleted_rows: List[int] = [0, 2]
         added_rows: List[Dict[str, Any]] = [
-            {"0": 10, "1": "foo", "2": False},
-            {"0": 11, "1": "bar", "2": True},
+            {"col1": 10, "col2": "foo", "col3": False},
+            {"col1": 11, "col2": "bar", "col3": True},
         ]
-        edited_cells: Mapping[str, str | int | float | bool | None] = {
-            "1:0": 123,
+
+        edited_cells: Mapping[int, Mapping[str, str | int | float | bool | None]] = {
+            1: {
+                "col1": 123,
+            }
         }
 
         _apply_dataframe_edits(
@@ -341,7 +348,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(
             proto.columns,
-            json.dumps({"index": {"hidden": True}}),
+            json.dumps({INDEX_IDENTIFIER: {"hidden": True}}),
         )
 
     def test_hide_index_false(self):
@@ -358,7 +365,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(
             proto.columns,
-            json.dumps({"index": {"hidden": False}}),
+            json.dumps({INDEX_IDENTIFIER: {"hidden": False}}),
         )
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -487,9 +494,9 @@ class DataEditorTest(DeltaGeneratorTestCase):
         df = pd.DataFrame({"col1": [1, 2, 3], "col2": ["a", "b", "c"]})
 
         schema = {
-            -1: ColumnDataKind.INTEGER,
-            0: ColumnDataKind.INTEGER,
-            1: ColumnDataKind.STRING,
+            INDEX_IDENTIFIER: ColumnDataKind.INTEGER,
+            "col1": ColumnDataKind.INTEGER,
+            "col2": ColumnDataKind.STRING,
         }
 
         with self.assertRaises(StreamlitAPIException):
@@ -567,3 +574,30 @@ class DataEditorTest(DeltaGeneratorTestCase):
         self.assertEqual(
             proto.styler.styles, "#T_FAKE_UUIDrow1_col2 { background-color: yellow }"
         )
+
+    def test_duplicate_column_names_raise_exception(self):
+        """Test that duplicate column names raise an exception."""
+        # create a dataframe with duplicate columns
+        df = pd.DataFrame({"duplicated": [1, 2, 3], "col2": [4, 5, 6]})
+        df.rename(columns={"col2": "duplicated"}, inplace=True)
+
+        # StreamlitAPIException should be raised
+        with self.assertRaises(StreamlitAPIException):
+            _check_column_names(df)
+
+    def test_index_column_name_raises_exception(self):
+        """Test that an index column name raises an exception."""
+        # create a dataframe with a column named "_index"
+        df = pd.DataFrame({INDEX_IDENTIFIER: [1, 2, 3], "col2": [4, 5, 6]})
+
+        # StreamlitAPIException should be raised
+        with self.assertRaises(StreamlitAPIException):
+            _check_column_names(df)
+
+    def test_column_names_are_unique(self):
+        """Test that unique column names do not raise an exception."""
+        # create a dataframe with unique columns
+        df = pd.DataFrame({"col1": [1, 2, 3], "col2": [4, 5, 6]})
+
+        # no exception should be raised here
+        _check_column_names(df)

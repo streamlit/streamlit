@@ -330,12 +330,12 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         self.assertEqual(
             determine_dataframe_schema(df, arrow_schema),
             {
-                -1: ColumnDataKind.INTEGER,  # This is the type of the index
-                0: ColumnDataKind.INTEGER,
-                1: ColumnDataKind.FLOAT,
-                2: ColumnDataKind.BOOLEAN,
-                3: ColumnDataKind.STRING,
-                4: ColumnDataKind.EMPTY,
+                INDEX_IDENTIFIER: ColumnDataKind.INTEGER,  # This is the type of the index
+                "int": ColumnDataKind.INTEGER,
+                "float": ColumnDataKind.FLOAT,
+                "bool": ColumnDataKind.BOOLEAN,
+                "str": ColumnDataKind.STRING,
+                "empty": ColumnDataKind.EMPTY,
             },
         )
 

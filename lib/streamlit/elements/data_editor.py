@@ -112,19 +112,17 @@ class EditingState(TypedDict, total=False):
 
     Attributes
     ----------
-    edited_cells : Dict[str, str | int | float | bool | None]
-        A dictionary of edited cells, where the key is the cell's row and
-        column position (row:column), and the value is the new value of the cell.
+    edited_cells : Dict[int, Dict[str, str | int | float | bool | None]]
+        An hierarchical mapping of edited cells based on: row position -> column name -> value.
 
     added_rows : List[Dict[str, str | int | float | bool | None]]
-        A list of added rows, where each row is a dictionary of column position
-        and the respective value.
+        A list of added rows, where each row is a mapping from column name to the cell value.
 
     deleted_rows : List[int]
         A list of deleted rows, where each row is the numerical position of the deleted row.
     """
 
-    edited_cells: Dict[str, str | int | float | bool | None]
+    edited_cells: Dict[int, Dict[str, str | int | float | bool | None]]
     added_rows: List[Dict[str, str | int | float | bool | None]]
     deleted_rows: List[int]
 
@@ -134,7 +132,7 @@ class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
     def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> EditingState:
-        return (  # type: ignore
+        data_editor_state: EditingState = (
             {
                 "edited_cells": {},
                 "added_rows": [],
@@ -143,6 +141,23 @@ class DataEditorSerde:
             if ui_value is None
             else json.loads(ui_value)
         )
+
+        # Make sure that all editing state keys are present:
+        if "edited_cells" not in data_editor_state:
+            data_editor_state["edited_cells"] = {}
+
+        if "deleted_rows" not in data_editor_state:
+            data_editor_state["deleted_rows"] = []
+
+        if "added_rows" not in data_editor_state:
+            data_editor_state["added_rows"] = []
+
+        # Convert the keys (numerical row positions) to integers.
+        # The keys are strings because they are serialized to JSON.
+        data_editor_state["edited_cells"] = {
+            int(k): v for k, v in data_editor_state["edited_cells"].items()
+        }
+        return data_editor_state
 
     def serialize(self, editing_state: EditingState) -> str:
         return json.dumps(editing_state, default=str)
@@ -212,7 +227,7 @@ def _parse_value(
 
 def _apply_cell_edits(
     df: pd.DataFrame,
-    edited_cells: Mapping[str, str | int | float | bool | None],
+    edited_cells: Mapping[int, Mapping[str, str | int | float | bool | None]],
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply cell edits to the provided dataframe (inplace).
@@ -222,23 +237,27 @@ def _apply_cell_edits(
     df : pd.DataFrame
         The dataframe to apply the cell edits to.
 
-    edited_cells : Dict[str, str | int | float | bool | None]
-        A dictionary of cell edits. The keys are the cell ids in the format
-        "row:column" and the values are the new cell values.
+    edited_cells : Mapping[int, Mapping[str, str | int | float | bool | None]]
+        A hierarchical mapping based on row position -> column name -> value
 
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
     """
-    for cell, value in edited_cells.items():
-        row_pos, col_pos = map(int, cell.split(":"))
-
-        if col_pos < 0:  # Index columns use negative column positions
-            # The edited cell is part of the index
-            # To support multi-index in the future: use a tuple of values here
-            # instead of a single value
-            df.index.values[row_pos] = _parse_value(value, dataframe_schema[col_pos])
-        else:
-            df.iat[row_pos, col_pos] = _parse_value(value, dataframe_schema[col_pos])
+    for row_id, row_changes in edited_cells.items():
+        row_pos = int(row_id)
+        for col_name, value in row_changes.items():
+            if col_name == INDEX_IDENTIFIER:
+                # The edited cell is part of the index
+                # TODO(lukasmasuch): To support multi-index in the future:
+                # use a tuple of values here instead of a single value
+                df.index.values[row_pos] = _parse_value(
+                    value, dataframe_schema[INDEX_IDENTIFIER]
+                )
+            else:
+                col_pos = df.columns.get_loc(col_name)
+                df.iat[row_pos, col_pos] = _parse_value(
+                    value, dataframe_schema[col_name]
+                )
 
 
 def _apply_row_additions(
@@ -275,15 +294,15 @@ def _apply_row_additions(
     for added_row in added_rows:
         index_value = None
         new_row: List[Any] = [None for _ in range(df.shape[1])]
-        for col in added_row.keys():
-            value = added_row[col]
-            col_pos = int(col)
-            if col_pos < 0:  # Index columns use negative column positions
-                # To support multi-index in the future: use a tuple of values here
-                # instead of a single value
-                index_value = _parse_value(value, dataframe_schema[col_pos])
+        for col_name in added_row.keys():
+            value = added_row[col_name]
+            if col_name == INDEX_IDENTIFIER:
+                # TODO(lukasmasuch): To support multi-index in the future:
+                # use a tuple of values here instead of a single value
+                index_value = _parse_value(value, dataframe_schema[INDEX_IDENTIFIER])
             else:
-                new_row[col_pos] = _parse_value(value, dataframe_schema[col_pos])
+                col_pos = df.columns.get_loc(col_name)
+                new_row[col_pos] = _parse_value(value, dataframe_schema[col_name])
         # Append the new row to the dataframe
         if range_index_stop is not None:
             df.loc[range_index_stop, :] = new_row
@@ -373,6 +392,34 @@ def _is_supported_index(df_index: pd.Index) -> bool:
     )
 
 
+def _check_column_names(
+    data_df: pd.DataFrame,
+):
+    """Check if the column names are valid.
+
+    It's not allowed to have duplicate column names or column names that are
+    named ``_index``. If the column names are not valid, a ``StreamlitAPIException``
+    is raised.
+    """
+    # Check if the column names are unique and raise an exception if not.
+    # Add the names of the duplicated columns to the exception message.
+    duplicated_columns = data_df.columns[data_df.columns.duplicated()]
+    if len(duplicated_columns) > 0:
+        raise StreamlitAPIException(
+            f"All column names are required to be unique for usage with data editor. "
+            f"The following column names are duplicated: {list(duplicated_columns)}. "
+            f"Please rename the duplicated columns in the provided data."
+        )
+
+    # Check if the column names are not named "_index" and raise an exception if so.
+    if INDEX_IDENTIFIER in data_df.columns:
+        raise StreamlitAPIException(
+            f"The column name '{INDEX_IDENTIFIER}' is reserved for the index column "
+            f"and can't be used for data columns. Please rename the column in the "
+            f"provided data."
+        )
+
+
 def _check_type_compatibilities(
     data_df: pd.DataFrame,
     columns_config: ColumnConfigMapping,
@@ -403,9 +450,9 @@ def _check_type_compatibilities(
     # TODO(lukasmasuch): Update this here to support multi-index in the future:
     indices = [(INDEX_IDENTIFIER, data_df.index)]
 
-    for i, column in enumerate(indices + list(data_df.items())):
+    for column in indices + list(data_df.items()):
         column_name, _ = column
-        column_data_kind = dataframe_schema[i - len(indices)]
+        column_data_kind = dataframe_schema[column_name]
 
         # TODO(lukasmasuch): support column config via numerical index here?
         if column_name in columns_config:
@@ -695,6 +742,9 @@ class DataEditorMixin:
                 f"The type of the dataframe index - {type(data_df.index).__name__} - is not "
                 "yet supported by the data editor."
             )
+
+        # Check if the column names are valid and unique.
+        _check_column_names(data_df)
 
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)

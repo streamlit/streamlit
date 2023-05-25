@@ -29,8 +29,8 @@ from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.type_util import DataFormat, is_colum_type_arrow_incompatible
 
 # The index identifier can be used to apply configuration options
-IndexIdentifierType = Literal["index"]
-INDEX_IDENTIFIER: IndexIdentifierType = "index"
+IndexIdentifierType = Literal["_index"]
+INDEX_IDENTIFIER: IndexIdentifierType = "_index"
 
 # This is used as prefix for columns that are configured via the numerical position.
 # The integer value is converted into a string key with this prefix.
@@ -62,7 +62,7 @@ class ColumnDataKind(str, Enum):
 # The dataframe schema is a mapping from the numerical position of the column
 # in the underlying dataframe to the column data kind.
 # The index column(s) use negative positions (e.g -1 for the first index column).
-DataframeSchema: TypeAlias = Dict[int, ColumnDataKind]
+DataframeSchema: TypeAlias = Dict[str, ColumnDataKind]
 
 # This mapping contains all editable column types mapped to the data kinds
 # that the column type is compatible for editing.
@@ -363,21 +363,21 @@ def determine_dataframe_schema(
 
     DataframeSchema
         A mapping that contains the detected data type for the index and columns.
-        The key is the numerical position of the column in the underlying dataframe,
-        or negative positions for index columns.
+        The key is the column name in the underlying dataframe or _index for index columns.
     """
 
     dataframe_schema: DataframeSchema = {}
 
     # Add type of index:
-    # TODO(lukasmasuch): To support multi-index dataframes,
-    # iterate or indices here instead
-    dataframe_schema[-1] = _determine_data_kind(data_df.index)
+    # TODO(lukasmasuch): We need to apply changes here to support multiindex.
+    dataframe_schema[INDEX_IDENTIFIER] = _determine_data_kind(data_df.index)
 
     # Add types for all columns:
     for i, column in enumerate(data_df.items()):
-        _, column_data = column
-        dataframe_schema[i] = _determine_data_kind(column_data, arrow_schema.field(i))
+        column_name, column_data = column
+        dataframe_schema[column_name] = _determine_data_kind(
+            column_data, arrow_schema.field(i)
+        )
     return dataframe_schema
 
 
