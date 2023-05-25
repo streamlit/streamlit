@@ -392,10 +392,8 @@ def _is_supported_index(df_index: pd.Index) -> bool:
     )
 
 
-def _check_column_names(
-    data_df: pd.DataFrame,
-):
-    """Check if the column names are valid.
+def _check_column_names(data_df: pd.DataFrame):
+    """Check if the column names in the provided dataframe are valid.
 
     It's not allowed to have duplicate column names or column names that are
     named ``_index``. If the column names are not valid, a ``StreamlitAPIException``
