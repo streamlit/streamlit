@@ -35,7 +35,7 @@ export interface ModalHeaderProps {
 }
 
 function ModalHeader({ children }: ModalHeaderProps): ReactElement {
-  const { colors, genericFonts, fontSizes, spacing }: EmotionTheme = useTheme()
+  const { genericFonts, fontSizes, spacing }: EmotionTheme = useTheme()
 
   return (
     <UIModalHeader
@@ -44,14 +44,13 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         marginLeft: spacing.none,
         marginRight: spacing.none,
         marginBottom: spacing.none,
-        paddingTop: spacing.lg,
-        paddingRight: spacing.xl,
-        paddingBottom: spacing.lg,
-        paddingLeft: spacing.xl,
-        borderBottom: `1px solid ${colors.fadedText10}`,
+        paddingTop: spacing.twoXL,
+        paddingBottom: spacing.md,
+        paddingLeft: spacing.threeXL,
+        paddingRight: spacing.threeXL,
         fontFamily: genericFonts.bodyFont,
         fontSize: fontSizes.lg,
-        fontWeight: 500,
+        fontWeight: 600,
         margin: spacing.none,
         lineHeight: 1.5,
         textTransform: "none",
@@ -80,10 +79,10 @@ function ModalBody({ children }: ModalBodyProps): ReactElement {
         marginLeft: spacing.none,
         marginRight: spacing.none,
         marginBottom: spacing.none,
-        paddingTop: spacing.xl,
-        paddingRight: spacing.xl,
-        paddingBottom: spacing.xl,
-        paddingLeft: spacing.xl,
+        paddingTop: spacing.md,
+        paddingRight: spacing.threeXL,
+        paddingBottom: spacing.threeXL,
+        paddingLeft: spacing.threeXL,
         color: colors.bodyText,
         fontSize: fontSizes.md,
         overflowY: "auto",
@@ -99,7 +98,7 @@ export interface ModalFooterProps {
 }
 
 function ModalFooter({ children }: ModalFooterProps): ReactElement {
-  const { colors, spacing }: EmotionTheme = useTheme()
+  const { spacing }: EmotionTheme = useTheme()
 
   return (
     <UIModalFooter
@@ -112,7 +111,6 @@ function ModalFooter({ children }: ModalFooterProps): ReactElement {
         paddingRight: spacing.md,
         paddingBottom: spacing.md,
         paddingLeft: spacing.md,
-        borderTop: `1px solid ${colors.fadedText10}`,
       }}
     >
       <div className="ModalBody">{children}</div>
@@ -127,8 +125,16 @@ const ModalButton: FunctionComponent<BaseButtonProps> = buttonProps => (
 )
 
 function Modal(props: ModalProps): ReactElement {
-  const { spacing, colors, radii }: EmotionTheme = useTheme()
+  const { spacing, radii, colors }: EmotionTheme = useTheme()
+
+  console.log(colors)
+
   const defaultOverrides = {
+    Root: {
+      style: {
+        background: colors.darkenedBgMix25,
+      },
+    },
     DialogContainer: {
       style: {
         alignItems: "start",
@@ -137,17 +143,13 @@ function Modal(props: ModalProps): ReactElement {
     },
     Dialog: {
       style: {
-        border: `1px solid ${colors.fadedText10}`,
-        borderTopLeftRadius: radii.md,
-        borderTopRightRadius: radii.md,
-        borderBottomRightRadius: radii.md,
-        borderBottomLeftRadius: radii.md,
+        borderRadius: radii.xl,
       },
     },
     Close: {
       style: {
-        top: spacing.xl, // Trying to center the button on the available space.
-        right: spacing.lg,
+        top: `calc(${spacing.twoXL} + .125rem)`, // Trying to center the button on the available space.
+        right: spacing.twoXL,
       },
     },
   }
