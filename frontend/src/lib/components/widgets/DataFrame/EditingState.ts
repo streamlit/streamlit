@@ -23,7 +23,6 @@ import { INDEX_IDENTIFIER } from "./hooks/useColumnLoader"
 
 /**
  * Get the column name for a given column to use in the widget state.
- *
  * This is either the column name or the index identifier for index columns.
  */
 function getColumnName(column: BaseColumn): string {
