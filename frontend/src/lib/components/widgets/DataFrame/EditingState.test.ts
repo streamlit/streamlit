@@ -206,6 +206,7 @@ describe("EditingState class", () => {
 
     const baseColumnProps = {
       id: "column_1",
+      name: "column_1",
       title: "column_1",
       indexNumber: 0,
       arrowType: {
@@ -224,22 +225,24 @@ describe("EditingState class", () => {
         ...baseColumnProps,
         indexNumber: 0,
         id: "column_1",
+        name: "column_1",
       }),
       TextColumn({
         ...baseColumnProps,
         indexNumber: 1,
         id: "column_2",
+        name: "column_2",
       }),
     ])
 
     expect(json).toEqual(
-      `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`
+      '{"edited_cells":{"0":{"column_1":"foo"}},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[1]}'
     )
   })
 
   it.each([
     [
-      `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`,
+      `{"edited_cells":{"0":{"col1":"foo"}},"added_rows":[{"col1":"foo","col2":"foo"}],"deleted_rows":[1]}`,
     ],
     [`{"edited_cells":{},"added_rows":[],"deleted_rows":[]}`],
     [
