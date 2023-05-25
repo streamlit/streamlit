@@ -156,7 +156,7 @@ class EditingState {
       columnsByIndex.set(column.indexNumber, column)
     })
 
-    // Map column name to column
+    // Map column name to columns
     const columnsByName = new Map<string, BaseColumn>()
     columns.forEach(column => {
       columnsByName.set(getColumnName(column), column)
