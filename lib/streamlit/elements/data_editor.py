@@ -112,7 +112,7 @@ class EditingState(TypedDict, total=False):
 
     Attributes
     ----------
-    edited_cells : Dict[int, Dict[str, str | int | float | bool | None]]
+    edited_rows : Dict[int, Dict[str, str | int | float | bool | None]]
         An hierarchical mapping of edited cells based on: row position -> column name -> value.
 
     added_rows : List[Dict[str, str | int | float | bool | None]]
@@ -122,7 +122,7 @@ class EditingState(TypedDict, total=False):
         A list of deleted rows, where each row is the numerical position of the deleted row.
     """
 
-    edited_cells: Dict[int, Dict[str, str | int | float | bool | None]]
+    edited_rows: Dict[int, Dict[str, str | int | float | bool | None]]
     added_rows: List[Dict[str, str | int | float | bool | None]]
     deleted_rows: List[int]
 
@@ -134,7 +134,7 @@ class DataEditorSerde:
     def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> EditingState:
         data_editor_state: EditingState = (
             {
-                "edited_cells": {},
+                "edited_rows": {},
                 "added_rows": [],
                 "deleted_rows": [],
             }
@@ -143,8 +143,8 @@ class DataEditorSerde:
         )
 
         # Make sure that all editing state keys are present:
-        if "edited_cells" not in data_editor_state:
-            data_editor_state["edited_cells"] = {}
+        if "edited_rows" not in data_editor_state:
+            data_editor_state["edited_rows"] = {}
 
         if "deleted_rows" not in data_editor_state:
             data_editor_state["deleted_rows"] = []
@@ -154,8 +154,8 @@ class DataEditorSerde:
 
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
-        data_editor_state["edited_cells"] = {
-            int(k): v for k, v in data_editor_state["edited_cells"].items()
+        data_editor_state["edited_rows"] = {
+            int(k): v for k, v in data_editor_state["edited_rows"].items()
         }
         return data_editor_state
 
@@ -227,7 +227,7 @@ def _parse_value(
 
 def _apply_cell_edits(
     df: pd.DataFrame,
-    edited_cells: Mapping[int, Mapping[str, str | int | float | bool | None]],
+    edited_rows: Mapping[int, Mapping[str, str | int | float | bool | None]],
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply cell edits to the provided dataframe (inplace).
@@ -237,13 +237,13 @@ def _apply_cell_edits(
     df : pd.DataFrame
         The dataframe to apply the cell edits to.
 
-    edited_cells : Mapping[int, Mapping[str, str | int | float | bool | None]]
+    edited_rows : Mapping[int, Mapping[str, str | int | float | bool | None]]
         A hierarchical mapping based on row position -> column name -> value
 
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
     """
-    for row_id, row_changes in edited_cells.items():
+    for row_id, row_changes in edited_rows.items():
         row_pos = int(row_id)
         for col_name, value in row_changes.items():
             if col_name == INDEX_IDENTIFIER:
@@ -352,8 +352,8 @@ def _apply_dataframe_edits(
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
     """
-    if data_editor_state.get("edited_cells"):
-        _apply_cell_edits(df, data_editor_state["edited_cells"], dataframe_schema)
+    if data_editor_state.get("edited_rows"):
+        _apply_cell_edits(df, data_editor_state["edited_rows"], dataframe_schema)
 
     if data_editor_state.get("added_rows"):
         _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
@@ -545,11 +545,11 @@ class DataEditorMixin:
 
         .. warning::
             When going from ``st.experimental_data_editor`` to ``st.data_editor`` in
-            1.23.0, the format of the data editor's representation in ``st.session_state``
-            was changed. The ``edited_cells`` dictionary now uses the row number and
-            column name as keys (e.g. ``{0: {"col1": ...} }``) instead of the row and column
-            numbers (e.g. ``{"0:1": ...}``). If your app uses ``st.experimental_data_editor``
-            in combination with ``st.session_state``, you may need to adjust the code.
+            1.23.0, the data editor's representation in ``st.session_state`` was changed.
+            The ``edited_rows`` dictionary is now called ``edited_rows`` and uses a
+            different format (``{0: {"column name": "edited value"}}`` instead of
+            ``{"0:1": "edited value"}``). You may need to adjust the code if your app uses
+            ``st.experimental_data_editor`` in combination with ``st.session_state``."
 
         Parameters
         ----------
@@ -846,11 +846,10 @@ class DataEditorMixin:
         "experimental_data_editor",
         "2023-09-01",
         """
-**Breaking change:** The format of the data editor's representation in
-`st.session_state` was changed. The `edited_cells` dictionary now uses the
-row number and column name as keys (e.g. `{0: {"col1": ...} }`) instead of
-the row and column numbers (e.g. `{"0:1": ...}`). If your app uses
-`st.experimental_data_editor` in combination with `st.session_state`,
-you may need to adjust the code.
+**Breaking change:** The data editor's representation in `st.session_state` was changed.
+The `edited_rows` dictionary is now called `edited_rows` and uses a
+different format (`{0: {"column name": "edited value"}}` instead of
+`{"0:1": "edited value"}`). You may need to adjust the code if your app uses
+`st.experimental_data_editor` in combination with `st.session_state`."
 """,
     )

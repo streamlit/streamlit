@@ -151,7 +151,7 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         )
 
-        edited_cells: Mapping[int, Mapping[str, str | int | float | bool | None]] = {
+        edited_rows: Mapping[int, Mapping[str, str | int | float | bool | None]] = {
             0: {
                 "col1": 10,
                 "col2": "foo",
@@ -162,7 +162,7 @@ class DataEditorUtilTest(unittest.TestCase):
         }
 
         _apply_cell_edits(
-            df, edited_cells, determine_dataframe_schema(df, _get_arrow_schema(df))
+            df, edited_rows, determine_dataframe_schema(df, _get_arrow_schema(df))
         )
 
         self.assertEqual(df.iat[0, 0], 10)
@@ -230,7 +230,7 @@ class DataEditorUtilTest(unittest.TestCase):
             {"col1": 11, "col2": "bar", "col3": True},
         ]
 
-        edited_cells: Mapping[int, Mapping[str, str | int | float | bool | None]] = {
+        edited_rows: Mapping[int, Mapping[str, str | int | float | bool | None]] = {
             1: {
                 "col1": 123,
             }
@@ -241,7 +241,7 @@ class DataEditorUtilTest(unittest.TestCase):
             {
                 "deleted_rows": deleted_rows,
                 "added_rows": added_rows,
-                "edited_cells": edited_cells,
+                "edited_rows": edited_rows,
             },
             determine_dataframe_schema(df, _get_arrow_schema(df)),
         )

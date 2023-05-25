@@ -184,7 +184,7 @@ describe("EditingState class", () => {
 
     // Row should npt be included in the JSON:
     expect(json).toEqual(
-      '{"edited_cells":{},"added_rows":[],"deleted_rows":[]}'
+      '{"edited_rows":{},"added_rows":[],"deleted_rows":[]}'
     )
   })
 
@@ -236,24 +236,24 @@ describe("EditingState class", () => {
     ])
 
     expect(json).toEqual(
-      '{"edited_cells":{"0":{"column_1":"foo"}},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[1]}'
+      '{"edited_rows":{"0":{"column_1":"foo"}},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[1]}'
     )
   })
 
   it.each([
     [
-      `{"edited_cells":{"0":{"column_1":"foo"}},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[1]}`,
+      `{"edited_rows":{"0":{"column_1":"foo"}},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[1]}`,
     ],
-    [`{"edited_cells":{},"added_rows":[],"deleted_rows":[]}`],
+    [`{"edited_rows":{},"added_rows":[],"deleted_rows":[]}`],
     [
-      `{"edited_cells":{},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[]}`,
+      `{"edited_rows":{},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[]}`,
     ],
-    [`{"edited_cells":{},"added_rows":[],"deleted_rows":[1]}`],
+    [`{"edited_rows":{},"added_rows":[],"deleted_rows":[1]}`],
     [
-      `{"edited_cells":{"0":{"column_1":"foo"}},"added_rows":[],"deleted_rows":[]}`,
+      `{"edited_rows":{"0":{"column_1":"foo"}},"added_rows":[],"deleted_rows":[]}`,
     ],
     [
-      `{"edited_cells":{"0":{"_index":"foo"}},"added_rows":[],"deleted_rows":[]}`,
+      `{"edited_rows":{"0":{"_index":"foo"}},"added_rows":[],"deleted_rows":[]}`,
     ],
   ])("converts JSON to editing state: %p", (editingStateJson: string) => {
     const NUM_OF_ROWS = 3
