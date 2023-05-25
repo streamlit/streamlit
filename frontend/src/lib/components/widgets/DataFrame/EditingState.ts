@@ -22,10 +22,11 @@ import { BaseColumn, isMissingValueCell } from "./columns"
 import { INDEX_IDENTIFIER } from "./hooks/useColumnLoader"
 
 /**
- * Get the column identifier for a given column.
+ * Get the column name for a given column to use in the widget state.
+ *
  * This is either the column name or the index identifier for index columns.
  */
-function getColumnIdentifier(column: BaseColumn): string {
+function getColumnName(column: BaseColumn): string {
   // TODO(lukasmasuch): We need to adapt this once we want to support multi-index columns.
   return column.isIndex
     ? INDEX_IDENTIFIER
@@ -85,7 +86,7 @@ class EditingState {
         row.forEach((cell: GridCell, colIndex: number, _map) => {
           const column = columnsByIndex.get(colIndex)
           if (column) {
-            editedRow[getColumnIdentifier(column)] = column.getCellValue(cell)
+            editedRow[getColumnName(column)] = column.getCellValue(cell)
           }
         })
         currentState.edited_cells[rowIndex] = editedRow
@@ -116,7 +117,7 @@ class EditingState {
           }
 
           if (notNullOrUndefined(cellValue)) {
-            addedRow[getColumnIdentifier(column)] = cellValue
+            addedRow[getColumnName(column)] = cellValue
           }
         }
       })
@@ -159,7 +160,7 @@ class EditingState {
     // Map column name to column
     const columnsByName = new Map<string, BaseColumn>()
     columns.forEach(column => {
-      columnsByName.set(getColumnIdentifier(column), column)
+      columnsByName.set(getColumnName(column), column)
     })
 
     // Loop through all edited cells and transform into the structure
