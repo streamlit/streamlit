@@ -59,9 +59,9 @@ class ColumnDataKind(str, Enum):
     UNKNOWN = "unknown"
 
 
-# The dataframe schema is a mapping from the numerical position of the column
+# The dataframe schema is a mapping from the name of the column
 # in the underlying dataframe to the column data kind.
-# The index column(s) use negative positions (e.g -1 for the first index column).
+# The index column uses `_index` as name.
 DataframeSchema: TypeAlias = Dict[str, ColumnDataKind]
 
 # This mapping contains all editable column types mapped to the data kinds
@@ -363,7 +363,7 @@ def determine_dataframe_schema(
 
     DataframeSchema
         A mapping that contains the detected data type for the index and columns.
-        The key is the column name in the underlying dataframe or _index for index columns.
+        The key is the column name in the underlying dataframe or ``_index`` for index columns.
     """
 
     dataframe_schema: DataframeSchema = {}
