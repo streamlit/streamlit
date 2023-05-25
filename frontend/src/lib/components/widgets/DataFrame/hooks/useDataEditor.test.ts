@@ -125,7 +125,7 @@ describe("useDataEditor hook", () => {
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
-      `{"edited_cells":{"0:1":"bar"},"added_rows":[],"deleted_rows":[]}`
+      '{"edited_cells":{"0":{"column_2":"bar"}},"added_rows":[],"deleted_rows":[]}'
     )
   })
 
@@ -167,7 +167,7 @@ describe("useDataEditor hook", () => {
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
-      `{"edited_cells":{"0:0":"bar"},"added_rows":[],"deleted_rows":[]}`
+      '{"edited_cells":{"0":{"column_2":"bar"}},"added_rows":[],"deleted_rows":[]}'
     )
   })
 
@@ -214,7 +214,7 @@ describe("useDataEditor hook", () => {
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
-      `{"edited_cells":{"1:0":321,"1:1":"bar"},"added_rows":[],"deleted_rows":[]}`
+      '{"edited_cells":{"1":{"column_1":321,"column_2":"bar"}},"added_rows":[],"deleted_rows":[]}'
     )
   })
 
@@ -255,7 +255,7 @@ describe("useDataEditor hook", () => {
 
     // Check with full editing state:
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
-      `{"edited_cells":{"2:0":321,"2:1":"bar"},"added_rows":[{"0":432,"1":"lorem"}],"deleted_rows":[]}`
+      '{"edited_cells":{"2":{"column_1":321,"column_2":"bar"}},"added_rows":[{"column_1":432,"column_2":"lorem"}],"deleted_rows":[]}'
     )
   })
 
@@ -296,7 +296,7 @@ describe("useDataEditor hook", () => {
 
     // Check with full editing state:
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
-      `{"edited_cells":{"2:0":321,"2:1":"bar"},"added_rows":[],"deleted_rows":[]}`
+      '{"edited_cells":{"2":{"column_1":321,"column_2":"bar"}},"added_rows":[],"deleted_rows":[]}'
     )
   })
 
@@ -352,7 +352,7 @@ describe("useDataEditor hook", () => {
 
     // Check with full editing state:
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
-      `{"edited_cells":{},"added_rows":[{"1":"foo"}],"deleted_rows":[]}`
+      '{"edited_cells":{},"added_rows":[{"column_2":"foo"}],"deleted_rows":[]}'
     )
   })
 
@@ -430,7 +430,7 @@ describe("useDataEditor hook", () => {
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
-      `{"edited_cells":{"0:0":null},"added_rows":[],"deleted_rows":[]}`
+      '{"edited_cells":{"0":{"column_1":null}},"added_rows":[],"deleted_rows":[]}'
     )
   })
 
