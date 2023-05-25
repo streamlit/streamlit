@@ -229,7 +229,7 @@ class AppSession:
             LOGGER.debug("Shutting down (id=%s)", self.id)
             # Clear any unused session files in upload file manager and media
             # file manager
-            self._uploaded_file_mgr.remove_session_files(self.id)
+            # self._uploaded_file_mgr.remove_session_files(self.id)
             self._uploaded_file_mgr.remove_session_files_modern(self.id)
 
             if runtime.exists():

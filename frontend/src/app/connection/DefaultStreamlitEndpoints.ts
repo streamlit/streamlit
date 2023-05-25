@@ -31,7 +31,7 @@ interface Props {
 }
 
 const MEDIA_ENDPOINT = "/media"
-const UPLOAD_URLS_ENDPOINT = "/_stcore/upload_urls"
+const UPLOAD_URLS_ENDPOINT = "http://localhost:8000/upload_urls"
 const UPLOAD_FILE_ENDPOINT = "/_stcore/upload_fileZZ"
 const COMPONENT_ENDPOINT_BASE = "/component"
 const FORWARD_MSG_CACHE_ENDPOINT = "/_stcore/message"

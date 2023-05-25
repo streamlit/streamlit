@@ -37,7 +37,10 @@ from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import (
+    ExternalUploadedFileManager,
+    UploadedFileManager,
+)
 from streamlit.web.cache_storage_manager_config import (
     create_default_cache_storage_manager,
 )
@@ -237,14 +240,17 @@ class Server:
         media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
         MediaFileHandler.initialize_storage(media_file_storage)
 
-        uploaded_file_mgr = UploadedFileManager(UPLOAD_FILE_ENDPOINT)
+        UploadedFileManager(UPLOAD_FILE_ENDPOINT)
+        new_upload_file_mgr = ExternalUploadedFileManager(
+            "http://localhost:8000/upload_fileZZ"
+        )
 
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
                 command_line=command_line,
                 media_file_storage=media_file_storage,
-                uploaded_file_manager=uploaded_file_mgr,
+                uploaded_file_manager=new_upload_file_mgr,
                 cache_storage_manager=create_default_cache_storage_manager(),
             ),
         )

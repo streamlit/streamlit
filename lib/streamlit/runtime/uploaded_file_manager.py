@@ -18,6 +18,7 @@ import uuid
 from collections import defaultdict
 from typing import IO, Dict, List, NamedTuple, Tuple
 
+import requests
 from blinker import Signal
 
 from streamlit import util
@@ -169,6 +170,358 @@ class UploadedFileManager(CacheStatsProvider):
     # PROTOCOL METHOD
     def get_files_modern(self, session_id, file_urls) -> List[NewUploadedFileRec]:
         return [self._modern_files[session_id][file_url] for file_url in file_urls]
+
+    def add_file(
+        self,
+        session_id: str,
+        widget_id: str,
+        file: UploadedFileRec,
+    ) -> UploadedFileRec:
+        """Add a file to the FileManager, and return a new UploadedFileRec
+        with its ID assigned.
+
+        The "on_files_updated" Signal will be emitted.
+
+        Safe to call from any thread.
+
+        Parameters
+        ----------
+        session_id
+            The ID of the session that owns the file.
+        widget_id
+            The widget ID of the FileUploader that created the file.
+        file
+            The file to add.
+
+        Returns
+        -------
+        UploadedFileRec
+            The added file, which has its unique ID assigned.
+        """
+        files_by_widget = session_id, widget_id
+
+        # Assign the file a unique ID
+        file_id = self._get_next_file_id()
+        file = UploadedFileRec(
+            id=file_id, name=file.name, type=file.type, data=file.data
+        )
+
+        with self._files_lock:
+            file_list = self._files_by_id.get(files_by_widget, None)
+            if file_list is not None:
+                file_list.append(file)
+            else:
+                self._files_by_id[files_by_widget] = [file]
+
+        self.on_files_updated.send(session_id)
+        return file
+
+    def get_all_files(self, session_id: str, widget_id: str) -> List[UploadedFileRec]:
+        """Return all the files stored for the given widget.
+
+        Safe to call from any thread.
+
+        Parameters
+        ----------
+        session_id
+            The ID of the session that owns the files.
+        widget_id
+            The widget ID of the FileUploader that created the files.
+        """
+        file_list_id = (session_id, widget_id)
+        with self._files_lock:
+            return self._files_by_id.get(file_list_id, []).copy()
+
+    def get_files(
+        self, session_id: str, widget_id: str, file_ids: List[int]
+    ) -> List[UploadedFileRec]:
+        """Return the files with the given widget_id and file_ids.
+
+        Safe to call from any thread.
+
+        Parameters
+        ----------
+        session_id
+            The ID of the session that owns the files.
+        widget_id
+            The widget ID of the FileUploader that created the files.
+        file_ids
+            List of file IDs. Only files whose IDs are in this list will be
+            returned.
+        """
+        return [
+            f for f in self.get_all_files(session_id, widget_id) if f.id in file_ids
+        ]
+
+    def remove_orphaned_files(
+        self,
+        session_id: str,
+        widget_id: str,
+        newest_file_id: int,
+        active_file_ids: List[int],
+    ) -> None:
+        """Remove 'orphaned' files: files that have been uploaded and
+        subsequently deleted, but haven't yet been removed from memory.
+
+        Because FileUploader can live inside forms, file deletion is made a
+        bit tricky: a file deletion should only happen after the form is
+        submitted.
+
+        FileUploader's widget value is an array of numbers that has two parts:
+        - The first number is always 'this.state.newestServerFileId'.
+        - The remaining 0 or more numbers are the file IDs of all the
+          uploader's uploaded files.
+
+        When the server receives the widget value, it deletes "orphaned"
+        uploaded files. An orphaned file is any file associated with a given
+        FileUploader whose file ID is not in the active_file_ids, and whose
+        ID is <= `newestServerFileId`.
+
+        This logic ensures that a FileUploader within a form doesn't have any
+        of its "unsubmitted" uploads prematurely deleted when the script is
+        re-run.
+
+        Safe to call from any thread.
+        """
+        file_list_id = (session_id, widget_id)
+        with self._files_lock:
+            file_list = self._files_by_id.get(file_list_id)
+            if file_list is None:
+                return
+
+            # Remove orphaned files from the list:
+            # - `f.id in active_file_ids`:
+            #   File is currently tracked by the widget. DON'T remove.
+            # - `f.id > newest_file_id`:
+            #   file was uploaded *after* the widget  was most recently
+            #   updated. (It's probably in a form.) DON'T remove.
+            # - `f.id < newest_file_id and f.id not in active_file_ids`:
+            #   File is not currently tracked by the widget, and was uploaded
+            #   *before* this most recent update. This means it's been deleted
+            #   by the user on the frontend, and is now "orphaned". Remove!
+            new_list = [
+                f for f in file_list if f.id > newest_file_id or f.id in active_file_ids
+            ]
+            self._files_by_id[file_list_id] = new_list
+            num_removed = len(file_list) - len(new_list)
+
+        if num_removed > 0:
+            LOGGER.debug("Removed %s orphaned files" % num_removed)
+
+    def remove_file(self, session_id: str, widget_id: str, file_id: int) -> bool:
+        """Remove the file list with the given ID, if it exists.
+
+        The "on_files_updated" Signal will be emitted.
+
+        Safe to call from any thread.
+
+        Returns
+        -------
+        bool
+            True if the file was removed, or False if no such file exists.
+        """
+        file_list_id = (session_id, widget_id)
+        with self._files_lock:
+            file_list = self._files_by_id.get(file_list_id, None)
+            if file_list is None:
+                return False
+
+            # Remove the file from its list.
+            new_file_list = [file for file in file_list if file.id != file_id]
+            self._files_by_id[file_list_id] = new_file_list
+
+        self.on_files_updated.send(session_id)
+        return True
+
+    def _remove_files(self, session_id: str, widget_id: str) -> None:
+        """Remove the file list for the provided widget in the
+        provided session, if it exists.
+
+        Does not emit any signals.
+
+        Safe to call from any thread.
+        """
+        files_by_widget = session_id, widget_id
+        with self._files_lock:
+            self._files_by_id.pop(files_by_widget, None)
+
+    def remove_files(self, session_id: str, widget_id: str) -> None:
+        """Remove the file list for the provided widget in the
+        provided session, if it exists.
+
+        The "on_files_updated" Signal will be emitted.
+
+        Safe to call from any thread.
+
+        Parameters
+        ----------
+        session_id : str
+            The ID of the session that owns the files.
+        widget_id : str
+            The widget ID of the FileUploader that created the files.
+        """
+        self._remove_files(session_id, widget_id)
+        self.on_files_updated.send(session_id)
+
+    def remove_session_files(self, session_id: str) -> None:
+        """Remove all files that belong to the given session.
+
+        Safe to call from any thread.
+
+        Parameters
+        ----------
+        session_id : str
+            The ID of the session whose files we're removing.
+
+        """
+        # Copy the keys into a list, because we'll be mutating the dictionary.
+        with self._files_lock:
+            all_ids = list(self._files_by_id.keys())
+
+        for files_id in all_ids:
+            if files_id[0] == session_id:
+                self.remove_files(*files_id)
+
+    def _get_next_file_id(self) -> int:
+        """Return the next file ID and increment our ID counter."""
+        with self._file_id_lock:
+            file_id = self._file_id_counter
+            self._file_id_counter += 1
+            return file_id
+
+    def get_stats(self) -> List[CacheStat]:
+        """Return the manager's CacheStats.
+
+        Safe to call from any thread.
+        """
+        with self._files_lock:
+            # Flatten all files into a single list
+            all_files: List[UploadedFileRec] = []
+            for file_list in self._files_by_id.values():
+                all_files.extend(file_list)
+
+        return [
+            CacheStat(
+                category_name="UploadedFileManager",
+                cache_name="",
+                byte_length=len(file.data),
+            )
+            for file in all_files
+        ]
+
+
+class ExternalUploadedFileManager(UploadedFileManager, CacheStatsProvider):
+    """Holds files uploaded by users of the running Streamlit app,
+    and emits an event signal when a file is added.
+
+    This class can be used safely from multiple threads simultaneously.
+    """
+
+    def __init__(self, endpoint: str):
+
+        self._modern_files: Dict[str, Dict[str, NewUploadedFileRec]] = defaultdict(dict)
+        self._modern_file_cache: Dict[str, Dict[str, NewUploadedFileRec]] = defaultdict(
+            dict
+        )
+        self.endpoint = endpoint
+
+        # A counter that generates unique file IDs. Each file ID is greater
+        # than the previous ID, which means we can use IDs to compare files
+        # by age.
+        self._file_id_counter = 1
+        self._file_id_lock = threading.Lock()
+
+        # Prevents concurrent access to the _files_by_id dict.
+        # In remove_session_files(), we iterate over the dict's keys. It's
+        # an error to mutate a dict while iterating; this lock prevents that.
+        self._files_lock = threading.Lock()
+        self.on_files_updated = Signal(
+            doc="""Emitted when a file list is added to the manager or updated.
+
+            Parameters
+            ----------
+            session_id : str
+                The session_id for the session whose files were updated.
+            """
+        )
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
+    def add_file_modern(self, session_id: str, file: NewUploadedFileRec):
+        print("AAAAAAAAA FILE ADDED TO UPLOADED_FILE_STORAGE!!!")
+        print(session_id)
+        print("---------")
+        print(file.name)
+        self._modern_files[session_id][file.file_url] = file
+
+    # PROTOCOL METHOD
+    def get_file_modern(self, session_id, file_url) -> IO[bytes]:
+        if (
+            session_id not in self._modern_file_cache
+            or file_url not in self._modern_file_cache[session_id]
+        ):
+            # get file by session_id and file_url
+            # write to cache
+            response = requests.get(file_url)
+            if response.status_code == 200:
+                self._modern_file_cache[session_id][file_url] = NewUploadedFileRec(
+                    file_url=file_url,
+                    name=response.headers.get("Content-Disposition").split("filename=")[
+                        1
+                    ],
+                    type=response.headers["content-type"],
+                    data=response.content,
+                )
+
+        return NewUploadedFile(record=self._modern_file_cache[session_id][file_url])
+
+    # PROTOCOL METHOD
+    def remove_file_modern(self, session_id, file_url):
+        print("IN DELETE!!!")
+        response = requests.delete(file_url)
+        if response.status_code == 200:
+            print("SUCCESFULL DELETE FROM SERVER")
+        self._modern_file_cache[session_id].pop(file_url, None)
+
+    # PROTOCOL METHOD
+    def get_presigned_urls_modern(self, session_id: str, number_of_files: int):
+        presigned_urls = []
+
+        for i in range(number_of_files):
+            file_id = str(uuid.uuid4())
+            presigned_url = f"{self.endpoint}/{session_id}/{file_id}"
+            presigned_urls.append({"presigned_url": presigned_url})
+        return presigned_urls
+
+    # PROTOCOL METHOD
+    def remove_session_files_modern(self, session_id):
+        response = requests.delete(f"{self.endpoint}/{session_id}/")
+        if response.status_code == 204:
+            print("SUCCESSFULLY DELETED SESSION FILEZZZ!!!")
+        self._modern_file_cache.pop(session_id, None)
+
+    # PROTOCOL METHOD
+    def get_files_modern(self, session_id, file_urls) -> List[NewUploadedFileRec]:
+
+        for file_url in file_urls:
+            if (
+                session_id not in self._modern_file_cache
+                or file_url not in self._modern_file_cache[session_id]
+            ):
+                response = requests.get(file_url)
+                if response.status_code == 200:
+                    print("GET FILE SUCCESSFULLY!!!!!!!")
+                    print(response.status_code)
+                    self._modern_file_cache[session_id][file_url] = NewUploadedFileRec(
+                        file_url=file_url,
+                        name=response.headers.get("Content-Disposition").split(
+                            "filename="
+                        )[1],
+                        type=response.headers["content-type"],
+                        data=response.content,
+                    )
+        return [self._modern_file_cache[session_id][file_url] for file_url in file_urls]
 
     def add_file(
         self,
