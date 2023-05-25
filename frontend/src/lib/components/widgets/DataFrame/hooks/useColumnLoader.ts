@@ -34,7 +34,7 @@ import {
 } from "src/lib/components/widgets/DataFrame/columns"
 
 // Using this ID for column config will apply the config to all index columns
-export const INDEX_IDENTIFIER = "index"
+export const INDEX_IDENTIFIER = "_index"
 // Prefix used in the config column mapping when referring to a column via the numeric position
 export const COLUMN_POSITION_PREFIX = "_pos:"
 

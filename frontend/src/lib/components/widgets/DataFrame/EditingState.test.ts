@@ -169,21 +169,18 @@ describe("EditingState class", () => {
     } as BaseColumnProps
 
     // Convert to JSON
-    const json = editingState.toJson(
-      [
-        TextColumn({
-          ...baseColumnProps,
-          indexNumber: 0,
-          id: "column_1",
-        }),
-        TextColumn({
-          ...baseColumnProps,
-          indexNumber: 1,
-          id: "column_2",
-        }),
-      ],
-      0
-    )
+    const json = editingState.toJson([
+      TextColumn({
+        ...baseColumnProps,
+        indexNumber: 0,
+        id: "column_1",
+      }),
+      TextColumn({
+        ...baseColumnProps,
+        indexNumber: 1,
+        id: "column_2",
+      }),
+    ])
 
     // Row should npt be included in the JSON:
     expect(json).toEqual(
@@ -222,21 +219,18 @@ describe("EditingState class", () => {
     } as BaseColumnProps
 
     // Convert to JSON
-    const json = editingState.toJson(
-      [
-        TextColumn({
-          ...baseColumnProps,
-          indexNumber: 0,
-          id: "column_1",
-        }),
-        TextColumn({
-          ...baseColumnProps,
-          indexNumber: 1,
-          id: "column_2",
-        }),
-      ],
-      0
-    )
+    const json = editingState.toJson([
+      TextColumn({
+        ...baseColumnProps,
+        indexNumber: 0,
+        id: "column_1",
+      }),
+      TextColumn({
+        ...baseColumnProps,
+        indexNumber: 1,
+        id: "column_2",
+      }),
+    ])
 
     expect(json).toEqual(
       `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`
@@ -284,9 +278,9 @@ describe("EditingState class", () => {
         id: "column_2",
       }),
     ]
-    editingState.fromJson(editingStateJson, MOCK_COLUMNS, 0)
+    editingState.fromJson(editingStateJson, MOCK_COLUMNS)
     // Test again if the edits were applied correctly:
-    expect(editingState.toJson(MOCK_COLUMNS, 0)).toEqual(editingStateJson)
+    expect(editingState.toJson(MOCK_COLUMNS)).toEqual(editingStateJson)
 
     const MOCK_COLUMNS_WITH_INDEX = [
       TextColumn({
@@ -307,9 +301,9 @@ describe("EditingState class", () => {
       }),
     ]
 
-    editingState.fromJson(editingStateJson, MOCK_COLUMNS_WITH_INDEX, 1)
+    editingState.fromJson(editingStateJson, MOCK_COLUMNS_WITH_INDEX)
     // Test again if the edits were applied correctly:
-    expect(editingState.toJson(MOCK_COLUMNS_WITH_INDEX, 1)).toEqual(
+    expect(editingState.toJson(MOCK_COLUMNS_WITH_INDEX)).toEqual(
       editingStateJson
     )
   })

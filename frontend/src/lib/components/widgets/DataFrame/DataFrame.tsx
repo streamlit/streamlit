@@ -151,10 +151,6 @@ function DataFrame({
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
   const originalNumRows = Math.max(0, dataDimensions.rows - 1)
-  // Number of index columns in the original data:
-  // TODO(lukasmasuch): use data.dimensions.headerColumns instead here?
-  // Should be also adapted in arrow utils.
-  const originalNumIndices = data.types?.index?.length ?? 0
 
   // For empty tables, we show an extra row that
   // contains "empty" as a way to indicate that the table is empty.
@@ -195,11 +191,7 @@ function DataFrame({
       if (element.editingMode !== READ_ONLY) {
         const initialWidgetValue = widgetMgr.getStringValue(element)
         if (initialWidgetValue) {
-          editingState.current.fromJson(
-            initialWidgetValue,
-            originalColumns,
-            originalNumIndices
-          )
+          editingState.current.fromJson(initialWidgetValue, originalColumns)
           setNumRows(editingState.current.getNumRows())
         }
       }
@@ -240,17 +232,14 @@ function DataFrame({
 
       // Use debounce to prevent rapid updates to the widget state.
       debounce(DEBOUNCE_TIME_MS, () => {
-        const currentEditingState = editingState.current.toJson(
-          columns,
-          originalNumIndices
-        )
+        const currentEditingState = editingState.current.toJson(columns)
         let currentWidgetState = widgetMgr.getStringValue(
           element as WidgetInfo
         )
 
         if (currentWidgetState === undefined) {
           // Create an empty widget state
-          currentWidgetState = new EditingState(0).toJson([], 0)
+          currentWidgetState = new EditingState(0).toJson([])
         }
 
         // Only update if there is actually a difference between editing and widget state
