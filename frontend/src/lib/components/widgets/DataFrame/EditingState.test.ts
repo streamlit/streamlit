@@ -242,20 +242,26 @@ describe("EditingState class", () => {
 
   it.each([
     [
-      `{"edited_cells":{"0":{"col1":"foo"}},"added_rows":[{"col1":"foo","col2":"foo"}],"deleted_rows":[1]}`,
+      `{"edited_cells":{"0":{"column_1":"foo"}},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[1]}`,
     ],
     [`{"edited_cells":{},"added_rows":[],"deleted_rows":[]}`],
     [
-      `{"edited_cells":{},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[]}`,
+      `{"edited_cells":{},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[]}`,
     ],
     [`{"edited_cells":{},"added_rows":[],"deleted_rows":[1]}`],
-    [`{"edited_cells":{"0:0":"foo"},"added_rows":[],"deleted_rows":[]}`],
+    [
+      `{"edited_cells":{"0":{"column_1":"foo"}},"added_rows":[],"deleted_rows":[]}`,
+    ],
+    [
+      `{"edited_cells":{"0":{"_index":"foo"}},"added_rows":[],"deleted_rows":[]}`,
+    ],
   ])("converts JSON to editing state: %p", (editingStateJson: string) => {
     const NUM_OF_ROWS = 3
     const editingState = new EditingState(NUM_OF_ROWS)
 
     const MOCK_COLUMN_PROPS = {
       id: "column_1",
+      name: "column_1",
       title: "column_1",
       indexNumber: 0,
       arrowType: {
@@ -272,42 +278,26 @@ describe("EditingState class", () => {
     const MOCK_COLUMNS = [
       TextColumn({
         ...MOCK_COLUMN_PROPS,
+        isIndex: true,
         indexNumber: 0,
-        id: "column_1",
+        id: "index_col",
+        name: "index_col",
       }),
       TextColumn({
         ...MOCK_COLUMN_PROPS,
         indexNumber: 1,
+        id: "column_1",
+        name: "column_1",
+      }),
+      TextColumn({
+        ...MOCK_COLUMN_PROPS,
+        indexNumber: 2,
         id: "column_2",
+        name: "column_2",
       }),
     ]
     editingState.fromJson(editingStateJson, MOCK_COLUMNS)
     // Test again if the edits were applied correctly:
     expect(editingState.toJson(MOCK_COLUMNS)).toEqual(editingStateJson)
-
-    const MOCK_COLUMNS_WITH_INDEX = [
-      TextColumn({
-        ...MOCK_COLUMN_PROPS,
-        isIndex: true,
-        indexNumber: 0,
-        id: "column_1",
-      }),
-      TextColumn({
-        ...MOCK_COLUMN_PROPS,
-        indexNumber: 1,
-        id: "column_2",
-      }),
-      TextColumn({
-        ...MOCK_COLUMN_PROPS,
-        indexNumber: 2,
-        id: "column_3",
-      }),
-    ]
-
-    editingState.fromJson(editingStateJson, MOCK_COLUMNS_WITH_INDEX)
-    // Test again if the edits were applied correctly:
-    expect(editingState.toJson(MOCK_COLUMNS_WITH_INDEX)).toEqual(
-      editingStateJson
-    )
   })
 })

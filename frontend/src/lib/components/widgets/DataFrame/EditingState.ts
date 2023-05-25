@@ -165,22 +165,23 @@ class EditingState {
     // Loop through all edited cells and transform into the structure
     // we use for the editing state:
     // row -> column -> GridCell
-    editingState.edited_cells.forEach(
-      (row: Map<string, any>, rowIndex: number, _map: any) => {
-        row.forEach((cellValue: any, colName: string, _map: any) => {
-          const column = columnsByName.get(colName)
-          if (column) {
-            const cell = column.getCell(cellValue)
-            if (cell) {
-              if (!this.editedCells.has(rowIndex)) {
-                this.editedCells.set(rowIndex, new Map())
-              }
-              this.editedCells.get(rowIndex)?.set(column.indexNumber, cell)
+    Object.keys(editingState.edited_cells).forEach(key => {
+      const rowIndex = Number(key)
+      const editedRow = editingState.edited_cells[key]
+      Object.keys(editedRow).forEach((colName: string) => {
+        const cellValue = editedRow[colName]
+        const column = columnsByName.get(colName)
+        if (column) {
+          const cell = column.getCell(cellValue)
+          if (cell) {
+            if (!this.editedCells.has(rowIndex)) {
+              this.editedCells.set(rowIndex, new Map())
             }
+            this.editedCells.get(rowIndex)?.set(column.indexNumber, cell)
           }
-        })
-      }
-    )
+        }
+      })
+    })
 
     // Loop through all added rows and transform into the format that
     // we use for the editing state:
