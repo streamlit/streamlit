@@ -27,7 +27,6 @@ from typing import (
 )
 
 import pyarrow as pa
-from pandas import DataFrame, Series
 
 from streamlit import type_util
 from streamlit.elements.lib.column_config_utils import (
@@ -44,13 +43,13 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from numpy import ndarray
-    from pandas import Index, Series
+    from pandas import DataFrame, Index, Series
     from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
 
 Data: TypeAlias = Union[
-    DataFrame,
+    "DataFrame",
     "Series",
     "Styler",
     "Index",
