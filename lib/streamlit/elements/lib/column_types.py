@@ -193,7 +193,7 @@ def Column(
     disabled: bool | None = None,
     required: bool | None = None,
 ) -> ColumnConfig:
-    """Configure a generic column in ```st.dataframe``` or ```st.data_editor```.
+    """Configure a generic column in ``st.dataframe`` or ``st.data_editor``.
 
     The type of the column will be automatically inferred from the data type.
     This command needs to be used in the ``column_config`` parameter of ``st.dataframe``
@@ -223,6 +223,7 @@ def Column(
     required: bool or None
         Whether edited cells in the column need to have a value. If True, an edited cell
         can only be submitted if it has a value other than None. Defaults to False.
+
     Examples
     --------
 
