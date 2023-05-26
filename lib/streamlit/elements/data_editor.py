@@ -544,7 +544,7 @@ class DataEditorMixin:
     ) -> DataTypes:
         """Display a data editor widget.
 
-        The data editor widget allows you to edit DataFrames and many other data structures in a table-like UI.
+        The data editor widget allows you to edit dataframes and many other data structures in a table-like UI.
 
         .. warning::
             When going from ``st.experimental_data_editor`` to ``st.data_editor`` in
