@@ -14,4 +14,4 @@ changelog:
         - change:bugfix
     - title: Other Changes
       labels:
-        - change:user-facing
+        - impact:users

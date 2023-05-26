@@ -32,4 +32,4 @@ jobs:
         with:
           mode: exactly
           count: 1
-          labels: "impact:user-facing,impact:internal"
+          labels: "impact:users,impact:internal"
