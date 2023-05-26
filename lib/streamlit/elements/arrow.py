@@ -80,8 +80,8 @@ class ArrowMixin:
             This argument can only be supplied by keyword.
 
         hide_index : bool or None
-            Whether to hide the index column(s). If None (default), they will be hidden
-            automatically based on the data.
+            Whether to hide the index column(s). If None (default), the visibility of
+            index columns is automatically determined based on the data.
 
         column_order : iterable of str or None
             Specifies the display order of columns. This also affects which columns are
