@@ -54,7 +54,9 @@ class DataFrameSelectorMixin:
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
-        The dataframe element allows you to display DataFrames and many other data structures in a table-like UI.
+        This command works with dataframes from Pandas, PyArrow, Snowpark, and PySpark.
+        It can also display several other types that can be converted to dataframes,
+        e.g. numpy arrays, lists, sets and dictionaries.
 
         Parameters
         ----------
