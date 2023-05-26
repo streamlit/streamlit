@@ -17,6 +17,7 @@
 import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
 import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 import { render } from "src/lib/test_util"
 
 import Modal from "./Modal"
@@ -29,7 +30,7 @@ describe("Modal component", () => {
       </BaseProvider>
     )
 
-    const modalElement = document.body.querySelector('[role="dialog"]')
+    const modalElement = screen.getByRole("dialog")
     expect(modalElement).toBeInTheDocument()
   })
 })
