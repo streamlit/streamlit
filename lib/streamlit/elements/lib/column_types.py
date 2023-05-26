@@ -306,7 +306,7 @@ def NumberColumn(
     format : str or None
         A printf-style format string controlling how numbers are displayed.
         This does not impact the return value. Valid formatters: %d %e %f %g %i %u.
-        You can also add prefixes and suffixes.
+        You can also add prefixes and suffixes, e.g. `"$ %.2f"` to show a dollar prefix.
 
     min_value : int, float, or None
         The minimum value that can be entered.
@@ -1419,7 +1419,8 @@ def ProgressColumn(
 
     format : str or None
         A printf-style format string controlling how numbers are displayed.
-        Valid formatters: %d %e %f %g %i %u. You can also add prefixes and suffixes.
+        Valid formatters: %d %e %f %g %i %u. You can also add prefixes and suffixes,
+        e.g. `"$ %.2f"` to show a dollar prefix.
 
     min_value : int, float, or None
         The minimum value of the progress bar.
