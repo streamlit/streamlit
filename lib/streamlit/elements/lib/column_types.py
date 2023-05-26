@@ -918,8 +918,8 @@ def ImageColumn(
       deployed via `static file serving <https://docs.streamlit.io/library/advanced-features/static-file-serving>`_.
       Note that you can NOT use an arbitrary local image if it is not available through
       a public URL.
-    * An SVG XML data URL like ``data:image/svg+xml;utf8,<svg xmlns=...</svg>``.
-    * A string containing a Base64 encoded image like ``data:image/png;base64,iVBO...``.
+    * A data URL containing an SVG XML like ``data:image/svg+xml;utf8,<svg xmlns=...</svg>``.
+    * A data URL containing a Base64 encoded image like ``data:image/png;base64,iVBO...``.
 
     Image columns are not editable at the moment. This command needs to be used in the
     ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
