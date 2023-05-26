@@ -106,7 +106,7 @@ class DataFrameSelectorMixin:
               a column as dollar amounts. See more info on the available column types
               and config options `here <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
 
-            To configure the index column(s), use ``index`` as the column name.
+            To configure the index column(s), use ``_index`` as the column name.
 
         Examples
         --------

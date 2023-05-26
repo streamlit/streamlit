@@ -46,7 +46,7 @@ st.header("Set column labels:")
 st.data_editor(
     df,
     column_config={
-        "index": "Index column",
+        "_index": "Index column",
         "col_0": "Column 0",
         "col_2": st.column_config.Column("Column 1"),
     },
@@ -75,7 +75,7 @@ st.data_editor(
     ),
     column_config={
         "col_0": st.column_config.Column(help="This :red[is] a **tooltip** 🌟"),
-        "index": {"help": "Index tooltip!"},
+        "_index": {"help": "Index tooltip!"},
     },
 )
 

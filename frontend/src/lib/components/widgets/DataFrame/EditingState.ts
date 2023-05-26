@@ -19,6 +19,20 @@ import { GridCell } from "@glideapps/glide-data-grid"
 import { notNullOrUndefined, isNullOrUndefined } from "src/lib/util/utils"
 
 import { BaseColumn, isMissingValueCell } from "./columns"
+import { INDEX_IDENTIFIER } from "./hooks/useColumnLoader"
+
+/**
+ * Get the column name for a given column to use in the widget state.
+ * This is either the column name or the index identifier for index columns.
+ */
+function getColumnName(column: BaseColumn): string {
+  // TODO(lukasmasuch): We need to adapt this once we want to support multi-index columns.
+  return column.isIndex
+    ? INDEX_IDENTIFIER
+    : isNullOrUndefined(column.name)
+    ? ""
+    : column.name
+}
 
 /**
  * The editing state keeps track of all table edits applied by the user.
@@ -57,31 +71,32 @@ class EditingState {
       // We use snake case here since this is the widget state
       // that is sent and used in the backend. Therefore, it should
       // conform with the Python naming conventions.
-      edited_cells: {} as Record<string, any>,
-      added_rows: [] as Record<number, any>[],
+      edited_rows: {} as Record<number, Record<string, any>>,
+      added_rows: [] as Record<string, any>[],
       deleted_rows: [] as number[],
     }
 
     // Loop through all edited cells and transform into the structure
     // we use for the JSON-compatible widget state:
-    // "<rowIndex>:<colIndex>" -> edited value
+    // row position -> column name -> edited value
     this.editedCells.forEach(
       (row: Map<number, GridCell>, rowIndex: number, _map) => {
+        const editedRow: Record<string, any> = {}
         row.forEach((cell: GridCell, colIndex: number, _map) => {
           const column = columnsByIndex.get(colIndex)
           if (column) {
-            currentState.edited_cells[`${rowIndex}:${colIndex}`] =
-              column.getCellValue(cell)
+            editedRow[getColumnName(column)] = column.getCellValue(cell)
           }
         })
+        currentState.edited_rows[rowIndex] = editedRow
       }
     )
 
     // Loop through all added rows and transform into the format that
     // we use for the JSON-compatible widget state:
-    // List of column index -> edited value
+    // List of column name -> edited value
     this.addedRows.forEach((row: Map<number, GridCell>) => {
-      const addedRow: Record<number, any> = {}
+      const addedRow: Record<string, any> = {}
       // This flags is used to check if the row is incomplete
       // (i.e. missing required values) and should therefore not be included in
       // the current state version.
@@ -90,6 +105,7 @@ class EditingState {
         const column = columnsByIndex.get(colIndex)
         if (column) {
           const cellValue = column.getCellValue(cell)
+
           if (
             column.isRequired &&
             column.isEditable &&
@@ -100,7 +116,7 @@ class EditingState {
           }
 
           if (notNullOrUndefined(cellValue)) {
-            addedRow[colIndex] = cellValue
+            addedRow[getColumnName(column)] = cellValue
           }
         }
       })
@@ -114,7 +130,7 @@ class EditingState {
 
     // Convert undefined values to null, otherwise this is removed here since
     // undefined does not exist in JSON.
-    const json = JSON.stringify(currentState, (k, v) =>
+    const json = JSON.stringify(currentState, (_k, v) =>
       v === undefined ? null : v
     )
     return json
@@ -127,6 +143,12 @@ class EditingState {
    * @returns JSON string
    */
   fromJson(editingStateJson: string, columns: BaseColumn[]): void {
+    // Clear existing state:
+    this.editedCells = new Map()
+    this.addedRows = []
+    this.deletedRows = []
+
+    // Parse JSON editing string:
     const editingState = JSON.parse(editingStateJson)
     // Map columns to column index
     const columnsByIndex = new Map<number, BaseColumn>()
@@ -134,42 +156,49 @@ class EditingState {
       columnsByIndex.set(column.indexNumber, column)
     })
 
+    // Map column name to columns
+    const columnsByName = new Map<string, BaseColumn>()
+    columns.forEach(column => {
+      columnsByName.set(getColumnName(column), column)
+    })
+
     // Loop through all edited cells and transform into the structure
     // we use for the editing state:
     // row -> column -> GridCell
-    Object.keys(editingState.edited_cells).forEach(key => {
-      const [rowIndex, colIndex] = key.split(":").map(Number)
-      const column = columnsByIndex.get(colIndex)
-      if (column) {
-        const cell = column.getCell(editingState.edited_cells[key])
-        if (cell) {
-          if (!this.editedCells.has(rowIndex)) {
-            this.editedCells.set(rowIndex, new Map())
+    Object.keys(editingState.edited_rows).forEach(key => {
+      const rowIndex = Number(key)
+      const editedRow = editingState.edited_rows[key]
+      Object.keys(editedRow).forEach((colName: string) => {
+        const cellValue = editedRow[colName]
+        const column = columnsByName.get(colName)
+        if (column) {
+          const cell = column.getCell(cellValue)
+          if (cell) {
+            if (!this.editedCells.has(rowIndex)) {
+              this.editedCells.set(rowIndex, new Map())
+            }
+            this.editedCells.get(rowIndex)?.set(column.indexNumber, cell)
           }
-          this.editedCells.get(rowIndex)?.set(colIndex, cell)
         }
-      }
+      })
     })
 
     // Loop through all added rows and transform into the format that
     // we use for the editing state:
     // List of column index -> edited value
-    editingState.added_rows.forEach((row: Record<number, any>) => {
+    editingState.added_rows.forEach((row: Record<string, any>) => {
       const addedRow: Map<number, GridCell> = new Map()
 
-      // Initialize all cells in row with undefined (empty)
-      columns.forEach(column => {
-        addedRow.set(column.indexNumber, column.getCell(undefined))
-      })
-
       // Set the cells that were actually edited in the row
-      Object.keys(row).forEach(colIndex => {
-        const column = columnsByIndex.get(Number(colIndex))
+      Object.keys(row).forEach(colName => {
+        const cellValue = row[colName]
+
+        const column = columnsByName.get(colName)
 
         if (column) {
-          const cell = column.getCell(row[Number(colIndex)])
+          const cell = column.getCell(cellValue)
           if (cell) {
-            addedRow.set(Number(colIndex), cell)
+            addedRow.set(column.indexNumber, cell)
           }
         }
       })

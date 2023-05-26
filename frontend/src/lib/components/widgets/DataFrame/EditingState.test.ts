@@ -184,7 +184,7 @@ describe("EditingState class", () => {
 
     // Row should npt be included in the JSON:
     expect(json).toEqual(
-      '{"edited_cells":{},"added_rows":[],"deleted_rows":[]}'
+      '{"edited_rows":{},"added_rows":[],"deleted_rows":[]}'
     )
   })
 
@@ -206,6 +206,7 @@ describe("EditingState class", () => {
 
     const baseColumnProps = {
       id: "column_1",
+      name: "column_1",
       title: "column_1",
       indexNumber: 0,
       arrowType: {
@@ -224,35 +225,43 @@ describe("EditingState class", () => {
         ...baseColumnProps,
         indexNumber: 0,
         id: "column_1",
+        name: "column_1",
       }),
       TextColumn({
         ...baseColumnProps,
         indexNumber: 1,
         id: "column_2",
+        name: "column_2",
       }),
     ])
 
     expect(json).toEqual(
-      `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`
+      '{"edited_rows":{"0":{"column_1":"foo"}},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[1]}'
     )
   })
 
   it.each([
     [
-      `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`,
+      `{"edited_rows":{"0":{"column_1":"foo"}},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[1]}`,
     ],
-    [`{"edited_cells":{},"added_rows":[],"deleted_rows":[]}`],
+    [`{"edited_rows":{},"added_rows":[],"deleted_rows":[]}`],
     [
-      `{"edited_cells":{},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[]}`,
+      `{"edited_rows":{},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[]}`,
     ],
-    [`{"edited_cells":{},"added_rows":[],"deleted_rows":[1]}`],
-    [`{"edited_cells":{"0:0":"foo"},"added_rows":[],"deleted_rows":[]}`],
+    [`{"edited_rows":{},"added_rows":[],"deleted_rows":[1]}`],
+    [
+      `{"edited_rows":{"0":{"column_1":"foo"}},"added_rows":[],"deleted_rows":[]}`,
+    ],
+    [
+      `{"edited_rows":{"0":{"_index":"foo"}},"added_rows":[],"deleted_rows":[]}`,
+    ],
   ])("converts JSON to editing state: %p", (editingStateJson: string) => {
     const NUM_OF_ROWS = 3
     const editingState = new EditingState(NUM_OF_ROWS)
 
     const MOCK_COLUMN_PROPS = {
       id: "column_1",
+      name: "column_1",
       title: "column_1",
       indexNumber: 0,
       arrowType: {
@@ -260,6 +269,7 @@ describe("EditingState class", () => {
         numpy_type: "object",
       },
       isEditable: false,
+      isRequired: false,
       isHidden: false,
       isIndex: false,
       isStretched: false,
@@ -268,13 +278,22 @@ describe("EditingState class", () => {
     const MOCK_COLUMNS = [
       TextColumn({
         ...MOCK_COLUMN_PROPS,
+        isIndex: true,
         indexNumber: 0,
-        id: "column_1",
+        id: "index_col",
+        name: "index_col",
       }),
       TextColumn({
         ...MOCK_COLUMN_PROPS,
         indexNumber: 1,
+        id: "column_1",
+        name: "column_1",
+      }),
+      TextColumn({
+        ...MOCK_COLUMN_PROPS,
+        indexNumber: 2,
         id: "column_2",
+        name: "column_2",
       }),
     ]
     editingState.fromJson(editingStateJson, MOCK_COLUMNS)

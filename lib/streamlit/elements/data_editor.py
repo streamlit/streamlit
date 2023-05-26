@@ -112,19 +112,17 @@ class EditingState(TypedDict, total=False):
 
     Attributes
     ----------
-    edited_cells : Dict[str, str | int | float | bool | None]
-        A dictionary of edited cells, where the key is the cell's row and
-        column position (row:column), and the value is the new value of the cell.
+    edited_rows : Dict[int, Dict[str, str | int | float | bool | None]]
+        An hierarchical mapping of edited cells based on: row position -> column name -> value.
 
     added_rows : List[Dict[str, str | int | float | bool | None]]
-        A list of added rows, where each row is a dictionary of column position
-        and the respective value.
+        A list of added rows, where each row is a mapping from column name to the cell value.
 
     deleted_rows : List[int]
         A list of deleted rows, where each row is the numerical position of the deleted row.
     """
 
-    edited_cells: Dict[str, str | int | float | bool | None]
+    edited_rows: Dict[int, Dict[str, str | int | float | bool | None]]
     added_rows: List[Dict[str, str | int | float | bool | None]]
     deleted_rows: List[int]
 
@@ -134,15 +132,32 @@ class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
     def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> EditingState:
-        return (  # type: ignore
+        data_editor_state: EditingState = (
             {
-                "edited_cells": {},
+                "edited_rows": {},
                 "added_rows": [],
                 "deleted_rows": [],
             }
             if ui_value is None
             else json.loads(ui_value)
         )
+
+        # Make sure that all editing state keys are present:
+        if "edited_rows" not in data_editor_state:
+            data_editor_state["edited_rows"] = {}
+
+        if "deleted_rows" not in data_editor_state:
+            data_editor_state["deleted_rows"] = []
+
+        if "added_rows" not in data_editor_state:
+            data_editor_state["added_rows"] = []
+
+        # Convert the keys (numerical row positions) to integers.
+        # The keys are strings because they are serialized to JSON.
+        data_editor_state["edited_rows"] = {
+            int(k): v for k, v in data_editor_state["edited_rows"].items()
+        }
+        return data_editor_state
 
     def serialize(self, editing_state: EditingState) -> str:
         return json.dumps(editing_state, default=str)
@@ -212,7 +227,7 @@ def _parse_value(
 
 def _apply_cell_edits(
     df: pd.DataFrame,
-    edited_cells: Mapping[str, str | int | float | bool | None],
+    edited_rows: Mapping[int, Mapping[str, str | int | float | bool | None]],
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply cell edits to the provided dataframe (inplace).
@@ -222,30 +237,27 @@ def _apply_cell_edits(
     df : pd.DataFrame
         The dataframe to apply the cell edits to.
 
-    edited_cells : Dict[str, str | int | float | bool | None]
-        A dictionary of cell edits. The keys are the cell ids in the format
-        "row:column" and the values are the new cell values.
+    edited_rows : Mapping[int, Mapping[str, str | int | float | bool | None]]
+        A hierarchical mapping based on row position -> column name -> value
 
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
     """
-    index_count = df.index.nlevels or 0
-
-    for cell, value in edited_cells.items():
-        row_pos, col_pos = map(int, cell.split(":"))
-
-        if col_pos < index_count:
-            # The edited cell is part of the index
-            # To support multi-index in the future: use a tuple of values here
-            # instead of a single value
-            df.index.values[row_pos] = _parse_value(value, dataframe_schema[col_pos])
-        else:
-            # We need to subtract the number of index levels from col_pos
-            # to get the correct column position for Pandas DataFrames
-            mapped_column = col_pos - index_count
-            df.iat[row_pos, mapped_column] = _parse_value(
-                value, dataframe_schema[col_pos]
-            )
+    for row_id, row_changes in edited_rows.items():
+        row_pos = int(row_id)
+        for col_name, value in row_changes.items():
+            if col_name == INDEX_IDENTIFIER:
+                # The edited cell is part of the index
+                # TODO(lukasmasuch): To support multi-index in the future:
+                # use a tuple of values here instead of a single value
+                df.index.values[row_pos] = _parse_value(
+                    value, dataframe_schema[INDEX_IDENTIFIER]
+                )
+            else:
+                col_pos = df.columns.get_loc(col_name)
+                df.iat[row_pos, col_pos] = _parse_value(
+                    value, dataframe_schema[col_name]
+                )
 
 
 def _apply_row_additions(
@@ -270,8 +282,6 @@ def _apply_row_additions(
     if not added_rows:
         return
 
-    index_count = df.index.nlevels or 0
-
     # This is only used if the dataframe has a range index:
     # There seems to be a bug in older pandas versions with RangeIndex in
     # combination with loc. As a workaround, we manually track the values here:
@@ -284,18 +294,15 @@ def _apply_row_additions(
     for added_row in added_rows:
         index_value = None
         new_row: List[Any] = [None for _ in range(df.shape[1])]
-        for col in added_row.keys():
-            value = added_row[col]
-            col_pos = int(col)
-            if col_pos < index_count:
-                # To support multi-index in the future: use a tuple of values here
-                # instead of a single value
-                index_value = _parse_value(value, dataframe_schema[col_pos])
+        for col_name in added_row.keys():
+            value = added_row[col_name]
+            if col_name == INDEX_IDENTIFIER:
+                # TODO(lukasmasuch): To support multi-index in the future:
+                # use a tuple of values here instead of a single value
+                index_value = _parse_value(value, dataframe_schema[INDEX_IDENTIFIER])
             else:
-                # We need to subtract the number of index levels from the col_pos
-                # to get the correct column position for Pandas DataFrames
-                mapped_column = col_pos - index_count
-                new_row[mapped_column] = _parse_value(value, dataframe_schema[col_pos])
+                col_pos = df.columns.get_loc(col_name)
+                new_row[col_pos] = _parse_value(value, dataframe_schema[col_name])
         # Append the new row to the dataframe
         if range_index_stop is not None:
             df.loc[range_index_stop, :] = new_row
@@ -345,8 +352,8 @@ def _apply_dataframe_edits(
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
     """
-    if data_editor_state.get("edited_cells"):
-        _apply_cell_edits(df, data_editor_state["edited_cells"], dataframe_schema)
+    if data_editor_state.get("edited_rows"):
+        _apply_cell_edits(df, data_editor_state["edited_rows"], dataframe_schema)
 
     if data_editor_state.get("added_rows"):
         _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
@@ -385,6 +392,32 @@ def _is_supported_index(df_index: pd.Index) -> bool:
     )
 
 
+def _check_column_names(data_df: pd.DataFrame):
+    """Check if the column names in the provided dataframe are valid.
+
+    It's not allowed to have duplicate column names or column names that are
+    named ``_index``. If the column names are not valid, a ``StreamlitAPIException``
+    is raised.
+    """
+    # Check if the column names are unique and raise an exception if not.
+    # Add the names of the duplicated columns to the exception message.
+    duplicated_columns = data_df.columns[data_df.columns.duplicated()]
+    if len(duplicated_columns) > 0:
+        raise StreamlitAPIException(
+            f"All column names are required to be unique for usage with data editor. "
+            f"The following column names are duplicated: {list(duplicated_columns)}. "
+            f"Please rename the duplicated columns in the provided data."
+        )
+
+    # Check if the column names are not named "_index" and raise an exception if so.
+    if INDEX_IDENTIFIER in data_df.columns:
+        raise StreamlitAPIException(
+            f"The column name '{INDEX_IDENTIFIER}' is reserved for the index column "
+            f"and can't be used for data columns. Please rename the column in the "
+            f"provided data."
+        )
+
+
 def _check_type_compatibilities(
     data_df: pd.DataFrame,
     columns_config: ColumnConfigMapping,
@@ -412,13 +445,14 @@ def _check_type_compatibilities(
         If a configured column type is editable and not compatible with the
         underlying data type.
     """
-    for i, column in enumerate(
-        [(INDEX_IDENTIFIER, data_df.index)] + list(data_df.items())
-    ):
-        column_name, _ = column
-        column_data_kind = dataframe_schema[i]
+    # TODO(lukasmasuch): Update this here to support multi-index in the future:
+    indices = [(INDEX_IDENTIFIER, data_df.index)]
 
-        # TODO: support column config by numerical index
+    for column in indices + list(data_df.items()):
+        column_name, _ = column
+        column_data_kind = dataframe_schema[column_name]
+
+        # TODO(lukasmasuch): support column config via numerical index here?
         if column_name in columns_config:
             column_config = columns_config[column_name]
             if column_config.get("disabled") is True:
@@ -507,19 +541,27 @@ class DataEditorMixin:
     ) -> DataTypes:
         """Display a data editor widget.
 
-        Display a data editor widget that allows you to edit DataFrames and
-        many other data structures in a table-like UI.
+        The data editor widget allows you to edit DataFrames and many other data structures in a table-like UI.
 
-        Mixing data types within a column can make the column uneditable.
-        Additionally, the following types are not supported for editing as values
-        within your data structure: complex, list, tuple, bytes, bytearray,
-        memoryview, dict, set, frozenset, datetime.timedelta, decimal.Decimal,
-        fractions.Fraction, pandas.Interval, pandas.Period, pandas.Timedelta
+        .. warning::
+            When going from ``st.experimental_data_editor`` to ``st.data_editor`` in
+            1.23.0, the data editor's representation in ``st.session_state`` was changed.
+            The ``edited_rows`` dictionary is now called ``edited_rows`` and uses a
+            different format (``{0: {"column name": "edited value"}}`` instead of
+            ``{"0:1": "edited value"}``). You may need to adjust the code if your app uses
+            ``st.experimental_data_editor`` in combination with ``st.session_state``."
 
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
             The data to edit in the data editor.
+
+            .. note::
+                Mixing data types within a column can make the column uneditable.
+                Additionally, the following data types are not yet supported for editing:
+                complex, list, tuple, bytes, bytearray, memoryview, dict, set, frozenset,
+                datetime.timedelta, decimal.Decimal, fractions.Fraction, pandas.Interval,
+                pandas.Period, pandas.Timedelta.
 
         width : int or None
             Desired width of the data editor expressed in pixels. If None, the width will
@@ -558,7 +600,7 @@ class DataEditorMixin:
               a column as dollar amounts. See more info on the available column types
               and config options `here <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
 
-            To configure the index column(s), use ``index`` as the column name.
+            To configure the index column(s), use ``_index`` as the column name.
 
         num_rows : "fixed" or "dynamic"
             Specifies if the user can add and delete rows in the data editor.
@@ -700,6 +742,9 @@ class DataEditorMixin:
                 "yet supported by the data editor."
             )
 
+        # Check if the column names are valid and unique.
+        _check_column_names(data_df)
+
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
         apply_data_specific_configs(
@@ -794,9 +839,16 @@ class DataEditorMixin:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
-    # TODO(lukasmasuch): Remove the deprecated function name after 2023-08-20:
+    # TODO(lukasmasuch): Remove the deprecated function name after 2023-09-01:
+    # Also remove the warning message in the `st.data_editor` docstring.
     experimental_data_editor = deprecate_func_name(
         gather_metrics("experimental_data_editor", data_editor),
         "experimental_data_editor",
-        "2023-08-20",
+        "2023-09-01",
+        """
+**Breaking change:** The data editor's representation in `st.session_state` was changed. The `edited_rows` dictionary is now called `edited_rows` and uses a
+different format (`{0: {"column name": "edited value"}}` instead of
+`{"0:1": "edited value"}`). You may need to adjust the code if your app uses
+`st.experimental_data_editor` in combination with `st.session_state`."
+""",
     )

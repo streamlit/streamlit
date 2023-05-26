@@ -23,6 +23,7 @@ import pyarrow as pa
 import pytest as pytest
 
 import streamlit as st
+from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.type_util import (
     bytes_to_data_frame,
     is_pandas_version_less_than,
@@ -92,7 +93,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(
             proto.columns,
-            json.dumps({"index": {"hidden": True}}),
+            json.dumps({INDEX_IDENTIFIER: {"hidden": True}}),
         )
 
     def test_hide_index_false(self):
@@ -109,7 +110,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         self.assertEqual(
             proto.columns,
-            json.dumps({"index": {"hidden": False}}),
+            json.dumps({INDEX_IDENTIFIER: {"hidden": False}}),
         )
 
     def test_uuid(self):
