@@ -306,7 +306,7 @@ def NumberColumn(
     format : str or None
         A printf-style format string controlling how numbers are displayed.
         This does not impact the return value. Valid formatters: %d %e %f %g %i %u.
-        You can also add prefixes and suffixes, e.g. `"$ %.2f"` to show a dollar prefix.
+        You can also add prefixes and suffixes, e.g. ``"$ %.2f"`` to show a dollar prefix.
 
     min_value : int, float, or None
         The minimum value that can be entered.
@@ -416,7 +416,7 @@ def TextColumn(
         there will be no maximum.
 
     validate: str or None
-        A regular expression (JS flavor, e.g. `"^[a-z]+$"`) that edited values are validated against.
+        A regular expression (JS flavor, e.g. ``"^[a-z]+$"``) that edited values are validated against.
         If the input is invalid, it will not be submitted.
 
     Examples
@@ -511,7 +511,7 @@ def LinkColumn(
         there will be no maximum.
 
     validate: str or None
-        A regular expression (JS flavor, e.g. `"^https://.+$"`) that edited values are validated against.
+        A regular expression (JS flavor, e.g. ``"^https://.+$"``) that edited values are validated against.
         If the input is invalid, it will not be submitted.
 
     Examples
@@ -1420,7 +1420,7 @@ def ProgressColumn(
     format : str or None
         A printf-style format string controlling how numbers are displayed.
         Valid formatters: %d %e %f %g %i %u. You can also add prefixes and suffixes,
-        e.g. `"$ %.2f"` to show a dollar prefix.
+        e.g. ``"$ %.2f"`` to show a dollar prefix.
 
     min_value : int, float, or None
         The minimum value of the progress bar.
