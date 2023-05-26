@@ -127,8 +127,6 @@ const ModalButton: FunctionComponent<BaseButtonProps> = buttonProps => (
 function Modal(props: ModalProps): ReactElement {
   const { spacing, radii, colors }: EmotionTheme = useTheme()
 
-  console.log(colors)
-
   const defaultOverrides = {
     Root: {
       style: {
