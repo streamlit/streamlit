@@ -193,7 +193,7 @@ def Column(
     disabled: bool | None = None,
     required: bool | None = None,
 ) -> ColumnConfig:
-    """Configure a generic column in ```st.dataframe``` or ```st.data_editor```.
+    """Configure a generic column in ``st.dataframe`` or ``st.data_editor``.
 
     The type of the column will be automatically inferred from the data type.
     This command needs to be used in the ``column_config`` parameter of ``st.dataframe``
@@ -223,6 +223,7 @@ def Column(
     required: bool or None
         Whether edited cells in the column need to have a value. If True, an edited cell
         can only be submitted if it has a value other than None. Defaults to False.
+
     Examples
     --------
 
@@ -305,7 +306,7 @@ def NumberColumn(
     format : str or None
         A printf-style format string controlling how numbers are displayed.
         This does not impact the return value. Valid formatters: %d %e %f %g %i %u.
-        You can also add prefixes and suffixes.
+        You can also add prefixes and suffixes, e.g. ``"$ %.2f"`` to show a dollar prefix.
 
     min_value : int, float, or None
         The minimum value that can be entered.
@@ -415,7 +416,7 @@ def TextColumn(
         there will be no maximum.
 
     validate: str or None
-        A regular expression (JS flavor) that edited values are validated against.
+        A regular expression (JS flavor, e.g. ``"^[a-z]+$"``) that edited values are validated against.
         If the input is invalid, it will not be submitted.
 
     Examples
@@ -510,7 +511,7 @@ def LinkColumn(
         there will be no maximum.
 
     validate: str or None
-        A regular expression (JS flavor) that edited values are validated against.
+        A regular expression (JS flavor, e.g. ``"^https://.+$"``) that edited values are validated against.
         If the input is invalid, it will not be submitted.
 
     Examples
@@ -917,8 +918,8 @@ def ImageColumn(
       deployed via `static file serving <https://docs.streamlit.io/library/advanced-features/static-file-serving>`_.
       Note that you can NOT use an arbitrary local image if it is not available through
       a public URL.
-    * An SVG XML data URL like ``data:image/svg+xml;utf8,<svg xmlns=...</svg>``.
-    * A string containing a Base64 encoded image like ``data:image/png;base64,iVBO...``.
+    * A data URL containing an SVG XML like ``data:image/svg+xml;utf8,<svg xmlns=...</svg>``.
+    * A data URL containing a Base64 encoded image like ``data:image/png;base64,iVBO...``.
 
     Image columns are not editable at the moment. This command needs to be used in the
     ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
@@ -1095,7 +1096,7 @@ def DatetimeColumn(
 
     max_value: datetime.datetime or None
         The maximum datetime that can be entered.
-        If None (default), there will be no minimum.
+        If None (default), there will be no maximum.
 
     step: int, float, datetime.timedelta, or None
         The stepping interval in seconds. If None (default), the step will be 1 second.
@@ -1214,7 +1215,7 @@ def TimeColumn(
 
     max_value: datetime.time or None
         The maximum time that can be entered.
-        If None (default), there will be no minimum.
+        If None (default), there will be no maximum.
 
     step: int, float, datetime.timedelta, or None
         The stepping interval in seconds. If None (default), the step will be 1 second.
@@ -1328,7 +1329,7 @@ def DateColumn(
 
     max_value: datetime.date or None
         The maximum date that can be entered.
-        If None (default), there will be no minimum.
+        If None (default), there will be no maximum.
 
     step: int or None
         The stepping interval in days. If None (default), the step will be 1 day.
@@ -1418,7 +1419,8 @@ def ProgressColumn(
 
     format : str or None
         A printf-style format string controlling how numbers are displayed.
-        Valid formatters: %d %e %f %g %i %u. You can also add prefixes and suffixes.
+        Valid formatters: %d %e %f %g %i %u. You can also add prefixes and suffixes,
+        e.g. ``"$ %.2f"`` to show a dollar prefix.
 
     min_value : int, float, or None
         The minimum value of the progress bar.
