@@ -1095,7 +1095,7 @@ def DatetimeColumn(
 
     max_value: datetime.datetime or None
         The maximum datetime that can be entered.
-        If None (default), there will be no minimum.
+        If None (default), there will be no maximum.
 
     step: int, float, datetime.timedelta, or None
         The stepping interval in seconds. If None (default), the step will be 1 second.
@@ -1214,7 +1214,7 @@ def TimeColumn(
 
     max_value: datetime.time or None
         The maximum time that can be entered.
-        If None (default), there will be no minimum.
+        If None (default), there will be no maximum.
 
     step: int, float, datetime.timedelta, or None
         The stepping interval in seconds. If None (default), the step will be 1 second.
@@ -1328,7 +1328,7 @@ def DateColumn(
 
     max_value: datetime.date or None
         The maximum date that can be entered.
-        If None (default), there will be no minimum.
+        If None (default), there will be no maximum.
 
     step: int or None
         The stepping interval in days. If None (default), the step will be 1 day.
