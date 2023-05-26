@@ -59,9 +59,11 @@ export class FileUploadClient {
   }
 
   /**
-   * Upload a file to the server. It will be associated with this browser's sessionID.
+   * Upload a file to the given URL. It will be associated with this browser's
+   * sessionID.
    *
    * @param widget: the FileUploader widget that's doing the upload.
+   * @param fileUploadUrl: the URL to upload the file to.
    * @param file: the files to upload.
    * @param onUploadProgress: an optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken: an optional axios CancelToken that can be used to cancel the in-progress upload.
@@ -70,13 +72,17 @@ export class FileUploadClient {
    */
   public async uploadFile(
     widget: WidgetInfo,
+    fileUploadUrl: string,
     file: File,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
+    // TODO(vdonato): Change the return type to Promise<void> once we've gotten
+    // rid of numerical file IDs.
   ): Promise<number> {
     this.offsetPendingRequestCount(widget.formId, 1)
     return this.endpoints
       .uploadFileUploaderFile(
+        fileUploadUrl,
         file,
         widget.id,
         this.sessionInfo.current.sessionId,
@@ -84,6 +90,17 @@ export class FileUploadClient {
         cancelToken
       )
       .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
+  }
+
+  /**
+   * Request that the file at the given URL is deleted.
+   * @param fileUrl: the URL of the file to delete.
+   */
+  public deleteFile(fileUrl: string): Promise<void> {
+    return this.endpoints.deleteFileAtURL(
+      fileUrl,
+      this.sessionInfo.current.sessionId
+    )
   }
 
   private getFormIdSet(): Set<string> {

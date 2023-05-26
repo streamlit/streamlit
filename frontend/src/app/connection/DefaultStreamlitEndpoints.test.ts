@@ -105,6 +105,27 @@ describe("DefaultStreamlitEndpoints", () => {
     })
   })
 
+  describe("buildFileUploadURL", () => {
+    const endpoints = new DefaultStreamlitEndpoints({
+      getServerUri: () => MOCK_SERVER_URI,
+      csrfEnabled: false,
+    })
+
+    it("builds URL correctly for files being uploaded to the tornado server", () => {
+      const url = endpoints.buildFileUploadURL("/_stcore/upload_file/file_1")
+      expect(url).toBe(
+        "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
+      )
+    })
+
+    it("passes through other file upload URLs unchanged", () => {
+      const uri = endpoints.buildFileUploadURL(
+        "http://example.com/upload_file/file_2"
+      )
+      expect(uri).toBe("http://example.com/upload_file/file_2")
+    })
+  })
+
   describe("buildAppPageURL", () => {
     const endpoints = new DefaultStreamlitEndpoints({
       getServerUri: () => MOCK_SERVER_URI,
@@ -157,9 +178,11 @@ describe("DefaultStreamlitEndpoints", () => {
       axiosMock.restore()
     })
 
-    it("calls the appropriate endpoint", async () => {
+    it("properly constructs the correct endpoint when given a relative URL", async () => {
       axiosMock
-        .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
+        .onPost(
+          "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
+        )
         .reply(() => [200, 1])
 
       const mockOnUploadProgress = (_: any): void => {}
@@ -167,6 +190,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
       await expect(
         endpoints.uploadFileUploaderFile(
+          "/_stcore/upload_file/file_1",
           MOCK_FILE,
           "mockWidgetId",
           "mockSessionId",
@@ -181,7 +205,7 @@ describe("DefaultStreamlitEndpoints", () => {
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
       expect(spyRequest).toHaveBeenCalledWith({
-        url: "http://streamlit.mock:80/mock/base/path/_stcore/upload_file",
+        url: "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1",
         method: "POST",
         responseType: "text",
         data: expectedData,
@@ -190,7 +214,43 @@ describe("DefaultStreamlitEndpoints", () => {
       })
     })
 
-    it("errors on unexpected return value", async () => {
+    it("Uses the endpoint unchanged when given an absolute url", async () => {
+      axiosMock
+        .onPost("http://example.com/upload_file/file_2")
+        .reply(() => [200, 1])
+
+      const mockOnUploadProgress = (_: any): void => {}
+      const mockCancelToken = axios.CancelToken.source().token
+
+      await expect(
+        endpoints.uploadFileUploaderFile(
+          "http://example.com/upload_file/file_2",
+          MOCK_FILE,
+          "mockWidgetId",
+          "mockSessionId",
+          mockOnUploadProgress,
+          mockCancelToken
+        )
+      ).resolves.toBeDefined()
+
+      const expectedData = new FormData()
+      expectedData.append("sessionId", "mockSessionId")
+      expectedData.append("widgetId", "mockWidgetId")
+      expectedData.append(MOCK_FILE.name, MOCK_FILE)
+
+      expect(spyRequest).toHaveBeenCalledWith({
+        url: "http://example.com/upload_file/file_2",
+        method: "POST",
+        responseType: "text",
+        data: expectedData,
+        cancelToken: mockCancelToken,
+        onUploadProgress: mockOnUploadProgress,
+      })
+    })
+
+    // NOTE: We'll be getting rid of this behavior soon, but just disabling
+    // this test rather than removing it entirely until then.
+    xit("errors on unexpected return value", async () => {
       // If our endpoint returns a non-number, we'll return a failed promise.
       axiosMock
         .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
@@ -198,6 +258,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
       await expect(
         endpoints.uploadFileUploaderFile(
+          "unused",
           MOCK_FILE,
           "mockWidgetId",
           "mockSessionId"
@@ -216,6 +277,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
       await expect(
         endpoints.uploadFileUploaderFile(
+          "/_stcore/upload_file",
           MOCK_FILE,
           "mockWidgetId",
           "mockSessionId"

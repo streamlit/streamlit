@@ -69,6 +69,19 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       : url
   }
 
+  /**
+   * Construct a URL for uploading a file. If the url is relative and starts
+   * with "/_stcore/upload_file", assume we're uploading the file to the
+   * Streamlit Tornado server and construct it appropriately. Otherwise, we're
+   * probably uploading the file to some external service, so we leave the URL
+   * alone.
+   */
+  public buildFileUploadURL(url: string): string {
+    return url.startsWith(UPLOAD_FILE_ENDPOINT)
+      ? buildHttpUri(this.requireServerUri(), url)
+      : url
+  }
+
   /** Construct a URL for an app page in a multi-page app. */
   public buildAppPageURL(
     pageLinkBaseURL: string | undefined,
@@ -95,18 +108,21 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   }
 
   public async uploadFileUploaderFile(
+    fileUploadUrl: string,
     file: File,
     widgetId: string,
     sessionId: string,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
+    // TODO(vdonato): Eventually change this type to Promise<void> once we've
+    // removed numerical file IDs.
   ): Promise<number> {
     const form = new FormData()
     form.append("sessionId", sessionId)
     form.append("widgetId", widgetId)
     form.append(file.name, file)
 
-    return this.csrfRequest<number>(UPLOAD_FILE_ENDPOINT, {
+    return this.csrfRequest<number>(this.buildFileUploadURL(fileUploadUrl), {
       cancelToken,
       method: "POST",
       data: form,
@@ -122,6 +138,19 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
         `Bad uploadFile response: expected a number but got '${response.data}'`
       )
     })
+  }
+
+  /**
+   * Send an HTTP DELETE request to the given URL.
+   */
+  public async deleteFileAtURL(
+    fileUrl: string,
+    sessionId: string
+  ): Promise<void> {
+    return this.csrfRequest<number>(this.buildFileUploadURL(fileUrl), {
+      method: "DELETE",
+      data: { sessionId },
+    }).then(() => undefined) // If the request succeeds, we don't care about the response body
   }
 
   public async fetchCachedForwardMsg(hash: string): Promise<Uint8Array> {
@@ -165,8 +194,15 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     url: string,
     params: AxiosRequestConfig
   ): Promise<R> {
-    const serverURI = this.requireServerUri()
-    params.url = buildHttpUri(serverURI, url)
+    // TODO(vdonato): Think about whether this is a reasonable long-term
+    // solution before this feature branch is merged into `develop`. If it is,
+    // then add some unit tests for this.
+    if (/^[a-z0-9]+:\/\//.test(url)) {
+      params.url = url
+    } else {
+      const serverURI = this.requireServerUri()
+      params.url = buildHttpUri(serverURI, url)
+    }
 
     if (this.csrfEnabled) {
       const xsrfCookie = getCookie("_xsrf")

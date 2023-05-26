@@ -33,8 +33,10 @@ describe("FileUploadClient Upload", () => {
       endpoints: {
         buildComponentURL: jest.fn(),
         buildMediaURL: jest.fn(),
+        buildFileUploadURL: jest.fn(),
         buildAppPageURL: jest.fn(),
         uploadFileUploaderFile: uploadFileUploaderFile,
+        deleteFileAtURL: jest.fn(),
         fetchCachedForwardMsg: jest.fn(),
       },
       formsWithPendingRequestsChanged,
@@ -45,7 +47,11 @@ describe("FileUploadClient Upload", () => {
     uploadFileUploaderFile.mockResolvedValue(MOCK_FILE_ID)
 
     await expect(
-      uploader.uploadFile({ id: "widgetId", formId: "" }, MOCK_FILE)
+      uploader.uploadFile(
+        { id: "widgetId", formId: "" },
+        "/_stcore/upload_file/file_1",
+        MOCK_FILE
+      )
     ).resolves.toBe(MOCK_FILE_ID)
 
     expect(formsWithPendingRequestsChanged).not.toHaveBeenCalled()
@@ -57,6 +63,7 @@ describe("FileUploadClient Upload", () => {
     // Upload a file with an attached form ID.
     const uploadFilePromise = uploader.uploadFile(
       { id: "widgetId", formId: "mockFormId" },
+      "/_stcore/upload_file/file_1",
       MOCK_FILE
     )
 
@@ -80,7 +87,12 @@ describe("FileUploadClient Upload", () => {
     uploadFileUploaderFile.mockRejectedValue(new Error("oh no!"))
 
     await expect(
-      uploader.uploadFile({ id: "widgetId", formId: "" }, MOCK_FILE)
+      uploader.uploadFile(
+        { id: "widgetId", formId: "" },
+
+        "/_stcore/upload_file/file_1",
+        MOCK_FILE
+      )
     ).rejects.toEqual(new Error("oh no!"))
 
     expect(formsWithPendingRequestsChanged).not.toHaveBeenCalled()
@@ -92,6 +104,7 @@ describe("FileUploadClient Upload", () => {
     // Upload a file with an attached form ID.
     const uploadFilePromise = uploader.uploadFile(
       { id: "widgetId", formId: "mockFormId" },
+      "/_stcore/upload_file/file_1",
       MOCK_FILE
     )
 
