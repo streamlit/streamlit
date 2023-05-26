@@ -23,3 +23,13 @@ jobs:
           mode: exactly
           count: 0
           labels: "do-not-merge"
+      - uses: mheap/github-action-required-labels@179af849240d834567e1a3d6dc781575eede757c
+        with:
+          mode: exactly
+          count: 1
+          labels: "change:breaking,change:feature,change:bugfix,change:refactor,change:chore,change:other"
+      - uses: mheap/github-action-required-labels@179af849240d834567e1a3d6dc781575eede757c
+        with:
+          mode: exactly
+          count: 1
+          labels: "impact:user-facing,impact:internal"
