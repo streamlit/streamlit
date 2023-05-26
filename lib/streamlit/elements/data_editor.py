@@ -88,9 +88,8 @@ EditableData = TypeVar(
         # TODO(lukasmasuch): Add support for np.ndarray
         # but it is not possible with np.ndarray.
         # NDArray[Any] works, but is only available in numpy>1.20.
-        # TODO(lukasmasuch): Typing for pa.Table is also not possible here because
-        # it would result in any since it is a C-based class.
-        # pa.Table,
+        # TODO(lukasmasuch): Add support for pa.Table typing
+        # pa.Table does not work since it is a C-based class resulting in Any
     ],
 )
 
