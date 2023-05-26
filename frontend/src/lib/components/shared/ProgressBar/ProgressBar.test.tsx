@@ -30,7 +30,8 @@ describe("ProgressBar component", () => {
   })
 
   it("sets the value correctly", () => {
-    const { container } = render(<ProgressBar value={75} width={100} />)
-    expect(container.firstElementChild).toMatchSnapshot()
+    render(<ProgressBar value={75} width={100} />)
+    const progressBarElement = screen.getByRole("progressbar")
+    expect(progressBarElement).toHaveAttribute("aria-valuenow", "75")
   })
 })
