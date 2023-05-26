@@ -864,8 +864,6 @@ def convert_df_to_data_format(
 ) -> Union[
     DataFrame,
     Series,
-    Index,
-    "Styler",
     pa.Table,
     np.ndarray[Any, np.dtype[Any]],
     Tuple[Any],
@@ -885,7 +883,7 @@ def convert_df_to_data_format(
 
     Returns
     -------
-    pd.DataFrame, pd.Index, Styler, pa.Table, np.ndarray, tuple, list, set, dict
+    pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, list, set, tuple, or dict.
         The converted dataframe.
     """
     if data_format in [
