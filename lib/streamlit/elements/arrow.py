@@ -14,11 +14,20 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    TypeAlias,
+    Union,
+    cast,
+)
 
 import pyarrow as pa
-from numpy import ndarray
-from pandas import DataFrame
+from pandas import DataFrame, Series
 
 from streamlit import type_util
 from streamlit.elements.lib.column_config_utils import (
@@ -34,12 +43,22 @@ from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from numpy import ndarray
+    from pandas import Index, Series
     from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
 
-Data = Union[
-    DataFrame, "Styler", pa.Table, ndarray, Iterable, Dict[str, List[Any]], None
+Data: TypeAlias = Union[
+    DataFrame,
+    "Series",
+    "Styler",
+    "Index",
+    pa.Table,
+    "ndarray",
+    Iterable,
+    Dict[str, List[Any]],
+    None,
 ]
 
 

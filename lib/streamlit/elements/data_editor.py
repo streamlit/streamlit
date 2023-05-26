@@ -88,6 +88,9 @@ EditableData = TypeVar(
         # TODO(lukasmasuch): Add support for np.ndarray
         # but it is not possible with np.ndarray.
         # NDArray[Any] works, but is only available in numpy>1.20.
+        # TODO(lukasmasuch): Typing for pa.Table is also not possible here because
+        # it would result in any since it is a C-based class.
+        # pa.Table,
     ],
 )
 
@@ -95,6 +98,7 @@ EditableData = TypeVar(
 # All data types supported by the data editor.
 DataTypes: TypeAlias = Union[
     pd.DataFrame,
+    pd.Series,
     pd.Index,
     "Styler",
     pa.Table,
@@ -553,7 +557,7 @@ class DataEditorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
+        data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
             The data to edit in the data editor.
 
             .. note::
@@ -631,7 +635,7 @@ class DataEditorMixin:
 
         Returns
         -------
-        pd.DataFrame, pd.Styler, pyarrow.Table, np.ndarray, list, set, tuple, or dict.
+        pandas.DataFrame, pandas.Series, pyarrow.Table, numpy.ndarray, list, set, tuple, or dict.
             The edited data. The edited data is returned in its original data type if
             it corresponds to any of the supported return types. All other data types
             are returned as a ``pd.DataFrame``.
