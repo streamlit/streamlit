@@ -15,21 +15,23 @@
  */
 
 import React from "react"
-import { ProgressBar as UIProgressBar } from "baseui/progress-bar"
-import { mount } from "src/lib/test_util"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
+import { render } from "src/lib/test_util"
 
 import ProgressBar from "./ProgressBar"
 
 describe("ProgressBar component", () => {
   it("renders without crashing", () => {
-    const wrapper = mount(<ProgressBar value={50} width={100} />)
+    render(<ProgressBar value={50} width={100} />)
 
-    expect(wrapper.find(UIProgressBar).length).toBe(1)
+    const progressBarElement = screen.getByRole("progressbar")
+    expect(progressBarElement).toBeInTheDocument()
   })
 
   it("sets the value correctly", () => {
-    const wrapper = mount(<ProgressBar value={50} width={100} />)
-
-    expect(wrapper.find(UIProgressBar).prop("value")).toEqual(50)
+    render(<ProgressBar value={75} width={100} />)
+    const progressBarElement = screen.getByRole("progressbar")
+    expect(progressBarElement).toHaveAttribute("aria-valuenow", "75")
   })
 })
