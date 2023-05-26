@@ -54,6 +54,8 @@ class DataFrameSelectorMixin:
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
+        The dataframe element allows you to display DataFrames and many other data structures in a table-like UI.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None

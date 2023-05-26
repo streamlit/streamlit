@@ -67,6 +67,8 @@ class ArrowMixin:
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
+        The dataframe element allows you to display DataFrames and many other data structures in a table-like UI.
+
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
