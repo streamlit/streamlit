@@ -416,7 +416,7 @@ def TextColumn(
         there will be no maximum.
 
     validate: str or None
-        A regular expression (JS flavor) that edited values are validated against.
+        A regular expression (JS flavor, e.g. `"^[a-z]+$"`) that edited values are validated against.
         If the input is invalid, it will not be submitted.
 
     Examples
@@ -511,7 +511,7 @@ def LinkColumn(
         there will be no maximum.
 
     validate: str or None
-        A regular expression (JS flavor) that edited values are validated against.
+        A regular expression (JS flavor, e.g. `"^https://.+$"`) that edited values are validated against.
         If the input is invalid, it will not be submitted.
 
     Examples
