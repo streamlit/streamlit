@@ -88,6 +88,8 @@ EditableData = TypeVar(
         # TODO(lukasmasuch): Add support for np.ndarray
         # but it is not possible with np.ndarray.
         # NDArray[Any] works, but is only available in numpy>1.20.
+        # TODO(lukasmasuch): Add support for pa.Table typing
+        # pa.Table does not work since it is a C-based class resulting in Any
     ],
 )
 
@@ -95,6 +97,7 @@ EditableData = TypeVar(
 # All data types supported by the data editor.
 DataTypes: TypeAlias = Union[
     pd.DataFrame,
+    pd.Series,
     pd.Index,
     "Styler",
     pa.Table,
@@ -541,7 +544,7 @@ class DataEditorMixin:
     ) -> DataTypes:
         """Display a data editor widget.
 
-        The data editor widget allows you to edit DataFrames and many other data structures in a table-like UI.
+        The data editor widget allows you to edit dataframes and many other data structures in a table-like UI.
 
         .. warning::
             When going from ``st.experimental_data_editor`` to ``st.data_editor`` in
@@ -553,7 +556,7 @@ class DataEditorMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
+        data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
             The data to edit in the data editor.
 
             .. note::
@@ -576,8 +579,8 @@ class DataEditorMixin:
             This takes precedence over the width argument. Defaults to False.
 
         hide_index : bool or None
-            Whether to hide the index column(s). If None (default), they will be hidden
-            automatically based on the data.
+            Whether to hide the index column(s). If None (default), the visibility of
+            index columns is automatically determined based on the data.
 
         column_order : iterable of str or None
             Specifies the display order of columns. This also affects which columns are
@@ -631,7 +634,7 @@ class DataEditorMixin:
 
         Returns
         -------
-        pd.DataFrame, pd.Styler, pyarrow.Table, np.ndarray, list, set, tuple, or dict.
+        pandas.DataFrame, pandas.Series, pyarrow.Table, numpy.ndarray, list, set, tuple, or dict.
             The edited data. The edited data is returned in its original data type if
             it corresponds to any of the supported return types. All other data types
             are returned as a ``pd.DataFrame``.

@@ -54,20 +54,19 @@ class DataFrameSelectorMixin:
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
 
+        This command works with dataframes from Pandas, PyArrow, Snowpark, and PySpark.
+        It can also display several other types that can be converted to dataframes,
+        e.g. numpy arrays, lists, sets and dictionaries.
+
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
             underlying DataFrame. Streamlit supports custom cell
-            values and colors. (It does not support some of the more exotic
-            pandas styling features, like bar charts, hovering, and captions.)
-            Styler support is experimental!
-            Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with ``config.dataFrameSerialization = "legacy"``).
-            To use pyarrow tables, please enable pyarrow by changing the config setting,
-            ``config.dataFrameSerialization = "arrow"``.
+            values and colors. It does not support some of the more exotic
+            pandas styling features, like bar charts, hovering, and captions.
 
         width : int or None
             Desired width of the dataframe expressed in pixels. If None, the width
@@ -83,8 +82,8 @@ class DataFrameSelectorMixin:
             This argument can only be supplied by keyword.
 
         hide_index : bool or None
-            Whether to hide the index column(s). If None (default), they will be hidden
-            automatically based on the data.
+            Whether to hide the index column(s). If None (default), the visibility of
+            index columns is automatically determined based on the data.
 
         column_order : iterable of str or None
             Specifies the display order of columns. This also affects which columns are
