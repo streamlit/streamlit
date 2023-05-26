@@ -14,19 +14,10 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    TypeAlias,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union, cast
 
 import pyarrow as pa
+from typing_extensions import TypeAlias
 
 from streamlit import type_util
 from streamlit.elements.lib.column_config_utils import (
