@@ -1,4 +1,4 @@
-altair==5.0.0
+altair==5.0.1
 attrs==23.1.0
 black==23.3.0
 bleach==6.0.0
@@ -25,7 +25,7 @@ gitdb==4.0.10
 GitPython==3.1.31
 graphviz==0.20.1
 greenlet==2.0.2
-hypothesis==6.75.3
+hypothesis==6.75.5
 identify==2.5.24
 idna==3.4
 importlib-metadata==6.6.0
