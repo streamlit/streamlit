@@ -70,11 +70,11 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   }
 
   /**
-   * Construct a URL for uploading a file. If the url is relative and starts
+   * Construct a URL for uploading a file. If the URL is relative and starts
    * with "/_stcore/upload_file", assume we're uploading the file to the
-   * Streamlit Tornado server and construct it appropriately. Otherwise, we're
-   * probably uploading the file to some external service, so we leave the URL
-   * alone.
+   * Streamlit Tornado server and construct the URL appropriately. Otherwise,
+   * we're probably uploading the file to some external service, so we leave
+   * the URL alone.
    */
   public buildFileUploadURL(url: string): string {
     return url.startsWith(UPLOAD_FILE_ENDPOINT)
@@ -194,6 +194,10 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     url: string,
     params: AxiosRequestConfig
   ): Promise<R> {
+    // If the URL starts with a scheme, assume it's an absolute URL and don't
+    // change it. Otherwise, it's a relative URL that needs to be made
+    // absolute.
+    //
     // TODO(vdonato): Think about whether this is a reasonable long-term
     // solution before this feature branch is merged into `develop`. If it is,
     // then add some unit tests for this.

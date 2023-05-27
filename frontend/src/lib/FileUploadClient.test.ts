@@ -89,7 +89,6 @@ describe("FileUploadClient Upload", () => {
     await expect(
       uploader.uploadFile(
         { id: "widgetId", formId: "" },
-
         "/_stcore/upload_file/file_1",
         MOCK_FILE
       )
