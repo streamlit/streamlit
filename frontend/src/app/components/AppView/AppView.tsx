@@ -72,8 +72,6 @@ export interface AppViewProps {
   currentPageScriptHash: string
 
   hideSidebarNav: boolean
-
-  pageLinkBaseUrl: string
 }
 
 /**
@@ -94,7 +92,6 @@ function AppView(props: AppViewProps): ReactElement {
     onPageChange,
     currentPageScriptHash,
     hideSidebarNav,
-    pageLinkBaseUrl,
     sendMessageToHost,
     endpoints,
   } = props
@@ -163,7 +160,6 @@ function AppView(props: AppViewProps): ReactElement {
           onPageChange={onPageChange}
           currentPageScriptHash={currentPageScriptHash}
           hideSidebarNav={hideSidebarNav}
-          pageLinkBaseUrl={pageLinkBaseUrl}
         >
           {renderBlock(elements.sidebar)}
         </ThemedSidebar>

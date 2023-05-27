@@ -1545,14 +1545,16 @@ export class App extends PureComponent<Props, State> {
         value={{
           initialSidebarState,
           wideMode: userSettings.wideMode,
-          sidebarChevronDownshift:
-            this.hostCommunicationMgr.state.sidebarChevronDownshift,
           embedded: isEmbed(),
           showPadding: !isEmbed() || isPaddingDisplayed(),
           disableScrolling: isScrollingHidden(),
           showFooter: !isEmbed() || isFooterDisplayed(),
           showToolbar: !isEmbed() || isToolbarDisplayed(),
           showColoredLine: !isEmbed() || isColoredLineDisplayed(),
+          // host communication manager elements
+          pageLinkBaseUrl: this.hostCommunicationMgr.state.pageLinkBaseUrl,
+          sidebarChevronDownshift:
+            this.hostCommunicationMgr.state.sidebarChevronDownshift,
         }}
       >
         <LibContext.Provider
@@ -1647,9 +1649,6 @@ export class App extends PureComponent<Props, State> {
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
                 hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
-                pageLinkBaseUrl={
-                  this.hostCommunicationMgr.state.pageLinkBaseUrl
-                }
               />
               {renderedDialog}
             </StyledApp>

@@ -69,6 +69,13 @@ export interface Props {
   showColoredLine: boolean
 
   /**
+   * Part of URL construction for an app page in a multi-page app;
+   * this is set by the host communication layer.
+   * @see SidebarNav
+   */
+  pageLinkBaseUrl: string
+
+  /**
    * If non-zero, this is the number of pixels that the sidebar's
    * "chevron" icon is shifted. (If sidebarChevronDownshift is 0, then
    * the current theme's spacing is used.)
@@ -86,5 +93,6 @@ export const AppContext = React.createContext<Props>({
   showFooter: false,
   showToolbar: false,
   showColoredLine: false,
+  pageLinkBaseUrl: "",
   sidebarChevronDownshift: 0,
 })
