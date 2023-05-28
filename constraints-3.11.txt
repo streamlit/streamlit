@@ -4,7 +4,7 @@ black==23.3.0
 bleach==6.0.0
 blinker==1.6.2
 bokeh==2.4.3
-cachetools==5.3.0
+cachetools==5.3.1
 certifi==2023.5.7
 cffi==1.15.1
 cfgv==3.3.1
@@ -25,7 +25,7 @@ gitdb==4.0.10
 GitPython==3.1.31
 graphviz==0.20.1
 greenlet==2.0.2
-hypothesis==6.75.5
+hypothesis==6.75.6
 identify==2.5.24
 idna==3.4
 importlib-metadata==6.6.0
