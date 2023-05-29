@@ -93,8 +93,8 @@ def show_config(
                 if lines and not lines[0].strip():
                     lines = lines[1:]
                 # Add comment character to each line and add to out
-                lines = ["# " + line.lstrip() for line in lines]
-                out.extend(lines)
+                for line in lines:
+                    append_comment(line.lstrip())
                 # Add a line break after a paragraph only if it's not the last paragraph.
                 if i != len(description_paragraphs) - 1:
                     out.append("")
