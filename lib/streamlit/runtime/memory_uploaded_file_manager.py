@@ -26,7 +26,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFileManager, Uploade
 LOGGER = get_logger(__name__)
 
 
-class MemoryUploadedFileManager(UploadedFileManager, CacheStatsProvider):
+class MemoryUploadedFileManager(UploadedFileManager):
     """Holds files uploaded by users of the running Streamlit app,
     and emits an event signal when a file is added.
 

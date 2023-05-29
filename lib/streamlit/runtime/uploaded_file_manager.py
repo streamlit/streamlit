@@ -18,6 +18,7 @@ from typing import List, NamedTuple
 from typing_extensions import Protocol
 
 from streamlit import util
+from streamlit.runtime.stats import CacheStatsProvider
 
 
 class UploadedFileRec(NamedTuple):
@@ -50,13 +51,13 @@ class UploadedFile(io.BytesIO):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, UploadedFile):
             return NotImplemented
-        return self.id == other.id
+        return self.file_url == other.file_url
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
 
-class UploadedFileManager(Protocol):
+class UploadedFileManager(CacheStatsProvider, Protocol):
     @abstractmethod
     def get_files(self, session_id: str, file_urls: List[str]) -> List[UploadedFileRec]:
         raise NotImplementedError
