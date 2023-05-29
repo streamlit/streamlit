@@ -104,7 +104,7 @@ types-click==7.1.8
 types-protobuf==4.23.0.1
 types-python-dateutil==2.8.19.13
 types-pytz==2023.3.0.0
-types-requests==2.31.0.0
+types-requests==2.31.0.1
 types-setuptools==67.8.0.0
 types-toml==0.10.8.6
 types-typed-ast==1.5.8.6
