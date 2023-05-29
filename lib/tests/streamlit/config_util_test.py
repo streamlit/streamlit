@@ -54,9 +54,9 @@ class ConfigUtilTest(unittest.TestCase):
         )
 
         truth = [
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+            "\nLorem ipsum dolor sit amet,\nconsectetur adipiscing elit.",
             "Curabitur ac fermentum eros.",
-            "Maecenas libero est, ultricies eget ligula eget,",
+            "Maecenas libero est,\nultricies\neget ligula eget,",
         ]
 
         result = config_util._clean_paragraphs(input)
