@@ -55,11 +55,10 @@ def show_config(
         )
     )
 
-    def append_desc(text):
-        out.append(click.style(text, bold=True))
-
     def append_comment(text):
-        out.append(click.style(text))
+        # Skip empty or whitespace only lines.
+        if text.strip():
+            out.append("# " + text)
 
     def append_section(text):
         out.append(click.style(text, bold=True, fg="green"))
@@ -67,16 +66,13 @@ def show_config(
     def append_setting(text):
         out.append(click.style(text, fg="green"))
 
-    def append_newline():
-        out.append("")
-
     for section, section_description in section_descriptions.items():
         if section in SKIP_SECTIONS:
             continue
 
-        append_newline()
+        out.append("")
         append_section("[%s]" % section)
-        append_newline()
+        out.append("")
 
         for key, option in config_options.items():
             if option.section != section:
@@ -91,40 +87,30 @@ def show_config(
             key = option.key.split(".")[1]
             description_paragraphs = _clean_paragraphs(option.description)
 
-            for i, txt in enumerate(description_paragraphs):
-                if i == 0:
-                    append_desc("# %s" % txt)
-                else:
-                    append_comment("# %s" % txt)
+            for txt in description_paragraphs:
+                for line in txt.split("\n"):
+                    append_comment(line)
 
             toml_default = toml.dumps({"default": option.default_val})
             toml_default = toml_default[10:].strip()
 
             if len(toml_default) > 0:
-                append_comment("# Default: %s" % toml_default)
-            else:
-                # Don't say "Default: (unset)" here because this branch applies
-                # to complex config settings too.
-                pass
+                append_comment("Default: %s" % toml_default)
 
             if option.deprecated:
-                append_comment("#")
-                append_comment("# " + click.style("DEPRECATED.", fg="yellow"))
+                for line in _clean_paragraphs(option.deprecation_text):
+                    append_comment(line)
                 append_comment(
-                    "# %s" % "\n".join(_clean_paragraphs(option.deprecation_text))
-                )
-                append_comment(
-                    "# This option will be removed on or after %s."
+                    "This option will be removed on or after %s."
                     % option.expiration_date
                 )
-                append_comment("#")
 
             option_is_manually_set = (
                 option.where_defined != ConfigOption.DEFAULT_DEFINITION
             )
 
             if option_is_manually_set:
-                append_comment("# The value below was set in %s" % option.where_defined)
+                append_comment("The value below was set in %s" % option.where_defined)
 
             toml_setting = toml.dumps({key: option.value})
 
@@ -140,10 +126,14 @@ def show_config(
 
 def _clean(txt):
     """Replace all whitespace with a single space."""
-    return " ".join(txt.split()).strip()
+    return " ".join(txt.split())
 
 
 def _clean_paragraphs(txt):
+    """Split the text into paragraphs, clean each line, but preserve newlines within the paragraphs."""
     paragraphs = txt.split("\n\n")
-    cleaned_paragraphs = [_clean(x) for x in paragraphs]
+    cleaned_paragraphs = [
+        "\n".join(_clean(line) for line in paragraph.split("\n"))
+        for paragraph in paragraphs
+    ]
     return cleaned_paragraphs
