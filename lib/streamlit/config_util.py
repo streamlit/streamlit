@@ -130,7 +130,7 @@ def show_config(
 
 
 def _clean(txt):
-    """Replace all whitespace with a single space."""
+    """Replace all whitespace (including newlines) with a single space."""
     return " ".join(txt.split())
 
 
