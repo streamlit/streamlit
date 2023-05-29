@@ -98,6 +98,7 @@ def show_config(
                 append_comment("Default: %s" % toml_default)
 
             if option.deprecated:
+                append_comment(click.style("DEPRECATED.", fg="yellow"))
                 for line in _clean_paragraphs(option.deprecation_text):
                     append_comment(line)
                 append_comment(
