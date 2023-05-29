@@ -57,7 +57,7 @@ def show_config(
     )
 
     def append_comment(text):
-        out.append("# " + text)
+        out.append("# " + click.style(text))
 
     def append_section(text):
         out.append(click.style(text, bold=True, fg="green"))
