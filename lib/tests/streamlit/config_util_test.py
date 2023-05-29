@@ -37,7 +37,7 @@ def create_config_options(overrides):
 class ConfigUtilTest(unittest.TestCase):
     def test_clean(self):
         result = config_util._clean(" clean    this         text  ")
-        self.assertEqual("clean this text", result)
+        self.assertEqual(" clean this text ", result)
 
     def test_clean_paragraphs(self):
         # from https://www.lipsum.com/
@@ -55,8 +55,8 @@ class ConfigUtilTest(unittest.TestCase):
 
         truth = [
             "\nLorem ipsum dolor sit amet,\nconsectetur adipiscing elit.",
-            "Curabitur ac fermentum eros.",
-            "Maecenas libero est,\nultricies\neget ligula eget,",
+            " Curabitur ac fermentum eros.",
+            "Maecenas libero est,\n ultricies\neget ligula eget, ",
         ]
 
         result = config_util._clean_paragraphs(input)

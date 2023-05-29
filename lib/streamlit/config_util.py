@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 from typing import Dict
 
 import click
@@ -56,9 +57,7 @@ def show_config(
     )
 
     def append_comment(text):
-        # Skip empty or whitespace only lines.
-        if text.strip():
-            out.append("# " + text)
+        out.append("# " + text)
 
     def append_section(text):
         out.append(click.style(text, bold=True, fg="green"))
@@ -87,9 +86,18 @@ def show_config(
             key = option.key.split(".")[1]
             description_paragraphs = _clean_paragraphs(option.description)
 
-            for txt in description_paragraphs:
-                for line in txt.split("\n"):
-                    append_comment(line)
+            for i, paragraph in enumerate(description_paragraphs):
+                # Split paragraph into lines
+                lines = paragraph.split("\n")
+                # If the first line is empty, remove it
+                if lines and not lines[0].strip():
+                    lines = lines[1:]
+                # Add comment character to each line and add to out
+                lines = ["# " + line.lstrip() for line in lines]
+                out.extend(lines)
+                # Add a line break after a paragraph only if it's not the last paragraph.
+                if i != len(description_paragraphs) - 1:
+                    out.append("")
 
             toml_default = toml.dumps({"default": option.default_val})
             toml_default = toml_default[10:].strip()
@@ -130,12 +138,15 @@ def show_config(
 
 
 def _clean(txt):
-    """Replace all whitespace (including newlines) with a single space."""
-    return " ".join(txt.split())
+    """Replace sequences of multiple spaces with a single space, excluding newlines.
+
+    Preserves leading and trailing spaces, and does not modify spaces in between lines.
+    """
+    return re.sub(" +", " ", txt)
 
 
 def _clean_paragraphs(txt):
-    """Split the text into paragraphs, clean each line, but preserve newlines within the paragraphs."""
+    """Split the text into paragraphs, preserve newlines within the paragraphs."""
     paragraphs = txt.split("\n\n")
     cleaned_paragraphs = [
         "\n".join(_clean(line) for line in paragraph.split("\n"))
