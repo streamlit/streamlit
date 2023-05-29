@@ -96,6 +96,10 @@ def show_config(
 
             if len(toml_default) > 0:
                 append_comment("Default: %s" % toml_default)
+            else:
+                # Don't say "Default: (unset)" here because this branch applies
+                # to complex config settings too.
+                pass
 
             if option.deprecated:
                 append_comment(click.style("DEPRECATED.", fg="yellow"))
