@@ -11,11 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import io
 from abc import abstractmethod
 from typing import List, NamedTuple
 
 from typing_extensions import Protocol
+
+from streamlit import util
 
 
 class UploadedFileRec(NamedTuple):
@@ -25,6 +27,33 @@ class UploadedFileRec(NamedTuple):
     name: str
     type: str
     data: bytes
+
+
+class UploadedFile(io.BytesIO):
+    """A mutable uploaded file.
+
+    This class extends BytesIO, which has copy-on-write semantics when
+    initialized with `bytes`.
+    """
+
+    def __init__(self, record: UploadedFileRec):
+        # BytesIO's copy-on-write semantics doesn't seem to be mentioned in
+        # the Python docs - possibly because it's a CPython-only optimization
+        # and not guaranteed to be in other Python runtimes. But it's detailed
+        # here: https://hg.python.org/cpython/rev/79a5fbe2c78f
+        super(UploadedFile, self).__init__(record.data)
+        self.file_url = record.file_url
+        self.name = record.name
+        self.type = record.type
+        self.size = len(record.data)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, UploadedFile):
+            return NotImplemented
+        return self.id == other.id
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
 
 class UploadedFileManager(Protocol):
