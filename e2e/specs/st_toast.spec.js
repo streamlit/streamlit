@@ -17,14 +17,13 @@
 describe("st.toast - Light Theme", () => {
     before(() => {
       cy.loadApp("http://localhost:3000/");
-
-      cy.prepForElementSnapshots();
     });
 
     beforeEach(() => {
         // Rerun the script before each test so snapshots have sufficient time
         cy.get("body").type("r");
-        cy.get("[data-testid='stToast']").should("have.length", 5);
+        cy.waitForScriptFinish()
+        cy.get("[data-testid='stToast']").should("have.length", 5)
     });
 
     it("displays default toast correctly", () => {
@@ -35,29 +34,29 @@ describe("st.toast - Light Theme", () => {
             .matchImageSnapshot("toast-default");
     });
 
-    // it("displays success toast correctly", () => {
-    //     cy.getIndexed("[data-testid='stMarkdownContainer']", 3)
-    //         .should("contain.text", "This is a success toast message")
+    it("displays success toast correctly", () => {
+        cy.getIndexed("[data-testid='stMarkdownContainer']", 3)
+            .should("contain.text", "This is a success toast message")
 
-    //     cy.getIndexed("[data-testid='stToast']", 3)
-    //         .matchImageSnapshot("toast-success");
-    // });
+        cy.getIndexed("[data-testid='stToast']", 3)
+            .matchImageSnapshot("toast-success");
+    });
 
-    // it("displays warning toast correctly", () => {
-    //     cy.getIndexed("[data-testid='stMarkdownContainer']", 2)
-    //         .should("contain.text", "This is a warning toast message")
+    it("displays warning toast correctly", () => {
+        cy.getIndexed("[data-testid='stMarkdownContainer']", 2)
+            .should("contain.text", "This is a warning toast message")
 
-    //     cy.getIndexed("[data-testid='stToast']", 2)
-    //         .matchImageSnapshot("toast-warning");
-    // });
+        cy.getIndexed("[data-testid='stToast']", 2)
+            .matchImageSnapshot("toast-warning");
+    });
 
-    // it("displays error toast correctly", () => {
-    //     cy.getIndexed("[data-testid='stMarkdownContainer']", 1)
-    //         .should("contain.text", "This is a error toast message")
+    it("displays error toast correctly", () => {
+        cy.getIndexed("[data-testid='stMarkdownContainer']", 1)
+            .should("contain.text", "This is a error toast message")
 
-    //     cy.getIndexed("[data-testid='stToast']", 1)
-    //         .matchImageSnapshot("toast-error");
-    // });
+        cy.getIndexed("[data-testid='stToast']", 1)
+            .matchImageSnapshot("toast-error");
+    });
 
     it("displays long message toast correctly", () => {
         cy.getIndexed("[data-testid='stMarkdownContainer']", 0)
@@ -87,14 +86,14 @@ describe("st.toast - Light Theme", () => {
 describe("st.toast - Dark Theme", () => {
     before(() => {
       cy.loadApp("http://localhost:3000/");
-
       cy.changeTheme("Dark");
-      cy.prepForElementSnapshots();
     });
+
     beforeEach(() => {
         // Rerun the script before each test so snapshots have sufficient time
         cy.get("body").type("r");
-        cy.get("[data-testid='stToast']").should("have.length", 5);
+        cy.waitForScriptFinish()
+        cy.get("[data-testid='stToast']").should("have.length", 5)
     });
 
     it("displays default toast correctly", () => {
@@ -105,29 +104,29 @@ describe("st.toast - Dark Theme", () => {
             .matchImageSnapshot("toast-default-dark");
     });
 
-    // it("displays success toast correctly", () => {
-    //     cy.getIndexed("[data-testid='stMarkdownContainer']", 3)
-    //         .should("contain.text", "This is a success toast message")
+    it("displays success toast correctly", () => {
+        cy.getIndexed("[data-testid='stMarkdownContainer']", 3)
+            .should("contain.text", "This is a success toast message")
 
-    //     cy.getIndexed("[data-testid='stToast']", 3)
-    //         .matchImageSnapshot("toast-success-dark");
-    // });
+        cy.getIndexed("[data-testid='stToast']", 3)
+            .matchImageSnapshot("toast-success-dark");
+    });
 
-    // it("displays warning toast correctly", () => {
-    //     cy.getIndexed("[data-testid='stMarkdownContainer']", 2)
-    //         .should("contain.text", "This is a warning toast message")
+    it("displays warning toast correctly", () => {
+        cy.getIndexed("[data-testid='stMarkdownContainer']", 2)
+            .should("contain.text", "This is a warning toast message")
 
-    //     cy.getIndexed("[data-testid='stToast']", 2)
-    //         .matchImageSnapshot("toast-warning-dark");
-    // });
+        cy.getIndexed("[data-testid='stToast']", 2)
+            .matchImageSnapshot("toast-warning-dark");
+    });
 
-    // it("displays error toast correctly", () => {
-    //     cy.getIndexed("[data-testid='stMarkdownContainer']", 1)
-    //         .should("contain.text", "This is a error toast message")
+    it("displays error toast correctly", () => {
+        cy.getIndexed("[data-testid='stMarkdownContainer']", 1)
+            .should("contain.text", "This is a error toast message")
 
-    //     cy.getIndexed("[data-testid='stToast']", 1)
-    //         .matchImageSnapshot("toast-error-dark");
-    // });
+        cy.getIndexed("[data-testid='stToast']", 1)
+            .matchImageSnapshot("toast-error-dark");
+    });
 
     it("displays long message toast correctly", () => {
         cy.getIndexed("[data-testid='stMarkdownContainer']", 0)
