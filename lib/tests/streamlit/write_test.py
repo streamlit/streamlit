@@ -14,6 +14,7 @@
 
 """Streamlit Unit test."""
 
+import dataclasses
 import time
 import unittest
 from collections import namedtuple
@@ -265,6 +266,20 @@ class StreamlitWriteTest(unittest.TestCase):
     def test_obj_instance(self):
         """Test st.write with an object instance that doesn't know how to str()."""
 
+        class SomeClass:
+            pass
+
+        my_instance = SomeClass()
+
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
+            st.write(my_instance)
+
+            p.assert_called_once_with(my_instance)
+
+    def test_dataclass_instance(self):
+        """Test st.write with a dataclass instance."""
+
+        @dataclasses.dataclass
         class SomeClass:
             pass
 

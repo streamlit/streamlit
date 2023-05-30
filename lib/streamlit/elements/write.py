@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 import inspect
 import json as json
 import types
@@ -204,6 +205,9 @@ class WriteMixin:
                 flush_buffer()
                 self.dg.exception(arg)
             elif isinstance(arg, HELP_TYPES):
+                flush_buffer()
+                self.dg.help(arg)
+            elif dataclasses.is_dataclass(arg):
                 flush_buffer()
                 self.dg.help(arg)
             elif type_util.is_altair_chart(arg):
