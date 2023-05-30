@@ -26,7 +26,9 @@ import {
   DeployedAppMetadata,
 } from "./types"
 import { isValidOrigin } from "src/lib/util/UriUtil"
-import { IS_DEV_ENV } from "src/lib/baseconsts"
+// Uncomment this import to test host communication with
+// frontend/hostframe.html:
+// import { IS_DEV_ENV } from "src/lib/baseconsts"
 
 import Resolver from "src/lib/util/Resolver"
 
@@ -84,13 +86,10 @@ export default class HostCommunicationManager {
       toolbarItems: [],
     }
 
-    // Bind methods for state access - TODO: Remove unnecessary bind functions
+    // Bind methods for state access
     this.setAllowedOriginsResp = this.setAllowedOriginsResp.bind(this)
-    this.openHostCommunication = this.openHostCommunication.bind(this)
-    this.closeHostCommunication = this.closeHostCommunication.bind(this)
     this.resetAuthToken = this.resetAuthToken.bind(this)
     this.receiveHostMessage = this.receiveHostMessage.bind(this)
-    this.sendMessageToHost = this.sendMessageToHost.bind(this)
   }
 
   /**
@@ -134,10 +133,9 @@ export default class HostCommunicationManager {
 
     // Uncomment this code if testing out host communication with
     // frontend/hostframe.html:
-    //
-    if (IS_DEV_ENV) {
-      allowedOrigins.push("http://localhost:8000")
-    }
+    // if (IS_DEV_ENV) {
+    //   allowedOrigins.push("http://localhost:8000")
+    // }
 
     if (!useExternalAuthToken) {
       this.state.deferredAuthToken.resolve(undefined)

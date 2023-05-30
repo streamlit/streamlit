@@ -70,7 +70,7 @@ export interface Props {
 
   /**
    * Part of URL construction for an app page in a multi-page app;
-   * this is set by the host communication layer.
+   * this is set from the host communication manager's state.
    * @see SidebarNav
    */
   pageLinkBaseUrl: string
