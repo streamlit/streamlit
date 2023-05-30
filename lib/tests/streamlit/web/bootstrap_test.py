@@ -96,6 +96,7 @@ class BootstrapPydanticFixTest(unittest.TestCase):
     @pytest.mark.skipif(
         should_skip_pydantic_tests(), reason="We test fix only for pydantic 1.*"
     )
+    @patch("pydantic.class_validators.in_ipython", Mock(return_value=False))
     def test_fix_pydantic_crash(self):
         import pydantic
 
