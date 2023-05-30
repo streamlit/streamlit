@@ -43,7 +43,7 @@ def should_skip_pydantic_tests() -> bool:
     try:
         import pydantic
 
-        return not pydantic.__version__.startswith("1")
+        return not pydantic.__version__.startswith("1.")
     except ImportError:
         return True
 

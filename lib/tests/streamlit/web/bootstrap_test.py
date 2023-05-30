@@ -101,14 +101,14 @@ class BootstrapPydanticFixTest(unittest.TestCase):
         import pydantic
 
         # Check that without fix it crashes when model with validator
-        # defined two times ( we emulate Streamlit rerun)
+        # defined two times (we emulate Streamlit rerun).
         with self.assertRaises(pydantic.errors.ConfigError):
             self.pydantic_model_definition()
             self.pydantic_model_definition()
 
         _fix_pydantic_duplicate_validators_error()
 
-        # Check that after fix model could be redefined without exception
+        # Check that after fix model could be redefined without exception.
         self.pydantic_model_definition()
         self.pydantic_model_definition()
 
