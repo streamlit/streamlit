@@ -56,6 +56,9 @@ def show_config(
         )
     )
 
+    def append_desc(text):
+        out.append("# " + click.style(text, bold=True))
+
     def append_comment(text):
         out.append("# " + click.style(text))
 
@@ -94,7 +97,11 @@ def show_config(
                     lines = lines[1:]
                 # Add comment character to each line and add to out
                 for line in lines:
-                    append_comment(line.lstrip())
+                    if i == 0:
+                        append_desc(line.lstrip())
+                    else:
+                        append_comment(line.lstrip())
+
                 # Add a line break after a paragraph only if it's not the last paragraph.
                 if i != len(description_paragraphs) - 1:
                     out.append("")
