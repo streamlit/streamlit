@@ -43,7 +43,6 @@ import {
   StyledDialogBody,
   StyledFullRow,
   StyledBackButton,
-  StyledHr,
   StyledSmall,
 } from "./styled-components"
 
@@ -295,17 +294,15 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
           </StyledFullRow>
 
           <StyledFullRow>
-            <StyledHr />
-          </StyledFullRow>
-
-          <StyledFullRow>
             <StyledSmall>
               To save your changes, copy your custom theme into the clipboard
               and paste it into the
               <code>[theme]</code> section of your{" "}
               <code>.streamlit/config.toml</code> file.
             </StyledSmall>
+          </StyledFullRow>
 
+          <StyledFullRow>
             <div>
               <BaseButton onClick={copyConfig} kind={BaseButtonKind.SECONDARY}>
                 {copied ? (
