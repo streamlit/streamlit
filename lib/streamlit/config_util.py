@@ -89,21 +89,25 @@ def show_config(
             key = option.key.split(".")[1]
             description_paragraphs = _clean_paragraphs(option.description)
 
+            last_paragraph_idx = len(description_paragraphs) - 1
+
             for i, paragraph in enumerate(description_paragraphs):
                 # Split paragraph into lines
                 lines = paragraph.split("\n")
+
                 # If the first line is empty, remove it
                 if lines and not lines[0].strip():
                     lines = lines[1:]
+
+                # Choose function based on whether it's the first paragraph or not
+                append_func = append_desc if i == 0 else append_comment
+
                 # Add comment character to each line and add to out
                 for line in lines:
-                    if i == 0:
-                        append_desc(line.lstrip())
-                    else:
-                        append_comment(line.lstrip())
+                    append_func(line.lstrip())
 
-                # Add a line break after a paragraph only if it's not the last paragraph.
-                if i != len(description_paragraphs) - 1:
+                # Add a line break after a paragraph only if it's not the last paragraph
+                if i != last_paragraph_idx:
                     out.append("")
 
             toml_default = toml.dumps({"default": option.default_val})
