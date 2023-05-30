@@ -151,6 +151,7 @@ function AppView(props: AppViewProps): ReactElement {
   const hasSidebarElements = !elements.sidebar.isEmpty
   const showSidebar =
     hasSidebarElements || (!hideSidebarNav && appPages.length > 1)
+  const hasEventElements = !elements.event.isEmpty
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
@@ -198,12 +199,14 @@ function AppView(props: AppViewProps): ReactElement {
           </StyledAppViewFooter>
         )}
       </StyledAppViewMain>
-      <EventContainer
-        toastAdjustment={toastAdjustment}
-        scriptRunId={elements.event.scriptRunId}
-      >
-        {renderBlock(elements.event, true)}
-      </EventContainer>
+      {hasEventElements && (
+        <EventContainer
+          toastAdjustment={toastAdjustment}
+          scriptRunId={elements.event.scriptRunId}
+        >
+          {renderBlock(elements.event, true)}
+        </EventContainer>
+      )}
     </StyledAppViewContainer>
   )
 }

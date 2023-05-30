@@ -95,9 +95,10 @@ describe("AppView element", () => {
     )
 
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event])),
     })
     const wrapper = shallow(<AppView {...props} />)
 
@@ -134,13 +135,14 @@ describe("AppView element", () => {
     )
 
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const appPages = [
       { pageName: "streamlit_app", pageScriptHash: "page_hash" },
       { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event])),
       appPages,
     })
     const wrapper = shallow(<AppView {...props} />)

@@ -20,7 +20,7 @@ import { ToasterContainer, toaster, PLACEMENT } from "baseui/toast"
 export interface EventContainerProps {
   toastAdjustment: boolean
   scriptRunId?: string
-  children: ReactNode
+  children?: ReactNode
 }
 
 function EventContainer({

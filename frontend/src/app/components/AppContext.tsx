@@ -70,7 +70,7 @@ export interface Props {
 
   /**
    * Adjustment to positioning of the app's toasts
-   * @see ToastRenderer
+   * @see EventContainer
    */
   toastAdjustment: boolean
 
