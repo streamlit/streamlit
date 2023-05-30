@@ -37,6 +37,7 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
+from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.secrets import secrets_singleton
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.version import STREAMLIT_VERSION_STRING
@@ -74,6 +75,7 @@ class AppSession:
         self,
         script_data: ScriptData,
         uploaded_file_manager: UploadedFileManager,
+        script_cache: ScriptCache,
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
         user_info: Dict[str, Optional[str]],
@@ -82,19 +84,24 @@ class AppSession:
 
         Parameters
         ----------
-        script_data : ScriptData
+        script_data
             Object storing parameters related to running a script
 
-        uploaded_file_manager : UploadedFileManager
+        uploaded_file_manager
             Used to manage files uploaded by users via the Streamlit web client.
 
-        message_enqueued_callback : Callable[[], None]
+        script_cache
+            The app's ScriptCache instance. Stores cached user scripts. ScriptRunner
+            uses the ScriptCache to avoid having to reload user scripts from disk
+            on each rerun.
+
+        message_enqueued_callback
             After enqueuing a message, this callable notification will be invoked.
 
-        local_sources_watcher: LocalSourcesWatcher
+        local_sources_watcher
             The file watcher that lets the session know local files have changed.
 
-        user_info: Dict
+        user_info
             A dict that contains information about the current user. For now,
             it only contains the user's email address.
 
@@ -112,6 +119,7 @@ class AppSession:
         self._event_loop = asyncio.get_running_loop()
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
+        self._script_cache = script_cache
 
         # The browser queue contains messages that haven't yet been
         # delivered to the browser. Periodically, the server flushes
@@ -378,6 +386,7 @@ class AppSession:
             client_state=self._client_state,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            script_cache=self._script_cache,
             initial_rerun_data=initial_rerun_data,
             user_info=self._user_info,
         )

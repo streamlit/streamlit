@@ -20,13 +20,18 @@ import Modal from "./DeployModal"
 import Card from "./DeployCard"
 import ListElement from "./DeployListElement"
 import { StyledBody, StyledAction } from "baseui/card"
-import { StyledSubheader, StyledActionsWrapper } from "./styled-components"
-import { FlexGrid, FlexGridItem } from "baseui/flex-grid"
+import {
+  StyledSubheader,
+  StyledActionsWrapper,
+  StyledCardContainer,
+} from "./styled-components"
 import {
   DialogType,
   PlainEventHandler,
 } from "src/app/components/StreamlitDialog/StreamlitDialog"
-import Button, { Kind } from "src/lib/components/shared/Button"
+import BaseButton, {
+  BaseButtonKind,
+} from "src/lib/components/shared/BaseButton"
 import StreamlitLogo from "src/assets/svg/logo.svg"
 import Rocket from "src/assets/svg/rocket.svg"
 import {
@@ -114,73 +119,70 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
 
   return (
     <Modal onClose={onClose}>
-      <FlexGrid flexGridColumnCount={[1, 1, 2]} flexGridRowGap="24px">
-        <FlexGridItem>
-          <Card>
-            <StyledBody>
-              <img src={StreamlitLogo} alt={"Streamlit Logo"} />
-              <StyledSubheader>Streamlit Community Cloud</StyledSubheader>
-              <ListElement extraSpacing={true}>For the community</ListElement>
-              <ListElement extraSpacing={true}>
-                Deploy unlimited public apps for free
-              </ListElement>
-              <ListElement extraSpacing={true}>
-                Apps are discoverable through the Streamlit gallery and search
-                engines
-              </ListElement>
-            </StyledBody>
-            <StyledAction>
-              <StyledActionsWrapper>
-                <Button kind={Kind.SECONDARY} onClick={onClickDeployApp}>
-                  Deploy now
-                </Button>
-                <Button
-                  onClick={() => {
-                    metricsMgr.enqueue(
-                      "readMoreCommunityCloudInDeployDialog",
-                      { clicked: true }
-                    )
-                    window.open(STREAMLIT_COMMUNITY_CLOUD_DOCS_URL, "_blank")
-                  }}
-                  kind={Kind.MINIMAL}
-                >
-                  Read more
-                </Button>
-              </StyledActionsWrapper>
-            </StyledAction>
-          </Card>
-        </FlexGridItem>
-        <FlexGridItem>
-          <Card>
-            <StyledBody>
-              <img src={Rocket} alt={"Rocket"} />
-              <StyledSubheader>Custom deployment</StyledSubheader>
-              <ListElement>For companies</ListElement>
-              <ListElement>
-                Deploy on your own hardware or in the cloud, with Docker,
-                Kubernetes, etc
-              </ListElement>
-              <ListElement>Set up your own authentication</ListElement>
-            </StyledBody>
-            <StyledAction>
-              <StyledActionsWrapper>
-                <Button
-                  onClick={() => {
-                    metricsMgr.enqueue(
-                      "readMoreDeployTutorialInDeployDialog",
-                      { clicked: true }
-                    )
-                    window.open(STREAMLIT_DEPLOY_TUTORIAL_URL, "_blank")
-                  }}
-                  kind={Kind.MINIMAL}
-                >
-                  Read more
-                </Button>
-              </StyledActionsWrapper>
-            </StyledAction>
-          </Card>
-        </FlexGridItem>
-      </FlexGrid>
+      <StyledCardContainer>
+        <Card>
+          <StyledBody>
+            <img src={StreamlitLogo} alt={"Streamlit Logo"} />
+            <StyledSubheader>Streamlit Community Cloud</StyledSubheader>
+            <ListElement extraSpacing={true}>For the community</ListElement>
+            <ListElement extraSpacing={true}>
+              Deploy unlimited public apps for free
+            </ListElement>
+            <ListElement extraSpacing={true}>
+              Apps are discoverable through the Streamlit gallery and search
+              engines
+            </ListElement>
+          </StyledBody>
+          <StyledAction>
+            <StyledActionsWrapper>
+              <BaseButton
+                kind={BaseButtonKind.SECONDARY}
+                onClick={onClickDeployApp}
+              >
+                Deploy now
+              </BaseButton>
+              <BaseButton
+                onClick={() => {
+                  metricsMgr.enqueue("readMoreCommunityCloudInDeployDialog", {
+                    clicked: true,
+                  })
+                  window.open(STREAMLIT_COMMUNITY_CLOUD_DOCS_URL, "_blank")
+                }}
+                kind={BaseButtonKind.MINIMAL}
+              >
+                Read more
+              </BaseButton>
+            </StyledActionsWrapper>
+          </StyledAction>
+        </Card>
+        <Card>
+          <StyledBody>
+            <img src={Rocket} alt={"Rocket"} />
+            <StyledSubheader>Custom deployment</StyledSubheader>
+            <ListElement>For companies</ListElement>
+            <ListElement>
+              Deploy on your own hardware or in the cloud, with Docker,
+              Kubernetes, etc
+            </ListElement>
+            <ListElement>Set up your own authentication</ListElement>
+          </StyledBody>
+          <StyledAction>
+            <StyledActionsWrapper>
+              <BaseButton
+                onClick={() => {
+                  metricsMgr.enqueue("readMoreDeployTutorialInDeployDialog", {
+                    clicked: true,
+                  })
+                  window.open(STREAMLIT_DEPLOY_TUTORIAL_URL, "_blank")
+                }}
+                kind={BaseButtonKind.MINIMAL}
+              >
+                Read more
+              </BaseButton>
+            </StyledActionsWrapper>
+          </StyledAction>
+        </Card>
+      </StyledCardContainer>
     </Modal>
   )
 }

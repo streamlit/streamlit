@@ -20,6 +20,8 @@ import {
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
+import { isNullOrUndefined } from "src/lib/util/utils"
+
 import {
   BaseColumn,
   BaseColumnProps,
@@ -63,6 +65,7 @@ function CheckboxColumn(props: BaseColumnProps): BaseColumn {
       return {
         ...cellTemplate,
         data: cellData,
+        isMissingValue: isNullOrUndefined(cellData),
       } as BooleanCell
     },
     getCellValue(cell: BooleanCell): boolean | null {

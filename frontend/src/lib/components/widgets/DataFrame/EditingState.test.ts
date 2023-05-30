@@ -37,6 +37,14 @@ const MOCK_TEXT_CELL_2: TextCell = {
   allowOverlay: true,
 }
 
+const MOCK_TEXT_MISSING_CELL = {
+  kind: GridCellKind.Text,
+  displayData: "",
+  data: "",
+  isMissingValue: true,
+  allowOverlay: true,
+} as TextCell
+
 describe("EditingState class", () => {
   it("allows to set edited cells", () => {
     const NUM_OF_ROWS = 3
@@ -133,21 +141,17 @@ describe("EditingState class", () => {
     expect(editingState.getNumRows()).toEqual(0)
   })
 
-  it("converts editing state to JSON", () => {
+  it("ignores rows with required empty values in toJson", () => {
     const NUM_OF_ROWS = 3
     const editingState = new EditingState(NUM_OF_ROWS)
 
-    // Edit a cell
-    editingState.setCell(0, 0, MOCK_TEXT_CELL_1)
-
-    // Add row
     const rowCells: Map<number, GridCell> = new Map()
     rowCells.set(0, MOCK_TEXT_CELL_1)
-    rowCells.set(1, MOCK_TEXT_CELL_2)
-    editingState.addRow(rowCells)
+    rowCells.set(1, MOCK_TEXT_MISSING_CELL)
 
-    // Delete a row
-    editingState.deleteRow(1)
+    // Add a row and check values
+    editingState.addRow(rowCells)
+    expect(editingState.getNumRows()).toEqual(NUM_OF_ROWS + 1)
 
     const baseColumnProps = {
       id: "column_1",
@@ -157,7 +161,8 @@ describe("EditingState class", () => {
         pandas_type: "unicode",
         numpy_type: "object",
       },
-      isEditable: false,
+      isEditable: true,
+      isRequired: true,
       isHidden: false,
       isIndex: false,
       isStretched: false,
@@ -177,27 +182,31 @@ describe("EditingState class", () => {
       }),
     ])
 
+    // Row should npt be included in the JSON:
     expect(json).toEqual(
-      `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`
+      '{"edited_rows":{},"added_rows":[],"deleted_rows":[]}'
     )
   })
 
-  it.each([
-    [
-      `{"edited_cells":{"0:0":"foo"},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[1]}`,
-    ],
-    [`{"edited_cells":{},"added_rows":[],"deleted_rows":[]}`],
-    [
-      `{"edited_cells":{},"added_rows":[{"0":"foo","1":"foo"}],"deleted_rows":[]}`,
-    ],
-    [`{"edited_cells":{},"added_rows":[],"deleted_rows":[1]}`],
-    [`{"edited_cells":{"0:0":"foo"},"added_rows":[],"deleted_rows":[]}`],
-  ])("converts JSON to editing state: %p", (editingStateJson: string) => {
+  it("converts editing state to JSON", () => {
     const NUM_OF_ROWS = 3
     const editingState = new EditingState(NUM_OF_ROWS)
 
-    const MOCK_COLUMN_PROPS = {
+    // Edit a cell
+    editingState.setCell(0, 0, MOCK_TEXT_CELL_1)
+
+    // Add row
+    const rowCells: Map<number, GridCell> = new Map()
+    rowCells.set(0, MOCK_TEXT_CELL_1)
+    rowCells.set(1, MOCK_TEXT_CELL_2)
+    editingState.addRow(rowCells)
+
+    // Delete a row
+    editingState.deleteRow(1)
+
+    const baseColumnProps = {
       id: "column_1",
+      name: "column_1",
       title: "column_1",
       indexNumber: 0,
       arrowType: {
@@ -210,16 +219,81 @@ describe("EditingState class", () => {
       isStretched: false,
     } as BaseColumnProps
 
+    // Convert to JSON
+    const json = editingState.toJson([
+      TextColumn({
+        ...baseColumnProps,
+        indexNumber: 0,
+        id: "column_1",
+        name: "column_1",
+      }),
+      TextColumn({
+        ...baseColumnProps,
+        indexNumber: 1,
+        id: "column_2",
+        name: "column_2",
+      }),
+    ])
+
+    expect(json).toEqual(
+      '{"edited_rows":{"0":{"column_1":"foo"}},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[1]}'
+    )
+  })
+
+  it.each([
+    [
+      `{"edited_rows":{"0":{"column_1":"foo"}},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[1]}`,
+    ],
+    [`{"edited_rows":{},"added_rows":[],"deleted_rows":[]}`],
+    [
+      `{"edited_rows":{},"added_rows":[{"column_1":"foo","column_2":"foo"}],"deleted_rows":[]}`,
+    ],
+    [`{"edited_rows":{},"added_rows":[],"deleted_rows":[1]}`],
+    [
+      `{"edited_rows":{"0":{"column_1":"foo"}},"added_rows":[],"deleted_rows":[]}`,
+    ],
+    [
+      `{"edited_rows":{"0":{"_index":"foo"}},"added_rows":[],"deleted_rows":[]}`,
+    ],
+  ])("converts JSON to editing state: %p", (editingStateJson: string) => {
+    const NUM_OF_ROWS = 3
+    const editingState = new EditingState(NUM_OF_ROWS)
+
+    const MOCK_COLUMN_PROPS = {
+      id: "column_1",
+      name: "column_1",
+      title: "column_1",
+      indexNumber: 0,
+      arrowType: {
+        pandas_type: "unicode",
+        numpy_type: "object",
+      },
+      isEditable: false,
+      isRequired: false,
+      isHidden: false,
+      isIndex: false,
+      isStretched: false,
+    } as BaseColumnProps
+
     const MOCK_COLUMNS = [
       TextColumn({
         ...MOCK_COLUMN_PROPS,
+        isIndex: true,
         indexNumber: 0,
-        id: "column_1",
+        id: "index_col",
+        name: "index_col",
       }),
       TextColumn({
         ...MOCK_COLUMN_PROPS,
         indexNumber: 1,
+        id: "column_1",
+        name: "column_1",
+      }),
+      TextColumn({
+        ...MOCK_COLUMN_PROPS,
+        indexNumber: 2,
         id: "column_2",
+        name: "column_2",
       }),
     ]
     editingState.fromJson(editingStateJson, MOCK_COLUMNS)
