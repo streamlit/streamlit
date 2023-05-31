@@ -56,14 +56,23 @@ export default class HostCommunicationManager {
   public readonly props: HostCommunicationProps
 
   private allowedOrigins: string[]
+
   public deployedAppMetadata: DeployedAppMetadata
+
   public deferredAuthToken: Resolver<string | undefined>
+
   public hideSidebarNav: boolean
+
   public isOwner: boolean
+
   public menuItems: IMenuItem[]
+
   public pageLinkBaseUrl: string
+
   public queryParams: string
+
   public sidebarChevronDownshift: number
+
   public toolbarItems: IToolbarItem[]
 
   constructor(props: HostCommunicationProps) {
