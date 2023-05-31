@@ -79,9 +79,7 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_upload_one_file(self):
         """Uploading a file should populate our file_mgr."""
         file = MockFile("filename", b"123")
-        params = {
-            file.name: file.data,
-        }
+        params = {file.name: file.data}
         response = self._upload_files(
             params, session_id="test_session_id", file_id=file.name
         )
