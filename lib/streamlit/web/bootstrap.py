@@ -197,6 +197,31 @@ def _fix_pydeck_mapbox_api_warning() -> None:
     os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
 
 
+def _fix_pydantic_duplicate_validators_error():
+    """Pydantic by default disallows to reuse of validators with the same name,
+    this combined with the Streamlit execution model leads to an error on the second
+    Streamlit script rerun if the Pydantic validator is registered
+    in the streamlit script.
+
+    It is important to note that the same issue exists for Pydantic validators inside
+    Jupyter notebooks, https://github.com/pydantic/pydantic/issues/312 and in order
+    to fix that in Pydantic they use the `in_ipython` function that checks that
+    Pydantic runs not in `ipython` environment.
+
+    Inside this function we patch `in_ipython` function to always return `True`.
+
+    This change will relax rules for writing Pydantic validators inside
+    Streamlit script a little bit, similar to how it works in jupyter,
+    which should not be critical.
+    """
+    try:
+        from pydantic import class_validators
+
+        class_validators.in_ipython = lambda: True  # type: ignore[attr-defined]
+    except ImportError:
+        pass
+
+
 def _print_new_version_message() -> None:
     if version.should_show_new_version_notice():
         click.secho(NEW_VERSION_TEXT)
@@ -381,6 +406,7 @@ def run(
     _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)
     _fix_pydeck_mapbox_api_warning()
+    _fix_pydantic_duplicate_validators_error()
     _install_config_watchers(flag_options)
     _install_pages_watcher(main_script_path)
 
