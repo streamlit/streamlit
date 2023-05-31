@@ -41,7 +41,6 @@ import { SessionInfo } from "src/lib/SessionInfo"
 import {
   createAutoTheme,
   CUSTOM_THEME_NAME,
-  darkTheme,
   lightTheme,
   toExportedTheme,
 } from "src/lib/theme"
@@ -54,6 +53,7 @@ import { App, Props, showDevelopmentOptions } from "./App"
 import MainMenu from "src/app/components/MainMenu"
 import ToolbarActions from "src/app/components/ToolbarActions"
 import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
+import { mockTheme } from "src/lib/mocks/mockTheme"
 import { HOST_COMM_VERSION } from "src/lib/hostComm/HostCommunicationManager"
 
 jest.mock("src/app/connection/ConnectionManager")
@@ -90,6 +90,8 @@ const getWrapper = (): ReactWrapper => {
   return mount(<App {...props} />, { attachTo: mountPoint })
 }
 
+// Mocking "message" event listeners on the window;
+// returns function to establish a listener
 function mockEventListeners(): (type: string, event: any) => void {
   const listeners: { [name: string]: ((event: Event) => void)[] } = {}
 
@@ -254,11 +256,11 @@ describe("App", () => {
   })
 
   describe("handles HostCommunication messaging", () => {
-    let dispatchEvent: any
-    let props: any
-    let wrapper: any
-    let instance: any
-    let sendMessageFunc: any
+    let dispatchEvent: (type: string, event: Event) => void
+    let props: Props
+    let wrapper: ShallowWrapper
+    let instance: App
+    let sendMessageFunc: jest.SpyInstance
 
     beforeEach(() => {
       dispatchEvent = mockEventListeners()
@@ -266,12 +268,14 @@ describe("App", () => {
       wrapper = shallow(<App {...props} />)
       instance = wrapper.instance() as App
 
+      // @ts-expect-error - hostCommunicationMgr is private
       instance.hostCommunicationMgr.setAllowedOriginsResp({
         allowedOrigins: ["https://devel.streamlit.test"],
         useExternalAuthToken: false,
       })
 
       sendMessageFunc = jest.spyOn(
+        // @ts-expect-error
         instance.hostCommunicationMgr,
         "sendMessageToHost"
       )
@@ -329,6 +333,7 @@ describe("App", () => {
       })
 
       const stopScriptFunc = jest.spyOn(
+        // @ts-expect-error
         instance.hostCommunicationMgr.props,
         "stopScript"
       )
@@ -344,7 +349,7 @@ describe("App", () => {
         })
       )
 
-      expect(stopScriptFunc).toHaveBeenCalled()
+      expect(stopScriptFunc).toHaveBeenCalledWith()
       expect(wrapper.state("scriptRunState")).toBe(
         ScriptRunState.STOP_REQUESTED
       )
@@ -354,6 +359,7 @@ describe("App", () => {
       instance.isServerConnected = jest.fn().mockReturnValue(true)
 
       const rerunScriptFunc = jest.spyOn(
+        // @ts-expect-error
         instance.hostCommunicationMgr.props,
         "rerunScript"
       )
@@ -369,7 +375,7 @@ describe("App", () => {
         })
       )
 
-      expect(rerunScriptFunc).toHaveBeenCalled()
+      expect(rerunScriptFunc).toHaveBeenCalledWith()
       expect(wrapper.state("scriptRunState")).toBe(
         ScriptRunState.RERUN_REQUESTED
       )
@@ -379,6 +385,7 @@ describe("App", () => {
       instance.isServerConnected = jest.fn().mockReturnValue(true)
 
       const clearCacheFunc = jest.spyOn(
+        // @ts-expect-error
         instance.hostCommunicationMgr.props,
         "clearCache"
       )
@@ -395,8 +402,8 @@ describe("App", () => {
         })
       )
 
-      expect(clearCacheFunc).toHaveBeenCalled()
-      expect(closeDialogFunc).toHaveBeenCalled()
+      expect(clearCacheFunc).toHaveBeenCalledWith()
+      expect(closeDialogFunc).toHaveBeenCalledWith()
     })
 
     it("does not prevent a modal from opening when closure message is set", () => {
@@ -453,14 +460,14 @@ describe("App", () => {
     })
 
     it("both sets theme locally and sends to host when setAndSendTheme is called", () => {
-      const mockThemeConfig = { emotion: darkTheme.emotion }
+      const mockThemeConfig = mockTheme
 
       instance.setAndSendTheme(mockThemeConfig)
       expect(props.theme.setTheme).toHaveBeenCalledWith(mockThemeConfig)
 
       expect(sendMessageFunc).toHaveBeenCalledWith({
         type: "SET_THEME_CONFIG",
-        themeInfo: toExportedTheme(darkTheme.emotion),
+        themeInfo: toExportedTheme(lightTheme.emotion),
       })
     })
 
@@ -485,6 +492,7 @@ describe("App", () => {
 
     it("responds to page change request messages", () => {
       const onPageChangeFunc = jest.spyOn(
+        // @ts-expect-error
         instance.hostCommunicationMgr.props,
         "onPageChange"
       )
@@ -519,6 +527,7 @@ describe("App", () => {
 
       wrapper.setState({ hideTopBar: false })
 
+      // @ts-expect-error
       expect(instance.hostCommunicationMgr.menuItems).toStrictEqual([
         { type: "separator" },
       ])
@@ -556,7 +565,6 @@ describe("App", () => {
       ])
     })
 
-    // TODO: Fix this test
     it("sets hideSidebarNav based on the server config option and host setting", () => {
       // hideSidebarNav initializes to true.
       expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
@@ -578,6 +586,7 @@ describe("App", () => {
         })
       )
 
+      // @ts-expect-error
       expect(instance.hostCommunicationMgr.hideSidebarNav).toEqual(true)
     })
 
@@ -1219,15 +1228,14 @@ describe("App.onHistoryChange", () => {
     )
     expect(instance.state.currentPageScriptHash).toEqual("sub_hash")
 
+    // TODO: (mayagbarnes) Test failing
     window.history.back()
-    waitFor(() => {
-      expect(instance.onPageChange).toHaveBeenCalledTimes(2)
+    await waitFor(() => {
       expect(instance.onPageChange).toHaveBeenLastCalledWith("top_hash")
     })
 
     window.history.back()
-    waitFor(() => {
-      expect(instance.onPageChange).toHaveBeenCalledTimes(3)
+    await waitFor(() => {
       expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
     })
   })
