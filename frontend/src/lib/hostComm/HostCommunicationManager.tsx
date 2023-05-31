@@ -47,6 +47,18 @@ export interface HostCommunicationProps {
   readonly stopScript: () => void
   readonly rerunScript: () => void
   readonly clearCache: () => void
+  readonly isOwnerChanged: (isOwner: boolean) => void
+  readonly hostMenuItemsChanged: (menuItems: IMenuItem[]) => void
+  readonly hostToolbarItemsChanged: (toolbarItems: IToolbarItem[]) => void
+  readonly hostHideSidebarNavChanged: (hideSidebarNav: boolean) => void
+  readonly sidebarChevronDownshiftChanged: (
+    sidebarChevronDownshift: number
+  ) => void
+  readonly pageLinkBaseUrlChanged: (pageLinkBaseUrl: string) => void
+  readonly queryParamsChanged: (queryParams: string) => void
+  readonly deployedAppMetadataChanged: (
+    deployedAppMetadata: DeployedAppMetadata
+  ) => void
 }
 
 /**
@@ -57,37 +69,13 @@ export default class HostCommunicationManager {
 
   private allowedOrigins: string[]
 
-  public deployedAppMetadata: DeployedAppMetadata
-
   public deferredAuthToken: Resolver<string | undefined>
-
-  public hideSidebarNav: boolean
-
-  public isOwner: boolean
-
-  public menuItems: IMenuItem[]
-
-  public pageLinkBaseUrl: string
-
-  public queryParams: string
-
-  public sidebarChevronDownshift: number
-
-  public toolbarItems: IToolbarItem[]
 
   constructor(props: HostCommunicationProps) {
     this.props = props
 
     this.allowedOrigins = []
     this.deferredAuthToken = new Resolver()
-    this.deployedAppMetadata = {}
-    this.hideSidebarNav = false
-    this.isOwner = false
-    this.menuItems = []
-    this.pageLinkBaseUrl = ""
-    this.queryParams = ""
-    this.sidebarChevronDownshift = 0
-    this.toolbarItems = []
   }
 
   /**
@@ -213,35 +201,37 @@ export default class HostCommunicationManager {
     }
 
     if (message.type === "SET_IS_OWNER") {
-      this.isOwner = message.isOwner
+      this.props.isOwnerChanged(message.isOwner)
     }
 
     if (message.type === "SET_MENU_ITEMS") {
-      this.menuItems = message.items
+      this.props.hostMenuItemsChanged(message.items)
     }
 
     if (message.type === "SET_METADATA") {
-      this.deployedAppMetadata = message.metadata
+      this.props.deployedAppMetadataChanged(message.metadata)
     }
 
     if (message.type === "SET_PAGE_LINK_BASE_URL") {
-      this.pageLinkBaseUrl = message.pageLinkBaseUrl
+      this.props.pageLinkBaseUrlChanged(message.pageLinkBaseUrl)
     }
 
     if (message.type === "SET_SIDEBAR_CHEVRON_DOWNSHIFT") {
-      this.sidebarChevronDownshift = message.sidebarChevronDownshift
+      this.props.sidebarChevronDownshiftChanged(
+        message.sidebarChevronDownshift
+      )
     }
 
     if (message.type === "SET_SIDEBAR_NAV_VISIBILITY") {
-      this.hideSidebarNav = message.hidden
+      this.props.hostHideSidebarNavChanged(message.hidden)
     }
 
     if (message.type === "SET_TOOLBAR_ITEMS") {
-      this.toolbarItems = message.items
+      this.props.hostToolbarItemsChanged(message.items)
     }
 
     if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
-      this.queryParams = message.queryParams
+      this.props.queryParamsChanged(message.queryParams)
       this.props.sendRerunBackMsg()
     }
 

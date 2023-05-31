@@ -41,6 +41,11 @@ import {
   WidgetStateManager,
 } from "src/lib/WidgetStateManager"
 import HostCommunicationManager from "src/lib/hostComm/HostCommunicationManager"
+import {
+  IMenuItem,
+  IToolbarItem,
+  DeployedAppMetadata,
+} from "src/lib/hostComm/types"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionEventDispatcher } from "src/app/SessionEventDispatcher"
@@ -162,6 +167,15 @@ interface State {
   appPages: IAppPage[]
   currentPageScriptHash: string
   latestRunTime: number
+  // host communication info
+  isOwner: boolean
+  hostMenuItems: IMenuItem[]
+  hostToolbarItems: IToolbarItem[]
+  hostHideSidebarNav: boolean
+  sidebarChevronDownshift: number
+  pageLinkBaseUrl: string
+  queryParams: string
+  deployedAppMetadata: DeployedAppMetadata
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -262,6 +276,15 @@ export class App extends PureComponent<Props, State> {
       hideSidebarNav: true,
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
+      // Information sent from the host
+      isOwner: false,
+      hostMenuItems: [],
+      hostToolbarItems: [],
+      hostHideSidebarNav: false,
+      sidebarChevronDownshift: 0,
+      pageLinkBaseUrl: "",
+      queryParams: "",
+      deployedAppMetadata: {},
     }
 
     this.connectionManager = null
@@ -279,6 +302,28 @@ export class App extends PureComponent<Props, State> {
       stopScript: this.stopScript,
       rerunScript: this.rerunScript,
       clearCache: this.clearCache,
+      isOwnerChanged: isOwner => this.setState({ isOwner }),
+      hostMenuItemsChanged: hostMenuItems => {
+        this.setState({ hostMenuItems })
+      },
+      hostToolbarItemsChanged: hostToolbarItems => {
+        this.setState({ hostToolbarItems })
+      },
+      hostHideSidebarNavChanged: hostHideSidebarNav => {
+        this.setState({ hostHideSidebarNav })
+      },
+      sidebarChevronDownshiftChanged: sidebarChevronDownshift => {
+        this.setState({ sidebarChevronDownshift })
+      },
+      pageLinkBaseUrlChanged: pageLinkBaseUrl => {
+        this.setState({ pageLinkBaseUrl })
+      },
+      queryParamsChanged: queryParams => {
+        this.setState({ queryParams })
+      },
+      deployedAppMetadataChanged: deployedAppMetadata => {
+        this.setState({ deployedAppMetadata })
+      },
     })
 
     this.endpoints = new DefaultStreamlitEndpoints({
@@ -325,12 +370,7 @@ export class App extends PureComponent<Props, State> {
       this.rerunScript()
     },
     CLEAR_CACHE: () => {
-      if (
-        showDevelopmentOptions(
-          this.hostCommunicationMgr.isOwner,
-          this.state.toolbarMode
-        )
-      ) {
+      if (showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode)) {
         this.openClearCacheDialog()
       }
     },
@@ -838,7 +878,7 @@ export class App extends PureComponent<Props, State> {
       this.endpoints
     )
 
-    this.metricsMgr.setMetadata(this.hostCommunicationMgr.deployedAppMetadata)
+    this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
     this.metricsMgr.setAppHash(newSessionHash)
 
     this.metricsMgr.enqueue("updateReport", {
@@ -1370,7 +1410,7 @@ export class App extends PureComponent<Props, State> {
       onSave: this.saveSettings,
       onClose: () => {},
       developerMode: showDevelopmentOptions(
-        this.hostCommunicationMgr.isOwner,
+        this.state.isOwner,
         this.state.toolbarMode
       ),
       openThemeCreator: this.openThemeCreatorDialog,
@@ -1456,7 +1496,7 @@ export class App extends PureComponent<Props, State> {
       : undefined
 
   getQueryString = (): string => {
-    const { queryParams } = this.hostCommunicationMgr
+    const { queryParams } = this.state
 
     const queryString =
       queryParams && queryParams.length > 0
@@ -1467,18 +1507,15 @@ export class App extends PureComponent<Props, State> {
   }
 
   isInCloudEnvironment = (): boolean => {
-    const { menuItems } = this.hostCommunicationMgr
-    return menuItems && menuItems?.length > 0
+    const { hostMenuItems } = this.state
+    return hostMenuItems && hostMenuItems?.length > 0
   }
 
   showDeployButton = (): boolean => {
     return (
       isTesting() ||
       (SHOW_DEPLOY_BUTTON &&
-        showDevelopmentOptions(
-          this.hostCommunicationMgr.isOwner,
-          this.state.toolbarMode
-        ) &&
+        showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode) &&
         !this.isInCloudEnvironment() &&
         this.sessionInfo.isSet &&
         !this.sessionInfo.isHello)
@@ -1509,13 +1546,16 @@ export class App extends PureComponent<Props, State> {
       hideTopBar,
       hideSidebarNav,
       currentPageScriptHash,
+      hostHideSidebarNav,
+      pageLinkBaseUrl,
+      sidebarChevronDownshift,
+      hostMenuItems,
+      hostToolbarItems,
     } = this.state
     const developmentMode = showDevelopmentOptions(
-      this.hostCommunicationMgr.isOwner,
+      this.state.isOwner,
       this.state.toolbarMode
     )
-
-    const { hideSidebarNav: hostHideSidebarNav } = this.hostCommunicationMgr
 
     const outerDivClass = classNames(
       "stApp",
@@ -1549,9 +1589,8 @@ export class App extends PureComponent<Props, State> {
           showToolbar: !isEmbed() || isToolbarDisplayed(),
           showColoredLine: !isEmbed() || isColoredLineDisplayed(),
           // host communication manager elements
-          pageLinkBaseUrl: this.hostCommunicationMgr.pageLinkBaseUrl,
-          sidebarChevronDownshift:
-            this.hostCommunicationMgr.sidebarChevronDownshift,
+          pageLinkBaseUrl,
+          sidebarChevronDownshift,
         }}
       >
         <LibContext.Provider
@@ -1586,7 +1625,7 @@ export class App extends PureComponent<Props, State> {
                       allowRunOnSave={allowRunOnSave}
                     />
                     <ToolbarActions
-                      hostToolbarItems={this.hostCommunicationMgr.toolbarItems}
+                      hostToolbarItems={hostToolbarItems}
                       sendMessageToHost={
                         this.hostCommunicationMgr.sendMessageToHost
                       }
@@ -1607,7 +1646,7 @@ export class App extends PureComponent<Props, State> {
                   printCallback={this.printCallback}
                   screencastCallback={this.screencastCallback}
                   screenCastState={this.props.screenCast.currentState}
-                  hostMenuItems={this.hostCommunicationMgr.menuItems}
+                  hostMenuItems={hostMenuItems}
                   developmentMode={developmentMode}
                   sendMessageToHost={
                     this.hostCommunicationMgr.sendMessageToHost

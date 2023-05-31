@@ -527,8 +527,7 @@ describe("App", () => {
 
       wrapper.setState({ hideTopBar: false })
 
-      // @ts-expect-error
-      expect(instance.hostCommunicationMgr.menuItems).toStrictEqual([
+      expect(instance.state.hostMenuItems).toStrictEqual([
         { type: "separator" },
       ])
       expect(wrapper.find(MainMenu).prop("hostMenuItems")).toStrictEqual([
@@ -586,8 +585,7 @@ describe("App", () => {
         })
       )
 
-      // @ts-expect-error
-      expect(instance.hostCommunicationMgr.hideSidebarNav).toEqual(true)
+      expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
     })
 
     it("Deploy button should be hidden for cloud environment", () => {

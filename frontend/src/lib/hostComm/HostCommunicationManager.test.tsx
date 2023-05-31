@@ -53,6 +53,14 @@ describe("HostCommunicationManager messaging", () => {
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
+      isOwnerChanged: jest.fn(),
+      hostMenuItemsChanged: jest.fn(),
+      hostToolbarItemsChanged: jest.fn(),
+      hostHideSidebarNavChanged: jest.fn(),
+      sidebarChevronDownshiftChanged: jest.fn(),
+      pageLinkBaseUrlChanged: jest.fn(),
+      queryParamsChanged: jest.fn(),
+      deployedAppMetadataChanged: jest.fn(),
     })
 
     originalHash = window.location.hash
@@ -173,8 +181,6 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("should respond to SET_IS_OWNER message", () => {
-    expect(hostCommunicationMgr.isOwner).toBe(false)
-
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -187,12 +193,12 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.isOwner).toEqual(true)
+    expect(hostCommunicationMgr.props.isOwnerChanged).toHaveBeenCalledWith(
+      true
+    )
   })
 
   it("should respond to SET_MENU_ITEMS message", () => {
-    expect(hostCommunicationMgr.menuItems).toStrictEqual([])
-
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -205,14 +211,12 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.menuItems).toStrictEqual([
-      { type: "separator" },
-    ])
+    expect(
+      hostCommunicationMgr.props.hostMenuItemsChanged
+    ).toHaveBeenCalledWith([{ type: "separator" }])
   })
 
   it("should respond to SET_METADATA message", () => {
-    expect(hostCommunicationMgr.deployedAppMetadata).toStrictEqual({})
-
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -225,7 +229,9 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.deployedAppMetadata).toEqual({
+    expect(
+      hostCommunicationMgr.props.deployedAppMetadataChanged
+    ).toHaveBeenCalledWith({
       hostedAt: "maya",
       owner: "corgi",
       repo: "streamlit",
@@ -233,8 +239,6 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("can process a received SET_PAGE_LINK_BASE_URL message", () => {
-    expect(hostCommunicationMgr.pageLinkBaseUrl).toStrictEqual("")
-
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -247,14 +251,12 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.pageLinkBaseUrl).toBe(
-      "https://share.streamlit.io/vdonato/foo/bar"
-    )
+    expect(
+      hostCommunicationMgr.props.pageLinkBaseUrlChanged
+    ).toHaveBeenCalledWith("https://share.streamlit.io/vdonato/foo/bar")
   })
 
   it("can process a received SET_SIDEBAR_CHEVRON_DOWNSHIFT message", () => {
-    expect(hostCommunicationMgr.sidebarChevronDownshift).toBe(0)
-
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -267,12 +269,12 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.sidebarChevronDownshift).toBe(50)
+    expect(
+      hostCommunicationMgr.props.sidebarChevronDownshiftChanged
+    ).toHaveBeenCalledWith(50)
   })
 
   it("can process a received SET_SIDEBAR_NAV_VISIBILITY message", () => {
-    expect(hostCommunicationMgr.hideSidebarNav).toBe(false)
-
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -285,12 +287,12 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.hideSidebarNav).toBe(true)
+    expect(
+      hostCommunicationMgr.props.hostHideSidebarNavChanged
+    ).toHaveBeenCalledWith(true)
   })
 
   it("can process a received SET_TOOLBAR_ITEMS message", () => {
-    expect(hostCommunicationMgr.toolbarItems).toStrictEqual([])
-
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -310,7 +312,9 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.toolbarItems).toEqual([
+    expect(
+      hostCommunicationMgr.props.hostToolbarItemsChanged
+    ).toHaveBeenCalledWith([
       {
         borderless: true,
         icon: "star.svg",
@@ -339,8 +343,6 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("can process a received UPDATE_FROM_QUERY_PARAMS message", () => {
-    expect(hostCommunicationMgr.queryParams).toEqual("")
-
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -353,7 +355,9 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.queryParams).toEqual("foo=bar")
+    expect(hostCommunicationMgr.props.queryParamsChanged).toHaveBeenCalledWith(
+      "foo=bar"
+    )
     expect(hostCommunicationMgr.props.sendRerunBackMsg).toHaveBeenCalledWith()
   })
 
@@ -399,6 +403,14 @@ describe("Test different origins", () => {
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
+      isOwnerChanged: jest.fn(),
+      hostMenuItemsChanged: jest.fn(),
+      hostToolbarItemsChanged: jest.fn(),
+      hostHideSidebarNavChanged: jest.fn(),
+      sidebarChevronDownshiftChanged: jest.fn(),
+      pageLinkBaseUrlChanged: jest.fn(),
+      queryParamsChanged: jest.fn(),
+      deployedAppMetadataChanged: jest.fn(),
     })
 
     dispatchEvent = mockEventListeners()
@@ -486,6 +498,14 @@ describe("HostCommunicationManager external auth token handling", () => {
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
+      isOwnerChanged: jest.fn(),
+      hostMenuItemsChanged: jest.fn(),
+      hostToolbarItemsChanged: jest.fn(),
+      hostHideSidebarNavChanged: jest.fn(),
+      sidebarChevronDownshiftChanged: jest.fn(),
+      pageLinkBaseUrlChanged: jest.fn(),
+      queryParamsChanged: jest.fn(),
+      deployedAppMetadataChanged: jest.fn(),
     })
   })
 
