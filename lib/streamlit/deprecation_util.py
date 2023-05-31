@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import functools
 from typing import Any, Callable, List, TypeVar, cast
@@ -40,15 +41,18 @@ def show_deprecation_warning(message: str) -> None:
 
 
 def make_deprecated_name_warning(
-    old_name: str, new_name: str, removal_date: str
+    old_name: str, new_name: str, removal_date: str, extra_message: str | None = None
 ) -> str:
     return (
         f"Please replace `st.{old_name}` with `st.{new_name}`.\n\n"
         f"`st.{old_name}` will be removed after {removal_date}."
+        + (f"\n\n{extra_message}" if extra_message else "")
     )
 
 
-def deprecate_func_name(func: TFunc, old_name: str, removal_date: str) -> TFunc:
+def deprecate_func_name(
+    func: TFunc, old_name: str, removal_date: str, extra_message: str | None = None
+) -> TFunc:
     """Wrap an `st` function whose name has changed.
 
     Wrapped functions will run as normal, but will also show an st.warning
@@ -67,13 +71,18 @@ def deprecate_func_name(func: TFunc, old_name: str, removal_date: str) -> TFunc:
     removal_date
         A date like "2020-01-01", indicating the last day we'll guarantee
         support for the deprecated name.
+
+    extra_message
+        An optional extra message to show in the deprecation warning.
     """
 
     @functools.wraps(func)
     def wrapped_func(*args, **kwargs):
         result = func(*args, **kwargs)
         show_deprecation_warning(
-            make_deprecated_name_warning(old_name, func.__name__, removal_date)
+            make_deprecated_name_warning(
+                old_name, func.__name__, removal_date, extra_message
+            )
         )
         return result
 

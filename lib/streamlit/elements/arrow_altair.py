@@ -16,7 +16,9 @@
 Altair is a Python visualization library based on Vega-Lite,
 a nice JSON schema for expressing graphs and charts.
 """
+from __future__ import annotations
 
+from contextlib import nullcontext
 from datetime import date
 from enum import Enum
 from typing import (
@@ -31,9 +33,7 @@ from typing import (
     cast,
 )
 
-import altair as alt
 import pandas as pd
-from altair.vegalite.v4.api import Chart
 from pandas.api.types import infer_dtype, is_integer_dtype
 from typing_extensions import Literal
 
@@ -48,16 +48,9 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from altair import Chart
+
     from streamlit.delta_generator import DeltaGenerator
-
-# Create and enable streamlit theme
-STREAMLIT_THEME = {"embedOptions": {"theme": "streamlit"}}
-
-# This allows to use alt.themes.enable("streamlit") to activate Streamlit theme.
-alt.themes.register("streamlit", lambda: {"usermeta": STREAMLIT_THEME})
-
-# no theme applied to charts
-alt.themes.enable("none")
 
 
 class ChartType(Enum):
@@ -77,7 +70,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a line chart.
 
         This is syntax-sugar around st._arrow_altair_chart. The main difference
@@ -150,7 +143,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display an area chart.
 
         This is just syntax-sugar around st._arrow_altair_chart. The main difference
@@ -223,7 +216,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a bar chart.
 
         This is just syntax-sugar around st._arrow_altair_chart. The main difference
@@ -293,12 +286,12 @@ class ArrowAltairMixin:
         altair_chart: Chart,
         use_container_width: bool = False,
         theme: Union[None, Literal["streamlit"]] = "streamlit",
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a chart using the Altair library.
 
         Parameters
         ----------
-        altair_chart : altair.vegalite.v2.api.Chart
+        altair_chart : altair.Chart
             The Altair chart object to display.
 
         use_container_width : bool
@@ -344,7 +337,7 @@ class ArrowAltairMixin:
         return self.dg._enqueue("arrow_vega_lite_chart", proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -500,6 +493,7 @@ def _generate_chart(
     height: int = 0,
 ) -> Chart:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
+    import altair as alt
 
     if data is None:
         # Use an empty-ish dict because if we use None the x axis labels rotate
@@ -608,17 +602,21 @@ def marshall(
 
     alt.data_transformers.register("id", id_transform)
 
-    with alt.data_transformers.enable("id"):
-        chart_dict = altair_chart.to_dict()
+    # The default altair theme has some width/height defaults defined
+    # which are not useful for Streamlit. Therefore, we change the theme to
+    # "none" to avoid those defaults.
+    with alt.themes.enable("none") if alt.themes.active == "default" else nullcontext():
+        with alt.data_transformers.enable("id"):
+            chart_dict = altair_chart.to_dict()
 
-        # Put datasets back into the chart dict but note how they weren't
-        # transformed.
-        chart_dict["datasets"] = datasets
+            # Put datasets back into the chart dict but note how they weren't
+            # transformed.
+            chart_dict["datasets"] = datasets
 
-        arrow_vega_lite.marshall(
-            vega_lite_chart,
-            chart_dict,
-            use_container_width=use_container_width,
-            theme=theme,
-            **kwargs,
-        )
+            arrow_vega_lite.marshall(
+                vega_lite_chart,
+                chart_dict,
+                use_container_width=use_container_width,
+                theme=theme,
+                **kwargs,
+            )

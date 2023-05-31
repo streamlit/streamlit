@@ -24,9 +24,7 @@ from typing import Optional
 from uuid import uuid4
 
 import click
-import requests
 import toml
-from requests.exceptions import RequestException
 
 from streamlit import env_util, file_util, util
 from streamlit.logger import get_logger
@@ -109,6 +107,7 @@ _INSTRUCTIONS_TEXT = """
 
 def _send_email(email: str) -> None:
     """Send the user's email to segment.io, if submitted"""
+    import requests
 
     if email is None or "@" not in email:
         return
@@ -242,6 +241,8 @@ class Credentials(object):
 
     def save(self):
         """Save to toml file and send email."""
+        from requests.exceptions import RequestException
+
         if self.activation is None:
             return
 
