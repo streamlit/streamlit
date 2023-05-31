@@ -19,6 +19,7 @@ import hashlib
 import os
 import re
 import tempfile
+import time
 import types
 import unittest
 import uuid
@@ -33,10 +34,12 @@ import pandas as pd
 from parameterized import parameterized
 from PIL import Image
 
+from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.hashing import (
     _NP_SIZE_LARGE,
     _PANDAS_ROWS_LARGE,
+    UserHashError,
     _CacheFuncHasher,
 )
 
@@ -56,9 +59,9 @@ from streamlit.type_util import is_type
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
 
-def get_hash(f):
+def get_hash(f, hash_funcs=None):
     hasher = hashlib.new("md5")
-    ch = _CacheFuncHasher(MagicMock())
+    ch = _CacheFuncHasher(MagicMock(), hash_funcs=hash_funcs)
     ch.update(hasher, f)
     return hasher.digest()
 
@@ -113,6 +116,23 @@ class HashTest(unittest.TestCase):
         b = [1, 2, 3]
         b.append(b)
         self.assertEqual(get_hash(a), get_hash(b))
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_recursive_hash_func(self, _, cache_decorator):
+        def hash_int(x):
+            return x
+
+        @cache_decorator(hash_funcs={int: hash_int})
+        def foo(x):
+            return x
+
+        self.assertEqual(foo(1), foo(1))
+        # Note: We're able to break the recursive cycle caused by the identity
+        # hash func but it causes all cycles to hash to the same thing.
+        # https://github.com/streamlit/streamlit/issues/1659
+        # self.assertNotEqual(foo(2), foo(1))
 
     def test_tuple(self):
         self.assertEqual(get_hash((1, 2)), get_hash((1, 2)))
@@ -390,6 +410,53 @@ class NotHashableTest(unittest.TestCase):
     def test_generator_not_hashable(self):
         with self.assertRaises(UnhashableTypeError):
             get_hash((x for x in range(1)))
+
+    def test_hash_funcs_acceptable_keys(self):
+        test_generator = (x for x in range(1))
+
+        with self.assertRaises(UnhashableTypeError):
+            get_hash(test_generator)
+
+        # Assert that hashes are equivalent when hash_func key is supplied both as a
+        # type literal, and as a type name string.
+
+        self.assertEqual(
+            get_hash(test_generator, hash_funcs={types.GeneratorType: id}),
+            get_hash(test_generator, hash_funcs={"builtins.generator": id}),
+        )
+
+    def test_hash_funcs_error(self):
+        with self.assertRaises(UserHashError):
+            get_hash(1, hash_funcs={int: lambda x: "a" + x})
+
+    def test_non_hashable(self):
+        """Test user provided hash functions."""
+
+        g = (x for x in range(1))
+
+        # Unhashable object raises an error
+        with self.assertRaises(UnhashableTypeError):
+            get_hash(g)
+
+        id_hash_func = {types.GeneratorType: id}
+
+        self.assertEqual(
+            get_hash(g, hash_funcs=id_hash_func),
+            get_hash(g, hash_funcs=id_hash_func),
+        )
+
+        unique_hash_func = {types.GeneratorType: lambda x: time.time()}
+
+        self.assertNotEqual(
+            get_hash(g, hash_funcs=unique_hash_func),
+            get_hash(g, hash_funcs=unique_hash_func),
+        )
+
+    def test_override_streamlit_hash_func(self):
+        """Test that a user provided hash function has priority over a streamlit one."""
+
+        hash_funcs = {int: lambda x: "hello"}
+        self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
 
     def test_function_not_hashable(self):
         def foo():
