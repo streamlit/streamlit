@@ -28,3 +28,7 @@ pyodbc>=4.0.32
 # SQLAlchemy 2.0 causes hashing tests to fail (and we're deliberately
 # choosing not to support it.)
 sqlalchemy[mypy]>=1.4.25, <2.0
+
+# Pydantic 1.* fails to initialize validators, we add it to requirements
+# to test the fix. Pydantic 2 should not have that issue.
+pydantic>=1.0, <2.0
