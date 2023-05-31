@@ -203,7 +203,7 @@ export class App extends PureComponent<Props, State> {
 
   private readonly widgetMgr: WidgetStateManager
 
-  public hostCommunicationMgr: HostCommunicationManager
+  private readonly hostCommunicationMgr: HostCommunicationManager
 
   private readonly uploadClient: FileUploadClient
 
@@ -327,7 +327,7 @@ export class App extends PureComponent<Props, State> {
     CLEAR_CACHE: () => {
       if (
         showDevelopmentOptions(
-          this.hostCommunicationMgr.state.isOwner,
+          this.hostCommunicationMgr.isOwner,
           this.state.toolbarMode
         )
       ) {
@@ -347,7 +347,7 @@ export class App extends PureComponent<Props, State> {
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
       claimHostAuthToken: () =>
-        this.hostCommunicationMgr.state.deferredAuthToken.promise,
+        this.hostCommunicationMgr.deferredAuthToken.promise,
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
       setAllowedOriginsResp: this.hostCommunicationMgr.setAllowedOriginsResp,
     })
@@ -838,9 +838,7 @@ export class App extends PureComponent<Props, State> {
       this.endpoints
     )
 
-    this.metricsMgr.setMetadata(
-      this.hostCommunicationMgr.state.deployedAppMetadata
-    )
+    this.metricsMgr.setMetadata(this.hostCommunicationMgr.deployedAppMetadata)
     this.metricsMgr.setAppHash(newSessionHash)
 
     this.metricsMgr.enqueue("updateReport", {
@@ -1372,7 +1370,7 @@ export class App extends PureComponent<Props, State> {
       onSave: this.saveSettings,
       onClose: () => {},
       developerMode: showDevelopmentOptions(
-        this.hostCommunicationMgr.state.isOwner,
+        this.hostCommunicationMgr.isOwner,
         this.state.toolbarMode
       ),
       openThemeCreator: this.openThemeCreatorDialog,
@@ -1458,7 +1456,7 @@ export class App extends PureComponent<Props, State> {
       : undefined
 
   getQueryString = (): string => {
-    const { queryParams } = this.hostCommunicationMgr.state
+    const { queryParams } = this.hostCommunicationMgr
 
     const queryString =
       queryParams && queryParams.length > 0
@@ -1469,7 +1467,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   isInCloudEnvironment = (): boolean => {
-    const { menuItems } = this.hostCommunicationMgr.state
+    const { menuItems } = this.hostCommunicationMgr
     return menuItems && menuItems?.length > 0
   }
 
@@ -1478,7 +1476,7 @@ export class App extends PureComponent<Props, State> {
       isTesting() ||
       (SHOW_DEPLOY_BUTTON &&
         showDevelopmentOptions(
-          this.hostCommunicationMgr.state.isOwner,
+          this.hostCommunicationMgr.isOwner,
           this.state.toolbarMode
         ) &&
         !this.isInCloudEnvironment() &&
@@ -1513,12 +1511,11 @@ export class App extends PureComponent<Props, State> {
       currentPageScriptHash,
     } = this.state
     const developmentMode = showDevelopmentOptions(
-      this.hostCommunicationMgr.state.isOwner,
+      this.hostCommunicationMgr.isOwner,
       this.state.toolbarMode
     )
 
-    const { hideSidebarNav: hostHideSidebarNav } =
-      this.hostCommunicationMgr.state
+    const { hideSidebarNav: hostHideSidebarNav } = this.hostCommunicationMgr
 
     const outerDivClass = classNames(
       "stApp",
@@ -1552,9 +1549,9 @@ export class App extends PureComponent<Props, State> {
           showToolbar: !isEmbed() || isToolbarDisplayed(),
           showColoredLine: !isEmbed() || isColoredLineDisplayed(),
           // host communication manager elements
-          pageLinkBaseUrl: this.hostCommunicationMgr.state.pageLinkBaseUrl,
+          pageLinkBaseUrl: this.hostCommunicationMgr.pageLinkBaseUrl,
           sidebarChevronDownshift:
-            this.hostCommunicationMgr.state.sidebarChevronDownshift,
+            this.hostCommunicationMgr.sidebarChevronDownshift,
         }}
       >
         <LibContext.Provider
@@ -1589,9 +1586,7 @@ export class App extends PureComponent<Props, State> {
                       allowRunOnSave={allowRunOnSave}
                     />
                     <ToolbarActions
-                      hostToolbarItems={
-                        this.hostCommunicationMgr.state.toolbarItems
-                      }
+                      hostToolbarItems={this.hostCommunicationMgr.toolbarItems}
                       sendMessageToHost={
                         this.hostCommunicationMgr.sendMessageToHost
                       }
@@ -1612,7 +1607,7 @@ export class App extends PureComponent<Props, State> {
                   printCallback={this.printCallback}
                   screencastCallback={this.screencastCallback}
                   screenCastState={this.props.screenCast.currentState}
-                  hostMenuItems={this.hostCommunicationMgr.state.menuItems}
+                  hostMenuItems={this.hostCommunicationMgr.menuItems}
                   developmentMode={developmentMode}
                   sendMessageToHost={
                     this.hostCommunicationMgr.sendMessageToHost
@@ -1659,5 +1654,4 @@ export class App extends PureComponent<Props, State> {
   }
 }
 
-// export default withHostCommunication(withScreencast(App))
 export default withScreencast(App)

@@ -18,6 +18,8 @@ import HostCommunicationManager, {
   HOST_COMM_VERSION,
 } from "src/lib/hostComm/HostCommunicationManager"
 
+// Mocking "message" event listeners on the window;
+// returns function to establish a listener
 function mockEventListeners(): (type: string, event: any) => void {
   const listeners: { [name: string]: ((event: Event) => void)[] } = {}
 
@@ -33,8 +35,8 @@ function mockEventListeners(): (type: string, event: any) => void {
 describe("HostCommunicationManager messaging", () => {
   let hostCommunicationMgr: HostCommunicationManager
 
-  let dispatchEvent: any
-  let originalHash: any
+  let dispatchEvent: (type: string, event: Event) => void
+  let originalHash: string
 
   let setAllowedOriginsFunc: jest.SpyInstance
   let openCommFunc: jest.SpyInstance
@@ -77,11 +79,15 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("sets allowedOrigins properly & opens HostCommunication", () => {
-    expect(setAllowedOriginsFunc).toHaveBeenCalled()
-    expect(hostCommunicationMgr.state.allowedOrigins).toEqual([
+    expect(setAllowedOriginsFunc).toHaveBeenCalledWith({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
+    // @ts-expect-error
+    expect(hostCommunicationMgr.allowedOrigins).toEqual([
       "https://devel.streamlit.test",
     ])
-    expect(openCommFunc).toHaveBeenCalled()
+    expect(openCommFunc).toHaveBeenCalledWith()
   })
 
   it("host should receive a GUEST_READY message", () => {
@@ -100,7 +106,7 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.props.closeModal).toHaveBeenCalled()
+    expect(hostCommunicationMgr.props.closeModal).toHaveBeenCalledWith()
   })
 
   it("can process a received STOP_SCRIPT message", () => {
@@ -115,7 +121,7 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.props.stopScript).toHaveBeenCalled()
+    expect(hostCommunicationMgr.props.stopScript).toHaveBeenCalledWith()
   })
 
   it("can process a received RERUN_SCRIPT message", () => {
@@ -130,7 +136,7 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.props.rerunScript).toHaveBeenCalled()
+    expect(hostCommunicationMgr.props.rerunScript).toHaveBeenCalledWith()
   })
 
   it("can process a received CLEAR_CACHE message", () => {
@@ -145,7 +151,7 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.props.clearCache).toHaveBeenCalled()
+    expect(hostCommunicationMgr.props.clearCache).toHaveBeenCalledWith()
   })
 
   it("can process a received REQUEST_PAGE_CHANGE message", () => {
@@ -167,6 +173,8 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("should respond to SET_IS_OWNER message", () => {
+    expect(hostCommunicationMgr.isOwner).toBe(false)
+
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -179,10 +187,12 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.state.isOwner).toEqual(true)
+    expect(hostCommunicationMgr.isOwner).toEqual(true)
   })
 
   it("should respond to SET_MENU_ITEMS message", () => {
+    expect(hostCommunicationMgr.menuItems).toStrictEqual([])
+
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -195,12 +205,14 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.state.menuItems).toEqual([
+    expect(hostCommunicationMgr.menuItems).toStrictEqual([
       { type: "separator" },
     ])
   })
 
   it("should respond to SET_METADATA message", () => {
+    expect(hostCommunicationMgr.deployedAppMetadata).toStrictEqual({})
+
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -213,7 +225,7 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.state.deployedAppMetadata).toEqual({
+    expect(hostCommunicationMgr.deployedAppMetadata).toEqual({
       hostedAt: "maya",
       owner: "corgi",
       repo: "streamlit",
@@ -221,6 +233,8 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("can process a received SET_PAGE_LINK_BASE_URL message", () => {
+    expect(hostCommunicationMgr.pageLinkBaseUrl).toStrictEqual("")
+
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -233,12 +247,14 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.state.pageLinkBaseUrl).toBe(
+    expect(hostCommunicationMgr.pageLinkBaseUrl).toBe(
       "https://share.streamlit.io/vdonato/foo/bar"
     )
   })
 
   it("can process a received SET_SIDEBAR_CHEVRON_DOWNSHIFT message", () => {
+    expect(hostCommunicationMgr.sidebarChevronDownshift).toBe(0)
+
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -251,10 +267,12 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.state.sidebarChevronDownshift).toBe(50)
+    expect(hostCommunicationMgr.sidebarChevronDownshift).toBe(50)
   })
 
   it("can process a received SET_SIDEBAR_NAV_VISIBILITY message", () => {
+    expect(hostCommunicationMgr.hideSidebarNav).toBe(false)
+
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -267,10 +285,12 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.state.hideSidebarNav).toBe(true)
+    expect(hostCommunicationMgr.hideSidebarNav).toBe(true)
   })
 
   it("can process a received SET_TOOLBAR_ITEMS message", () => {
+    expect(hostCommunicationMgr.toolbarItems).toStrictEqual([])
+
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -290,7 +310,7 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.state.toolbarItems).toEqual([
+    expect(hostCommunicationMgr.toolbarItems).toEqual([
       {
         borderless: true,
         icon: "star.svg",
@@ -301,6 +321,8 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("should respond to UPDATE_HASH message", () => {
+    expect(window.location.hash).toEqual("")
+
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -317,6 +339,8 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("can process a received UPDATE_FROM_QUERY_PARAMS message", () => {
+    expect(hostCommunicationMgr.queryParams).toEqual("")
+
     dispatchEvent(
       "message",
       new MessageEvent("message", {
@@ -329,8 +353,8 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
-    expect(hostCommunicationMgr.state.queryParams).toEqual("foo=bar")
-    expect(hostCommunicationMgr.props.sendRerunBackMsg).toHaveBeenCalled()
+    expect(hostCommunicationMgr.queryParams).toEqual("foo=bar")
+    expect(hostCommunicationMgr.props.sendRerunBackMsg).toHaveBeenCalledWith()
   })
 
   it("can process a received SET_CUSTOM_THEME_CONFIG message", async () => {
@@ -477,7 +501,7 @@ describe("HostCommunicationManager external auth token handling", () => {
     })
 
     expect(setAllowedOriginsFunc).toBeCalled()
-    expect(hostCommunicationMgr.state.deferredAuthToken.promise).resolves.toBe(
+    expect(hostCommunicationMgr.deferredAuthToken.promise).resolves.toBe(
       undefined
     )
   })
@@ -507,9 +531,9 @@ describe("HostCommunicationManager external auth token handling", () => {
       )
     })
 
-    await expect(
-      hostCommunicationMgr.state.deferredAuthToken.promise
-    ).resolves.toBe("i am an auth token")
+    await expect(hostCommunicationMgr.deferredAuthToken.promise).resolves.toBe(
+      "i am an auth token"
+    )
 
     // Reset the auth token and do everything again to confirm that we don't
     // incorrectly resolve to an old value after resetAuthToken is called.
@@ -537,8 +561,8 @@ describe("HostCommunicationManager external auth token handling", () => {
       )
     })
 
-    await expect(
-      hostCommunicationMgr.state.deferredAuthToken.promise
-    ).resolves.toBe("i am a NEW auth token")
+    await expect(hostCommunicationMgr.deferredAuthToken.promise).resolves.toBe(
+      "i am a NEW auth token"
+    )
   })
 })

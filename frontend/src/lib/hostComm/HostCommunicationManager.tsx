@@ -28,75 +28,64 @@ import {
 import { isValidOrigin } from "src/lib/util/UriUtil"
 // Uncomment this import to test host communication with
 // frontend/hostframe.html:
-// import { IS_DEV_ENV } from "src/lib/baseconsts"
+import { IS_DEV_ENV } from "src/lib/baseconsts"
 
 import Resolver from "src/lib/util/Resolver"
 
 export const HOST_COMM_VERSION = 1
 
 export interface HostCommunicationProps {
-  theme: {
+  readonly theme: {
     setImportedTheme: (themeInfo: ICustomThemeConfig) => void
   }
-  sendRerunBackMsg: (
+  readonly sendRerunBackMsg: (
     widgetStates?: WidgetStates,
     pageScriptHash?: string
   ) => void
-  onPageChange: (pageScriptHash: string) => void
-  closeModal: () => void
-  stopScript: () => void
-  rerunScript: () => void
-  clearCache: () => void
-}
-
-export interface HostCommunicationState {
-  allowedOrigins: string[]
-  deployedAppMetadata: DeployedAppMetadata
-  deferredAuthToken: Resolver<string | undefined>
-  hideSidebarNav: boolean
-  isOwner: boolean
-  menuItems: IMenuItem[]
-  pageLinkBaseUrl: string
-  queryParams: string
-  sidebarChevronDownshift: number
-  toolbarItems: IToolbarItem[]
+  readonly onPageChange: (pageScriptHash: string) => void
+  readonly closeModal: () => void
+  readonly stopScript: () => void
+  readonly rerunScript: () => void
+  readonly clearCache: () => void
 }
 
 /**
  * Manages host communication & messaging
  */
 export default class HostCommunicationManager {
-  public props: HostCommunicationProps
+  public readonly props: HostCommunicationProps
 
-  public state: HostCommunicationState
+  private allowedOrigins: string[]
+  public deployedAppMetadata: DeployedAppMetadata
+  public deferredAuthToken: Resolver<string | undefined>
+  public hideSidebarNav: boolean
+  public isOwner: boolean
+  public menuItems: IMenuItem[]
+  public pageLinkBaseUrl: string
+  public queryParams: string
+  public sidebarChevronDownshift: number
+  public toolbarItems: IToolbarItem[]
 
   constructor(props: HostCommunicationProps) {
     this.props = props
 
-    this.state = {
-      allowedOrigins: [],
-      deferredAuthToken: new Resolver(),
-      deployedAppMetadata: {},
-      hideSidebarNav: false,
-      isOwner: false,
-      menuItems: [],
-      pageLinkBaseUrl: "",
-      queryParams: "",
-      sidebarChevronDownshift: 0,
-      toolbarItems: [],
-    }
-
-    // Bind methods for state access
-    this.setAllowedOriginsResp = this.setAllowedOriginsResp.bind(this)
-    this.resetAuthToken = this.resetAuthToken.bind(this)
-    this.receiveHostMessage = this.receiveHostMessage.bind(this)
+    this.allowedOrigins = []
+    this.deferredAuthToken = new Resolver()
+    this.deployedAppMetadata = {}
+    this.hideSidebarNav = false
+    this.isOwner = false
+    this.menuItems = []
+    this.pageLinkBaseUrl = ""
+    this.queryParams = ""
+    this.sidebarChevronDownshift = 0
+    this.toolbarItems = []
   }
 
   /**
    * Adds a listener for messages from the host
    * sends message that guest is ready to receive messages
    */
-  public openHostCommunication(): void {
+  public openHostCommunication = (): void => {
     window.addEventListener("message", this.receiveHostMessage)
     this.sendMessageToHost({ type: "GUEST_READY" })
   }
@@ -104,7 +93,7 @@ export default class HostCommunicationManager {
   /**
    * Cleans up message event listener
    */
-  public closeHostCommunication(): void {
+  public closeHostCommunication = (): void => {
     window.removeEventListener("message", this.receiveHostMessage)
   }
 
@@ -114,8 +103,8 @@ export default class HostCommunicationManager {
    *
    * This should be called in a .then() handler attached to deferredAuthToken.promise.
    */
-  public resetAuthToken(): void {
-    this.state.deferredAuthToken = new Resolver()
+  public resetAuthToken = (): void => {
+    this.deferredAuthToken = new Resolver()
   }
 
   /**
@@ -128,22 +117,24 @@ export default class HostCommunicationManager {
    *     WebsocketConnection class waits for this promise to resolve before
    *     attempting to establish a connection with the Streamlit server.
    */
-  public setAllowedOriginsResp(resp: IAllowedMessageOriginsResponse): void {
+  public setAllowedOriginsResp = (
+    resp: IAllowedMessageOriginsResponse
+  ): void => {
     const { allowedOrigins, useExternalAuthToken } = resp
 
     // Uncomment this code if testing out host communication with
     // frontend/hostframe.html:
-    // if (IS_DEV_ENV) {
-    //   allowedOrigins.push("http://localhost:8000")
-    // }
+    if (IS_DEV_ENV) {
+      allowedOrigins.push("http://localhost:8000")
+    }
 
     if (!useExternalAuthToken) {
-      this.state.deferredAuthToken.resolve(undefined)
+      this.deferredAuthToken.resolve(undefined)
     }
     if (!allowedOrigins.length) {
       return
     }
-    this.state.allowedOrigins = allowedOrigins
+    this.allowedOrigins = allowedOrigins
 
     this.openHostCommunication()
   }
@@ -151,7 +142,7 @@ export default class HostCommunicationManager {
   /**
    * Register a function to deliver a message to the Host
    */
-  public sendMessageToHost(message: IGuestToHostMessage): void {
+  public sendMessageToHost = (message: IGuestToHostMessage): void => {
     window.parent.postMessage(
       {
         stCommVersion: HOST_COMM_VERSION,
@@ -164,7 +155,7 @@ export default class HostCommunicationManager {
   /**
    * Register a function to handle a message from the Host
    */
-  public receiveHostMessage(event: MessageEvent): void {
+  public receiveHostMessage = (event: MessageEvent): void => {
     const message: VersionedMessage<IHostToGuestMessage> | any = event.data
 
     // Messages coming from the parent frame of a deployed Streamlit app
@@ -176,7 +167,7 @@ export default class HostCommunicationManager {
 
     if (
       message.stCommVersion !== HOST_COMM_VERSION ||
-      !this.state.allowedOrigins.find(allowed =>
+      !this.allowedOrigins.find(allowed =>
         isValidOrigin(allowed, event.origin)
       )
     ) {
@@ -209,39 +200,39 @@ export default class HostCommunicationManager {
       // type isn't an issue here because resolving a promise a second time
       // is a no-op, and we already resolved the promise to undefined
       // above.
-      this.state.deferredAuthToken.resolve(message.authToken)
+      this.deferredAuthToken.resolve(message.authToken)
     }
 
     if (message.type === "SET_IS_OWNER") {
-      this.state.isOwner = message.isOwner
+      this.isOwner = message.isOwner
     }
 
     if (message.type === "SET_MENU_ITEMS") {
-      this.state.menuItems = message.items
+      this.menuItems = message.items
     }
 
     if (message.type === "SET_METADATA") {
-      this.state.deployedAppMetadata = message.metadata
+      this.deployedAppMetadata = message.metadata
     }
 
     if (message.type === "SET_PAGE_LINK_BASE_URL") {
-      this.state.pageLinkBaseUrl = message.pageLinkBaseUrl
+      this.pageLinkBaseUrl = message.pageLinkBaseUrl
     }
 
     if (message.type === "SET_SIDEBAR_CHEVRON_DOWNSHIFT") {
-      this.state.sidebarChevronDownshift = message.sidebarChevronDownshift
+      this.sidebarChevronDownshift = message.sidebarChevronDownshift
     }
 
     if (message.type === "SET_SIDEBAR_NAV_VISIBILITY") {
-      this.state.hideSidebarNav = message.hidden
+      this.hideSidebarNav = message.hidden
     }
 
     if (message.type === "SET_TOOLBAR_ITEMS") {
-      this.state.toolbarItems = message.items
+      this.toolbarItems = message.items
     }
 
     if (message.type === "UPDATE_FROM_QUERY_PARAMS") {
-      this.state.queryParams = message.queryParams
+      this.queryParams = message.queryParams
       this.props.sendRerunBackMsg()
     }
 

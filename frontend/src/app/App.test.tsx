@@ -517,10 +517,9 @@ describe("App", () => {
         })
       )
 
-      // TODO: double check Main Menu re-renders based on prop change
       wrapper.setState({ hideTopBar: false })
 
-      expect(instance.hostCommunicationMgr.state.menuItems).toStrictEqual([
+      expect(instance.hostCommunicationMgr.menuItems).toStrictEqual([
         { type: "separator" },
       ])
       expect(wrapper.find(MainMenu).prop("hostMenuItems")).toStrictEqual([
@@ -579,7 +578,7 @@ describe("App", () => {
         })
       )
 
-      expect(instance.hostCommunicationMgr.state.hideSidebarNav).toEqual(true)
+      expect(instance.hostCommunicationMgr.hideSidebarNav).toEqual(true)
     })
 
     it("Deploy button should be hidden for cloud environment", () => {
@@ -1433,6 +1432,7 @@ describe("App.handlePageNotFound", () => {
     })
     const instance = wrapper.instance() as App
     const sendMessageFunc = jest.spyOn(
+      // @ts-expect-error
       instance.hostCommunicationMgr,
       "sendMessageToHost"
     )
@@ -1465,6 +1465,7 @@ describe("App.handlePageNotFound", () => {
     })
     const instance = wrapper.instance() as App
     const sendMessageFunc = jest.spyOn(
+      // @ts-expect-error
       instance.hostCommunicationMgr,
       "sendMessageToHost"
     )
