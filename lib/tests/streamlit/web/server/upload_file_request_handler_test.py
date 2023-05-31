@@ -149,11 +149,11 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
     """Tests the /upload_file endpoint."""
 
     def get_app(self):
-        self.file_mgr = UploadedFileManager()
+        self.file_mgr = MemoryUploadedFileManager(upload_endpoint=UPLOAD_FILE_ENDPOINT)
         return tornado.web.Application(
             [
                 (
-                    UPLOAD_FILE_ROUTE,
+                    f"{UPLOAD_FILE_ENDPOINT}/(?P<session_id>[^/]+)/(?P<file_id>[^/]+)",
                     UploadFileRequestHandler,
                     dict(
                         file_mgr=self.file_mgr,
@@ -163,17 +163,19 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
             ]
         )
 
-    def _upload_files(self, params):
+    def _upload_files(self, files_body, session_id, file_id):
         # We use requests.Request to construct our multipart/form-data request
         # here, because they are absurdly fiddly to compose, and Tornado
         # doesn't include a utility for building them. We then use self.fetch()
         # to actually send the request to the test server.
         req = requests.Request(
-            method="POST", url=self.get_url("/_stcore/upload_file"), files=params
+            method="POST",
+            url=self.get_url(f"{UPLOAD_FILE_ENDPOINT}/{session_id}/{file_id}"),
+            files=files_body,
         ).prepare()
 
         return self.fetch(
-            "/_stcore/upload_file",
+            req.url,
             method=req.method,
             headers=req.headers,
             body=req.body,
@@ -182,14 +184,10 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
     def test_upload_one_file(self):
         """Upload should fail if the sessionId doesn't exist."""
         file = MockFile("filename", b"123")
-        params = {
-            file.name: file.data,
-            "sessionId": (None, "mockSessionId"),
-            "widgetId": (None, "mockWidgetId"),
-        }
-        response = self._upload_files(params)
+        params = {file.name: file.data}
+        response = self._upload_files(params, session_id="sessionId", file_id="fileId")
         self.assertEqual(400, response.code)
-        self.assertIn("Invalid session_id: 'mockSessionId'", response.reason)
+        self.assertIn("Invalid session_id: 'sessionId'", response.reason)
         self.assertEqual(
-            self.file_mgr.get_all_files("mockSessionId", "mockWidgetId"), []
+            self.file_mgr.get_files("sessionId", [response.effective_url]), []
         )
