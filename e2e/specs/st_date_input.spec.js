@@ -303,12 +303,13 @@ describe("st.date_input", () => {
     cy.get(".stDateInput").each((el, idx) => {
       if (idx === 5 || idx === 2) {
         // idx = 5 -> Disabled one cannot be clicked
-        // idx = 2 -> Range with no date flaky (calendar always shows current month/yr, so snapshot fails monthly)
+        // idx = 2 -> Range with no date calendar flaky (always shows current month/yr, so snapshot fails monthly)
         return;
       }
       const testName = `date_input_calendar_${idx}`;
       cy.getIndexed(".stDateInput", idx).click();
-      cy.get('[data-baseweb="calendar"]').matchImageSnapshot(
+      // Last protects against edge case in CI where two calendar objects open
+      cy.get('[data-baseweb="calendar"]').last().matchImageSnapshot(
         `${testName}-dark`,
         {
           force: false,
@@ -321,12 +322,13 @@ describe("st.date_input", () => {
     cy.get(".stDateInput").each((el, idx) => {
       if (idx === 5 || idx === 2) {
         // idx = 5 -> Disabled one cannot be clicked
-        // idx = 2 -> Range with no date flaky (calendar always shows current month/yr, so snapshot fails monthly)
+        // idx = 2 -> Range with no date calendar flaky (always shows current month/yr, so snapshot fails monthly)
         return;
       }
       const testName = `date_input_calendar_${idx}`;
       cy.getIndexed(".stDateInput", idx).click();
-      cy.get('[data-baseweb="calendar"]').matchImageSnapshot(
+      // Last protects against edge case in CI where two calendar objects open
+      cy.get('[data-baseweb="calendar"]').last().matchImageSnapshot(
         testName,
         {
           force: false,
