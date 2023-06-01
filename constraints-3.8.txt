@@ -31,7 +31,7 @@ fonttools==4.39.4
 gast==0.4.0
 gitdb==4.0.10
 GitPython==3.1.31
-google-auth==2.19.0
+google-auth==2.19.1
 google-auth-oauthlib==1.0.0
 google-pasta==0.2.0
 graphviz==0.20.1
