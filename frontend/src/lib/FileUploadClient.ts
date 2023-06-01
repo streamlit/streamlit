@@ -84,7 +84,6 @@ export class FileUploadClient {
       .uploadFileUploaderFile(
         fileUploadUrl,
         file,
-        widget.id,
         this.sessionInfo.current.sessionId,
         onUploadProgress,
         cancelToken

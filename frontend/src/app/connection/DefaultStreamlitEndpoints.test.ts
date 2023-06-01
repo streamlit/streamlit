@@ -192,7 +192,6 @@ describe("DefaultStreamlitEndpoints", () => {
         endpoints.uploadFileUploaderFile(
           "/_stcore/upload_file/file_1",
           MOCK_FILE,
-          "mockWidgetId",
           "mockSessionId",
           mockOnUploadProgress,
           mockCancelToken
@@ -201,7 +200,6 @@ describe("DefaultStreamlitEndpoints", () => {
 
       const expectedData = new FormData()
       expectedData.append("sessionId", "mockSessionId")
-      expectedData.append("widgetId", "mockWidgetId")
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
       expect(spyRequest).toHaveBeenCalledWith({
@@ -226,7 +224,6 @@ describe("DefaultStreamlitEndpoints", () => {
         endpoints.uploadFileUploaderFile(
           "http://example.com/upload_file/file_2",
           MOCK_FILE,
-          "mockWidgetId",
           "mockSessionId",
           mockOnUploadProgress,
           mockCancelToken
@@ -235,7 +232,6 @@ describe("DefaultStreamlitEndpoints", () => {
 
       const expectedData = new FormData()
       expectedData.append("sessionId", "mockSessionId")
-      expectedData.append("widgetId", "mockWidgetId")
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
       expect(spyRequest).toHaveBeenCalledWith({
@@ -257,12 +253,7 @@ describe("DefaultStreamlitEndpoints", () => {
         .reply(() => [200, "invalidFileId"])
 
       await expect(
-        endpoints.uploadFileUploaderFile(
-          "unused",
-          MOCK_FILE,
-          "mockWidgetId",
-          "mockSessionId"
-        )
+        endpoints.uploadFileUploaderFile("unused", MOCK_FILE, "mockSessionId")
       ).rejects.toEqual(
         new Error(
           "Bad uploadFile response: expected a number but got 'invalidFileId'"
@@ -279,7 +270,6 @@ describe("DefaultStreamlitEndpoints", () => {
         endpoints.uploadFileUploaderFile(
           "/_stcore/upload_file",
           MOCK_FILE,
-          "mockWidgetId",
           "mockSessionId"
         )
       ).rejects.toEqual(new Error("Request failed with status code 400"))

@@ -70,7 +70,6 @@ class Endpoints implements StreamlitEndpoints {
   public uploadFileUploaderFile(
     fileUploadUrl: string,
     file: File,
-    widgetId: string,
     sessionId: string,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken

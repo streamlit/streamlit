@@ -110,7 +110,6 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   public async uploadFileUploaderFile(
     fileUploadUrl: string,
     file: File,
-    widgetId: string,
     sessionId: string,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
@@ -119,7 +118,6 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   ): Promise<number> {
     const form = new FormData()
     form.append("sessionId", sessionId)
-    form.append("widgetId", widgetId)
     form.append(file.name, file)
 
     return this.csrfRequest<number>(this.buildFileUploadURL(fileUploadUrl), {
