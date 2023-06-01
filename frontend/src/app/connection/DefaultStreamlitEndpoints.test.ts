@@ -344,13 +344,14 @@ describe("DefaultStreamlitEndpoints", () => {
         csrfEnabled: true,
       })
 
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
       // @ts-expect-error
-      endpoints.csrfRequest("mockUrl", {})
+      endpoints.csrfRequest(url, {})
 
       expect(spyRequest).toHaveBeenCalledWith({
         headers: { "X-Xsrftoken": "mockXsrfCookie" },
         withCredentials: true,
-        url: buildHttpUri(MOCK_SERVER_URI, "mockUrl"),
+        url,
       })
     })
 
@@ -360,10 +361,12 @@ describe("DefaultStreamlitEndpoints", () => {
         csrfEnabled: false,
       })
 
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
       // @ts-expect-error
-      endpoints.csrfRequest("mockUrl", {})
+      endpoints.csrfRequest(url, {})
+
       expect(spyRequest).toHaveBeenCalledWith({
-        url: buildHttpUri(MOCK_SERVER_URI, "mockUrl"),
+        url,
       })
     })
   })

@@ -192,19 +192,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     url: string,
     params: AxiosRequestConfig
   ): Promise<R> {
-    // If the URL starts with a scheme, assume it's an absolute URL and don't
-    // change it. Otherwise, it's a relative URL that needs to be made
-    // absolute.
-    //
-    // TODO(vdonato): Think about whether this is a reasonable long-term
-    // solution before this feature branch is merged into `develop`. If it is,
-    // then add some unit tests for this.
-    if (/^[a-z0-9]+:\/\//.test(url)) {
-      params.url = url
-    } else {
-      const serverURI = this.requireServerUri()
-      params.url = buildHttpUri(serverURI, url)
-    }
+    params.url = url
 
     if (this.csrfEnabled) {
       const xsrfCookie = getCookie("_xsrf")
