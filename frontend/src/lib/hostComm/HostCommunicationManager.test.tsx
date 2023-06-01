@@ -44,11 +44,9 @@ describe("HostCommunicationManager messaging", () => {
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({
-      theme: {
-        setImportedTheme: jest.fn(),
-      },
+      themeChanged: jest.fn(),
       sendRerunBackMsg: jest.fn(),
-      onPageChange: jest.fn(),
+      pageChanged: jest.fn(),
       closeModal: jest.fn(),
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
@@ -113,7 +111,7 @@ describe("HostCommunicationManager messaging", () => {
         origin: "https://devel.streamlit.test",
       })
     )
-
+    // @ts-expect-error - props are private
     expect(hostCommunicationMgr.props.closeModal).toHaveBeenCalledWith()
   })
 
@@ -128,7 +126,7 @@ describe("HostCommunicationManager messaging", () => {
         origin: "https://devel.streamlit.test",
       })
     )
-
+    // @ts-expect-error - props are private
     expect(hostCommunicationMgr.props.stopScript).toHaveBeenCalledWith()
   })
 
@@ -143,7 +141,7 @@ describe("HostCommunicationManager messaging", () => {
         origin: "https://devel.streamlit.test",
       })
     )
-
+    // @ts-expect-error - props are private
     expect(hostCommunicationMgr.props.rerunScript).toHaveBeenCalledWith()
   })
 
@@ -159,6 +157,7 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
+    // @ts-expect-error - props are private
     expect(hostCommunicationMgr.props.clearCache).toHaveBeenCalledWith()
   })
 
@@ -174,8 +173,8 @@ describe("HostCommunicationManager messaging", () => {
         origin: "https://devel.streamlit.test",
       })
     )
-
-    expect(hostCommunicationMgr.props.onPageChange).toHaveBeenCalledWith(
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.pageChanged).toHaveBeenCalledWith(
       "hash1"
     )
   })
@@ -192,7 +191,7 @@ describe("HostCommunicationManager messaging", () => {
         origin: "https://devel.streamlit.test",
       })
     )
-
+    // @ts-expect-error - props are private
     expect(hostCommunicationMgr.props.isOwnerChanged).toHaveBeenCalledWith(
       true
     )
@@ -212,6 +211,7 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     expect(
+      // @ts-expect-error - props are private
       hostCommunicationMgr.props.hostMenuItemsChanged
     ).toHaveBeenCalledWith([{ type: "separator" }])
   })
@@ -230,6 +230,7 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     expect(
+      // @ts-expect-error - props are private
       hostCommunicationMgr.props.deployedAppMetadataChanged
     ).toHaveBeenCalledWith({
       hostedAt: "maya",
@@ -252,6 +253,7 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     expect(
+      // @ts-expect-error - props are private
       hostCommunicationMgr.props.pageLinkBaseUrlChanged
     ).toHaveBeenCalledWith("https://share.streamlit.io/vdonato/foo/bar")
   })
@@ -270,6 +272,7 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     expect(
+      // @ts-expect-error - props are private
       hostCommunicationMgr.props.sidebarChevronDownshiftChanged
     ).toHaveBeenCalledWith(50)
   })
@@ -288,6 +291,7 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     expect(
+      // @ts-expect-error - props are private
       hostCommunicationMgr.props.hostHideSidebarNavChanged
     ).toHaveBeenCalledWith(true)
   })
@@ -313,6 +317,7 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     expect(
+      // @ts-expect-error - props are private
       hostCommunicationMgr.props.hostToolbarItemsChanged
     ).toHaveBeenCalledWith([
       {
@@ -355,9 +360,11 @@ describe("HostCommunicationManager messaging", () => {
       })
     )
 
+    // @ts-expect-error - props are private
     expect(hostCommunicationMgr.props.queryParamsChanged).toHaveBeenCalledWith(
       "foo=bar"
     )
+    // @ts-expect-error - props are private
     expect(hostCommunicationMgr.props.sendRerunBackMsg).toHaveBeenCalledWith()
   })
 
@@ -383,7 +390,8 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     expect(
-      hostCommunicationMgr.props.theme.setImportedTheme
+      // @ts-expect-error - props are private
+      hostCommunicationMgr.props.themeChanged
     ).toHaveBeenCalledWith(mockCustomThemeConfig)
   })
 })
@@ -394,11 +402,9 @@ describe("Test different origins", () => {
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({
-      theme: {
-        setImportedTheme: jest.fn(),
-      },
+      themeChanged: jest.fn(),
       sendRerunBackMsg: jest.fn(),
-      onPageChange: jest.fn(),
+      pageChanged: jest.fn(),
       closeModal: jest.fn(),
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
@@ -489,11 +495,9 @@ describe("HostCommunicationManager external auth token handling", () => {
 
   beforeEach(() => {
     hostCommunicationMgr = new HostCommunicationManager({
-      theme: {
-        setImportedTheme: jest.fn(),
-      },
+      themeChanged: jest.fn(),
       sendRerunBackMsg: jest.fn(),
-      onPageChange: jest.fn(),
+      pageChanged: jest.fn(),
       closeModal: jest.fn(),
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
@@ -521,6 +525,7 @@ describe("HostCommunicationManager external auth token handling", () => {
     })
 
     expect(setAllowedOriginsFunc).toBeCalled()
+    // @ts-expect-error - deferredAuthToken is private
     expect(hostCommunicationMgr.deferredAuthToken.promise).resolves.toBe(
       undefined
     )
@@ -551,6 +556,7 @@ describe("HostCommunicationManager external auth token handling", () => {
       )
     })
 
+    // @ts-expect-error - deferredAuthToken is private
     await expect(hostCommunicationMgr.deferredAuthToken.promise).resolves.toBe(
       "i am an auth token"
     )
@@ -581,6 +587,7 @@ describe("HostCommunicationManager external auth token handling", () => {
       )
     })
 
+    // @ts-expect-error - deferredAuthToken is private
     await expect(hostCommunicationMgr.deferredAuthToken.promise).resolves.toBe(
       "i am a NEW auth token"
     )

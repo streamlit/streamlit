@@ -295,13 +295,13 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.hostCommunicationMgr = new HostCommunicationManager({
-      theme: this.props.theme,
       sendRerunBackMsg: this.sendRerunBackMsg,
-      onPageChange: this.onPageChange,
       closeModal: this.closeDialog,
       stopScript: this.stopScript,
       rerunScript: this.rerunScript,
       clearCache: this.clearCache,
+      themeChanged: this.props.theme.setImportedTheme,
+      pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       hostMenuItemsChanged: hostMenuItems => {
         this.setState({ hostMenuItems })
@@ -386,8 +386,7 @@ export class App extends PureComponent<Props, State> {
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
-      claimHostAuthToken: () =>
-        this.hostCommunicationMgr.deferredAuthToken.promise,
+      claimHostAuthToken: this.hostCommunicationMgr.claimAuthToken,
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
       setAllowedOriginsResp: this.hostCommunicationMgr.setAllowedOriginsResp,
     })

@@ -35,18 +35,16 @@ import Resolver from "src/lib/util/Resolver"
 export const HOST_COMM_VERSION = 1
 
 export interface HostCommunicationProps {
-  readonly theme: {
-    setImportedTheme: (themeInfo: ICustomThemeConfig) => void
-  }
   readonly sendRerunBackMsg: (
     widgetStates?: WidgetStates,
     pageScriptHash?: string
   ) => void
-  readonly onPageChange: (pageScriptHash: string) => void
   readonly closeModal: () => void
   readonly stopScript: () => void
   readonly rerunScript: () => void
   readonly clearCache: () => void
+  readonly themeChanged: (themeInfo: ICustomThemeConfig) => void
+  readonly pageChanged: (pageScriptHash: string) => void
   readonly isOwnerChanged: (isOwner: boolean) => void
   readonly hostMenuItemsChanged: (menuItems: IMenuItem[]) => void
   readonly hostToolbarItemsChanged: (toolbarItems: IToolbarItem[]) => void
@@ -65,11 +63,11 @@ export interface HostCommunicationProps {
  * Manages host communication & messaging
  */
 export default class HostCommunicationManager {
-  public readonly props: HostCommunicationProps
+  private readonly props: HostCommunicationProps
 
   private allowedOrigins: string[]
 
-  public deferredAuthToken: Resolver<string | undefined>
+  private deferredAuthToken: Resolver<string | undefined>
 
   constructor(props: HostCommunicationProps) {
     this.props = props
@@ -105,8 +103,16 @@ export default class HostCommunicationManager {
   }
 
   /**
+   * Function returning a promise that resolves to the auth token sent by the host
+   * Used by connectionManager
+   */
+  public claimAuthToken = (): Promise<string | undefined> => {
+    return this.deferredAuthToken.promise
+  }
+
+  /**
    * Function to set the response body received from hitting the Streamlit
-   * server's /st-allowed-message-origins endpoint. The response contains
+   * server's /_stcore/allowed-message-origins endpoint. The response contains
    *   - allowedOrigins: A list of origins that we're allowed to receive
    *     cross-iframe messages from via the browser's window.postMessage API.
    *   - useExternalAuthToken: Whether to wait until we've received a
@@ -114,11 +120,10 @@ export default class HostCommunicationManager {
    *     WebsocketConnection class waits for this promise to resolve before
    *     attempting to establish a connection with the Streamlit server.
    */
-  public setAllowedOriginsResp = (
-    resp: IAllowedMessageOriginsResponse
-  ): void => {
-    const { allowedOrigins, useExternalAuthToken } = resp
-
+  public setAllowedOriginsResp = ({
+    allowedOrigins,
+    useExternalAuthToken,
+  }: IAllowedMessageOriginsResponse): void => {
     // Uncomment this code if testing out host communication with
     // frontend/hostframe.html:
     if (IS_DEV_ENV) {
@@ -161,7 +166,6 @@ export default class HostCommunicationManager {
     // processing messages received from origins we haven't explicitly
     // labeled as trusted here to lower the probability that we end up
     // processing malicious input.
-
     if (
       message.stCommVersion !== HOST_COMM_VERSION ||
       !this.allowedOrigins.find(allowed =>
@@ -188,7 +192,7 @@ export default class HostCommunicationManager {
     }
 
     if (message.type === "REQUEST_PAGE_CHANGE") {
-      this.props.onPageChange(message.pageScriptHash)
+      this.props.pageChanged(message.pageScriptHash)
     }
 
     if (message.type === "SET_AUTH_TOKEN") {
@@ -240,7 +244,7 @@ export default class HostCommunicationManager {
     }
 
     if (message.type === "SET_CUSTOM_THEME_CONFIG") {
-      this.props.theme.setImportedTheme(message.themeInfo)
+      this.props.themeChanged(message.themeInfo)
     }
   }
 }

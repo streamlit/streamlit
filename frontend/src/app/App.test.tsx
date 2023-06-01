@@ -173,7 +173,9 @@ describe("App", () => {
     beforeEach(() => {
       prevWindowLocation = window.location
     })
-    afterEach(() => (window.location = prevWindowLocation))
+    afterEach(() => {
+      window.location = prevWindowLocation
+    })
 
     it("triggers page reload", () => {
       const props = getProps()
@@ -389,6 +391,7 @@ describe("App", () => {
         instance.hostCommunicationMgr.props,
         "clearCache"
       )
+      // the clearCache function in App.tsx calls closeDialog
       const closeDialogFunc = jest.spyOn(instance, "closeDialog")
 
       dispatchEvent(
@@ -491,10 +494,10 @@ describe("App", () => {
     })
 
     it("responds to page change request messages", () => {
-      const onPageChangeFunc = jest.spyOn(
+      const pageChangedFunc = jest.spyOn(
         // @ts-expect-error
         instance.hostCommunicationMgr.props,
-        "onPageChange"
+        "pageChanged"
       )
 
       dispatchEvent(
@@ -509,7 +512,7 @@ describe("App", () => {
         })
       )
 
-      expect(onPageChangeFunc).toHaveBeenCalledWith("hash1")
+      expect(pageChangedFunc).toHaveBeenCalledWith("hash1")
     })
 
     it("shows hostMenuItems", () => {
@@ -910,7 +913,44 @@ describe("App.handleNewSession", () => {
     expect(window.prerenderReady).toBe(true)
   })
 
-  it("plumbs appPages and currentPageScriptHash to the AppView component", () => {})
+  it("plumbs appPages and currentPageScriptHash to the AppView component", () => {
+    const props = getProps()
+    const wrapper = shallow(<App {...props} />)
+    const instance = wrapper.instance() as App
+    const sendMessageFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr,
+      "sendMessageToHost"
+    )
+
+    expect(wrapper.find("AppView").prop("appPages")).toEqual([])
+
+    const appPages = [
+      { pageScriptHash: "hash1", pageName: "page1" },
+      { pageScriptHash: "hash2", pageName: "page2" },
+    ]
+
+    const newSessionJson = cloneDeep(NEW_SESSION_JSON)
+    newSessionJson.appPages = appPages
+    newSessionJson.pageScriptHash = "hash1"
+
+    // @ts-expect-error
+    wrapper.instance().handleNewSession(new NewSession(newSessionJson))
+    expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+    expect(wrapper.find("AppView").prop("currentPageScriptHash")).toEqual(
+      "hash1"
+    )
+    expect(document.title).toBe("page1 · Streamlit")
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "SET_APP_PAGES",
+      appPages,
+    })
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: "",
+      currentPageScriptHash: "hash1",
+    })
+  })
 
   it("calls clearAppState if currentPageScriptHash changes", () => {
     const wrapper = shallow(<App {...getProps()} />)
@@ -1177,6 +1217,7 @@ describe("App.onHistoryChange", () => {
     },
     customTheme: {
       primaryColor: "red",
+      fontFaces: [],
     },
     initialize: {
       userInfo: {
@@ -1531,7 +1572,15 @@ describe("Test Main Menu shortcut functionality", () => {
     window.location = prevWindowLocation
   })
 
-  it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {})
+  it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
+    const props = getProps()
+    const wrapper = shallow<App>(<App {...props} />)
+
+    wrapper.instance().openClearCacheDialog = jest.fn()
+    wrapper.instance().keyHandlers.CLEAR_CACHE()
+
+    expect(wrapper.instance().openClearCacheDialog).not.toBeCalled()
+  })
 
   it("Tests dev menu shortcuts can be accessed as a developer", () => {
     const props = getProps()
