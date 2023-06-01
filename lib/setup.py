@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.22.0"  # PEP-440
+VERSION = "1.23.0"  # PEP-440
 
 NAME = "streamlit"
 
