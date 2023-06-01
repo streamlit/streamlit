@@ -301,8 +301,9 @@ describe("st.date_input", () => {
     cy.changeTheme("Dark");
 
     cy.get(".stDateInput").each((el, idx) => {
-      if (idx === 5) {
-        // Disabled one cannot be clicked
+      if (idx === 5 || idx === 2) {
+        // idx = 5 -> Disabled one cannot be clicked
+        // idx = 2 -> Range with no date flaky (calendar always shows current month/yr, so snapshot fails monthly)
         return;
       }
       const testName = `date_input_calendar_${idx}`;
@@ -318,8 +319,9 @@ describe("st.date_input", () => {
     // Revert back to light mode
     cy.changeTheme("Light");
     cy.get(".stDateInput").each((el, idx) => {
-      if (idx === 5) {
-        // Disabled one cannot be clicked
+      if (idx === 5 || idx === 2) {
+        // idx = 5 -> Disabled one cannot be clicked
+        // idx = 2 -> Range with no date flaky (calendar always shows current month/yr, so snapshot fails monthly)
         return;
       }
       const testName = `date_input_calendar_${idx}`;
