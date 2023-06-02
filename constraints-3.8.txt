@@ -150,7 +150,7 @@ types-setuptools==67.8.0.0
 types-toml==0.10.8.6
 types-typed-ast==1.5.8.6
 types-urllib3==1.26.25.13
-typing_extensions==4.6.2
+typing_extensions==4.6.3
 tzdata==2023.3
 tzlocal==4.3
 urllib3==1.26.16
