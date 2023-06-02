@@ -70,7 +70,7 @@ Streamlit comes in with [a ton of additional powerful elements](https://docs.str
       </a>
     </td>
     <td>
-      <a href="https://docs.streamlit.io/library/get-started/multipage-apps/create-a-multipage-app">
+      <a href="https://docs.streamlit.io/library/get-started/multipage-apps">
         <img src="https://user-images.githubusercontent.com/7164864/215173883-eae0de69-7c1d-4d78-97d0-3bc1ab865e5b.gif" style="max-height:150px; width:auto; display:block;">
       </a>
     </td>
