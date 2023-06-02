@@ -15,9 +15,6 @@
 import streamlit as st
 
 st.toast("This is a default toast message", icon="🐶")
-st.toast("This is a success toast message", icon="✅", type="success")
-st.toast("This is a warning toast message", icon="🚧", type="warning")
-st.toast("This is a error toast message", icon="🚨", type="error")
 st.toast(
     "Random toast message that is a really really really really really really really long message, going way past the 3 line limit",
     icon="🦄",

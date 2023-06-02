@@ -678,7 +678,6 @@ const RawElementNodeRenderer = (
           key={node.scriptRunId}
           text={toastProto.text}
           icon={toastProto.icon}
-          type={toastProto.type}
         />
       )
     }

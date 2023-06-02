@@ -22,7 +22,4 @@ message Toast {
 
     // Emoji
     string icon = 2;
-
-    // Type of Toast - default, success, warning, or error
-    string type = 3;
 }

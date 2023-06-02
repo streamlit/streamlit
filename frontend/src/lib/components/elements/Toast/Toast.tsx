@@ -27,22 +27,16 @@ import { toaster, ToastOverrides } from "baseui/toast"
 import { EmotionTheme } from "src/lib/theme"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 
-import {
-  toastColoration,
-  StyledViewButton,
-  StyledToastMessage,
-} from "./styled-components"
+import { StyledViewButton, StyledToastMessage } from "./styled-components"
 
 export interface ToastProps {
   theme: EmotionTheme
   text: string
   icon?: string
-  type: string
 }
 
 function generateToastOverrides(
   expanded: boolean,
-  toastType: string,
   theme: EmotionTheme
 ): ToastOverrides {
   return {
@@ -54,7 +48,10 @@ function generateToastOverrides(
         width: "288px",
         marginTop: "8px",
         borderRadius: "4px",
-        ...toastColoration(toastType, theme),
+        backgroundColor: theme.inSidebar
+          ? theme.colors.bgColor
+          : theme.colors.secondaryBg,
+        color: theme.colors.bodyText,
       },
     },
     InnerContainer: {
@@ -92,7 +89,7 @@ function shortenMessage(fullMessage: string): string {
   return fullMessage
 }
 
-export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
+export function Toast({ theme, text, icon }: ToastProps): ReactElement {
   const fullMessage = icon ? `${icon}&ensp;${text}` : text
   const displayMessage = shortenMessage(fullMessage)
   const shortened = fullMessage !== displayMessage
@@ -105,8 +102,8 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
   }, [expanded])
 
   const styleOverrides = useMemo(
-    () => generateToastOverrides(expanded, type, theme),
-    [expanded, type, theme]
+    () => generateToastOverrides(expanded, theme),
+    [expanded, theme]
   )
 
   const toastContent = useMemo(
@@ -129,28 +126,12 @@ export function Toast({ theme, text, icon, type }: ToastProps): ReactElement {
     [shortened, expanded, fullMessage, displayMessage, handleClick]
   )
 
-  const createToast = useCallback(() => {
-    // Uses toaster utility to create toasts and generate unique key
-    // to reference that toast for update/removal
-    if (type === "success") {
-      return toaster.positive(toastContent, {
-        overrides: { ...styleOverrides },
-      })
-    } else if (type === "warning") {
-      return toaster.warning(toastContent, {
-        overrides: { ...styleOverrides },
-      })
-    } else if (type === "error") {
-      return toaster.negative(toastContent, {
-        overrides: { ...styleOverrides },
-      })
-    }
-    return toaster.info(toastContent, { overrides: { ...styleOverrides } })
-  }, [toastContent, styleOverrides, type])
-
   useEffect(() => {
-    // Create new toast on mount
-    const newKey = createToast()
+    // Uses toaster utility to create toast on mount and generate unique key
+    // to reference that toast for update/removal
+    const newKey = toaster.info(toastContent, {
+      overrides: { ...styleOverrides },
+    })
     setToastKey(newKey)
 
     return () => {

@@ -29,7 +29,6 @@ class ToastTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.toast
         self.assertEqual(c.text, "toast text")
         self.assertEqual(c.icon, "")
-        self.assertEqual(c.type, "")
 
     def test_no_text(self):
         """Test that an error is raised if no text is provided."""
@@ -47,7 +46,6 @@ class ToastTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.toast
         self.assertEqual(c.text, "toast text")
         self.assertEqual(c.icon, "🦄")
-        self.assertEqual(c.type, "")
 
     def test_invalid_icon(self):
         """Test that an error is raised if an invalid icon is provided."""
@@ -56,23 +54,4 @@ class ToastTest(DeltaGeneratorTestCase):
         self.assertEqual(
             str(e.exception),
             'The value "invalid" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.',
-        )
-
-    @parameterized.expand([("success",), ("warning",), ("error",)])
-    def test_valid_types(self, toast_type):
-        """Test that it can be called passing success as toast type."""
-        st.toast("toast text", icon="🦄", type=toast_type)
-
-        c = self.get_delta_from_queue().new_element.toast
-        self.assertEqual(c.text, "toast text")
-        self.assertEqual(c.icon, "🦄")
-        self.assertEqual(c.type, toast_type)
-
-    def test_invalid_type(self):
-        """Test that an error is raised if an invalid type is provided."""
-        with self.assertRaises(StreamlitAPIException) as e:
-            st.toast("toast text", type="invalid")
-        self.assertEqual(
-            str(e.exception),
-            "Invalid toast type: invalid. Valid types are “success”, “warning”, “error”, or None",
         )

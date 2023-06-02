@@ -25,21 +25,6 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-def validate_type(toast_type: Optional[str]) -> str:
-    valid_types = ["success", "warning", "error"]
-
-    if toast_type is None:
-        return ""
-
-    toast_type = toast_type.lower()
-    if toast_type in valid_types:
-        return toast_type
-    else:
-        raise StreamlitAPIException(
-            f"Invalid toast type: {toast_type}. Valid types are “success”, “warning”, “error”, or None"
-        )
-
-
 def validate_text(toast_text: SupportsStr) -> None:
     if toast_text is "":
         raise StreamlitAPIException(
@@ -54,7 +39,6 @@ class ToastMixin:
         text: SupportsStr,
         *,  # keyword-only args:
         icon: Optional[str] = None,
-        type: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display a short message, known as a notification "toast".
         The toast appears in the app's bottom-right corner and disappears after four seconds.
@@ -68,21 +52,17 @@ class ToastMixin:
             the icon for the toast. Shortcodes are not allowed, please use a
             single character instead. E.g. "🚨", "🔥", "🤖", etc.
             Defaults to None, which means no icon is displayed.
-        type : "success", "warning", "error", or None
-            An optional, keyword-only argument that specifies the type of toast, which
-            influences its color. Defaults to None, which corresponds to a neutral gray.
 
         Example
         -------
         >>> import streamlit as st
         >>>
-        >>> st.toast('Your edited image was saved!', icon='😍', type='success')
+        >>> st.toast('Your edited image was saved!', icon='😍')
         """
         validate_text(text)
         toast_proto = ToastProto()
         toast_proto.text = clean_text(text)
         toast_proto.icon = validate_emoji(icon)
-        toast_proto.type = validate_type(type)
         return self.dg._enqueue("toast", toast_proto)
 
     @property

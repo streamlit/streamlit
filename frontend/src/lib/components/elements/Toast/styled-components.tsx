@@ -14,55 +14,7 @@
  * limitations under the License.
  */
 
-import { CSSProperties } from "@emotion/serialize"
 import styled from "@emotion/styled"
-import { darken, lighten } from "color2k"
-
-import { hasLightBackgroundColor, EmotionTheme } from "src/lib/theme"
-
-export function toastColoration(
-  toastType: string,
-  theme: EmotionTheme
-): CSSProperties {
-  const lightTheme = hasLightBackgroundColor(theme)
-  const inSidebar = theme.inSidebar
-
-  const defaultStyle = {
-    backgroundColor: inSidebar
-      ? theme.colors.bgColor
-      : theme.colors.secondaryBg,
-    color: theme.colors.bodyText,
-  }
-  const successStyle = {
-    backgroundColor: lightTheme
-      ? lighten(theme.colors.green10, 0.03)
-      : darken(theme.colors.green100, 0.15),
-    color: lightTheme ? theme.colors.green100 : theme.colors.green10,
-  }
-  const warningStyle = {
-    backgroundColor: lightTheme
-      ? theme.colors.yellow10
-      : darken(theme.colors.yellow110, 0.16),
-    color: lightTheme ? theme.colors.yellow110 : theme.colors.yellow20,
-  }
-  const errorStyle = {
-    backgroundColor: lightTheme
-      ? theme.colors.red10
-      : darken(theme.colors.red100, 0.2),
-    color: lightTheme ? theme.colors.red100 : theme.colors.red20,
-  }
-
-  switch (toastType) {
-    case "success":
-      return successStyle
-    case "warning":
-      return warningStyle
-    case "error":
-      return errorStyle
-    default:
-      return defaultStyle
-  }
-}
 
 export const StyledViewButton = styled.button(({ theme }) => ({
   fontSize: theme.fontSizes.sm,

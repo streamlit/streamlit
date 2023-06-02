@@ -43,7 +43,6 @@ const createContainer = (): ReactElement => (
 
 const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
   text: "This is a toast message",
-  type: "",
   icon: "🐶",
   theme: mockTheme.emotion,
   ...elementProps,
@@ -68,63 +67,6 @@ describe("Toast Component", () => {
     expect(toast).toHaveTextContent("🐶 This is a toast message")
     expect(closeButton).toBeInTheDocument()
     expect(expandButton).not.toBeInTheDocument()
-  })
-
-  test("renders success toast", () => {
-    const props = getProps({
-      text: "This is a success toast",
-      icon: "✅",
-      type: "success",
-    })
-    const container = createContainer()
-    render(
-      <>
-        {container}
-        <Toast {...props} />
-      </>
-    )
-
-    const toast = screen.getByRole("alert")
-    expect(toast).toBeInTheDocument()
-    expect(toast).toHaveTextContent("✅ This is a success toast")
-  })
-
-  test("renders warning toast", () => {
-    const props = getProps({
-      text: "This is a warning toast",
-      icon: "🚧",
-      type: "warning",
-    })
-    const container = createContainer()
-    render(
-      <>
-        {container}
-        <Toast {...props} />
-      </>
-    )
-
-    const toast = screen.getByRole("alert")
-    expect(toast).toBeInTheDocument()
-    expect(toast).toHaveTextContent("🚧 This is a warning toast")
-  })
-
-  test("renders error toast", () => {
-    const props = getProps({
-      text: "This is a error toast",
-      icon: "🚨",
-      type: "error",
-    })
-    const container = createContainer()
-    render(
-      <>
-        {container}
-        <Toast {...props} />
-      </>
-    )
-
-    const toast = screen.getByRole("alert")
-    expect(toast).toBeInTheDocument()
-    expect(toast).toHaveTextContent("🚨 This is a error toast")
   })
 
   test("renders long toast messages with expand option", () => {
