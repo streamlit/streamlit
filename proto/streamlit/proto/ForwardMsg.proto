@@ -74,7 +74,7 @@ message ForwardMsg {
     string ref_hash = 11;
 
     // TODO(vdonato): Explanatory comment
-    FileUrlsResponse file_urls_response = 19;
+    FileURLsResponse file_urls_response = 19;
   }
 
   // The ID of the last BackMsg that we received before sending this

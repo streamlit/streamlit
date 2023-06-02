@@ -23,7 +23,7 @@ from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.proto.Common_pb2 import FileUrlsRequest, FileUrlsResponse
+from streamlit.proto.Common_pb2 import FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewSession_pb2 import (
@@ -741,7 +741,7 @@ class AppSession:
         self._run_on_save = new_value
         self._enqueue_forward_msg(self._create_session_status_changed_message())
 
-    def _handle_file_urls_request(self, file_urls_request: FileUrlsRequest) -> None:
+    def _handle_file_urls_request(self, file_urls_request: FileURLsRequest) -> None:
         """TODO(vdonato): docstring"""
         msg = ForwardMsg()
         msg.file_urls_response.response_id = file_urls_request.request_id
@@ -752,7 +752,7 @@ class AppSession:
 
         for url in upload_urls:
             msg.file_urls_response.file_urls.append(
-                FileUrlsResponse.FileUrls(
+                FileURLsResponse.FileURLs(
                     file_id=url,
                     upload_url=url,
                     delete_url=url,

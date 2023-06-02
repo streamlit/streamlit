@@ -65,7 +65,7 @@ message BackMsg {
     bool debug_shutdown_runtime = 15;
 
     // TODO(vdonato): Explanatory comment
-    FileUrlsRequest file_urls_request = 16;
+    FileURLsRequest file_urls_request = 16;
   }
 
   // An ID used to associate this BackMsg with the corresponding ForwardMsgs

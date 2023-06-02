@@ -26,7 +26,7 @@ import streamlit.runtime.app_session as app_session
 from streamlit import config
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
-from streamlit.proto.Common_pb2 import FileUrlsRequest, FileUrlsResponse
+from streamlit.proto.Common_pb2 import FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
 from streamlit.runtime.app_session import AppSession, AppSessionState
@@ -489,7 +489,7 @@ class AppSessionTest(unittest.TestCase):
         session._uploaded_file_mgr.get_upload_urls.return_value = upload_file_urls
 
         session._handle_file_urls_request(
-            FileUrlsRequest(
+            FileURLsRequest(
                 request_id="my_id",
                 file_names=["file_1", "file_2", "file_3"],
                 session_id=session.id,
@@ -501,10 +501,10 @@ class AppSessionTest(unittest.TestCase):
         )
 
         expected_msg = ForwardMsg(
-            file_urls_response=FileUrlsResponse(
+            file_urls_response=FileURLsResponse(
                 response_id="my_id",
                 file_urls=[
-                    FileUrlsResponse.FileUrls(
+                    FileURLsResponse.FileURLs(
                         file_id=url,
                         upload_url=url,
                         delete_url=url,
