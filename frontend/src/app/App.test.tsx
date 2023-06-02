@@ -907,7 +907,6 @@ describe("App.onHistoryChange", () => {
     )
     expect(instance.state.currentPageScriptHash).toEqual("sub_hash")
 
-    // TODO: (mayagbarnes) Test failing
     window.history.back()
     await waitFor(() => {
       expect(instance.onPageChange).toHaveBeenLastCalledWith("top_hash")
