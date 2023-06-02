@@ -15,7 +15,12 @@
  */
 
 import React, { ReactElement } from "react"
-import { screen, fireEvent, waitFor } from "@testing-library/react"
+import {
+  screen,
+  fireEvent,
+  waitFor,
+  RenderResult,
+} from "@testing-library/react"
 import "@testing-library/jest-dom"
 
 import { render } from "src/lib/test_util"
@@ -25,7 +30,8 @@ import { mockTheme } from "src/lib/mocks/mockTheme"
 import { Toast, ToastProps } from "./Toast"
 import { ToasterContainer, PLACEMENT } from "baseui/toast"
 
-// The Toast Container is required to render Toasts
+// A Toaster Container is required to render Toasts
+// Don't import the actual one from EventContainer as that lives on app side
 const createContainer = (): ReactElement => (
   <ToasterContainer
     placement={PLACEMENT.bottomRight}
@@ -48,16 +54,19 @@ const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
   ...elementProps,
 })
 
+const renderComponent = (props: ToastProps): RenderResult => {
+  return render(
+    <>
+      {createContainer()}
+      <Toast {...props} />
+    </>
+  )
+}
+
 describe("Toast Component", () => {
   test("renders default toast", () => {
     const props = getProps()
-    const container = createContainer()
-    render(
-      <>
-        {container}
-        <Toast {...props} />
-      </>
-    )
+    renderComponent(props)
 
     const toast = screen.getByRole("alert")
     const closeButton = screen.getByRole("button", { name: "Close" })
@@ -74,13 +83,7 @@ describe("Toast Component", () => {
       icon: "",
       text: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
     })
-    const container = createContainer()
-    render(
-      <>
-        {container}
-        <Toast {...props} />
-      </>
-    )
+    renderComponent(props)
 
     const toast = screen.getByRole("alert")
     const expandButton = screen.getByRole("button", { name: "view more" })
@@ -96,13 +99,7 @@ describe("Toast Component", () => {
       icon: "",
       text: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
     })
-    const container = createContainer()
-    render(
-      <>
-        {container}
-        <Toast {...props} />
-      </>
-    )
+    renderComponent(props)
 
     const toast = screen.getByRole("alert")
     const expandButton = screen.getByRole("button", { name: "view more" })
@@ -125,13 +122,7 @@ describe("Toast Component", () => {
       icon: "",
       text: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
     })
-    const container = createContainer()
-    render(
-      <>
-        {container}
-        <Toast {...props} />
-      </>
-    )
+    renderComponent(props)
 
     const toast = screen.getByRole("alert")
     const expandButton = screen.getByRole("button", { name: "view more" })
@@ -152,13 +143,7 @@ describe("Toast Component", () => {
 
   test("can close toast", async () => {
     const props = getProps()
-    const container = createContainer()
-    render(
-      <>
-        {container}
-        <Toast {...props} />
-      </>
-    )
+    renderComponent(props)
 
     const toast = screen.getByRole("alert")
     const closeButton = screen.getByRole("button", { name: "Close" })

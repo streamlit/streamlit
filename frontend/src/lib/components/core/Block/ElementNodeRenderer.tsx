@@ -672,9 +672,9 @@ const RawElementNodeRenderer = (
     // Events:
     case "toast": {
       const toastProto = node.element.toast as ToastProto
-      console.log("SCRIPT RUN ID:", node.scriptRunId, toastProto.icon)
       return (
         <Toast
+          // React key needed so toasts triggered on re-run
           key={node.scriptRunId}
           text={toastProto.text}
           icon={toastProto.icon}

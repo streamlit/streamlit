@@ -24,7 +24,7 @@ import React, {
 import { withTheme } from "@emotion/react"
 import { toaster, ToastOverrides } from "baseui/toast"
 
-import { EmotionTheme } from "src/lib/theme"
+import { hasLightBackgroundColor, EmotionTheme } from "src/lib/theme"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 
 import { StyledViewButton, StyledToastMessage } from "./styled-components"
@@ -39,6 +39,7 @@ function generateToastOverrides(
   expanded: boolean,
   theme: EmotionTheme
 ): ToastOverrides {
+  const lightBackground = hasLightBackgroundColor(theme)
   return {
     Body: {
       props: {
@@ -48,9 +49,9 @@ function generateToastOverrides(
         width: "288px",
         marginTop: "8px",
         borderRadius: "4px",
-        backgroundColor: theme.inSidebar
-          ? theme.colors.bgColor
-          : theme.colors.secondaryBg,
+        backgroundColor: lightBackground
+          ? theme.colors.gray10
+          : theme.colors.gray90,
         color: theme.colors.bodyText,
       },
     },
@@ -73,6 +74,7 @@ function generateToastOverrides(
   }
 }
 
+// Function used to truncate toast messages that are longer than three lines.
 function shortenMessage(fullMessage: string): string {
   const characterLimit = 114
 

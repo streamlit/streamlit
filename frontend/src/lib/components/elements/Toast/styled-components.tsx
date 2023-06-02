@@ -41,7 +41,5 @@ interface StyledToastMessageProps {
 export const StyledToastMessage = styled.div<StyledToastMessageProps>(
   ({ expanded }) => ({
     maxHeight: expanded ? "none" : "68px",
-    overflow: "hidden",
-    display: "flex",
   })
 )
