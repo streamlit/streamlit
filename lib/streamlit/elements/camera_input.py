@@ -43,7 +43,7 @@ SomeUploadedSnapshotFile = Optional[UploadedFile]
 
 
 def _get_file_recs_for_camera_input_widget(
-    widget_id: str, widget_value: Optional[FileUploaderStateProto]
+    widget_value: Optional[FileUploaderStateProto],
 ) -> List[UploadedFileRec]:
     if widget_value is None:
         return []
@@ -56,13 +56,12 @@ def _get_file_recs_for_camera_input_widget(
     if len(uploaded_file_info) == 0:
         return []
 
-    active_file_ids = [f.id for f in uploaded_file_info]
+    active_file_urls = [f.file_url for f in uploaded_file_info]
 
     # Grab the files that correspond to our active file IDs.
     return ctx.uploaded_file_mgr.get_files(
         session_id=ctx.session_id,
-        widget_id=widget_id,
-        file_ids=active_file_ids,
+        file_urls=active_file_urls,
     )
 
 
@@ -74,20 +73,11 @@ class CameraInputSerde:
     ) -> FileUploaderStateProto:
         state_proto = FileUploaderStateProto()
 
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return state_proto
-
-        # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
-        # the *next* uploaded file, so the current highest file id is the
-        # counter minus 1.
-        state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
-
         if not snapshot:
             return state_proto
 
         file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
-        file_info.id = snapshot.id
+        file_info.file_url = snapshot.file_url
         file_info.name = snapshot.name
         file_info.size = snapshot.size
 
@@ -96,7 +86,7 @@ class CameraInputSerde:
     def deserialize(
         self, ui_value: Optional[FileUploaderStateProto], widget_id: str
     ) -> SomeUploadedSnapshotFile:
-        file_recs = _get_file_recs_for_camera_input_widget(widget_id, ui_value)
+        file_recs = _get_file_recs_for_camera_input_widget(ui_value)
 
         if len(file_recs) == 0:
             return_value = None
@@ -254,22 +244,6 @@ class CameraInputMixin:
         camera_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
-
-        ctx = get_script_run_ctx()
-        camera_image_input_state = serde.serialize(camera_input_state.value)
-
-        uploaded_shapshot_info = camera_image_input_state.uploaded_file_info
-
-        if ctx is not None and len(uploaded_shapshot_info) != 0:
-            newest_file_id = camera_image_input_state.max_file_id
-            active_file_ids = [f.id for f in uploaded_shapshot_info]
-
-            ctx.uploaded_file_mgr.remove_orphaned_files(
-                session_id=ctx.session_id,
-                widget_id=camera_input_proto.id,
-                newest_file_id=newest_file_id,
-                active_file_ids=active_file_ids,
-            )
 
         self.dg._enqueue("camera_input", camera_input_proto)
         return camera_input_state.value
