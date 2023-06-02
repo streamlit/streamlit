@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from dataclasses import dataclass
 from textwrap import dedent
 from typing import List, Optional, Sequence, Union, cast, overload
@@ -19,7 +18,7 @@ from typing import List, Optional, Sequence, Union, cast, overload
 from typing_extensions import Literal
 
 import streamlit
-from streamlit import config
+from streamlit import config, util
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
     check_callback_rules,
@@ -53,7 +52,7 @@ TYPE_PAIRS = [
 
 
 def _get_file_recs(
-    widget_id: str, widget_value: Optional[FileUploaderStateProto]
+    widget_value: Optional[FileUploaderStateProto],
 ) -> List[UploadedFileRec]:
     if widget_value is None:
         return []
@@ -66,13 +65,12 @@ def _get_file_recs(
     if len(uploaded_file_info) == 0:
         return []
 
-    active_file_ids = [f.id for f in uploaded_file_info]
+    active_file_urls = [f.file_url for f in uploaded_file_info]
 
     # Grab the files that correspond to our active file IDs.
     return ctx.uploaded_file_mgr.get_files(
         session_id=ctx.session_id,
-        widget_id=widget_id,
-        file_ids=active_file_ids,
+        file_urls=active_file_urls,
     )
 
 
@@ -83,7 +81,7 @@ class FileUploaderSerde:
     def deserialize(
         self, ui_value: Optional[FileUploaderStateProto], widget_id: str
     ) -> SomeUploadedFiles:
-        file_recs = _get_file_recs(widget_id, ui_value)
+        file_recs = _get_file_recs(ui_value)
         if len(file_recs) == 0:
             return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
                 [] if self.accept_multiple_files else None
@@ -96,15 +94,6 @@ class FileUploaderSerde:
     def serialize(self, files: SomeUploadedFiles) -> FileUploaderStateProto:
         state_proto = FileUploaderStateProto()
 
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return state_proto
-
-        # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
-        # the *next* uploaded file, so the current highest file id is the
-        # counter minus 1.
-        state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
-
         if not files:
             return state_proto
         elif not isinstance(files, list):
@@ -112,7 +101,7 @@ class FileUploaderSerde:
 
         for f in files:
             file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
-            file_info.id = f.id
+            file_info.file_url = f.file_url
             file_info.name = f.name
             file_info.size = f.size
 
@@ -441,19 +430,6 @@ class FileUploaderMixin:
         file_uploader_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
-
-        file_uploader_state = serde.serialize(widget_state.value)
-        uploaded_file_info = file_uploader_state.uploaded_file_info
-        if ctx is not None and len(uploaded_file_info) != 0:
-            newest_file_id = file_uploader_state.max_file_id
-            active_file_ids = [f.id for f in uploaded_file_info]
-
-            ctx.uploaded_file_mgr.remove_orphaned_files(
-                session_id=ctx.session_id,
-                widget_id=file_uploader_proto.id,
-                newest_file_id=newest_file_id,
-                active_file_ids=active_file_ids,
-            )
 
         self.dg._enqueue("file_uploader", file_uploader_proto)
         return widget_state.value
