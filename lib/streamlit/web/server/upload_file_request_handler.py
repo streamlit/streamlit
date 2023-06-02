@@ -28,6 +28,8 @@ UPLOAD_FILE_URLS_ROUTE = r"/_stcore/upload_urls/"
 LOGGER = get_logger(__name__)
 
 
+# TODO(vdonato): Remove this if we finalize the decision to use websockets to fetch this
+# info.
 class UploadFileUrlsRequestHandler(tornado.web.RequestHandler):
     """Implements the POST /upload_urls/ endpoint to get upload urls."""
 
