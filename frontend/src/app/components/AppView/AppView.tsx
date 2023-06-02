@@ -29,7 +29,7 @@ import { ComponentRegistry } from "src/lib/components/widgets/CustomComponent"
 import { AppContext } from "src/app/components/AppContext"
 import { BlockNode, AppRoot } from "src/lib/AppNode"
 import { SessionInfo } from "src/lib/SessionInfo"
-import { IGuestToHostMessage } from "src/lib/hocs/withHostCommunication/types"
+import { IGuestToHostMessage } from "src/lib/hostComm/types"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
 
 import {
@@ -74,8 +74,6 @@ export interface AppViewProps {
   currentPageScriptHash: string
 
   hideSidebarNav: boolean
-
-  pageLinkBaseUrl: string
 }
 
 /**
@@ -96,7 +94,6 @@ function AppView(props: AppViewProps): ReactElement {
     onPageChange,
     currentPageScriptHash,
     hideSidebarNav,
-    pageLinkBaseUrl,
     sendMessageToHost,
     endpoints,
   } = props
@@ -169,7 +166,6 @@ function AppView(props: AppViewProps): ReactElement {
           onPageChange={onPageChange}
           currentPageScriptHash={currentPageScriptHash}
           hideSidebarNav={hideSidebarNav}
-          pageLinkBaseUrl={pageLinkBaseUrl}
         >
           {renderBlock(elements.sidebar)}
         </ThemedSidebar>
