@@ -58,6 +58,8 @@ class UploadedFile(io.BytesIO):
 
 
 class UploadedFileManager(CacheStatsProvider, Protocol):
+    """# TODO(kajarenc): Docstrings for this protocol + its methods."""
+
     @abstractmethod
     def get_files(self, session_id: str, file_urls: List[str]) -> List[UploadedFileRec]:
         raise NotImplementedError
