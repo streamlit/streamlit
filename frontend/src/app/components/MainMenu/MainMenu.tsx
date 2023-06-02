@@ -38,10 +38,7 @@ import {
   NoRepositoryDetected,
 } from "src/app/components/StreamlitDialog/DeployErrorDialogs"
 import Icon from "src/lib/components/shared/Icon"
-import {
-  IGuestToHostMessage,
-  IMenuItem,
-} from "src/lib/hocs/withHostCommunication/types"
+import { IGuestToHostMessage, IMenuItem } from "src/lib/hostComm/types"
 import { Config, GitInfo, IGitInfo, PageConfig } from "src/lib/proto"
 import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "src/lib/urls"
 import { SegmentMetricsManager } from "src/app/SegmentMetricsManager"

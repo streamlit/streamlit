@@ -20,7 +20,7 @@ This file is used to help develop Host<->Guest communications.
 
 Usage:
 
-  1. Uncomment the import and code block in `withHostCommunication.tsx` that mention
+  1. Uncomment the import and code block in `HostCommunicationManager.tsx` that mention
      hostframe.html
 
   2. In terminal 1: start the dev frontend server
@@ -53,6 +53,56 @@ Usage:
       stCommVersion: 1,
       ...data,
     }, '*')
+  }
+
+  function setHostMenuItem() {
+    sendMessage({
+      type: "SET_MENU_ITEMS",
+      items: [
+        {
+          type: 'text',
+          label: 'Adopt a Corgi',
+          key: 'share',
+        },
+        {
+          type: 'separator',
+        },
+      ],
+    })
+  }
+
+  function setHostToolbarItem() {
+    sendMessage({
+      type: "SET_TOOLBAR_ITEMS",
+      items: [
+        {
+          borderless: false,
+          label: "Favorite",
+          icon: "",
+          key: "favorite",
+        },
+      ],
+    })
+  }
+
+  function setHideSidebarNav() {
+    sendMessage({
+      type: "SET_SIDEBAR_NAV_VISIBILITY",
+      hidden: true,
+    })
+  }
+
+  function setSidebarDownshift() {
+    sendMessage({
+      type: "SET_SIDEBAR_CHEVRON_DOWNSHIFT",
+      sidebarChevronDownshift: 50,
+    })
+  }
+
+  function closeModal() {
+    sendMessage({
+      type: "CLOSE_MODAL",
+    })
   }
 
   function rerunScript() {
@@ -165,10 +215,15 @@ body {
 
 <div id="toolbar">
   This is the host frame.
-  <button onclick="sendThemeMessage()">send theme message</button>
-  <button onclick="rerunScript()">rerun</button>
-  <button onclick="stopScript()">stop</button>
-  <button onclick="clearCache()">clear cache</button>
+  <button onclick="sendThemeMessage()">Send Theme</button>
+  <button onclick="rerunScript()">Rerun Script</button>
+  <button onclick="stopScript()">Stop Script</button>
+  <button onclick="clearCache()">Clear Cache</button>
+  <button onclick="closeModal()">Close modal</button>
+  <button onclick="setHostMenuItem()">Add Menu Item</button>
+  <button onclick="setHostToolbarItem()">Add Toolbar Item</button>
+  <button onclick="setHideSidebarNav()">Hide Sidebar Nav</button>
+  <button onclick="setSidebarDownshift()">Sidebar Chevron Downshift</button>
 </div>
 
 <iframe id="guest" src="http://localhost:3000" />

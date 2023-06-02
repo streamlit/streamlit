@@ -28,23 +28,6 @@ export type DeployedAppMetadata = {
   isOwner?: boolean
 }
 
-export interface HostCommunicationState {
-  authTokenPromise: Promise<string | undefined>
-  deployedAppMetadata: DeployedAppMetadata
-  forcedModalClose: boolean
-  scriptRerunRequested: boolean
-  scriptStopRequested: boolean
-  cacheClearRequested: boolean
-  hideSidebarNav: boolean
-  isOwner: boolean
-  menuItems: IMenuItem[]
-  pageLinkBaseUrl: string
-  queryParams: string
-  requestedPageScriptHash: string | null
-  sidebarChevronDownshift: number
-  toolbarItems: IToolbarItem[]
-}
-
 export type IToolbarItem = {
   borderless?: boolean
   icon?: string

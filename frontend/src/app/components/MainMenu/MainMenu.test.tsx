@@ -17,7 +17,7 @@
 import React from "react"
 
 import { mount, render } from "src/lib/test_util"
-import { IMenuItem } from "src/lib/hocs/withHostCommunication/types"
+import { IMenuItem } from "src/lib/hostComm/types"
 
 import { Config, GitInfo, IGitInfo } from "src/lib/proto"
 import { IDeployErrorDialog } from "src/app/components/StreamlitDialog/DeployErrorDialogs/types"

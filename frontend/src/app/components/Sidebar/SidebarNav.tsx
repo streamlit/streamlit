@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement, useCallback, useRef, useState } from "react"
+import { AppContext } from "src/app/components/AppContext"
 // We import react-device-detect in this way so that tests can mock its
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"
@@ -42,7 +43,6 @@ export interface Props {
   hasSidebarElements: boolean
   hideParentScrollbar: (newValue: boolean) => void
   onPageChange: (pageName: string) => void
-  pageLinkBaseUrl: string
 }
 
 /** Displays a list of navigable app page links for multi-page apps. */
@@ -54,8 +54,8 @@ const SidebarNav = ({
   hasSidebarElements,
   hideParentScrollbar,
   onPageChange,
-  pageLinkBaseUrl,
 }: Props): ReactElement | null => {
+  const { pageLinkBaseUrl } = React.useContext(AppContext)
   const [expanded, setExpanded] = useState(false)
   const navItemsRef = useRef<HTMLUListElement>(null)
   const isOverflowing = useIsOverflowing(navItemsRef)
