@@ -51,6 +51,7 @@ const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
   text: "This is a toast message",
   icon: "🐶",
   theme: mockTheme.emotion,
+  width: 0,
   ...elementProps,
 })
 

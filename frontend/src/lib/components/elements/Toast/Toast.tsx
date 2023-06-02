@@ -28,11 +28,14 @@ import { hasLightBackgroundColor, EmotionTheme } from "src/lib/theme"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 
 import { StyledViewButton, StyledToastMessage } from "./styled-components"
+import { Kind } from "src/lib/components/shared/AlertContainer"
+import AlertElement from "src/lib/components/elements/AlertElement/AlertElement"
 
 export interface ToastProps {
   theme: EmotionTheme
   text: string
   icon?: string
+  width: number
 }
 
 function generateToastOverrides(
@@ -91,7 +94,7 @@ function shortenMessage(fullMessage: string): string {
   return fullMessage
 }
 
-export function Toast({ theme, text, icon }: ToastProps): ReactElement {
+export function Toast({ theme, text, icon, width }: ToastProps): ReactElement {
   const fullMessage = icon ? `${icon}&ensp;${text}` : text
   const displayMessage = shortenMessage(fullMessage)
   const shortened = fullMessage !== displayMessage
@@ -129,6 +132,10 @@ export function Toast({ theme, text, icon }: ToastProps): ReactElement {
   )
 
   useEffect(() => {
+    // Handles the error case where toast is called on st.sidebar since
+    // baseweb would throw error anyway (no toast container in sidebar)
+    if (theme.inSidebar) return
+
     // Uses toaster utility to create toast on mount and generate unique key
     // to reference that toast for update/removal
     const newKey = toaster.info(toastContent, {
@@ -157,7 +164,17 @@ export function Toast({ theme, text, icon }: ToastProps): ReactElement {
     })
   }, [toastKey, toastContent, styleOverrides])
 
-  return <></>
+  const errorMessage =
+    "Streamlit API Error: The toast command cannot be called directly on the sidebar (`st.sidebar.toast`). See `st.toast` docs [link](www.example.com) for more information."
+
+  return (
+    // Shows error if toast is called on st.sidebar
+    <>
+      {theme.inSidebar && (
+        <AlertElement kind={Kind.ERROR} body={errorMessage} width={width} />
+      )}
+    </>
+  )
 }
 
 export default withTheme(Toast)
