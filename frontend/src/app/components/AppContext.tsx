@@ -70,7 +70,7 @@ export interface Props {
 
   /**
    * Part of URL construction for an app page in a multi-page app;
-   * this is set from the host communication manager's state.
+   * this is set from the host communication manager via host message.
    * @see SidebarNav
    */
   pageLinkBaseUrl: string
@@ -78,7 +78,8 @@ export interface Props {
   /**
    * If non-zero, this is the number of pixels that the sidebar's
    * "chevron" icon is shifted. (If sidebarChevronDownshift is 0, then
-   * the current theme's spacing is used.)
+   * the current theme's spacing is used.);
+   * this is set from the host communication manager via host message.
    * @see StyledSidebarCollapsedControl
    */
   sidebarChevronDownshift: number
