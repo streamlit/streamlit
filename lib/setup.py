@@ -55,7 +55,7 @@ INSTALL_REQUIRES = [
     "rich>=10.11.0, <14",
     "tenacity>=8.0.0, <9",
     "toml<2",
-    "typing-extensions>=3.10.0.0",
+    "typing-extensions>=4.0.1, <5",
     "tzlocal>=1.1, <5",
     "validators>=0.2, <1",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
