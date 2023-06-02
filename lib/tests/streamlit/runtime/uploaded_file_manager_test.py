@@ -20,8 +20,8 @@ from streamlit.runtime.stats import CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager, UploadedFileRec
 from tests.exception_capturing_thread import call_on_threads
 
-FILE_1 = UploadedFileRec(id=0, name="file1", type="type", data=b"file1")
-FILE_2 = UploadedFileRec(id=0, name="file2", type="type", data=b"file222")
+FILE_1 = UploadedFileRec(file_url="url1", name="file1", type="type", data=b"file1")
+FILE_2 = UploadedFileRec(file_url="url2", name="file2", type="type", data=b"file222")
 
 
 class UploadedFileManagerTest(unittest.TestCase):

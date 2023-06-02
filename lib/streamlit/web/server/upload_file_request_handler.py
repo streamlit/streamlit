@@ -19,34 +19,26 @@ import tornado.web
 
 from streamlit import config
 from streamlit.logger import get_logger
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager, UploadedFileRec
 from streamlit.web.server import routes, server_util
 
-# /_stcore/upload_file/(optional session id)/(optional widget id)
-UPLOAD_FILE_ROUTE = (
-    r"/_stcore/upload_file/?(?P<session_id>[^/]*)?/?(?P<widget_id>[^/]*)?"
-)
+UPLOAD_FILE_URLS_ROUTE = r"/_stcore/upload_urls/"
+
 LOGGER = get_logger(__name__)
 
 
-class UploadFileRequestHandler(tornado.web.RequestHandler):
-    """Implements the POST /upload_file endpoint."""
+# TODO(vdonato): Remove this if we finalize the decision to use websockets to fetch this
+# info.
+class UploadFileUrlsRequestHandler(tornado.web.RequestHandler):
+    """Implements the POST /upload_urls/ endpoint to get upload urls."""
 
     def initialize(
-        self, file_mgr: UploadedFileManager, is_active_session: Callable[[str], bool]
+        self,
+        file_mgr: MemoryUploadedFileManager,
     ):
-        """
-        Parameters
-        ----------
-        file_mgr : UploadedFileManager
-            The server's singleton UploadedFileManager. All file uploads
-            go here.
-        is_active_session:
-            A function that returns true if a session_id belongs to an active
-            session.
-        """
+
         self._file_mgr = file_mgr
-        self._is_active_session = is_active_session
 
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Methods", "POST, OPTIONS")
@@ -64,49 +56,100 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
     def options(self, **kwargs):
         """/OPTIONS handler for preflight CORS checks.
-
         When a browser is making a CORS request, it may sometimes first
         send an OPTIONS request, to check whether the server understands the
         CORS protocol. This is optional, and doesn't happen for every request
         or in every browser. If an OPTIONS request does get sent, and is not
         then handled by the server, the browser will fail the underlying
         request.
-
         The proper way to handle this is to send a 204 response ("no content")
         with the CORS headers attached. (These headers are automatically added
         to every outgoing response, including OPTIONS responses,
         via set_default_headers().)
-
         See https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
         """
         self.set_status(204)
         self.finish()
 
-    @staticmethod
-    def _require_arg(args: Dict[str, List[bytes]], name: str) -> str:
-        """Return the value of the argument with the given name.
-
-        A human-readable exception will be raised if the argument doesn't
-        exist. This will be used as the body for the error response returned
-        from the request.
+    def post(self, **kwargs):
         """
-        try:
-            arg = args[name]
-        except KeyError:
-            raise Exception(f"Missing '{name}'")
+        Receive a number of uploaded file and return a list of urls.
+        """
 
-        if len(arg) != 1:
-            raise Exception(f"Expected 1 '{name}' arg, but got {len(arg)}")
+        json_data = tornado.escape.json_decode(self.request.body)
+        number_of_files = int(json_data["numberOfFiles"])
+        session_id = json_data["sessionId"]
 
-        # Convert bytes to string
-        return arg[0].decode("utf-8")
+        presigned_urls = self._file_mgr.get_upload_urls(session_id, number_of_files)
+
+        self.write(tornado.escape.json_encode(presigned_urls))
+        self.set_status(201)
+        self.finish()
+
+
+class UploadFileRequestHandler(tornado.web.RequestHandler):
+    """Implements the POST /upload_file endpoint."""
+
+    def initialize(
+        self,
+        file_mgr: MemoryUploadedFileManager,
+        is_active_session: Callable[[str], bool],
+    ):
+        """
+        Parameters
+        ----------
+        file_mgr : UploadedFileManager
+            The server's singleton UploadedFileManager. All file uploads
+            go here.
+        is_active_session:
+            A function that returns true if a session_id belongs to an active
+            session.
+        """
+        self._file_mgr = file_mgr
+        self._is_active_session = is_active_session
+
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Methods", "POST, OPTIONS, DELETE")
+        self.set_header("Access-Control-Allow-Headers", "Content-Type")
+        if config.get_option("server.enableXsrfProtection"):
+            self.set_header(
+                "Access-Control-Allow-Origin",
+                server_util.get_url(config.get_option("browser.serverAddress")),
+            )
+            self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken, Content-Type")
+            self.set_header("Vary", "Origin")
+            self.set_header("Access-Control-Allow-Credentials", "true")
+        elif routes.allow_cross_origin_requests():
+            self.set_header("Access-Control-Allow-Origin", "*")
+
+    def options(self, **kwargs):
+        """/OPTIONS handler for preflight CORS checks.
+        When a browser is making a CORS request, it may sometimes first
+        send an OPTIONS request, to check whether the server understands the
+        CORS protocol. This is optional, and doesn't happen for every request
+        or in every browser. If an OPTIONS request does get sent, and is not
+        then handled by the server, the browser will fail the underlying
+        request.
+        The proper way to handle this is to send a 204 response ("no content")
+        with the CORS headers attached. (These headers are automatically added
+        to every outgoing response, including OPTIONS responses,
+        via set_default_headers().)
+        See https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+        """
+        self.set_status(204)
+        self.finish()
 
     def post(self, **kwargs):
-        """Receive an uploaded file and add it to our UploadedFileManager.
+        """
+        Receive an uploaded file and add it to our UploadedFileManager.
         Return the file's ID, so that the client can refer to it.
         """
+
         args: Dict[str, List[bytes]] = {}
         files: Dict[str, List[Any]] = {}
+
+        session_id = self.path_kwargs["session_id"]
+        file_url = self.request.full_url()
 
         tornado.httputil.parse_body_arguments(
             content_type=self.request.headers["Content-Type"],
@@ -116,25 +159,19 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         )
 
         try:
-            session_id = self._require_arg(args, "sessionId")
-            widget_id = self._require_arg(args, "widgetId")
             if not self._is_active_session(session_id):
                 raise Exception(f"Invalid session_id: '{session_id}'")
-
         except Exception as e:
             self.send_error(400, reason=str(e))
             return
 
-        # Create an UploadedFile object for each file.
-        # We assign an initial, invalid file_id to each file in this loop.
-        # The file_mgr will assign unique file IDs and return in `add_file`,
-        # below.
         uploaded_files: List[UploadedFileRec] = []
+
         for _, flist in files.items():
             for file in flist:
                 uploaded_files.append(
                     UploadedFileRec(
-                        id=0,
+                        file_url=file_url,
                         name=file["filename"],
                         type=file["content_type"],
                         data=file["body"],
@@ -147,11 +184,13 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             )
             return
 
-        added_file = self._file_mgr.add_file(
-            session_id=session_id, widget_id=widget_id, file=uploaded_files[0]
-        )
+        self._file_mgr.add_file(session_id=session_id, file=uploaded_files[0])
+        self.set_status(204)
 
-        # Return the file_id to the client. (The client will parse
-        # the string back to an int.)
-        self.write(str(added_file.id))
-        self.set_status(200)
+    def delete(self, **kwargs):
+        """DELETE FILE"""
+        session_id = self.path_kwargs["session_id"]
+        file_url = self.request.full_url()
+
+        self._file_mgr.remove_file(session_id=session_id, file_url=file_url)
+        self.set_status(204)

@@ -48,15 +48,20 @@ message StringTriggerValue {
 
 // Information on a file uploaded via the file_uploader widget.
 message UploadedFileInfo {
+  // TO DEPRECATE:
   sint64 id = 1;
 
   string name = 2;
 
   // The size of this file in bytes.
   uint32 size = 3;
+
+  // URL that this file was uploaded to.
+  string file_url = 4;
 }
 
 message FileUploaderState {
+  // TO DEPRECATE:
   sint64 max_file_id = 1;
   repeated UploadedFileInfo uploaded_file_info = 2;
 }
