@@ -78,15 +78,14 @@ class MemoryUploadedFileManager(UploadedFileManager):
         session_storage = self.file_storage[session_id]
         session_storage.pop(file_url, None)
 
-    def get_upload_urls(self, session_id: str, number_of_files: int):
-        file_urls = []
-
-        for i in range(number_of_files):
-            file_id = str(uuid.uuid4())
-            file_url = f"{self.endpoint}/{session_id}/{file_id}"
-            file_urls.append({"presigned_url": file_url})
-
-        return file_urls
+    # TODO(vdonato / kajarenc): Maybe change this function signature to take a list of
+    # file names rather than number_of_files.
+    # TODO(vdonato / kajarenc): Unit tests for this
+    def get_upload_urls(self, session_id: str, number_of_files: int) -> List[str]:
+        return [
+            f"{self.endpoint}/{session_id}/{str(uuid.uuid4())}"
+            for _ in range(number_of_files)
+        ]
 
     def get_stats(self) -> List[CacheStat]:
         """Return the manager's CacheStats.

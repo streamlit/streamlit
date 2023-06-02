@@ -26,6 +26,7 @@ import streamlit.runtime.app_session as app_session
 from streamlit import config
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.Common_pb2 import FileUrlsRequest, FileUrlsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
 from streamlit.runtime.app_session import AppSession, AppSessionState
@@ -475,6 +476,45 @@ class AppSessionTest(unittest.TestCase):
         gc.collect(2)
 
         self.assertEqual(len(gc.get_referrers(session)), 0)
+
+    @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg")
+    def test_handle_file_urls_request(self, mock_enqueue):
+        session = _create_test_session()
+
+        upload_file_urls = [
+            "upload_file_url_1",
+            "upload_file_url_2",
+            "upload_file_url_3",
+        ]
+        session._uploaded_file_mgr.get_upload_urls.return_value = upload_file_urls
+
+        session._handle_file_urls_request(
+            FileUrlsRequest(
+                request_id="my_id",
+                file_names=["file_1", "file_2", "file_3"],
+                session_id=session.id,
+            )
+        )
+
+        session._uploaded_file_mgr.get_upload_urls.assert_called_once_with(
+            session.id, 3
+        )
+
+        expected_msg = ForwardMsg(
+            file_urls_response=FileUrlsResponse(
+                response_id="my_id",
+                file_urls=[
+                    FileUrlsResponse.FileUrls(
+                        file_id=url,
+                        upload_url=url,
+                        delete_url=url,
+                    )
+                    for url in upload_file_urls
+                ],
+            )
+        )
+
+        mock_enqueue.assert_called_once_with(expected_msg)
 
 
 def _mock_get_options_for_section(overrides=None) -> Callable[..., Any]:
