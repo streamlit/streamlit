@@ -165,6 +165,7 @@
     "@types/styletron-engine-atomic": "^1.1.1",
     "@types/styletron-react": "^5.0.3",
     "@types/styletron-standard": "^2.0.2",
+    "@types/uuid": "^9.0.1",
     "@types/xxhashjs": "^0.2.2",
     "@typescript-eslint/eslint-plugin": "^5.51.0",
     "@typescript-eslint/parser": "^5.51.0",
