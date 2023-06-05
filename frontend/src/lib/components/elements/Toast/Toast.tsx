@@ -132,7 +132,7 @@ export function Toast({ theme, text, icon, width }: ToastProps): ReactElement {
   )
 
   useEffect(() => {
-    // Handles the error case where toast is called on st.sidebar since
+    // Handles the error case where st.sidebar.toast is called since
     // baseweb would throw error anyway (no toast container in sidebar)
     if (theme.inSidebar) return
 
@@ -157,23 +157,24 @@ export function Toast({ theme, text, icon, width }: ToastProps): ReactElement {
   }, [])
 
   useEffect(() => {
-    // Handles view more / view less button behavior
+    // Handles expand/collapse button behavior for long toast messages
     toaster.update(toastKey, {
       children: toastContent,
       overrides: { ...styleOverrides },
     })
   }, [toastKey, toastContent, styleOverrides])
 
-  const errorMessage =
-    "Streamlit API Error: The toast command cannot be called directly on the sidebar (`st.sidebar.toast`). See `st.toast` docs [link](www.example.com) for more information."
-
+  const sidebarErrorMessage = (
+    <AlertElement
+      kind={Kind.ERROR}
+      body="Streamlit API Error: `st.toast` cannot be called directly on the sidebar with `st.sidebar.toast`.
+        See our `st.toast` API [docs](https://docs.streamlit.io/library/api-reference/status/st.toast) for more information."
+      width={width}
+    />
+  )
   return (
     // Shows error if toast is called on st.sidebar
-    <>
-      {theme.inSidebar && (
-        <AlertElement kind={Kind.ERROR} body={errorMessage} width={width} />
-      )}
-    </>
+    <>{theme.inSidebar && sidebarErrorMessage}</>
   )
 }
 
