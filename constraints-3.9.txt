@@ -35,7 +35,7 @@ graphviz==0.20.1
 greenlet==2.0.2
 grpcio==1.54.2
 h5py==3.8.0
-hypothesis==6.75.9
+hypothesis==6.76.0
 identify==2.5.24
 idna==3.4
 importlib-metadata==6.6.0
