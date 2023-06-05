@@ -29,6 +29,7 @@ import { Toast as ToastProto } from "src/lib/proto"
 import { mockTheme } from "src/lib/mocks/mockTheme"
 import { Toast, ToastProps } from "./Toast"
 import { ToasterContainer, PLACEMENT } from "baseui/toast"
+import { EmotionTheme } from "src/lib/theme"
 
 // A Toaster Container is required to render Toasts
 // Don't import the actual one from EventContainer as that lives on app side
@@ -47,10 +48,16 @@ const createContainer = (): ReactElement => (
   />
 )
 
-const getProps = (elementProps: Partial<ToastProto> = {}): ToastProps => ({
+const getProps = (
+  elementProps: Partial<ToastProto> = {},
+  themeProps: Partial<EmotionTheme> = {}
+): ToastProps => ({
   text: "This is a toast message",
   icon: "🐶",
-  theme: mockTheme.emotion,
+  theme: {
+    ...mockTheme.emotion,
+    ...themeProps,
+  },
   width: 0,
   ...elementProps,
 })
@@ -154,5 +161,14 @@ describe("Toast Component", () => {
     fireEvent.click(closeButton)
     // Wait for toast to be removed from DOM
     await waitFor(() => expect(toast).not.toBeInTheDocument())
+  })
+
+  test("throws an error when called via st.sidebar.toast", async () => {
+    const props = getProps({}, { inSidebar: true })
+    renderComponent(props)
+
+    const toastError = screen.getByRole("alert")
+    expect(toastError).toBeInTheDocument()
+    expect(toastError).toHaveTextContent("Streamlit API Error")
   })
 })
