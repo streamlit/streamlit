@@ -26,7 +26,7 @@ export const StyledResizableContainer = styled.div(({ theme }) => ({
   "& .glideDataEditor": {
     height: "100%",
     minWidth: "100%",
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.lg,
   },
 
   "& .dvn-scroller": {
