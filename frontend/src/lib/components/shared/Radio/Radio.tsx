@@ -133,8 +133,9 @@ class Radio extends React.PureComponent<Props, State> {
                 },
                 RadioMarkOuter: {
                   style: ({ $checked }: { $checked: boolean }) => ({
-                    width: "1rem",
-                    height: "1rem",
+                    // Make the radio smaller so we can make the outer border look closer to 1px instead of 2px
+                    width: ".9rem",
+                    height: ".9rem",
                     marginTop: "0.35rem",
                     marginRight: "0",
                     backgroundColor:
