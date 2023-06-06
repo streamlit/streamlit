@@ -171,6 +171,9 @@ export function isValidOrigin(
     return false
   }
 
+  // Allow localhost for Cypress e2e testing
+  if (testUrl.hostname == "localhost") return true
+
   if (
     allowedUrl.protocol !== testUrl.protocol ||
     allowedUrl.port !== testUrl.port
