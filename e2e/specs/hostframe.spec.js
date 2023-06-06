@@ -25,7 +25,7 @@ describe("Host communication", () => {
         cy.get("iframe")
             .iframe(() => {
                 cy.prepForElementSnapshots();
-                cy.get("[data-testid='stVerticalBlock']").eq(1).matchImageSnapshot("host_theme_message");
+                cy.matchImageSnapshot("host_theme_message");
             });
     });
 
