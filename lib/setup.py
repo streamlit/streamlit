@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.22.0"  # PEP-440
+VERSION = "1.23.1"  # PEP-440
 
 NAME = "streamlit"
 
@@ -56,7 +56,7 @@ INSTALL_REQUIRES = [
     "rich>=10.14.0, <14",
     "tenacity>=8.0.0, <9",
     "toml>=0.10.1, <2",
-    "typing-extensions>=4.0.0",
+    "typing-extensions>=4.0.1, <5",
     "tzlocal>=1.1, <5",
     "validators>=0.2, <1",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
@@ -136,6 +136,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Topic :: Database :: Front-Ends",
         "Topic :: Office/Business :: Financial :: Spreadsheet",
         "Topic :: Scientific/Engineering :: Information Analysis",
