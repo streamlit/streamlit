@@ -41,7 +41,7 @@ from streamlit.runtime.caching.hashing import (
     _NP_SIZE_LARGE,
     _PANDAS_ROWS_LARGE,
     UserHashError,
-    _CacheFuncHasher,
+    update_hash,
 )
 
 try:
@@ -62,8 +62,9 @@ get_main_script_director = MagicMock(return_value=os.getcwd())
 
 def get_hash(value, hash_funcs=None, cache_type=None):
     hasher = hashlib.new("md5")
-    ch = _CacheFuncHasher(cache_type or MagicMock(), hash_funcs=hash_funcs)
-    ch.update(hasher, value)
+    update_hash(
+        value, hasher, cache_type=cache_type or MagicMock(), hash_funcs=hash_funcs
+    )
     return hasher.digest()
 
 

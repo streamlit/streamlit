@@ -214,7 +214,7 @@ class CacheDataTest(unittest.TestCase):
 
         str_hash_func = Mock(return_value=None)
 
-        @st.cache(hash_funcs={str: str_hash_func})
+        @st.cache_data(hash_funcs={str: str_hash_func})
         def foo(string_arg):
             return []
 
@@ -256,7 +256,6 @@ pass that to `hash_funcs` instead:
 
 ```
 Object of type tests.streamlit.runtime.caching.cache_data_api_test.CacheDataTest.test_user_hash_error.<locals>.MyObj: MyObj class
-Object of type builtins.tuple: ('x', MyObj class)
 ```
 
 If you think this is actually a Streamlit bug, please
