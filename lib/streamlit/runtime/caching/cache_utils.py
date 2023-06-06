@@ -400,7 +400,6 @@ def _make_value_key(
             # we call update_hash twice here, first time for `arg name`
             # without `hash_funcs`, and second time for `arg_value` with hash_funcs
             # to evaluate user defined `hash_funcs` only for computing `arg_value` hash.
-
             update_hash(
                 arg_value,
                 hasher=args_hasher,
