@@ -39,17 +39,6 @@ from streamlit.runtime.caching.hashing import (
     _PANDAS_ROWS_LARGE,
     _CacheFuncHasher,
 )
-
-try:
-    import keras
-except ImportError:
-    pass
-
-try:
-    import tensorflow as tf
-except ImportError:
-    pass
-
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.type_util import is_type
 
