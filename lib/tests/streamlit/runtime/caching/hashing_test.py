@@ -36,6 +36,7 @@ from PIL import Image
 
 from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import (
     _NP_SIZE_LARGE,
     _PANDAS_ROWS_LARGE,
@@ -59,10 +60,10 @@ from streamlit.type_util import is_type
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
 
-def get_hash(f, hash_funcs=None):
+def get_hash(value, hash_funcs=None, cache_type=None):
     hasher = hashlib.new("md5")
-    ch = _CacheFuncHasher(MagicMock(), hash_funcs=hash_funcs)
-    ch.update(hasher, f)
+    ch = _CacheFuncHasher(cache_type or MagicMock(), hash_funcs=hash_funcs)
+    ch.update(hasher, value)
     return hasher.digest()
 
 
@@ -426,8 +427,27 @@ class NotHashableTest(unittest.TestCase):
         )
 
     def test_hash_funcs_error(self):
-        with self.assertRaises(UserHashError):
-            get_hash(1, hash_funcs={int: lambda x: "a" + x})
+        with self.assertRaises(UserHashError) as ctx:
+            get_hash(1, cache_type=CacheType.DATA, hash_funcs={int: lambda x: "a" + x})
+
+        expected_message = """can only concatenate str (not "int") to str
+
+This error is likely due to a bug in `<lambda>()`, which is a
+user-defined hash function that was passed into the `@st.cache_data` decorator of
+something.
+
+`<lambda>()` failed when hashing an object of type
+`builtins.int`.  If you don't know where that object is coming from,
+try looking at the hash chain below for an object that you do recognize, then
+pass that to `hash_funcs` instead:
+
+```
+Object of type builtins.int: 1
+```
+
+If you think this is actually a Streamlit bug, please
+[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""
+        self.assertEqual(str(ctx.exception), expected_message)
 
     def test_non_hashable(self):
         """Test user provided hash functions."""
