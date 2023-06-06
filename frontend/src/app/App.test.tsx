@@ -35,19 +35,12 @@ import {
   PageNotFound,
   PagesChanged,
 } from "src/lib/proto"
-import { HostCommunicationHOC } from "src/lib/hocs/withHostCommunication"
-import {
-  HostCommunicationState,
-  IMenuItem,
-  IToolbarItem,
-} from "src/lib/hocs/withHostCommunication/types"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { SessionInfo } from "src/lib/SessionInfo"
 import {
   createAutoTheme,
   CUSTOM_THEME_NAME,
-  darkTheme,
   lightTheme,
   toExportedTheme,
 } from "src/lib/theme"
@@ -60,6 +53,8 @@ import { App, Props, showDevelopmentOptions } from "./App"
 import MainMenu from "src/app/components/MainMenu"
 import ToolbarActions from "src/app/components/ToolbarActions"
 import { mockSessionInfo, mockSessionInfoProps } from "src/lib/mocks/mocks"
+import { mockTheme } from "src/lib/mocks/mockTheme"
+import { HOST_COMM_VERSION } from "src/lib/hostComm/HostCommunicationManager"
 
 jest.mock("src/app/connection/ConnectionManager")
 jest.mock("src/lib/baseconsts", () => {
@@ -69,41 +64,6 @@ jest.mock("src/lib/baseconsts", () => {
   }
 })
 
-const getHostCommunicationState = (
-  extend?: Partial<HostCommunicationState>
-): HostCommunicationState => ({
-  authTokenPromise: Promise.resolve(undefined),
-  forcedModalClose: false,
-  scriptRerunRequested: false,
-  scriptStopRequested: false,
-  cacheClearRequested: false,
-  hideSidebarNav: false,
-  isOwner: true,
-  menuItems: [],
-  pageLinkBaseUrl: "",
-  queryParams: "",
-  requestedPageScriptHash: null,
-  sidebarChevronDownshift: 0,
-  deployedAppMetadata: {},
-  toolbarItems: [],
-  ...extend,
-})
-
-const getHostCommunicationProp = (
-  extend?: Partial<HostCommunicationHOC>
-): HostCommunicationHOC => ({
-  currentState: getHostCommunicationState({}),
-  onModalReset: jest.fn(),
-  onPageChanged: jest.fn(),
-  resetAuthToken: jest.fn(),
-  sendMessage: jest.fn(),
-  onScriptStop: jest.fn(),
-  onScriptRerun: jest.fn(),
-  onCacheClear: jest.fn(),
-  setAllowedOriginsResp: jest.fn(),
-  ...extend,
-})
-
 const getProps = (extend?: Partial<Props>): Props => ({
   screenCast: {
     currentState: "OFF",
@@ -111,7 +71,6 @@ const getProps = (extend?: Partial<Props>): Props => ({
     startRecording: jest.fn(),
     stopRecording: jest.fn(),
   },
-  hostCommunication: getHostCommunicationProp({}),
   theme: {
     activeTheme: lightTheme,
     availableThemes: [],
@@ -129,6 +88,54 @@ const getWrapper = (): ReactWrapper => {
   const props = getProps()
 
   return mount(<App {...props} />, { attachTo: mountPoint })
+}
+
+// Mocking "message" event listeners on the window;
+// returns function to establish a listener
+function mockEventListeners(): (type: string, event: any) => void {
+  const listeners: { [name: string]: ((event: Event) => void)[] } = {}
+
+  window.addEventListener = jest.fn((event: string, cb: any) => {
+    listeners[event] = listeners[event] || []
+    listeners[event].push(cb)
+  })
+
+  return (type: string, event: Event): void =>
+    listeners[type].forEach(cb => cb(event))
+}
+
+const NEW_SESSION_JSON: INewSession = {
+  config: {
+    gatherUsageStats: false,
+    maxCachedMessageAge: 0,
+    mapboxToken: "mapboxToken",
+    allowRunOnSave: false,
+    hideSidebarNav: false,
+  },
+  customTheme: {
+    primaryColor: "red",
+    fontFaces: [],
+  },
+  initialize: {
+    userInfo: {
+      installationId: "installationId",
+      installationIdV3: "installationIdV3",
+    },
+    environmentInfo: {
+      streamlitVersion: "streamlitVersion",
+      pythonVersion: "pythonVersion",
+    },
+    sessionStatus: {
+      runOnSave: false,
+      scriptIsRunning: false,
+    },
+    sessionId: "sessionId",
+    commandLine: "commandLine",
+  },
+  appPages: [
+    { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
+  ],
+  pageScriptHash: "page_script_hash",
 }
 
 // Prevent "moment-timezone requires moment" exception when mocking "moment".
@@ -163,8 +170,12 @@ describe("App", () => {
 
   describe("streamlit server version changes", () => {
     let prevWindowLocation: Location
-    beforeEach(() => (prevWindowLocation = window.location))
-    afterEach(() => (window.location = prevWindowLocation))
+    beforeEach(() => {
+      prevWindowLocation = window.location
+    })
+    afterEach(() => {
+      window.location = prevWindowLocation
+    })
 
     it("triggers page reload", () => {
       const props = getProps()
@@ -230,251 +241,6 @@ describe("App", () => {
     expect(props.screenCast.stopRecording).toBeCalled()
   })
 
-  it("shows hostMenuItems", () => {
-    const props = getProps({
-      hostCommunication: getHostCommunicationProp({
-        sendMessage: jest.fn(),
-        currentState: getHostCommunicationState({
-          queryParams: "",
-          menuItems: [
-            {
-              type: "separator",
-            },
-          ] as IMenuItem[],
-          toolbarItems: [],
-          forcedModalClose: false,
-          isOwner: true,
-        }),
-      }),
-    })
-    const wrapper = shallow(<App {...props} />)
-
-    expect(wrapper.find(MainMenu).prop("hostMenuItems")).toStrictEqual([
-      { type: "separator" },
-    ])
-  })
-
-  it("shows hostToolbarItems", () => {
-    const props = getProps({
-      hostCommunication: getHostCommunicationProp({
-        sendMessage: jest.fn(),
-        currentState: getHostCommunicationState({
-          queryParams: "",
-          toolbarItems: [
-            {
-              key: "favorite",
-              icon: "star.svg",
-            },
-          ] as IToolbarItem[],
-        }),
-      }),
-    })
-    const wrapper = shallow(<App {...props} />)
-    wrapper.setState({ hideTopBar: false })
-
-    expect(
-      wrapper.find(ToolbarActions).prop("hostToolbarItems")
-    ).toStrictEqual([
-      {
-        key: "favorite",
-        icon: "star.svg",
-      },
-    ])
-  })
-
-  it("closes modals when the modal closure message has been received", () => {
-    const wrapper = shallow(<App {...getProps()} />)
-    const dialog = StreamlitDialog({
-      type: DialogType.ABOUT,
-      sessionInfo: mockSessionInfo(),
-      onClose: () => {},
-    })
-    wrapper.setState({ dialog })
-    expect(wrapper.find(Modal)).toHaveLength(1)
-    const onModalReset = jest.fn()
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({ forcedModalClose: true }),
-          onModalReset,
-        }),
-      })
-    )
-    expect(wrapper.find(Modal)).toHaveLength(0)
-    expect(onModalReset).toBeCalled()
-  })
-
-  it("changes scriptRunState and fires withHostCommunication callback when scriptStopRequested signal has been received", () => {
-    const wrapper = shallow(<App {...getProps()} />)
-    const instance = wrapper.instance() as App
-
-    instance.isServerConnected = jest.fn().mockReturnValue(true)
-
-    // We explicitly set the scriptRunState to RUNNING, so we can test that
-    // scriptStopRequested is handled correctly.
-    wrapper.setState({
-      scriptRunState: ScriptRunState.RUNNING,
-    })
-
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({
-            scriptStopRequested: true,
-          }),
-        }),
-      })
-    )
-
-    expect(wrapper.state("scriptRunState")).toBe(ScriptRunState.STOP_REQUESTED)
-    expect(instance.props.hostCommunication.onScriptStop).toHaveBeenCalled()
-  })
-
-  it("changes scriptRunState and fires withHostCommunication callback when scriptRerunRequested signal has been received", () => {
-    const wrapper = shallow(<App {...getProps()} />)
-    const instance = wrapper.instance() as App
-
-    instance.isServerConnected = jest.fn().mockReturnValue(true)
-
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({
-            scriptRerunRequested: true,
-          }),
-        }),
-      })
-    )
-
-    expect(wrapper.state("scriptRunState")).toBe(
-      ScriptRunState.RERUN_REQUESTED
-    )
-    expect(instance.props.hostCommunication.onScriptRerun).toHaveBeenCalled()
-  })
-
-  it("fires withHostCommunication callback when cacheClearRequested signal has been received", () => {
-    const wrapper = shallow(<App {...getProps()} />)
-    const instance = wrapper.instance() as App
-
-    instance.isServerConnected = jest.fn().mockReturnValue(true)
-
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({
-            cacheClearRequested: true,
-          }),
-        }),
-      })
-    )
-    expect(instance.props.hostCommunication.onCacheClear).toHaveBeenCalled()
-  })
-
-  it("does not prevent a modal from opening when closure message is set", () => {
-    const onModalReset = jest.fn()
-    const wrapper = shallow(
-      <App
-        {...getProps({
-          hostCommunication: getHostCommunicationProp({
-            currentState: getHostCommunicationState({
-              menuItems: [],
-              queryParams: "",
-              forcedModalClose: false,
-            }),
-            onModalReset,
-            sendMessage: jest.fn(),
-          }),
-        })}
-      />
-    )
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({ forcedModalClose: true }),
-          onModalReset,
-        }),
-      })
-    )
-    expect(onModalReset).toBeCalled()
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({ forcedModalClose: false }),
-          onModalReset,
-        }),
-      })
-    )
-    const dialog = StreamlitDialog({
-      type: DialogType.ABOUT,
-      sessionInfo: mockSessionInfo(),
-      onClose: () => {},
-    })
-    wrapper.setState({ dialog })
-    expect(wrapper.find(Modal)).toHaveLength(1)
-  })
-
-  it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when the app is first rendered", () => {
-    const props = getProps()
-    shallow(<App {...props} />)
-
-    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-      type: "SCRIPT_RUN_STATE_CHANGED",
-      scriptRunState: ScriptRunState.NOT_RUNNING,
-    })
-  })
-
-  it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing", () => {
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
-
-    Object.values(ScriptRunState).forEach(scriptRunState => {
-      wrapper.setState({ scriptRunState })
-      expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-        type: "SCRIPT_RUN_STATE_CHANGED",
-        scriptRunState,
-      })
-    })
-  })
-
-  it("does not sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing to the same state", () => {
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
-
-    const scriptRunState = ScriptRunState.RUNNING
-    wrapper.setState({ scriptRunState })
-    // @ts-expect-error
-    props.hostCommunication.sendMessage.mockClear()
-    // When scriptRunState changed to the same,
-    // sendMessage should not be called again.
-    wrapper.setState({ scriptRunState })
-    expect(props.hostCommunication.sendMessage).not.toHaveBeenCalled()
-  })
-
-  it("sends theme info to the host when the app is first rendered", () => {
-    const props = getProps()
-    shallow(<App {...props} />)
-
-    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-      type: "SET_THEME_CONFIG",
-      themeInfo: toExportedTheme(lightTheme.emotion),
-    })
-  })
-
-  it("both sets theme locally and sends to host when setAndSendTheme is called", () => {
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
-    const mockThemeConfig = { emotion: darkTheme.emotion }
-
-    // @ts-expect-error
-    wrapper.instance().setAndSendTheme(mockThemeConfig)
-
-    expect(props.theme.setTheme).toHaveBeenCalledWith(mockThemeConfig)
-    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-      type: "SET_THEME_CONFIG",
-      themeInfo: toExportedTheme(darkTheme.emotion),
-    })
-  })
-
   it("hides the top bar if hideTopBar === true", () => {
     const wrapper = shallow(<App {...getProps()} />)
     // hideTopBar is true by default
@@ -490,52 +256,6 @@ describe("App", () => {
     expect(wrapper.find("WithTheme(StatusWidget)").exists()).toBe(true)
     expect(wrapper.find("ToolbarActions").exists()).toBe(true)
   })
-
-  it("updates state.appPages when it receives a PagesChanged msg", () => {
-    const appPages = [
-      { icon: "", pageName: "bob", scriptPath: "bob.py" },
-      { icon: "", pageName: "carl", scriptPath: "carl.py" },
-    ]
-
-    const msg = new ForwardMsg()
-    msg.pagesChanged = new PagesChanged({ appPages })
-
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
-    expect(wrapper.find("AppView").prop("appPages")).toEqual([])
-
-    const instance = wrapper.instance() as App
-    instance.handleMessage(msg)
-    expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
-
-    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
-      type: "SET_APP_PAGES",
-      appPages,
-    })
-  })
-
-  it("responds to page change requests", () => {
-    const props = getProps()
-    const wrapper = shallow(<App {...props} />)
-    const instance = wrapper.instance() as App
-    instance.onPageChange = jest.fn()
-
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({
-            requestedPageScriptHash: "hash1",
-          }),
-        }),
-      })
-    )
-    wrapper.update()
-
-    expect(instance.onPageChange).toHaveBeenCalledWith("hash1")
-    expect(
-      props.hostCommunication.currentState.requestedPageScriptHash
-    ).toBeNull()
-  })
 })
 
 const mockGetBaseUriParts = (basePath?: string) => () => ({
@@ -543,39 +263,6 @@ const mockGetBaseUriParts = (basePath?: string) => () => ({
 })
 
 describe("App.handleNewSession", () => {
-  const NEW_SESSION_JSON: INewSession = {
-    config: {
-      gatherUsageStats: false,
-      maxCachedMessageAge: 0,
-      mapboxToken: "mapboxToken",
-      allowRunOnSave: false,
-      hideSidebarNav: false,
-    },
-    customTheme: {
-      primaryColor: "red",
-      fontFaces: [],
-    },
-    initialize: {
-      userInfo: {
-        installationId: "installationId",
-        installationIdV3: "installationIdV3",
-      },
-      environmentInfo: {
-        streamlitVersion: "streamlitVersion",
-        pythonVersion: "pythonVersion",
-      },
-      sessionStatus: {
-        runOnSave: false,
-        scriptIsRunning: false,
-      },
-      sessionId: "sessionId",
-      commandLine: "commandLine",
-    },
-    appPages: [
-      { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
-    ],
-    pageScriptHash: "page_script_hash",
-  }
   const NEW_SESSION = new NewSession(NEW_SESSION_JSON)
 
   afterEach(() => {
@@ -869,6 +556,12 @@ describe("App.handleNewSession", () => {
   it("plumbs appPages and currentPageScriptHash to the AppView component", () => {
     const props = getProps()
     const wrapper = shallow(<App {...props} />)
+    const instance = wrapper.instance() as App
+    const sendMessageFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr,
+      "sendMessageToHost"
+    )
 
     expect(wrapper.find("AppView").prop("appPages")).toEqual([])
 
@@ -888,11 +581,11 @@ describe("App.handleNewSession", () => {
       "hash1"
     )
     expect(document.title).toBe("page1 · Streamlit")
-    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+    expect(sendMessageFunc).toHaveBeenCalledWith({
       type: "SET_APP_PAGES",
       appPages,
     })
-    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+    expect(sendMessageFunc).toHaveBeenCalledWith({
       type: "SET_CURRENT_PAGE_NAME",
       currentPageName: "",
       currentPageScriptHash: "hash1",
@@ -928,31 +621,6 @@ describe("App.handleNewSession", () => {
     wrapper.instance().handleNewSession(new NewSession(newSessionJson))
 
     expect(instance.clearAppState).not.toHaveBeenCalled()
-  })
-
-  it("sets hideSidebarNav based on the server config option and host setting", () => {
-    const wrapper = shallow(<App {...getProps()} />)
-
-    // hideSidebarNav initializes to true.
-    expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
-
-    // Simulate the server ui.hideSidebarNav config option being false.
-    const instance = wrapper.instance() as App
-    instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
-    expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(false)
-
-    // Have the host override the server config option.
-    wrapper.setProps(
-      getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({
-            hideSidebarNav: true,
-          }),
-        }),
-      })
-    )
-
-    expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
   })
 
   describe("page change URL handling", () => {
@@ -1172,33 +840,6 @@ describe("App.handleNewSession", () => {
 
       expect(wrapper.find("DeployButton")).toHaveLength(0)
     })
-
-    it("button should be hidden for cloud environment", () => {
-      const props = getProps({
-        hostCommunication: getHostCommunicationProp({
-          currentState: getHostCommunicationState({
-            isOwner: false,
-            menuItems: [
-              { label: "Host menu item", key: "host-item", type: "text" },
-            ],
-          }),
-        }),
-      })
-      const wrapper = shallow(<App {...props} />)
-      const instance = wrapper.instance() as App
-
-      instance.handleNewSession(
-        new NewSession({
-          ...NEW_SESSION_JSON,
-          config: {
-            ...NEW_SESSION_JSON.config,
-            toolbarMode: Config.ToolbarMode.DEVELOPER,
-          },
-        })
-      )
-
-      expect(wrapper.find("DeployButton")).toHaveLength(0)
-    })
   })
 })
 
@@ -1216,6 +857,7 @@ describe("App.onHistoryChange", () => {
     },
     customTheme: {
       primaryColor: "red",
+      fontFaces: [],
     },
     initialize: {
       userInfo: {
@@ -1266,14 +908,14 @@ describe("App.onHistoryChange", () => {
     expect(instance.state.currentPageScriptHash).toEqual("sub_hash")
 
     window.history.back()
-    await waitFor(() =>
+    await waitFor(() => {
       expect(instance.onPageChange).toHaveBeenLastCalledWith("top_hash")
-    )
+    })
 
     window.history.back()
-    await waitFor(() =>
+    await waitFor(() => {
       expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
-    )
+    })
   })
 })
 
@@ -1475,6 +1117,11 @@ describe("App.handlePageNotFound", () => {
       appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
     })
     const instance = wrapper.instance() as App
+    const sendMessageFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr,
+      "sendMessageToHost"
+    )
 
     // @ts-expect-error
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
@@ -1488,7 +1135,8 @@ describe("App.handlePageNotFound", () => {
       "Page not found",
       expect.stringMatching("You have requested page /nonexistentPage")
     )
-    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+
+    expect(sendMessageFunc).toHaveBeenCalledWith({
       type: "SET_CURRENT_PAGE_NAME",
       currentPageName: "",
       currentPageScriptHash: "page_hash",
@@ -1502,6 +1150,11 @@ describe("App.handlePageNotFound", () => {
       appPages: [{ pageScriptHash: "page_hash", pageName: "streamlit_app" }],
     })
     const instance = wrapper.instance() as App
+    const sendMessageFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr,
+      "sendMessageToHost"
+    )
 
     // @ts-expect-error
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
@@ -1515,7 +1168,7 @@ describe("App.handlePageNotFound", () => {
         "The page that you have requested does not seem to exist"
       )
     )
-    expect(props.hostCommunication.sendMessage).toHaveBeenCalledWith({
+    expect(sendMessageFunc).toHaveBeenCalledWith({
       type: "SET_CURRENT_PAGE_NAME",
       currentPageName: "",
       currentPageScriptHash: "page_hash",
@@ -1559,14 +1212,7 @@ describe("Test Main Menu shortcut functionality", () => {
   })
 
   it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
-    const props = getProps({
-      hostCommunication: getHostCommunicationProp({
-        currentState: getHostCommunicationState({
-          isOwner: false,
-        }),
-        sendMessage: jest.fn(),
-      }),
-    })
+    const props = getProps()
     const wrapper = shallow<App>(<App {...props} />)
 
     wrapper.instance().openClearCacheDialog = jest.fn()
@@ -1639,4 +1285,361 @@ describe("showDevelopmentMenu", () => {
       expect(result).toEqual(expectedResult)
     }
   )
+})
+
+describe("handles HostCommunication messaging", () => {
+  let dispatchEvent: (type: string, event: Event) => void
+  let props: Props
+  let wrapper: ShallowWrapper
+  let instance: App
+  let sendMessageFunc: jest.SpyInstance
+
+  beforeEach(() => {
+    dispatchEvent = mockEventListeners()
+    props = getProps()
+    wrapper = shallow(<App {...props} />)
+    instance = wrapper.instance() as App
+
+    // @ts-expect-error - hostCommunicationMgr is private
+    instance.hostCommunicationMgr.setAllowedOriginsResp({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
+
+    sendMessageFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr,
+      "sendMessageToHost"
+    )
+  })
+
+  it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when the app is first rendered", () => {
+    instance.componentDidMount()
+
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "SCRIPT_RUN_STATE_CHANGED",
+      scriptRunState: ScriptRunState.NOT_RUNNING,
+    })
+  })
+
+  it("sends theme info to the host when the app is first rendered", () => {
+    instance.componentDidMount()
+
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "SET_THEME_CONFIG",
+      themeInfo: toExportedTheme(lightTheme.emotion),
+    })
+  })
+
+  it("closes modals when the modal closure message has been received", () => {
+    const dialog = StreamlitDialog({
+      type: DialogType.ABOUT,
+      sessionInfo: mockSessionInfo(),
+      onClose: () => {},
+    })
+
+    wrapper.setState({ dialog })
+    expect(wrapper.find(Modal)).toHaveLength(1)
+
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "CLOSE_MODAL",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    expect(wrapper.find(Modal)).toHaveLength(0)
+  })
+
+  it("changes scriptRunState and triggers stopScript when STOP_SCRIPT message has been received", () => {
+    instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+    // We explicitly set the scriptRunState to RUNNING, so we can test that
+    // scriptStopRequested is handled correctly.
+    wrapper.setState({
+      scriptRunState: ScriptRunState.RUNNING,
+    })
+
+    const stopScriptFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr.props,
+      "stopScript"
+    )
+
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "STOP_SCRIPT",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    expect(stopScriptFunc).toHaveBeenCalledWith()
+    expect(wrapper.state("scriptRunState")).toBe(ScriptRunState.STOP_REQUESTED)
+  })
+
+  it("changes scriptRunState and triggers rerunScript when scriptRerunRequested message has been received", () => {
+    instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+    const rerunScriptFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr.props,
+      "rerunScript"
+    )
+
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "RERUN_SCRIPT",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    expect(rerunScriptFunc).toHaveBeenCalledWith()
+    expect(wrapper.state("scriptRunState")).toBe(
+      ScriptRunState.RERUN_REQUESTED
+    )
+  })
+
+  it("fires clearCache function when cacheClearRequested message has been received", () => {
+    instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+    const clearCacheFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr.props,
+      "clearCache"
+    )
+    // the clearCache function in App.tsx calls closeDialog
+    const closeDialogFunc = jest.spyOn(instance, "closeDialog")
+
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "CLEAR_CACHE",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    expect(clearCacheFunc).toHaveBeenCalledWith()
+    expect(closeDialogFunc).toHaveBeenCalledWith()
+  })
+
+  it("does not prevent a modal from opening when closure message is set", () => {
+    const dialog = StreamlitDialog({
+      type: DialogType.ABOUT,
+      sessionInfo: mockSessionInfo(),
+      onClose: () => {},
+    })
+
+    // Open a dialog
+    wrapper.setState({ dialog })
+    expect(wrapper.find(Modal)).toHaveLength(1)
+
+    // Send close message
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "CLOSE_MODAL",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+    expect(wrapper.find(Modal)).toHaveLength(0)
+
+    // Open a dialog again - make sure it works
+    wrapper.setState({ dialog })
+    expect(wrapper.find(Modal)).toHaveLength(1)
+  })
+
+  it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing", () => {
+    Object.keys(ScriptRunState).forEach(scriptRunState => {
+      wrapper.setState({ scriptRunState })
+      expect(sendMessageFunc).toHaveBeenCalledWith({
+        type: "SCRIPT_RUN_STATE_CHANGED",
+        scriptRunState,
+      })
+    })
+  })
+
+  it("does not sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing to the same state", () => {
+    const scriptRunState = ScriptRunState.RUNNING
+    wrapper.setState({ scriptRunState })
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "SCRIPT_RUN_STATE_CHANGED",
+      scriptRunState: scriptRunState,
+    })
+    expect(sendMessageFunc).toHaveBeenCalledTimes(1)
+    // When scriptRunState changed to the same,
+    // sendMessage should not be called again.
+    wrapper.setState({ scriptRunState })
+    expect(sendMessageFunc).toHaveBeenCalledTimes(1)
+  })
+
+  it("both sets theme locally and sends to host when setAndSendTheme is called", () => {
+    const mockThemeConfig = mockTheme
+
+    instance.setAndSendTheme(mockThemeConfig)
+    expect(props.theme.setTheme).toHaveBeenCalledWith(mockThemeConfig)
+
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "SET_THEME_CONFIG",
+      themeInfo: toExportedTheme(lightTheme.emotion),
+    })
+  })
+
+  it("updates state.appPages when it receives a PagesChanged msg", () => {
+    const appPages = [
+      { icon: "", pageName: "bob", scriptPath: "bob.py" },
+      { icon: "", pageName: "carl", scriptPath: "carl.py" },
+    ]
+
+    const msg = new ForwardMsg()
+    msg.pagesChanged = new PagesChanged({ appPages })
+
+    expect(wrapper.find("AppView").prop("appPages")).toEqual([])
+    instance.handleMessage(msg)
+    expect(wrapper.find("AppView").prop("appPages")).toEqual(appPages)
+
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "SET_APP_PAGES",
+      appPages,
+    })
+  })
+
+  it("responds to page change request messages", () => {
+    const pageChangedFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr.props,
+      "pageChanged"
+    )
+
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "REQUEST_PAGE_CHANGE",
+          pageScriptHash: "hash1",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    expect(pageChangedFunc).toHaveBeenCalledWith("hash1")
+  })
+
+  it("shows hostMenuItems", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_MENU_ITEMS",
+          items: [{ type: "separator" }],
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    wrapper.setState({ hideTopBar: false })
+
+    expect(instance.state.hostMenuItems).toStrictEqual([{ type: "separator" }])
+    expect(wrapper.find(MainMenu).prop("hostMenuItems")).toStrictEqual([
+      { type: "separator" },
+    ])
+  })
+
+  it("shows hostToolbarItems", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_TOOLBAR_ITEMS",
+          items: [
+            {
+              key: "favorite",
+              icon: "star.svg",
+            },
+          ],
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    wrapper.setState({ hideTopBar: false })
+    expect(
+      wrapper.find(ToolbarActions).prop("hostToolbarItems")
+    ).toStrictEqual([
+      {
+        key: "favorite",
+        icon: "star.svg",
+      },
+    ])
+  })
+
+  it("sets hideSidebarNav based on the server config option and host setting", () => {
+    // hideSidebarNav initializes to true.
+    expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
+
+    // Simulate the server ui.hideSidebarNav config option being false.
+    instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
+    expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(false)
+
+    // Have the host override the server config option.
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_SIDEBAR_NAV_VISIBILITY",
+          hidden: true,
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    expect(wrapper.find("AppView").prop("hideSidebarNav")).toEqual(true)
+  })
+
+  it("Deploy button should be hidden for cloud environment", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_MENU_ITEMS",
+          items: [{ label: "Host menu item", key: "host-item", type: "text" }],
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    instance.handleNewSession(
+      new NewSession({
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+    )
+
+    expect(wrapper.find("DeployButton")).toHaveLength(0)
+  })
 })

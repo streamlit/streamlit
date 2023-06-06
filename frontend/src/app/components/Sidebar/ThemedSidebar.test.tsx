@@ -31,7 +31,6 @@ function getProps(
     currentPageScriptHash: "page_hash",
     hasElements: true,
     hideSidebarNav: false,
-    pageLinkBaseUrl: "",
     ...props,
   }
 }

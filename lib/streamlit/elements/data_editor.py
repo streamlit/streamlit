@@ -549,7 +549,7 @@ class DataEditorMixin:
         .. warning::
             When going from ``st.experimental_data_editor`` to ``st.data_editor`` in
             1.23.0, the data editor's representation in ``st.session_state`` was changed.
-            The ``edited_rows`` dictionary is now called ``edited_rows`` and uses a
+            The ``edited_cells`` dictionary is now called ``edited_rows`` and uses a
             different format (``{0: {"column name": "edited value"}}`` instead of
             ``{"0:1": "edited value"}``). You may need to adjust the code if your app uses
             ``st.experimental_data_editor`` in combination with ``st.session_state``."
@@ -599,7 +599,7 @@ class DataEditorMixin:
             * A string to set the display label of the column.
 
             * One of the column types defined under ``st.column_config``, e.g.
-              ``st.column_config.NumberColumn(”Dollar values”, format=”$ %d”)`` to show
+              ``st.column_config.NumberColumn("Dollar values”, format=”$ %d")`` to show
               a column as dollar amounts. See more info on the available column types
               and config options `here <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
 
@@ -849,7 +849,7 @@ class DataEditorMixin:
         "experimental_data_editor",
         "2023-09-01",
         """
-**Breaking change:** The data editor's representation in `st.session_state` was changed. The `edited_rows` dictionary is now called `edited_rows` and uses a
+**Breaking change:** The data editor's representation in `st.session_state` was changed. The `edited_cells` dictionary is now called `edited_rows` and uses a
 different format (`{0: {"column name": "edited value"}}` instead of
 `{"0:1": "edited value"}`). You may need to adjust the code if your app uses
 `st.experimental_data_editor` in combination with `st.session_state`."

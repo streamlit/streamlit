@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 import axios from "axios"
 
 import { BackMsg, ForwardMsg, IBackMsg } from "src/lib/proto"
-import { IAllowedMessageOriginsResponse } from "src/lib/hocs/withHostCommunication/types"
+import { IAllowedMessageOriginsResponse } from "src/lib/hostComm/types"
 import { ConnectionState } from "src/app/connection/ConnectionState"
 import { ForwardMsgCache } from "src/lib/ForwardMessageCache"
 import { logError, logMessage, logWarning } from "src/lib/util/log"

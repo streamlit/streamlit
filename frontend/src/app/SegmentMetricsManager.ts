@@ -17,7 +17,7 @@
 import { pick } from "lodash"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { initializeSegment } from "src/app/vendor/Segment"
-import { DeployedAppMetadata } from "src/lib/hocs/withHostCommunication/types"
+import { DeployedAppMetadata } from "src/lib/hostComm/types"
 import { Delta, Element } from "src/lib/proto"
 import { IS_DEV_ENV } from "src/lib/baseconsts"
 import { logAlways } from "src/lib/util/log"
