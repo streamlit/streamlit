@@ -18,8 +18,6 @@ SHELL=/bin/bash
 
 INSTALL_DEV_REQS ?= true
 INSTALL_TEST_REQS ?= true
-TENSORFLOW_SUPPORTED ?= $(shell python scripts/should_install_tensorflow.py)
-INSTALL_TENSORFLOW ?= $(shell python scripts/should_install_tensorflow.py)
 USE_CONSTRAINT_FILE ?= true
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 GITHUB_REPOSITORY ?= streamlit/streamlit
@@ -108,16 +106,6 @@ python-init:
 	fi;\
 	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
 		pip_args+=("--requirement" "lib/test-requirements.txt"); \
-		if [ "${INSTALL_TENSORFLOW}" = "true" ] ; then \
-			if [ "${TENSORFLOW_SUPPORTED}" = "false" ]; then \
-					echo "";\
-					echo "Your system does not support the official, pre-built tensorflow binaries.";\
-					echo "This generally happens because you are running Python 3.10 or have an Apple Silicon machine.";\
-					echo "";\
-					exit 1;\
-			fi;\
-			pip_args+=(--requirement lib/test-requirements-with-tensorflow.txt); \
-		fi;\
 	fi;\
 	echo "Running command: pip install $${pip_args[@]}";\
 	pip install $${pip_args[@]};
