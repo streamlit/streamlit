@@ -15,6 +15,7 @@
 """Hashing for st.memo and st.singleton."""
 import collections
 import dataclasses
+import datetime
 import functools
 import hashlib
 import inspect
@@ -237,6 +238,9 @@ class _CacheFuncHasher:
 
         elif isinstance(obj, uuid.UUID):
             return obj.bytes
+
+        elif isinstance(obj, datetime.datetime):
+            return obj.isoformat().encode()
 
         elif isinstance(obj, (list, tuple)):
             h = hashlib.new("md5")
