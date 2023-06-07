@@ -353,8 +353,6 @@ class _CacheFuncHasher:
             hash_func = self._hash_funcs[type_util.get_fqn_type(obj)]
             try:
                 output = hash_func(obj)
-                # check `output` type, it should be primitive type
-                # if not, raise error
             except Exception as ex:
                 raise UserHashError(
                     ex, obj, hash_func=hash_func, cache_type=self.cache_type
