@@ -276,6 +276,10 @@ class FileUploader extends React.PureComponent<Props, State> {
       this.removeFile(this.state.files[0].id)
     }
 
+    this.props.uploadClient.fetchFileURLs(acceptedFiles).then((resp: any) => {
+      console.error(resp)
+    })
+
     // Upload each accepted file.
     acceptedFiles.forEach(this.uploadFile)
 

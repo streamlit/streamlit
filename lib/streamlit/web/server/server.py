@@ -54,11 +54,7 @@ from streamlit.web.server.routes import (
 )
 from streamlit.web.server.server_util import make_url_path_regex
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
-from streamlit.web.server.upload_file_request_handler import (
-    UPLOAD_FILE_URLS_ROUTE,
-    UploadFileRequestHandler,
-    UploadFileUrlsRequestHandler,
-)
+from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
 LOGGER = get_logger(__name__)
 
@@ -313,18 +309,6 @@ class Server:
                 dict(
                     file_mgr=self._runtime.uploaded_file_mgr,
                     is_active_session=self._runtime.is_active_session,
-                ),
-            ),
-            # TODO(vdonato): Remove this if we finalize the decision to use websockets
-            # to fetch this info.
-            (
-                make_url_path_regex(
-                    base,
-                    UPLOAD_FILE_URLS_ROUTE,
-                ),
-                UploadFileUrlsRequestHandler,
-                dict(
-                    file_mgr=self._runtime.uploaded_file_mgr,
                 ),
             ),
             (
