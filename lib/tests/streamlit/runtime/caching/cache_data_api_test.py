@@ -41,6 +41,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     MultiCacheResults,
     _make_widget_key,
 )
+from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.caching.storage import (
     CacheStorage,
     CacheStorageContext,
@@ -176,6 +177,90 @@ class CacheDataTest(unittest.TestCase):
             show_warning_mock.assert_called_once_with(warning_str)
         else:
             show_warning_mock.assert_not_called()
+
+    def test_cached_member_function_with_hash_func(self):
+        """@st.cache_data can be applied to class member functions
+        with corresponding hash_func.
+        """
+
+        class TestClass:
+            @st.cache_data(
+                hash_funcs={
+                    "tests.streamlit.runtime.caching.cache_data_api_test.CacheDataTest.test_cached_member_function_with_hash_func.<locals>.TestClass": id
+                }
+            )
+            def member_func(self):
+                return "member func!"
+
+            @classmethod
+            @st.cache_data
+            def class_method(cls):
+                return "class method!"
+
+            @staticmethod
+            @st.cache_data
+            def static_method():
+                return "static method!"
+
+        obj = TestClass()
+        self.assertEqual("member func!", obj.member_func())
+        self.assertEqual("class method!", obj.class_method())
+        self.assertEqual("static method!", obj.static_method())
+
+    def test_function_name_does_not_use_hashfuncs(self):
+        """Hash funcs should only be used on arguments to a function,
+        and not when computing the key for a function's unique MemCache.
+        """
+
+        str_hash_func = Mock(return_value=None)
+
+        @st.cache_data(hash_funcs={str: str_hash_func})
+        def foo(string_arg):
+            return []
+
+        # If our str hash_func is called multiple times, it's probably because
+        # it's being used to compute the function's function_key (as opposed to
+        # the value_key). It should only be used to compute the value_key!
+        foo("ahoy")
+        str_hash_func.assert_called_once_with("ahoy")
+
+    def test_user_hash_error(self):
+        class MyObj:
+            # we specify __repr__ here, to avoid `MyObj object at 0x1347a3f70`
+            # in error message
+            def __repr__(self):
+                return "MyObj class"
+
+        def bad_hash_func(x):
+            x += 10  # Throws a TypeError since x has type MyObj.
+            return x
+
+        @st.cache_data(hash_funcs={MyObj: bad_hash_func})
+        def user_hash_error_func(x):
+            pass
+
+        with self.assertRaises(UserHashError) as ctx:
+            my_obj = MyObj()
+            user_hash_error_func(my_obj)
+
+        expected_message = """unsupported operand type(s) for +=: 'MyObj' and 'int'
+
+This error is likely due to a bug in `bad_hash_func()`, which is a
+user-defined hash function that was passed into the `@st.cache_data` decorator of
+`user_hash_error_func()`.
+
+`bad_hash_func()` failed when hashing an object of type
+`tests.streamlit.runtime.caching.cache_data_api_test.CacheDataTest.test_user_hash_error.<locals>.MyObj`.  If you don't know where that object is coming from,
+try looking at the hash chain below for an object that you do recognize, then
+pass that to `hash_funcs` instead:
+
+```
+Object of type tests.streamlit.runtime.caching.cache_data_api_test.CacheDataTest.test_user_hash_error.<locals>.MyObj: MyObj class
+```
+
+If you think this is actually a Streamlit bug, please
+[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""
+        self.assertEqual(str(ctx.exception), expected_message)
 
 
 class CacheDataPersistTest(DeltaGeneratorTestCase):

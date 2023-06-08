@@ -867,8 +867,8 @@ pass that to `hash_funcs` instead:
 %(hash_stack)s
 ```
 
-If you think this is actually a Streamlit bug, please [file a bug report here.]
-(https://github.com/streamlit/streamlit/issues/new/choose)
+If you think this is actually a Streamlit bug, please
+[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose).
             """
             % args
         ).strip("\n")
