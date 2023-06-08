@@ -40,5 +40,5 @@ for requirement in package.requires():
 
     oldest_dependencies.append(dependency)
 
-for dependency in oldest_dependencies:
+for dependency in sorted(oldest_dependencies):
     print(dependency)
