@@ -23,68 +23,7 @@ from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileMan
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager, UploadedFileRec
 from streamlit.web.server import routes, server_util
 
-UPLOAD_FILE_URLS_ROUTE = r"/_stcore/upload_urls/"
-
 LOGGER = get_logger(__name__)
-
-
-# TODO(vdonato): Remove this if we finalize the decision to use websockets to fetch this
-# info.
-class UploadFileUrlsRequestHandler(tornado.web.RequestHandler):
-    """Implements the POST /upload_urls/ endpoint to get upload urls."""
-
-    def initialize(
-        self,
-        file_mgr: MemoryUploadedFileManager,
-    ):
-
-        self._file_mgr = file_mgr
-
-    def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-        self.set_header("Access-Control-Allow-Headers", "Content-Type")
-        if config.get_option("server.enableXsrfProtection"):
-            self.set_header(
-                "Access-Control-Allow-Origin",
-                server_util.get_url(config.get_option("browser.serverAddress")),
-            )
-            self.set_header("Access-Control-Allow-Headers", "X-Xsrftoken, Content-Type")
-            self.set_header("Vary", "Origin")
-            self.set_header("Access-Control-Allow-Credentials", "true")
-        elif routes.allow_cross_origin_requests():
-            self.set_header("Access-Control-Allow-Origin", "*")
-
-    def options(self, **kwargs):
-        """/OPTIONS handler for preflight CORS checks.
-        When a browser is making a CORS request, it may sometimes first
-        send an OPTIONS request, to check whether the server understands the
-        CORS protocol. This is optional, and doesn't happen for every request
-        or in every browser. If an OPTIONS request does get sent, and is not
-        then handled by the server, the browser will fail the underlying
-        request.
-        The proper way to handle this is to send a 204 response ("no content")
-        with the CORS headers attached. (These headers are automatically added
-        to every outgoing response, including OPTIONS responses,
-        via set_default_headers().)
-        See https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
-        """
-        self.set_status(204)
-        self.finish()
-
-    def post(self, **kwargs):
-        """
-        Receive a number of uploaded file and return a list of urls.
-        """
-
-        json_data = tornado.escape.json_decode(self.request.body)
-        number_of_files = int(json_data["numberOfFiles"])
-        session_id = json_data["sessionId"]
-
-        presigned_urls = self._file_mgr.get_upload_urls(session_id, number_of_files)
-
-        self.write(tornado.escape.json_encode(presigned_urls))
-        self.set_status(201)
-        self.finish()
 
 
 class UploadFileRequestHandler(tornado.web.RequestHandler):
