@@ -23,6 +23,7 @@ from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.Common_pb2 import FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewSession_pb2 import (
@@ -287,6 +288,8 @@ class AppSession:
                 self._handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == "stop_script":
                 self._handle_stop_script_request()
+            elif msg_type == "file_urls_request":
+                self._handle_file_urls_request(msg.file_urls_request)
             else:
                 LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -737,6 +740,32 @@ class AppSession:
         """
         self._run_on_save = new_value
         self._enqueue_forward_msg(self._create_session_status_changed_message())
+
+    def _handle_file_urls_request(self, file_urls_request: FileURLsRequest) -> None:
+        """Handle a file_urls_request BackMsg sent by the client."""
+        msg = ForwardMsg()
+        msg.file_urls_response.response_id = file_urls_request.request_id
+
+        # TODO(vdonato / kajarenc): Figure out how to get rid of this type error:
+        #   We currently don't have the get_upload_urls method as part of the
+        #   UploadedFileManager protocol (it's only defined in the
+        #   MemoryUploadedFileManager implementation), so mypy gets angry at the line
+        #   below. We may want to consider adding it to the protocol even if it does end
+        #   up being a no-op depending on the runtime environment.
+        upload_urls = self._uploaded_file_mgr.get_upload_urls(  # type: ignore
+            self.id, len(file_urls_request.file_names)
+        )
+
+        for url in upload_urls:
+            msg.file_urls_response.file_urls.append(
+                FileURLsResponse.FileURLs(
+                    file_id=url,
+                    upload_url=url,
+                    delete_url=url,
+                )
+            )
+
+        self._enqueue_forward_msg(msg)
 
 
 # Config.ToolbarMode.ValueType does not exist at runtime (only in the pyi stubs), so

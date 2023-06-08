@@ -50,6 +50,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
       sessionInfo: sessionInfo,
       endpoints: endpoints,
       formsWithPendingRequestsChanged: () => {},
+      requestFileURLs: jest.fn(),
     }),
     widgetsDisabled: true,
     componentRegistry: new ComponentRegistry(endpoints),
