@@ -746,7 +746,13 @@ class AppSession:
         msg = ForwardMsg()
         msg.file_urls_response.response_id = file_urls_request.request_id
 
-        upload_urls = self._uploaded_file_mgr.get_upload_urls(
+        # TODO(vdonato / kajarenc): Figure out how to get rid of this type error:
+        #   We currently don't have the get_upload_urls method as part of the
+        #   UploadedFileManager protocol (it's only defined in the
+        #   MemoryUploadedFileManager implementation), so mypy gets angry at the line
+        #   below. We may want to consider adding it to the protocol even if it does end
+        #   up being a no-op depending on the runtime environment.
+        upload_urls = self._uploaded_file_mgr.get_upload_urls(  # type: ignore
             self.id, len(file_urls_request.file_names)
         )
 
