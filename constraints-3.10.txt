@@ -65,7 +65,7 @@ psycopg2-binary==2.9.6
 py4j==0.10.9.7
 pyarrow==12.0.0
 pycparser==2.21
-pydantic==1.10.8
+pydantic==1.10.9
 pydeck==0.8.1b0
 pydot==1.4.2
 Pygments==2.15.1
@@ -115,7 +115,7 @@ types-urllib3==1.26.25.13
 typing_extensions==4.6.3
 tzdata==2023.3
 tzlocal==4.3
-urllib3==2.0.2
+urllib3==2.0.3
 validators==0.20.0
 virtualenv==20.23.0
 watchdog==3.0.0
