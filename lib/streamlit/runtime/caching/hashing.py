@@ -180,10 +180,10 @@ class _HashStack:
     def __contains__(self, val: Any):
         return id(val) in self._stack
 
-    def pretty_print(self):
-        def to_str(v):
+    def pretty_print(self) -> str:
+        def to_str(v: Any) -> str:
             try:
-                return "Object of type %s: %s" % (type_util.get_fqn_type(v), str(v))
+                return f"Object of type {type_util.get_fqn_type(v)}: {str(v)}"
             except Exception:
                 return "<Unable to convert item to string>"
 

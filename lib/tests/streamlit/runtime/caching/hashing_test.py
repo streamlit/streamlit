@@ -123,6 +123,10 @@ class HashTest(unittest.TestCase):
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
     )
     def test_recursive_hash_func(self, _, cache_decorator):
+        """Test that if user defined hash_func returns the value of the same type
+        that hash_funcs tries to cache, we break the recursive cycle with predefined
+        placeholder"""
+
         def hash_int(x):
             return x
 
@@ -414,13 +418,13 @@ class NotHashableTest(unittest.TestCase):
             get_hash((x for x in range(1)))
 
     def test_hash_funcs_acceptable_keys(self):
+        """Test that hashes are equivalent when hash_func key is supplied both as a
+        type literal, and as a type name string.
+        """
         test_generator = (x for x in range(1))
 
         with self.assertRaises(UnhashableTypeError):
             get_hash(test_generator)
-
-        # Assert that hashes are equivalent when hash_func key is supplied both as a
-        # type literal, and as a type name string.
 
         self.assertEqual(
             get_hash(test_generator, hash_funcs={types.GeneratorType: id}),
