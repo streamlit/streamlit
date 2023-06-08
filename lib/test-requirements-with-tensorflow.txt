@@ -1,7 +1,0 @@
-# 2023.1.20: These requirements exist only for `@st.cache` tests. st.cache is deprecated, and
-# we're not going to update its associated tests anymore. Please don't modify
-# these pinned versions!
-
-tensorflow>=2.6.0, <2.8.0
-torch<1.9.0
-torchvision
