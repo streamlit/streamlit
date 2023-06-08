@@ -22,12 +22,15 @@ const MOCK_FILE = new File(["file1"], "file1.txt")
 
 describe("FileUploadClient Upload", () => {
   let formsWithPendingRequestsChanged: jest.Mock
+  let requestFileURLs: jest.Mock
   let uploadFileUploaderFile: jest.Mock
   let uploader: FileUploadClient
 
   beforeEach(() => {
     formsWithPendingRequestsChanged = jest.fn()
     uploadFileUploaderFile = jest.fn()
+    requestFileURLs = jest.fn()
+
     uploader = new FileUploadClient({
       sessionInfo: mockSessionInfo(),
       endpoints: {
@@ -40,6 +43,7 @@ describe("FileUploadClient Upload", () => {
         fetchCachedForwardMsg: jest.fn(),
       },
       formsWithPendingRequestsChanged,
+      requestFileURLs,
     })
   })
 
@@ -121,5 +125,58 @@ describe("FileUploadClient Upload", () => {
     // an empty set
     expect(formsWithPendingRequestsChanged).toHaveBeenCalledTimes(2)
     expect(formsWithPendingRequestsChanged).toHaveBeenLastCalledWith(new Set())
+  })
+
+  it("fetchFileURLs calls requestFileURLs and returns a promise", () => {
+    const fileURLsPromise = uploader.fetchFileURLs([])
+    expect(requestFileURLs).toHaveBeenCalledTimes(1)
+
+    // @ts-expect-error
+    const pendingReqs = uploader.pendingFileURLsRequests
+    expect(pendingReqs.size).toBe(1)
+
+    const reqId = pendingReqs.keys().next().value
+
+    expect(pendingReqs.get(reqId)?.promise).toBe(fileURLsPromise)
+  })
+
+  it("onFileURLsResponse rejects promise on errorMsg", () => {
+    const fileURLsPromise = uploader.fetchFileURLs([])
+
+    // @ts-expect-error
+    const pendingReqs = uploader.pendingFileURLsRequests
+    const reqId = pendingReqs.keys().next().value
+    const promise = pendingReqs.get(reqId)?.promise
+
+    uploader.onFileURLsResponse({
+      responseId: reqId,
+      errorMsg: "kaboom",
+    })
+
+    expect(promise).rejects.toBe("kaboom")
+  })
+
+  it("onFileURLsResponse resolves promise on success", () => {
+    const fileURLsPromise = uploader.fetchFileURLs([])
+
+    // @ts-expect-error
+    const pendingReqs = uploader.pendingFileURLsRequests
+    const reqId = pendingReqs.keys().next().value
+    const promise = pendingReqs.get(reqId)?.promise
+
+    uploader.onFileURLsResponse({
+      responseId: reqId,
+      fileUrls: [],
+    })
+
+    expect(promise).resolves.toEqual([])
+  })
+
+  it("onFileURLsResponse does not error when given an invalid responseId", () => {
+    // No need to do anything other than check that no error is thrown.
+    uploader.onFileURLsResponse({
+      responseId: "noCorrespondingId",
+      fileUrls: [],
+    })
   })
 })

@@ -742,7 +742,7 @@ class AppSession:
         self._enqueue_forward_msg(self._create_session_status_changed_message())
 
     def _handle_file_urls_request(self, file_urls_request: FileURLsRequest) -> None:
-        """TODO(vdonato): docstring"""
+        """Handle a file_urls_request BackMsg sent by the client."""
         msg = ForwardMsg()
         msg.file_urls_response.response_id = file_urls_request.request_id
 

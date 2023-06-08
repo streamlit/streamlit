@@ -66,15 +66,13 @@ message ForwardMsg {
     // Other messages.
     PageNotFound page_not_found = 15;
     PagesChanged pages_changed = 16;
+    FileURLsResponse file_urls_response = 19;
 
     // A reference to a ForwardMsg that has already been delivered.
     // The client should substitute the message with the given hash
     // for this one. If the client does not have the referenced message
     // in its cache, it can retrieve it from the server.
     string ref_hash = 11;
-
-    // TODO(vdonato): Explanatory comment
-    FileURLsResponse file_urls_response = 19;
   }
 
   // The ID of the last BackMsg that we received before sending this

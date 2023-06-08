@@ -64,7 +64,8 @@ message BackMsg {
     // global.developmentMode = True.
     bool debug_shutdown_runtime = 15;
 
-    // TODO(vdonato): Explanatory comment
+    // Requests that the server generate URLs for getting/uploading/deleting
+    // files for the `st.file_uploader` widget
     FileURLsRequest file_urls_request = 16;
   }
 
