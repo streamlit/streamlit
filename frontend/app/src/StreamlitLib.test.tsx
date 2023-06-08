@@ -53,6 +53,10 @@ class Endpoints implements StreamlitEndpoints {
     return url
   }
 
+  public buildFileUploadURL(url: string): string {
+    return url
+  }
+
   public buildAppPageURL(
     pageLinkBaseURL: string | undefined,
     page: IAppPage,
@@ -62,12 +66,16 @@ class Endpoints implements StreamlitEndpoints {
   }
 
   public uploadFileUploaderFile(
+    fileUploadUrl: string,
     file: File,
-    widgetId: string,
     sessionId: string,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
   ): Promise<number> {
+    return Promise.reject(new Error("Unimplemented"))
+  }
+
+  public deleteFileAtURL(fileUrl: string, sessionId: string): Promise<void> {
     return Promise.reject(new Error("Unimplemented"))
   }
 

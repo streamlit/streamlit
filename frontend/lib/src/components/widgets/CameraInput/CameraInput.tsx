@@ -569,6 +569,8 @@ class CameraInput extends React.PureComponent<Props, State> {
     this.props.uploadClient
       .uploadFile(
         this.props.element,
+        // TODO(vdonato): Use the file upload URL received from the server.
+        "/_stcore/upload_file",
         file,
         e => this.onUploadProgress(e, uploadingFileInfo.id),
         cancelToken.token
