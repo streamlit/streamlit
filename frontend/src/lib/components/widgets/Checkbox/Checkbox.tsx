@@ -192,6 +192,8 @@ class Checkbox extends React.PureComponent<Props, State> {
             },
             Label: {
               style: {
+                position: "relative",
+                top: "1px",
                 color,
               },
             },
