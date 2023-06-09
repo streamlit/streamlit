@@ -158,6 +158,8 @@ def _clean(txt):
 
 def _clean_paragraphs(txt):
     """Split the text into paragraphs, preserve newlines within the paragraphs."""
+    # Strip leading newlines.
+    txt = txt.lstrip("\n")
     paragraphs = txt.split("\n\n")
     cleaned_paragraphs = [
         "\n".join(_clean(line) for line in paragraph.split("\n"))
