@@ -58,7 +58,6 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   hasSidebarElements: false,
   hideParentScrollbar: jest.fn(),
   onPageChange: jest.fn(),
-  pageLinkBaseUrl: "",
   endpoints: mockEndpoints(),
   ...props,
 })

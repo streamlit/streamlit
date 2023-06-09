@@ -236,7 +236,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("class", ds.type)
         self.assertEqual("", ds.doc_string)
 
-    def test_padding_an_instance(self):
+    def test_passing_an_instance(self):
         """When the type of the object is type and no docs are defined,
         we expect docs to be None."""
 
@@ -251,7 +251,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("MyClass", ds.name)
         self.assertEqual(
             "tests.streamlit.elements.help_test.StHelpTest."
-            "test_padding_an_instance.<locals>.MyClass()",
+            "test_passing_an_instance.<locals>.MyClass()",
             ds.value,
         )
         self.assertEqual("class", ds.type)

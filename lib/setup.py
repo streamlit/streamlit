@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.22.0"  # PEP-440
+VERSION = "1.23.1"  # PEP-440
 
 NAME = "streamlit"
 
@@ -30,7 +30,7 @@ NAME = "streamlit"
 # - Include relevant lower bound for any features we use from our dependencies
 # - And include an upper bound that's < NEXT_MAJOR_VERSION
 INSTALL_REQUIRES = [
-    "altair>=3.2.0, <5",
+    "altair>=4.0, <6",
     "blinker>=1.0.0, <2",
     "cachetools>=4.0, <6",
     "click>=7.0, <9",
@@ -55,7 +55,7 @@ INSTALL_REQUIRES = [
     "rich>=10.11.0, <14",
     "tenacity>=8.0.0, <9",
     "toml<2",
-    "typing-extensions>=3.10.0.0",
+    "typing-extensions>=4.0.1, <5",
     "tzlocal>=1.1, <5",
     "validators>=0.2, <1",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
@@ -135,6 +135,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Topic :: Database :: Front-Ends",
         "Topic :: Office/Business :: Financial :: Spreadsheet",
         "Topic :: Scientific/Engineering :: Information Analysis",
