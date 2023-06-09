@@ -84,6 +84,8 @@ class FileUploaderSerde:
     ) -> SomeUploadedFiles:
         file_recs = _get_file_recs(ui_value)
 
+        # TODO[KAREN] Extract this logic for file_uploader and camera_input into
+        #  separate method.
         if ui_value is not None:
             uploaded_file_info = ui_value.uploaded_file_info
 

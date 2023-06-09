@@ -67,7 +67,6 @@ def _get_file_recs_for_camera_input_widget(
 
 @dataclass
 class CameraInputSerde:
-
     file_delete_urls: Dict[str, str] = field(default_factory=dict)
 
     def serialize(
