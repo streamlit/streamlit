@@ -75,8 +75,11 @@ message UploadedFileInfo {
   // The size of this file in bytes.
   uint32 size = 3;
 
-  // URL that this file was uploaded to.
-  string file_url = 4;
+  // File id that can be used to retrieve a file.
+  string file_id = 4;
+
+  // File url to delete the file
+  string file_delete_url = 5;
 }
 
 message FileUploaderState {

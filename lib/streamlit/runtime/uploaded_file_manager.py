@@ -13,7 +13,7 @@
 # limitations under the License.
 import io
 from abc import abstractmethod
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Sequence
 
 from typing_extensions import Protocol
 
@@ -24,10 +24,18 @@ from streamlit.runtime.stats import CacheStatsProvider
 class UploadedFileRec(NamedTuple):
     """Metadata and raw bytes for an uploaded file. Immutable."""
 
-    file_url: str
+    file_id: str
     name: str
     type: str
     data: bytes
+
+
+class UploadFileUrlInfo(NamedTuple):
+    """Information we provide for single file in get_upload_urls"""
+
+    file_id: str
+    upload_url: str
+    delete_url: str
 
 
 class UploadedFile(io.BytesIO):
@@ -43,7 +51,7 @@ class UploadedFile(io.BytesIO):
         # and not guaranteed to be in other Python runtimes. But it's detailed
         # here: https://hg.python.org/cpython/rev/79a5fbe2c78f
         super(UploadedFile, self).__init__(record.data)
-        self.file_url = record.file_url
+        self.file_id = record.file_id
         self.name = record.name
         self.type = record.type
         self.size = len(record.data)
@@ -51,7 +59,7 @@ class UploadedFile(io.BytesIO):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, UploadedFile):
             return NotImplemented
-        return self.file_url == other.file_url
+        return self.file_id == other.file_id
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -61,9 +69,17 @@ class UploadedFileManager(CacheStatsProvider, Protocol):
     """# TODO(kajarenc): Docstrings for this protocol + its methods."""
 
     @abstractmethod
-    def get_files(self, session_id: str, file_urls: List[str]) -> List[UploadedFileRec]:
+    def get_files(
+        self, session_id: str, file_ids: Sequence[str]
+    ) -> List[UploadedFileRec]:
         raise NotImplementedError
 
     @abstractmethod
     def remove_session_files(self, session_id: str) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_upload_urls(
+        self, session_id: str, file_names: Sequence[str]
+    ) -> List[UploadFileUrlInfo]:
         raise NotImplementedError

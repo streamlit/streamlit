@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from textwrap import dedent
-from typing import List, Optional, Sequence, Union, cast, overload
+from typing import Dict, List, Optional, Sequence, Union, cast, overload
 
 from typing_extensions import Literal
 
@@ -65,23 +65,31 @@ def _get_file_recs(
     if len(uploaded_file_info) == 0:
         return []
 
-    active_file_urls = [f.file_url for f in uploaded_file_info]
+    active_file_ids = [f.file_id for f in uploaded_file_info]
 
     # Grab the files that correspond to our active file IDs.
     return ctx.uploaded_file_mgr.get_files(
         session_id=ctx.session_id,
-        file_urls=active_file_urls,
+        file_ids=active_file_ids,
     )
 
 
 @dataclass
 class FileUploaderSerde:
     accept_multiple_files: bool
+    file_delete_urls: Dict[str, str] = field(default_factory=dict)
 
     def deserialize(
         self, ui_value: Optional[FileUploaderStateProto], widget_id: str
     ) -> SomeUploadedFiles:
         file_recs = _get_file_recs(ui_value)
+
+        if ui_value is not None:
+            uploaded_file_info = ui_value.uploaded_file_info
+
+            for f in uploaded_file_info:
+                self.file_delete_urls[f.file_id] = f.file_delete_url
+
         if len(file_recs) == 0:
             return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
                 [] if self.accept_multiple_files else None
@@ -101,9 +109,10 @@ class FileUploaderSerde:
 
         for f in files:
             file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
-            file_info.file_url = f.file_url
+            file_info.file_id = f.file_id
             file_info.name = f.name
             file_info.size = f.size
+            file_info.file_delete_url = self.file_delete_urls[f.file_id]
 
         return state_proto
 

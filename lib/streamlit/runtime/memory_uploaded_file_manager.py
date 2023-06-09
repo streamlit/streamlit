@@ -14,14 +14,16 @@
 
 import uuid
 from collections import defaultdict
-from typing import Dict, List
-
-from blinker import Signal
+from typing import Dict, List, Sequence
 
 from streamlit import util
 from streamlit.logger import get_logger
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import (
+    UploadedFileManager,
+    UploadedFileRec,
+    UploadFileUrlInfo,
+)
 
 LOGGER = get_logger(__name__)
 
@@ -37,12 +39,14 @@ class MemoryUploadedFileManager(UploadedFileManager):
         self.file_storage: Dict[str, Dict[str, UploadedFileRec]] = defaultdict(dict)
         self.endpoint = upload_endpoint
 
-    def get_files(self, session_id: str, file_urls: List[str]) -> List[UploadedFileRec]:
+    def get_files(
+        self, session_id: str, file_ids: Sequence[str]
+    ) -> List[UploadedFileRec]:
         session_storage = self.file_storage[session_id]
         file_recs = []
 
-        for file_url in file_urls:
-            file_rec = session_storage.get(file_url, None)
+        for file_id in file_ids:
+            file_rec = session_storage.get(file_id, None)
             if file_rec is not None:
                 file_recs.append(file_rec)
 
@@ -72,20 +76,26 @@ class MemoryUploadedFileManager(UploadedFileManager):
             The file to add.
         """
 
-        self.file_storage[session_id][file.file_url] = file
+        self.file_storage[session_id][file.file_id] = file
 
-    def remove_file(self, session_id, file_url):
+    def remove_file(self, session_id, file_id):
         session_storage = self.file_storage[session_id]
-        session_storage.pop(file_url, None)
+        session_storage.pop(file_id, None)
 
-    # TODO(vdonato / kajarenc): Maybe change this function signature to take a list of
-    # file names rather than number_of_files.
-    # TODO(vdonato / kajarenc): Unit tests for this
-    def get_upload_urls(self, session_id: str, number_of_files: int) -> List[str]:
-        return [
-            f"{self.endpoint}/{session_id}/{str(uuid.uuid4())}"
-            for _ in range(number_of_files)
-        ]
+    def get_upload_urls(
+        self, session_id: str, file_names: Sequence[str]
+    ) -> List[UploadFileUrlInfo]:
+        result = []
+        for _ in file_names:
+            file_id = str(uuid.uuid4())
+            result.append(
+                UploadFileUrlInfo(
+                    file_id=file_id,
+                    upload_url=f"{self.endpoint}/{session_id}/{file_id}",
+                    delete_url=f"{self.endpoint}/{session_id}/{file_id}",
+                )
+            )
+        return result
 
     def get_stats(self) -> List[CacheStat]:
         """Return the manager's CacheStats.
