@@ -202,10 +202,20 @@ class ConfigUtilTest(unittest.TestCase):
         [(args, _)] = patched_echo.call_args_list
         # Remove the ascii escape sequences used to color terminal output.
         output = re.compile(r"\x1b[^m]*m").sub("", args[0])
-        lines = set(output.split("\n"))
+        lines = output.split("\n")
+        description_index = lines.index(
+            "# This option's description starts from third line."
+        )
 
-        assert "# This option's description starts from third line." in lines
-        assert "# All preceding empty lines should be removed." in lines
+        assert (
+            description_index > 1
+        ), "Description should not be at the start of the output"
+        assert (
+            lines[description_index - 1].strip() == ""
+        ), "Preceding line should be empty (this line separates config options)"
+        assert (
+            lines[description_index - 2].strip() != ""
+        ), "The line before the preceding line should not be empty (this is the section header)"
 
     @patch("streamlit.config_util.click.echo")
     def test_description_appears_before_option(self, patched_echo):
