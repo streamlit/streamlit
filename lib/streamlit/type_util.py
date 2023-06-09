@@ -503,12 +503,6 @@ def convert_anything_to_df(
     pandas.DataFrame
 
     """
-    # This is inefficient as the data will be converted back to Arrow
-    # when marshalled to protobuf, but area/bar/line charts need
-    # DataFrame magic to generate the correct output.
-    if isinstance(data, pa.Table):
-        return data.to_pandas()
-
     if is_type(data, _PANDAS_DF_TYPE_STR):
         return data.copy() if ensure_copy else data
 
@@ -535,6 +529,12 @@ def convert_anything_to_df(
                 "Call `collect()` on the dataframe to show more."
             )
         return data
+
+    # This is inefficient when data is a pyarrow.Table as it will be converted
+    # back to Arrow when marshalled to protobuf, but area/bar/line charts need
+    # DataFrame magic to generate the correct output.
+    if hasattr(data, "to_pandas"):
+        return data.to_pandas()
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
