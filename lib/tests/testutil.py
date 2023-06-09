@@ -39,6 +39,15 @@ def should_skip_pyspark_tests() -> bool:
     return sys.version_info >= (3, 11, 0)
 
 
+def should_skip_pydantic_tests() -> bool:
+    try:
+        import pydantic
+
+        return not pydantic.__version__.startswith("1.")
+    except ImportError:
+        return True
+
+
 def create_mock_script_run_ctx() -> ScriptRunContext:
     """Create a ScriptRunContext for use in tests."""
     return ScriptRunContext(

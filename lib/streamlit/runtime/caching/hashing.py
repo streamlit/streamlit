@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Hashing for st.memo and st.singleton."""
+"""Hashing for st.cache_data and st.cache_resource."""
 import collections
 import dataclasses
 import functools
@@ -28,9 +28,10 @@ import unittest.mock
 import uuid
 import weakref
 from enum import Enum
-from typing import Any, Dict, List, Optional, Pattern
+from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
 
 from streamlit import type_util, util
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.uploaded_file_manager import UploadedFile
@@ -43,17 +44,109 @@ _PANDAS_SAMPLE_SIZE = 10000
 _NP_SIZE_LARGE = 1000000
 _NP_SAMPLE_SIZE = 100000
 
+HashFuncsDict = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
+
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
 _CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
 
 
-def update_hash(val: Any, hasher, cache_type: CacheType) -> None:
+class UserHashError(StreamlitAPIException):
+    def __init__(
+        self,
+        orig_exc,
+        object_to_hash,
+        hash_func,
+        cache_type: Optional[CacheType] = None,
+    ):
+        self.alternate_name = type(orig_exc).__name__
+        self.hash_func = hash_func
+        self.cache_type = cache_type
+
+        msg = self._get_message_from_func(orig_exc, object_to_hash)
+
+        super().__init__(msg)
+        self.with_traceback(orig_exc.__traceback__)
+
+    def _get_message_from_func(self, orig_exc, cached_func):
+        args = self._get_error_message_args(orig_exc, cached_func)
+
+        return (
+            """
+%(orig_exception_desc)s
+
+This error is likely due to a bug in %(hash_func_name)s, which is a
+user-defined hash function that was passed into the `%(cache_primitive)s` decorator of
+%(object_desc)s.
+
+%(hash_func_name)s failed when hashing an object of type
+`%(failed_obj_type_str)s`.  If you don't know where that object is coming from,
+try looking at the hash chain below for an object that you do recognize, then
+pass that to `hash_funcs` instead:
+
+```
+%(hash_stack)s
+```
+
+If you think this is actually a Streamlit bug, please
+[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose).
+"""
+            % args
+        ).strip("\n")
+
+    def _get_error_message_args(
+        self,
+        orig_exc: BaseException,
+        failed_obj: Any,
+    ) -> Dict[str, Any]:
+        hash_source = hash_stacks.current.hash_source
+
+        failed_obj_type_str = type_util.get_fqn_type(failed_obj)
+
+        if hash_source is None:
+            object_desc = "something"
+        else:
+            if hasattr(hash_source, "__name__"):
+                object_desc = f"`{hash_source.__name__}()`"
+            else:
+                object_desc = "a function"
+
+        decorator_name = ""
+        if self.cache_type is CacheType.RESOURCE:
+            decorator_name = "@st.cache_resource"
+        elif self.cache_type is CacheType.DATA:
+            decorator_name = "@st.cache_data"
+
+        if hasattr(self.hash_func, "__name__"):
+            hash_func_name = f"`{self.hash_func.__name__}()`"
+        else:
+            hash_func_name = "a function"
+
+        return {
+            "orig_exception_desc": str(orig_exc),
+            "failed_obj_type_str": failed_obj_type_str,
+            "hash_stack": hash_stacks.current.pretty_print(),
+            "object_desc": object_desc,
+            "cache_primitive": decorator_name,
+            "hash_func_name": hash_func_name,
+        }
+
+
+def update_hash(
+    val: Any,
+    hasher,
+    cache_type: CacheType,
+    hash_source: Optional[Callable[..., Any]] = None,
+    hash_funcs: Optional[HashFuncsDict] = None,
+) -> None:
     """Updates a hashlib hasher with the hash of val.
 
     This is the main entrypoint to hashing.py.
     """
-    ch = _CacheFuncHasher(cache_type)
+
+    hash_stacks.current.hash_source = hash_source
+
+    ch = _CacheFuncHasher(cache_type, hash_funcs)
     ch.update(hasher, val)
 
 
@@ -71,6 +164,9 @@ class _HashStack:
 
     def __init__(self):
         self._stack: collections.OrderedDict[int, List[Any]] = collections.OrderedDict()
+        # A function that we decorate with streamlit cache
+        # primitive (st.cache_data or st.cache_resource).
+        self.hash_source: Optional[Callable[..., Any]] = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -83,6 +179,15 @@ class _HashStack:
 
     def __contains__(self, val: Any):
         return id(val) in self._stack
+
+    def pretty_print(self) -> str:
+        def to_str(v: Any) -> str:
+            try:
+                return f"Object of type {type_util.get_fqn_type(v)}: {str(v)}"
+            except Exception:
+                return "<Unable to convert item to string>"
+
+        return "\n".join(to_str(x) for x in reversed(self._stack.values()))
 
 
 class _HashStacks:
@@ -161,7 +266,24 @@ def _key(obj: Optional[Any]) -> Any:
 class _CacheFuncHasher:
     """A hasher that can hash objects with cycles."""
 
-    def __init__(self, cache_type: CacheType):
+    def __init__(
+        self, cache_type: CacheType, hash_funcs: Optional[HashFuncsDict] = None
+    ):
+        # Can't use types as the keys in the internal _hash_funcs because
+        # we always remove user-written modules from memory when rerunning a
+        # script in order to reload it and grab the latest code changes.
+        # (See LocalSourcesWatcher.py:on_file_changed) This causes
+        # the type object to refer to different underlying class instances each run,
+        # so type-based comparisons fail. To solve this, we use the types converted
+        # to fully-qualified strings as keys in our internal dict.
+        self._hash_funcs: HashFuncsDict
+        if hash_funcs:
+            self._hash_funcs = {
+                k if isinstance(k, str) else type_util.get_fqn(k): v
+                for k, v in hash_funcs.items()
+            }
+        else:
+            self._hash_funcs = {}
         self._hashes: Dict[Any, bytes] = {}
 
         # The number of the bytes in the hash.
@@ -225,6 +347,17 @@ class _CacheFuncHasher:
 
         elif isinstance(obj, bytes) or isinstance(obj, bytearray):
             return obj
+
+        elif type_util.get_fqn_type(obj) in self._hash_funcs:
+            # Escape hatch for unsupported objects
+            hash_func = self._hash_funcs[type_util.get_fqn_type(obj)]
+            try:
+                output = hash_func(obj)
+            except Exception as ex:
+                raise UserHashError(
+                    ex, obj, hash_func=hash_func, cache_type=self.cache_type
+                ) from ex
+            return self.to_bytes(output)
 
         elif isinstance(obj, str):
             return obj.encode()

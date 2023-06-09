@@ -45,6 +45,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     MsgData,
     MultiCacheResults,
 )
+from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
@@ -153,11 +154,13 @@ class CachedResourceFuncInfo(CachedFuncInfo):
         ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
         allow_widgets: bool,
+        hash_funcs: HashFuncsDict | None = None,
     ):
         super().__init__(
             func,
             show_spinner=show_spinner,
             allow_widgets=allow_widgets,
+            hash_funcs=hash_funcs,
         )
         self.max_entries = max_entries
         self.ttl = ttl
@@ -245,6 +248,7 @@ class CacheResourceAPI:
         show_spinner: bool | str = True,
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
+        hash_funcs: HashFuncsDict | None = None,
     ):
         return self._decorator(
             func,
@@ -253,6 +257,7 @@ class CacheResourceAPI:
             show_spinner=show_spinner,
             validate=validate,
             experimental_allow_widgets=experimental_allow_widgets,
+            hash_funcs=hash_funcs,
         )
 
     def _decorator(
@@ -264,6 +269,7 @@ class CacheResourceAPI:
         show_spinner: bool | str,
         validate: ValidateFunc | None,
         experimental_allow_widgets: bool,
+        hash_funcs: HashFuncsDict | None = None,
     ):
         """Decorator to cache functions that return global resources (e.g. database connections, ML models).
 
@@ -389,6 +395,7 @@ class CacheResourceAPI:
                     ttl=ttl,
                     validate=validate,
                     allow_widgets=experimental_allow_widgets,
+                    hash_funcs=hash_funcs,
                 )
             )
 
@@ -400,6 +407,7 @@ class CacheResourceAPI:
                 ttl=ttl,
                 validate=validate,
                 allow_widgets=experimental_allow_widgets,
+                hash_funcs=hash_funcs,
             )
         )
 
