@@ -236,14 +236,10 @@ class ConfigUtilTest(unittest.TestCase):
         lines = output.split("\n")
 
         # Find the index of the description and the option in the output.
-        description_index = next(
-            i
-            for i, line in enumerate(lines)
-            if "This option's description should appear before the option." in line
+        description_index = lines.index(
+            "# This option's description should appear before the option."
         )
-        option_index = next(
-            i for i, line in enumerate(lines) if 'customOption = "default"' in line
-        )
+        option_index = lines.index('# customOption = "default"')
 
         # Assert that the description appears before the option.
         self.assertLess(description_index, option_index)
