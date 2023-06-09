@@ -56,7 +56,7 @@ pathspec==0.11.1
 Pillow==9.5.0
 pkginfo==1.9.6
 platformdirs==3.5.1
-plotly==5.14.1
+plotly==5.15.0
 pluggy==1.0.0
 pre-commit==3.3.2
 protobuf==3.20.3
@@ -81,7 +81,7 @@ pytz-deprecation-shim==0.1.0.post0
 PyYAML==6.0
 readme-renderer==37.3
 requests==2.31.0
-requests-mock==1.10.0
+requests-mock==1.11.0
 requests-toolbelt==1.0.0
 retrying==1.3.4
 rfc3986==2.0.0
