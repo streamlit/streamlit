@@ -59,7 +59,7 @@ class ConfigUtilTest(unittest.TestCase):
         )
 
         truth = [
-            "\nLorem ipsum dolor sit amet,\nconsectetur adipiscing elit.",
+            "Lorem ipsum dolor sit amet,\nconsectetur adipiscing elit.",
             " Curabitur ac fermentum eros.",
             "Maecenas libero est,\n ultricies\neget ligula eget, ",
         ]
