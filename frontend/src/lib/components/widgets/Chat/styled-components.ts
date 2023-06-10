@@ -84,12 +84,12 @@ export const StyledAvatarImage = styled.img(({ theme }) => ({
   display: "flex",
 }))
 
-export interface StyledChatInputContainer {
+export interface StyledChatInputContainerProps {
   width: number
 }
 
-export const StyledChatInputContainer = styled.div<StyledChatInputContainer>(
-  ({ theme, width }) => {
+export const StyledChatInputContainer =
+  styled.div<StyledChatInputContainerProps>(({ theme, width }) => {
     const lightTheme = hasLightBackgroundColor(theme)
     return {
       backgroundColor: lightTheme ? theme.colors.gray10 : theme.colors.gray90,
@@ -107,8 +107,7 @@ export const StyledChatInputContainer = styled.div<StyledChatInputContainer>(
       zIndex: theme.zIndices.chatInput,
       width: `${width}px`,
     }
-  }
-)
+  })
 
 export const StyledChatInput = styled.div(({ theme }) => {
   const lightTheme = hasLightBackgroundColor(theme)

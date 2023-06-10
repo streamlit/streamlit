@@ -14,46 +14,38 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  ReactNode,
-  useEffect,
-  useRef,
-  useMemo,
-  useState,
-  RefObject,
-} from "react"
+import React, { ReactElement, ReactNode, useEffect, useRef } from "react"
 import { StyledChatContainer, StyledChatAnchor } from "./styled-components"
 
 export interface Props {
   children?: ReactNode
 }
 
-function useOnScreen(ref: RefObject<HTMLElement>) {
-  const [isIntersecting, setIntersecting] = useState(false)
+// function useOnScreen(ref: RefObject<HTMLElement>) {
+//   const [isIntersecting, setIntersecting] = useState(false)
 
-  const observer = useMemo(
-    () =>
-      new IntersectionObserver(([entry]) =>
-        setIntersecting(entry.isIntersecting)
-      ),
-    [ref]
-  )
+//   const observer = useMemo(
+//     () =>
+//       new IntersectionObserver(([entry]) =>
+//         setIntersecting(entry.isIntersecting)
+//       ),
+//     [ref]
+//   )
 
-  useEffect(() => {
-    if (ref.current) {
-      observer.observe(ref.current)
-      return () => observer.disconnect()
-    }
-  }, [])
+//   useEffect(() => {
+//     if (ref.current) {
+//       observer.observe(ref.current)
+//       return () => observer.disconnect()
+//     }
+//   }, [])
 
-  return isIntersecting
-}
+//   return isIntersecting
+// }
 
 function ChatContainer(props: Props): ReactElement {
   const { children } = props
   const scrollAnchorRef = useRef<HTMLDivElement>(null)
-  const _isVisible = useOnScreen(scrollAnchorRef)
+  // const isVisible = useOnScreen(scrollAnchorRef)
 
   const scrollArea = document.getElementsByClassName("main")[0]
   const isOnBottom =

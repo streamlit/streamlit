@@ -78,6 +78,7 @@ class ChatInput extends React.PureComponent<Props, State> {
     console.log(this.props.element.default)
     return this.props.element.default
   }
+
   public componentDidMount(): void {
     if (this.props.element.setValue) {
       this.updateFromProtobuf()
