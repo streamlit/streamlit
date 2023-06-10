@@ -24,7 +24,7 @@ export interface Props {
   value: string
   maxLength?: number
   className?: string
-  type?: "multiline" | "single"
+  type?: "multiline" | "single" | "chat"
 }
 
 const InputInstructions = ({
@@ -54,7 +54,7 @@ const InputInstructions = ({
       } else {
         addMessage("Press Ctrl+Enter to apply")
       }
-    } else {
+    } else if (type === "single") {
       addMessage("Press Enter to apply")
     }
   }

@@ -245,6 +245,20 @@ export class WidgetStateManager {
    * Sets the trigger value for the given widget ID to true, sends a rerunScript message
    * to the server, and then immediately unsets the trigger value.
    */
+  public setStringTriggerValue(
+    widget: WidgetInfo,
+    value: string,
+    source: Source
+  ): void {
+    this.createWidgetState(widget, source).stringTriggerValue = value
+    this.onWidgetValueChanged(widget.formId, source)
+    this.deleteWidgetState(widget.id)
+  }
+
+  /**
+   * Sets the trigger value for the given widget ID to true, sends a rerunScript message
+   * to the server, and then immediately unsets the trigger value.
+   */
   public setTriggerValue(widget: WidgetInfo, source: Source): void {
     this.createWidgetState(widget, source).triggerValue = true
     this.onWidgetValueChanged(widget.formId, source)

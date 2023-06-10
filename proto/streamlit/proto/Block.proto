@@ -25,6 +25,8 @@ message Block {
     Form form = 5;
     TabContainer tab_container = 6;
     Tab tab = 7;
+    ChatContainer chat_container = 9;
+    ChatMessage chat_message = 10;
   }
 
   bool allow_empty = 8;
@@ -58,5 +60,14 @@ message Block {
     string label = 1;
   }
 
-  // Next ID: 9
+  message ChatContainer {
+  }
+
+  message ChatMessage {
+    string label = 1;
+    string avatar = 2;
+    string background = 3;
+  }
+
+  // Next ID: 11
 }

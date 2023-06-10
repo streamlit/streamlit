@@ -525,13 +525,19 @@ class SessionState:
         """Set all trigger values in our state dictionary to False."""
         for state_id in self._new_widget_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
-            if metadata is not None and metadata.value_type == "trigger_value":
-                self._new_widget_state[state_id] = Value(False)
+            if metadata is not None:
+                if metadata.value_type == "trigger_value":
+                    self._new_widget_state[state_id] = Value(False)
+                elif metadata.value_type == "string_trigger_value":
+                    self._new_widget_state[state_id] = Value(None)
 
         for state_id in self._old_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
-            if metadata is not None and metadata.value_type == "trigger_value":
-                self._old_state[state_id] = False
+            if metadata is not None:
+                if metadata.value_type == "trigger_value":
+                    self._old_state[state_id] = False
+                elif metadata.value_type == "string_trigger_value":
+                    self._old_state[state_id] = None
 
     def _remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
         """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""

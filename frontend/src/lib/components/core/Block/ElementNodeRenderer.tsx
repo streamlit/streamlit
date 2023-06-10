@@ -22,6 +22,7 @@ import {
   Button as ButtonProto,
   DownloadButton as DownloadButtonProto,
   CameraInput as CameraInputProto,
+  ChatInput as ChatInputProto,
   Checkbox as CheckboxProto,
   Code as CodeProto,
   ColorPicker as ColorPickerProto,
@@ -137,6 +138,11 @@ const DownloadButton = React.lazy(
 const CameraInput = React.lazy(
   () => import("src/lib/components/widgets/CameraInput")
 )
+
+const ChatInput = React.lazy(
+  () => import("src/lib/components/widgets/Chat/ChatInput")
+)
+
 const Checkbox = React.lazy(
   () => import("src/lib/components/widgets/Checkbox")
 )
@@ -475,6 +481,19 @@ const RawElementNodeRenderer = (
           key={cameraInputProto.id}
           element={cameraInputProto}
           uploadClient={props.uploadClient}
+          width={width}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "chatInput": {
+      const chatInputProto = node.element.chatInput as ChatInputProto
+      widgetProps.disabled = widgetProps.disabled || chatInputProto.disabled
+      return (
+        <ChatInput
+          key={chatInputProto.id}
+          element={chatInputProto}
           width={width}
           {...widgetProps}
         />

@@ -214,3 +214,7 @@ experimental_set_query_params = _set_query_params
 experimental_rerun = _rerun
 experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _connection_factory
+
+chat_container = _main._chat_container
+chat_message = _main._chat_message
+chat_input = _main.chat_input

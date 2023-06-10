@@ -1,4 +1,6 @@
 /**
+import default from '../../../theme/emotionLightTheme/themeColors';
+import default from '../../../theme/emotionLightTheme/themeColors';
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,27 +16,6 @@
  * limitations under the License.
  */
 
-const sidebar = 100
-const menuButton = sidebar + 10
-const balloons = 1000000
-const header = balloons - 10
-const chatInput = balloons - 7
-const sidebarMobile = balloons - 5
-const popupMenu = balloons + 40
-const fullscreenWrapper = balloons + 50
-const tablePortal = fullscreenWrapper + 60
-
-export const zIndices = {
-  hide: -1,
-  auto: "auto",
-  base: 0,
-  sidebar,
-  menuButton,
-  balloons,
-  header,
-  sidebarMobile,
-  popupMenu,
-  fullscreenWrapper,
-  tablePortal,
-  chatInput,
-}
+export { default as ChatContainer } from "./ChatContainer"
+export { default as ChatMessage } from "./ChatMessage"
+export { default as ChatInput } from "./ChatInput"

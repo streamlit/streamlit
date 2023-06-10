@@ -22,6 +22,7 @@ import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/util/utils"
 import withExpandable from "src/lib/hocs/withExpandable"
 import { Form } from "src/lib/components/widgets/Form"
+import { ChatContainer, ChatMessage } from "src/lib/components/widgets/Chat"
 import Tabs, { TabProps } from "src/lib/components/elements/Tabs"
 
 import {
@@ -98,6 +99,20 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       >
         {child}
       </Form>
+    )
+  }
+  if (node.deltaBlock.chatContainer) {
+    return <ChatContainer>{child}</ChatContainer>
+  }
+
+  if (node.deltaBlock.chatMessage) {
+    const { avatar, label, background } = node.deltaBlock
+      .chatMessage as BlockProto.ChatMessage
+
+    return (
+      <ChatMessage avatar={avatar} label={label} background={background}>
+        {child}
+      </ChatMessage>
     )
   }
 
