@@ -601,6 +601,16 @@ class DeltaGenerator(
                 raise StreamlitAPIException(
                     "Columns can only be placed inside other columns up to one level of nesting."
                 )
+        if block_type == "chat_message" and block_type in frozenset(parent_block_types):
+            raise StreamlitAPIException(
+                "Chat messages cannot nested inside other chat messages."
+            )
+        if block_type == "chat_container" and block_type in frozenset(
+            parent_block_types
+        ):
+            raise StreamlitAPIException(
+                "Chat containers cannot nested inside other chat containers."
+            )
         if block_type == "expandable" and block_type in frozenset(parent_block_types):
             raise StreamlitAPIException(
                 "Expanders may not be nested inside other expanders."

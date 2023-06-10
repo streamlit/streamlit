@@ -148,6 +148,11 @@ export const StyledSendIconContainer =
           : theme.colors.gray10,
         outline: "none",
       },
+      "&:focus:not(:active)": {
+        backgroundColor: lightTheme
+          ? theme.colors.gray10
+          : theme.colors.gray90,
+      },
     }
   })
 

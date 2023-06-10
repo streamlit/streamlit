@@ -215,6 +215,9 @@ experimental_rerun = _rerun
 experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _connection_factory
 
-chat_container = _main._chat_container
-chat_message = _main._chat_message
+_chat_container = _main._chat_container
+_chat_message = _main._chat_message
 chat_input = _main.chat_input
+chat_v3 = _main.chat_v3
+chat_v9 = _main.chat_v9
+chat_message_v9 = _main.chat_message_v9
