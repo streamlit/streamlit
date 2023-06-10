@@ -221,3 +221,7 @@ chat_input = _main.chat_input
 chat_v3 = _main.chat_v3
 chat_v9 = _main.chat_v9
 chat_message_v9 = _main.chat_message_v9
+
+from streamlit.elements.chat_api_prototypes import chat_state as _chat_state
+
+chat_state_v9 = _chat_state

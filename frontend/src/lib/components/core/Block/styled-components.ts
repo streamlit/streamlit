@@ -87,6 +87,13 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
           marginBottom: `-${theme.spacing.lg}`,
         }
       : {}),
+    ...(elementType === "chatInput"
+      ? {
+          // Apply negative bottom margin to remove the flexbox gap.
+          // display: none does not work for chat_input, since it needs to be visible.
+          marginBottom: `-${theme.spacing.lg}`,
+        }
+      : {}),
   })
 )
 

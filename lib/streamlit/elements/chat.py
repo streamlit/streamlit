@@ -114,13 +114,14 @@ class ChatMixin:
         self,
         placeholder: str | None = None,
         *,
-        key: Optional[Key] = None,
-        on_change: Optional[WidgetCallback] = None,
+        value: str | None = None,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
         max_chars: int | None = None,
         disabled: bool = False,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
-    ):
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+    ) -> str | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
 
@@ -145,8 +146,7 @@ class ChatMixin:
         if max_chars is not None:
             chat_input_proto.max_chars = max_chars
 
-        # chat inputs don't have a default value
-        chat_input_proto.default = ""
+        chat_input_proto.default = value if value is not None else ""
         # chat inputs can't be in forms
         chat_input_proto.form_id = ""
 
@@ -170,7 +170,7 @@ class ChatMixin:
             chat_input_proto.set_value = True
 
         self.dg._enqueue("chat_input", chat_input_proto)
-        return widget_state.value
+        return None if widget_state.value_changed else widget_state.value
 
     @property
     def dg(self) -> "DeltaGenerator":

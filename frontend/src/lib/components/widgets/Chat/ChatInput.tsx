@@ -75,14 +75,16 @@ class ChatInput extends React.PureComponent<Props, State> {
     // TODO(lukasmasuch): Since it is a trigger value we probably don't need to do this.
     // const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
     // return storedValue !== undefined ? storedValue : this.props.element.default
+    console.log(this.props.element.default)
     return this.props.element.default
   }
   public componentDidMount(): void {
     if (this.props.element.setValue) {
       this.updateFromProtobuf()
-    } else {
-      this.commitWidgetValue({ fromUi: false })
     }
+    // else {
+    //   this.commitWidgetValue({ fromUi: false })
+    // }
 
     // TODO(lukasmasuch): This is super hacky, but we probably want to remove
     // the footer as soon as there is a floating chat input on the page.
@@ -110,10 +112,10 @@ class ChatInput extends React.PureComponent<Props, State> {
   private updateFromProtobuf(): void {
     const { value } = this.props.element
     this.props.element.setValue = false
-    this.setState({ value }, () => {
+    this.setState({ value, dirty: true }, () => {
       const scrollHeight = this.getScrollHeight()
       this.setState({ scrollHeight })
-      this.commitWidgetValue({ fromUi: false })
+      // this.commitWidgetValue({ fromUi: false })
     })
   }
 
