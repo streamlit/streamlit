@@ -20,7 +20,7 @@ decorator==5.1.1
 distlib==0.3.6
 docutils==0.20.1
 exceptiongroup==1.1.1
-filelock==3.12.0
+filelock==3.12.1
 fonttools==4.39.4
 gitdb==4.0.10
 GitPython==3.1.31
@@ -56,7 +56,7 @@ parameterized==0.9.0
 pathspec==0.11.1
 Pillow==9.5.0
 pkginfo==1.9.6
-platformdirs==3.5.1
+platformdirs==3.5.3
 plotly==5.15.0
 pluggy==1.0.0
 pre-commit==3.3.2
