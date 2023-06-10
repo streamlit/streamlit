@@ -18,14 +18,18 @@ describe("Host communication", () => {
     before(() => {
         cy.visit("hostframe.html");
         cy.get("#toolbar button").should("have.length", 9);
+        cy.get("iframe")
+            .iframe(() => {
+                cy.waitForScriptFinish()
+            });
     });
 
     it("handles a host theme message", () => {
         cy.getIndexed("#toolbar > button", 0).click();
         cy.get("iframe")
             .iframe(() => {
-                cy.prepForElementSnapshots();
-                cy.matchImageSnapshot("host_theme_message");
+                cy.prepForElementSnapshots()
+                cy.matchImageSnapshot("host_theme_message")
             });
     });
 
@@ -59,9 +63,9 @@ describe("Host communication", () => {
         cy.get("iframe")
             .iframe(() => {
                 // Open the Main Menu
-                cy.get("#MainMenu > button").click();
+                cy.get("#MainMenu > button").click()
                 // Open the Settings Modal
-                cy.getIndexed('[data-testid="main-menu-list"] > ul', 1).click();
+                cy.getIndexed('[data-testid="main-menu-list"] > ul', 1).click()
                 cy.get("div[role='dialog']").should("exist")
             });
         // Close modal
@@ -79,7 +83,7 @@ describe("Host communication", () => {
         cy.get("iframe")
             .iframe(() => {
                 // Open the Main Menu
-                cy.get("#MainMenu > button").click();
+                cy.get("#MainMenu > button").click()
                 // Check that new menu item exists
                 cy.getIndexed('[data-testid="main-menu-list"] > ul', 4).should("have.text", "Adopt a Corgi")
                 // Exit main menu
@@ -106,7 +110,7 @@ describe("Host communication", () => {
         cy.get("iframe")
             .iframe(() => {
                 // Close sidebar
-                cy.get("[data-testid='stSidebar'] button").click();
+                cy.get("[data-testid='stSidebar'] button").click()
                 // Check chevron positioning
                 cy.get("[data-testid='collapsedControl']").should("have.css", "top", "50px")
             });
