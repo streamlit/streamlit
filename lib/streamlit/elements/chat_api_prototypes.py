@@ -166,6 +166,9 @@ class ChatState:
     def messages(self):
         return self._messages
 
+    def clear(self):
+        self._messages = []
+
     def to_openai(self) -> List[OpenAiChatMessage]:
         converted_messages: List[OpenAiChatMessage] = []
         for message in self._messages:
