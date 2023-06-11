@@ -75,7 +75,6 @@ class ChatInput extends React.PureComponent<Props, State> {
     // TODO(lukasmasuch): Since it is a trigger value we probably don't need to do this.
     // const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
     // return storedValue !== undefined ? storedValue : this.props.element.default
-    console.log(this.props.element.default)
     return this.props.element.default
   }
 

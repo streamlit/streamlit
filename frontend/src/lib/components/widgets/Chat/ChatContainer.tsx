@@ -64,7 +64,6 @@ function ChatContainer(props: Props): ReactElement {
   // if (scrollArea) {
   //   const observer = new MutationObserver(function () {
   //     scrollArea.scrollTop = scrollArea.scrollHeight
-  //     console.log("scrolling")
   //   })
 
   //   observer.observe(scrollArea, { childList: true })
