@@ -68,7 +68,7 @@ runs:
       name: Create Python environment cache key
       run: |
         md5sum $(which python) > $GITHUB_WORKSPACE/python_cache_key.md5
-        md5sum lib/dev-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/min-constraints-gen.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
         date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
@@ -79,14 +79,14 @@ runs:
       uses: actions/cache@v3
       with:
         path: venv
-        key: v1-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
+        key: v1-python-venv-min-${{ hashFiles('**/python_cache_key.md5') }}
     - if: steps.cache-virtualenv.outputs.cache-hit != 'true'
       name: Create Virtual Env
       run: |
         python -m venv venv
         source venv/bin/activate
         pip install --upgrade pip
-        make python-init
+        make python-init-test-min-deps
         deactivate
       shell: bash --login -eo pipefail {0}
     - name: Activate virtualenv
