@@ -53,7 +53,7 @@ const WEBSOCKET_STREAM_PATH = "_stcore/stream"
  * Min and max wait time between pings in millis.
  */
 const PING_MINIMUM_RETRY_PERIOD_MS = 500
-const PING_MAXIMUM_RETRY_PERIOD_MS = 1000 * 60
+const PING_MAXIMUM_RETRY_PERIOD_MS = 1000 * 10
 
 /**
  * Ping timeout in millis.
@@ -64,6 +64,9 @@ const PING_TIMEOUT_MS = 15 * 1000
  * Timeout when attempting to connect to a websocket, in millis.
  */
 const WEBSOCKET_TIMEOUT_MS = 15 * 1000
+
+const HEARTBEAT_PING_INTERVAL_MS = 2 * 1000
+const HEARTBEAT_PING_TIMEOUT_MS = 2 * 1000
 
 /**
  * If the ping retrieves a 403 status code a message will be displayed.
@@ -219,10 +222,13 @@ export class WebsocketConnection {
    */
   private wsConnectionTimeoutId?: number
 
+  private pingFailureCount = 0
+
   constructor(props: Args) {
     this.args = props
     this.cache = new ForwardMsgCache(props.endpoints)
     this.stepFsm("INITIALIZED")
+    this.setHeartbeatPings()
   }
 
   /**
@@ -286,6 +292,7 @@ export class WebsocketConnection {
    */
   private stepFsm(event: Event, errMsg?: string): void {
     logMessage(LOG, `State: ${this.state}; Event: ${event}`)
+    console.log(LOG, `State: ${this.state}; Event: ${event}`)
 
     if (
       event === "FATAL_ERROR" &&
@@ -584,6 +591,73 @@ export class WebsocketConnection {
       this.lastDispatchedMessageIndex = dispatchMessageIndex
     }
   }
+
+  /** Setting heartbeat ping */
+  private async setHeartbeatPings(): Promise<void> {
+    while (true) {
+      if (this.websocket?.readyState === 1) {
+        Promise.all(
+          this.args.baseUriPartsList.map(uriParts => {
+            const healthzUri = buildHttpUri(uriParts, SERVER_PING_PATH)
+            return axios.get(healthzUri, {
+              signal: AbortSignal.timeout(HEARTBEAT_PING_TIMEOUT_MS),
+              timeout: HEARTBEAT_PING_TIMEOUT_MS,
+            })
+          })
+        )
+          .then(() => {
+            this.pingFailureCount = 0
+          })
+          .catch(error => {
+            if (error.code === "ECONNABORTED") {
+              console.log("Connection timed out.")
+            }
+            if (error.response) {
+              // The request was made and the server responded with a status code
+              // that falls out of the range of 2xx
+
+              const { data, status } = error.response
+
+              if (status === /* NO RESPONSE */ 0) {
+                console.log("No Response.")
+              }
+              if (status === 403) {
+                console.log("Forbidden.")
+              }
+              console.log(
+                `Connection failed with status ${status}, ` +
+                  `and response "${data}".`
+              )
+            }
+            if (error.request) {
+              // The request was made but no response was received
+              // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+              // http.ClientRequest in node.js
+              console.log("No Response.")
+            }
+            // Something happened in setting up the request that triggered an Error
+            console.log(`Ping Error Message: ${error.message}`)
+
+            console.log(`failureCount: ${this.pingFailureCount}`)
+            this.pingFailureCount += 1
+            if (this.pingFailureCount == 2) {
+              // Trigger only once
+              this.closeConnection()
+              this.stepFsm("CONNECTION_CLOSED")
+              this.args.onRetry(
+                6,
+                "Unable to connect to the server, please check your network connection.",
+                1
+              )
+            }
+          })
+      }
+      await new Promise(resolve =>
+        setTimeout(resolve, HEARTBEAT_PING_INTERVAL_MS)
+      )
+    }
+    return new Resolver<void>().promise
+  }
 }
 
 export const StyledBashCode = styled.code({
@@ -634,7 +708,7 @@ export function doInitPings(
     const retryTimeout = Math.min(maximumTimeoutMs, timeoutMs)
 
     retryCallback(totalTries, errorNode, retryTimeout)
-
+    console.log(`retryTimeout: ${retryTimeout}, errorNode: ${errorNode}`)
     window.setTimeout(retryImmediately, retryTimeout)
   }
 
