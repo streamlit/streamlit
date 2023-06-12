@@ -19,7 +19,7 @@ package = pkg_resources.working_set.find(pkg_resources.Requirement.parse("stream
 
 oldest_dependencies = []
 
-for requirement in package.requires():
+for requirement in package.requires():  # type: ignore
     dependency = requirement.project_name
     if requirement.extras:
         dependency += "[" + ",".join(requirement.extras) + "]"
