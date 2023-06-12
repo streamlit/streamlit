@@ -93,7 +93,9 @@ def show_config(
 
             for i, paragraph in enumerate(description_paragraphs):
                 # Split paragraph into lines
-                lines = paragraph.split("\n")
+                lines = paragraph.rstrip().split(
+                    "\n"
+                )  # Remove trailing newline characters
 
                 # If the first line is empty, remove it
                 if lines and not lines[0].strip():
@@ -106,7 +108,7 @@ def show_config(
                 for line in lines:
                     append_func(line.lstrip())
 
-                # Add a line break after a paragraph only if it's not the last paragraph
+                # # Add a line break after a paragraph only if it's not the last paragraph
                 if i != last_paragraph_idx:
                     out.append("")
 
@@ -114,6 +116,9 @@ def show_config(
             toml_default = toml_default[10:].strip()
 
             if len(toml_default) > 0:
+                # Ensure a line break before appending "Default" comment, if not already there
+                if out[-1] != "":
+                    out.append("")
                 append_comment("Default: %s" % toml_default)
             else:
                 # Don't say "Default: (unset)" here because this branch applies
@@ -158,8 +163,8 @@ def _clean(txt):
 
 def _clean_paragraphs(txt):
     """Split the text into paragraphs, preserve newlines within the paragraphs."""
-    # Strip leading newlines.
-    txt = txt.lstrip("\n")
+    # Strip both leading and trailing newlines.
+    txt = txt.strip("\n")
     paragraphs = txt.split("\n\n")
     cleaned_paragraphs = [
         "\n".join(_clean(line) for line in paragraph.split("\n"))
