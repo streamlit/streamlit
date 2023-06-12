@@ -54,7 +54,6 @@ export interface SidebarProps {
   onPageChange: (pageName: string) => void
   currentPageScriptHash: string
   hideSidebarNav: boolean
-  pageLinkBaseUrl: string
 }
 
 interface State {
@@ -213,7 +212,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       onPageChange,
       currentPageScriptHash,
       hideSidebarNav,
-      pageLinkBaseUrl,
     } = this.props
 
     const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
@@ -281,7 +279,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                 hasSidebarElements={hasElements}
                 hideParentScrollbar={this.hideScrollbar}
                 onPageChange={onPageChange}
-                pageLinkBaseUrl={pageLinkBaseUrl}
               />
             )}
             <StyledSidebarUserContent hasPageNavAbove={hasPageNavAbove}>

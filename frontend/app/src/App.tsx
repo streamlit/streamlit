@@ -34,12 +34,9 @@ import {
   StreamlitDialog,
 } from "src/components/StreamlitDialog"
 import { ConnectionManager } from "src/connection/ConnectionManager"
+import { ConnectionState } from "src/connection/ConnectionState"
+import { SessionEventDispatcher } from "src/SessionEventDispatcher"
 import {
-  PerformanceEvents,
-  createFormsData,
-  FormsData,
-  WidgetStateManager,
-  ScriptRunState,
   generateUID,
   getElementWidgetID,
   getEmbeddingIdClassName,
@@ -76,8 +73,6 @@ import {
   ThemeConfig,
   toExportedTheme,
   StreamlitEndpoints,
-  withHostCommunication,
-  HostCommunicationHOC,
   ensureError,
   LibContext,
   AppPage,
@@ -101,9 +96,16 @@ import {
   SessionEvent,
   SessionStatus,
   WidgetStates,
+  ScriptRunState,
+  HostCommunicationManager,
+  IMenuItem,
+  IToolbarItem,
+  DeployedAppMetadata,
+  PerformanceEvents,
+  createFormsData,
+  FormsData,
+  WidgetStateManager,
 } from "@streamlit/lib"
-import { ConnectionState } from "src/connection/ConnectionState"
-import { SessionEventDispatcher } from "src/SessionEventDispatcher"
 import { concat, noop, without } from "lodash"
 
 import { UserSettings } from "src/components/StreamlitDialog/UserSettings"
@@ -122,7 +124,6 @@ import "src/assets/css/theme.scss"
 
 export interface Props {
   screenCast: ScreenCastHOC
-  hostCommunication: HostCommunicationHOC
   theme: {
     activeTheme: ThemeConfig
     availableThemes: ThemeConfig[]
@@ -156,6 +157,15 @@ interface State {
   appPages: IAppPage[]
   currentPageScriptHash: string
   latestRunTime: number
+  // host communication info
+  isOwner: boolean
+  hostMenuItems: IMenuItem[]
+  hostToolbarItems: IToolbarItem[]
+  hostHideSidebarNav: boolean
+  sidebarChevronDownshift: number
+  pageLinkBaseUrl: string
+  queryParams: string
+  deployedAppMetadata: DeployedAppMetadata
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -196,6 +206,8 @@ export class App extends PureComponent<Props, State> {
   private connectionManager: ConnectionManager | null
 
   private readonly widgetMgr: WidgetStateManager
+
+  private readonly hostCommunicationMgr: HostCommunicationManager
 
   private readonly uploadClient: FileUploadClient
 
@@ -254,6 +266,15 @@ export class App extends PureComponent<Props, State> {
       hideSidebarNav: true,
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
+      // Information sent from the host
+      isOwner: false,
+      hostMenuItems: [],
+      hostToolbarItems: [],
+      hostHideSidebarNav: false,
+      sidebarChevronDownshift: 0,
+      pageLinkBaseUrl: "",
+      queryParams: "",
+      deployedAppMetadata: {},
     }
 
     this.connectionManager = null
@@ -261,6 +282,38 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr = new WidgetStateManager({
       sendRerunBackMsg: this.sendRerunBackMsg,
       formsDataChanged: formsData => this.setState({ formsData }),
+    })
+
+    this.hostCommunicationMgr = new HostCommunicationManager({
+      sendRerunBackMsg: this.sendRerunBackMsg,
+      closeModal: this.closeDialog,
+      stopScript: this.stopScript,
+      rerunScript: this.rerunScript,
+      clearCache: this.clearCache,
+      themeChanged: this.props.theme.setImportedTheme,
+      pageChanged: this.onPageChange,
+      isOwnerChanged: isOwner => this.setState({ isOwner }),
+      hostMenuItemsChanged: hostMenuItems => {
+        this.setState({ hostMenuItems })
+      },
+      hostToolbarItemsChanged: hostToolbarItems => {
+        this.setState({ hostToolbarItems })
+      },
+      hostHideSidebarNavChanged: hostHideSidebarNav => {
+        this.setState({ hostHideSidebarNav })
+      },
+      sidebarChevronDownshiftChanged: sidebarChevronDownshift => {
+        this.setState({ sidebarChevronDownshift })
+      },
+      pageLinkBaseUrlChanged: pageLinkBaseUrl => {
+        this.setState({ pageLinkBaseUrl })
+      },
+      queryParamsChanged: queryParams => {
+        this.setState({ queryParams })
+      },
+      deployedAppMetadataChanged: deployedAppMetadata => {
+        this.setState({ deployedAppMetadata })
+      },
     })
 
     this.endpoints = new DefaultStreamlitEndpoints({
@@ -307,12 +360,7 @@ export class App extends PureComponent<Props, State> {
       this.rerunScript()
     },
     CLEAR_CACHE: () => {
-      if (
-        showDevelopmentOptions(
-          this.props.hostCommunication.currentState.isOwner,
-          this.state.toolbarMode
-        )
-      ) {
+      if (showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode)) {
         this.openClearCacheDialog()
       }
     },
@@ -328,11 +376,9 @@ export class App extends PureComponent<Props, State> {
       onMessage: this.handleMessage,
       onConnectionError: this.handleConnectionError,
       connectionStateChanged: this.handleConnectionStateChanged,
-      claimHostAuthToken: () =>
-        this.props.hostCommunication.currentState.authTokenPromise,
-      resetHostAuthToken: this.props.hostCommunication.resetAuthToken,
-      setAllowedOriginsResp:
-        this.props.hostCommunication.setAllowedOriginsResp,
+      claimHostAuthToken: this.hostCommunicationMgr.claimAuthToken,
+      resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
+      setAllowedOriginsResp: this.hostCommunicationMgr.setAllowedOriginsResp,
     })
 
     if (isScrollingHidden()) {
@@ -361,12 +407,12 @@ export class App extends PureComponent<Props, State> {
       import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
-    this.props.hostCommunication.sendMessage({
+    this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(this.props.theme.activeTheme.emotion),
     })
 
-    this.props.hostCommunication.sendMessage({
+    this.hostCommunicationMgr.sendMessageToHost({
       type: "SCRIPT_RUN_STATE_CHANGED",
       scriptRunState: this.state.scriptRunState,
     })
@@ -380,38 +426,13 @@ export class App extends PureComponent<Props, State> {
     prevProps: Readonly<Props>,
     prevState: Readonly<State>
   ): void {
-    if (
-      prevProps.hostCommunication.currentState.queryParams !==
-      this.props.hostCommunication.currentState.queryParams
-    ) {
-      this.sendRerunBackMsg()
-    }
-    if (this.props.hostCommunication.currentState.forcedModalClose) {
-      this.closeDialog()
-    }
-    if (this.props.hostCommunication.currentState.scriptRerunRequested) {
-      this.rerunScript()
-    }
-    if (this.props.hostCommunication.currentState.scriptStopRequested) {
-      this.stopScript()
-    }
-    if (this.props.hostCommunication.currentState.cacheClearRequested) {
-      this.clearCache()
-    }
-
-    const { requestedPageScriptHash } =
-      this.props.hostCommunication.currentState
-    if (requestedPageScriptHash !== null) {
-      this.onPageChange(requestedPageScriptHash)
-      this.props.hostCommunication.onPageChanged()
-    }
     // @ts-expect-error
     if (window.prerenderReady === false && this.isAppInReadyState(prevState)) {
       // @ts-expect-error
       window.prerenderReady = true
     }
     if (this.state.scriptRunState !== prevState.scriptRunState) {
-      this.props.hostCommunication.sendMessage({
+      this.hostCommunicationMgr.sendMessageToHost({
         type: "SCRIPT_RUN_STATE_CHANGED",
         scriptRunState: this.state.scriptRunState,
       })
@@ -433,6 +454,8 @@ export class App extends PureComponent<Props, State> {
     // happy since connectionManager's type is `ConnectionManager | null`,
     // but at this point it should always be set.
     this.connectionManager?.disconnect()
+
+    this.hostCommunicationMgr.closeHostCommunication()
 
     window.removeEventListener("popstate", this.onHistoryChange, false)
   }
@@ -565,7 +588,7 @@ export class App extends PureComponent<Props, State> {
       pageConfig
 
     if (title) {
-      this.props.hostCommunication.sendMessage({
+      this.hostCommunicationMgr.sendMessageToHost({
         type: "SET_PAGE_TITLE",
         title,
       })
@@ -576,7 +599,7 @@ export class App extends PureComponent<Props, State> {
     if (favicon) {
       handleFavicon(
         favicon,
-        this.props.hostCommunication.sendMessage,
+        this.hostCommunicationMgr.sendMessageToHost,
         this.endpoints
       )
     }
@@ -607,7 +630,7 @@ export class App extends PureComponent<Props, State> {
       document.location.pathname + (queryString ? `?${queryString}` : "")
     window.history.pushState({}, "", targetUrl)
 
-    this.props.hostCommunication.sendMessage({
+    this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_QUERY_PARAM",
       queryParams: queryString ? `?${queryString}` : "",
     })
@@ -622,7 +645,7 @@ export class App extends PureComponent<Props, State> {
 
     const currentPageScriptHash = this.state.appPages[0]?.pageScriptHash || ""
     this.setState({ currentPageScriptHash }, () => {
-      this.props.hostCommunication.sendMessage({
+      this.hostCommunicationMgr.sendMessageToHost({
         type: "SET_CURRENT_PAGE_NAME",
         currentPageName: "",
         currentPageScriptHash,
@@ -633,7 +656,7 @@ export class App extends PureComponent<Props, State> {
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
     const { appPages } = pagesChangedMsg
     this.setState({ appPages }, () => {
-      this.props.hostCommunication.sendMessage({
+      this.hostCommunicationMgr.sendMessageToHost({
         type: "SET_APP_PAGES",
         appPages,
       })
@@ -816,12 +839,12 @@ export class App extends PureComponent<Props, State> {
         latestRunTime: performance.now(),
       },
       () => {
-        this.props.hostCommunication.sendMessage({
+        this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_APP_PAGES",
           appPages: newSessionProto.appPages,
         })
 
-        this.props.hostCommunication.sendMessage({
+        this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_CURRENT_PAGE_NAME",
           currentPageName: viewingMainPage ? "" : newPageName,
           currentPageScriptHash: newPageScriptHash,
@@ -840,13 +863,11 @@ export class App extends PureComponent<Props, State> {
     document.title = `${newPageName} · Streamlit`
     handleFavicon(
       `${process.env.PUBLIC_URL}/favicon.png`,
-      this.props.hostCommunication.sendMessage,
+      this.hostCommunicationMgr.sendMessageToHost,
       this.endpoints
     )
 
-    this.metricsMgr.setMetadata(
-      this.props.hostCommunication.currentState.deployedAppMetadata
-    )
+    this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
     this.metricsMgr.setAppHash(newSessionHash)
 
     this.metricsMgr.enqueue("updateReport", {
@@ -905,7 +926,7 @@ export class App extends PureComponent<Props, State> {
    */
   setAndSendTheme = (themeConfig: ThemeConfig): void => {
     this.props.theme.setTheme(themeConfig)
-    this.props.hostCommunication.sendMessage({
+    this.hostCommunicationMgr.sendMessageToHost({
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(themeConfig.emotion),
     })
@@ -1055,7 +1076,6 @@ export class App extends PureComponent<Props, State> {
    */
   closeDialog = (): void => {
     this.setState({ dialog: undefined })
-    this.props.hostCommunication.onModalReset()
   }
 
   /**
@@ -1182,7 +1202,6 @@ export class App extends PureComponent<Props, State> {
       this.saveSettings({ ...this.state.userSettings, runOnSave: true })
     }
 
-    this.props.hostCommunication.onScriptRerun()
     this.widgetMgr.sendUpdateWidgetsMessage()
   }
 
@@ -1283,7 +1302,6 @@ export class App extends PureComponent<Props, State> {
     backMsg.type = "stopScript"
     this.sendBackMsg(backMsg)
     this.setState({ scriptRunState: ScriptRunState.STOP_REQUESTED })
-    this.props.hostCommunication.onScriptStop()
   }
 
   /**
@@ -1342,7 +1360,6 @@ export class App extends PureComponent<Props, State> {
     } else {
       logError("Cannot clear cache: disconnected from server")
     }
-    this.props.hostCommunication.onCacheClear()
   }
 
   /**
@@ -1382,7 +1399,7 @@ export class App extends PureComponent<Props, State> {
       onSave: this.saveSettings,
       onClose: () => {},
       developerMode: showDevelopmentOptions(
-        this.props.hostCommunication.currentState.isOwner,
+        this.state.isOwner,
         this.state.toolbarMode
       ),
       openThemeCreator: this.openThemeCreatorDialog,
@@ -1468,7 +1485,7 @@ export class App extends PureComponent<Props, State> {
       : undefined
 
   getQueryString = (): string => {
-    const { queryParams } = this.props.hostCommunication.currentState
+    const { queryParams } = this.state
 
     const queryString =
       queryParams && queryParams.length > 0
@@ -1479,18 +1496,15 @@ export class App extends PureComponent<Props, State> {
   }
 
   isInCloudEnvironment = (): boolean => {
-    const { menuItems } = this.props.hostCommunication.currentState
-    return menuItems && menuItems?.length > 0
+    const { hostMenuItems } = this.state
+    return hostMenuItems && hostMenuItems?.length > 0
   }
 
   showDeployButton = (): boolean => {
     return (
       isTesting() ||
       (SHOW_DEPLOY_BUTTON &&
-        showDevelopmentOptions(
-          this.props.hostCommunication.currentState.isOwner,
-          this.state.toolbarMode
-        ) &&
+        showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode) &&
         !this.isInCloudEnvironment() &&
         this.sessionInfo.isSet &&
         !this.sessionInfo.isHello)
@@ -1521,14 +1535,16 @@ export class App extends PureComponent<Props, State> {
       hideTopBar,
       hideSidebarNav,
       currentPageScriptHash,
+      hostHideSidebarNav,
+      pageLinkBaseUrl,
+      sidebarChevronDownshift,
+      hostMenuItems,
+      hostToolbarItems,
     } = this.state
     const developmentMode = showDevelopmentOptions(
-      this.props.hostCommunication.currentState.isOwner,
+      this.state.isOwner,
       this.state.toolbarMode
     )
-
-    const { hideSidebarNav: hostHideSidebarNav } =
-      this.props.hostCommunication.currentState
 
     const outerDivClass = classNames(
       "stApp",
@@ -1555,14 +1571,15 @@ export class App extends PureComponent<Props, State> {
         value={{
           initialSidebarState,
           wideMode: userSettings.wideMode,
-          sidebarChevronDownshift:
-            this.props.hostCommunication.currentState.sidebarChevronDownshift,
           embedded: isEmbed(),
           showPadding: !isEmbed() || isPaddingDisplayed(),
           disableScrolling: isScrollingHidden(),
           showFooter: !isEmbed() || isFooterDisplayed(),
           showToolbar: !isEmbed() || isToolbarDisplayed(),
           showColoredLine: !isEmbed() || isColoredLineDisplayed(),
+          // host communication manager elements
+          pageLinkBaseUrl,
+          sidebarChevronDownshift,
         }}
       >
         <LibContext.Provider
@@ -1597,11 +1614,9 @@ export class App extends PureComponent<Props, State> {
                       allowRunOnSave={allowRunOnSave}
                     />
                     <ToolbarActions
-                      hostToolbarItems={
-                        this.props.hostCommunication.currentState.toolbarItems
-                      }
+                      hostToolbarItems={hostToolbarItems}
                       sendMessageToHost={
-                        this.props.hostCommunication.sendMessage
+                        this.hostCommunicationMgr.sendMessageToHost
                       }
                     />
                   </>
@@ -1620,11 +1635,11 @@ export class App extends PureComponent<Props, State> {
                   printCallback={this.printCallback}
                   screencastCallback={this.screencastCallback}
                   screenCastState={this.props.screenCast.currentState}
-                  hostMenuItems={
-                    this.props.hostCommunication.currentState.menuItems
-                  }
+                  hostMenuItems={hostMenuItems}
                   developmentMode={developmentMode}
-                  sendMessageToHost={this.props.hostCommunication.sendMessage}
+                  sendMessageToHost={
+                    this.hostCommunicationMgr.sendMessageToHost
+                  }
                   gitInfo={gitInfo}
                   showDeployError={this.showDeployError}
                   closeDialog={this.closeDialog}
@@ -1644,7 +1659,7 @@ export class App extends PureComponent<Props, State> {
               <AppView
                 endpoints={this.endpoints}
                 sessionInfo={this.sessionInfo}
-                sendMessageToHost={this.props.hostCommunication.sendMessage}
+                sendMessageToHost={this.hostCommunicationMgr.sendMessageToHost}
                 elements={elements}
                 scriptRunId={scriptRunId}
                 scriptRunState={scriptRunState}
@@ -1657,9 +1672,6 @@ export class App extends PureComponent<Props, State> {
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
                 hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
-                pageLinkBaseUrl={
-                  this.props.hostCommunication.currentState.pageLinkBaseUrl
-                }
               />
               {renderedDialog}
             </StyledApp>
@@ -1670,4 +1682,4 @@ export class App extends PureComponent<Props, State> {
   }
 }
 
-export default withHostCommunication(withScreencast(App))
+export default withScreencast(App)

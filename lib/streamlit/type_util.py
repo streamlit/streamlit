@@ -503,12 +503,6 @@ def convert_anything_to_df(
     pandas.DataFrame
 
     """
-    # This is inefficient as the data will be converted back to Arrow
-    # when marshalled to protobuf, but area/bar/line charts need
-    # DataFrame magic to generate the correct output.
-    if isinstance(data, pa.Table):
-        return data.to_pandas()
-
     if is_type(data, _PANDAS_DF_TYPE_STR):
         return data.copy() if ensure_copy else data
 
@@ -535,6 +529,12 @@ def convert_anything_to_df(
                 "Call `collect()` on the dataframe to show more."
             )
         return data
+
+    # This is inefficient when data is a pyarrow.Table as it will be converted
+    # back to Arrow when marshalled to protobuf, but area/bar/line charts need
+    # DataFrame magic to generate the correct output.
+    if hasattr(data, "to_pandas"):
+        return data.to_pandas()
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
@@ -864,8 +864,6 @@ def convert_df_to_data_format(
 ) -> Union[
     DataFrame,
     Series,
-    Index,
-    "Styler",
     pa.Table,
     np.ndarray[Any, np.dtype[Any]],
     Tuple[Any],
@@ -885,7 +883,7 @@ def convert_df_to_data_format(
 
     Returns
     -------
-    pd.DataFrame, pd.Index, Styler, pa.Table, np.ndarray, tuple, list, set, dict
+    pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, list, set, tuple, or dict.
         The converted dataframe.
     """
     if data_format in [

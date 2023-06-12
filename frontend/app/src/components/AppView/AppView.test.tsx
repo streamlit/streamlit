@@ -63,7 +63,6 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
     onPageChange: jest.fn(),
     currentPageScriptHash: "main_page_script_hash",
     hideSidebarNav: false,
-    pageLinkBaseUrl: "",
     ...props,
   }
 }

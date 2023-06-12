@@ -38,11 +38,10 @@ export { default as VegaLiteChartElement } from "./components/elements/VegaLiteC
 export type {
   DeployedAppMetadata,
   IGuestToHostMessage,
-  HostCommunicationState,
   IMenuItem,
   IAllowedMessageOriginsResponse,
   IToolbarItem,
-} from "./hocs/withHostCommunication/types"
+} from "./hostComm/types"
 export {
   default as Modal,
   ModalHeader,
@@ -125,8 +124,8 @@ export { useIsOverflowing } from "./util/Hooks"
 export { LibContext } from "./components/core/LibContext"
 export type { LibContextProps } from "./components/core/LibContext"
 export { handleFavicon } from "./components/elements/Favicon"
-export { default as withHostCommunication } from "./hocs/withHostCommunication"
-export type { HostCommunicationHOC } from "./hocs/withHostCommunication"
+export { default as HostCommunicationManager } from "./hostComm"
+export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"
 export { default as IsSidebarContext } from "./components/core/IsSidebarContext"
 export { default as Tooltip, Placement } from "./components/shared/Tooltip"
 export { default as BaseColorPicker } from "./components/shared/BaseColorPicker"

@@ -15,14 +15,17 @@
  */
 
 import React from "react"
-import { shallow } from "@streamlit/lib"
+import { render } from "@streamlit/lib"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
 
 import Countdown from "./Countdown"
 
 describe("Countdown Component", () => {
   it("should render without crashing", () => {
-    const wrapper = shallow(<Countdown countdown={10} />)
+    render(<Countdown countdown={10} />)
+    const countdownElement = screen.getByText("10")
 
-    expect(wrapper.find("span").text()).toBe("10")
+    expect(countdownElement).toBeInTheDocument()
   })
 })

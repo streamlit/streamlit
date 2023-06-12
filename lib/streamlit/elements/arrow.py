@@ -17,8 +17,7 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union, cast
 
 import pyarrow as pa
-from numpy import ndarray
-from pandas import DataFrame
+from typing_extensions import TypeAlias
 
 from streamlit import type_util
 from streamlit.elements.lib.column_config_utils import (
@@ -34,12 +33,22 @@ from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from numpy import ndarray
+    from pandas import DataFrame, Index, Series
     from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
 
-Data = Union[
-    DataFrame, "Styler", pa.Table, ndarray, Iterable, Dict[str, List[Any]], None
+Data: TypeAlias = Union[
+    "DataFrame",
+    "Series",
+    "Styler",
+    "Index",
+    pa.Table,
+    "ndarray",
+    Iterable,
+    Dict[str, List[Any]],
+    None,
 ]
 
 
@@ -57,6 +66,10 @@ class ArrowMixin:
         column_config: ColumnConfigMappingInput | None = None,
     ) -> "DeltaGenerator":
         """Display a dataframe as an interactive table.
+
+        This command works with dataframes from Pandas, PyArrow, Snowpark, and PySpark.
+        It can also display several other types that can be converted to dataframes,
+        e.g. numpy arrays, lists, sets and dictionaries.
 
         Parameters
         ----------
@@ -80,8 +93,8 @@ class ArrowMixin:
             This argument can only be supplied by keyword.
 
         hide_index : bool or None
-            Whether to hide the index column(s). If None (default), they will be hidden
-            automatically based on the data.
+            Whether to hide the index column(s). If None (default), the visibility of
+            index columns is automatically determined based on the data.
 
         column_order : iterable of str or None
             Specifies the display order of columns. This also affects which columns are
@@ -99,11 +112,11 @@ class ArrowMixin:
             * A string to set the display label of the column.
 
             * One of the column types defined under ``st.column_config``, e.g.
-              ``st.column_config.NumberColumn(”Dollar values”, format=”$ %d”)`` to show
+              ``st.column_config.NumberColumn("Dollar values”, format=”$ %d")`` to show
               a column as dollar amounts. See more info on the available column types
               and config options `here <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
 
-            To configure the index column(s), use ``index`` as the column name.
+            To configure the index column(s), use ``_index`` as the column name.
 
         Examples
         --------

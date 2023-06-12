@@ -16,7 +16,7 @@
 
 import nodeEmoji from "node-emoji"
 import { grabTheRightIcon } from "src/vendor/twemoji"
-import { IGuestToHostMessage } from "src/hocs/withHostCommunication/types"
+import { IGuestToHostMessage } from "src/hostComm/types"
 import { StreamlitEndpoints } from "src/StreamlitEndpoints"
 
 /**
