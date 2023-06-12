@@ -380,8 +380,7 @@ _create_option(
         Acceptable values:
         - 'legacy': Serialize DataFrames using Streamlit's custom format. Slow
           but battle-tested.
-        - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.
-        """,
+        - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.""",
     default_val="arrow",
     type_=str,
 )
@@ -395,7 +394,8 @@ _create_section("logger", "Settings to customize Streamlit log messages.")
 def _logger_log_level() -> str:
     """Level of logging: 'error', 'warning', 'info', or 'debug'.
 
-    Default: 'info'"""
+    Default: 'info'
+    """
     if get_option("global.logLevel"):
         return str(get_option("global.logLevel"))
     elif get_option("global.developmentMode"):
@@ -411,7 +411,8 @@ def _logger_message_format() -> str:
     [Python's documentation](https://docs.python.org/2.6/library/logging.html#formatter-objects)
     for available attributes.
 
-    Default: '%(asctime)s %(message)s'"""
+    Default: "%(asctime)s %(message)s"
+    """
     if get_option("global.developmentMode"):
         from streamlit.logger import DEFAULT_LOG_MESSAGE
 
@@ -441,9 +442,7 @@ _create_section("client", "Settings for scripts that use Streamlit.")
 
 _create_option(
     "client.caching",
-    description="""
-        Whether to enable st.cache.
-        """,
+    description="Whether to enable st.cache.",
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -452,8 +451,7 @@ _create_option(
 _create_option(
     "client.displayEnabled",
     description="""If false, makes your Streamlit script not draw to a
-        Streamlit app.
-        """,
+        Streamlit app.""",
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -469,8 +467,7 @@ _create_option(
 
         If set to False, an exception or deprecation warning will result in
         a generic message being shown in the browser, and exceptions, tracebacks,
-        and deprecation warnings will be printed to the console only.
-        """,
+        and deprecation warnings will be printed to the console only.""",
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -608,7 +605,8 @@ def _server_cookie_secret() -> str:
     """Symmetric key used to produce signed cookies. If deploying on multiple replicas, this should
     be set to the same value across all replicas to ensure they all share the same secret.
 
-    Default: randomly generated secret key."""
+    Default: randomly generated secret key.
+    """
     return secrets.token_hex()
 
 
@@ -617,7 +615,8 @@ def _server_headless() -> bool:
     """If false, will attempt to open a browser window on start.
 
     Default: false unless (1) we are on a Linux box where DISPLAY is unset, or
-    (2) we are running in the Streamlit Atom plugin."""
+    (2) we are running in the Streamlit Atom plugin.
+    """
     if env_util.IS_LINUX_OR_BSD and not os.getenv("DISPLAY"):
         # We're running in Linux and DISPLAY is unset
         return True
@@ -656,15 +655,15 @@ def _server_address() -> Optional[str]:
     If set, the server will only be accessible from this address, and not from
     any aliases (like localhost).
 
-    Default: (unset)"""
+    Default: (unset)
+    """
     return None
 
 
 _create_option(
     "server.port",
     description="""
-        The port where the server will listen for browser connections.
-        """,
+        The port where the server will listen for browser connections.""",
     default_val=8501,
     type_=int,
 )
@@ -796,7 +795,8 @@ def _browser_server_port() -> int:
     - Show the URL on the terminal
     - Open the browser
 
-    Default: whatever value is set in server.port."""
+    Default: whatever value is set in server.port.
+    """
     return int(get_option("server.port"))
 
 
@@ -868,8 +868,7 @@ _create_option(
     description="""Configure Streamlit to use a custom Mapbox
                 token for elements like st.pydeck_chart and st.map.
                 To get a token for yourself, create an account at
-                https://mapbox.com. It's free (for moderate usage levels)!
-                """,
+                https://mapbox.com. It's free (for moderate usage levels)!""",
     default_val="",
     sensitive=True,
 )
@@ -881,9 +880,7 @@ _create_section("deprecation", "Configuration to show or hide deprecation warnin
 
 _create_option(
     "deprecation.showfileUploaderEncoding",
-    description="""
-        Set to false to disable the deprecation warning for the file uploader encoding.
-        """,
+    description="Set to false to disable the deprecation warning for the file uploader encoding.",
     default_val=True,
     scriptable=True,
     type_=bool,
@@ -892,9 +889,7 @@ _create_option(
 
 _create_option(
     "deprecation.showImageFormat",
-    description="""
-        Set to false to disable the deprecation warning for the image format parameter.
-        """,
+    description="Set to false to disable the deprecation warning for the image format parameter.",
     default_val=True,
     scriptable=True,
     type_=bool,
@@ -905,9 +900,7 @@ _create_option(
 
 _create_option(
     "deprecation.showPyplotGlobalUse",
-    description="""
-        Set to false to disable the deprecation warning for using the global pyplot instance.
-        """,
+    description="Set to false to disable the deprecation warning for using the global pyplot instance.",
     default_val=True,
     scriptable=True,
     type_=bool,
@@ -921,36 +914,27 @@ _create_section("theme", "Settings to define a custom theme for your Streamlit a
 _create_option(
     "theme.base",
     description="""The preset Streamlit theme that your custom theme inherits from.
-    One of "light" or "dark".
-    """,
+    One of "light" or "dark".""",
 )
 
 _create_option(
     "theme.primaryColor",
-    description="""
-        Primary accent color for interactive elements.
-        """,
+    description="Primary accent color for interactive elements.",
 )
 
 _create_option(
     "theme.backgroundColor",
-    description="""
-        Background color for the main content area.
-        """,
+    description="Background color for the main content area.",
 )
 
 _create_option(
     "theme.secondaryBackgroundColor",
-    description="""
-        Background color used for the sidebar and most interactive widgets.
-        """,
+    description="Background color used for the sidebar and most interactive widgets.",
 )
 
 _create_option(
     "theme.textColor",
-    description="""
-        Color used for almost all text.
-        """,
+    description="Color used for almost all text.",
 )
 
 _create_option(
