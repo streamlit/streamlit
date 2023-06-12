@@ -17,6 +17,8 @@
 import {Streamlit} from "./streamlit";
 
 beforeEach(() => {
+  // The Streamlit class defines several static fields. To avoid side effects,
+  // we restore them to their original state.
   Object.defineProperty(Streamlit, 'registeredMessageListener', {
     value: false,
     configurable: true,
