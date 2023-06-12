@@ -56,9 +56,9 @@ class ChatInputSerde:
 
 
 class ChatMixin:
-    def chat_v3(
+    def chat_layout(
         self,
-        participants: List[chat_api_prototypes.ChatUserInfo]
+        participants: List[chat_api_prototypes.ChatUserInfo | str]
         | Dict[str, str | None]
         | None = None,
     ) -> List[chat_api_prototypes.ChatChildrenDeltaGenerator]:
@@ -66,7 +66,7 @@ class ChatMixin:
 
     def chat_v9(
         self,
-        participants: List[chat_api_prototypes.ChatUserInfo]
+        participants: List[chat_api_prototypes.ChatUserInfo | str]
         | Dict[str, str | None]
         | None = None,
         chat_state: chat_api_prototypes.ChatState | str | None = None,

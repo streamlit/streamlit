@@ -218,7 +218,7 @@ experimental_connection = _connection_factory
 _chat_container = _main._chat_container
 _chat_message = _main._chat_message
 chat_input = _main.chat_input
-chat_v3 = _main.chat_v3
+chat_layout = _main.chat_layout
 chat_v9 = _main.chat_v9
 chat_message_v9 = _main.chat_message_v9
 

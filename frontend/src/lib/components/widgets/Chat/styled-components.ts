@@ -51,7 +51,7 @@ export const StyledChatMessageContainer =
       alignItems: "flex-start",
       gap: theme.spacing.sm,
       padding: theme.spacing.md,
-      paddingTop: theme.spacing.lg,
+      paddingTop: theme.spacing.md,
       borderRadius: theme.radii.md,
       ...messageBackground,
     }
@@ -78,7 +78,7 @@ export const StyledAvatarEmoji = styled.div(({ theme }) => ({
 export const StyledAvatarImage = styled.img(({ theme }) => ({
   width: "2rem",
   height: "2rem",
-  marginTop: "-4px",
+  // marginTop: "-4px",
   borderRadius: theme.radii.md,
   objectFit: "cover",
   display: "flex",

@@ -55,7 +55,7 @@ def ChatUser(
 
 
 def _process_participants(
-    participants: List[ChatUserInfo] | Dict[str, str | None] | str | None
+    participants: List[ChatUserInfo | str] | Dict[str, str | None] | str | None
 ) -> List[ChatUserInfo]:
     if participants is None:
         return [
@@ -84,6 +84,8 @@ def _process_participants(
     elif isinstance(participants, str):
         return [ChatUser(role=participants)]
     else:
+        if len(participants) > 0 and isinstance(participants[0], str):
+            return [ChatUser(role=participant) for participant in participants]
         return participants
 
 
@@ -124,7 +126,7 @@ class ChatChildrenDeltaGenerator:
 
 def chat_v3(
     dg: "DeltaGenerator",
-    participants: List[ChatUserInfo] | Dict[str, str | None] | None = None,
+    participants: List[ChatUserInfo | str] | Dict[str, str | None] | None = None,
 ) -> List[ChatChildrenDeltaGenerator]:
     participants = _process_participants(participants)
     chat_layout = dg._chat_container()
@@ -154,7 +156,9 @@ class ChatState:
     def __init__(self):
         self._messages: List[ChatMessage] = []
 
-    def add_message(self, participant: ChatUserInfo, *content):
+    def add_message(self, participant: ChatUserInfo | str, *content):
+        if isinstance(participant, str):
+            participant = ChatUser(role=participant)
         self._messages.append(
             {
                 "participant": participant,
@@ -316,7 +320,7 @@ def chat_message(
 
 def chat_v9(
     dg: "DeltaGenerator",
-    participants: List[ChatUserInfo] | Dict[str, str | None] | None = None,
+    participants: List[ChatUserInfo | str] | Dict[str, str | None] | None = None,
     chat_state: ChatState | str | None = None,
 ) -> "DeltaGenerator":
     participants = _process_participants(participants)
@@ -332,14 +336,20 @@ def chat_v9(
     if chat_state is not None:
         chat_container.chat_state: ChatState = chat_state  # type: ignore
         with chat_container:
-            for message in chat_container.chat_state.messages:  # type: ignore
+            for message in chat_container.chat_state.messages:  # type: igno
+                message_participant: ChatUserInfo | None = None
                 if isinstance(message["participant"], str):
-                    message_participant = chat_container.chat_participants[  # type: ignore
-                        message["participant"]
-                    ]
+                    if message["participant"] in chat_container.chat_participants:
+                        message_participant = chat_container.chat_participants[  # type: ignore
+                            message["participant"]
+                        ]
                 else:
                     message_participant = message["participant"]
-                if not message_participant["hidden"]:
+                if (
+                    message_participant
+                    and not message_participant["hidden"]
+                    and message_participant["role"] in chat_container.chat_participants
+                ):
                     _display_chat_message(
                         chat_container, message_participant, *message.get("content", [])
                     )
