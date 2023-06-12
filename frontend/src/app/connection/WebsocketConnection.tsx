@@ -229,6 +229,10 @@ export class WebsocketConnection {
     this.cache = new ForwardMsgCache(props.endpoints)
     this.stepFsm("INITIALIZED")
     this.setHeartbeatPings()
+    console.log("-->baseUriPartsList:")
+    for (const item of this.args.baseUriPartsList) {
+      console.log(item.host, item.port, item.basePath)
+    }
   }
 
   /**
@@ -593,18 +597,18 @@ export class WebsocketConnection {
   }
 
   /** Setting heartbeat ping */
-  private async setHeartbeatPings(): Promise<void> {
-    while (true) {
+  private setHeartbeatPings(): void {
+    window.setInterval(() => {
       if (this.websocket?.readyState === 1) {
-        Promise.all(
-          this.args.baseUriPartsList.map(uriParts => {
-            const healthzUri = buildHttpUri(uriParts, SERVER_PING_PATH)
-            return axios.get(healthzUri, {
-              signal: AbortSignal.timeout(HEARTBEAT_PING_TIMEOUT_MS),
-              timeout: HEARTBEAT_PING_TIMEOUT_MS,
-            })
-          })
+        const healthzUri = buildHttpUri(
+          this.args.baseUriPartsList[this.uriIndex],
+          SERVER_PING_PATH
         )
+        axios
+          .get(healthzUri, {
+            signal: AbortSignal.timeout(HEARTBEAT_PING_TIMEOUT_MS),
+            timeout: HEARTBEAT_PING_TIMEOUT_MS,
+          })
           .then(() => {
             this.pingFailureCount = 0
           })
@@ -652,11 +656,7 @@ export class WebsocketConnection {
             }
           })
       }
-      await new Promise(resolve =>
-        setTimeout(resolve, HEARTBEAT_PING_INTERVAL_MS)
-      )
-    }
-    return new Resolver<void>().promise
+    }, HEARTBEAT_PING_INTERVAL_MS)
   }
 }
 
