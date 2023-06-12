@@ -24,6 +24,9 @@ pytest-cov
 requests-mock
 testfixtures
 
+
+mypy-protobuf>=3.2
+
 # These requirements exist only for `@st.cache` tests. st.cache is deprecated, and
 # we're not going to update its associated tests anymore. Please don't modify
 # these pinned versions!
