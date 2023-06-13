@@ -22,7 +22,16 @@ describe("st.markdown", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown").should("have.length", 20);
+    cy.get(".element-container .stMarkdown").should("have.length", 21);
+  });
+
+  it("displays expander", () => {
+    const els = cy.get("[data-testid='stExpander'] .streamlit-expanderHeader");
+
+    els.should("have.length", 1);
+    els.should("have.attr", "aria-expanded", "true");
+
+    cy.get("[data-testid='stExpander'] [data-testid='stMarkdownContainer'] p").contains("Some list of items");
   });
 
   it("displays markdown", () => {
@@ -41,6 +50,7 @@ describe("st.markdown", () => {
       expect(els[9].textContent).to.eq("Some header 2");
       expect(els[10].textContent).to.eq("Some header 3");
       expect(els[11].textContent).to.eq("Col1Col2SomeData");
+      expect(els[19].textContent).to.eq("Some list of items\n\nDisc bullet point 1\n\nCircle bullet point 1\n\nSquare bullet point 1\n\n\nCircle bullet point 2\n\n\nDisc bullet point 2\nDisc bullet point 3\n");
 
       cy.wrap(els[3]).find("a").should("not.exist");
       cy.wrap(els[4]).find("a").should("have.attr", "href");
@@ -52,6 +62,14 @@ describe("st.markdown", () => {
       cy.wrap(els[8]).find("h1").should("have.attr", "id", "some-header-1");
       cy.wrap(els[9]).find("h2").should("have.attr", "id", "some-header-2");
       cy.wrap(els[10]).find("h3").should("have.attr", "id", "some-header-3");
+    });
+  });
+
+  it("displays consistent view of unordered list in expander", () => {
+    cy.get("div.streamlit-expanderContent").then((els) => {
+      cy.wrap(els[0]).find("[data-testid='stMarkdownContainer'] ul > li").should('have.css', 'list-style-type', 'disc');
+      cy.wrap(els[0]).find("[data-testid='stMarkdownContainer'] ul ul > li").should('have.css', 'list-style-type', 'circle');
+      cy.wrap(els[0]).find("[data-testid='stMarkdownContainer'] ul ul ul > li").should('have.css', 'list-style-type', 'square');
     });
   });
 
