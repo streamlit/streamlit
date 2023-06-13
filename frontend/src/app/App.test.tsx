@@ -893,6 +893,10 @@ describe("App.onHistoryChange", () => {
     pushStateSpy = jest.spyOn(window.history, "pushState")
   })
 
+  afterEach(() => {
+    pushStateSpy.mockRestore()
+  })
+
   it("handles popState events, e.g. clicking browser's back button", async () => {
     const instance = wrapper.instance() as App
 
