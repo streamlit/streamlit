@@ -106,7 +106,7 @@ export function withStreamlitConnection<ArgType=any>(
       // We won't render the component until we receive the first RENDER_EVENT.
       Streamlit.events.addEventListener(
         Streamlit.RENDER_EVENT,
-        this.onRenderEvent
+        this.onRenderEvent as EventListener
       );
       Streamlit.setComponentReady();
     };
@@ -124,7 +124,7 @@ export function withStreamlitConnection<ArgType=any>(
     public componentWillUnmount = (): void => {
       Streamlit.events.removeEventListener(
         Streamlit.RENDER_EVENT,
-        this.onRenderEvent
+        this.onRenderEvent as EventListener
       );
     };
 
@@ -133,10 +133,9 @@ export function withStreamlitConnection<ArgType=any>(
      * We save the render data in State, so that it can be passed to the
      * component in our own render() function.
      */
-    private onRenderEvent = (event: Event): void => {
+    private onRenderEvent = (event: CustomEvent<RenderData<ArgType>>): void => {
       // Update our state with the newest render data
-      const renderEvent = event as CustomEvent<RenderData<ArgType>>;
-      this.setState({ renderData: renderEvent.detail });
+      this.setState({ renderData: event.detail });
     };
 
     public render(): ReactNode {

@@ -119,7 +119,7 @@ describe("StreamlitReact", () => {
 
   test("the component error should be visible", async () => {
     class BrokenComponent extends StreamlitComponentBase {
-      render () {
+      render (): React.ReactNode {
         throw new Error("Error in component")
       }
     }
