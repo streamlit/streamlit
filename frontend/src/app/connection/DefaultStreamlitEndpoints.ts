@@ -131,10 +131,6 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       if (typeof response.data === "number") {
         return response.data
       }
-
-      throw new Error(
-        `Bad uploadFile response: expected a number but got '${response.data}'`
-      )
     })
   }
 
