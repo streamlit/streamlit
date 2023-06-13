@@ -292,6 +292,26 @@ export const globalStyles = (theme: EmotionTheme): any => css`
     padding: 0;
   }
 
+  // View consistency
+  // Make all nested <ul> tags have identical list style type
+  //
+  // Fix issue with the invalid bullet points style of a Markdown component inside Expander block
+
+  ul,
+  ol > li > ul {
+    list-style: initial;
+  }
+
+  ul > li > ul,
+  ol > li > ul > li > ul {
+    list-style-type: circle;
+  }
+
+  ul > li > ul > li > ul,
+  ol > li > ul > li > ul > li > ul {
+    list-style-type: square;
+  }
+
   // 1. Undo browser default
 
   dd {
