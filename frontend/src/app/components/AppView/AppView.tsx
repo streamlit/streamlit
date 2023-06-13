@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useRef } from "react"
 import { IAppPage } from "src/lib/proto"
 
 import VerticalBlock from "src/lib/components/core/Block"
@@ -29,6 +29,7 @@ import { BlockNode, AppRoot } from "src/lib/AppNode"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { IGuestToHostMessage } from "src/lib/hostComm/types"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
+import { debounce, isNullOrUndefined } from "src/lib/util/utils"
 
 import {
   StyledAppViewBlockContainer,
@@ -95,6 +96,39 @@ function AppView(props: AppViewProps): ReactElement {
     sendMessageToHost,
     endpoints,
   } = props
+
+  const bottomAnchorRef = useRef<HTMLDivElement>(null)
+  const mainContainerRef = useRef<HTMLDivElement>(null)
+
+  let isOnBottom = mainContainerRef.current
+    ? Math.abs(
+        mainContainerRef.current.scrollHeight -
+          mainContainerRef.current.scrollTop -
+          mainContainerRef.current.clientHeight
+      ) < 20
+    : false
+
+  React.useEffect(() => {
+    const containsChatInput =
+      Array.from(elements.main.getElements()).find(element => {
+        return element.type === "chatInput"
+      }) !== undefined
+    // console.log("containsChatInput", containsChatInput)
+    if (isOnBottom && mainContainerRef.current && containsChatInput) {
+      debounce(5, () => {
+        // Some elements (e.g. charts) will get the final height only a few ms after the first render.
+        bottomAnchorRef.current?.scrollIntoView()
+      })()
+      // debounce(100, () => {
+      //   // Some elements (e.g. charts) will get the final height only a few ms after the first render.
+      //   bottomAnchorRef.current?.scrollIntoView({
+      //     behavior: "smooth",
+      //     block: "end",
+      //     inline: "nearest",
+      //   })
+      // })()
+    }
+  }, [elements.main])
 
   React.useEffect(() => {
     const listener = (): void => {
@@ -169,12 +203,14 @@ function AppView(props: AppViewProps): ReactElement {
         isEmbedded={embedded}
         disableScrolling={disableScrolling}
         className="main"
+        ref={mainContainerRef}
       >
         {renderBlock(elements.main)}
         {/* Anchor indicates to the iframe resizer that this is the lowest
         possible point to determine height */}
         <StyledIFrameResizerAnchor
           hasFooter={!embedded || showFooter}
+          ref={bottomAnchorRef}
           data-iframe-height
         />
         {/* Spacer fills up dead space to ensure the footer remains at the

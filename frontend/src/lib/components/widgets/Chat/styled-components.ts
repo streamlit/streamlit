@@ -18,14 +18,11 @@ import styled from "@emotion/styled"
 import { hasLightBackgroundColor } from "src/lib/theme"
 
 export const StyledChatContainer = styled.div(() => {
-  return {
-    // overflowAnchor: "none",
-  }
+  return {}
 })
 
 export const StyledChatAnchor = styled.div(() => {
   return {
-    // overflowAnchor: "auto",
     height: "0.5px",
   }
 })
@@ -52,6 +49,7 @@ export const StyledChatMessageContainer =
       gap: theme.spacing.sm,
       padding: theme.spacing.md,
       paddingTop: theme.spacing.md,
+      paddingRight: background ? theme.spacing.md : 0,
       borderRadius: theme.radii.md,
       ...messageBackground,
     }
@@ -86,28 +84,37 @@ export const StyledAvatarImage = styled.img(({ theme }) => ({
 
 export interface StyledChatInputContainerProps {
   width: number
+  fullscreenLayout: boolean
 }
 
 export const StyledChatInputContainer =
-  styled.div<StyledChatInputContainerProps>(({ theme, width }) => {
-    const lightTheme = hasLightBackgroundColor(theme)
-    return {
-      backgroundColor: lightTheme ? theme.colors.gray10 : theme.colors.gray90,
-      borderRadius: theme.radii.md,
-      border: `1px solid ${
-        lightTheme ? theme.colors.gray20 : theme.colors.gray80
-      }`,
-      filter: lightTheme
-        ? "drop-shadow(0px 4px 6px rgba(25, 30, 36, 0.15))"
-        : "drop-shadow(0px 4px 6px rgba(191, 197, 211, 0.3))",
-      display: "flex",
-      alignItems: "center",
-      position: "fixed",
-      bottom: "40px",
-      zIndex: theme.zIndices.chatInput,
-      width: `${width}px`,
+  styled.div<StyledChatInputContainerProps>(
+    ({ theme, width, fullscreenLayout }) => {
+      const lightTheme = hasLightBackgroundColor(theme)
+      return {
+        backgroundColor: lightTheme
+          ? theme.colors.gray10
+          : theme.colors.gray90,
+        borderRadius: theme.radii.md,
+        display: "flex",
+        alignItems: "center",
+        border: `1px solid ${
+          lightTheme ? theme.colors.gray20 : theme.colors.gray80
+        }`,
+        ...(fullscreenLayout
+          ? {
+              filter: lightTheme
+                ? "drop-shadow(0px 4px 6px rgba(25, 30, 36, 0.15))"
+                : "drop-shadow(0px 4px 6px rgba(191, 197, 211, 0.3))",
+              position: "fixed",
+              bottom: "40px",
+              zIndex: theme.zIndices.chatInput,
+            }
+          : {}),
+        width: `${width}px`,
+      }
     }
-  })
+  )
 
 export const StyledChatInput = styled.div(({ theme }) => {
   const lightTheme = hasLightBackgroundColor(theme)

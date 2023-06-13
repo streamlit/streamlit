@@ -17,7 +17,6 @@
 import React, { RefObject } from "react"
 import { withTheme } from "@emotion/react"
 import { ChatInput as ChatInputProto } from "src/lib/proto"
-import { FormClearHelper } from "src/lib/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
@@ -30,6 +29,9 @@ import {
 } from "./styled-components"
 import Send from "./send.svg"
 import { hasLightBackgroundColor, EmotionTheme } from "src/lib/theme"
+
+const MIN_HEIGHT = 40.4 // 40.4 is the default height of a text input
+const MAX_HEIGHT = 230
 
 export interface Props {
   theme: EmotionTheme
@@ -59,7 +61,8 @@ interface State {
 }
 
 class ChatInput extends React.PureComponent<Props, State> {
-  private readonly formClearHelper = new FormClearHelper()
+  // TODO(lukasmasuch): I assume we don't need to do this since chat_input is allowed in forms.
+  // private readonly formClearHelper = new FormClearHelper()
 
   private chatInputRef: RefObject<HTMLTextAreaElement> = React.createRef()
 
@@ -79,19 +82,17 @@ class ChatInput extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    if (this.props.element.setValue) {
-      this.updateFromProtobuf()
-    }
+    this.maybeUpdateFromProtobuf()
     // else {
     //   this.commitWidgetValue({ fromUi: false })
     // }
 
     // TODO(lukasmasuch): This is super hacky, but we probably want to remove
     // the footer as soon as there is a floating chat input on the page.
-    const footerElements = document.getElementsByTagName("footer")
-    if (footerElements && footerElements.length === 1) {
-      footerElements[0].remove()
-    }
+    // const footerElements = document.getElementsByTagName("footer")
+    // if (footerElements && footerElements.length === 1) {
+    //   footerElements[0].remove()
+    // }
   }
 
   public componentDidUpdate(): void {
@@ -99,24 +100,19 @@ class ChatInput extends React.PureComponent<Props, State> {
   }
 
   public componentWillUnmount(): void {
-    this.formClearHelper.disconnect()
+    // TODO(lukasmasuch): I assume we don't need to do this since chat_input is allowed in forms.
+    // this.formClearHelper.disconnect()
   }
 
   private maybeUpdateFromProtobuf(): void {
-    const { setValue } = this.props.element
-    if (setValue) {
-      this.updateFromProtobuf()
+    if (this.props.element.setValue) {
+      const { value } = this.props.element
+      this.props.element.setValue = false
+      this.setState({ value, dirty: true }, () => {
+        const scrollHeight = this.getScrollHeight()
+        this.setState({ scrollHeight })
+      })
     }
-  }
-
-  private updateFromProtobuf(): void {
-    const { value } = this.props.element
-    this.props.element.setValue = false
-    this.setState({ value, dirty: true }, () => {
-      const scrollHeight = this.getScrollHeight()
-      this.setState({ scrollHeight })
-      // this.commitWidgetValue({ fromUi: false })
-    })
   }
 
   /** Commit state.value to the WidgetStateManager. */
@@ -126,22 +122,24 @@ class ChatInput extends React.PureComponent<Props, State> {
       this.state.value,
       source
     )
-    // Rest the value to empty string
+
+    // Reset the value in the chat input to empty string:
     this.setState({ dirty: false, value: "", scrollHeight: 0 })
   }
 
+  // TODO(lukasmasuch): I assume we don't need to do this since chat_input is allowed in forms:
   /**
    * If we're part of a clear_on_submit form, this will be called when our
    * form is submitted. Restore our default value and update the WidgetManager.
    */
-  private onFormCleared = (): void => {
-    this.setState(
-      (_, prevProps) => {
-        return { value: prevProps.element.default }
-      },
-      () => this.commitWidgetValue({ fromUi: true })
-    )
-  }
+  // private onFormCleared = (): void => {
+  //   this.setState(
+  //     (_, prevProps) => {
+  //       return { value: prevProps.element.default }
+  //     },
+  //     () => this.commitWidgetValue({ fromUi: true })
+  //   )
+  // }
 
   private getScrollHeight = (): number => {
     let scrollHeight = 0
@@ -171,6 +169,7 @@ class ChatInput extends React.PureComponent<Props, State> {
   isEnterKeyPressed = (
     event: React.KeyboardEvent<HTMLTextAreaElement>
   ): boolean => {
+    // TODO(lukasmasuch): keyCode is deprecated, is it still fine to use?
     const { keyCode, key } = event
 
     // Using keyCode as well due to some different behaviors on Windows
@@ -195,97 +194,110 @@ class ChatInput extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { theme, element, disabled, widgetMgr } = this.props
+    const { theme, element, disabled } = this.props
     const { value, dirty, scrollHeight } = this.state
     const { placeholder } = element
-    const MIN_HEIGHT = 55
-    const MAX_HEIGHT = 230
-    const realHeight = Math.min(Math.max(scrollHeight, MIN_HEIGHT), MAX_HEIGHT)
 
+    const fullscreenLayout = true
+
+    const realHeight = Math.min(Math.max(scrollHeight, MIN_HEIGHT), MAX_HEIGHT)
     const lightTheme = hasLightBackgroundColor(theme)
 
-    // Manage our form-clear event handler.
-    this.formClearHelper.manageFormClearListener(
-      widgetMgr,
-      element.formId,
-      this.onFormCleared
-    )
+    // TODO(lukasmasuch): I believe we can just remove manageFormClearListener since
+    // we don't allow chat input in forms anyways (will show an exception triggered on Python side)
+    // this.formClearHelper.manageFormClearListener(
+    //   widgetMgr,
+    //   element.formId,
+    //   this.onFormCleared
+    // )
 
     return (
-      <StyledChatInputContainer
-        className="stChatInputContainer"
-        width={this.props.width}
-      >
-        <StyledChatInput>
-          <UITextArea
-            data-testid="stChatInput"
-            inputRef={this.chatInputRef}
-            value={value}
-            placeholder={placeholder}
-            onChange={this.onChange}
-            onKeyDown={this.onKeyDown}
-            aria-label={placeholder}
-            disabled={disabled}
-            rows={1}
-            overrides={{
-              Root: {
-                style: {
-                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                  borderLeftWidth: 0,
-                  borderTopWidth: 0,
-                  borderRightWidth: 0,
-                  borderBottomWidth: 0,
-                  borderLeftStyle: "none",
-                  borderTopStyle: "none",
-                  borderRightStyle: "none",
-                  borderBottomStyle: "none",
-                  outline: "none",
-                  borderBottomLeftRadius: theme.radii.md,
-                  borderBottomRightRadius: theme.radii.md,
-                  borderTopLeftRadius: theme.radii.md,
-                  borderTopRightRadius: theme.radii.md,
-                  ":focus-within": {
-                    border: `none`,
-                  },
-                },
-              },
-              Input: {
-                style: {
-                  lineHeight: "1.4",
-                  height: `${realHeight + 1}px`,
-                  minHeight: `${MIN_HEIGHT}px`,
-                  borderColor: lightTheme
-                    ? theme.colors.gray20
-                    : theme.colors.gray90,
-                  backgroundColor: lightTheme
-                    ? theme.colors.gray10
-                    : theme.colors.gray90,
-                  "::placeholder": {
-                    opacity: "0.7",
-                  },
-                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                  paddingRight: theme.spacing.lg,
-                  paddingLeft: theme.spacing.lg,
-                  paddingBottom: theme.spacing.lg,
-                  paddingTop: theme.spacing.lg,
-                },
-              },
-            }}
-          />
-          <InputInstructions
-            dirty={dirty}
-            value={value}
-            maxLength={element.maxChars}
-            type={"chat"}
-          />
-        </StyledChatInput>
-        <StyledSendIconContainer
-          height={`${realHeight}px`}
-          onClick={this.handleSubmit}
+      <>
+        <StyledChatInputContainer
+          className="stChatInputContainer"
+          width={this.props.width}
+          fullscreenLayout={fullscreenLayout}
         >
-          <StyledSendIcon src={Send} alt="Send" />
-        </StyledSendIconContainer>
-      </StyledChatInputContainer>
+          <StyledChatInput>
+            <UITextArea
+              data-testid="stChatInput"
+              inputRef={this.chatInputRef}
+              value={value}
+              placeholder={placeholder}
+              onChange={this.onChange}
+              onKeyDown={this.onKeyDown}
+              aria-label={placeholder}
+              disabled={disabled}
+              rows={1}
+              overrides={{
+                Root: {
+                  style: {
+                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                    borderLeftWidth: 0,
+                    borderTopWidth: 0,
+                    borderRightWidth: 0,
+                    borderBottomWidth: 0,
+                    borderLeftStyle: "none",
+                    borderTopStyle: "none",
+                    borderRightStyle: "none",
+                    borderBottomStyle: "none",
+                    outline: "none",
+                    borderBottomLeftRadius: theme.radii.md,
+                    borderBottomRightRadius: theme.radii.md,
+                    borderTopLeftRadius: theme.radii.md,
+                    borderTopRightRadius: theme.radii.md,
+                    ":focus-within": {
+                      border: `none`,
+                    },
+                  },
+                },
+                Input: {
+                  style: {
+                    lineHeight: "1.4",
+                    height: `${realHeight - 2}px`,
+                    minHeight: `${MIN_HEIGHT - 2}px`,
+                    borderColor: lightTheme
+                      ? theme.colors.gray20
+                      : theme.colors.gray90,
+                    backgroundColor: lightTheme
+                      ? theme.colors.gray10
+                      : theme.colors.gray90,
+                    "::placeholder": {
+                      opacity: "0.7",
+                    },
+                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                    paddingRight: theme.spacing.sm,
+                    paddingLeft: theme.spacing.sm,
+                    paddingBottom: theme.spacing.sm,
+                    paddingTop: theme.spacing.sm,
+                  },
+                },
+              }}
+            />
+            <InputInstructions
+              dirty={dirty}
+              value={value}
+              maxLength={element.maxChars}
+              type={"chat"}
+            />
+          </StyledChatInput>
+          <StyledSendIconContainer
+            height={`${realHeight}px`}
+            onClick={this.handleSubmit}
+          >
+            <StyledSendIcon src={Send} alt="Send" />
+          </StyledSendIconContainer>
+        </StyledChatInputContainer>
+        {/* <div
+          style={{
+            height: "40px",
+            position: "fixed",
+            bottom: "0px",
+            background: "white",
+            width: this.props.width,
+          }}
+        /> */}
+      </>
     )
   }
 }

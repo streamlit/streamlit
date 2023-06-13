@@ -84,7 +84,7 @@ export const StyledAppViewBlockContainer =
       if (addPaddingForHeader && !showPadding) {
         topEmbedPadding = "3rem"
       }
-      const bottomEmbedPadding = showPadding ? "10rem" : "1rem"
+      const bottomEmbedPadding = showPadding ? "6rem" : "1rem"
       const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
       return {
         width: theme.sizes.full,
