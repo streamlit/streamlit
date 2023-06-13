@@ -846,6 +846,7 @@ describe("App.handleNewSession", () => {
 describe("App.onHistoryChange", () => {
   let wrapper: ShallowWrapper
   let instance: App
+  let pushStateSpy: any
 
   const NEW_SESSION_JSON = {
     config: {
@@ -889,6 +890,7 @@ describe("App.onHistoryChange", () => {
     instance.connectionManager.getBaseUriParts = mockGetBaseUriParts()
 
     window.history.pushState({}, "", "/")
+    pushStateSpy = jest.spyOn(window.history, "pushState")
   })
 
   it("handles popState events, e.g. clicking browser's back button", async () => {
@@ -916,6 +918,25 @@ describe("App.onHistoryChange", () => {
     await waitFor(() => {
       expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
     })
+  })
+
+  it("doesn't push a new history when the new url contains an anchor so we don't rerun", () => {
+    pushStateSpy = jest.spyOn(window.history, "pushState")
+    window.history.pushState({}, "", "/#foo=bar")
+
+    const instance = wrapper.instance() as App
+    instance.handleNewSession(new NewSession(NEW_SESSION_JSON))
+
+    expect(window.history.pushState).toHaveBeenLastCalledWith(
+      {},
+      "",
+      "/#foo=bar"
+    )
+
+    // check that onPageChange is not run when anchor is in the url
+    waitFor(() => expect(instance.onPageChange).not.toHaveBeenCalled())
+    // @ts-expect-error
+    window.history.pushState.mockClear()
   })
 })
 
