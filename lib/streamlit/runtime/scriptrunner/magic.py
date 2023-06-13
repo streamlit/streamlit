@@ -52,7 +52,9 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
     for i, node in enumerate(body):
         node_type = type(node)
 
-        # Parse the contents of functions, With statements, and for statements
+        # Recursively parses the content of the statements
+        # `with`, `for` and `while`, as well as function definitions.
+        # Also covers their async counterparts
         if (
             node_type is ast.FunctionDef
             or node_type is ast.With
@@ -64,7 +66,8 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
         ):
             _modify_ast_subtree(node)
 
-        # Parse the contents of try statements
+        # Recursively parses the contents of try statements,
+        # all their handlers (except and else) and the finally body
         elif node_type is ast.Try:
             for j, inner_node in enumerate(node.handlers):
                 node.handlers[j] = _modify_ast_subtree(inner_node)
@@ -72,7 +75,9 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
             node.finalbody = finally_node.finalbody
             _modify_ast_subtree(node)
 
-        # Convert if expressions to st.write
+        # Recursively parses if blocks, as well as their else/elif blocks
+        # (else/elif are both mapped to orelse)
+        # it intentionally does not parse the test expression.
         elif node_type is ast.If:
             _modify_ast_subtree(node)
             _modify_ast_subtree(node, "orelse")
