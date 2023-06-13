@@ -84,37 +84,38 @@ export const StyledAvatarImage = styled.img(({ theme }) => ({
 
 export interface StyledChatInputContainerProps {
   width: number
-  fullscreenLayout: boolean
+  sticky: boolean
 }
 
 export const StyledChatInputContainer =
-  styled.div<StyledChatInputContainerProps>(
-    ({ theme, width, fullscreenLayout }) => {
-      const lightTheme = hasLightBackgroundColor(theme)
-      return {
-        backgroundColor: lightTheme
-          ? theme.colors.gray10
-          : theme.colors.gray90,
-        borderRadius: theme.radii.md,
-        display: "flex",
-        alignItems: "center",
-        border: `1px solid ${
-          lightTheme ? theme.colors.gray20 : theme.colors.gray80
-        }`,
-        ...(fullscreenLayout
-          ? {
-              filter: lightTheme
-                ? "drop-shadow(0px 4px 6px rgba(25, 30, 36, 0.15))"
-                : "drop-shadow(0px 4px 6px rgba(191, 197, 211, 0.3))",
-              position: "fixed",
-              bottom: "40px",
-              zIndex: theme.zIndices.chatInput,
-            }
-          : {}),
-        width: `${width}px`,
-      }
+  styled.div<StyledChatInputContainerProps>(({ theme, width, sticky }) => {
+    const lightTheme = hasLightBackgroundColor(theme)
+    return {
+      backgroundColor: lightTheme ? theme.colors.gray10 : theme.colors.gray90,
+      borderRadius: theme.radii.md,
+      display: "flex",
+      alignItems: "center",
+      border: `1px solid ${
+        lightTheme ? theme.colors.gray20 : theme.colors.gray80
+      }`,
+      ...(sticky
+        ? {
+            filter: lightTheme
+              ? "drop-shadow(0px 4px 6px rgba(25, 30, 36, 0.15))"
+              : "drop-shadow(0px 4px 6px rgba(191, 197, 211, 0.3))",
+            position: "fixed",
+            bottom: "40px",
+            zIndex: theme.zIndices.chatInput,
+          }
+        : {
+            // This is a bit of a workaround to fix the margin in
+            // a non-sticky usage. Since for sticky usage, we need to remove the margin
+            // for the element container.
+            marginBottom: theme.spacing.lg,
+          }),
+      width: `${width}px`,
     }
-  )
+  })
 
 export const StyledChatInput = styled.div(({ theme }) => {
   const lightTheme = hasLightBackgroundColor(theme)
@@ -166,3 +167,18 @@ export const StyledSendIcon = styled.img({
   width: "1.5rem",
   height: "1.5rem",
 })
+
+export interface StyledChatInputBackgroundProps {
+  width: number
+}
+
+export const StyledChatInputBackground =
+  styled.div<StyledChatInputBackgroundProps>(({ theme, width }) => ({
+    backgroundColor: theme.colors.bodyBg,
+    height: "40px",
+    position: "fixed",
+    bottom: 0,
+    background: "white",
+    width: width,
+    zIndex: theme.zIndices.chatInput - 1,
+  }))

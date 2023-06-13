@@ -25,6 +25,7 @@ import {
   StyledChatInputContainer,
   StyledChatInput,
   StyledSendIconContainer,
+  StyledChatInputBackground,
   StyledSendIcon,
 } from "./styled-components"
 import Send from "./send.svg"
@@ -198,7 +199,7 @@ class ChatInput extends React.PureComponent<Props, State> {
     const { value, dirty, scrollHeight } = this.state
     const { placeholder } = element
 
-    const fullscreenLayout = true
+    const sticky = true
 
     const realHeight = Math.min(Math.max(scrollHeight, MIN_HEIGHT), MAX_HEIGHT)
     const lightTheme = hasLightBackgroundColor(theme)
@@ -216,7 +217,7 @@ class ChatInput extends React.PureComponent<Props, State> {
         <StyledChatInputContainer
           className="stChatInputContainer"
           width={this.props.width}
-          fullscreenLayout={fullscreenLayout}
+          sticky={sticky}
         >
           <StyledChatInput>
             <UITextArea
@@ -288,15 +289,8 @@ class ChatInput extends React.PureComponent<Props, State> {
             <StyledSendIcon src={Send} alt="Send" />
           </StyledSendIconContainer>
         </StyledChatInputContainer>
-        {/* <div
-          style={{
-            height: "40px",
-            position: "fixed",
-            bottom: "0px",
-            background: "white",
-            width: this.props.width,
-          }}
-        /> */}
+        {/* Show a background overlaying the part underneath the floating chat input: */}
+        {sticky && <StyledChatInputBackground width={this.props.width} />}
       </>
     )
   }
