@@ -76,15 +76,15 @@ with st.container():
     st.markdown("# Some title")
     st.markdown("Some text")
 
-with st.expander('Some expander', expanded=True):
-    md_text = '''Some list of items
+with st.expander("Some expander", expanded=True):
+    md_text = """Some list of items
   - Disc bullet point 1
     - Circle bullet point 1
       - Square bullet point 1
     - Circle bullet point 2
   - Disc bullet point 2
   - Disc bullet point 3
-'''
+"""
 
     st.markdown(md_text)
 
