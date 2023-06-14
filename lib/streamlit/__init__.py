@@ -215,9 +215,10 @@ experimental_rerun = _rerun
 experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _connection_factory
 
-_chat_container = _main._chat_container
-_chat_message = _main._chat_message
+chat_message = _main.chat_message
 chat_input = _main.chat_input
+
+# Just some API prototypes:
 chat_layout = _main.chat_layout
 chat_v9 = _main.chat_v9
 chat_message_v9 = _main.chat_message_v9

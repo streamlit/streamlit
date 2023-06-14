@@ -103,7 +103,7 @@ class ChatChildrenDeltaGenerator:
 
     def _get_or_create_chat_message(self) -> "DeltaGenerator":
         if self._chat_handler.last_speaker != self or self._message_container is None:
-            self._message_container = self._chat_handler.parent_dg._chat_message(
+            self._message_container = self._chat_handler.parent_dg.chat_message(
                 label=self._participant["role"],
                 avatar=self._participant["avatar"],
                 background=self._participant["background"],
@@ -220,7 +220,7 @@ def _display_chat_message(
     background = participant.get("background")
     avatar = participant.get("avatar")
 
-    message_container = dg._chat_message(role, avatar, background=background)
+    message_container = dg.chat_message(role, avatar, background=background)
     with message_container:
         message_content: List[Any] = []
 
