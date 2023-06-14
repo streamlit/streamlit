@@ -952,7 +952,6 @@ describe("App.onHistoryChange", () => {
     instance.handleNewSession(
       new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "page_2_hash" })
     )
-    window.history.pushState({}, "", "/page2#anchor")
     window.history.back()
     instance.onHistoryChange()
 
