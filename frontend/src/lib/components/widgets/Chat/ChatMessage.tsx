@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, ReactNode } from "react"
-import { Face, Try } from "@emotion-icons/material-outlined"
+import { Face, SmartToy } from "@emotion-icons/material-outlined"
 
 import { Block as BlockProto } from "src/lib/proto"
 import Icon from "src/lib/components/shared/Icon"
@@ -57,8 +57,8 @@ function ChatMessage(props: Props): ReactElement {
       )
     } else {
       avatarElement = (
-        <StyledAvatarIcon background={theme.colors.orange60}>
-          <Icon content={Try} size="lg" />
+        <StyledAvatarIcon background={theme.colors.blue60}>
+          <Icon content={SmartToy} size="lg" />
         </StyledAvatarIcon>
       )
     }

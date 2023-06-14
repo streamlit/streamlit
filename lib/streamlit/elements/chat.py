@@ -165,14 +165,14 @@ class ChatMixin:
             if self.dg._active_dg == self.dg._main_dg:
                 in_main_dg = True
 
-        print("in_main_dg", in_main_dg, position)
         if position is None:
             position = "bottom" if in_main_dg else "inline"
 
-        if not in_main_dg and position == "bottom":
-            raise StreamlitAPIException(
-                "`st.chat_input()` with position='bottom' can only be used in the main container."
-            )
+        # TODO(lukasmasuch): Should we really do this?:
+        # if not in_main_dg and position == "bottom":
+        #     raise StreamlitAPIException(
+        #         "`st.chat_input()` with position='bottom' can only be used in the main container."
+        #     )
 
         chat_input_proto = ChatInputProto()
         if placeholder is not None:

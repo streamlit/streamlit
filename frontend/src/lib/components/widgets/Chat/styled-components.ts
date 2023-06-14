@@ -89,6 +89,7 @@ export const StyledAvatarIcon = styled(
 )<StyledAvatarIconProps>(({ theme, background }) => ({
   backgroundColor: background,
   color: theme.colors.white,
+  boxShadow: "none",
 }))
 
 export const StyledAvatarImage = styled.img(({ theme }) => {
@@ -101,9 +102,9 @@ export const StyledAvatarImage = styled.img(({ theme }) => {
     borderRadius: theme.radii.md,
     objectFit: "cover",
     display: "flex",
-    boxShadow: lightTheme
-      ? "0px 1px 3px rgba(25, 30, 36, 0.15), 0px 4px 8px rgba(25, 30, 36, 0.05)"
-      : "0px 1px 3px rgba(90, 90, 90, 0.75), 0px 4px 8px rgba(47, 47, 47, 0.01)",
+    // boxShadow: lightTheme
+    //   ? "0px 1px 3px rgba(25, 30, 36, 0.15), 0px 4px 8px rgba(25, 30, 36, 0.05)"
+    //   : "0px 1px 3px rgba(90, 90, 90, 0.75), 0px 4px 8px rgba(47, 47, 47, 0.01)",
   }
 })
 
