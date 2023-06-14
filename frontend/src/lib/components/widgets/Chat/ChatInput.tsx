@@ -260,7 +260,7 @@ class ChatInput extends React.PureComponent<Props, State> {
                 Input: {
                   style: {
                     lineHeight: "1.4",
-                    height: `${realHeight - 2}px`,
+                    height: `${realHeight}px`,
                     minHeight: `${MIN_HEIGHT - 2}px`,
                     backgroundColor: theme.colors.transparent,
                     "::placeholder": {

@@ -98,7 +98,6 @@ export const StyledAvatarImage = styled.img(({ theme }) => {
     backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
     width: "2rem",
     height: "2rem",
-    // marginTop: "-4px",
     borderRadius: theme.radii.md,
     objectFit: "cover",
     display: "flex",
