@@ -939,11 +939,13 @@ describe("App.onHistoryChange", () => {
     const instance = wrapper.instance() as App
     jest.spyOn(instance, "onPageChange")
 
+    // navigate to current page with anchor
     window.history.pushState({}, "", "#foo_bar")
     instance.onHistoryChange()
     // check that onPageChange is not run when anchor is in the url and we are on the same page
     expect(instance.onPageChange).not.toHaveBeenCalled()
 
+    // navigate to current page with anchor
     window.history.pushState({}, "", "#foo_baz")
     instance.onHistoryChange()
     // check that onPageChange is not run when anchor is in the url and we are on the same page
