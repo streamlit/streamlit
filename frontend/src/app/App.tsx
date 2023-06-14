@@ -919,7 +919,6 @@ export class App extends PureComponent<Props, State> {
    * Handler called when the history state changes, e.g. `popstate` event.
    */
   onHistoryChange = (): void => {
-    console.log(this.state.appPages)
     const targetAppPage =
       this.state.appPages.find(appPage =>
         // The page name is embedded at the end of the URL path, and if not, we are in the main page.
