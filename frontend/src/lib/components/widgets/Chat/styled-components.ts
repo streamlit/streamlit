@@ -91,18 +91,21 @@ export const StyledChatInputContainer =
   styled.div<StyledChatInputContainerProps>(({ theme, width, sticky }) => {
     const lightTheme = hasLightBackgroundColor(theme)
     return {
-      backgroundColor: lightTheme ? theme.colors.gray10 : theme.colors.gray90,
+      backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
       borderRadius: theme.radii.md,
       display: "flex",
       alignItems: "center",
-      border: `1px solid ${
-        lightTheme ? theme.colors.gray20 : theme.colors.gray80
-      }`,
+      // border: `1px solid ${
+      //   lightTheme ? theme.colors.gray20 : theme.colors.gray80
+      // }`,
       ...(sticky
         ? {
             filter: lightTheme
-              ? "drop-shadow(0px 4px 6px rgba(25, 30, 36, 0.15))"
-              : "drop-shadow(0px 4px 6px rgba(191, 197, 211, 0.3))",
+              ? "drop-shadow(0px 1px 3px rgba(25, 30, 36, 0.15)) drop-shadow(0px 4px 16px rgba(25, 30, 36, 0.1))"
+              : "drop-shadow(0px 1px 3px rgba(191, 197, 211, 0.4)) drop-shadow(0px 4px 16px rgba(191, 197, 211, 0.15))",
+            // filter: lightTheme
+            //   ? "drop-shadow(0px 4px 6px rgba(25, 30, 36, 0.15))"
+            //   : "drop-shadow(0px 4px 6px rgba(191, 197, 211, 0.3))",
             position: "fixed",
             bottom: "40px",
             zIndex: theme.zIndices.chatInput,
@@ -120,7 +123,7 @@ export const StyledChatInputContainer =
 export const StyledChatInput = styled.div(({ theme }) => {
   const lightTheme = hasLightBackgroundColor(theme)
   return {
-    backgroundColor: lightTheme ? theme.colors.gray10 : theme.colors.gray90,
+    backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
     position: "relative",
     flexGrow: 1,
     borderRadius: theme.radii.md,
@@ -133,40 +136,39 @@ export interface StyledSendIconContainerProps {
 export const StyledSendIconContainer =
   styled.button<StyledSendIconContainerProps>(({ theme, height }) => {
     const lightTheme = hasLightBackgroundColor(theme)
-
     return {
       height: height,
       border: "none",
-      backgroundColor: lightTheme ? theme.colors.gray10 : theme.colors.gray90,
+      backgroundColor: theme.colors.transparent,
       borderRadius: theme.radii.md,
-      display: "flex",
+      padding: theme.spacing.sm,
+      display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      paddingRight: theme.spacing.sm,
-      paddingLeft: theme.spacing.sm,
-      ":hover": {
-        backgroundColor: lightTheme
-          ? theme.colors.gray40
-          : theme.colors.gray10,
-      },
-      ":focus": {
-        backgroundColor: lightTheme
-          ? theme.colors.gray40
-          : theme.colors.gray10,
+      lineHeight: 1,
+      margin: 0,
+      color: theme.colors.gray70,
+      "&:focus": {
         outline: "none",
       },
-      "&:focus:not(:active)": {
+      ":focus": {
+        outline: "none",
+      },
+      "&:focus-visible": {
         backgroundColor: lightTheme
           ? theme.colors.gray10
           : theme.colors.gray90,
       },
+      "&:hover": {
+        backgroundColor: theme.colors.darkenedBgMix25,
+      },
+      "&:disabled, &:disabled:hover, &:disabled:active": {
+        backgroundColor: theme.colors.lightGray,
+        borderColor: theme.colors.transparent,
+        color: theme.colors.gray,
+      },
     }
   })
-
-export const StyledSendIcon = styled.img({
-  width: "1.5rem",
-  height: "1.5rem",
-})
 
 export interface StyledChatInputBackgroundProps {
   width: number
@@ -174,11 +176,10 @@ export interface StyledChatInputBackgroundProps {
 
 export const StyledChatInputBackground =
   styled.div<StyledChatInputBackgroundProps>(({ theme, width }) => ({
-    backgroundColor: theme.colors.bodyBg,
+    backgroundColor: theme.colors.bgColor,
     height: "40px",
     position: "fixed",
     bottom: 0,
-    background: "white",
     width: width,
     zIndex: theme.zIndices.chatInput - 1,
   }))

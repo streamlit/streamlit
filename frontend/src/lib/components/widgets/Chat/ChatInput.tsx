@@ -16,20 +16,22 @@
 
 import React, { RefObject } from "react"
 import { withTheme } from "@emotion/react"
+import { Send } from "@emotion-icons/material-rounded"
+import { Textarea as UITextArea } from "baseui/textarea"
+
 import { ChatInput as ChatInputProto } from "src/lib/proto"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
-
-import { Textarea as UITextArea } from "baseui/textarea"
+import { EmotionTheme } from "src/lib/theme"
+import Icon from "src/lib/components/shared/Icon"
 import InputInstructions from "src/lib/components/shared/InputInstructions/InputInstructions"
+
 import {
   StyledChatInputContainer,
   StyledChatInput,
   StyledSendIconContainer,
   StyledChatInputBackground,
-  StyledSendIcon,
 } from "./styled-components"
-import Send from "./send.svg"
-import { hasLightBackgroundColor, EmotionTheme } from "src/lib/theme"
+// import Send from "./send.svg"
 
 const MIN_HEIGHT = 40.4 // 40.4 is the default height of a text input
 const MAX_HEIGHT = 230
@@ -202,7 +204,6 @@ class ChatInput extends React.PureComponent<Props, State> {
     const sticky = true
 
     const realHeight = Math.min(Math.max(scrollHeight, MIN_HEIGHT), MAX_HEIGHT)
-    const lightTheme = hasLightBackgroundColor(theme)
 
     // TODO(lukasmasuch): I believe we can just remove manageFormClearListener since
     // we don't allow chat input in forms anyways (will show an exception triggered on Python side)
@@ -247,9 +248,15 @@ class ChatInput extends React.PureComponent<Props, State> {
                     borderBottomRightRadius: theme.radii.md,
                     borderTopLeftRadius: theme.radii.md,
                     borderTopRightRadius: theme.radii.md,
+                    backgroundColor: theme.colors.transparent,
                     ":focus-within": {
                       border: `none`,
                     },
+                  },
+                },
+                InputContainer: {
+                  style: {
+                    backgroundColor: theme.colors.transparent,
                   },
                 },
                 Input: {
@@ -257,12 +264,7 @@ class ChatInput extends React.PureComponent<Props, State> {
                     lineHeight: "1.4",
                     height: `${realHeight - 2}px`,
                     minHeight: `${MIN_HEIGHT - 2}px`,
-                    borderColor: lightTheme
-                      ? theme.colors.gray20
-                      : theme.colors.gray90,
-                    backgroundColor: lightTheme
-                      ? theme.colors.gray10
-                      : theme.colors.gray90,
+                    backgroundColor: theme.colors.transparent,
                     "::placeholder": {
                       opacity: "0.7",
                     },
@@ -286,7 +288,7 @@ class ChatInput extends React.PureComponent<Props, State> {
             height={`${realHeight}px`}
             onClick={this.handleSubmit}
           >
-            <StyledSendIcon src={Send} alt="Send" />
+            <Icon content={Send} size="lg" />
           </StyledSendIconContainer>
         </StyledChatInputContainer>
         {/* Show a background overlaying the part underneath the floating chat input: */}

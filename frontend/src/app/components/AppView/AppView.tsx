@@ -115,18 +115,19 @@ function AppView(props: AppViewProps): ReactElement {
       }) !== undefined
     // console.log("containsChatInput", containsChatInput)
     if (isOnBottom && mainContainerRef.current && containsChatInput) {
-      debounce(5, () => {
-        // Some elements (e.g. charts) will get the final height only a few ms after the first render.
-        bottomAnchorRef.current?.scrollIntoView()
-      })()
-      // debounce(100, () => {
+      bottomAnchorRef.current?.scrollIntoView()
+      // debounce(5, () => {
       //   // Some elements (e.g. charts) will get the final height only a few ms after the first render.
-      //   bottomAnchorRef.current?.scrollIntoView({
-      //     behavior: "smooth",
-      //     block: "end",
-      //     inline: "nearest",
-      //   })
+      //   bottomAnchorRef.current?.scrollIntoView()
       // })()
+      debounce(100, () => {
+        // Some elements (e.g. charts) will get the final height only a few ms after the first render.
+        bottomAnchorRef.current?.scrollIntoView({
+          //behavior: "smooth",
+          block: "end",
+          inline: "nearest",
+        })
+      })()
     }
   }, [elements.main])
 
