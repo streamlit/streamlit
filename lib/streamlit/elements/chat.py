@@ -80,7 +80,7 @@ class ChatMixin:
     ):
         return chat_api_prototypes.chat_message(self.dg, participant, *args)
 
-    def _chat_message(
+    def chat_message(
         self,
         label: str,
         avatar: Literal["user", "assistant"] | str | None = None,
@@ -117,20 +117,6 @@ class ChatMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.chat_message.CopyFrom(message_container_proto)
-
-        return self.dg._block(block_proto=block_proto)
-
-    def _chat_container(self) -> "DeltaGenerator":
-        if self.dg != self.dg._main_dg:
-            raise StreamlitAPIException(
-                "st._chat_container() can only be used in the main container"
-            )
-
-        chat_container_proto = BlockProto.ChatContainer()
-
-        block_proto = BlockProto()
-        block_proto.allow_empty = True
-        block_proto.chat_container.CopyFrom(chat_container_proto)
 
         return self.dg._block(block_proto=block_proto)
 

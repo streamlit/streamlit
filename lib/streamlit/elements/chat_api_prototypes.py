@@ -126,7 +126,7 @@ def chat_v3(
     participants: List[ChatUserInfo | str] | Dict[str, str | None] | None = None,
 ) -> List[ChatChildrenDeltaGenerator]:
     participants = _process_participants(participants)
-    chat_layout = dg._chat_container()
+    chat_layout = dg.container()
     chat_handler = ChatHandler(chat_layout)
     return [
         ChatChildrenDeltaGenerator(chat_handler, participant)
@@ -325,7 +325,7 @@ def chat_v9(
     if isinstance(chat_state, str):
         chat_state = ChatStateManager()[chat_state]
 
-    chat_container = dg._chat_container()
+    chat_container = dg.container()
 
     chat_container.chat_participants = {  # type: ignore
         participant["role"]: participant for participant in participants
