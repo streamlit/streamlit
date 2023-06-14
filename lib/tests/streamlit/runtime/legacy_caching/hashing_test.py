@@ -33,26 +33,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import sqlalchemy as db
-from packaging.version import Version
 from parameterized import parameterized
-
-try:
-    import keras
-    import tensorflow as tf
-    import torch
-    import torchvision
-
-    HAS_TENSORFLOW = True
-except ImportError:
-    HAS_TENSORFLOW = False
-
-try:
-    import keras
-
-    HAS_SUPPORTED_KERAS = Version(keras.__version__) < Version("2.5.0")
-except ImportError:
-    HAS_SUPPORTED_KERAS = False
-
 
 import streamlit as st
 from streamlit.runtime.legacy_caching.hashing import (
@@ -398,60 +379,6 @@ class HashTest(unittest.TestCase):
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
 
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    @unittest.skipIf(
-        not HAS_SUPPORTED_KERAS,
-        "The supported version of Keras is not installed. "
-        "Streamlit requires Keras<2.5.0",
-    )
-    def test_keras_model(self):
-        a = keras.applications.vgg16.VGG16(include_top=False, weights=None)
-        b = keras.applications.vgg16.VGG16(include_top=False, weights=None)
-
-        # This test still passes if we remove the default hash func for Keras
-        # models. Ideally we'd seed the weights before creating the models
-        # but not clear how to do so.
-        self.assertEqual(get_hash(a), get_hash(a))
-        self.assertNotEqual(get_hash(a), get_hash(b))
-
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    @unittest.skipIf(
-        not HAS_SUPPORTED_KERAS,
-        "The supported version of Keras is not installed. "
-        "Streamlit requires Keras<2.5.0",
-    )
-    def test_tf_keras_model(self):
-        a = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
-        b = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
-
-        self.assertEqual(get_hash(a), get_hash(a))
-        self.assertNotEqual(get_hash(a), get_hash(b))
-
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    def test_tf_saved_model(self):
-        tempdir = tempfile.TemporaryDirectory()
-
-        model = tf.keras.models.Sequential(
-            [
-                tf.keras.layers.Dense(512, activation="relu", input_shape=(784,)),
-            ]
-        )
-        model.save(tempdir.name)
-
-        a = tf.saved_model.load(tempdir.name)
-        b = tf.saved_model.load(tempdir.name)
-
-        self.assertEqual(get_hash(a), get_hash(a))
-        self.assertNotEqual(get_hash(a), get_hash(b))
-
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    def test_pytorch_model(self):
-        a = torchvision.models.resnet.resnet18()
-        b = torchvision.models.resnet.resnet18()
-
-        self.assertEqual(get_hash(a), get_hash(a))
-        self.assertNotEqual(get_hash(a), get_hash(b))
-
     def test_socket(self):
         a = socket.socket()
         b = socket.socket()
@@ -464,42 +391,6 @@ class HashTest(unittest.TestCase):
         # (This also tests that MagicMock can hash at all, without blowing the
         # stack due to an infinite recursion.)
         self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
-
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    def test_tensorflow_session(self):
-        tf_config = tf.compat.v1.ConfigProto()
-        tf_session = tf.compat.v1.Session(config=tf_config)
-        self.assertEqual(get_hash(tf_session), get_hash(tf_session))
-
-        tf_session2 = tf.compat.v1.Session(config=tf_config)
-        self.assertNotEqual(get_hash(tf_session), get_hash(tf_session2))
-
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    def test_torch_c_tensorbase(self):
-        a = torch.ones([1, 1]).__reduce__()[1][2]
-        b = torch.ones([1, 1], requires_grad=True).__reduce__()[1][2]
-        c = torch.ones([1, 2]).__reduce__()[1][2]
-
-        assert is_type(a, "torch._C._TensorBase")
-        self.assertEqual(get_hash(a), get_hash(b))
-        self.assertNotEqual(get_hash(a), get_hash(c))
-
-        b.mean().backward()
-        # Calling backward on a tensorbase doesn't seem to affect the gradient
-        self.assertEqual(get_hash(a), get_hash(b))
-
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    def test_torch_tensor(self):
-        a = torch.ones([1, 1])
-        b = torch.ones([1, 1], requires_grad=True)
-        c = torch.ones([1, 2])
-
-        self.assertEqual(get_hash(a), get_hash(b))
-        self.assertNotEqual(get_hash(a), get_hash(c))
-
-        b.mean().backward()
-
-        self.assertNotEqual(get_hash(a), get_hash(b))
 
     def test_non_hashable(self):
         """Test user provided hash functions."""

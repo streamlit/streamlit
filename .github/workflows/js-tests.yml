@@ -71,3 +71,34 @@ jobs:
           fi
       - name: Run frontend tests
         run: make jstest
+
+  components_lib_tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash --login -eo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 2
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20.x"
+          cache: "yarn"
+          cache-dependency-path: "component-lib/yarn.lock"
+      - name: Install node dependencies
+        working-directory: component-lib
+        run: yarn install
+      - name: Run frontend tests
+        working-directory: component-lib
+        run: yarn test
+      - name: Build package
+        working-directory: component-lib
+        run: yarn build
