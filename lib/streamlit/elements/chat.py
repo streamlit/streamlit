@@ -26,7 +26,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.elements.image import image_to_url, WidthBehaviour
+from streamlit.elements.image import image_to_url, WidthBehaviour, AtomicImage
 from streamlit.elements import chat_api_prototypes
 from streamlit.runtime.state import (
     WidgetArgs,
@@ -82,24 +82,28 @@ class ChatMixin:
 
     def chat_message(
         self,
-        label: str,
-        avatar: Literal["user", "assistant"] | str | None = None,
-        background: Literal["grey"] | None = None,
+        label: Literal["user", "assistant"] | str,
+        *,
+        avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
+        background: bool | None = None,
     ) -> "DeltaGenerator":
         AVATAR_TYPES = BlockProto.ChatMessage.AvatarType
 
-        if avatar is None or not avatar.strip():
+        converted_avatar: str
+        if avatar is None:
             avatar_type = AVATAR_TYPES.ICON
-            avatar = "user" if label == "user" else "assistant"
-        elif avatar in ["user", "assistant"]:
+            converted_avatar = "user" if label == "user" else "assistant"
+        elif isinstance(avatar, str) and avatar in ["user", "assistant"]:
             avatar_type = AVATAR_TYPES.ICON
-        elif is_emoji(avatar):
+            converted_avatar = avatar
+        elif isinstance(avatar, str) and is_emoji(avatar):
             avatar_type = AVATAR_TYPES.EMOJI
+            converted_avatar = avatar
         else:
             # Try to convert the value into an image URL:
             avatar_type = AVATAR_TYPES.IMAGE
             # TODO(lukasmasuch): Pure SVGs are have a special handling in marshall_images
-            avatar = image_to_url(
+            converted_avatar = image_to_url(
                 avatar,
                 width=WidthBehaviour.ORIGINAL,
                 clamp=False,
@@ -110,10 +114,10 @@ class ChatMixin:
 
         message_container_proto = BlockProto.ChatMessage()
         message_container_proto.label = label
-        message_container_proto.avatar = avatar
+        message_container_proto.avatar = converted_avatar
         message_container_proto.avatar_type = avatar_type
         if background:
-            message_container_proto.background = background
+            message_container_proto.background = "grey"
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.chat_message.CopyFrom(message_container_proto)
