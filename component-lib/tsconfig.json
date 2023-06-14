@@ -13,9 +13,6 @@
     "module": "esnext",
     "moduleResolution": "node",
     "outDir": "./dist",
-    "paths": {
-      "*": ["./*", "../declarations/*"]
-    },
     "resolveJsonModule": true,
     "strict": true,
     "target": "es5"

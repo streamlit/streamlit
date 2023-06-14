@@ -14,18 +14,24 @@
  * limitations under the License.
  */
 
-import {Streamlit} from "./streamlit";
+import { TextEncoder, TextDecoder } from "util";
+
+global.TextEncoder = TextEncoder;
+// @ts-expect-error
+global.TextDecoder = TextDecoder;
 
 beforeEach(() => {
   // The Streamlit class defines several static fields. To avoid side effects,
   // we restore them to their original state.
+  const {Streamlit} = require('./streamlit')
+
   Object.defineProperty(Streamlit, 'registeredMessageListener', {
     value: false,
     configurable: true,
     writable: true
   })
   Object.defineProperty(Streamlit, 'lastFrameHeight', {
-    value: undefined,
+    value: null,
     configurable: true,
     writable: true
   })

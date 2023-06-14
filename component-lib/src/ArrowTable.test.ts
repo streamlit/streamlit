@@ -16,7 +16,6 @@
 
 import { ArrowTable } from "./ArrowTable";
 import { EXAMPLE_DF } from "./mock_data";
-import { BN } from "apache-arrow/util/bn";
 
 const range = (startAt = 0, endAt = 0) =>
   Array(endAt - startAt)
@@ -69,7 +68,7 @@ describe("ArrowTable", () => {
       columnIndex: 0,
       expectedResult: {
         classNames: "row_heading level0 row0",
-        content: new BN(new Int32Array([0, 0]), true),
+        content: BigInt(0),
         id: "T_undefinedlevel0_row0",
         type: "index",
       },
@@ -89,7 +88,7 @@ describe("ArrowTable", () => {
       columnIndex: 3,
       expectedResult: {
         classNames: "data row4 col2",
-        content: new BN(new Int32Array([73, 0]), true),
+        content: BigInt(73),
         id: "T_undefinedrow4_col2",
         type: "data",
       },
@@ -111,34 +110,34 @@ describe("ArrowTable", () => {
     expect(celContents).toEqual([
       ["", "First Name", "Last Name", "Age"],
       [
-        new BN(new Int32Array([0, 0]), true),
+        BigInt(0),
         "Jason",
         "Miller",
-        new BN(new Int32Array([42, 0]), true),
+        BigInt(42),
       ],
       [
-        new BN(new Int32Array([1, 0]), true),
+        BigInt(1),
         "Molly",
         "Jacobson",
-        new BN(new Int32Array([52, 0]), true),
+        BigInt(52),
       ],
       [
-        new BN(new Int32Array([2, 0]), true),
+        BigInt(2),
         "Tina",
         "Ali",
-        new BN(new Int32Array([36, 0]), true),
+        BigInt(36),
       ],
       [
-        new BN(new Int32Array([3, 0]), true),
+        BigInt(3),
         "Jake",
         "Milner",
-        new BN(new Int32Array([24, 0]), true),
+        BigInt(24),
       ],
       [
-        new BN(new Int32Array([4, 0]), true),
+        BigInt(4),
         "Amy",
         "Smith",
-        new BN(new Int32Array([73, 0]), true),
+        BigInt(73),
       ],
     ]);
   });

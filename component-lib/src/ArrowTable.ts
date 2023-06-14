@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import { Table, Type, Vector } from "apache-arrow";
-import { StructRow } from "apache-arrow/vector/row";
+import { tableToIPC, tableFromIPC, Table, Type, Vector, StructRow } from "apache-arrow";
 
 export type CellType = "blank" | "index" | "columns" | "data";
 
@@ -70,13 +69,13 @@ export class ArrowTable {
     columnsBuffer: Uint8Array,
     styler?: any
   ) {
-    this.dataTable = Table.from(dataBuffer);
-    this.indexTable = Table.from(indexBuffer);
-    this.columnsTable = Table.from(columnsBuffer);
+    this.dataTable = tableFromIPC(dataBuffer);
+    this.indexTable = tableFromIPC(indexBuffer);
+    this.columnsTable = tableFromIPC(columnsBuffer);
     this.styler = styler
       ? {
           caption: styler.caption,
-          displayValuesTable: Table.from(styler.displayValues),
+          displayValuesTable: tableFromIPC(styler.displayValues),
           styles: styler.styles,
           uuid: styler.uuid
         }
@@ -84,11 +83,11 @@ export class ArrowTable {
   }
 
   get rows(): number {
-    return this.indexTable.length + this.columnsTable.numCols;
+    return this.indexTable.numRows + this.columnsTable.numCols;
   }
 
   get columns(): number {
-    return this.indexTable.numCols + this.columnsTable.length;
+    return this.indexTable.numCols + this.columnsTable.numRows;
   }
 
   get headerRows(): number {
@@ -100,7 +99,7 @@ export class ArrowTable {
   }
 
   get dataRows(): number {
-    return this.dataTable.length;
+    return this.dataTable.numRows;
   }
 
   get dataColumns(): number {
@@ -207,7 +206,7 @@ export class ArrowTable {
     rowIndex: number,
     columnIndex: number
   ): DataType => {
-    const column = table.getColumnAt(columnIndex);
+    const column = table.getChildAt(columnIndex);
     if (column === null) {
       return "";
     }
@@ -228,9 +227,9 @@ export class ArrowTable {
    */
   public serialize(): ArrowTableProto {
     return {
-      data: this.dataTable.serialize(),
-      index: this.indexTable.serialize(),
-      columns: this.columnsTable.serialize()
+      data: tableToIPC(this.dataTable),
+      index: tableToIPC(this.indexTable),
+      columns: tableToIPC(this.columnsTable )
     };
   }
 
