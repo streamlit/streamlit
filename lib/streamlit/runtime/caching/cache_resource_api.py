@@ -236,6 +236,7 @@ class CacheResourceAPI:
         show_spinner: bool | str = True,
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
+        hash_funcs: HashFuncsDict | None = None,
     ) -> Callable[[F], F]:
         ...
 
@@ -329,6 +330,14 @@ class CacheResourceAPI:
             widget value is treated as an additional input parameter to the cache.
             We may remove support for this option at any time without notice.
 
+        hash_funcs : dict or None
+            Mapping of types or fully qualified names to hash functions.
+            This is used to override the behavior of the hasher inside Streamlit's
+            caching mechanism: when the hasher encounters an object, it will first
+            check to see if its type matches a key in this dict and, if so, will use
+            the provided function to generate a hash for it. See below for an example
+            of how this can be used.
+
         Example
         -------
         >>> import streamlit as st
@@ -381,6 +390,32 @@ class CacheResourceAPI:
         >>> get_database_session.clear()
         >>> # Clear all cached entries for this function.
 
+        To override the default hashing behavior, pass a custom hash function.
+        You can do that by mapping a type (e.g. ``Person``) to a hash
+        function (``str``) like this:
+
+        >>> import streamlit as st
+        >>> from pydantic import BaseModel
+        >>>
+        >>> class Person(BaseModel):
+        ...     name: str
+        >>>
+        >>> @st.cache_resource(hash_funcs={Person: str})
+        ... def get_person_name(person: Person):
+        ...     return person.name
+
+        Alternatively, you can map the type's fully-qualified name
+        (e.g. ``"__main__.Person"``) to the hash function instead:
+
+        >>> import streamlit as st
+        >>> from pydantic import BaseModel
+        >>>
+        >>> class Person(BaseModel):
+        ...     name: str
+        >>>
+        >>> @st.cache_resource(hash_funcs={"__main__.Person": str})
+        ... def get_person_name(person: Person):
+        ...     return person.name
         """
         self._maybe_show_deprecation_warning()
 
