@@ -919,8 +919,7 @@ describe("App.onHistoryChange", () => {
   })
 
   it("doesn't push a new history when the new url contains an anchor so we don't rerun", () => {
-    let pushStateSpy: any
-    pushStateSpy = jest.spyOn(window.history, "pushState")
+    const pushStateSpy = jest.spyOn(window.history, "pushState")
     window.history.pushState({}, "", "/#foo=bar")
 
     const instance = wrapper.instance() as App
@@ -929,6 +928,7 @@ describe("App.onHistoryChange", () => {
     waitFor(() => expect(instance.onPageChange).not.toHaveBeenCalled())
     // @ts-expect-error
     window.history.pushState.mockClear()
+    pushStateSpy.mockRestore()
   })
 })
 
