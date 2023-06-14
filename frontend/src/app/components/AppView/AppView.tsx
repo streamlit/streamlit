@@ -29,7 +29,7 @@ import { BlockNode, AppRoot } from "src/lib/AppNode"
 import { SessionInfo } from "src/lib/SessionInfo"
 import { IGuestToHostMessage } from "src/lib/hostComm/types"
 import { StreamlitEndpoints } from "src/lib/StreamlitEndpoints"
-import { debounce, isNullOrUndefined } from "src/lib/util/utils"
+import { debounce } from "src/lib/util/utils"
 
 import {
   StyledAppViewBlockContainer,
@@ -100,7 +100,7 @@ function AppView(props: AppViewProps): ReactElement {
   const bottomAnchorRef = useRef<HTMLDivElement>(null)
   const mainContainerRef = useRef<HTMLDivElement>(null)
 
-  let isOnBottom = mainContainerRef.current
+  const isOnBottom = mainContainerRef.current
     ? Math.abs(
         mainContainerRef.current.scrollHeight -
           mainContainerRef.current.scrollTop -
