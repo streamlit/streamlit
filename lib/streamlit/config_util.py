@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 from typing import Dict
 
 import click
@@ -56,10 +57,10 @@ def show_config(
     )
 
     def append_desc(text):
-        out.append(click.style(text, bold=True))
+        out.append("# " + click.style(text, bold=True))
 
     def append_comment(text):
-        out.append(click.style(text))
+        out.append("# " + click.style(text))
 
     def append_section(text):
         out.append(click.style(text, bold=True, fg="green"))
@@ -67,16 +68,13 @@ def show_config(
     def append_setting(text):
         out.append(click.style(text, fg="green"))
 
-    def append_newline():
-        out.append("")
-
     for section, section_description in section_descriptions.items():
         if section in SKIP_SECTIONS:
             continue
 
-        append_newline()
+        out.append("")
         append_section("[%s]" % section)
-        append_newline()
+        out.append("")
 
         for key, option in config_options.items():
             if option.section != section:
@@ -91,40 +89,57 @@ def show_config(
             key = option.key.split(".")[1]
             description_paragraphs = _clean_paragraphs(option.description)
 
-            for i, txt in enumerate(description_paragraphs):
-                if i == 0:
-                    append_desc("# %s" % txt)
-                else:
-                    append_comment("# %s" % txt)
+            last_paragraph_idx = len(description_paragraphs) - 1
+
+            for i, paragraph in enumerate(description_paragraphs):
+                # Split paragraph into lines
+                lines = paragraph.rstrip().split(
+                    "\n"
+                )  # Remove trailing newline characters
+
+                # If the first line is empty, remove it
+                if lines and not lines[0].strip():
+                    lines = lines[1:]
+
+                # Choose function based on whether it's the first paragraph or not
+                append_func = append_desc if i == 0 else append_comment
+
+                # Add comment character to each line and add to out
+                for line in lines:
+                    append_func(line.lstrip())
+
+                # # Add a line break after a paragraph only if it's not the last paragraph
+                if i != last_paragraph_idx:
+                    out.append("")
 
             toml_default = toml.dumps({"default": option.default_val})
             toml_default = toml_default[10:].strip()
 
             if len(toml_default) > 0:
-                append_comment("# Default: %s" % toml_default)
+                # Ensure a line break before appending "Default" comment, if not already there
+                if out[-1] != "":
+                    out.append("")
+                append_comment("Default: %s" % toml_default)
             else:
                 # Don't say "Default: (unset)" here because this branch applies
                 # to complex config settings too.
                 pass
 
             if option.deprecated:
-                append_comment("#")
-                append_comment("# " + click.style("DEPRECATED.", fg="yellow"))
+                append_comment(click.style("DEPRECATED.", fg="yellow"))
+                for line in _clean_paragraphs(option.deprecation_text):
+                    append_comment(line)
                 append_comment(
-                    "# %s" % "\n".join(_clean_paragraphs(option.deprecation_text))
-                )
-                append_comment(
-                    "# This option will be removed on or after %s."
+                    "This option will be removed on or after %s."
                     % option.expiration_date
                 )
-                append_comment("#")
 
             option_is_manually_set = (
                 option.where_defined != ConfigOption.DEFAULT_DEFINITION
             )
 
             if option_is_manually_set:
-                append_comment("# The value below was set in %s" % option.where_defined)
+                append_comment("The value below was set in %s" % option.where_defined)
 
             toml_setting = toml.dumps({key: option.value})
 
@@ -139,11 +154,20 @@ def show_config(
 
 
 def _clean(txt):
-    """Replace all whitespace with a single space."""
-    return " ".join(txt.split()).strip()
+    """Replace sequences of multiple spaces with a single space, excluding newlines.
+
+    Preserves leading and trailing spaces, and does not modify spaces in between lines.
+    """
+    return re.sub(" +", " ", txt)
 
 
 def _clean_paragraphs(txt):
+    """Split the text into paragraphs, preserve newlines within the paragraphs."""
+    # Strip both leading and trailing newlines.
+    txt = txt.strip("\n")
     paragraphs = txt.split("\n\n")
-    cleaned_paragraphs = [_clean(x) for x in paragraphs]
+    cleaned_paragraphs = [
+        "\n".join(_clean(line) for line in paragraph.split("\n"))
+        for paragraph in paragraphs
+    ]
     return cleaned_paragraphs

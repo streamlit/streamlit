@@ -22,6 +22,7 @@ from unittest.mock import patch
 from parameterized import parameterized
 
 from streamlit import config, config_util
+from streamlit.config_option import ConfigOption
 
 CONFIG_OPTIONS_TEMPLATE = config._config_options_template
 CONFIG_SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
@@ -37,7 +38,11 @@ def create_config_options(overrides):
 class ConfigUtilTest(unittest.TestCase):
     def test_clean(self):
         result = config_util._clean(" clean    this         text  ")
-        self.assertEqual("clean this text", result)
+        self.assertEqual(" clean this text ", result)
+
+    def test_clean_empty_string(self):
+        result = config_util._clean("")
+        self.assertEqual("", result)
 
     def test_clean_paragraphs(self):
         # from https://www.lipsum.com/
@@ -54,13 +59,17 @@ class ConfigUtilTest(unittest.TestCase):
         )
 
         truth = [
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-            "Curabitur ac fermentum eros.",
-            "Maecenas libero est, ultricies eget ligula eget,",
+            "Lorem ipsum dolor sit amet,\nconsectetur adipiscing elit.",
+            " Curabitur ac fermentum eros.",
+            "Maecenas libero est,\n ultricies\neget ligula eget, ",
         ]
 
         result = config_util._clean_paragraphs(input)
         self.assertEqual(truth, result)
+
+    def test_clean_paragraphs_empty_string(self):
+        result = config_util._clean_paragraphs("")
+        self.assertEqual([""], result)
 
     @patch("streamlit.config_util.click.echo")
     def test_default_config_options_commented_out(self, patched_echo):
@@ -146,3 +155,121 @@ class ConfigUtilTest(unittest.TestCase):
         self.assertEqual(
             config_util.server_option_changed(old_options, new_options), changed
         )
+
+    @patch("streamlit.config_util.click.echo")
+    def test_newlines_preserved_in_description(self, patched_echo):
+        config_options = {
+            "server.customOption": ConfigOption(
+                key="server.customOption",
+                description="""
+                    This option has multiple lines.
+                    Each line should be preserved.
+                    Even this one.
+                """,
+                default_val="default",
+                type_=str,
+            )
+        }
+
+        config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
+
+        [(args, _)] = patched_echo.call_args_list
+        # Remove the ascii escape sequences used to color terminal output.
+        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        lines = set(output.split("\n"))
+
+        assert "# This option has multiple lines." in lines
+        assert "# Each line should be preserved." in lines
+        assert "# Even this one." in lines
+
+    @patch("streamlit.config_util.click.echo")
+    def test_omits_empty_lines_at_description_start(self, patched_echo):
+        config_options = {
+            "server.customOption": ConfigOption(
+                key="server.customOption",
+                description="""
+
+                    This option's description starts from third line.
+                    All preceding empty lines should be removed.
+                """,
+                default_val="default",
+                type_=str,
+            )
+        }
+
+        config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
+
+        [(args, _)] = patched_echo.call_args_list
+        # Remove the ascii escape sequences used to color terminal output.
+        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        lines = output.split("\n")
+        description_index = lines.index(
+            "# This option's description starts from third line."
+        )
+
+        assert (
+            description_index > 1
+        ), "Description should not be at the start of the output"
+        assert (
+            lines[description_index - 1].strip() == ""
+        ), "Preceding line should be empty (this line separates config options)"
+        assert (
+            lines[description_index - 2].strip() != ""
+        ), "The line before the preceding line should not be empty (this is the section header)"
+
+    @patch("streamlit.config_util.click.echo")
+    def test_description_appears_before_option(self, patched_echo):
+        config_options = {
+            "server.customOption": ConfigOption(
+                key="server.customOption",
+                description="This option's description should appear before the option.",
+                default_val="default",
+                type_=str,
+            )
+        }
+
+        config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
+
+        [(args, _)] = patched_echo.call_args_list
+        # Remove the ascii escape sequences used to color terminal output.
+        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        lines = output.split("\n")
+
+        # Find the index of the description and the option in the output.
+        description_index = lines.index(
+            "# This option's description should appear before the option."
+        )
+        option_index = lines.index('# customOption = "default"')
+
+        # Assert that the description appears before the option.
+        self.assertLess(description_index, option_index)
+
+    @patch("streamlit.config_util.click.echo")
+    def test_show_config_section_formatting(self, patched_echo):
+        config_options = create_config_options({"server.address": "localhost"})
+        config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
+
+        [(args, _)] = patched_echo.call_args_list
+        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        lines = output.split("\n")
+
+        self.assertIn("[server]", lines)
+
+    @patch("streamlit.config_util.click.echo")
+    def test_show_config_hidden_option(self, patched_echo):
+        config_options = {
+            "server.hiddenOption": ConfigOption(
+                key="server.hiddenOption",
+                description="This is a hidden option.",
+                default_val="default",
+                type_=str,
+                visibility="hidden",
+            )
+        }
+        config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
+
+        [(args, _)] = patched_echo.call_args_list
+        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        lines = output.split("\n")
+
+        self.assertNotIn("# This is a hidden option.", lines)
