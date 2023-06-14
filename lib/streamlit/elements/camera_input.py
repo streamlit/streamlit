@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from textwrap import dedent
-from typing import TYPE_CHECKING, List, Optional, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -56,17 +56,19 @@ def _get_file_recs_for_camera_input_widget(
     if len(uploaded_file_info) == 0:
         return []
 
-    active_file_urls = [f.file_url for f in uploaded_file_info]
+    active_file_ids = [f.file_id for f in uploaded_file_info]
 
     # Grab the files that correspond to our active file IDs.
     return ctx.uploaded_file_mgr.get_files(
         session_id=ctx.session_id,
-        file_urls=active_file_urls,
+        file_ids=active_file_ids,
     )
 
 
 @dataclass
 class CameraInputSerde:
+    file_delete_urls: Dict[str, str] = field(default_factory=dict)
+
     def serialize(
         self,
         snapshot: SomeUploadedSnapshotFile,
@@ -77,9 +79,10 @@ class CameraInputSerde:
             return state_proto
 
         file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
-        file_info.file_url = snapshot.file_url
+        file_info.file_id = snapshot.file_id
         file_info.name = snapshot.name
         file_info.size = snapshot.size
+        file_info.file_delete_url = self.file_delete_urls[snapshot.file_id]
 
         return state_proto
 
@@ -87,6 +90,12 @@ class CameraInputSerde:
         self, ui_value: Optional[FileUploaderStateProto], widget_id: str
     ) -> SomeUploadedSnapshotFile:
         file_recs = _get_file_recs_for_camera_input_widget(ui_value)
+
+        if ui_value is not None:
+            uploaded_file_info = ui_value.uploaded_file_info
+
+            for f in uploaded_file_info:
+                self.file_delete_urls[f.file_id] = f.file_delete_url
 
         if len(file_recs) == 0:
             return_value = None

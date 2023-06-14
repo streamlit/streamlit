@@ -88,7 +88,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         files: Dict[str, List[Any]] = {}
 
         session_id = self.path_kwargs["session_id"]
-        file_url = self.request.full_url()
+        file_id = self.path_kwargs["file_id"]
 
         tornado.httputil.parse_body_arguments(
             content_type=self.request.headers["Content-Type"],
@@ -110,7 +110,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             for file in flist:
                 uploaded_files.append(
                     UploadedFileRec(
-                        file_url=file_url,
+                        file_id=file_id,
                         name=file["filename"],
                         type=file["content_type"],
                         data=file["body"],
@@ -129,7 +129,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
     def delete(self, **kwargs):
         """DELETE FILE"""
         session_id = self.path_kwargs["session_id"]
-        file_url = self.request.full_url()
+        file_id = self.path_kwargs["file_id"]
 
-        self._file_mgr.remove_file(session_id=session_id, file_url=file_url)
+        self._file_mgr.remove_file(session_id=session_id, file_id=file_id)
         self.set_status(204)
