@@ -114,29 +114,39 @@ class ChatMixin:
         self,
         placeholder: str | None = None,
         *,
-        value: str | None = None,
+        default: str | None = None,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
         max_chars: int | None = None,
         disabled: bool = False,
+        position: Literal["inline", "bottom"] | None = None,
+        on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
     ) -> str | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
 
-        if self.dg != self.dg._main_dg:
-            raise StreamlitAPIException(
-                "st.chat_input() can only be used in the main container"
-            )
+        in_main_dg = False
 
-        # It doesn't make sense to create a chat_input inside a form.
-        # We throw an error to warn the user about this.
         # We omit this check for scripts running outside streamlit, because
         # they will have no script_run_ctx.
-        if runtime.exists() and is_in_form(self.dg):
+        if runtime.exists():
+            if is_in_form(self.dg):
+                # It doesn't make sense to create a chat_input inside a form.
+                # We throw an error to warn the user about this.
+                raise StreamlitAPIException(
+                    f"`st.chat_input()` can't be used in an `st.form()`. {FORM_DOCS_INFO}"
+                )
+            if self.dg._active_dg == self.dg._main_dg:
+                in_main_dg = True
+
+        print("in_main_dg", in_main_dg, position)
+        if position is None:
+            position = "bottom" if in_main_dg else "inline"
+
+        if not in_main_dg and position == "bottom":
             raise StreamlitAPIException(
-                f"`st.chat_input()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
+                "`st.chat_input()` with position='bottom' can only be used in the main container."
             )
 
         chat_input_proto = ChatInputProto()
@@ -146,9 +156,10 @@ class ChatMixin:
         if max_chars is not None:
             chat_input_proto.max_chars = max_chars
 
-        chat_input_proto.default = value if value is not None else ""
+        chat_input_proto.default = default if default is not None else ""
         # chat inputs can't be in forms
         chat_input_proto.form_id = ""
+        chat_input_proto.position = position
 
         ctx = get_script_run_ctx()
         serde = ChatInputSerde("")
@@ -170,6 +181,10 @@ class ChatMixin:
             chat_input_proto.set_value = True
 
         self.dg._enqueue("chat_input", chat_input_proto)
+
+        # If the widget value was changed by the user via the session state,
+        # we return None here. This should only put the configured value into
+        # the chat input on the frontend but should not automatically trigger the value.
         return None if widget_state.value_changed else widget_state.value
 
     @property

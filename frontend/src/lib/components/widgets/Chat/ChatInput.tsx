@@ -201,8 +201,6 @@ class ChatInput extends React.PureComponent<Props, State> {
     const { value, dirty, scrollHeight } = this.state
     const { placeholder } = element
 
-    const sticky = true
-
     const realHeight = Math.min(Math.max(scrollHeight, MIN_HEIGHT), MAX_HEIGHT)
 
     // TODO(lukasmasuch): I believe we can just remove manageFormClearListener since
@@ -218,7 +216,7 @@ class ChatInput extends React.PureComponent<Props, State> {
         <StyledChatInputContainer
           className="stChatInputContainer"
           width={this.props.width}
-          sticky={sticky}
+          position={element.position as "inline" | "bottom"}
         >
           <StyledChatInput>
             <UITextArea
@@ -291,8 +289,11 @@ class ChatInput extends React.PureComponent<Props, State> {
             <Icon content={Send} size="lg" />
           </StyledSendIconContainer>
         </StyledChatInputContainer>
-        {/* Show a background overlaying the part underneath the floating chat input: */}
-        {sticky && <StyledChatInputBackground width={this.props.width} />}
+
+        {element.position === "bottom" && (
+          // Show a background overlaying the part underneath the floating chat input:
+          <StyledChatInputBackground width={this.props.width} />
+        )}
       </>
     )
   }

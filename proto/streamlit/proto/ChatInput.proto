@@ -24,7 +24,8 @@
    string value = 5;
    bool set_value = 6;
    string default = 7;
-
-   // chat inputs can't be in forms
+   // TODO(lukasmasuch): chat inputs can't be in forms,
+   // do we even need this ID here?
    string form_id = 8;
+   string position = 9;
  }

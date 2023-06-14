@@ -62,68 +62,81 @@ export const StyledMessageContent = styled.div(({ theme }) => ({
   // paddingRight: "1rem",
 }))
 
-export const StyledAvatarEmoji = styled.div(({ theme }) => ({
-  display: "flex",
-  backgroundColor: theme.colors.secondaryBg,
-  lineHeight: "1",
-  fontSize: "1.25rem",
-  padding: "0.75rem",
-  borderRadius: theme.radii.md,
-  alignItems: "center",
-  justifyContent: "center",
-}))
+export const StyledAvatarEmoji = styled.div(({ theme }) => {
+  const lightTheme = hasLightBackgroundColor(theme)
+  return {
+    display: "flex",
+    backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
+    lineHeight: "1",
+    fontSize: "1.25rem",
+    padding: "0.75rem",
+    borderRadius: theme.radii.md,
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: lightTheme
+      ? "0px 1px 3px rgba(25, 30, 36, 0.15), 0px 4px 8px rgba(25, 30, 36, 0.05)"
+      : "0px 1px 3px rgba(90, 90, 90, 0.75), 0px 4px 8px rgba(47, 47, 47, 0.01)",
+  }
+})
 
-export const StyledAvatarImage = styled.img(({ theme }) => ({
-  width: "2rem",
-  height: "2rem",
-  // marginTop: "-4px",
-  borderRadius: theme.radii.md,
-  objectFit: "cover",
-  display: "flex",
-}))
+export const StyledAvatarImage = styled.img(({ theme }) => {
+  const lightTheme = hasLightBackgroundColor(theme)
+  return {
+    backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
+    width: "2rem",
+    height: "2rem",
+    // marginTop: "-4px",
+    borderRadius: theme.radii.md,
+    objectFit: "cover",
+    display: "flex",
+    boxShadow: lightTheme
+      ? "0px 1px 3px rgba(25, 30, 36, 0.15), 0px 4px 8px rgba(25, 30, 36, 0.05)"
+      : "0px 1px 3px rgba(90, 90, 90, 0.75), 0px 4px 8px rgba(47, 47, 47, 0.01)",
+  }
+})
 
 export interface StyledChatInputContainerProps {
   width: number
-  sticky: boolean
+  position: "inline" | "bottom"
 }
 
 export const StyledChatInputContainer =
-  styled.div<StyledChatInputContainerProps>(({ theme, width, sticky }) => {
+  styled.div<StyledChatInputContainerProps>(({ theme, width, position }) => {
     const lightTheme = hasLightBackgroundColor(theme)
     return {
-      backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
       borderRadius: theme.radii.md,
       display: "flex",
       alignItems: "center",
       // border: `1px solid ${
       //   lightTheme ? theme.colors.gray20 : theme.colors.gray80
       // }`,
-      ...(sticky
-        ? {
-            filter: lightTheme
-              ? "drop-shadow(0px 1px 3px rgba(25, 30, 36, 0.15)) drop-shadow(0px 4px 16px rgba(25, 30, 36, 0.1))"
-              : "drop-shadow(0px 1px 3px rgba(191, 197, 211, 0.4)) drop-shadow(0px 4px 16px rgba(191, 197, 211, 0.15))",
-            // filter: lightTheme
-            //   ? "drop-shadow(0px 4px 6px rgba(25, 30, 36, 0.15))"
-            //   : "drop-shadow(0px 4px 6px rgba(191, 197, 211, 0.3))",
-            position: "fixed",
-            bottom: "40px",
-            zIndex: theme.zIndices.chatInput,
-          }
-        : {
-            // This is a bit of a workaround to fix the margin in
-            // a non-sticky usage. Since for sticky usage, we need to remove the margin
-            // for the element container.
-            marginBottom: theme.spacing.lg,
-          }),
+      ...(position === "bottom" && {
+        backgroundColor: lightTheme
+          ? theme.colors.white
+          : theme.colors.gray100,
+        filter: lightTheme
+          ? "drop-shadow(0px 1px 3px rgba(25, 30, 36, 0.15)) drop-shadow(0px 4px 16px rgba(25, 30, 36, 0.1))"
+          : "drop-shadow(0px 1px 3px rgba(255, 255, 255, 0.15)) drop-shadow(0px 4px 16px rgba(255, 255, 255, 0.1))",
+        position: "fixed",
+        bottom: "40px",
+        zIndex: theme.zIndices.chatInput,
+      }),
+      ...(position === "inline" && {
+        backgroundColor: lightTheme
+          ? theme.colors.gray20
+          : theme.colors.gray90,
+        // This is a bit of a workaround to fix the margin in
+        // a non-sticky usage. Since for sticky usage, we need to remove the margin
+        // for the element container.
+        marginBottom: theme.spacing.lg,
+      }),
       width: `${width}px`,
     }
   })
 
 export const StyledChatInput = styled.div(({ theme }) => {
-  const lightTheme = hasLightBackgroundColor(theme)
   return {
-    backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
+    backgroundColor: theme.colors.transparent,
     position: "relative",
     flexGrow: 1,
     borderRadius: theme.radii.md,
