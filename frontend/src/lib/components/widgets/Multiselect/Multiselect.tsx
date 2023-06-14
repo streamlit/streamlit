@@ -278,8 +278,8 @@ class Multiselect extends React.PureComponent<Props, State> {
                   overrides: {
                     Svg: {
                       style: () => ({
-                        width: "24px",
-                        height: "24px",
+                        width: theme.iconSizes.xl,
+                        height: theme.iconSizes.xl,
                       }),
                     },
                   },

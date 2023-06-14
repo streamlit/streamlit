@@ -29,6 +29,7 @@ import {
   WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/lib/components/widgets/BaseWidget"
+import { iconSizes } from "src/lib/theme/primitives"
 
 export interface Props {
   disabled: boolean
@@ -261,8 +262,8 @@ class Selectbox extends React.PureComponent<Props, State> {
                 overrides: {
                   Svg: {
                     style: () => ({
-                      width: "24px",
-                      height: "24px",
+                      width: iconSizes.xl,
+                      height: iconSizes.xl,
                     }),
                   },
                 },
