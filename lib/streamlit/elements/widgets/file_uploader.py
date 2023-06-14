@@ -114,7 +114,10 @@ class FileUploaderSerde:
             file_info.file_id = f.file_id
             file_info.name = f.name
             file_info.size = f.size
-            file_info.file_delete_url = self.file_delete_urls[f.file_id]
+            try:
+                file_info.file_delete_url = self.file_delete_urls[f.file_id]
+            except:
+                pass
 
         return state_proto
 
