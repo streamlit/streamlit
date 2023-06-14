@@ -80,6 +80,7 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
     justifyContent: "center",
     fontWeight: theme.fontWeights.normal,
     padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+    minHeight: "38.4px",
     borderRadius: theme.radii.md,
     margin: 0,
     lineHeight: theme.lineHeights.base,

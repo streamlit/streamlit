@@ -15,7 +15,6 @@
  */
 
 // Safari doesn't support the EventTarget class, so we use a shim.
-import { EventTarget } from "event-target-shim";
 import { ArrowDataframeProto, ArrowTable } from "./ArrowTable";
 
 /** Object defining the currently set theme. */
