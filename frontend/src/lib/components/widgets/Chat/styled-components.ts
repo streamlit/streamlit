@@ -68,8 +68,9 @@ export const StyledAvatarEmoji = styled.div(({ theme }) => {
     display: "flex",
     backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
     lineHeight: "1",
-    fontSize: "1.25rem",
-    padding: "0.75rem",
+    fontSize: theme.fontSizes.md,
+    width: "2rem",
+    height: "2rem",
     borderRadius: theme.radii.md,
     alignItems: "center",
     justifyContent: "center",
@@ -78,6 +79,17 @@ export const StyledAvatarEmoji = styled.div(({ theme }) => {
       : "0px 1px 3px rgba(90, 90, 90, 0.75), 0px 4px 8px rgba(47, 47, 47, 0.01)",
   }
 })
+
+export interface StyledAvatarIconProps {
+  background: string
+}
+
+export const StyledAvatarIcon = styled(
+  StyledAvatarEmoji
+)<StyledAvatarIconProps>(({ theme, background }) => ({
+  backgroundColor: background,
+  color: theme.colors.white,
+}))
 
 export const StyledAvatarImage = styled.img(({ theme }) => {
   const lightTheme = hasLightBackgroundColor(theme)

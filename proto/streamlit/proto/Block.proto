@@ -64,9 +64,16 @@ message Block {
   }
 
   message ChatMessage {
+    enum AvatarType {
+      IMAGE = 0;
+      EMOJI = 1;
+      ICON = 2;
+    }
+
     string label = 1;
     string avatar = 2;
     string background = 3;
+    AvatarType avatar_type = 4;
   }
 
   // Next ID: 11

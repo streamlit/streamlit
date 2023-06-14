@@ -19,12 +19,14 @@ from typing import TYPE_CHECKING, Optional, cast, List, Dict, Any
 from typing_extensions import Final, Literal
 
 from streamlit import runtime
+from streamlit.string_util import is_emoji
 from streamlit.elements.utils import check_callback_rules
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.elements.image import image_to_url, WidthBehaviour
 from streamlit.elements import chat_api_prototypes
 from streamlit.runtime.state import (
     WidgetArgs,
@@ -81,12 +83,35 @@ class ChatMixin:
     def _chat_message(
         self,
         label: str,
-        avatar: str | None = None,
+        avatar: Literal["user", "assistant"] | str | None = None,
         background: Literal["grey"] | None = None,
     ) -> "DeltaGenerator":
+        AVATAR_TYPES = BlockProto.ChatMessage.AvatarType
+
+        if avatar is None or not avatar.strip():
+            avatar_type = AVATAR_TYPES.ICON
+            avatar = "user" if label == "user" else "assistant"
+        elif avatar in ["user", "assistant"]:
+            avatar_type = AVATAR_TYPES.ICON
+        elif is_emoji(avatar):
+            avatar_type = AVATAR_TYPES.EMOJI
+        else:
+            # Try to convert the value into an image URL:
+            avatar_type = AVATAR_TYPES.IMAGE
+            # TODO(lukasmasuch): Pure SVGs are have a special handling in marshall_images
+            avatar = image_to_url(
+                avatar,
+                width=WidthBehaviour.ORIGINAL,
+                clamp=False,
+                channels="RGB",
+                output_format="auto",
+                image_id="",
+            )
+
         message_container_proto = BlockProto.ChatMessage()
         message_container_proto.label = label
-        message_container_proto.avatar = avatar or ""
+        message_container_proto.avatar = avatar
+        message_container_proto.avatar_type = avatar_type
         if background:
             message_container_proto.background = background
         block_proto = BlockProto()
