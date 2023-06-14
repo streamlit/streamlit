@@ -62,7 +62,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
             if not filename:
                 filename = (
-                    f"StreamlitFile{get_extension_for_mimetype(media_file.mimetype)}"
+                    f"STREAMLIT_FILE{get_extension_for_mimetype(media_file.mimetype)}"
                 )
 
             try:
