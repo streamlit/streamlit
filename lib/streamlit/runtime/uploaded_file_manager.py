@@ -78,7 +78,6 @@ class UploadedFileManager(CacheStatsProvider, Protocol):
     def remove_session_files(self, session_id: str) -> None:
         raise NotImplementedError
 
-    @abstractmethod
     def get_upload_urls(
         self, session_id: str, file_names: Sequence[str]
     ) -> List[UploadFileUrlInfo]:
