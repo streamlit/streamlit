@@ -919,15 +919,18 @@ export class App extends PureComponent<Props, State> {
    * Handler called when the history state changes, e.g. `popstate` event.
    */
   onHistoryChange = (): void => {
+    console.log(this.state.appPages)
     const targetAppPage =
       this.state.appPages.find(appPage =>
         // The page name is embedded at the end of the URL path, and if not, we are in the main page.
         // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
         document.location.pathname.endsWith("/" + appPage.pageName)
       ) ?? this.state.appPages[0]
-    // do not cause a rerun when an anchor is clicked or a header is in the url
-    const isAnAnchor = document.location.toString().lastIndexOf("#") !== -1
-    if (targetAppPage == null || isAnAnchor) {
+    // do not cause a rerun when an anchor is clicked and we aren't changing pages
+    const hasAnchor = document.location.toString().lastIndexOf("#") !== -1
+    const isSamePage =
+      targetAppPage?.pageScriptHash === this.state.currentPageScriptHash
+    if (targetAppPage == null || (hasAnchor && isSamePage)) {
       return
     }
     this.onPageChange(targetAppPage.pageScriptHash as string)

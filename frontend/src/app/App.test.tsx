@@ -918,14 +918,45 @@ describe("App.onHistoryChange", () => {
     })
   })
 
-  it("doesn't push a new history when the new url contains an anchor so we don't rerun", () => {
+  it("doesn't rerun when we are on the same page and the url contains an anchor", () => {
     const pushStateSpy = jest.spyOn(window.history, "pushState")
-    window.history.pushState({}, "", "/#foo=bar")
 
     const instance = wrapper.instance() as App
+    window.history.pushState({}, "", "#foo_bar")
+    jest.spyOn(instance, "onPageChange")
+    instance.onHistoryChange()
 
-    // check that onPageChange is not run when anchor is in the url
-    waitFor(() => expect(instance.onPageChange).not.toHaveBeenCalled())
+    // check that onPageChange is not run when anchor is in the url and we are on the same page
+    expect(instance.onPageChange).not.toHaveBeenCalled()
+    // @ts-expect-error
+    window.history.pushState.mockClear()
+    pushStateSpy.mockRestore()
+  })
+
+  it("does rerun when we are navigating to a different page and the url contains an anchor", () => {
+    const pushStateSpy = jest.spyOn(window.history, "pushState")
+
+    const instance = wrapper.instance() as App
+    jest.spyOn(instance, "onPageChange")
+
+    window.history.pushState({}, "", "#foo_bar")
+    instance.onHistoryChange()
+    // check that onPageChange is not run when anchor is in the url and we are on the same page
+    expect(instance.onPageChange).not.toHaveBeenCalled()
+
+    window.history.pushState({}, "", "#foo_baz")
+    instance.onHistoryChange()
+    // check that onPageChange is not run when anchor is in the url and we are on the same page
+    expect(instance.onPageChange).not.toHaveBeenCalled()
+
+    instance.handleNewSession(
+      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "page_2_hash" })
+    )
+    window.history.pushState({}, "", "/page2#anchor")
+    window.history.back()
+    instance.onHistoryChange()
+
+    expect(instance.onPageChange).toHaveBeenCalled()
     // @ts-expect-error
     window.history.pushState.mockClear()
     pushStateSpy.mockRestore()
