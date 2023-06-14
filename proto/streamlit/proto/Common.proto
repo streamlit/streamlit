@@ -42,10 +42,10 @@ message UInt32Array {
   repeated uint32 data = 1;
 }
 
-// TODO(vdonato): Finalize the next two proto types. We currently have enough
-// information here to support pure OS use cases, but we'll need to coordinate
-// with the SiS team to verify that we're passing enough file metadata back for
-// them.
+// TODO(vdonato / kajarenc): Finalize the next two proto types. We currently
+// have enough information here to support pure OS use cases, but we'll need to
+// coordinate with the SiS team to verify that we're passing enough file
+// metadata back for them.
 message FileURLsRequest {
   string request_id = 1;
   repeated string file_names = 2;
@@ -54,6 +54,8 @@ message FileURLsRequest {
 
 message FileURLsResponse {
   // TODO(vdonato): Maybe come up with a better name for this proto type.
+  // TODO(vdonato / kajarenc): Maybe move this outside of FileURLsResponse so that
+  //                we can use this type in UploadedFileInfo.
   message FileURLs {
     string file_id = 1;
     string upload_url = 2;
@@ -75,10 +77,13 @@ message UploadedFileInfo {
   // The size of this file in bytes.
   uint32 size = 3;
 
-  // File id that can be used to retrieve a file.
+  // ID that can be used to retrieve a file.
   string file_id = 4;
 
-  // File url to delete the file
+  // TODO(vdonato / kajarenc): Add a file_upload_url field. Or use the factored
+  // out FileURLs type from the above TODO.
+
+  // URL to delete the file
   string file_delete_url = 5;
 }
 
