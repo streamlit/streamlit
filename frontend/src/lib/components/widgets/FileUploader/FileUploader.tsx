@@ -111,16 +111,16 @@ class FileUploader extends React.PureComponent<Props, State> {
         // TODO(vdonato): Stop using the serverFileId field, and use
         // the uploadFileUrl/deleteFileUrl/fileId fields instead of fileUrl.
         const serverFileId = f.id as number
-        const uploadFileURL = f.fileUrl as string
-        const deleteFileURL = f.fileUrl as string
+        const fileId = f.fileId as string
+        const deleteFileURL = f.fileDeleteUrl as string
 
         return new UploadFileInfo(name, size, this.nextLocalFileId(), {
           type: "uploaded",
           serverFileId,
 
           // TODO(vdonato / kajarenc): Use the finalized fields here
-          fileId: "TODO",
-          uploadFileURL,
+          fileId,
+          uploadFileURL: "TODO",
           deleteFileURL,
         })
       }),
@@ -219,7 +219,10 @@ class FileUploader extends React.PureComponent<Props, State> {
         const { name, size, status } = f
         return new UploadedFileInfoProto({
           id: (status as UploadedStatus).serverFileId,
-          fileUrl: (status as UploadedStatus).fileId,
+          fileId: (status as UploadedStatus).fileId,
+          // TODO(vdonato / kajarenc): Pass the uploadFileURL from
+          // UploadedStatus -> FileUploaderStateProto
+          fileDeleteUrl: (status as UploadedStatus).deleteFileURL,
           name,
           size,
         })

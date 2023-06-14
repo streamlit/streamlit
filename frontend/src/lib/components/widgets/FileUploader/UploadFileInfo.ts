@@ -29,6 +29,8 @@ export interface UploadedStatus {
   serverFileId: number
 
   fileId: string
+  // TODO(vdonato / kajarenc): Use the same names here as in the
+  // UploadedFileInfo proto type.
   uploadFileURL: string
   deleteFileURL?: string
 }
