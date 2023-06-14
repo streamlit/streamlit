@@ -392,7 +392,7 @@ class CacheResourceAPI:
 
         To override the default hashing behavior, pass a custom hash function.
         You can do that by mapping a type (e.g. ``Person``) to a hash
-        function (``lambda x: x.json()``) like this:
+        function (``str``) like this:
 
         >>> import streamlit as st
         >>> from pydantic import BaseModel
@@ -400,7 +400,7 @@ class CacheResourceAPI:
         >>> class Person(BaseModel):
         ...     name: str
         >>>
-        >>> @st.cache_resource(hash_funcs={Person: lambda x: x.json()})
+        >>> @st.cache_resource(hash_funcs={Person: str})
         ... def get_person_name(person: Person):
         ...     return person.name
 
@@ -408,12 +408,12 @@ class CacheResourceAPI:
         (e.g. ``"__main__.Person"``) to the hash function instead:
 
         >>> import streamlit as st
-        >>> import datetime
+        >>> from pydantic import BaseModel
         >>>
         >>> class Person(BaseModel):
         ...     name: str
         >>>
-        >>> @st.cache_resource(hash_funcs={"__main__.Person": lambda x: x.json()})
+        >>> @st.cache_resource(hash_funcs={"__main__.Person": str})
         ... def get_person_name(person: Person):
         ...     return person.name
         """
