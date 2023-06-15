@@ -25,7 +25,7 @@ Moreover, it is worth adding that:
 * The new version of `apache-arrow` requires a newer version of Typescript to work, but thanks to that you can also use `create-react-script` 5 and newer and the latest versions of NodeJS.
 * We dropped use of [`event-target-shim`](https://www.npmjs.com/package/event-target-shim) as modern browsers no longer need it.
 
-## List of commits:
+## List of commits
 
 * [`21e7beeae`](https://github.com/streamlit/streamlit/commit/21e7beeae) Bump dependencies of component-lib (#6830)
 * [`1e6a3e45e`](https://github.com/streamlit/streamlit/commit/1e6a3e45e) Add tests for component-lib (#6580)
