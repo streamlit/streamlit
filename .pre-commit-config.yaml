@@ -78,7 +78,7 @@ repos:
       - id: typecheck-lib
         name: Typecheck Lib
         always_run: true
-        # no emit bc tsconfig.json emitDeclaration key is used
+        # no noEmit flag bc tsconfig.json emitDeclaration key is used
         entry: yarn --cwd frontend/lib tsc
         files: \.(js|jsx|ts|tsx)$
         language: node

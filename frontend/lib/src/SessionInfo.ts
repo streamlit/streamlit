@@ -101,17 +101,6 @@ export class SessionInfo {
     const config = newSession.config as Config
     const userInfo = initialize.userInfo as UserInfo
     const environmentInfo = initialize.environmentInfo as EnvironmentInfo
-    console.log({
-      appId: hashString(userInfo.installationIdV3 + newSession.mainScriptPath),
-      sessionId: initialize.sessionId,
-      streamlitVersion: environmentInfo.streamlitVersion,
-      pythonVersion: environmentInfo.pythonVersion,
-      installationId: userInfo.installationId,
-      installationIdV3: userInfo.installationIdV3,
-      maxCachedMessageAge: config.maxCachedMessageAge,
-      commandLine: initialize.commandLine,
-      userMapboxToken: config.mapboxToken,
-    })
     return {
       appId: hashString(userInfo.installationIdV3 + newSession.mainScriptPath),
       sessionId: initialize.sessionId,

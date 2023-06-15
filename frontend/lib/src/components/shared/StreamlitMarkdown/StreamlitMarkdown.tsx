@@ -267,6 +267,7 @@ export function RenderedMarkdown({
   isLabel,
   isButton,
 }: RenderedMarkdownProps): ReactElement {
+  console.log("RENDERED MARKDOWN!!!")
   const renderers: Components = {
     pre: CodeBlock,
     code: CustomCodeTag,

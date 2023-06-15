@@ -84,11 +84,11 @@ describe("linkReference", () => {
 
   it("renders a link containing parentheses", () => {
     const body =
-      "Here's a link containing parentheses [Yikes](http://msdn.microsoft.com/en-usrary/aa752574(VS.85).aspx)"
+      "Here's a link containing parentheses [Yikes](http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx)"
     const wrapper = mount(getMarkdownElement(body))
 
     expect(wrapper.find("a").prop("href")).toEqual(
-      "http://msdn.microsoft.com/en-usrary/aa752574(VS.85).aspx"
+      "http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx"
     )
   })
 
