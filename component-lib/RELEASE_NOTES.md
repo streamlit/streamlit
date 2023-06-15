@@ -19,7 +19,7 @@
 # 2.0.0
 
 This release has no significant changes to our API, but we bump the major version as
-the [`apache-arrow`](https://www.npmjs.com/package/apache-arrow) library is updated, which may affect users of library. For details, see: [https://arrow.apache.org/release/](Apache Arrow Releases).
+the [`apache-arrow`](https://www.npmjs.com/package/apache-arrow) library is updated, which may affect users of the library. For details, see: [Apache Arrow Releases](https://arrow.apache.org/release/).
 
 Moreover, it is worth adding that:
 * The new version of `apache-arrow` requires a newer version of Typescript to work, but thanks to that you can also use `create-react-script` 5 and newer and the latest versions of NodeJS.
