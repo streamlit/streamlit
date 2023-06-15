@@ -20,13 +20,17 @@ import { Block as BlockProto } from "src/lib/proto"
 
 import ChatMessage, { Props as ChatMessageProps } from "./ChatMessage"
 
-const getProps = (props?: Partial<ChatMessageProps>): ChatMessageProps =>
-  Object({
+const getProps = (
+  elementProps: Partial<ChatMessageProps> = {}
+): ChatMessageProps => ({
+  element: BlockProto.ChatMessage.create({
     label: "user",
     avatarType: BlockProto.ChatMessage.AvatarType.ICON,
     avatar: "user",
-    ...props,
-  })
+    ...elementProps,
+  }),
+  children: <div />,
+})
 
 describe("Chat message container", () => {
   it("renders without crashing", () => {
