@@ -25,6 +25,7 @@ import {
   StringArray,
   WidgetState,
   WidgetStates,
+  StringTriggerValue,
 } from "src/lib/proto"
 import { Signal, SignalConnection } from "typed-signals"
 import { isValidFormId } from "./util/utils"
@@ -250,7 +251,8 @@ export class WidgetStateManager {
     value: string,
     source: Source
   ): void {
-    this.createWidgetState(widget, source).stringTriggerValue = value
+    this.createWidgetState(widget, source).stringTriggerValue =
+      new StringTriggerValue({ data: value })
     this.onWidgetValueChanged(widget.formId, source)
     this.deleteWidgetState(widget.id)
   }

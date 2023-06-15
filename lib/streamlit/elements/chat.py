@@ -23,6 +23,7 @@ from streamlit.elements.form import is_in_form
 from streamlit.elements.utils import check_callback_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
+from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import (
@@ -31,7 +32,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.type_util import Key, SupportsStr, to_key
+from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -44,13 +45,15 @@ For more information, refer to the
 
 @dataclass
 class ChatInputSerde:
-    value: SupportsStr
+    def deserialize(
+        self, ui_value: Optional[StringTriggerValueProto], widget_id: str = ""
+    ) -> str | None:
+        if ui_value is None or not ui_value.HasField("data"):
+            return None
+        return ui_value.data
 
-    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str | None:
-        return ui_value
-
-    def serialize(self, v: str | None) -> str | None:
-        return v
+    def serialize(self, v: str | None) -> StringTriggerValueProto:
+        return StringTriggerValueProto(data=v)
 
 
 class ChatMixin:
@@ -94,7 +97,7 @@ class ChatMixin:
         chat_input_proto.position = ChatInputProto.Position.BOTTOM
 
         ctx = get_script_run_ctx()
-        serde = ChatInputSerde("")
+        serde = ChatInputSerde()
         widget_state = register_widget(
             "chat_input",
             chat_input_proto,
@@ -113,7 +116,7 @@ class ChatMixin:
             chat_input_proto.set_value = True
 
         self.dg._enqueue("chat_input", chat_input_proto)
-        return widget_state.value
+        return None if widget_state.value_changed else widget_state.value
 
     @property
     def dg(self) -> "DeltaGenerator":

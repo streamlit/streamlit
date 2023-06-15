@@ -56,3 +56,7 @@ message FileUploaderState {
   sint64 max_file_id = 1;
   repeated UploadedFileInfo uploaded_file_info = 2;
 }
+
+message StringTriggerValue {
+  optional string data = 1;
+}

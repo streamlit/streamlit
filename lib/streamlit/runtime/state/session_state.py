@@ -215,6 +215,8 @@ class WStates(MutableMapping[str, Any]):
             setattr(widget, field, json.dumps(serialized))
         elif field == "file_uploader_state_value":
             widget.file_uploader_state_value.CopyFrom(serialized)
+        elif field == "string_trigger_value":
+            widget.string_trigger_value.CopyFrom(serialized)
         else:
             setattr(widget, field, serialized)
 
