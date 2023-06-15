@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from typing import Optional
-from urllib.parse import quote, unquote_plus
+from urllib.parse import quote
 
 import tornado.web
 
@@ -23,7 +23,6 @@ from streamlit.runtime.memory_media_file_storage import (
     MemoryMediaFileStorage,
     get_extension_for_mimetype,
 )
-from streamlit.string_util import generate_download_filename_from_title
 from streamlit.web.server import allow_cross_origin_requests
 
 _LOGGER = get_logger(__name__)
@@ -62,12 +61,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
             filename = media_file.filename
 
             if not filename:
-                title = self.get_argument("title", "", True)
-                title = unquote_plus(title)
-                filename = generate_download_filename_from_title(title)
-                filename = (
-                    f"{filename}{get_extension_for_mimetype(media_file.mimetype)}"
-                )
+                filename = f"streamlit_download{get_extension_for_mimetype(media_file.mimetype)}"
 
             try:
                 # Check that the value can be encoded in latin1. Latin1 is
