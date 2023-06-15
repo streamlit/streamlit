@@ -14,49 +14,63 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+ syntax = "proto3";
 
-message Block {
-  oneof type {
-    Vertical vertical = 1;
-    Horizontal horizontal = 2;
-    Column column = 3;
-    Expandable expandable = 4;
-    Form form = 5;
-    TabContainer tab_container = 6;
-    Tab tab = 7;
-  }
+ message Block {
+   oneof type {
+     Vertical vertical = 1;
+     Horizontal horizontal = 2;
+     Column column = 3;
+     Expandable expandable = 4;
+     Form form = 5;
+     TabContainer tab_container = 6;
+     Tab tab = 7;
+     ChatMessage chat_message = 9;
+   }
 
-  bool allow_empty = 8;
+   bool allow_empty = 8;
 
-  message Vertical {
-  }
+   message Vertical {
+   }
 
-  message Horizontal {
-    string gap = 1;
-  }
+   message Horizontal {
+     string gap = 1;
+   }
 
-  message Column {
-    double weight = 1;
-    string gap = 2;
-  }
+   message Column {
+     double weight = 1;
+     string gap = 2;
+   }
 
-  message Expandable {
-    string label = 1;
-    bool expanded = 2;
-  }
+   message Expandable {
+     string label = 1;
+     bool expanded = 2;
+   }
 
-  message Form {
-    string form_id = 1;
-    bool clear_on_submit = 2;
-  }
+   message Form {
+     string form_id = 1;
+     bool clear_on_submit = 2;
+   }
 
-  message TabContainer {
-  }
+   message TabContainer {
+   }
 
-  message Tab {
-    string label = 1;
-  }
+   message Tab {
+     string label = 1;
+   }
 
-  // Next ID: 9
-}
+   message ChatMessage {
+     enum AvatarType {
+       IMAGE = 0;
+       EMOJI = 1;
+       ICON = 2;
+     }
+
+     string label = 1;
+     string avatar = 2;
+     string background = 3;
+     AvatarType avatar_type = 4;
+   }
+
+   // Next ID: 11
+ }
