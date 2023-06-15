@@ -31,7 +31,9 @@ const getProps = (props?: Partial<ChatMessageProps>): ChatMessageProps =>
 
 describe("Chat message container", () => {
   it("renders without crashing", () => {
-    const wrapper = render(<ChatMessage {...getProps()} />)
-    // TODO(lukasmasuch): Implement tests
+    const props = getProps()
+    const rtlResults = render(<ChatMessage {...props} />)
+    expect(rtlResults).toBeDefined()
   })
+  // TODO(lukasmasuch): Implement tests
 })
