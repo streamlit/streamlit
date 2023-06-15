@@ -16,7 +16,6 @@
 
 import React from "react"
 import { render } from "src/lib/test_util"
-import { BlockNode } from "src/lib/AppNode"
 import { Block as BlockProto } from "src/lib/proto"
 
 import ChatMessage, { Props as ChatMessageProps } from "./ChatMessage"
