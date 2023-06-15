@@ -53,6 +53,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
         "button": "trigger_value",
         "download_button": "trigger_value",
         "checkbox": "bool_value",
+        "chat_input": "string_trigger_value",
         "camera_input": "file_uploader_state_value",
         "color_picker": "string_value",
         "date_input": "string_array_value",
@@ -234,7 +235,6 @@ def coalesce_widget_states(
 
     for old_state in old_states.widgets:
         if old_state.WhichOneof("value") == "trigger_value" and old_state.trigger_value:
-
             # Ensure the corresponding new_state is also a trigger;
             # otherwise, a widget that was previously a button but no longer is
             # could get a bad value.
