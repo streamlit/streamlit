@@ -61,9 +61,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
             filename = media_file.filename
 
             if not filename:
-                filename = (
-                    f"STREAMLIT_FILE{get_extension_for_mimetype(media_file.mimetype)}"
-                )
+                filename = f"streamlit_download{get_extension_for_mimetype(media_file.mimetype)}"
 
             try:
                 # Check that the value can be encoded in latin1. Latin1 is

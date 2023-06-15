@@ -64,12 +64,12 @@ class MediaFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 "video/mp4",
                 "attachment; filename*=utf-8''%E6%BC%A2%E5%AD%97.mp3",
             ),
-            (None, "text/plain", 'attachment; filename="STREAMLIT_FILE.txt"'),
-            (None, "video/mp4", 'attachment; filename="STREAMLIT_FILE.mp4"'),
+            (None, "text/plain", 'attachment; filename="streamlit_download.txt"'),
+            (None, "video/mp4", 'attachment; filename="streamlit_download.mp4"'),
             (
                 None,
                 "application/octet-stream",
-                'attachment; filename="STREAMLIT_FILE.bin"',
+                'attachment; filename="streamlit_download.bin"',
             ),
         ]
     )
