@@ -312,8 +312,17 @@ class NumberInputTest(DeltaGeneratorTestCase):
         self.assertEqual(number, 42)
         self.assertEqual(type(number), int)
 
-    @parameterized.expand([(6, -10, 0), (-11, -10, 0)])
-    def test_should_raise_exception_when_default_out_of_bounds_min_and_max(
+    @parameterized.expand(
+        [
+            # Integer tests
+            (6, -10, 0),
+            (-11, -10, 0),
+            # Float tests
+            (-11.0, -10.0, 0.0),
+            (6.0, -10.0, 0.0),
+        ]
+    )
+    def test_should_raise_exception_when_default_out_of_bounds_min_and_max_defined(
         self, value, min_value, max_value
     ):
         with pytest.raises(StreamlitAPIException):
@@ -321,13 +330,13 @@ class NumberInputTest(DeltaGeneratorTestCase):
                 "My Label", value=value, min_value=min_value, max_value=max_value
             )
 
-    def test_should_raise_exception_when_default_out_of_bounds_min(self):
+    def test_should_raise_exception_when_default_lt_min_and_max_is_none(self):
         value = -11.0
         min_value = -10.0
         with pytest.raises(StreamlitAPIException):
             st.number_input("My Label", value=value, min_value=min_value)
 
-    def test_should_raise_exception_when_default_out_of_bounds_max(self):
+    def test_should_raise_exception_when_default_gt_max_and_min_is_none(self):
         value = 11
         max_value = 10
         with pytest.raises(StreamlitAPIException):
