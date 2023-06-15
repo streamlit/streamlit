@@ -83,12 +83,6 @@ class ChatMixin:
             if self.dg._active_dg == self.dg._main_dg:
                 pass
 
-        # TODO(lukasmasuch): Should we really do this?:
-        # if not in_main_dg and position == "bottom":
-        #     raise StreamlitAPIException(
-        #         "`st.chat_input()` with position='bottom' can only be used in the main container."
-        #     )
-
         chat_input_proto = ChatInputProto()
         if placeholder is not None:
             chat_input_proto.placeholder = str(placeholder)
@@ -96,7 +90,7 @@ class ChatMixin:
         if max_chars is not None:
             chat_input_proto.max_chars = max_chars
 
-        chat_input_proto.default = default if default is not None else ""
+        chat_input_proto.default = default
         chat_input_proto.position = ChatInputProto.Position.BOTTOM
 
         ctx = get_script_run_ctx()
@@ -119,11 +113,7 @@ class ChatMixin:
             chat_input_proto.set_value = True
 
         self.dg._enqueue("chat_input", chat_input_proto)
-
-        # If the widget value was changed by the user via the session state,
-        # we return None here. This should only put the configured value into
-        # the chat input on the frontend but should not automatically trigger the value.
-        return None if widget_state.value_changed else widget_state.value
+        return widget_state.value
 
     @property
     def dg(self) -> "DeltaGenerator":

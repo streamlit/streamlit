@@ -67,7 +67,10 @@ const InputInstructions = ({
   }
 
   return (
-    <StyledWidgetInstructions className={className}>
+    <StyledWidgetInstructions
+      data-testid="InputInstructions"
+      className={className}
+    >
       {messages}
     </StyledWidgetInstructions>
   )

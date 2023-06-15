@@ -33,8 +33,7 @@ import InputInstructions from "src/lib/components/shared/InputInstructions/Input
 import {
   StyledChatInputContainer,
   StyledChatInput,
-  StyledSendIconContainer,
-  // StyledChatInputBackground,
+  StyledSendIconButton,
 } from "./styled-components"
 
 const MIN_HEIGHT = 40.4 // 40.4 is the default height of a text input
@@ -81,6 +80,9 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
 
   const handleSubmit = (): void => {
     widgetMgr.setStringTriggerValue(element, value, { fromUi: true })
+    setDirty(false)
+    setValue("")
+    setScrollHeight(0)
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -112,6 +114,7 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
   useEffect(() => {
     if (element.setValue) {
       const { value } = element
+      // We are intentionally setting this to avoid regularly calling this effect.
       element.setValue = false
       setValue(value)
       setDirty(true)
@@ -156,9 +159,9 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
                 borderBottomStyle: "none",
                 outline: "none",
                 borderBottomLeftRadius: theme.radii.md,
-                borderBottomRightRadius: theme.radii.md,
+                borderBottomRightRadius: theme.radii.none,
                 borderTopLeftRadius: theme.radii.md,
-                borderTopRightRadius: theme.radii.md,
+                borderTopRightRadius: theme.radii.none,
                 backgroundColor: theme.colors.transparent,
                 ":focus-within": {
                   border: `none`,
@@ -196,19 +199,11 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
           type="single"
         />
       </StyledChatInput>
-      <StyledSendIconContainer
-        height={`${realHeight}px`}
-        onClick={handleSubmit}
-      >
+      <StyledSendIconButton height={realHeight} onClick={handleSubmit}>
         <Icon content={Send} size="lg" />
-      </StyledSendIconContainer>
+      </StyledSendIconButton>
     </StyledChatInputContainer>
   )
-
-  // {element.position === "bottom" && (
-  //   // Show a background overlaying the part underneath the floating chat input:
-  //   <StyledChatInputBackground width={this.props.width} />
-  // )}
 }
 
 export default ChatInput

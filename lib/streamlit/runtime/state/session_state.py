@@ -215,9 +215,6 @@ class WStates(MutableMapping[str, Any]):
             setattr(widget, field, json.dumps(serialized))
         elif field == "file_uploader_state_value":
             widget.file_uploader_state_value.CopyFrom(serialized)
-        elif field == "string_trigger_value":
-            # TODO(lukasmasuch): Otherwise we get: Cannot set WidgetState.string_trigger_value to None: None has type <class 'NoneType'>, but expected one of: (<class 'bytes'>, <class 'str'>)
-            setattr(widget, field, "" if serialized is None else serialized)
         else:
             setattr(widget, field, serialized)
 

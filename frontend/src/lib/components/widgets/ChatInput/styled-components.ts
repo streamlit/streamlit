@@ -64,18 +64,19 @@ export const StyledChatInput = styled.div(({ theme }) => {
     borderRadius: theme.radii.md,
   }
 })
-export interface StyledSendIconContainerProps {
-  height: string
+export interface StyledSendIconButtonProps {
+  height: number
 }
 
-export const StyledSendIconContainer =
-  styled.button<StyledSendIconContainerProps>(({ theme, height }) => {
+export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
+  ({ theme, height }) => {
     const lightTheme = hasLightBackgroundColor(theme)
     return {
-      height: height,
+      height: `${height}px`,
       border: "none",
       backgroundColor: theme.colors.transparent,
-      borderRadius: theme.radii.md,
+      borderTopRightRadius: theme.radii.md,
+      borderBottomRightRadius: theme.radii.md,
       padding: theme.spacing.sm,
       display: "inline-flex",
       alignItems: "center",
@@ -103,18 +104,5 @@ export const StyledSendIconContainer =
         color: theme.colors.gray,
       },
     }
-  })
-
-export interface StyledChatInputBackgroundProps {
-  width: number
-}
-
-export const StyledChatInputBackground =
-  styled.div<StyledChatInputBackgroundProps>(({ theme, width }) => ({
-    backgroundColor: theme.colors.bgColor,
-    height: "40px",
-    position: "fixed",
-    bottom: 0,
-    width: width,
-    zIndex: theme.zIndices.chatInput - 1,
-  }))
+  }
+)
