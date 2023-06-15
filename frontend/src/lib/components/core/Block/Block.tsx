@@ -103,15 +103,9 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   }
 
   if (node.deltaBlock.chatMessage) {
-    const { avatar, avatarType, label, background } = node.deltaBlock
-      .chatMessage as BlockProto.ChatMessage
-
     return (
       <ChatMessage
-        avatar={avatar}
-        avatarType={avatarType}
-        label={label}
-        background={background}
+        element={node.deltaBlock.chatMessage as BlockProto.ChatMessage}
       >
         {child}
       </ChatMessage>

@@ -32,16 +32,13 @@ import {
 } from "./styled-components"
 
 export interface Props {
-  avatar: string
-  avatarType: BlockProto.ChatMessage.AvatarType
-  background: string
-  label: string
+  element: BlockProto.ChatMessage
   children: ReactNode
 }
 
-function ChatMessage(props: Props): ReactElement {
+function ChatMessage({ element, children }: Props): ReactElement {
   const theme: EmotionTheme = useTheme()
-  const { avatar, avatarType, background, label, children } = props
+  const { avatar, avatarType, background, label } = element
 
   let avatarElement
   if (avatarType === BlockProto.ChatMessage.AvatarType.IMAGE) {
