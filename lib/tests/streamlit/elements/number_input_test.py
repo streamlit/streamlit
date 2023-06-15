@@ -311,3 +311,15 @@ class NumberInputTest(DeltaGeneratorTestCase):
         # Assert output
         self.assertEqual(number, 42)
         self.assertEqual(type(number), int)
+
+    def test_should_raise_exception_when_default_out_of_bounds_min_and_max(self):
+        with pytest.raises(StreamlitAPIException):
+            st.number_input("My Label", value=6.0, min_value=-10.0, max_value=0.0)
+
+    def test_should_raise_exception_when_default_out_of_bounds_min(self):
+        with pytest.raises(StreamlitAPIException):
+            st.number_input("My Label", value=-16.0, min_value=-10.0)
+
+    def test_should_raise_exception_when_default_out_of_bounds_max(self):
+        with pytest.raises(StreamlitAPIException):
+            st.number_input("My Label", value=16.0, max_value=-10.0)
