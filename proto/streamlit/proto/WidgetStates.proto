@@ -51,6 +51,6 @@ message WidgetState {
 
     // String value that resets itself to empty after the script has been run.
     // This is used for the chat_input widget.
-    string string_trigger_value = 14;
+    StringTriggerValue string_trigger_value = 14;
   }
 }
