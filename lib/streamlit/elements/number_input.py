@@ -291,27 +291,13 @@ class NumberInputMixin:
 
         min_value_out_of_bounds = min_value != None and min_value > value
         max_value_out_of_bounds = max_value != None and max_value < value
-        print(f"min_value_out_of_bounds: {min_value_out_of_bounds}")
-        print(f"max_value_out_of_bounds: {max_value_out_of_bounds}")
 
-        if (min_value_out_of_bounds) and (max_value_out_of_bounds):
+        if (min_value_out_of_bounds) or (max_value_out_of_bounds):
             raise StreamlitAPIException(
                 "The default `value` of %(value)s "
                 "must lie between the `min_value` of %(min)s "
                 "and the `max_value` of %(max)s, inclusively."
                 % {"value": value, "min": min_value, "max": max_value}
-            )
-        if min_value_out_of_bounds:
-            raise StreamlitAPIException(
-                "The default `value` of %(value)s "
-                "must be greater than between the `min_value` of %(min)s "
-                % {"value": value, "min": min_value}
-            )
-        if max_value_out_of_bounds:
-            raise StreamlitAPIException(
-                "The default `value` of %(value)s "
-                "must be less than between the `max_value` of %(max)s "
-                % {"value": value, "max": max_value}
             )
 
         # Bounds checks. JSNumber produces human-readable exceptions that
