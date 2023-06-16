@@ -129,7 +129,7 @@ class CheckboxMixin:
         ...     st.write('Great!')
 
         .. output::
-           https://doc-checkbox.streamlitapp.com/
+           https://doc-checkbox.streamlit.app/
            height: 220px
 
         """

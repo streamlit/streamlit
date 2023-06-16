@@ -69,7 +69,7 @@ class JsonMixin:
         ... })
 
         .. output::
-           https://doc-json.streamlitapp.com/
+           https://doc-json.streamlit.app/
            height: 385px
 
         """

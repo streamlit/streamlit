@@ -171,7 +171,7 @@ class NumberInputMixin:
         >>> st.write('The current number is ', number)
 
         .. output::
-           https://doc-number-input.streamlitapp.com/
+           https://doc-number-input.streamlit.app/
            height: 260px
 
         """

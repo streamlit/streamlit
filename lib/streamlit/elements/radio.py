@@ -176,7 +176,7 @@ class RadioMixin:
         ...     st.write("You didn\'t select comedy.")
 
         .. output::
-           https://doc-radio.streamlitapp.com/
+           https://doc-radio.streamlit.app/
            height: 260px
 
         """

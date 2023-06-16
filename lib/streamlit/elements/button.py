@@ -138,7 +138,7 @@ class ButtonMixin:
         ...     st.write('Goodbye')
 
         .. output::
-           https://doc-buton.streamlitapp.com/
+           https://doc-buton.streamlit.app/
            height: 220px
 
         """
@@ -303,7 +303,7 @@ class ButtonMixin:
         ...           )
 
         .. output::
-           https://doc-download-buton.streamlitapp.com/
+           https://doc-download-buton.streamlit.app/
            height: 335px
 
         """

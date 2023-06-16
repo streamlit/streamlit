@@ -160,7 +160,7 @@ class SelectboxMixin:
         >>> st.write('You selected:', option)
 
         .. output::
-           https://doc-selectbox.streamlitapp.com/
+           https://doc-selectbox.streamlit.app/
            height: 320px
 
         """

@@ -329,7 +329,7 @@ class SliderMixin:
         >>> st.write("Start time:", start_time)
 
         .. output::
-           https://doc-slider.streamlitapp.com/
+           https://doc-slider.streamlit.app/
            height: 300px
 
         """

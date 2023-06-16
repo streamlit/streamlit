@@ -125,7 +125,7 @@ class MapMixin:
         >>> st.map(df)
 
         .. output::
-           https://doc-map.streamlitapp.com/
+           https://doc-map.streamlit.app/
            height: 650px
 
         """
