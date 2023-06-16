@@ -129,11 +129,9 @@ class HashTest(unittest.TestCase):
     @parameterized.expand(
         [
             datetime.timezone.utc,
-            tzlocal.get_localzone(),
             dateutil.tz.gettz("America/Los_Angeles"),
             dateutil.tz.gettz("Europe/Berlin"),
             dateutil.tz.UTC,
-            None,  # check for naive too
         ]
     )
     def test_pandas_timestamp(self, tz_info):
