@@ -29,6 +29,7 @@ import {
   StyledAvatarImage,
   StyledAvatarIcon,
   StyledAvatarEmoji,
+  StyledAvatarInitial,
 } from "./styled-components"
 
 export interface Props {
@@ -45,20 +46,30 @@ function ChatMessage({ element, children }: Props): ReactElement {
     avatarElement = <StyledAvatarImage src={avatar} alt={`${label} avatar`} />
   } else if (avatarType === BlockProto.ChatMessage.AvatarType.EMOJI) {
     avatarElement = <StyledAvatarEmoji>{avatar}</StyledAvatarEmoji>
-  } else if (avatarType === BlockProto.ChatMessage.AvatarType.ICON) {
-    if (avatar === "user") {
-      avatarElement = (
-        <StyledAvatarIcon background={theme.colors.red60}>
-          <Icon content={Face} size="lg" />
-        </StyledAvatarIcon>
-      )
-    } else {
-      avatarElement = (
-        <StyledAvatarIcon background={theme.colors.orange60}>
-          <Icon content={SmartToy} size="lg" />
-        </StyledAvatarIcon>
-      )
-    }
+  } else if (
+    avatarType === BlockProto.ChatMessage.AvatarType.ICON &&
+    avatar === "user"
+  ) {
+    avatarElement = (
+      <StyledAvatarIcon background={theme.colors.red60}>
+        <Icon content={Face} size="lg" />
+      </StyledAvatarIcon>
+    )
+  } else if (
+    avatarType === BlockProto.ChatMessage.AvatarType.ICON &&
+    avatar === "assistant"
+  ) {
+    avatarElement = (
+      <StyledAvatarIcon background={theme.colors.orange60}>
+        <Icon content={SmartToy} size="lg" />
+      </StyledAvatarIcon>
+    )
+  } else {
+    avatarElement = (
+      <StyledAvatarInitial>
+        {label.charAt(0).toUpperCase()}
+      </StyledAvatarInitial>
+    )
   }
 
   return (

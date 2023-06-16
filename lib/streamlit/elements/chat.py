@@ -39,9 +39,16 @@ class ChatMixin:
         AVATAR_TYPES = BlockProto.ChatMessage.AvatarType
 
         converted_avatar: str
+
+        if label == "user" and background is None:
+            background = True
+
         if avatar is None:
             avatar_type = AVATAR_TYPES.ICON
-            converted_avatar = "user" if label == "user" else "assistant"
+            if label in ["user", "assistant"]:
+                converted_avatar = label
+            else:
+                converted_avatar = ""
         elif isinstance(avatar, str) and avatar in ["user", "assistant"]:
             avatar_type = AVATAR_TYPES.ICON
             converted_avatar = avatar

@@ -25,14 +25,6 @@ export interface StyledChatMessageContainerProps {
 export const StyledChatMessageContainer =
   styled.div<StyledChatMessageContainerProps>(({ theme, background }) => {
     const lightTheme = hasLightBackgroundColor(theme)
-    const messageBackground = background
-      ? {
-          backgroundColor: lightTheme
-            ? transparentize(theme.colors.gray20, 0.5)
-            : transparentize(theme.colors.gray90, 0.5),
-        }
-      : {}
-
     return {
       display: "flex",
       alignItems: "flex-start",
@@ -40,7 +32,13 @@ export const StyledChatMessageContainer =
       padding: theme.spacing.lg,
       paddingRight: background ? theme.spacing.lg : 0,
       borderRadius: theme.radii.lg,
-      ...messageBackground,
+      ...(background
+        ? {
+            backgroundColor: lightTheme
+              ? transparentize(theme.colors.gray20, 0.5)
+              : transparentize(theme.colors.gray90, 0.5),
+          }
+        : {}),
     }
   })
 
@@ -58,6 +56,25 @@ export const StyledAvatarEmoji = styled.div(({ theme }) => {
       lightTheme ? theme.colors.gray40 : theme.colors.gray85
     }`,
     backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
+    lineHeight: "1",
+    fontSize: theme.fontSizes.md,
+    width: "2rem",
+    height: "2rem",
+    borderRadius: theme.radii.lg,
+    alignItems: "center",
+    justifyContent: "center",
+  }
+})
+
+export const StyledAvatarInitial = styled.div(({ theme }) => {
+  const lightTheme = hasLightBackgroundColor(theme)
+  return {
+    display: "flex",
+    border: `1px solid ${
+      lightTheme ? theme.colors.gray40 : theme.colors.gray85
+    }`,
+    backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
+    color: lightTheme ? theme.colors.gray90 : theme.colors.white,
     lineHeight: "1",
     fontSize: theme.fontSizes.md,
     width: "2rem",
