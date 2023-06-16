@@ -40,7 +40,7 @@ export const StyledDocContainer = styled.span<StyledDocContainerProps>(
   ({ theme }) => ({
     display: "flex",
     flexDirection: "column",
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.lg,
     border: `1px solid ${theme.colors.fadedText05}`,
     fontFamily: theme.genericFonts.codeFont,
     fontSize: theme.fontSizes.sm,

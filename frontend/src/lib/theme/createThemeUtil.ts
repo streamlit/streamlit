@@ -106,16 +106,16 @@ export const createThemeOverrides = (
       useRoundedCorners: true,
       /** Button, ButtonGroup */
       buttonBorderRadiusMini: radii.md, // Unused today.
-      buttonBorderRadius: radii.md,
+      buttonBorderRadius: radii.lg,
       /** Checkbox */
       checkboxBorderRadius: radii.sm,
       /** Input, Select, Textarea */
       inputBorderRadiusMini: radii.md, // Unused today.
-      inputBorderRadius: radii.md,
+      inputBorderRadius: radii.lg,
       /** Popover, Menu, Tooltip */
-      popoverBorderRadius: radii.md,
+      popoverBorderRadius: radii.lg,
       /** Card, Datepicker, Modal, Toast, Notification */
-      surfaceBorderRadius: radii.md,
+      surfaceBorderRadius: radii.lg,
       /** Tag */
       tagBorderRadius: radii.md,
     },

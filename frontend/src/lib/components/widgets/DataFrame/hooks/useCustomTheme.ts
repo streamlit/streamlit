@@ -80,7 +80,7 @@ function useCustomTheme(): Partial<GlideTheme> & {
     // Unused settings:
     // lineHeight
     // Custom settings
-    tableBorderRadius: theme.radii.md,
+    tableBorderRadius: theme.radii.lg,
     // Configure custom SVG icons used in the column header:
     headerIcons,
   }

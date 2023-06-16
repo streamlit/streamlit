@@ -76,7 +76,7 @@ export interface StyledBoxProps {
 
 export const StyledBox = styled.div<StyledBoxProps>(({ theme, width }) => ({
   backgroundColor: theme.colors.secondaryBg,
-  borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
+  borderRadius: `${theme.radii.lg} ${theme.radii.lg} 0 0`,
   width: "100%",
   height: (width * 9) / 16,
   display: "flex",
@@ -95,7 +95,7 @@ export interface StyledImgProps {
 }
 
 export const StyledImg = styled.img<StyledImgProps>(({ theme, opacity }) => ({
-  borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
+  borderRadius: `${theme.radii.lg} ${theme.radii.lg} 0 0`,
   objectFit: "contain",
   opacity,
 }))
@@ -141,7 +141,7 @@ export const StyledCameraInputBaseButton =
     justifyContent: "center",
     backgroundColor: theme.colors.lightenedBg05,
     border: `1px solid ${theme.colors.fadedText10}`,
-    borderRadius: `0 0 ${theme.radii.md} ${theme.radii.md}`,
+    borderRadius: `0 0 ${theme.radii.lg} ${theme.radii.lg}`,
     "&:hover": {
       borderColor: theme.colors.primary,
       color: theme.colors.primary,

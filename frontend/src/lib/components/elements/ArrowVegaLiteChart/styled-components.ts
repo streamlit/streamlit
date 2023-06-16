@@ -58,7 +58,7 @@ export const StyledVegaLiteChartContainer = styled.div(({ theme }) => ({
       zIndex: theme.zIndices.menuButton,
       border: "none",
       boxShadow: "none",
-      borderRadius: theme.radii.md,
+      borderRadius: theme.radii.lg,
       color: theme.colors.fadedText10,
       backgroundColor: "transparent",
       transition: "opacity 300ms 150ms,transform 300ms 150ms",

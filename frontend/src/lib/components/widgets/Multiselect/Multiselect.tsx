@@ -21,6 +21,7 @@ import { withTheme } from "@emotion/react"
 import { FormClearHelper } from "src/lib/components/widgets/Form"
 import { WidgetStateManager, Source } from "src/lib/WidgetStateManager"
 import { MultiSelect as MultiSelectProto } from "src/lib/proto"
+import { ChevronDown } from "baseui/icon"
 import {
   TYPE,
   Select as UISelect,
@@ -270,6 +271,21 @@ class Multiselect extends React.PureComponent<Props, State> {
             filterOptions={this.filterOptions}
             closeOnSelect={false}
             overrides={{
+              SelectArrow: {
+                component: ChevronDown,
+
+                props: {
+                  overrides: {
+                    Svg: {
+                      style: () => ({
+                        width: theme.iconSizes.xl,
+                        height: theme.iconSizes.xl,
+                      }),
+                    },
+                  },
+                },
+              },
+
               IconsContainer: {
                 style: () => ({
                   paddingRight: theme.spacing.sm,
