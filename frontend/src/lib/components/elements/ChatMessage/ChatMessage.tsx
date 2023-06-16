@@ -64,10 +64,10 @@ function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
     }
   }
 
-  // Fallback to label initial if nothing else can be matched:
+  // Fallback to first character of the label if nothing else can be matched:
   return (
     <StyledAvatarBackground>
-      {label.length > 0 ? label.charAt(0).toUpperCase() : ""}
+      {label.length > 0 ? label.charAt(0).toUpperCase() : "🧑‍💻"}
     </StyledAvatarBackground>
   )
 }
