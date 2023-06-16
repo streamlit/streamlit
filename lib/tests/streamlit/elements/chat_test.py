@@ -18,8 +18,8 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from streamlit.proto.Block_pb2 import Block as BlockProto
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class ChatMessageTest(DeltaGeneratorTestCase):
@@ -110,24 +110,19 @@ class ChatMessageTest(DeltaGeneratorTestCase):
         )
         self.assertEqual(message_block.add_block.chat_message.background, "")
 
-     def test_setting_background(self):
+    def test_setting_background(self):
         """Test that it is possible to set the background color."""
 
-        message = st.chat_message(
-            "cat",
-            background=True
-        )
+        message = st.chat_message("cat", background=True)
 
         with message:
             pass
 
         message_block = self.get_delta_from_queue()
         self.assertEqual(message_block.add_block.chat_message.label, "cat")
-        self.assertEqual(
-            message_block.add_block.chat_message.avatar, ""
-        )
+        self.assertEqual(message_block.add_block.chat_message.avatar, "")
         self.assertEqual(
             message_block.add_block.chat_message.avatar_type,
-            BlockProto.ChatMessage.AvatarType.ICON
+            BlockProto.ChatMessage.AvatarType.ICON,
         )
         self.assertEqual(message_block.add_block.chat_message.background, "grey")

@@ -13,16 +13,15 @@
 # limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast, Tuple
+from typing import TYPE_CHECKING, Tuple, cast
 
 from typing_extensions import Literal
 
+from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import is_emoji
-from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.elements.image import image_to_url, WidthBehaviour, AtomicImage
-
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
