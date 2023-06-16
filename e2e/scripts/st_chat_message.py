@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
 import numpy as np
 import pandas as pd
+
+import streamlit as st
 
 np.random.seed(0)
 
@@ -66,3 +67,5 @@ cat.text_input("What's your name?")
 with st.chat_message("Bot"):
     with st.expander("See more", expanded=True):
         st.write("Lorem ipsum dolor sit amet")
+
+st.chat_message("user").write("")

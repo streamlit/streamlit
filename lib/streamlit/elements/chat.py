@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+from enum import Enum
 from typing import TYPE_CHECKING, Tuple, cast
 
 from typing_extensions import Literal
@@ -27,14 +28,22 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
+class DefinedLabels(str, Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
 def _process_avatar_input(
-    avatar: Literal["user", "assistant"] | str | AtomicImage | None = None
+    avatar: str | AtomicImage | None = None,
 ) -> Tuple[BlockProto.ChatMessage.AvatarType.ValueType, str]:
     AvatarType = BlockProto.ChatMessage.AvatarType
 
     if avatar is None:
         return AvatarType.ICON, ""
-    elif isinstance(avatar, str) and avatar in ["user", "assistant"]:
+    elif isinstance(avatar, str) and avatar in [
+        DefinedLabels.USER,
+        DefinedLabels.ASSISTANT,
+    ]:
         return AvatarType.ICON, avatar
     elif isinstance(avatar, str) and is_emoji(avatar):
         return AvatarType.EMOJI, avatar
@@ -63,7 +72,10 @@ class ChatMixin:
         if label is None:
             raise StreamlitAPIException("A label is required for a chat message")
 
-        if avatar is None and label.lower() in ["user", "assistant"]:
+        if avatar is None and label.lower() in [
+            DefinedLabels.USER,
+            DefinedLabels.ASSISTANT,
+        ]:
             # For selected labels, we are mapping the label to an avatar
             avatar = label.lower()
         avatar_type, converted_avatar = _process_avatar_input(avatar)
@@ -72,7 +84,7 @@ class ChatMixin:
         message_container_proto.label = label
         message_container_proto.avatar = converted_avatar
         message_container_proto.avatar_type = avatar_type
-        if background or (background is None and label == "user"):
+        if background or (background is None and label == DefinedLabels.USER):
             message_container_proto.background = "grey"
         block_proto = BlockProto()
         block_proto.allow_empty = True
