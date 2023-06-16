@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, cast, Tuple
 
 from typing_extensions import Literal
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import is_emoji
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -60,6 +61,9 @@ class ChatMixin:
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
         background: bool | None = None,
     ) -> "DeltaGenerator":
+        if label is None:
+            raise StreamlitAPIException("A label is required for a chat message")
+
         if avatar is None and label.lower() in ["user", "assistant"]:
             # For selected labels, we are mapping the label to an avatar
             avatar = label.lower()
