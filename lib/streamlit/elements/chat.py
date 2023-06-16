@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, Tuple
 
 from typing_extensions import Literal
 
@@ -27,6 +27,30 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
+def _process_avatar_input(
+    avatar: Literal["user", "assistant"] | str | AtomicImage | None = None
+) -> Tuple[BlockProto.ChatMessage.AvatarType.ValueType, str]:
+    AvatarType = BlockProto.ChatMessage.AvatarType
+
+    if avatar is None:
+        return AvatarType.ICON, ""
+    elif isinstance(avatar, str) and avatar in ["user", "assistant"]:
+        return AvatarType.ICON, avatar
+    elif isinstance(avatar, str) and is_emoji(avatar):
+        return AvatarType.EMOJI, avatar
+    else:
+        # TODO(lukasmasuch): Pure SVGs are not yet supported here.
+        # They have a special handling in `st.image` and might require some refactoring.
+        return AvatarType.IMAGE, image_to_url(
+            avatar,
+            width=WidthBehaviour.ORIGINAL,
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id="",
+        )
+
+
 class ChatMixin:
     @gather_metrics("chat_message")
     def chat_message(
@@ -36,43 +60,16 @@ class ChatMixin:
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
         background: bool | None = None,
     ) -> "DeltaGenerator":
-        AVATAR_TYPES = BlockProto.ChatMessage.AvatarType
-
-        converted_avatar: str
-
-        if label == "user" and background is None:
-            background = True
-
-        if avatar is None:
-            avatar_type = AVATAR_TYPES.ICON
-            if label in ["user", "assistant"]:
-                converted_avatar = label
-            else:
-                converted_avatar = ""
-        elif isinstance(avatar, str) and avatar in ["user", "assistant"]:
-            avatar_type = AVATAR_TYPES.ICON
-            converted_avatar = avatar
-        elif isinstance(avatar, str) and is_emoji(avatar):
-            avatar_type = AVATAR_TYPES.EMOJI
-            converted_avatar = avatar
-        else:
-            # Try to convert the value into an image URL:
-            avatar_type = AVATAR_TYPES.IMAGE
-            # TODO(lukasmasuch): Pure SVGs are have a special handling in marshall_images
-            converted_avatar = image_to_url(
-                avatar,
-                width=WidthBehaviour.ORIGINAL,
-                clamp=False,
-                channels="RGB",
-                output_format="auto",
-                image_id="",
-            )
+        if avatar is None and label.lower() in ["user", "assistant"]:
+            # For selected labels, we are mapping the label to an avatar
+            avatar = label.lower()
+        avatar_type, converted_avatar = _process_avatar_input(avatar)
 
         message_container_proto = BlockProto.ChatMessage()
         message_container_proto.label = label
         message_container_proto.avatar = converted_avatar
         message_container_proto.avatar_type = avatar_type
-        if background:
+        if background or (background is None and label == "user"):
             message_container_proto.background = "grey"
         block_proto = BlockProto()
         block_proto.allow_empty = True
