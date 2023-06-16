@@ -69,7 +69,7 @@ message FileURLsResponse {
 
 // Information on a file uploaded via the file_uploader widget.
 message UploadedFileInfo {
-  // TO DEPRECATE:
+  // DEPRECATED.
   sint64 id = 1;
 
   string name = 2;
