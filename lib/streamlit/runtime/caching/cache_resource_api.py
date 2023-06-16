@@ -45,6 +45,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     MsgData,
     MultiCacheResults,
 )
+from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
@@ -153,11 +154,13 @@ class CachedResourceFuncInfo(CachedFuncInfo):
         ttl: float | timedelta | str | None,
         validate: ValidateFunc | None,
         allow_widgets: bool,
+        hash_funcs: HashFuncsDict | None = None,
     ):
         super().__init__(
             func,
             show_spinner=show_spinner,
             allow_widgets=allow_widgets,
+            hash_funcs=hash_funcs,
         )
         self.max_entries = max_entries
         self.ttl = ttl
@@ -233,6 +236,7 @@ class CacheResourceAPI:
         show_spinner: bool | str = True,
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
+        hash_funcs: HashFuncsDict | None = None,
     ) -> Callable[[F], F]:
         ...
 
@@ -245,6 +249,7 @@ class CacheResourceAPI:
         show_spinner: bool | str = True,
         validate: ValidateFunc | None = None,
         experimental_allow_widgets: bool = False,
+        hash_funcs: HashFuncsDict | None = None,
     ):
         return self._decorator(
             func,
@@ -253,6 +258,7 @@ class CacheResourceAPI:
             show_spinner=show_spinner,
             validate=validate,
             experimental_allow_widgets=experimental_allow_widgets,
+            hash_funcs=hash_funcs,
         )
 
     def _decorator(
@@ -264,6 +270,7 @@ class CacheResourceAPI:
         show_spinner: bool | str,
         validate: ValidateFunc | None,
         experimental_allow_widgets: bool,
+        hash_funcs: HashFuncsDict | None = None,
     ):
         """Decorator to cache functions that return global resources (e.g. database connections, ML models).
 
@@ -323,6 +330,14 @@ class CacheResourceAPI:
             widget value is treated as an additional input parameter to the cache.
             We may remove support for this option at any time without notice.
 
+        hash_funcs : dict or None
+            Mapping of types or fully qualified names to hash functions.
+            This is used to override the behavior of the hasher inside Streamlit's
+            caching mechanism: when the hasher encounters an object, it will first
+            check to see if its type matches a key in this dict and, if so, will use
+            the provided function to generate a hash for it. See below for an example
+            of how this can be used.
+
         Example
         -------
         >>> import streamlit as st
@@ -375,6 +390,32 @@ class CacheResourceAPI:
         >>> get_database_session.clear()
         >>> # Clear all cached entries for this function.
 
+        To override the default hashing behavior, pass a custom hash function.
+        You can do that by mapping a type (e.g. ``Person``) to a hash
+        function (``str``) like this:
+
+        >>> import streamlit as st
+        >>> from pydantic import BaseModel
+        >>>
+        >>> class Person(BaseModel):
+        ...     name: str
+        >>>
+        >>> @st.cache_resource(hash_funcs={Person: str})
+        ... def get_person_name(person: Person):
+        ...     return person.name
+
+        Alternatively, you can map the type's fully-qualified name
+        (e.g. ``"__main__.Person"``) to the hash function instead:
+
+        >>> import streamlit as st
+        >>> from pydantic import BaseModel
+        >>>
+        >>> class Person(BaseModel):
+        ...     name: str
+        >>>
+        >>> @st.cache_resource(hash_funcs={"__main__.Person": str})
+        ... def get_person_name(person: Person):
+        ...     return person.name
         """
         self._maybe_show_deprecation_warning()
 
@@ -389,6 +430,7 @@ class CacheResourceAPI:
                     ttl=ttl,
                     validate=validate,
                     allow_widgets=experimental_allow_widgets,
+                    hash_funcs=hash_funcs,
                 )
             )
 
@@ -400,6 +442,7 @@ class CacheResourceAPI:
                 ttl=ttl,
                 validate=validate,
                 allow_widgets=experimental_allow_widgets,
+                hash_funcs=hash_funcs,
             )
         )
 
