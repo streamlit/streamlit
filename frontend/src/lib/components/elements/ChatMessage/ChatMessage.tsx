@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode } from "react"
+import React, { useMemo, ReactElement } from "react"
 import { Face, SmartToy } from "@emotion-icons/material-outlined"
 
 import { Block as BlockProto } from "src/lib/proto"
@@ -28,54 +28,72 @@ import {
   StyledMessageContent,
   StyledAvatarImage,
   StyledAvatarIcon,
-  StyledAvatarEmoji,
-  StyledAvatarInitial,
+  StyledAvatarBackground,
 } from "./styled-components"
+import { notNullOrUndefined } from "src/lib/util/utils"
 
-export interface Props {
-  element: BlockProto.ChatMessage
-  children: ReactNode
+interface ChatMessageAvatarProps {
+  label: string
+  avatar?: string
+  avatarType?: BlockProto.ChatMessage.AvatarType
 }
 
-function ChatMessage({ element, children }: Props): ReactElement {
+function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
+  const { avatar, avatarType, label } = props
   const theme: EmotionTheme = useTheme()
-  const { avatar, avatarType, background, label } = element
 
-  let avatarElement
-  if (avatarType === BlockProto.ChatMessage.AvatarType.IMAGE) {
-    avatarElement = <StyledAvatarImage src={avatar} alt={`${label} avatar`} />
-  } else if (avatarType === BlockProto.ChatMessage.AvatarType.EMOJI) {
-    avatarElement = <StyledAvatarEmoji>{avatar}</StyledAvatarEmoji>
-  } else if (
-    avatarType === BlockProto.ChatMessage.AvatarType.ICON &&
-    avatar === "user"
-  ) {
-    avatarElement = (
-      <StyledAvatarIcon background={theme.colors.red60}>
-        <Icon content={Face} size="lg" />
-      </StyledAvatarIcon>
-    )
-  } else if (
-    avatarType === BlockProto.ChatMessage.AvatarType.ICON &&
-    avatar === "assistant"
-  ) {
-    avatarElement = (
-      <StyledAvatarIcon background={theme.colors.orange60}>
-        <Icon content={SmartToy} size="lg" />
-      </StyledAvatarIcon>
-    )
-  } else {
-    avatarElement = (
-      <StyledAvatarInitial>
-        {label.charAt(0).toUpperCase()}
-      </StyledAvatarInitial>
-    )
+  if (avatar) {
+    switch (avatarType) {
+      case BlockProto.ChatMessage.AvatarType.IMAGE:
+        return <StyledAvatarImage src={avatar} alt={`${label} avatar`} />
+      case BlockProto.ChatMessage.AvatarType.EMOJI:
+        return <StyledAvatarBackground>{avatar}</StyledAvatarBackground>
+      case BlockProto.ChatMessage.AvatarType.ICON:
+        if (avatar === "user") {
+          return (
+            <StyledAvatarIcon background={theme.colors.red60}>
+              <Icon content={Face} size="lg" />
+            </StyledAvatarIcon>
+          )
+        } else if (avatar === "assistant") {
+          return (
+            <StyledAvatarIcon background={theme.colors.orange60}>
+              <Icon content={SmartToy} size="lg" />
+            </StyledAvatarIcon>
+          )
+        }
+    }
   }
+
+  // Fallback to label initial if nothing else can be matched:
+  return (
+    <StyledAvatarBackground>
+      {label.length > 0 ? label.charAt(0).toUpperCase() : ""}
+    </StyledAvatarBackground>
+  )
+}
+
+export interface ChatMessageProps {
+  element: BlockProto.ChatMessage
+}
+
+const ChatMessage: React.FC<ChatMessageProps> = ({
+  element,
+  children,
+}): ReactElement => {
+  const { avatar, avatarType, background, label } = element
 
   return (
     <StyledChatMessageContainer background={background === "grey"}>
-      {avatarElement}
-      <StyledMessageContent>{children}</StyledMessageContent>
+      <ChatMessageAvatar
+        label={label}
+        avatar={avatar}
+        avatarType={avatarType}
+        data-testid="stChatMessageAvatar"
+      />
+      <StyledMessageContent aria-label={`Chat message from ${label}`}>
+        {children}
+      </StyledMessageContent>
     </StyledChatMessageContainer>
   )
 }

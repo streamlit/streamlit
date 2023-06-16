@@ -18,10 +18,12 @@ import React from "react"
 import { render } from "src/lib/test_util"
 import { Block as BlockProto } from "src/lib/proto"
 
-import ChatMessage, { Props as ChatMessageProps } from "./ChatMessage"
+import ChatMessage, { ChatMessageProps } from "./ChatMessage"
+
+import "@testing-library/jest-dom"
 
 const getProps = (
-  elementProps: Partial<ChatMessageProps> = {}
+  elementProps: Partial<BlockProto.ChatMessage> = {}
 ): ChatMessageProps => ({
   element: BlockProto.ChatMessage.create({
     label: "user",
@@ -29,14 +31,87 @@ const getProps = (
     avatar: "user",
     ...elementProps,
   }),
-  children: <div />,
 })
 
-describe("Chat message container", () => {
+describe("ChatMessage", () => {
   it("renders without crashing", () => {
     const props = getProps()
     const rtlResults = render(<ChatMessage {...props} />)
     expect(rtlResults).toBeDefined()
   })
-  // TODO(lukasmasuch): Implement tests
+
+  it("renders message children content", () => {
+    const props = getProps()
+    const { getByLabelText } = render(
+      <ChatMessage {...props}>Hello, world!</ChatMessage>
+    )
+    expect(getByLabelText("Chat message from user").textContent).toBe(
+      "Hello, world!"
+    )
+  })
+
+  it("renders with an emoji avatar", () => {
+    const props = getProps({
+      avatar: "😃",
+      avatarType: BlockProto.ChatMessage.AvatarType.EMOJI,
+    })
+    const rtlResults = render(<ChatMessage {...props} />)
+    expect(rtlResults.getByText("😃")).toBeTruthy()
+  })
+
+  it("renders with an image avatar", () => {
+    const props = getProps({
+      avatar: "http://example.com/avatar.jpg",
+      avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
+    })
+    const { container } = render(<ChatMessage {...props} />)
+    const images = container.getElementsByTagName("img")
+    expect(images.length).toEqual(1)
+    expect(images[0].src).toBe("http://example.com/avatar.jpg")
+  })
+
+  it("renders with a label character as fallback", () => {
+    const props = getProps({
+      avatar: undefined,
+      avatarType: undefined,
+      label: "test",
+    })
+    const { getByText } = render(<ChatMessage {...props} />)
+    expect(getByText("T")).toBeTruthy()
+  })
+
+  it("renders with a 'user' icon avatar", () => {
+    const props = getProps({
+      avatar: "user",
+      avatarType: BlockProto.ChatMessage.AvatarType.ICON,
+      label: "foo",
+    })
+    const { container } = render(<ChatMessage {...props} />)
+
+    const svgs = container.getElementsByTagName("svg")
+    expect(svgs.length).toEqual(1)
+  })
+
+  it("renders with a 'assistant' icon avatar", () => {
+    const props = getProps({
+      avatar: "assistant",
+      avatarType: BlockProto.ChatMessage.AvatarType.ICON,
+      label: "foo",
+    })
+    const { container } = render(<ChatMessage {...props} />)
+
+    const svgs = container.getElementsByTagName("svg")
+    expect(svgs.length).toEqual(1)
+  })
+
+  it("renders with a grey background when background prop is 'grey'", () => {
+    const props = getProps({
+      background: "grey",
+    })
+    const { container } = render(<ChatMessage {...props} />)
+    const messageContainer = container.firstChild
+    expect(messageContainer).toHaveStyle(
+      "background-color: rgba(240, 242, 246, 0.5)"
+    )
+  })
 })

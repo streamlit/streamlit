@@ -48,25 +48,7 @@ export const StyledMessageContent = styled.div(({ theme }) => ({
   flexGrow: 1,
 }))
 
-export const StyledAvatarEmoji = styled.div(({ theme }) => {
-  const lightTheme = hasLightBackgroundColor(theme)
-  return {
-    display: "flex",
-    border: `1px solid ${
-      lightTheme ? theme.colors.gray40 : theme.colors.gray85
-    }`,
-    backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
-    lineHeight: "1",
-    fontSize: theme.fontSizes.md,
-    width: "2rem",
-    height: "2rem",
-    borderRadius: theme.radii.lg,
-    alignItems: "center",
-    justifyContent: "center",
-  }
-})
-
-export const StyledAvatarInitial = styled.div(({ theme }) => {
+export const StyledAvatarBackground = styled.div(({ theme }) => {
   const lightTheme = hasLightBackgroundColor(theme)
   return {
     display: "flex",
