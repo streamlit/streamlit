@@ -46,6 +46,7 @@ from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.button import ButtonMixin
 from streamlit.elements.camera_input import CameraInputMixin
+from streamlit.elements.chat import ChatMixin
 from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.color_picker import ColorPickerMixin
@@ -156,6 +157,7 @@ class DeltaGenerator(
     BokehMixin,
     ButtonMixin,
     CameraInputMixin,
+    ChatMixin,
     CheckboxMixin,
     CodeMixin,
     ColorPickerMixin,

@@ -16,31 +16,30 @@
 
 import styled from "@emotion/styled"
 import { hasLightBackgroundColor } from "src/lib/theme"
+import { transparentize } from "color2k"
 
 export interface StyledChatMessageContainerProps {
-  background: string
+  background: boolean
 }
 
 export const StyledChatMessageContainer =
   styled.div<StyledChatMessageContainerProps>(({ theme, background }) => {
     const lightTheme = hasLightBackgroundColor(theme)
-    const messageBackground =
-      background === "grey"
-        ? {
-            backgroundColor: lightTheme
-              ? theme.colors.gray10
-              : theme.colors.gray90,
-          }
-        : {}
+    const messageBackground = background
+      ? {
+          backgroundColor: lightTheme
+            ? transparentize(theme.colors.gray20, 0.5)
+            : transparentize(theme.colors.gray90, 0.5),
+        }
+      : {}
 
     return {
       display: "flex",
       alignItems: "flex-start",
       gap: theme.spacing.sm,
-      padding: theme.spacing.md,
-      paddingTop: theme.spacing.md,
-      paddingRight: background ? theme.spacing.md : 0,
-      borderRadius: theme.radii.md,
+      padding: theme.spacing.lg,
+      paddingRight: background ? theme.spacing.lg : 0,
+      borderRadius: theme.radii.lg,
       ...messageBackground,
     }
   })
@@ -49,24 +48,23 @@ export const StyledMessageContent = styled.div(({ theme }) => ({
   color: theme.colors.bodyText,
   margin: "auto",
   flexGrow: 1,
-  // paddingRight: "1rem",
 }))
 
 export const StyledAvatarEmoji = styled.div(({ theme }) => {
   const lightTheme = hasLightBackgroundColor(theme)
   return {
     display: "flex",
+    border: `1px solid ${
+      lightTheme ? theme.colors.gray40 : theme.colors.gray85
+    }`,
     backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
     lineHeight: "1",
     fontSize: theme.fontSizes.md,
     width: "2rem",
     height: "2rem",
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.lg,
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: lightTheme
-      ? "0px 1px 3px rgba(25, 30, 36, 0.15), 0px 4px 8px rgba(25, 30, 36, 0.05)"
-      : "0px 1px 3px rgba(90, 90, 90, 0.75), 0px 4px 8px rgba(47, 47, 47, 0.01)",
   }
 })
 
@@ -74,26 +72,28 @@ export interface StyledAvatarIconProps {
   background: string
 }
 
-export const StyledAvatarIcon = styled(
-  StyledAvatarEmoji
-)<StyledAvatarIconProps>(({ theme, background }) => ({
-  backgroundColor: background,
-  color: theme.colors.white,
-  boxShadow: "none",
-}))
+export const StyledAvatarIcon = styled.div<StyledAvatarIconProps>(
+  ({ theme, background }) => {
+    const lightTheme = hasLightBackgroundColor(theme)
+    return {
+      display: "flex",
+      width: "2rem",
+      height: "2rem",
+      borderRadius: theme.radii.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: background,
+      color: lightTheme ? theme.colors.white : theme.colors.gray100,
+    }
+  }
+)
 
 export const StyledAvatarImage = styled.img(({ theme }) => {
-  const lightTheme = hasLightBackgroundColor(theme)
   return {
-    backgroundColor: lightTheme ? theme.colors.white : theme.colors.gray100,
     width: "2rem",
     height: "2rem",
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.lg,
     objectFit: "cover",
     display: "flex",
-    // TODO(lukasmasuch): Should images also have a drop shadow?
-    // boxShadow: lightTheme
-    //   ? "0px 1px 3px rgba(25, 30, 36, 0.15), 0px 4px 8px rgba(25, 30, 36, 0.05)"
-    //   : "0px 1px 3px rgba(90, 90, 90, 0.75), 0px 4px 8px rgba(47, 47, 47, 0.01)",
   }
 })

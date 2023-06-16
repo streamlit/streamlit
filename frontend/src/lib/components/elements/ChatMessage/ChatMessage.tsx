@@ -54,7 +54,7 @@ function ChatMessage({ element, children }: Props): ReactElement {
       )
     } else {
       avatarElement = (
-        <StyledAvatarIcon background={theme.colors.blue60}>
+        <StyledAvatarIcon background={theme.colors.orange60}>
           <Icon content={SmartToy} size="lg" />
         </StyledAvatarIcon>
       )
@@ -62,7 +62,7 @@ function ChatMessage({ element, children }: Props): ReactElement {
   }
 
   return (
-    <StyledChatMessageContainer background={background}>
+    <StyledChatMessageContainer background={background === "grey"}>
       {avatarElement}
       <StyledMessageContent>{children}</StyledMessageContent>
     </StyledChatMessageContainer>
