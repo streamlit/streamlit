@@ -137,9 +137,9 @@ class HashTest(unittest.TestCase):
         ]
     )
     def test_pandas_timestamp(self, tz_info):
-        timestamp1 = pandas.Timestamp(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
-        timestamp1_copy = pandas.Timestamp(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
-        timestamp2 = pandas.Timestamp(2011, 12, 21, 15, 45, 55, tzinfo=tz_info)
+        timestamp1 = pandas.Timestamp(2007, 12, 23, 15, 45, 55, tz=tz_info)
+        timestamp1_copy = pandas.Timestamp(2007, 12, 23, 15, 45, 55, tz=tz_info)
+        timestamp2 = pandas.Timestamp(2011, 12, 21, 15, 45, 55, tz=tz_info)
 
         self.assertEqual(get_hash(timestamp1), get_hash(timestamp1_copy))
         self.assertNotEqual(id(timestamp1), id(timestamp1_copy))
