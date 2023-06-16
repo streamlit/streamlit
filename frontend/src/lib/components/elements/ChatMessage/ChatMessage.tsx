@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useMemo, ReactElement } from "react"
+import React, { ReactElement } from "react"
 import { Face, SmartToy } from "@emotion-icons/material-outlined"
 
 import { Block as BlockProto } from "src/lib/proto"
@@ -30,7 +30,6 @@ import {
   StyledAvatarIcon,
   StyledAvatarBackground,
 } from "./styled-components"
-import { notNullOrUndefined } from "src/lib/util/utils"
 
 interface ChatMessageAvatarProps {
   label: string
