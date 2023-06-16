@@ -114,4 +114,14 @@ describe("ChatMessage", () => {
       "background-color: rgba(240, 242, 246, 0.5)"
     )
   })
+
+  it("sets an aria label on the chat message", () => {
+    const props = getProps()
+    const { getByTestId } = render(<ChatMessage {...props} />)
+
+    const chatMessageContent = getByTestId("stChatMessageContent")
+    expect(chatMessageContent.getAttribute("aria-label")).toEqual(
+      "Chat message from user"
+    )
+  })
 })

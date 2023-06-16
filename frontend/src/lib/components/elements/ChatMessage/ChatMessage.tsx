@@ -83,14 +83,20 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const { avatar, avatarType, background, label } = element
 
   return (
-    <StyledChatMessageContainer background={background === "grey"}>
+    <StyledChatMessageContainer
+      className="stChatMessage"
+      background={background === "grey"}
+    >
       <ChatMessageAvatar
         label={label}
         avatar={avatar}
         avatarType={avatarType}
         data-testid="stChatMessageAvatar"
       />
-      <StyledMessageContent aria-label={`Chat message from ${label}`}>
+      <StyledMessageContent
+        data-testid="stChatMessageContent"
+        aria-label={`Chat message from ${label}`}
+      >
         {children}
       </StyledMessageContent>
     </StyledChatMessageContainer>
