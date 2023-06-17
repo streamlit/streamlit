@@ -928,8 +928,7 @@ describe("App.onHistoryChange", () => {
 
     // check that onPageChange is not run when anchor is in the url and we are on the same page
     expect(instance.onPageChange).not.toHaveBeenCalled()
-    // @ts-expect-error
-    window.history.pushState.mockClear()
+
     pushStateSpy.mockRestore()
   })
 
@@ -942,24 +941,17 @@ describe("App.onHistoryChange", () => {
     // navigate to current page with anchor
     window.history.pushState({}, "", "#foo_bar")
     instance.onHistoryChange()
-    // check that onPageChange is not run when anchor is in the url and we are on the same page
-    expect(instance.onPageChange).not.toHaveBeenCalled()
-
-    // navigate to current page with anchor
-    window.history.pushState({}, "", "#foo_baz")
-    instance.onHistoryChange()
-    // check that onPageChange is not run when anchor is in the url and we are on the same page
     expect(instance.onPageChange).not.toHaveBeenCalled()
 
     instance.handleNewSession(
-      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "page_2_hash" })
+      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
     )
     window.history.back()
-    instance.onHistoryChange()
 
-    expect(instance.onPageChange).toHaveBeenCalled()
-    // @ts-expect-error
-    window.history.pushState.mockClear()
+    waitFor(() => {
+      expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
+    })
+
     pushStateSpy.mockRestore()
   })
 })

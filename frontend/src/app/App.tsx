@@ -926,7 +926,7 @@ export class App extends PureComponent<Props, State> {
         document.location.pathname.endsWith("/" + appPage.pageName)
       ) ?? this.state.appPages[0]
     // do not cause a rerun when an anchor is clicked and we aren't changing pages
-    const hasAnchor = document.location.toString().lastIndexOf("#") !== -1
+    const hasAnchor = document.location.toString().includes("#")
     const isSamePage =
       targetAppPage?.pageScriptHash === this.state.currentPageScriptHash
     if (targetAppPage == null || (hasAnchor && isSamePage)) {
