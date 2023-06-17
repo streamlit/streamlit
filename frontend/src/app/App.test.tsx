@@ -921,7 +921,6 @@ describe("App.onHistoryChange", () => {
   it("doesn't rerun when we are on the same page and the url contains an anchor", () => {
     const pushStateSpy = jest.spyOn(window.history, "pushState")
 
-    const instance = wrapper.instance() as App
     window.history.pushState({}, "", "#foo_bar")
     jest.spyOn(instance, "onPageChange")
     instance.onHistoryChange()
@@ -932,10 +931,9 @@ describe("App.onHistoryChange", () => {
     pushStateSpy.mockRestore()
   })
 
-  it("does rerun when we are navigating to a different page and the url contains an anchor", () => {
+  it("does rerun when we are navigating to a different page and the last window history url contains an anchor", () => {
     const pushStateSpy = jest.spyOn(window.history, "pushState")
 
-    const instance = wrapper.instance() as App
     jest.spyOn(instance, "onPageChange")
 
     // navigate to current page with anchor
@@ -943,6 +941,7 @@ describe("App.onHistoryChange", () => {
     instance.onHistoryChange()
     expect(instance.onPageChange).not.toHaveBeenCalled()
 
+    // navigate to new page
     instance.handleNewSession(
       new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
     )
