@@ -25,7 +25,7 @@ gitdb==4.0.10
 GitPython==3.1.31
 graphviz==0.20.1
 greenlet==2.0.2
-hypothesis==6.78.3
+hypothesis==6.79.0
 identify==2.5.24
 idna==3.4
 importlib-metadata==6.6.0
@@ -47,7 +47,7 @@ mypy-extensions==1.0.0
 mypy-protobuf==3.3.0
 mysqlclient==2.1.1
 nodeenv==1.8.0
-numpy==1.24.3
+numpy==1.25.0
 opencv-python==4.7.0.72
 packaging==23.1
 pandas==2.0.2
@@ -55,7 +55,7 @@ parameterized==0.9.0
 pathspec==0.11.1
 Pillow==9.5.0
 pkginfo==1.9.6
-platformdirs==3.5.3
+platformdirs==3.6.0
 plotly==5.15.0
 pluggy==1.0.0
 pre-commit==3.3.3
