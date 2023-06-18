@@ -243,8 +243,9 @@ export class WidgetStateManager {
   }
 
   /**
-   * Sets the trigger value for the given widget ID to true, sends a rerunScript message
-   * to the server, and then immediately unsets the trigger value.
+   * Sets the string trigger value for the given widget ID to a string value,
+   * sends a rerunScript message to the server, and then immediately unsets the
+   * string trigger value to None/null.
    */
   public setStringTriggerValue(
     widget: WidgetInfo,
