@@ -64,28 +64,80 @@ class ChatMixin:
     @gather_metrics("chat_message")
     def chat_message(
         self,
-        label: Literal["user", "assistant"] | str,
+        participant: Literal["user", "assistant"] | str,
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
-        background: bool | None = None,
     ) -> "DeltaGenerator":
-        if label is None:
-            raise StreamlitAPIException("A label is required for a chat message")
+        r"""Insert a container that is styled like a chat message.
 
-        if avatar is None and label.lower() in [
+        To add elements to the returned container, you can use "with" notation
+        (preferred) or just call methods directly on the returned object. See
+         examples below.
+
+        Parameters
+        ----------
+        participant : "user", "assistant", or str
+            The name of the chat participant. Can be “user” or “assistant” to enable
+            preset styling and avatars. For accessibility reasons, you should not
+            use an empty string.
+        avatar : str, numpy.ndarray, or BytesIO
+            The avatar shown next to the message. Can be one of:
+
+            * A single emoji, e.g. “🧑‍💻”, “🤖”, “🦖”. Shortcodes are not supported.
+
+            * An image using one of the formats allowed for ``st.image``: path of a local
+            image file; URL to fetch the image from; array of shape (w,h) or (w,h,1)
+            for a monochrome image, (w,h,3) for a color image, or (w,h,4) for an RGBA image.
+
+        Returns
+        -------
+        Container
+            A single container that can hold multiple elements.
+
+        Examples
+        --------
+        You can use `with` notation to insert any element into an expander
+
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>>
+        >>> with st.chat_message("user"):
+        ...     st.write(\"Hello 👋\")
+        ...     st.line_chart(np.random.randn(30, 3))
+
+        .. output ::
+            https://doc-chat-message-user.streamlit.app/
+            height: 450px
+
+        Or you can just call methods directly in the returned objects:
+
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>>
+        >>> message = st.chat_message("assistant"):
+        >>> message.write(\"Hello human\")
+        >>> message.bar_chart(np.random.randn(30, 3))
+
+        .. output ::
+            https://doc-chat-message-assistant.streamlit.app/
+            height: 450px
+
+        """
+        if participant is None:
+            raise StreamlitAPIException("A participant is required for a chat message")
+
+        if avatar is None and participant.lower() in [
             DefinedLabels.USER,
             DefinedLabels.ASSISTANT,
         ]:
             # For selected labels, we are mapping the label to an avatar
-            avatar = label.lower()
+            avatar = participant.lower()
         avatar_type, converted_avatar = _process_avatar_input(avatar)
 
         message_container_proto = BlockProto.ChatMessage()
-        message_container_proto.label = label
+        message_container_proto.participant = participant
         message_container_proto.avatar = converted_avatar
         message_container_proto.avatar_type = avatar_type
-        if background or (background is None and label == DefinedLabels.USER):
-            message_container_proto.background = "grey"
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.chat_message.CopyFrom(message_container_proto)

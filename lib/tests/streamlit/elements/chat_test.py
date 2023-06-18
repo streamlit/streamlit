@@ -44,13 +44,12 @@ class ChatMessageTest(DeltaGeneratorTestCase):
 
         message_block = self.get_delta_from_queue()
 
-        self.assertEqual(message_block.add_block.chat_message.label, "user")
+        self.assertEqual(message_block.add_block.chat_message.participant, "user")
         self.assertEqual(message_block.add_block.chat_message.avatar, "user")
         self.assertEqual(
             message_block.add_block.chat_message.avatar_type,
             BlockProto.ChatMessage.AvatarType.ICON,
         )
-        self.assertEqual(message_block.add_block.chat_message.background, "grey")
 
     def test_assistant_message(self):
         """Test that the assistant message is correct."""
@@ -61,13 +60,12 @@ class ChatMessageTest(DeltaGeneratorTestCase):
 
         message_block = self.get_delta_from_queue()
 
-        self.assertEqual(message_block.add_block.chat_message.label, "assistant")
+        self.assertEqual(message_block.add_block.chat_message.participant, "assistant")
         self.assertEqual(message_block.add_block.chat_message.avatar, "assistant")
         self.assertEqual(
             message_block.add_block.chat_message.avatar_type,
             BlockProto.ChatMessage.AvatarType.ICON,
         )
-        self.assertEqual(message_block.add_block.chat_message.background, "")
 
     def test_emoji_avatar(self):
         """Test that it is possible to set an emoji as avatar."""
@@ -79,13 +77,12 @@ class ChatMessageTest(DeltaGeneratorTestCase):
 
         message_block = self.get_delta_from_queue()
 
-        self.assertEqual(message_block.add_block.chat_message.label, "user")
+        self.assertEqual(message_block.add_block.chat_message.participant, "user")
         self.assertEqual(message_block.add_block.chat_message.avatar, "👋")
         self.assertEqual(
             message_block.add_block.chat_message.avatar_type,
             BlockProto.ChatMessage.AvatarType.EMOJI,
         )
-        self.assertEqual(message_block.add_block.chat_message.background, "grey")
 
     def test_image_avatar(self):
         """Test that it is possible to set an image as avatar."""
@@ -99,7 +96,7 @@ class ChatMessageTest(DeltaGeneratorTestCase):
             pass
 
         message_block = self.get_delta_from_queue()
-        self.assertEqual(message_block.add_block.chat_message.label, "cat")
+        self.assertEqual(message_block.add_block.chat_message.participant, "cat")
         self.assertEqual(
             message_block.add_block.chat_message.avatar,
             "https://static.streamlit.io/examples/cat.jpg",
@@ -108,21 +105,3 @@ class ChatMessageTest(DeltaGeneratorTestCase):
             message_block.add_block.chat_message.avatar_type,
             BlockProto.ChatMessage.AvatarType.IMAGE,
         )
-        self.assertEqual(message_block.add_block.chat_message.background, "")
-
-    def test_setting_background(self):
-        """Test that it is possible to set the background color."""
-
-        message = st.chat_message("cat", background=True)
-
-        with message:
-            pass
-
-        message_block = self.get_delta_from_queue()
-        self.assertEqual(message_block.add_block.chat_message.label, "cat")
-        self.assertEqual(message_block.add_block.chat_message.avatar, "")
-        self.assertEqual(
-            message_block.add_block.chat_message.avatar_type,
-            BlockProto.ChatMessage.AvatarType.ICON,
-        )
-        self.assertEqual(message_block.add_block.chat_message.background, "grey")

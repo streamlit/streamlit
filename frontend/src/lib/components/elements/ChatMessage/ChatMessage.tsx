@@ -32,19 +32,19 @@ import {
 } from "./styled-components"
 
 interface ChatMessageAvatarProps {
-  label: string
+  participant: string
   avatar?: string
   avatarType?: BlockProto.ChatMessage.AvatarType
 }
 
 function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
-  const { avatar, avatarType, label } = props
+  const { avatar, avatarType, participant } = props
   const theme: EmotionTheme = useTheme()
 
   if (avatar) {
     switch (avatarType) {
       case BlockProto.ChatMessage.AvatarType.IMAGE:
-        return <StyledAvatarImage src={avatar} alt={`${label} avatar`} />
+        return <StyledAvatarImage src={avatar} alt={`${participant} avatar`} />
       case BlockProto.ChatMessage.AvatarType.EMOJI:
         return <StyledAvatarBackground>{avatar}</StyledAvatarBackground>
       case BlockProto.ChatMessage.AvatarType.ICON:
@@ -64,10 +64,10 @@ function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
     }
   }
 
-  // Fallback to first character of the label if nothing else can be matched:
+  // Fallback to first character of the participant label if nothing else can be matched:
   return (
     <StyledAvatarBackground>
-      {label ? label.charAt(0).toUpperCase() : "🧑‍💻"}
+      {participant ? participant.charAt(0).toUpperCase() : "🧑‍💻"}
     </StyledAvatarBackground>
   )
 }
@@ -80,22 +80,22 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   element,
   children,
 }): ReactElement => {
-  const { avatar, avatarType, background, label } = element
+  const { avatar, avatarType, participant } = element
 
   return (
     <StyledChatMessageContainer
       className="stChatMessage"
-      background={background === "grey"}
+      background={participant.toLowerCase() === "user"}
     >
       <ChatMessageAvatar
-        label={label}
+        participant={participant}
         avatar={avatar}
         avatarType={avatarType}
         data-testid="stChatMessageAvatar"
       />
       <StyledMessageContent
         data-testid="stChatMessageContent"
-        aria-label={`Chat message from ${label}`}
+        aria-label={`Chat message from ${participant}`}
       >
         {children}
       </StyledMessageContent>

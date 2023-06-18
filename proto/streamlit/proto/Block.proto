@@ -66,10 +66,9 @@ message Block {
       ICON = 2;
     }
 
-    string label = 1;
+    string participant = 1;
     string avatar = 2;
-    string background = 3;
-    AvatarType avatar_type = 4;
+    AvatarType avatar_type = 3;
   }
 
   // Next ID: 10
