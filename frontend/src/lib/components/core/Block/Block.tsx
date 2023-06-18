@@ -54,13 +54,13 @@ interface BlockPropsWithWidth extends BaseBlockProps {
 const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   let { node } = props
 
-  if (node.deltaBlock.chatMessage && props.scriptRunId === node.scriptRunId) {
-    // TODO(lukasmasuch): This is just a quickfix to clear out all stale nodes
-    // from chat messages. We only apply this to chat message containers that
-    // already got updated (props.scriptRunId === node.scriptRunId). To prevent
-    // strange effects of disappearing elements during reruns.
-    node = node.clearStaleNodes(node.scriptRunId) as BlockNode
-  }
+  // if (node.deltaBlock.chatMessage && props.scriptRunId === node.scriptRunId) {
+  //   // TODO(lukasmasuch): This is just a quickfix to clear out all stale nodes
+  //   // from chat messages. We only apply this to chat message containers that
+  //   // already got updated (props.scriptRunId === node.scriptRunId). To prevent
+  //   // strange effects of disappearing elements during reruns.
+  //   node = node.clearStaleNodes(node.scriptRunId) as BlockNode
+  // }
 
   // Allow columns to create the specified space regardless of empty state
   if (node.isEmpty && !node.deltaBlock.column) {

@@ -82,4 +82,7 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
                 display_message = False
         with legacy_caching.suppress_cached_st_function_warning():
             with caching.suppress_cached_st_function_warning():
-                message.empty()
+                # TODO(lukasmasuch): Set the spinner element back to an empty container
+                # to have it removed from the delta path. This prevent the stale element
+                # issue in relation with the spinner element.
+                message.container()
