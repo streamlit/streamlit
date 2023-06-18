@@ -243,7 +243,7 @@ class MultiSelectMixin:
         >>> st.write('You selected:', options)
 
         .. output::
-           https://doc-multiselect.streamlitapp.com/
+           https://doc-multiselect.streamlit.app/
            height: 420px
 
         """
