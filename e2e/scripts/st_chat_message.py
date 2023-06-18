@@ -56,9 +56,7 @@ with st.chat_message("dog", avatar="https://static.streamlit.io/examples/dog.jpg
     st.write("Woof woof! I'm a dog and I like charts:")
     st.line_chart(df, use_container_width=True)
 
-cat = st.chat_message(
-    "cat", avatar="https://static.streamlit.io/examples/cat.jpg", background=True
-)
+cat = st.chat_message("cat", avatar="https://static.streamlit.io/examples/cat.jpg")
 cat.write("I'm a cat and I like this dataset:")
 cat.dataframe(df, use_container_width=True)
 cat.text_input("What's your name?")
