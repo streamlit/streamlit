@@ -1,4 +1,4 @@
-/**
+/**!
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,27 +14,19 @@
  * limitations under the License.
  */
 
-const sidebar = 100
-const menuButton = sidebar + 10
-const balloons = 1000000
-const header = balloons - 10
-const chatInput = sidebar - 1
-const sidebarMobile = balloons - 5
-const popupMenu = balloons + 40
-const fullscreenWrapper = balloons + 50
-const tablePortal = fullscreenWrapper + 60
+syntax = "proto3";
 
-export const zIndices = {
-  hide: -1,
-  auto: "auto",
-  base: 0,
-  sidebar,
-  menuButton,
-  balloons,
-  header,
-  sidebarMobile,
-  popupMenu,
-  fullscreenWrapper,
-  tablePortal,
-  chatInput,
+message ChatInput {
+enum Position {
+  BOTTOM = 0;
+}
+
+  string id = 1;
+  string placeholder = 2;
+  uint32 max_chars = 3;
+  bool disabled = 4;
+  string value = 5;
+  bool set_value = 6;
+  string default = 7;
+  Position position = 8;
 }

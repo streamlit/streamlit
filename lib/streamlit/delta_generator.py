@@ -46,6 +46,7 @@ from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.button import ButtonMixin
 from streamlit.elements.camera_input import CameraInputMixin
+from streamlit.elements.chat import ChatMixin
 from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.color_picker import ColorPickerMixin
@@ -156,6 +157,7 @@ class DeltaGenerator(
     BokehMixin,
     ButtonMixin,
     CameraInputMixin,
+    ChatMixin,
     CheckboxMixin,
     CodeMixin,
     ColorPickerMixin,
@@ -278,7 +280,7 @@ class DeltaGenerator(
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
-            for (name, func) in mixin.__dict__.items():
+            for name, func in mixin.__dict__.items():
                 if callable(func):
                     func.__module__ = self.__module__
 
@@ -574,7 +576,9 @@ class DeltaGenerator(
 
     def _block(
         self,
-        block_proto: Block_pb2.Block = Block_pb2.Block(),
+        block_proto: Block_pb2.Block = Block_pb2.Block(
+            vertical=Block_pb2.Block.Vertical()
+        ),
     ) -> DeltaGenerator:
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg

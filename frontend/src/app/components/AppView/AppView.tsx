@@ -39,6 +39,7 @@ import {
   StyledIFrameResizerAnchor,
   StyledAppViewBlockSpacer,
 } from "./styled-components"
+import ScrollToBottomContainer from "./ScrollToBottomContainer"
 
 export interface AppViewProps {
   elements: AppRoot
@@ -96,6 +97,14 @@ function AppView(props: AppViewProps): ReactElement {
     endpoints,
   } = props
 
+  const containsChatInput =
+    Array.from(elements.main.getElements()).find(element => {
+      return element.type === "chatInput"
+    }) !== undefined
+  const Component = containsChatInput
+    ? ScrollToBottomContainer
+    : StyledAppViewMain
+
   React.useEffect(() => {
     const listener = (): void => {
       sendMessageToHost({
@@ -120,6 +129,7 @@ function AppView(props: AppViewProps): ReactElement {
   const renderBlock = (node: BlockNode): ReactElement => (
     <StyledAppViewBlockContainer
       className="block-container"
+      data-testid="block-container"
       isWideMode={wideMode}
       showPadding={showPadding}
       addPaddingForHeader={showToolbar || showColoredLine}
@@ -164,7 +174,7 @@ function AppView(props: AppViewProps): ReactElement {
           {renderBlock(elements.sidebar)}
         </ThemedSidebar>
       )}
-      <StyledAppViewMain
+      <Component
         tabIndex={0}
         isEmbedded={embedded}
         disableScrolling={disableScrolling}
@@ -179,7 +189,9 @@ function AppView(props: AppViewProps): ReactElement {
         />
         {/* Spacer fills up dead space to ensure the footer remains at the
         bottom of the page in larger views */}
-        {(!embedded || showFooter) && <StyledAppViewBlockSpacer />}
+        {(!embedded || showFooter) && (
+          <StyledAppViewBlockSpacer data-testid="AppViewBlockSpacer" />
+        )}
         {(!embedded || showFooter) && (
           <StyledAppViewFooter isWideMode={wideMode}>
             Made with{" "}
@@ -188,7 +200,7 @@ function AppView(props: AppViewProps): ReactElement {
             </StyledAppViewFooterLink>
           </StyledAppViewFooter>
         )}
-      </StyledAppViewMain>
+      </Component>
     </StyledAppViewContainer>
   )
 }
