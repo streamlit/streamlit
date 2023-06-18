@@ -23,6 +23,24 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import is_emoji
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Optional, cast
+
+from streamlit import runtime
+from streamlit.elements.utils import check_callback_rules, check_session_state_rules
+from streamlit.errors import StreamlitAPIException
+from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
+from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
+from streamlit.proto.RootContainer_pb2 import RootContainer
+from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import (
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+    register_widget,
+)
+from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -70,6 +88,23 @@ def _process_avatar_input(
             output_format="auto",
             image_id="",
         )
+
+
+DISALLOWED_CONTAINERS_ERROR_TEXT = "`st.chat_input()` can't be used inside an `st.expander`, `st.form`, `st.tabs`, `st.columns`, or `st.sidebar`."
+
+
+@dataclass
+class ChatInputSerde:
+    def deserialize(
+        self, ui_value: Optional[StringTriggerValueProto], widget_id: str = ""
+    ) -> str | None:
+        if ui_value is None or not ui_value.HasField("data"):
+            return None
+
+        return ui_value.data
+
+    def serialize(self, v: str | None) -> StringTriggerValueProto:
+        return StringTriggerValueProto(data=v)
 
 
 class ChatMixin:
@@ -159,6 +194,112 @@ class ChatMixin:
         block_proto.chat_message.CopyFrom(message_container_proto)
 
         return self.dg._block(block_proto=block_proto)
+
+    @gather_metrics("chat_input")
+    def chat_input(
+        self,
+        placeholder: str = "Your message",
+        *,
+        key: Key | None = None,
+        max_chars: int | None = None,
+        disabled: bool = False,
+        on_submit: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+    ) -> str | None:
+        r"""Display a chat input widget.
+
+        Parameters
+        ----------
+        placeholder : str
+            A placeholder text shown when the chat input is empty. Defaults to
+            "Your message". For accessibility reasons, you should not use an
+            empty string.
+        max_chars : int or None
+            The maximum number of characters that can be entered. If None
+            (default), there will be no maximum. Can be supplied by keyword only.
+        disabled : bool
+            Whether the chat input should be disabled. Defaults to False. Can
+            be supplied by keyword only.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget based on
+            its content. Multiple widgets of the same type may not share the same key.
+        on_submit : callable
+            An optional callback invoked when the chat input's value is submitted.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
+
+        Returns
+        -------
+        str or None
+            The current (non-empty) value of the text input widget on the last
+            run of the app, None otherwise.
+
+        Examples
+        --------
+
+        >>> import streamlit as st
+        >>>
+        >>> prompt = st.chat_input("Say something")
+        >>> if prompt:
+        ...     st.write(f\"User has sent the following prompt: {prompt}\")
+
+        """
+        # We default to an empty string here and disallow user choice intentionally
+        default = ""
+        key = to_key(key)
+        check_callback_rules(self.dg, on_submit)
+        check_session_state_rules(default_value=default, key=key, writes_allowed=False)
+
+        # We omit this check for scripts running outside streamlit, because
+        # they will have no script_run_ctx.
+        if runtime.exists():
+            if (
+                len(list(self.dg._active_dg._parent_block_types)) > 0
+                or self.dg._active_dg._root_container == RootContainer.SIDEBAR
+            ):
+                # TODO: This allows the user to create a chat_input inside a
+                # container but it still cannot be in other containers. This is
+                # a result of the Vertical field not being set in Blocks by
+                # default and seems like a "bug", but one that is not producing
+                # major issues. We should look into what's the correct behavior
+                # to implement.
+                raise StreamlitAPIException(DISALLOWED_CONTAINERS_ERROR_TEXT)
+
+        chat_input_proto = ChatInputProto()
+        chat_input_proto.placeholder = str(placeholder)
+
+        if max_chars is not None:
+            chat_input_proto.max_chars = max_chars
+
+        chat_input_proto.default = default
+        chat_input_proto.position = ChatInputProto.Position.BOTTOM
+
+        ctx = get_script_run_ctx()
+
+        serde = ChatInputSerde()
+        widget_state = register_widget(
+            "chat_input",
+            chat_input_proto,
+            user_key=key,
+            on_change_handler=on_submit,
+            args=args,
+            kwargs=kwargs,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
+            ctx=ctx,
+        )
+
+        chat_input_proto.disabled = disabled
+        if widget_state.value_changed and widget_state.value is not None:
+            chat_input_proto.value = widget_state.value
+            chat_input_proto.set_value = True
+
+        self.dg._enqueue("chat_input", chat_input_proto)
+        return widget_state.value if not widget_state.value_changed else None
 
     @property
     def dg(self) -> "DeltaGenerator":
