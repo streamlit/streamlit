@@ -232,18 +232,22 @@ def coalesce_widget_states(
         wstate.id: wstate for wstate in new_states.widgets
     }
 
+    trigger_value_types = [("trigger_value", False), ("string_trigger_value", None)]
     for old_state in old_states.widgets:
-        if old_state.WhichOneof("value") == "trigger_value" and old_state.trigger_value:
-
-            # Ensure the corresponding new_state is also a trigger;
-            # otherwise, a widget that was previously a button but no longer is
-            # could get a bad value.
-            new_trigger_val = states_by_id.get(old_state.id)
+        for trigger_value_type, unset_value in trigger_value_types:
             if (
-                new_trigger_val
-                and new_trigger_val.WhichOneof("value") == "trigger_value"
+                old_state.WhichOneof("value") == trigger_value_type
+                and old_state.trigger_value != unset_value
             ):
-                states_by_id[old_state.id] = old_state
+                # Ensure the corresponding new_state is also a trigger;
+                # otherwise, a widget that was previously a button but no longer is
+                # could get a bad value.
+                new_trigger_val = states_by_id.get(old_state.id)
+                if (
+                    new_trigger_val
+                    and new_trigger_val.WhichOneof("value") == trigger_value_type
+                ):
+                    states_by_id[old_state.id] = old_state
 
     coalesced = WidgetStates()
     coalesced.widgets.extend(states_by_id.values())
