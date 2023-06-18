@@ -21,7 +21,7 @@ describe("st.chat_message", () => {
   });
 
   it("shows tables correctly", () => {
-    cy.get(".stChatMessage").should("have.length", 6);
+    cy.get(".stChatMessage").should("have.length", 7);
 
     cy.get(".stChatMessage").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("chat_message-" + idx);
