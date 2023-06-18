@@ -48,5 +48,8 @@ message WidgetState {
     ArrowTable arrow_value = 11;
     bytes bytes_value = 12;
     FileUploaderState file_uploader_state_value = 13;
+    // String value that resets itself to empty after the script has been run.
+    // This is used for the chat_input widget.
+    StringTriggerValue string_trigger_value = 14;
   }
 }
