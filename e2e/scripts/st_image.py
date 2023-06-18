@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 from PIL import Image, ImageDraw
 
+import streamlit as st
+
 if TYPE_CHECKING:
     import numpy.typing as npt
 
@@ -51,8 +53,6 @@ def create_gif(size, frames=1):
 
     return data.getvalue()
 
-
-import streamlit as st
 
 img = np.repeat(0, 10000).reshape(100, 100)
 img800 = np.repeat(0, 640000).reshape(800, 800)
