@@ -15,12 +15,12 @@
  */
 
 import React from "react"
+import "@testing-library/jest-dom"
+
 import { render } from "src/lib/test_util"
 import { Block as BlockProto } from "src/lib/proto"
 
 import ChatMessage, { ChatMessageProps } from "./ChatMessage"
-
-import "@testing-library/jest-dom"
 
 const getProps = (
   elementProps: Partial<BlockProto.ChatMessage> = {}

@@ -15,12 +15,11 @@
  */
 
 import React, { ReactElement } from "react"
+import { useTheme } from "@emotion/react"
 import { Face, SmartToy } from "@emotion-icons/material-outlined"
 
 import { Block as BlockProto } from "src/lib/proto"
 import Icon from "src/lib/components/shared/Icon"
-import { useTheme } from "@emotion/react"
-
 import { EmotionTheme } from "src/lib/theme"
 
 import {

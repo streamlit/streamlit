@@ -15,8 +15,9 @@
  */
 
 import styled from "@emotion/styled"
-import { hasLightBackgroundColor } from "src/lib/theme"
 import { transparentize } from "color2k"
+
+import { hasLightBackgroundColor } from "src/lib/theme"
 
 export interface StyledChatMessageContainerProps {
   background: boolean
