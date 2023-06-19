@@ -38,7 +38,11 @@ import { useLayoutEffect, useMemo, useRef, useCallback } from "react"
  * is invoked again before the scheduled invocation, the scheduled
  * invocation is canceled and a new one is scheduled `ms` milliseconds
  * after the latest invocation.
-
+ *
+ * TODO: This has very similar but different behavior than our debounce function
+ * in utils.ts. This behavior ensures that the debounced function is called on
+ * some interval. Our other debounce function ensures that the function is
+ * delayed until the user stops calling it. We should probably unify these
  *
  * @returns A debounced version of the `fn` function.
  */
