@@ -25,10 +25,10 @@ gitdb==4.0.10
 GitPython==3.1.31
 graphviz==0.20.1
 greenlet==2.0.2
-hypothesis==6.79.0
+hypothesis==6.79.1
 identify==2.5.24
 idna==3.4
-importlib-metadata==6.6.0
+importlib-metadata==6.7.0
 iniconfig==2.0.0
 install==1.3.5
 jaraco.classes==3.2.3
@@ -57,7 +57,7 @@ Pillow==9.5.0
 pkginfo==1.9.6
 platformdirs==3.6.0
 plotly==5.15.0
-pluggy==1.0.0
+pluggy==1.1.0
 pre-commit==3.3.3
 protobuf==3.20.3
 psycopg2-binary==2.9.6
@@ -70,7 +70,7 @@ pydot==1.4.2
 Pygments==2.15.1
 Pympler==1.0.1
 pyodbc==4.0.39
-pyparsing==3.0.9
+pyparsing==3.1.0
 pyrsistent==0.19.3
 pyspark==3.4.0
 pytest==7.3.2
