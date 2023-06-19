@@ -93,7 +93,12 @@ jobs:
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Debug venv install
-        run: ls venv/lib/python3.7/site-packages/tests
+        run: |
+          ls venv
+          ls venv/lib
+          ls venv/lib/python3.7
+          ls venv/lib/python3.7/site-packages
+          ls venv/lib/python3.7/site-packages/tests
       - name: Run Python Tests
         run: make pytest
       - name: Run Integration Tests
