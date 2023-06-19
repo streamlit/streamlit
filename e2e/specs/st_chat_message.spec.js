@@ -18,13 +18,15 @@ describe("st.chat_message", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
     cy.prepForElementSnapshots();
+    // Make the toolbar disappear to not interfere with snapshots (in wide mode)
+    cy.get("[data-testid='stToolbar']").invoke("css", "opacity", 0);
   });
 
-  it("shows chat message correctly", () => {
+  it("renders chat messages correctly", () => {
     cy.get(".stChatMessage").should("have.length", 7);
 
     cy.get(".stChatMessage").each((el, idx) => {
-      return cy.wrap(el).matchImageSnapshot("chat_message-" + idx);
+      return cy.wrap(el).matchThemedSnapshots("chat_message-" + idx);
     });
   });
 });
