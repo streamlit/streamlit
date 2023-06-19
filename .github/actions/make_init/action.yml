@@ -54,16 +54,8 @@ runs:
       run: |
         echo "./vendor/protoc-3.20.3-linux-x86_64/bin" >> $GITHUB_PATH
       shell: bash --login -eo pipefail {0}
-    # Combine hashes of the Python interpreter, Pipfile, and today's
+    # Combine hashes of the Python interpreter, requirements files, and today's
     # date into a file whose hash will key the Python virtualenv.
-    #
-    # This means that our virtualenv cache will expire each day. We do
-    # this because we are not using a lockfile to pin dependencies -
-    # instead, each time Github Actions rebuilds the virtualenv, it uses the
-    # latest compatible version of each dependency (which mirrors what
-    # happens when a user installs Streamlit locally). So we expire our
-    # virtualenv cache daily to prevent it from getting far out of sync
-    # with what a fresh Streamlit installation would look like.
     - if: inputs.use_cached_venv == 'true'
       name: Create Python environment cache key
       run: |

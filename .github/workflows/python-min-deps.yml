@@ -92,6 +92,8 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+      - name: Debug venv install
+        run: ls venv/lib/python3.7/site-packages/tests
       - name: Run Python Tests
         run: make pytest
       - name: Run Integration Tests
