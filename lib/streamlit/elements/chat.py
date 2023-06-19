@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-class DefinedLabels(str, Enum):
+class PresetLabels(str, Enum):
     USER = "user"
     ASSISTANT = "assistant"
 
@@ -41,8 +41,8 @@ def _process_avatar_input(
     if avatar is None:
         return AvatarType.ICON, ""
     elif isinstance(avatar, str) and avatar in [
-        DefinedLabels.USER,
-        DefinedLabels.ASSISTANT,
+        PresetLabels.USER,
+        PresetLabels.ASSISTANT,
     ]:
         return AvatarType.ICON, avatar
     elif isinstance(avatar, str) and is_emoji(avatar):
@@ -126,10 +126,14 @@ class ChatMixin:
         if participant is None:
             raise StreamlitAPIException("A participant is required for a chat message")
 
-        if avatar is None and participant.lower() in [
-            DefinedLabels.USER,
-            DefinedLabels.ASSISTANT,
-        ]:
+        if avatar is None and (
+            participant.lower()
+            in [
+                PresetLabels.USER,
+                PresetLabels.ASSISTANT,
+            ]
+            or is_emoji(participant)
+        ):
             # For selected labels, we are mapping the label to an avatar
             avatar = participant.lower()
         avatar_type, converted_avatar = _process_avatar_input(avatar)
