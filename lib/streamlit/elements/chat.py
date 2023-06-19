@@ -36,6 +36,18 @@ class PresetLabels(str, Enum):
 def _process_avatar_input(
     avatar: str | AtomicImage | None = None,
 ) -> Tuple[BlockProto.ChatMessage.AvatarType.ValueType, str]:
+    """Detects the avatar type and prepares the avatar data for the frontend.
+
+    Parameters
+    ----------
+    avatar :
+        The avatar that was provided by the user.
+
+    Returns
+    -------
+    Tuple[AvatarType, str]
+        The detected avatar type and the prepared avatar data.
+    """
     AvatarType = BlockProto.ChatMessage.AvatarType
 
     if avatar is None:
