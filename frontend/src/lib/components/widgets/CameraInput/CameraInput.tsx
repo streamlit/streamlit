@@ -464,6 +464,10 @@ class CameraInput extends React.PureComponent<Props, State> {
       file.status.cancelToken.cancel()
     }
 
+    if (file.status.type === "uploaded" && file.status.deleteFileURL) {
+      this.props.uploadClient.deleteFile(file.status.deleteFileURL)
+    }
+
     this.removeFile(fileId)
   }
 
