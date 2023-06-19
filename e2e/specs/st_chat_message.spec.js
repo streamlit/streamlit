@@ -20,7 +20,7 @@ describe("st.chat_message", () => {
     cy.prepForElementSnapshots();
   });
 
-  it("shows tables correctly", () => {
+  it("shows chat message correctly", () => {
     cy.get(".stChatMessage").should("have.length", 7);
 
     cy.get(".stChatMessage").each((el, idx) => {
