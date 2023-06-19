@@ -106,7 +106,7 @@ export const StyledFloatingChatInputContainer = styled.div(({ theme }) => ({
   alignItems: "center",
   paddingBottom: "70px",
   paddingTop: theme.spacing.lg,
-  width: "100vw",
+  width: "100%",
   backgroundColor: theme.colors.bgColor,
   zIndex: theme.zIndices.chatInput,
 }))
