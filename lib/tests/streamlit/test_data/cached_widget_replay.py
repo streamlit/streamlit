@@ -17,7 +17,7 @@ import streamlit as st
 st.button("click to rerun")
 
 
-@st.cache_resource(experimental_allow_widgets=True, show_spinner=False)
+@st.cache_data(experimental_allow_widgets=True, show_spinner=False)
 def foo(i):
     options = ["foo", "bar", "baz", "qux"]
     r = st.radio("radio", options, index=i)
