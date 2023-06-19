@@ -15,7 +15,6 @@
  */
 
 import {
-  useCallback,
   useRef,
   useState,
   MutableRefObject,
