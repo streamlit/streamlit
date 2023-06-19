@@ -26,3 +26,7 @@ class SpinnerTest(DeltaGeneratorTestCase):
             time.sleep(0.2)
             el = self.get_delta_from_queue().new_element
             self.assertEqual(el.spinner.text, "some text")
+        # Check that the element gets reset to an empty container block:
+        last_delta = self.get_delta_from_queue()
+        self.assertTrue(last_delta.HasField("add_block"))
+        self.assertFalse(last_delta.add_block.allow_empty)
