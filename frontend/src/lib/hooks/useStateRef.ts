@@ -58,23 +58,6 @@ export default function useStateRef<T>(
 ): [T, Dispatch<SetStateAction<T>>, MutableRefObject<T>] {
   const [state, setState] = useState<T>(initialState)
   const ref = useRef<T>(initialState)
-  const setValue = useCallback(
-    nextValue => {
-      if (typeof nextValue === "function") {
-        setValue((state: T): T => {
-          nextValue = nextValue(state)
-          ref.current = nextValue
-
-          return nextValue
-        })
-      } else {
-        ref.current = nextValue
-
-        setValue(nextValue)
-      }
-    },
-    [ref]
-  )
   ref.current = state
 
   return [state, setState, ref]

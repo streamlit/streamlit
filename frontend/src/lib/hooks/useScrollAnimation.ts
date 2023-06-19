@@ -16,6 +16,15 @@
 
 import { useCallback, useLayoutEffect, useRef } from "react"
 
+/**
+ * Computes next step in a square-root based animation sequence. Step size is
+ * square root of absolute difference between current and target values. Can be
+ * used as a stepper function for other higher-level stepping functions.
+ *
+ * @param {number} current - Current value in animation sequence.
+ * @param {number} to - Target value of animation sequence.
+ * @returns {number} Next value in animation sequence.
+ */
 function squareStepper(current: number, to: number): number {
   const sign = Math.sign(to - current)
   const step = Math.sqrt(Math.abs(to - current))
@@ -28,6 +37,17 @@ function squareStepper(current: number, to: number): number {
   return Math.max(to, next)
 }
 
+/**
+ * Computes sequence of steps in animation by repeatedly applying a stepper
+ * function.
+ *
+ * @param {number} from - Initial value in animation sequence.
+ * @param {number} to - Target value of animation sequence.
+ * @param {function} stepper - Function computing next value given current
+ *                             and target values.
+ * @param {number} index - Number of steps to compute.
+ * @returns {number} Value at given index in animation sequence.
+ */
 function step(
   from: number,
   to: number,
@@ -43,6 +63,20 @@ function step(
   return next
 }
 
+/**
+ * Handles scroll animation for a given target HTMLElement. Uses a square-root
+ * based stepping function to compute scroll animation. Stops animation if
+ * target's scrollTop has reached scrollHeight or if user interacts with target
+ * (mousedown or mousewheel). Can also be cancelled by caller.
+ *
+ * @export
+ * @param {HTMLElement | null} target - HTML element to animate scroll of. If
+ *                                      null, no animation is performed.
+ * @param {() => void} onEnd - Callback when animation ends or is cancelled.
+ * @param {boolean} isAnimating - Boolean to start or stop animation. If false,
+ *                                no animation is performed.
+ * @returns {void}
+ */
 export default function useScrollAnimation(
   target: HTMLElement | null,
   onEnd: () => void,
