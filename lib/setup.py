@@ -30,7 +30,7 @@ NAME = "streamlit"
 # - Include relevant lower bound for any features we use from our dependencies
 # - And include an upper bound that's < NEXT_MAJOR_VERSION
 INSTALL_REQUIRES = [
-    "altair>=4.0, <6",
+    "altair>=4.2, <6",
     "blinker>=1.0.0, <2",
     "cachetools>=4.0, <6",
     "click>=7.0, <9",
@@ -70,7 +70,7 @@ INSTALL_REQUIRES = [
 # `pip install streamlit` or `conda install -c conda-forge streamlit`)
 SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
     "gitpython>=3.0.7, <4, !=3.1.19",
-    "pydeck>=0.2, <1",
+    "pydeck>=0.8, <1",
     # Tornado 6.0.3 was the current Tornado version when Python 3.8, our earliest supported Python version,
     # was released (Oct 14, 2019).
     "tornado>=6.0.3, <7",
