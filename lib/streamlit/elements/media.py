@@ -91,7 +91,7 @@ class MediaMixin:
         >>> st.audio(note_la, sample_rate=sample_rate)
 
         .. output::
-           https://doc-audio.streamlitapp.com/
+           https://doc-audio.streamlit.app/
            height: 865px
 
         """
@@ -146,7 +146,7 @@ class MediaMixin:
         >>> st.video(video_bytes)
 
         .. output::
-           https://doc-video.streamlitapp.com/
+           https://doc-video.streamlit.app/
            height: 700px
 
         .. note::
@@ -323,7 +323,7 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
     # to st.audio data)
     import numpy as np
 
-    data = np.array(data, dtype=float)
+    data: "npt.NDArray[Any]" = np.array(data, dtype=float)
 
     if len(data.shape) == 1:
         nchan = 1

@@ -151,7 +151,7 @@ class ImageMixin:
         >>> st.image(image, caption='Sunrise by the mountains')
 
         .. output::
-           https://doc-image.streamlitapp.com/
+           https://doc-image.streamlit.app/
            height: 710px
 
         """
