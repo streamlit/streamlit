@@ -146,7 +146,7 @@ setuptools.setup(
     # We exclude Python 3.9.7 from our compatible versions due to a bug in that version
     # with typing.Protocol. See https://github.com/streamlit/streamlit/issues/5140 and
     # https://bugs.python.org/issue45121
-    python_requires=">=3.7, !=3.9.7",
+    python_requires=">=3.8, !=3.9.7",
     # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
     package_data={"streamlit": ["py.typed", "hello/**/*.py"]},
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
