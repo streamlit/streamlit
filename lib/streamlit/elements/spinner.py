@@ -82,4 +82,10 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
                 display_message = False
         with legacy_caching.suppress_cached_st_function_warning():
             with caching.suppress_cached_st_function_warning():
-                message.empty()
+                # We are resetting the spinner placeholder to an empty container
+                # instead of an empty placeholder (st.empty) to have it removed from the
+                # delta path. Empty containers are ignored in the frontend since they
+                # are configured with allow_empty=False. This prevents issues with stale
+                # elements caused by the spinner being rendered only in some situations
+                # (e.g. for caching).
+                message.container()
