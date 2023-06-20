@@ -96,6 +96,7 @@ class RunWarningTest(unittest.TestCase):
                 "button",
                 "camera_input",
                 "caption",
+                "chat_input",
                 "chat_message",
                 "checkbox",
                 "code",
