@@ -166,4 +166,16 @@ describe("st.select_slider", () => {
       "Value 8: 2" + "Select slider changed: True"
     );
   });
+
+  it("realigns label values when expander re-opened", () => {
+    // Closes the expander
+    cy.get(".streamlit-expanderHeader").click();
+
+    // Reopens the expander
+    cy.get(".streamlit-expanderHeader").click();
+
+    // Positioning error occurs on overflow of expander container
+    // which occurs when position left set to 0px
+    cy.getIndexed(".StyledThumbValue", 12).should("not.have.css", "left", "0px")
+  });
 });
