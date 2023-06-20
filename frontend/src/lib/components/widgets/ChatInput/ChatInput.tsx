@@ -133,8 +133,7 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
   }, [element])
 
   useEffect(() => {
-    const scrollHeight = getScrollHeight()
-    setScrollHeight(scrollHeight)
+    setScrollHeight(value !== "" ? getScrollHeight() : 0)
   }, [value])
 
   useEffect(() => {
