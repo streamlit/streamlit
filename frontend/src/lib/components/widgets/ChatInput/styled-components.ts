@@ -105,6 +105,12 @@ export const StyledFloatingChatInputContainer = styled.div(({ theme }) => ({
   width: "100%",
   backgroundColor: theme.colors.bgColor,
   zIndex: theme.zIndices.chatInput,
+  [`@media (max-width: ${theme.breakpoints.md})`]: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    left: 0,
+  },
 }))
 
 export const StyledSendIconButtonContainer = styled.div(() => ({
