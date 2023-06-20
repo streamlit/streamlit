@@ -157,20 +157,17 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("int", ds.type)
         self.assertTrue(len(ds.doc_string) > 0)
 
-    # TODO: When we stop supporting Python 3.7, uncomment this.
-    # This doesn't even compile when running in 3.7, so I'm commenting it out.
-    # Which means we can't test support for walrus in st.help :(
-    # def test_walrus(self):
-    #     """Test a named variable using walrus operator."""
+    def test_walrus(self):
+        """Test a named variable using walrus operator."""
 
-    #     with patch_varname_getter():
-    #         st.help(myvar := 123)
+        with patch_varname_getter():
+            st.help(myvar := 123)
 
-    #     ds = self.get_delta_from_queue().new_element.doc_string
-    #     self.assertEqual("myvar", ds.name)
-    #     self.assertEqual("123", ds.value)
-    #     self.assertEqual("int", ds.type)
-    #     self.assertTrue(len(ds.doc_string) > 0)
+        ds = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual("myvar", ds.name)
+        self.assertEqual("123", ds.value)
+        self.assertEqual("int", ds.type)
+        self.assertTrue(len(ds.doc_string) > 0)
 
     def test_complex_var(self):
         """Test complex dict-list-object combination."""
