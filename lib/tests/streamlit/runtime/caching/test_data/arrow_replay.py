@@ -24,7 +24,7 @@ df = pd.DataFrame(
 st.write(df)
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def stampa_df(df_param: pd.DataFrame) -> None:
     st.write(df_param)
 
