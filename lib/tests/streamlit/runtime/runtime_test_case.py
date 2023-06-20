@@ -14,7 +14,7 @@
 
 import asyncio
 from typing import Callable, Dict, List, Optional
-from unittest import mock
+from unittest import IsolatedAsyncioTestCase, mock
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
@@ -32,7 +32,6 @@ from streamlit.runtime.session_manager import (
     SessionStorage,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 
 class MockSessionManager(SessionManager):

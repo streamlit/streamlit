@@ -551,7 +551,7 @@ class _CodeHasher:
             if cargs:
                 cargs[1] = dict(
                     collections.OrderedDict(
-                        sorted(cargs[1].items(), key=lambda t: t[0])  # type: ignore
+                        sorted(cargs[1].items(), key=lambda t: t[0])
                     )
                 )
 

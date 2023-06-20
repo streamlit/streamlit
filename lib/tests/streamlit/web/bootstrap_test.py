@@ -15,6 +15,7 @@ import os.path
 import sys
 import unittest
 from io import StringIO
+from unittest import IsolatedAsyncioTestCase
 from unittest.mock import Mock, patch
 
 import matplotlib
@@ -27,7 +28,6 @@ from streamlit.web.bootstrap import (
     _fix_pydantic_duplicate_validators_error,
 )
 from tests import testutil
-from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 from tests.testutil import patch_config_options, should_skip_pydantic_tests
 
 

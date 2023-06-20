@@ -598,8 +598,10 @@ class Runtime:
             async_objs.started.set_result(None)
 
             while not async_objs.must_stop.is_set():
-                if self._state == RuntimeState.NO_SESSIONS_CONNECTED:
-                    await asyncio.wait(
+                if self._state == RuntimeState.NO_SESSIONS_CONNECTED:  # type: ignore[comparison-overlap]
+                    # mypy 1.4 incorrectly thinks this if-clause is unreachable,
+                    # because it thinks self._state must be INITIAL | ONE_OR_MORE_SESSIONS_CONNECTED.
+                    await asyncio.wait(  # type: ignore[unreachable]
                         (
                             asyncio.create_task(async_objs.must_stop.wait()),
                             asyncio.create_task(async_objs.has_connection.wait()),

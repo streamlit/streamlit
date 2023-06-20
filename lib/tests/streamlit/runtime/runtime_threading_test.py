@@ -15,10 +15,10 @@
 import asyncio
 import threading
 from queue import Queue
+from unittest import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock
 
 from streamlit.runtime import Runtime, RuntimeConfig
-from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 
 class RuntimeThreadingTest(IsolatedAsyncioTestCase):

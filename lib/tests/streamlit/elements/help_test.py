@@ -157,20 +157,17 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("int", ds.type)
         self.assertTrue(len(ds.doc_string) > 0)
 
-    # TODO: When we stop supporting Python 3.7, uncomment this.
-    # This doesn't even compile when running in 3.7, so I'm commenting it out.
-    # Which means we can't test support for walrus in st.help :(
-    # def test_walrus(self):
-    #     """Test a named variable using walrus operator."""
+    def test_walrus(self):
+        """Test a named variable using walrus operator."""
 
-    #     with patch_varname_getter():
-    #         st.help(myvar := 123)
+        with patch_varname_getter():
+            st.help(myvar := 123)
 
-    #     ds = self.get_delta_from_queue().new_element.doc_string
-    #     self.assertEqual("myvar", ds.name)
-    #     self.assertEqual("123", ds.value)
-    #     self.assertEqual("int", ds.type)
-    #     self.assertTrue(len(ds.doc_string) > 0)
+        ds = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual("myvar", ds.name)
+        self.assertEqual("123", ds.value)
+        self.assertEqual("int", ds.type)
+        self.assertTrue(len(ds.doc_string) > 0)
 
     def test_complex_var(self):
         """Test complex dict-list-object combination."""
@@ -446,8 +443,6 @@ class GetVariableNameFromCodeStrTest(unittest.TestCase):
             self.assertEqual(actual, code)
 
     def test_if_dont_know_just_echo(self):
-        is_below_py38 = sys.version_info < (3, 8)
-
         tests = [
             (
                 "foo()",
@@ -459,21 +454,15 @@ class GetVariableNameFromCodeStrTest(unittest.TestCase):
             ),
             (
                 "(x for x in range(10))",
-                # Account for Python 3.7 bug that eats the first char.
-                # See https://github.com/python/cpython/commit/b619b097923155a7034c05c4018bf06af9f994d0
-                # The result is that the string we show in Python 3.7 is not syntactically correct
-                # but we're OK living with that since it only happens in unlikely scenarios.
-                "x for x in range(10))" if is_below_py38 else "(x for x in range(10))",
+                "(x for x in range(10))",
             ),
             (
                 "x for x in range(10)",
-                # Interestingly, when the generator expression isn't wrapped in parentheses, Python
-                # 3.7 doesn't display the bug above.
-                # However Python GREATER than 3.7 has its own bug here (because of course) where the
+                # Python >= 3.8 has its own bug here (because of course) where the
                 # column offsets are off by one in different directions, leading to parentheses
                 # appearing around the generator expression. This leads to syntactically correct
                 # code, though, so not so bad!
-                "x for x in range(10)" if is_below_py38 else "(x for x in range(10))",
+                "(x for x in range(10))",
             ),
             (
                 "{x: None for x in range(10)}",

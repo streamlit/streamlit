@@ -18,6 +18,7 @@ import threading
 import unittest
 from asyncio import AbstractEventLoop
 from typing import Any, Callable, List, Optional, cast
+from unittest import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -47,7 +48,6 @@ from streamlit.runtime.scriptrunner import (
 from streamlit.runtime.state import SessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
-from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 from tests.testutil import patch_config_options
 
 
