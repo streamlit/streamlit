@@ -38,6 +38,8 @@ import {
   StyledAppViewMain,
   StyledIFrameResizerAnchor,
   StyledAppViewBlockSpacer,
+  StyledChatFooter,
+  StyledStickyChatFooter,
 } from "./styled-components"
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
 
@@ -153,6 +155,8 @@ function AppView(props: AppViewProps): ReactElement {
 
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
+  const hasBottomElements = !elements.bottom.isEmpty
+
   const showSidebar =
     hasSidebarElements || (!hideSidebarNav && appPages.length > 1)
 
@@ -201,6 +205,11 @@ function AppView(props: AppViewProps): ReactElement {
               Streamlit
             </StyledAppViewFooterLink>
           </StyledAppViewFooter>
+        )}
+        {hasBottomElements && (
+          <StyledStickyChatFooter>
+            <StyledChatFooter>{renderBlock(elements.bottom)}</StyledChatFooter>
+          </StyledStickyChatFooter>
         )}
       </Component>
     </StyledAppViewContainer>

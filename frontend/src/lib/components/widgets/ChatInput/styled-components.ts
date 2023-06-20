@@ -26,6 +26,9 @@ export const StyledChatInputContainer =
   styled.div<StyledChatInputContainerProps>(({ theme, width, position }) => {
     const lightTheme = hasLightBackgroundColor(theme)
     return {
+      position: "fixed",
+      bottom: "70px",
+      zIndex: theme.zIndices.chatInput,
       borderRadius: theme.radii.lg,
       display: "flex",
       ...(position === ChatInputProto.Position.BOTTOM && {
@@ -96,22 +99,6 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
     }
   }
 )
-
-export const StyledFloatingChatInputContainer = styled.div(({ theme }) => ({
-  position: "fixed",
-  bottom: "0px",
-  paddingBottom: "70px",
-  paddingTop: theme.spacing.lg,
-  width: "100%",
-  backgroundColor: theme.colors.bgColor,
-  zIndex: theme.zIndices.chatInput,
-  [`@media (max-width: ${theme.breakpoints.md})`]: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    left: 0,
-  },
-}))
 
 export const StyledSendIconButtonContainer = styled.div(() => ({
   display: "flex",

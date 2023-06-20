@@ -42,6 +42,26 @@ export interface StyledAppViewMainProps {
   disableScrolling: boolean
 }
 
+export const StyledStickyChatFooter = styled.div(() => ({
+  position: "sticky",
+  left: 0,
+  bottom: 0,
+  height: 0,
+  width: "100%",
+}))
+
+export const StyledChatFooter = styled.div(() => ({
+  position: "absolute",
+  width: "100%",
+  minWidth: "100%",
+  backgroundColor: "white",
+  height: 120,
+  minHeight: 120,
+  bottom: 0,
+  // backgroundImage:
+  //   "linear-gradient(180deg,hsla(0,0%,100%,0) 13.94%,#fff 54.73%)",
+}))
+
 export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
   ({ disableScrolling, theme }) => ({
     display: "flex",
@@ -84,7 +104,7 @@ export const StyledAppViewBlockContainer =
       if (addPaddingForHeader && !showPadding) {
         topEmbedPadding = "3rem"
       }
-      const bottomEmbedPadding = showPadding ? "10rem" : "1rem"
+      const bottomEmbedPadding = showPadding ? "8rem" : "1rem"
       const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
       return {
         width: theme.sizes.full,

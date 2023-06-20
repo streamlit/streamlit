@@ -45,7 +45,6 @@ export const StyledChatMessageContainer =
 
 export const StyledMessageContent = styled.div(({ theme }) => ({
   color: theme.colors.bodyText,
-  margin: "auto",
   flexGrow: 1,
 }))
 

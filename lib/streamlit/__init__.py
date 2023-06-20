@@ -103,6 +103,7 @@ _config.on_config_parsed(_update_logger, True)
 
 
 _main = _DeltaGenerator(root_container=_RootContainer.MAIN)
+_bottom = _DeltaGenerator(root_container=_RootContainer.BOTTOM)
 sidebar = _DeltaGenerator(root_container=_RootContainer.SIDEBAR, parent=_main)
 
 secrets = _secrets_singleton

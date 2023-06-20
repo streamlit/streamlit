@@ -34,7 +34,6 @@ import { hasLightBackgroundColor } from "src/lib/theme"
 import {
   StyledChatInputContainer,
   StyledChatInput,
-  StyledFloatingChatInputContainer,
   StyledInputInstructionsContainer,
   StyledSendIconButton,
   StyledSendIconButtonContainer,
@@ -158,81 +157,79 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
       : false
 
   return (
-    <StyledFloatingChatInputContainer className="stChatFloatingInputContainer">
-      <StyledChatInputContainer
-        className="stChatInputContainer"
-        width={width}
-        position={element.position}
-      >
-        <StyledChatInput>
-          <UITextArea
-            data-testid="stChatInput"
-            inputRef={chatInputRef}
+    <StyledChatInputContainer
+      className="stChatInputContainer"
+      width={width}
+      position={element.position}
+    >
+      <StyledChatInput>
+        <UITextArea
+          data-testid="stChatInput"
+          inputRef={chatInputRef}
+          value={value}
+          placeholder={element.placeholder}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          aria-label={element.placeholder}
+          disabled={element.disabled}
+          rows={1}
+          overrides={{
+            Root: {
+              style: {
+                outline: "none",
+                backgroundColor: theme.colors.transparent,
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: "1px",
+                borderRightWidth: "1px",
+                borderTopWidth: "1px",
+                borderBottomWidth: "1px",
+                width: `${width}px`,
+              },
+            },
+            InputContainer: {
+              style: {
+                backgroundColor: theme.colors.transparent,
+              },
+            },
+            Input: {
+              style: {
+                lineHeight: "1.4",
+                backgroundColor: theme.colors.transparent,
+                "::placeholder": {
+                  color: placeholderColor,
+                },
+                height: isInputExtended
+                  ? `${scrollHeight + ROUNDING_OFFSET}px`
+                  : "auto",
+                maxHeight: maxHeight ? `${maxHeight}px` : "none",
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                paddingRight: "3rem",
+                paddingLeft: theme.spacing.sm,
+                paddingBottom: theme.spacing.sm,
+                paddingTop: theme.spacing.sm,
+              },
+            },
+          }}
+        />
+        <StyledInputInstructionsContainer>
+          <InputInstructions
+            dirty={dirty}
             value={value}
-            placeholder={element.placeholder}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            aria-label={element.placeholder}
-            disabled={element.disabled}
-            rows={1}
-            overrides={{
-              Root: {
-                style: {
-                  outline: "none",
-                  backgroundColor: theme.colors.transparent,
-                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                  borderLeftWidth: "1px",
-                  borderRightWidth: "1px",
-                  borderTopWidth: "1px",
-                  borderBottomWidth: "1px",
-                  width: `${width}px`,
-                },
-              },
-              InputContainer: {
-                style: {
-                  backgroundColor: theme.colors.transparent,
-                },
-              },
-              Input: {
-                style: {
-                  lineHeight: "1.4",
-                  backgroundColor: theme.colors.transparent,
-                  "::placeholder": {
-                    color: placeholderColor,
-                  },
-                  height: isInputExtended
-                    ? `${scrollHeight + ROUNDING_OFFSET}px`
-                    : "auto",
-                  maxHeight: maxHeight ? `${maxHeight}px` : "none",
-                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                  paddingRight: "3rem",
-                  paddingLeft: theme.spacing.sm,
-                  paddingBottom: theme.spacing.sm,
-                  paddingTop: theme.spacing.sm,
-                },
-              },
-            }}
+            maxLength={element.maxChars}
+            type="chat"
           />
-          <StyledInputInstructionsContainer>
-            <InputInstructions
-              dirty={dirty}
-              value={value}
-              maxLength={element.maxChars}
-              type="chat"
-            />
-          </StyledInputInstructionsContainer>
-          <StyledSendIconButtonContainer>
-            <StyledSendIconButton
-              onClick={handleSubmit}
-              disabled={!dirty}
-              extended={isInputExtended}
-            >
-              <Icon content={Send} size="xl" color="inherit" />
-            </StyledSendIconButton>
-          </StyledSendIconButtonContainer>
-        </StyledChatInput>
-      </StyledChatInputContainer>
-    </StyledFloatingChatInputContainer>
+        </StyledInputInstructionsContainer>
+        <StyledSendIconButtonContainer>
+          <StyledSendIconButton
+            onClick={handleSubmit}
+            disabled={!dirty}
+            extended={isInputExtended}
+          >
+            <Icon content={Send} size="xl" color="inherit" />
+          </StyledSendIconButton>
+        </StyledSendIconButtonContainer>
+      </StyledChatInput>
+    </StyledChatInputContainer>
   )
 }
 
