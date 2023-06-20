@@ -21,17 +21,23 @@ import { createTheme, ThemeConfig } from "src/lib/theme"
 import { LibContext } from "src/lib/components/core/LibContext"
 import Sidebar, { SidebarProps } from "./Sidebar"
 
-const createSidebarTheme = (theme: ThemeConfig): ThemeConfig =>
-  createTheme(
+const createSidebarTheme = (theme: ThemeConfig): ThemeConfig => {
+  return createTheme(
     "Sidebar",
     {
       secondaryBackgroundColor: theme.emotion.colors.bgColor,
       backgroundColor: theme.emotion.colors.secondaryBg,
+
+      // Explictly pass these props to the sidebar theming as well.
+      // This ensures custom fonts passed through postMessage propagate to the sidebar as well.
+      bodyFont: theme.emotion.genericFonts.bodyFont,
+      codeFont: theme.emotion.genericFonts.codeFont,
     },
     theme,
     // inSidebar
     true
   )
+}
 
 const ThemedSidebar = ({
   children,
