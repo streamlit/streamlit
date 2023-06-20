@@ -100,10 +100,6 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
 export const StyledFloatingChatInputContainer = styled.div(({ theme }) => ({
   position: "fixed",
   bottom: "0px",
-  left: "0px",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
   paddingBottom: "70px",
   paddingTop: theme.spacing.lg,
   width: "100%",
