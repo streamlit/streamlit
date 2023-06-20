@@ -94,11 +94,12 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Debug venv install
         run: |
-          ls
-          ls venv
-          ls venv/lib
-          ls venv/lib/python3.7
-          ls venv/lib/python3.7/site-packages
+          # ls
+          # ls venv
+          # ls venv/lib
+          # ls venv/lib/python3.7
+          # ls venv/lib/python3.7/site-packages
+          pip list
           # python -c "import tests; print(tests.__file__)"
       - name: Run Python Tests
         run: make pytest
