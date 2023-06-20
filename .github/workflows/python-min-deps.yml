@@ -101,6 +101,7 @@ jobs:
           # ls venv/lib/python3.7/site-packages
           pip list
           # python -c "import tests; print(tests.__file__)"
+          python -c 'import sys; print(sys.path)'
       - name: Run Python Tests
         run: make pytest
       - name: Run Integration Tests
