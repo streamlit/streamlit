@@ -293,7 +293,10 @@ class ChatMixin:
             chat_input_proto.value = widget_state.value
             chat_input_proto.set_value = True
 
-        self.dg._enqueue("chat_input", chat_input_proto)
+        import streamlit
+
+        with streamlit._bottom:
+            self.dg._enqueue("chat_input", chat_input_proto)
         return widget_state.value if not widget_state.value_changed else None
 
     @property

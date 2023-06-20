@@ -50,14 +50,18 @@ export const StyledStickyChatFooter = styled.div(() => ({
   width: "100%",
 }))
 
-export const StyledChatFooter = styled.div(() => ({
+export const StyledChatFooter = styled.div(({ theme }) => ({
   position: "absolute",
   width: "100%",
   minWidth: "100%",
-  backgroundColor: "white",
+  backgroundColor: theme.colors.bgColor,
   height: 120,
   minHeight: 120,
   bottom: 0,
+  display: "flex",
+  flexDirection: "column",
+  // width: theme.sizes.full,
+  alignItems: "center",
   // backgroundImage:
   //   "linear-gradient(180deg,hsla(0,0%,100%,0) 13.94%,#fff 54.73%)",
 }))

@@ -208,7 +208,28 @@ function AppView(props: AppViewProps): ReactElement {
         )}
         {hasBottomElements && (
           <StyledStickyChatFooter>
-            <StyledChatFooter>{renderBlock(elements.bottom)}</StyledChatFooter>
+            <StyledChatFooter>
+              <StyledAppViewBlockContainer
+                className="block-container"
+                data-testid="block-container"
+                isWideMode={wideMode}
+                showPadding={false}
+                addPaddingForHeader={false}
+              >
+                <VerticalBlock
+                  node={elements.bottom}
+                  endpoints={endpoints}
+                  sessionInfo={sessionInfo}
+                  scriptRunId={scriptRunId}
+                  scriptRunState={scriptRunState}
+                  widgetMgr={widgetMgr}
+                  widgetsDisabled={widgetsDisabled}
+                  uploadClient={uploadClient}
+                  componentRegistry={componentRegistry}
+                  formsData={formsData}
+                />
+              </StyledAppViewBlockContainer>
+            </StyledChatFooter>
           </StyledStickyChatFooter>
         )}
       </Component>

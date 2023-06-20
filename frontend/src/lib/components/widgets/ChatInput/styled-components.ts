@@ -26,9 +26,6 @@ export const StyledChatInputContainer =
   styled.div<StyledChatInputContainerProps>(({ theme, width, position }) => {
     const lightTheme = hasLightBackgroundColor(theme)
     return {
-      position: "fixed",
-      bottom: "70px",
-      zIndex: theme.zIndices.chatInput,
       borderRadius: theme.radii.lg,
       display: "flex",
       ...(position === ChatInputProto.Position.BOTTOM && {

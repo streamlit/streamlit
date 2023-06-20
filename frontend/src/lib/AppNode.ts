@@ -482,8 +482,8 @@ export class AppRoot {
   public constructor(root: BlockNode) {
     this.root = root
 
-    // Verify that our root node has exactly 2 children: a 'main' block and
-    // a 'sidebar' block.
+    // Verify that our root node has exactly 3 children: a 'main' block and
+    // a 'sidebar' block and a bottom block.
     if (
       this.root.children.length !== 3 ||
       this.main == null ||
