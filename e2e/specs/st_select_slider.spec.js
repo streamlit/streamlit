@@ -176,6 +176,6 @@ describe("st.select_slider", () => {
 
     // Positioning error occurs on overflow of expander container
     // which occurs when position left set to 0px
-    cy.getIndexed(".StyledThumbValue", 12).should("not.have.css", "left", "0px")
+    cy.getIndexed(".StyledThumbValue", 11).should("not.have.css", "left", "0px")
   });
 });
