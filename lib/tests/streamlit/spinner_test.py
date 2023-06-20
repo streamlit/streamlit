@@ -29,4 +29,8 @@ class SpinnerTest(DeltaGeneratorTestCase):
         # Check that the element gets reset to an empty container block:
         last_delta = self.get_delta_from_queue()
         self.assertTrue(last_delta.HasField("add_block"))
+        # The block should have `allow_empty` set to false,
+        # which means that it will be ignored on the frontend in case
+        # it the container is empty. This is the desired behavior
+        # for spinner
         self.assertFalse(last_delta.add_block.allow_empty)
