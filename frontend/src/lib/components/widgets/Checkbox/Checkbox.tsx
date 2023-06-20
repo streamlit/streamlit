@@ -179,10 +179,10 @@ class Checkbox extends React.PureComponent<Props, State> {
                   // use the long-hand version, which means we can't use the
                   // shorthand names here as if we do we'll end up with warn
                   // logs spamming us every time a checkbox is rendered.
-                  borderLeftWidth: "2px",
-                  borderRightWidth: "2px",
-                  borderTopWidth: "2px",
-                  borderBottomWidth: "2px",
+                  borderLeftWidth: "1px",
+                  borderRightWidth: "1px",
+                  borderTopWidth: "1px",
+                  borderBottomWidth: "1px",
                   borderLeftColor: borderColor,
                   borderRightColor: borderColor,
                   borderTopColor: borderColor,
@@ -192,6 +192,8 @@ class Checkbox extends React.PureComponent<Props, State> {
             },
             Label: {
               style: {
+                position: "relative",
+                top: "1px",
                 color,
               },
             },

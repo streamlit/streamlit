@@ -22,7 +22,7 @@ export const StyledFormSubmitContent = styled.div(() => ({
 
 export const StyledForm = styled.div(({ theme }) => ({
   border: `1px solid ${theme.colors.fadedText10}`,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.lg,
   padding: "calc(1em - 1px)", // 1px to account for border.
 }))
 

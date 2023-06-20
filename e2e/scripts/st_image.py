@@ -13,11 +13,15 @@
 # limitations under the License.
 
 import io
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from PIL import Image, ImageDraw
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    import numpy.typing as npt
 
 
 def create_gif(size, frames=1):
@@ -50,8 +54,6 @@ def create_gif(size, frames=1):
     return data.getvalue()
 
 
-import streamlit as st
-
 img = np.repeat(0, 10000).reshape(100, 100)
 img800 = np.repeat(0, 640000).reshape(800, 800)
 gif = create_gif(64, frames=32)
@@ -62,7 +64,7 @@ st.image(img, caption="Black Square as PNG", output_format="PNG", width=100)
 
 st.image(img, caption="Black Square with no output format specified", width=100)
 
-transparent_img = np.zeros((100, 100, 4), dtype=np.uint8)
+transparent_img: "npt.NDArray[Any]" = np.zeros((100, 100, 4), dtype=np.uint8)
 st.image(transparent_img, caption="Transparent Black Square", width=100)
 
 col1, col2, col3 = st.columns(3)

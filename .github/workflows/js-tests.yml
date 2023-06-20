@@ -99,10 +99,6 @@ jobs:
       - name: Run frontend tests
         working-directory: component-lib
         run: yarn test
-      # Build of package is broken as we have too old version of Typescript.
-      # The Typescript update is a separate effort.
-      # See: https://github.com/streamlit/streamlit/pull/6584
-      # TODO(kbregula): Enable this step after update of Typescript.
-      # - name: Build package
-      #   working-directory: component-lib
-      #   run: yarn build
+      - name: Build package
+        working-directory: component-lib
+        run: yarn build

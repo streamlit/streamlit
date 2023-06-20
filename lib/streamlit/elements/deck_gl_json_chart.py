@@ -113,7 +113,7 @@ class PydeckMixin:
         ... ))
 
         .. output::
-           https://doc-pydeck-chart.streamlitapp.com/
+           https://doc-pydeck-chart.streamlit.app/
            height: 530px
 
         .. note::
