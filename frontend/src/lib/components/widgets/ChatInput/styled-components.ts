@@ -102,7 +102,6 @@ export const StyledFloatingChatInputContainer = styled.div(({ theme }) => ({
   bottom: "0px",
   paddingBottom: "70px",
   paddingTop: theme.spacing.lg,
-  width: "100%",
   backgroundColor: theme.colors.bgColor,
   zIndex: theme.zIndices.chatInput,
   [`@media (max-width: ${theme.breakpoints.md})`]: {
@@ -110,6 +109,7 @@ export const StyledFloatingChatInputContainer = styled.div(({ theme }) => ({
     flexDirection: "column",
     alignItems: "center",
     left: 0,
+    width: "100vw",
   },
 }))
 
