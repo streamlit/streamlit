@@ -79,8 +79,11 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
     let scrollHeight = 0
     const { current: textarea } = chatInputRef
     if (textarea) {
+      const placeholder = textarea.placeholder
+      textarea.placeholder = ""
       textarea.style.height = "auto"
       scrollHeight = textarea.scrollHeight
+      textarea.placeholder = placeholder
       textarea.style.height = ""
     }
 
@@ -132,11 +135,6 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
       setDirty(val !== "")
     }
   }, [element])
-
-  useEffect(() => {
-    const scrollHeight = getScrollHeight()
-    setScrollHeight(scrollHeight)
-  }, [value])
 
   useEffect(() => {
     if (chatInputRef.current) {
