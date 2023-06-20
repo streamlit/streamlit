@@ -36,7 +36,7 @@ export const StyledInputContainer = styled.div(({ theme }) => ({
   transitionDuration: "200ms",
   transitionProperty: "border",
   transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.4, 1)",
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.lg,
   overflow: "hidden", // Fix rounded corner being overlayed with corner of internal input.
 
   "&.focused": {
@@ -82,8 +82,8 @@ export const StyledInputControl = styled.button(({ theme }) => ({
     border: "none",
   },
   "&:last-of-type": {
-    borderTopRightRadius: theme.radii.md,
-    borderBottomRightRadius: theme.radii.md,
+    borderTopRightRadius: theme.radii.lg,
+    borderBottomRightRadius: theme.radii.lg,
   },
   "&:disabled": {
     cursor: "not-allowed",

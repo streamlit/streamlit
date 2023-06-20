@@ -349,7 +349,7 @@ class FileUploaderMixin:
         ...     st.write(bytes_data)
 
         .. output::
-           https://doc-file-uploader.streamlitapp.com/
+           https://doc-file-uploader.streamlit.app/
            height: 375px
 
         """
