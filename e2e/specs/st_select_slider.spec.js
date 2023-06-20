@@ -21,7 +21,7 @@ describe("st.select_slider", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stSlider").should("have.length", 8);
+    cy.get(".element-container .stSlider").should("have.length", 9);
   });
 
   it("looks right when disabled", () => {
