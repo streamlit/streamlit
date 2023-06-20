@@ -289,18 +289,20 @@ class NumberInputMixin:
         # Ensure that the value matches arguments' types.
         all_ints = int_value and int_args
 
-        if min_value != None and min_value > value:
-            raise StreamlitAPIException(
-                "The default `value` of %(value)s "
-                "must be greater than or equal to the `min_value` of %(min)s "
-                % {"value": value, "min": min_value}
-            )
-        if max_value != None and max_value < value:
-            raise StreamlitAPIException(
-                "The default `value` of %(value)s "
-                "must be less than or equal to the `max_value` of %(max)s "
-                % {"value": value, "max": max_value}
-            )
+        if min_value is not None and value is not None:
+            if min_value > value:
+                raise StreamlitAPIException(
+                    "The default `value` of %(value)s "
+                    "must be greater than or equal to the `min_value` of %(min)s "
+                    % {"value": value, "min": min_value}
+                )
+        if max_value is not None and value is not None:
+            if max_value < value:
+                raise StreamlitAPIException(
+                    "The default `value` of %(value)s "
+                    "must be less than or equal to the `max_value` of %(max)s "
+                    % {"value": value, "max": max_value}
+                )
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.

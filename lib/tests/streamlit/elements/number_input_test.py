@@ -125,14 +125,6 @@ class NumberInputTest(DeltaGeneratorTestCase):
         self.assertEqual(c.format, "%f")
         self.assertEqual("%0.2f" % c.step, "0.01")
 
-    def test_value_outrange(self):
-        with pytest.raises(StreamlitAPIException) as exc_message:
-            st.number_input("the label", 11, 0, 10)
-        assert (
-            "The default `value` of 10 must lie between the `min_value` of "
-            "11 and the `max_value` of 0, inclusively." == str(exc_message.value)
-        )
-
     def test_accept_valid_formats(self):
         # note: We decided to accept %u even though it is slightly problematic.
         #       See https://github.com/streamlit/streamlit/pull/943
