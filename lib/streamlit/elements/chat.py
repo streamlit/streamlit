@@ -13,22 +13,17 @@
 # limitations under the License.
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Tuple, cast
+from typing import TYPE_CHECKING, Optional, Tuple, cast
 
 from typing_extensions import Literal
 
-from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import is_emoji
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional, cast
-
 from streamlit import runtime
+from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -40,6 +35,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.string_util import is_emoji
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -217,10 +213,9 @@ class ChatMixin:
             empty string.
         max_chars : int or None
             The maximum number of characters that can be entered. If None
-            (default), there will be no maximum. Can be supplied by keyword only.
+            (default), there will be no maximum.
         disabled : bool
-            Whether the chat input should be disabled. Defaults to False. Can
-            be supplied by keyword only.
+            Whether the chat input should be disabled. Defaults to False.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget based on

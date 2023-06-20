@@ -14,12 +14,6 @@
 
 """chat input and message unit tests."""
 
-from parameterized import parameterized
-
-import streamlit as st
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Block_pb2 import Block as BlockProto
-from tests.delta_generator_test_case import DeltaGeneratorTestCase
 import pytest
 from parameterized import parameterized
 
@@ -27,6 +21,7 @@ import streamlit as st
 from streamlit.elements.chat import DISALLOWED_CONTAINERS_ERROR_TEXT
 from streamlit.elements.utils import SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
