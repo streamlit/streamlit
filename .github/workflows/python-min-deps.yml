@@ -105,6 +105,8 @@ jobs:
       - name: Run Python Tests
         run: make pytest
       - name: Run Integration Tests
-        run: make integration-tests
+        run: |
+          python -c 'import sys; print(sys.path)'
+          make integration-tests
       - name: CLI Smoke Tests
         run: make cli-smoke-tests

@@ -79,6 +79,7 @@ runs:
         source venv/bin/activate
         pip install --upgrade pip
         make python-init-test-min-deps
+        python -c 'import sys; print(sys.path)'
         deactivate
       shell: bash --login -eo pipefail {0}
     - name: Activate virtualenv
