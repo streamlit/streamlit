@@ -85,7 +85,7 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
                 # We are resetting the spinner placeholder to an empty container
                 # instead of an empty placeholder (st.empty) to have it removed from the
                 # delta path. Empty containers are ignored in the frontend since they
-                # are configured with allowEmpty=False. This prevents issues with stale
-                # elements caused by the spinner being rendered only in some
-                # situations (e.g. for caching).
+                # are configured with allow_empty=False. This prevents issues with stale
+                # elements caused by the spinner being rendered only in some situations
+                # (e.g. for caching).
                 message.container()
