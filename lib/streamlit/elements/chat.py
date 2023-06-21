@@ -113,8 +113,9 @@ class ChatMixin:
     ) -> "DeltaGenerator":
         r"""Insert a chat message container.
 
-        To add elements to the returned container, you can use `with` notation (preferred)
-        or just call methods directly on the returned object. See examples below.
+        To add elements to the returned container, you can use `with` notation
+        (preferred) or just call methods directly on the returned object. See
+        examples below.
 
         Parameters
         ----------
