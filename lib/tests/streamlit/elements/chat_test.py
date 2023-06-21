@@ -50,7 +50,7 @@ class ChatTest(DeltaGeneratorTestCase):
 
         message_block = self.get_delta_from_queue()
 
-        self.assertEqual(message_block.add_block.chat_message.participant, "user")
+        self.assertEqual(message_block.add_block.chat_message.name, "user")
         self.assertEqual(message_block.add_block.chat_message.avatar, "user")
         self.assertEqual(
             message_block.add_block.chat_message.avatar_type,
@@ -66,7 +66,7 @@ class ChatTest(DeltaGeneratorTestCase):
 
         message_block = self.get_delta_from_queue()
 
-        self.assertEqual(message_block.add_block.chat_message.participant, "assistant")
+        self.assertEqual(message_block.add_block.chat_message.name, "assistant")
         self.assertEqual(message_block.add_block.chat_message.avatar, "assistant")
         self.assertEqual(
             message_block.add_block.chat_message.avatar_type,
@@ -83,7 +83,7 @@ class ChatTest(DeltaGeneratorTestCase):
 
         message_block = self.get_delta_from_queue()
 
-        self.assertEqual(message_block.add_block.chat_message.participant, "user")
+        self.assertEqual(message_block.add_block.chat_message.name, "user")
         self.assertEqual(message_block.add_block.chat_message.avatar, "👋")
         self.assertEqual(
             message_block.add_block.chat_message.avatar_type,
@@ -102,7 +102,7 @@ class ChatTest(DeltaGeneratorTestCase):
             pass
 
         message_block = self.get_delta_from_queue()
-        self.assertEqual(message_block.add_block.chat_message.participant, "cat")
+        self.assertEqual(message_block.add_block.chat_message.name, "cat")
         self.assertEqual(
             message_block.add_block.chat_message.avatar,
             "https://static.streamlit.io/examples/cat.jpg",

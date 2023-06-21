@@ -112,7 +112,7 @@ class ChatMixin:
     @gather_metrics("chat_message")
     def chat_message(
         self,
-        participant: Literal["user", "assistant"] | str,
+        name: Literal["user", "assistant"] | str,
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
     ) -> "DeltaGenerator":
@@ -124,10 +124,13 @@ class ChatMixin:
 
         Parameters
         ----------
-        participant : "user", "assistant", or str
-            The name of the chat participant. Can be "user" or "assistant" to enable
-            preset styling and avatars. For accessibility reasons, you should not
-            use an empty string.
+        name : "user", "assistant", or str
+            The name of the chat participant. Can be “user” or “assistant” to
+            enable preset styling and avatars.
+
+            Currently, the name is not shown in the UI but is only set as an
+            accessibility label. For accessibility reasons, you should not use
+            an empty string.
 
         avatar : str, numpy.ndarray, or BytesIO
             The avatar shown next to the message. Can be one of:
@@ -138,8 +141,8 @@ class ChatMixin:
                 image file; URL to fetch the image from; array of shape (w,h) or (w,h,1)
                 for a monochrome image, (w,h,3) for a color image, or (w,h,4) for an RGBA image.
 
-            If None (default), uses default icons if ``participant`` is "user" or
-            "assistant", or the first letter of the ``participant`` value.
+            If None (default), uses default icons if ``name`` is "user" or
+            "assistant", or the first letter of the ``name`` value.
 
         Returns
         -------
@@ -175,23 +178,23 @@ class ChatMixin:
             height: 450px
 
         """
-        if participant is None:
-            raise StreamlitAPIException("A participant is required for a chat message")
+        if name is None:
+            raise StreamlitAPIException("A name is required for a chat message")
 
         if avatar is None and (
-            participant.lower()
+            name.lower()
             in [
                 PresetLabels.USER,
                 PresetLabels.ASSISTANT,
             ]
-            or is_emoji(participant)
+            or is_emoji(name)
         ):
             # For selected labels, we are mapping the label to an avatar
-            avatar = participant.lower()
+            avatar = name.lower()
         avatar_type, converted_avatar = _process_avatar_input(avatar)
 
         message_container_proto = BlockProto.ChatMessage()
-        message_container_proto.participant = participant
+        message_container_proto.name = name
         message_container_proto.avatar = converted_avatar
         message_container_proto.avatar_type = avatar_type
         block_proto = BlockProto()
