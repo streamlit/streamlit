@@ -120,7 +120,7 @@ class ChatMixin:
         Parameters
         ----------
         participant : "user", "assistant", or str
-            The name of the chat participant. Can be “user” or “assistant” to enable
+            The name of the chat participant. Can be "user" or "assistant" to enable
             preset styling and avatars. For accessibility reasons, you should not
             use an empty string.
 
@@ -133,8 +133,8 @@ class ChatMixin:
             image file; URL to fetch the image from; array of shape (w,h) or (w,h,1)
             for a monochrome image, (w,h,3) for a color image, or (w,h,4) for an RGBA image.
 
-            If None (default), uses default icons if participant is “user” or
-            “assistant”, or the first letter of participant.
+            If None (default), uses default icons if ``participant`` is “user” or
+            “assistant”, or the first letter of the ``participant`` value.
 
         Returns
         -------
