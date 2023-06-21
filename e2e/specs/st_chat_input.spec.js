@@ -18,8 +18,6 @@ describe("st.chat_input", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
     cy.prepForElementSnapshots();
-    // Make the toolbar disappear to not interfere with snapshots (in wide mode)
-    cy.get("[data-testid='stToolbar']").invoke("css", "opacity", 0);
     cy.get(".stChatInputContainer").should("have.length", 1);
   });
 
@@ -45,8 +43,17 @@ describe("st.chat_input", () => {
   });
 
   it("Enter submits/clears input", () => {
+    // Types a message & then Enter
     cy.get(".stChatInputContainer textarea").clear().type(`Corgi{enter}`);
-    cy.get(".stChatInputContainer").matchImageSnapshot("chatInput-Enter");
+    cy.get('.stChatInputContainer textarea').invoke('val').should('eq', '');
+  });
+
+  it("can click button to submit & clear input", () => {
+    // Types a message
+    cy.get(".stChatInputContainer textarea").clear().type(`Corgi`);
+    // Clicks the submit button
+    cy.get(".stChatInputContainer button").click();
+    cy.get('.stChatInputContainer textarea').invoke('val').should('eq', '');
   });
 
   it("grows when input text is long & shrinks when deleted", () => {
