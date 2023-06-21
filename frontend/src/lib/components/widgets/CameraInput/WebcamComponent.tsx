@@ -96,8 +96,10 @@ const WebcamComponent = ({
   const videoRef = useRef<Webcam>(null)
 
   const [debouncedWidth, setDebouncedWidth] = useState(width)
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const memoizedSetDebouncedCallback = useCallback(
-    (width: number) => debounce(1000, setDebouncedWidth(width)),
+    debounce(1000, setDebouncedWidth),
     []
   )
 
