@@ -95,8 +95,10 @@ class CameraInputSerde:
             uploaded_file_info = ui_value.uploaded_file_info
 
             for f in uploaded_file_info:
-                self.file_delete_urls[f.file_id] = f.file_delete_url
-
+                try:
+                    self.file_delete_urls[f.file_id] = f.file_delete_url
+                except:
+                    pass
         if len(file_recs) == 0:
             return_value = None
         else:
