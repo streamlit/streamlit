@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """st.memo/singleton hashing tests."""
-
+import datetime
 import functools
 import hashlib
 import os
@@ -29,8 +29,11 @@ from io import BytesIO, StringIO
 from unittest.mock import MagicMock, Mock
 
 import cffi
+import dateutil.tz
 import numpy as np
+import pandas
 import pandas as pd
+import tzlocal
 from parameterized import parameterized
 from PIL import Image
 
@@ -88,6 +91,58 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(uuid3), get_hash(uuid3_copy))
         self.assertNotEqual(id(uuid3), id(uuid3_copy))
         self.assertNotEqual(get_hash(uuid3), get_hash(uuid4))
+
+    def test_datetime_naive(self):
+        naive_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55)
+        naive_datetime1_copy = datetime.datetime(2007, 12, 23, 15, 45, 55)
+        naive_datetime3 = datetime.datetime(2011, 12, 21, 15, 45, 55)
+
+        self.assertEqual(get_hash(naive_datetime1), get_hash(naive_datetime1_copy))
+        self.assertNotEqual(id(naive_datetime1), id(naive_datetime1_copy))
+        self.assertNotEqual(get_hash(naive_datetime1), get_hash(naive_datetime3))
+
+    @parameterized.expand(
+        [
+            datetime.timezone.utc,
+            tzlocal.get_localzone(),
+            dateutil.tz.gettz("America/Los_Angeles"),
+            dateutil.tz.gettz("Europe/Berlin"),
+            dateutil.tz.UTC,
+        ]
+    )
+    def test_datetime_aware(self, tz_info):
+        aware_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
+        aware_datetime1_copy = datetime.datetime(
+            2007, 12, 23, 15, 45, 55, tzinfo=tz_info
+        )
+        aware_datetime2 = datetime.datetime(2011, 12, 21, 15, 45, 55, tzinfo=tz_info)
+
+        # naive datetime1 is the same datetime that aware_datetime,
+        # but without timezone info. They should have different hashes.
+        naive_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55)
+
+        self.assertEqual(get_hash(aware_datetime1), get_hash(aware_datetime1_copy))
+        self.assertNotEqual(id(aware_datetime1), id(aware_datetime1_copy))
+        self.assertNotEqual(get_hash(aware_datetime1), get_hash(aware_datetime2))
+        self.assertNotEqual(get_hash(aware_datetime1), get_hash(naive_datetime1))
+
+    @parameterized.expand(
+        [
+            "US/Pacific",
+            "America/Los_Angeles",
+            "Europe/Berlin",
+            "UTC",
+            None,  # check for naive too
+        ]
+    )
+    def test_pandas_timestamp(self, tz_info):
+        timestamp1 = pandas.Timestamp("2017-01-01T12", tz=tz_info)
+        timestamp1_copy = pandas.Timestamp("2017-01-01T12", tz=tz_info)
+        timestamp2 = pandas.Timestamp("2019-01-01T12", tz=tz_info)
+
+        self.assertEqual(get_hash(timestamp1), get_hash(timestamp1_copy))
+        self.assertNotEqual(id(timestamp1), id(timestamp1_copy))
+        self.assertNotEqual(get_hash(timestamp1), get_hash(timestamp2))
 
     def test_mocks_do_not_result_in_infinite_recursion(self):
         try:
