@@ -91,7 +91,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
 
     const { uploadedFileInfo } = widgetValue
-    if (uploadedFileInfo == null) {
+    if (uploadedFileInfo == null || uploadedFileInfo.length === 0) {
       return emptyState
     }
 
@@ -190,14 +190,6 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  /**
-   * When the server receives the widget value, it deletes "orphaned" uploaded
-   * files. An orphaned file is any file, associated with this uploader,
-   * whose file ID is not in the file ID list, and whose
-   * ID is <= `newestServerFileId`. This logic ensures that a FileUploader
-   * within a form doesn't have any of its "unsubmitted" uploads prematurely
-   * deleted when the script is re-run.
-   */
   private createWidgetValue(): FileUploaderStateProto | undefined {
     const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
       .filter(f => f.status.type === "uploaded")
@@ -213,9 +205,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         })
       })
 
-    return new FileUploaderStateProto({
-      uploadedFileInfo,
-    })
+    return new FileUploaderStateProto({ uploadedFileInfo })
   }
 
   /**

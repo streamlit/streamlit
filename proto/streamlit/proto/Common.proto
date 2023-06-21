@@ -88,7 +88,8 @@ message UploadedFileInfo {
 }
 
 message FileUploaderState {
-  // TO DEPRECATE:
+  // DEPRECATED
   sint64 max_file_id = 1;
+
   repeated UploadedFileInfo uploaded_file_info = 2;
 }
