@@ -118,10 +118,8 @@ jobs:
           name: cypress_videos
           path: frontend/cypress/videos
       - name: Store Snapshots
-        env:
-          CURRENT_RUN: ${{matrix.specs}}
         uses: actions/upload-artifact@v3
-        if: ${{ $CURRENT_RUN == 22 }}
+        if: ${{ matrix.specs == 22 }}
         with:
           name: cypress_snapshots
           path: frontend/cypress/snapshots
