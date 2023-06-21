@@ -74,16 +74,21 @@ def _process_avatar_input(
     elif isinstance(avatar, str) and is_emoji(avatar):
         return AvatarType.EMOJI, avatar
     else:
-        # TODO(lukasmasuch): Pure SVGs are not yet supported here.
-        # They have a special handling in `st.image` and might require some refactoring.
-        return AvatarType.IMAGE, image_to_url(
-            avatar,
-            width=WidthBehaviour.ORIGINAL,
-            clamp=False,
-            channels="RGB",
-            output_format="auto",
-            image_id="",
-        )
+        try:
+            # TODO(lukasmasuch): Pure SVGs are not yet supported here.
+            # They have a special handling in `st.image` and might require some refactoring.
+            return AvatarType.IMAGE, image_to_url(
+                avatar,
+                width=WidthBehaviour.ORIGINAL,
+                clamp=False,
+                channels="RGB",
+                output_format="auto",
+                image_id="",
+            )
+        except Exception as ex:
+            raise StreamlitAPIException(
+                "Failed to load the provided avatar value as an image."
+            ) from ex
 
 
 DISALLOWED_CONTAINERS_ERROR_TEXT = "`st.chat_input()` can't be used inside an `st.expander`, `st.form`, `st.tabs`, `st.columns`, or `st.sidebar`."
