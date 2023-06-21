@@ -116,18 +116,19 @@ class ChatMixin:
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
     ) -> "DeltaGenerator":
-        r"""Insert a container that is styled like a chat message.
+        r"""Insert a chat message container.
 
-        To add elements to the returned container, you can use "with" notation
+        To add elements to the returned container, you can use `with` notation
         (preferred) or just call methods directly on the returned object. See
-         examples below.
+        examples below.
 
         Parameters
         ----------
         participant : "user", "assistant", or str
-            The name of the chat participant. Can be “user” or “assistant” to enable
+            The name of the chat participant. Can be "user" or "assistant" to enable
             preset styling and avatars. For accessibility reasons, you should not
             use an empty string.
+
         avatar : str, numpy.ndarray, or BytesIO
             The avatar shown next to the message. Can be one of:
 
@@ -136,6 +137,9 @@ class ChatMixin:
             * An image using one of the formats allowed for ``st.image``: path of a local
             image file; URL to fetch the image from; array of shape (w,h) or (w,h,1)
             for a monochrome image, (w,h,3) for a color image, or (w,h,4) for an RGBA image.
+
+            If None (default), uses default icons if ``participant`` is “user” or
+            “assistant”, or the first letter of the ``participant`` value.
 
         Returns
         -------
@@ -210,25 +214,36 @@ class ChatMixin:
     ) -> str | None:
         r"""Display a chat input widget.
 
+        .. warning::
+            Chat input can only be used once per app and inside the main area of the app.
+            It cannot be used in the sidebar, columns, expanders, forms or tabs.
+            We plan to support this in the future.
+
         Parameters
         ----------
         placeholder : str
             A placeholder text shown when the chat input is empty. Defaults to
             "Your message". For accessibility reasons, you should not use an
             empty string.
+
         max_chars : int or None
             The maximum number of characters that can be entered. If None
             (default), there will be no maximum.
+
         disabled : bool
             Whether the chat input should be disabled. Defaults to False.
+
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget based on
             its content. Multiple widgets of the same type may not share the same key.
+
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
+
         args : tuple
             An optional tuple of args to pass to the callback.
+
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
@@ -246,6 +261,10 @@ class ChatMixin:
         >>> prompt = st.chat_input("Say something")
         >>> if prompt:
         ...     st.write(f\"User has sent the following prompt: {prompt}\")
+
+        .. output ::
+            https://doc-chat-input.streamlit.app/
+            height: 350px
 
         """
         # We default to an empty string here and disallow user choice intentionally
