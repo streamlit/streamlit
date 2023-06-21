@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-class PresetLabels(str, Enum):
+class PresetNames(str, Enum):
     USER = "user"
     ASSISTANT = "assistant"
 
@@ -67,8 +67,8 @@ def _process_avatar_input(
     if avatar is None:
         return AvatarType.ICON, ""
     elif isinstance(avatar, str) and avatar in [
-        PresetLabels.USER,
-        PresetLabels.ASSISTANT,
+        PresetNames.USER,
+        PresetNames.ASSISTANT,
     ]:
         return AvatarType.ICON, avatar
     elif isinstance(avatar, str) and is_emoji(avatar):
@@ -125,7 +125,7 @@ class ChatMixin:
         Parameters
         ----------
         name : "user", "assistant", or str
-            The name of the chat participant. Can be “user” or “assistant” to
+            The name of the message author. Can be “user” or “assistant” to
             enable preset styling and avatars.
 
             Currently, the name is not shown in the UI but is only set as an
@@ -179,13 +179,15 @@ class ChatMixin:
 
         """
         if name is None:
-            raise StreamlitAPIException("A name is required for a chat message")
+            raise StreamlitAPIException(
+                "The author name is required for a chat message, please set it via the parameter `name`."
+            )
 
         if avatar is None and (
             name.lower()
             in [
-                PresetLabels.USER,
-                PresetLabels.ASSISTANT,
+                PresetNames.USER,
+                PresetNames.ASSISTANT,
             ]
             or is_emoji(name)
         ):
