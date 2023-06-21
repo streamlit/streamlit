@@ -26,7 +26,7 @@ const getProps = (
   elementProps: Partial<BlockProto.ChatMessage> = {}
 ): ChatMessageProps => ({
   element: BlockProto.ChatMessage.create({
-    participant: "user",
+    name: "user",
     avatarType: BlockProto.ChatMessage.AvatarType.ICON,
     avatar: "user",
     ...elementProps,
@@ -70,11 +70,11 @@ describe("ChatMessage", () => {
     expect(images[0].src).toBe("http://example.com/avatar.jpg")
   })
 
-  it("renders with a participant label character as fallback", () => {
+  it("renders with a name label character as fallback", () => {
     const props = getProps({
       avatar: undefined,
       avatarType: undefined,
-      participant: "test",
+      name: "test",
     })
     const { getByText } = render(<ChatMessage {...props} />)
     expect(getByText("T")).toBeTruthy()
@@ -84,7 +84,7 @@ describe("ChatMessage", () => {
     const props = getProps({
       avatar: "user",
       avatarType: BlockProto.ChatMessage.AvatarType.ICON,
-      participant: "foo",
+      name: "foo",
     })
     const { container } = render(<ChatMessage {...props} />)
 
@@ -96,7 +96,7 @@ describe("ChatMessage", () => {
     const props = getProps({
       avatar: "assistant",
       avatarType: BlockProto.ChatMessage.AvatarType.ICON,
-      participant: "foo",
+      name: "foo",
     })
     const { container } = render(<ChatMessage {...props} />)
 
@@ -104,9 +104,9 @@ describe("ChatMessage", () => {
     expect(svgs.length).toEqual(1)
   })
 
-  it("renders with a grey background when participant is 'user'", () => {
+  it("renders with a grey background when name is 'user'", () => {
     const props = getProps({
-      participant: "user",
+      name: "user",
     })
     const { container } = render(<ChatMessage {...props} />)
     const messageContainer = container.firstChild
