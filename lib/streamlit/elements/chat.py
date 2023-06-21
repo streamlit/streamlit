@@ -215,7 +215,7 @@ class ChatMixin:
         r"""Display a chat input widget.
 
         .. warning::
-            Chat input can only be used once per app and inside the main area of the app.
+            Chat input can only be used once per app page and inside the main area of the app.
             It cannot be used in the sidebar, columns, expanders, forms or tabs.
             We plan to support this in the future.
 
