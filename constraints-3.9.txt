@@ -57,7 +57,7 @@ parameterized==0.9.0
 pathspec==0.11.1
 Pillow==9.5.0
 pkginfo==1.9.6
-platformdirs==3.6.0
+platformdirs==3.7.0
 plotly==5.15.0
 pluggy==1.0.0
 pre-commit==3.3.3
