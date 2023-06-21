@@ -925,7 +925,6 @@ describe("App.onHistoryChange", () => {
     jest.spyOn(instance, "onPageChange")
     instance.onHistoryChange()
 
-    // check that onPageChange is not run when anchor is in the url and we are on the same page
     expect(instance.onPageChange).not.toHaveBeenCalled()
 
     pushStateSpy.mockRestore()
