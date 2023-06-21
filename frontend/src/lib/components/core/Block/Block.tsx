@@ -55,7 +55,11 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const { node } = props
 
   // Allow columns to create the specified space regardless of empty state
-  if (node.isEmpty && !node.deltaBlock.column) {
+  if (
+    node.isEmpty &&
+    !node.deltaBlock.column &&
+    !node.deltaBlock.chatMessage
+  ) {
     return <></>
   }
 
