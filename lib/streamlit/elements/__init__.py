@@ -15,6 +15,7 @@
 WIDGETS = [
     "button",
     "camera_input",
+    "chat_input",
     "checkbox",
     "color_picker",
     "component_instance",

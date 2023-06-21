@@ -18,6 +18,7 @@ const sidebar = 100
 const menuButton = sidebar + 10
 const balloons = 1000000
 const header = balloons - 10
+const chatInput = sidebar - 1
 const sidebarMobile = balloons - 5
 const popupMenu = balloons + 40
 const fullscreenWrapper = balloons + 50
@@ -35,4 +36,5 @@ export const zIndices = {
   popupMenu,
   fullscreenWrapper,
   tablePortal,
+  chatInput,
 }

@@ -15,7 +15,19 @@
  */
 
 import React from "react"
-import { Block as BlockProto, ForwardMsgMetadata } from "src/lib/proto"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
+import {
+  AppContext,
+  Props as AppContextProps,
+} from "src/app/components/AppContext"
+import {
+  Block as BlockProto,
+  ForwardMsgMetadata,
+  PageConfig,
+  Element,
+  ChatInput as ChatInputProto,
+} from "src/lib/proto"
 import { ScriptRunState } from "src/lib/ScriptRunState"
 import { BlockNode, ElementNode, AppRoot } from "src/lib/AppNode"
 import { FileUploadClient } from "src/lib/FileUploadClient"
@@ -26,8 +38,24 @@ import {
 import { makeElementWithInfoText } from "src/lib/util/utils"
 import { ComponentRegistry } from "src/lib/components/widgets/CustomComponent"
 import { mockEndpoints, mockSessionInfo } from "src/lib/mocks/mocks"
-import { render, shallow } from "src/lib/test_util"
+import { render } from "src/lib/test_util"
 import AppView, { AppViewProps } from "./AppView"
+
+function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
+  return {
+    wideMode: false,
+    initialSidebarState: PageConfig.SidebarState.AUTO,
+    embedded: false,
+    showPadding: false,
+    disableScrolling: false,
+    showFooter: false,
+    showToolbar: false,
+    showColoredLine: false,
+    pageLinkBaseUrl: "",
+    sidebarChevronDownshift: 0,
+    ...context,
+  }
+}
 
 function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
   const formsData = createFormsData()
@@ -68,17 +96,15 @@ describe("AppView element", () => {
   })
 
   it("renders without crashing", () => {
-    const props = getProps()
-    const wrapper = shallow(<AppView {...props} />)
-
-    expect(wrapper).toBeDefined()
+    render(<AppView {...getProps()} />)
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {
     const props = getProps()
-    const wrapper = shallow(<AppView {...props} />)
+    render(<AppView {...props} />)
 
-    expect(wrapper.find("[data-testid='stSidebar']").exists()).toBe(false)
+    const sidebar = screen.queryByTestId("stSidebar")
+    expect(sidebar).not.toBeInTheDocument()
   })
 
   it("renders a sidebar when there are elements and only one page", () => {
@@ -98,14 +124,10 @@ describe("AppView element", () => {
     const props = getProps({
       elements: new AppRoot(new BlockNode([main, sidebar])),
     })
-    const wrapper = shallow(<AppView {...props} />)
+    render(<AppView {...props} />)
 
-    expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
-    expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(true)
-    expect(wrapper.find("ThemedSidebar").prop("appPages")).toHaveLength(1)
-    expect(wrapper.find("ThemedSidebar").prop("currentPageScriptHash")).toBe(
-      "main_page_script_hash"
-    )
+    const sidebarDOMElement = screen.queryByTestId("stSidebar")
+    expect(sidebarDOMElement).toBeInTheDocument()
   })
 
   it("renders a sidebar when there are no elements but multiple pages", () => {
@@ -113,11 +135,10 @@ describe("AppView element", () => {
       { pageName: "streamlit_app", pageScriptHash: "page_hash" },
       { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
-    const wrapper = shallow(<AppView {...getProps({ appPages })} />)
+    render(<AppView {...getProps({ appPages })} />)
 
-    expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
-    expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(false)
-    expect(wrapper.find("ThemedSidebar").prop("appPages")).toEqual(appPages)
+    const sidebarDOMElement = screen.queryByTestId("stSidebar")
+    expect(sidebarDOMElement).toBeInTheDocument()
   })
 
   it("renders a sidebar when there are elements and multiple pages", () => {
@@ -142,11 +163,10 @@ describe("AppView element", () => {
       elements: new AppRoot(new BlockNode([main, sidebar])),
       appPages,
     })
-    const wrapper = shallow(<AppView {...props} />)
+    render(<AppView {...props} />)
 
-    expect(wrapper.find("ThemedSidebar").exists()).toBe(true)
-    expect(wrapper.find("ThemedSidebar").prop("hasElements")).toBe(true)
-    expect(wrapper.find("ThemedSidebar").prop("appPages")).toEqual(appPages)
+    const sidebarDOMElement = screen.queryByTestId("stSidebar")
+    expect(sidebarDOMElement).toBeInTheDocument()
   })
 
   it("does not render the sidebar if there are no elements, multiple pages but hideSidebarNav is true", () => {
@@ -158,65 +178,86 @@ describe("AppView element", () => {
       appPages,
       hideSidebarNav: true,
     })
-    const wrapper = shallow(<AppView {...props} />)
+    render(<AppView {...props} />)
 
-    expect(wrapper.find("ThemedSidebar").exists()).toBe(false)
+    const sidebar = screen.queryByTestId("stSidebar")
+    expect(sidebar).not.toBeInTheDocument()
   })
 
   it("does not render the wide class", () => {
-    jest
-      .spyOn(React, "useContext")
-      .mockImplementation(() => ({ wideMode: false, embedded: false }))
-    const wrapper = shallow(<AppView {...getProps()} />)
+    const realUseContext = React.useContext
+    jest.spyOn(React, "useContext").mockImplementation(input => {
+      if (input === AppContext) {
+        return getContextOutput({ wideMode: false, embedded: false })
+      }
 
-    expect(
-      wrapper.find("StyledAppViewBlockContainer").prop("isWideMode")
-    ).toBe(false)
+      return realUseContext(input)
+    })
 
-    expect(wrapper.find("StyledAppViewFooter").prop("isWideMode")).toBe(false)
+    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
+
+    const props = getProps({
+      elements: new AppRoot(new BlockNode([main, sidebar])),
+    })
+    const { getByTestId } = render(<AppView {...props} />)
+
+    const style = window.getComputedStyle(getByTestId("block-container"))
+    expect(style.maxWidth).not.toEqual("initial")
   })
 
   it("does render the wide class when specified", () => {
-    jest
-      .spyOn(React, "useContext")
-      .mockImplementation(() => ({ wideMode: true, embedded: false }))
-    const wrapper = shallow(<AppView {...getProps()} />)
+    const realUseContext = React.useContext
+    jest.spyOn(React, "useContext").mockImplementation(input => {
+      if (input === AppContext) {
+        return getContextOutput({ wideMode: true, embedded: false })
+      }
 
-    expect(
-      wrapper.find("StyledAppViewBlockContainer").prop("isWideMode")
-    ).toBe(true)
+      return realUseContext(input)
+    })
+    const { getByTestId } = render(<AppView {...getProps()} />)
+    const style = window.getComputedStyle(getByTestId("block-container"))
 
-    expect(wrapper.find("StyledAppViewFooter").prop("isWideMode")).toBe(true)
+    expect(style.maxWidth).toEqual("initial")
   })
 
   it("opens link to streamlit.io in new tab", () => {
-    const wrapper = shallow(<AppView {...getProps()} />)
-    expect(wrapper.find("StyledAppViewFooterLink").props()).toEqual(
-      expect.objectContaining({
-        href: "//streamlit.io",
-        target: "_blank",
-      })
-    )
+    render(<AppView {...getProps()} />)
+    const link = screen.getByRole("link", { name: "Streamlit" })
+    expect(link).toHaveAttribute("href", "//streamlit.io")
+    expect(link).toHaveAttribute("target", "_blank")
   })
 
   it("renders the Spacer and Footer when not embedded", () => {
-    jest
-      .spyOn(React, "useContext")
-      .mockImplementation(() => ({ wideMode: false, embedded: false }))
-    const wrapper = shallow(<AppView {...getProps()} />)
+    const realUseContext = React.useContext
+    jest.spyOn(React, "useContext").mockImplementation(input => {
+      if (input === AppContext) {
+        return getContextOutput({ wideMode: false, embedded: false })
+      }
 
-    expect(wrapper.find("StyledAppViewBlockSpacer").exists()).toBe(true)
-    expect(wrapper.find("StyledAppViewFooter").exists()).toBe(true)
+      return realUseContext(input)
+    })
+
+    const { getByRole, getByTestId } = render(<AppView {...getProps()} />)
+
+    expect(getByTestId("AppViewBlockSpacer")).toBeInTheDocument()
+    expect(getByRole("contentinfo")).toBeInTheDocument()
   })
 
   it("does not render the Spacer and Footer when embedded", () => {
-    jest
-      .spyOn(React, "useContext")
-      .mockImplementation(() => ({ wideMode: false, embedded: true }))
-    const wrapper = shallow(<AppView {...getProps()} />)
+    const realUseContext = React.useContext
+    jest.spyOn(React, "useContext").mockImplementation(input => {
+      if (input === AppContext) {
+        return getContextOutput({ wideMode: false, embedded: true })
+      }
 
-    expect(wrapper.find("StyledAppViewBlockSpacer").exists()).toBe(false)
-    expect(wrapper.find("StyledAppViewFooter").exists()).toBe(false)
+      return realUseContext(input)
+    })
+
+    const { queryByRole, queryByTestId } = render(<AppView {...getProps()} />)
+
+    expect(queryByTestId("AppViewBlockSpacer")).not.toBeInTheDocument()
+    expect(queryByRole("contentinfo")).not.toBeInTheDocument()
   })
 
   describe("when window.location.hash changes", () => {
@@ -235,5 +276,44 @@ describe("AppView element", () => {
         type: "UPDATE_HASH",
       })
     })
+  })
+
+  it("does not render a Scroll To Bottom container when no chat input is present", () => {
+    const props = getProps()
+    render(<AppView {...props} />)
+
+    const stbContainer = screen.queryByTestId("ScrollToBottomContainer")
+    expect(stbContainer).not.toBeInTheDocument()
+  })
+
+  it("renders a Scroll To Bottom container when a chat input is present", () => {
+    const chatInputElement = new ElementNode(
+      new Element({
+        chatInput: {
+          id: "123",
+          placeholder: "Enter Text Here",
+          disabled: false,
+          default: "",
+          position: ChatInputProto.Position.BOTTOM,
+        },
+      }),
+      ForwardMsgMetadata.create({}),
+      "no script run id"
+    )
+
+    const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
+
+    const main = new BlockNode(
+      [chatInputElement],
+      new BlockProto({ allowEmpty: true })
+    )
+    const props = getProps({
+      elements: new AppRoot(new BlockNode([main, sidebar])),
+    })
+
+    render(<AppView {...props} />)
+
+    const stbContainer = screen.queryByTestId("ScrollToBottomContainer")
+    expect(stbContainer).toBeInTheDocument()
   })
 })

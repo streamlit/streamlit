@@ -23,6 +23,7 @@ import {
   IFileUploaderState,
   SInt64Array,
   StringArray,
+  StringTriggerValue,
   WidgetState,
   WidgetStates,
 } from "src/lib/proto"
@@ -36,7 +37,7 @@ export interface Source {
 /** Common widget protobuf fields that are used by the WidgetStateManager. */
 export interface WidgetInfo {
   id: string
-  formId: string
+  formId?: string
 }
 
 /**
@@ -239,6 +240,22 @@ export class WidgetStateManager {
     if (form.clearOnSubmit) {
       form.formCleared.emit()
     }
+  }
+
+  /**
+   * Sets the string trigger value for the given widget ID to a string value,
+   * sends a rerunScript message to the server, and then immediately unsets the
+   * string trigger value to None/null.
+   */
+  public setStringTriggerValue(
+    widget: WidgetInfo,
+    value: string,
+    source: Source
+  ): void {
+    this.createWidgetState(widget, source).stringTriggerValue =
+      new StringTriggerValue({ data: value })
+    this.onWidgetValueChanged(widget.formId, source)
+    this.deleteWidgetState(widget.id)
   }
 
   /**
@@ -527,7 +544,7 @@ export class WidgetStateManager {
   private createWidgetState(widget: WidgetInfo, source: Source): WidgetState {
     const addToForm = isValidFormId(widget.formId) && source.fromUi
     const widgetStateDict = addToForm
-      ? this.getOrCreateFormState(widget.formId).widgetStates
+      ? this.getOrCreateFormState(widget.formId as string).widgetStates
       : this.widgetStates
 
     return widgetStateDict.createState(widget.id)

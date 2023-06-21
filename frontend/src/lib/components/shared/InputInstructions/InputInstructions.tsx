@@ -24,7 +24,7 @@ export interface Props {
   value: string
   maxLength?: number
   className?: string
-  type?: "multiline" | "single"
+  type?: "multiline" | "single" | "chat"
 }
 
 const InputInstructions = ({
@@ -54,12 +54,12 @@ const InputInstructions = ({
       } else {
         addMessage("Press Ctrl+Enter to apply")
       }
-    } else {
+    } else if (type === "single") {
       addMessage("Press Enter to apply")
     }
   }
 
-  if (maxLength) {
+  if (maxLength && (type !== "chat" || dirty)) {
     addMessage(
       `${value.length}/${maxLength}`,
       dirty && value.length >= maxLength
@@ -67,7 +67,10 @@ const InputInstructions = ({
   }
 
   return (
-    <StyledWidgetInstructions className={className}>
+    <StyledWidgetInstructions
+      data-testid="InputInstructions"
+      className={className}
+    >
       {messages}
     </StyledWidgetInstructions>
   )

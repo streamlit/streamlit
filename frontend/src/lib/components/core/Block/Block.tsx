@@ -22,6 +22,7 @@ import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/util/utils"
 import withExpandable from "src/lib/hocs/withExpandable"
 import { Form } from "src/lib/components/widgets/Form"
+import ChatMessage from "src/lib/components/elements/ChatMessage"
 import Tabs, { TabProps } from "src/lib/components/elements/Tabs"
 
 import {
@@ -53,8 +54,13 @@ interface BlockPropsWithWidth extends BaseBlockProps {
 const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const { node } = props
 
-  // Allow columns to create the specified space regardless of empty state
-  if (node.isEmpty && !node.deltaBlock.column) {
+  // Allow columns and chat messages to create the specified space regardless of empty state
+  // TODO: Maybe we can simplify this to: node.isEmpty && !node.deltaBlock.allowEmpty?
+  if (
+    node.isEmpty &&
+    !node.deltaBlock.column &&
+    !node.deltaBlock.chatMessage
+  ) {
     return <></>
   }
 
@@ -98,6 +104,16 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       >
         {child}
       </Form>
+    )
+  }
+
+  if (node.deltaBlock.chatMessage) {
+    return (
+      <ChatMessage
+        element={node.deltaBlock.chatMessage as BlockProto.ChatMessage}
+      >
+        {child}
+      </ChatMessage>
     )
   }
 

@@ -46,6 +46,7 @@ from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.button import ButtonMixin
 from streamlit.elements.camera_input import CameraInputMixin
+from streamlit.elements.chat import ChatMixin
 from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.color_picker import ColorPickerMixin
@@ -156,6 +157,7 @@ class DeltaGenerator(
     BokehMixin,
     ButtonMixin,
     CameraInputMixin,
+    ChatMixin,
     CheckboxMixin,
     CodeMixin,
     ColorPickerMixin,
@@ -278,7 +280,7 @@ class DeltaGenerator(
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
-            for (name, func) in mixin.__dict__.items():
+            for name, func in mixin.__dict__.items():
                 if callable(func):
                     func.__module__ = self.__module__
 
@@ -599,6 +601,10 @@ class DeltaGenerator(
                 raise StreamlitAPIException(
                     "Columns can only be placed inside other columns up to one level of nesting."
                 )
+        if block_type == "chat_message" and block_type in frozenset(parent_block_types):
+            raise StreamlitAPIException(
+                "Chat messages cannot nested inside other chat messages."
+            )
         if block_type == "expandable" and block_type in frozenset(parent_block_types):
             raise StreamlitAPIException(
                 "Expanders may not be nested inside other expanders."

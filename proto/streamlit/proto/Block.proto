@@ -25,6 +25,7 @@ message Block {
     Form form = 5;
     TabContainer tab_container = 6;
     Tab tab = 7;
+    ChatMessage chat_message = 9;
   }
 
   bool allow_empty = 8;
@@ -58,5 +59,17 @@ message Block {
     string label = 1;
   }
 
-  // Next ID: 9
+  message ChatMessage {
+    enum AvatarType {
+      IMAGE = 0;
+      EMOJI = 1;
+      ICON = 2;
+    }
+
+    string name = 1;
+    string avatar = 2;
+    AvatarType avatar_type = 3;
+  }
+
+  // Next ID: 10
 }
