@@ -58,7 +58,7 @@ Pillow==9.5.0
 pkginfo==1.9.6
 platformdirs==3.7.0
 plotly==5.15.0
-pluggy==1.0.0
+pluggy==1.2.0
 pre-commit==3.3.3
 protobuf==3.20.3
 psycopg2-binary==2.9.6
@@ -108,13 +108,13 @@ types-protobuf==4.23.0.1
 types-python-dateutil==2.8.19.13
 types-pytz==2023.3.0.0
 types-requests==2.31.0.1
-types-setuptools==67.8.0.0
+types-setuptools==68.0.0.0
 types-toml==0.10.8.6
 types-typed-ast==1.5.8.6
 types-urllib3==1.26.25.13
 typing_extensions==4.6.3
 tzdata==2023.3
-tzlocal==4.3
+tzlocal==4.3.1
 urllib3==2.0.3
 validators==0.20.0
 virtualenv==20.23.1
