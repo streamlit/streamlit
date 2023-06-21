@@ -112,6 +112,11 @@ class ChatTest(DeltaGeneratorTestCase):
             BlockProto.ChatMessage.AvatarType.IMAGE,
         )
 
+    def test_throws_invalid_avatar_exception(self):
+        """Test that chat_message throws an StreamlitAPIException on invalid avatar input."""
+        with pytest.raises(StreamlitAPIException):
+            st.chat_message("user", avatar="FOOO")
+
     def test_chat_input(self):
         """Test that it can be called."""
         st.chat_input("Placeholder")
