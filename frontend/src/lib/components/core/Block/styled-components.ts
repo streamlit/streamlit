@@ -69,6 +69,8 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       overflow: "visible",
     },
 
+    // We do not want the chat input to be faded out.
+    // TODO: Reconsider this when we implement fixed sized chat inputs
     ...(isStale && elementType !== "chatInput"
       ? {
           opacity: 0.33,
