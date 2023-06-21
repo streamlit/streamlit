@@ -102,6 +102,8 @@ jobs:
           pip list
           # python -c "import tests; print(tests.__file__)"
           python -c 'import sys; print(sys.path)'
+      - name: reinstall for local connection
+        run: make init-test-min-deps
       - name: Run Python Tests
         run: make pytest
       - name: Run Integration Tests
