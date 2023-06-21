@@ -413,7 +413,9 @@ class AppSession:
         return True
 
     def _on_source_file_changed(self, filepath: Optional[str] = None) -> None:
-        """One of our source files changed. Schedule a rerun if appropriate."""
+        """One of our source files changed. Clear the cache and schedule a rerun if appropriate."""
+        self._script_cache.clear()
+
         if filepath is not None and not self._should_rerun_on_file_change(filepath):
             return
 
