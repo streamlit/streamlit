@@ -925,7 +925,13 @@ export class App extends PureComponent<Props, State> {
         // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
         document.location.pathname.endsWith("/" + appPage.pageName)
       ) ?? this.state.appPages[0]
-    if (targetAppPage == null) {
+
+    // do not cause a rerun when an anchor is clicked and we aren't changing pages
+    const hasAnchor = document.location.toString().includes("#")
+    const isSamePage =
+      targetAppPage?.pageScriptHash === this.state.currentPageScriptHash
+
+    if (targetAppPage == null || (hasAnchor && isSamePage)) {
       return
     }
     this.onPageChange(targetAppPage.pageScriptHash as string)
