@@ -256,6 +256,10 @@ class ChatMixin:
         >>> if prompt:
         ...     st.write(f\"User has sent the following prompt: {prompt}\")
 
+        .. output ::
+            https://doc-chat-input.streamlit.app/
+            height: 350px
+
         """
         # We default to an empty string here and disallow user choice intentionally
         default = ""
