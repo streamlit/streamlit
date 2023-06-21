@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { shallow } from "src/lib/test_util"
+import { render } from "src/lib/test_util"
 
 import InputInstructions, { Props } from "./InputInstructions"
 
@@ -27,24 +27,31 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 
 describe("InputInstructions", () => {
   const props = getProps()
-  const wrapper = shallow(<InputInstructions {...props} />)
 
   it("renders without crashing", () => {
-    expect(wrapper.text()).toBeDefined()
+    const { getByTestId } = render(<InputInstructions {...props} />)
+
+    expect(getByTestId("InputInstructions").textContent).toBeDefined()
   })
 
   it("should show Enter instructions", () => {
-    expect(wrapper.text()).toBe("Press Enter to apply")
+    const { getByTestId } = render(<InputInstructions {...props} />)
+
+    expect(getByTestId("InputInstructions").textContent).toBe(
+      "Press Enter to apply"
+    )
   })
 
   describe("Multiline type", () => {
     const props = getProps({
       type: "multiline",
     })
-    const wrapper = shallow(<InputInstructions {...props} />)
 
     it("should show Ctrl+Enter instructions", () => {
-      expect(wrapper.text()).toBe("Press Ctrl+Enter to apply")
+      const { getByTestId } = render(<InputInstructions {...props} />)
+      expect(getByTestId("InputInstructions").textContent).toBe(
+        "Press Ctrl+Enter to apply"
+      )
     })
 
     it("show ⌘+Enter instructions", () => {
@@ -56,9 +63,11 @@ describe("InputInstructions", () => {
       const props = getProps({
         type: "multiline",
       })
-      const wrapper = shallow(<InputInstructions {...props} />)
+      const { getByTestId } = render(<InputInstructions {...props} />)
 
-      expect(wrapper.text()).toBe("Press ⌘+Enter to apply")
+      expect(getByTestId("InputInstructions").textContent).toBe(
+        "Press ⌘+Enter to apply"
+      )
     })
 
     it("should show instructions for max length", () => {
@@ -66,9 +75,11 @@ describe("InputInstructions", () => {
         type: "multiline",
         maxLength: 3,
       })
-      const wrapper = shallow(<InputInstructions {...props} />)
+      const { getByTestId } = render(<InputInstructions {...props} />)
 
-      expect(wrapper.text()).toBe("Press ⌘+Enter to apply3/3")
+      expect(getByTestId("InputInstructions").textContent).toBe(
+        "Press ⌘+Enter to apply3/3"
+      )
     })
   })
 
@@ -76,8 +87,31 @@ describe("InputInstructions", () => {
     const props = getProps({
       maxLength: 3,
     })
-    const wrapper = shallow(<InputInstructions {...props} />)
+    const { getByTestId } = render(<InputInstructions {...props} />)
 
-    expect(wrapper.text()).toBe("Press Enter to apply3/3")
+    expect(getByTestId("InputInstructions").textContent).toBe(
+      "Press Enter to apply3/3"
+    )
+  })
+
+  describe("Chat type", () => {
+    const props = getProps({
+      type: "chat",
+    })
+
+    it("should not show instructions", () => {
+      const { getByTestId } = render(<InputInstructions {...props} />)
+      expect(getByTestId("InputInstructions").textContent).toBe("")
+    })
+
+    it("should show instructions for max length", () => {
+      const props = getProps({
+        type: "chat",
+        maxLength: 3,
+      })
+      const { getByTestId } = render(<InputInstructions {...props} />)
+
+      expect(getByTestId("InputInstructions").textContent).toBe("3/3")
+    })
   })
 })
