@@ -116,10 +116,10 @@ class ChatMixin:
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
     ) -> "DeltaGenerator":
-        r"""Insert a chat message container.
+        """Insert a chat message container.
 
-        To add elements to the returned container, you can use `with` notation
-        (preferred) or just call methods directly on the returned object. See
+        To add elements to the returned container, you can use ``with`` notation
+        (preferred) or just call methods directly on the returned object. See the
         examples below.
 
         Parameters
@@ -132,14 +132,14 @@ class ChatMixin:
         avatar : str, numpy.ndarray, or BytesIO
             The avatar shown next to the message. Can be one of:
 
-            * A single emoji, e.g. “🧑‍💻”, “🤖”, “🦖”. Shortcodes are not supported.
+            * A single emoji, e.g. "🧑‍💻", "🤖", "🦖". Shortcodes are not supported.
 
             * An image using one of the formats allowed for ``st.image``: path of a local
-            image file; URL to fetch the image from; array of shape (w,h) or (w,h,1)
-            for a monochrome image, (w,h,3) for a color image, or (w,h,4) for an RGBA image.
+                image file; URL to fetch the image from; array of shape (w,h) or (w,h,1)
+                for a monochrome image, (w,h,3) for a color image, or (w,h,4) for an RGBA image.
 
-            If None (default), uses default icons if ``participant`` is “user” or
-            “assistant”, or the first letter of the ``participant`` value.
+            If None (default), uses default icons if ``participant`` is "user" or
+            "assistant", or the first letter of the ``participant`` value.
 
         Returns
         -------
@@ -148,13 +148,13 @@ class ChatMixin:
 
         Examples
         --------
-        You can use `with` notation to insert any element into an expander
+        You can use ``with`` notation to insert any element into an expander
 
         >>> import streamlit as st
         >>> import numpy as np
         >>>
         >>> with st.chat_message("user"):
-        ...     st.write(\"Hello 👋\")
+        ...     st.write("Hello 👋")
         ...     st.line_chart(np.random.randn(30, 3))
 
         .. output ::
@@ -167,7 +167,7 @@ class ChatMixin:
         >>> import numpy as np
         >>>
         >>> message = st.chat_message("assistant"):
-        >>> message.write(\"Hello human\")
+        >>> message.write("Hello human")
         >>> message.bar_chart(np.random.randn(30, 3))
 
         .. output ::
@@ -212,7 +212,7 @@ class ChatMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
     ) -> str | None:
-        r"""Display a chat input widget.
+        """Display a chat input widget.
 
         .. warning::
             Chat input can only be used once per app page and inside the main area of the app.
@@ -255,12 +255,11 @@ class ChatMixin:
 
         Examples
         --------
-
         >>> import streamlit as st
         >>>
         >>> prompt = st.chat_input("Say something")
         >>> if prompt:
-        ...     st.write(f\"User has sent the following prompt: {prompt}\")
+        ...     st.write(f"User has sent the following prompt: {prompt}")
 
         .. output ::
             https://doc-chat-input.streamlit.app/
@@ -323,4 +322,5 @@ class ChatMixin:
     @property
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
+        return cast("DeltaGenerator", self)
         return cast("DeltaGenerator", self)
