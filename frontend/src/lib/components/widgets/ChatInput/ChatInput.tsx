@@ -144,6 +144,7 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
     }
   }, [chatInputRef])
 
+  const { disabled, placeholder, maxChars, position } = element
   const lightTheme = hasLightBackgroundColor(theme)
   const { minHeight, maxHeight } = heightGuidance.current
   const placeholderColor = lightTheme
@@ -160,18 +161,18 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
       <StyledChatInputContainer
         className="stChatInputContainer"
         width={width}
-        position={element.position}
+        position={position}
       >
         <StyledChatInput>
           <UITextArea
             data-testid="stChatInput"
             inputRef={chatInputRef}
             value={value}
-            placeholder={element.placeholder}
+            placeholder={placeholder}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            aria-label={element.placeholder}
-            disabled={element.disabled}
+            aria-label={placeholder}
+            disabled={disabled}
             rows={1}
             overrides={{
               Root: {
@@ -215,14 +216,14 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
             <InputInstructions
               dirty={dirty}
               value={value}
-              maxLength={element.maxChars}
+              maxLength={maxChars}
               type="chat"
             />
           </StyledInputInstructionsContainer>
           <StyledSendIconButtonContainer>
             <StyledSendIconButton
               onClick={handleSubmit}
-              disabled={!dirty}
+              disabled={!dirty || disabled}
               extended={isInputExtended}
             >
               <Icon content={Send} size="xl" color="inherit" />

@@ -197,4 +197,53 @@ describe("ChatInput widget", () => {
     expect(textareas.length).toEqual(1)
     expect(textareas[0].value).toEqual("")
   })
+
+  it("disables the textarea and button", () => {
+    const props = getProps({ disabled: true })
+    const { container } = render(<ChatInput {...props} />)
+    const textareas = container.getElementsByTagName("textarea")
+    expect(textareas.length).toEqual(1)
+    expect(textareas[0]).toBeDisabled()
+
+    const button = container.getElementsByTagName("button")
+    expect(button.length).toEqual(1)
+    expect(button[0]).toBeDisabled()
+  })
+
+  it("not disable the textarea by default", () => {
+    const props = getProps()
+    const { container } = render(<ChatInput {...props} />)
+    const textareas = container.getElementsByTagName("textarea")
+    expect(textareas.length).toEqual(1)
+    expect(textareas[0]).not.toBeDisabled()
+
+    const button = container.getElementsByTagName("button")
+    expect(button.length).toEqual(1)
+    expect(button[0]).toBeDisabled()
+  })
+
+  it("disables the send button by default since there's no text", () => {
+    const props = getProps()
+    const { container } = render(<ChatInput {...props} />)
+
+    const button = container.getElementsByTagName("button")
+    expect(button.length).toEqual(1)
+    expect(button[0]).toBeDisabled()
+  })
+
+  it("enables the send button when text is set, disables it when removed", () => {
+    const props = getProps()
+    const { container } = render(<ChatInput {...props} />)
+    const textareas = container.getElementsByTagName("textarea")
+    expect(textareas.length).toEqual(1)
+    fireEvent.change(textareas[0], { target: { value: "Sample text" } })
+
+    const button = container.getElementsByTagName("button")
+    expect(button.length).toEqual(1)
+    expect(button[0]).not.toBeDisabled()
+
+    fireEvent.change(textareas[0], { target: { value: "" } })
+    expect(button.length).toEqual(1)
+    expect(button[0]).toBeDisabled()
+  })
 })
