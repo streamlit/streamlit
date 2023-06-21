@@ -17,7 +17,7 @@ import time
 import streamlit as st
 
 st.slider("Enter a number", 0, 20, 0)
-st.checkbox("Check me out")
+st.checkbox("Check me out", value=True)
 st.radio("Radio Widget", ["Option 1", "Option 2", "Option 3"])
 
 with st.sidebar:
