@@ -79,7 +79,7 @@ runs:
         source venv/bin/activate
         pip install --upgrade pip
         # make python-init-test-min-deps
-        make python-init-all
+        make python-init
         python -c 'import sys; print(sys.path)'
         deactivate
       shell: bash --login -eo pipefail {0}
