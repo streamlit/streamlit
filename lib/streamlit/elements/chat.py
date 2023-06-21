@@ -226,17 +226,17 @@ class ChatMixin:
             "Your message". For accessibility reasons, you should not use an
             empty string.
 
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget based on
+            its content. Multiple widgets of the same type may not share the same key.
+
         max_chars : int or None
             The maximum number of characters that can be entered. If None
             (default), there will be no maximum.
 
         disabled : bool
             Whether the chat input should be disabled. Defaults to False.
-
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget based on
-            its content. Multiple widgets of the same type may not share the same key.
 
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
