@@ -171,7 +171,8 @@ export function isValidOrigin(
     return false
   }
 
-  // Allow localhost for Cypress e2e testing
+  // Allow localhost for testing of host <-> guest communication
+  // with hostframe.html (facilitates manual & Cypress e2e testing)
   if (testUrl.hostname == "localhost") return true
 
   if (
