@@ -90,6 +90,12 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+
+      # This section is an inlined copy of the make_init action
+      # Both because we need to do some parts of it differently
+      # and because it running in a separate action causes the python path
+      # setup to work weirdly, so some tests fail unless you run an install
+      # command in the workflow directly.
       - name: Restore pre-commit cache
         id: cache-pre-commit
         uses: actions/cache@v3
@@ -157,8 +163,7 @@ jobs:
         run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
       - name: Generate Protobufs
         run: make protobuf
-      # - name: reinstall for local connection
-      #   run: make python-init-test-min-deps
+
       - name: Run Python Tests
         run: make pytest
       - name: Run Integration Tests
