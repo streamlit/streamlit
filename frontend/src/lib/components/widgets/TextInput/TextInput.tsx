@@ -158,8 +158,15 @@ class TextInput extends React.PureComponent<Props, State> {
   ): void => {
     if (e.key === "Enter") {
       if (isInForm(this.props.element)) {
-        // This needs to be the correct form id
-        this.props.widgetMgr.submitForm(this.props.element)
+        const submitButton = this.props.widgetMgr.getSubmitButton(
+          this.props.element.formId
+        )
+        if (submitButton !== undefined) {
+          this.props.widgetMgr.submitForm({
+            id: submitButton.values().next().value.id,
+            formId: this.props.element.formId,
+          })
+        }
       } else if (this.state.dirty) {
         this.commitWidgetValue({ fromUi: true })
       }

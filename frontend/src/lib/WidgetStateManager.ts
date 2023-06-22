@@ -23,6 +23,7 @@ import {
   IFileUploaderState,
   SInt64Array,
   StringArray,
+  Button as SubmitButtonProto,
   WidgetState,
   WidgetStates,
 } from "src/lib/proto"
@@ -52,10 +53,10 @@ export interface FormsData {
   readonly formsWithUploads: Set<string>
 
   /**
-   * Mapping of formID:array of submitButtonIds. (Most forms will have only one,
+   * Mapping of formID:numberOfSubmitButtons. (Most forms will have only one,
    * but it's not an error to have multiple.)
    */
-  readonly submitButtons: Map<string, Array<string>>
+  readonly submitButtons: Map<string, Set<SubmitButtonProto>>
 }
 
 /** Create an empty FormsData instance. */
@@ -581,14 +582,17 @@ export class WidgetStateManager {
    * Called by FormSubmitButton on creation. Increment submitButtonCount for
    * the given form, and update FormsData.
    */
-  public addSubmitButton(formId: string, submitButtonId: string): void {
-    if (this.formsData.submitButtons.has(formId)) {
-      const formSubmitButtons = this.formsData.submitButtons.get(formId)
-      if (formSubmitButtons !== undefined) {
-        formSubmitButtons.push(submitButtonId)
-      }
+  public addSubmitButton(
+    formId: string,
+    submitButtonProto: SubmitButtonProto
+  ): void {
+    if (this.formsData.submitButtons.get(formId) === undefined) {
+      this.setSubmitButtons(formId, new Set([submitButtonProto]))
     } else {
-      this.formsData.submitButtons.set(formId, [submitButtonId])
+      const newSubmitButtonProtos = new Set(
+        this.formsData.submitButtons.get(formId)
+      ).add(submitButtonProto)
+      this.setSubmitButtons(formId, newSubmitButtonProtos)
     }
   }
 
@@ -596,16 +600,35 @@ export class WidgetStateManager {
    * Called by FormSubmitButton on creation. Decrement submitButtonCount for
    * the given form, and update FormsData.
    */
-  public removeSubmitButton(formId: string, submitButtonId: string): void {
-    if (this.formsData.submitButtons.has(formId)) {
-      const formSubmitButtons = this.formsData.submitButtons.get(formId)
-      if (formSubmitButtons !== undefined) {
-        const index = formSubmitButtons.indexOf(submitButtonId, 0)
-        if (index > -1) {
-          formSubmitButtons.splice(index, 1)
-        }
-      }
+  public removeSubmitButton(
+    formId: string,
+    submitButtonProto: SubmitButtonProto
+  ): void {
+    const submitButtons = this.formsData.submitButtons.get(formId)
+    if (submitButtons !== undefined) {
+      const copySet = new Set(this.formsData.submitButtons.get(formId))
+      copySet.delete(submitButtonProto)
+      this.setSubmitButtons(formId, copySet)
     }
+  }
+
+  private setSubmitButtons(
+    formId: string,
+    submitButtons: Set<SubmitButtonProto>
+  ): void {
+    if (submitButtons.size < 0) {
+      throw new Error(
+        `Bad submitButtons value ${submitButtons.size} (must be >= 0)`
+      )
+    }
+
+    this.updateFormsData(draft => {
+      draft.submitButtons.set(formId, submitButtons)
+    })
+  }
+
+  public getSubmitButton(formId: string): Set<SubmitButtonProto> | undefined {
+    return this.formsData.submitButtons.get(formId)
   }
 
   /**

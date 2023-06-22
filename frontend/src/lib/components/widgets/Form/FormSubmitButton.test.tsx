@@ -120,22 +120,22 @@ describe("FormSubmitButton", () => {
     expect(button.disabled).toBe(true)
   })
 
-  it("increments submitButtonCount on mount and decrements on unmount", () => {
-    expect(formsData.submitButtonCount.get("mockFormId")).toBeUndefined()
+  it("increments submitButtons on mount and decrements on unmount", () => {
+    expect(formsData.submitButtons.get("mockFormId")).toBeUndefined()
 
     const props = getProps()
 
     const wrapper1 = render(<FormSubmitButton {...props} />)
-    expect(formsData.submitButtonCount.get("mockFormId")).toBe(1)
+    expect(formsData.submitButtons.get("mockFormId")).size.toBe(1)
 
     const wrapper2 = render(<FormSubmitButton {...props} />)
-    expect(formsData.submitButtonCount.get("mockFormId")).toBe(2)
+    expect(formsData.submitButtons.get("mockFormId")).size.toBe(2)
 
     wrapper1.unmount()
-    expect(formsData.submitButtonCount.get("mockFormId")).toBe(1)
+    expect(formsData.submitButtons.get("mockFormId")).size.toBe(1)
 
     wrapper2.unmount()
-    expect(formsData.submitButtonCount.get("mockFormId")).toBe(0)
+    expect(formsData.submitButtons.get("mockFormId")).size.toBe(0)
   })
 
   it("does not use container width by default", () => {
