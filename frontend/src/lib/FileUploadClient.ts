@@ -103,9 +103,7 @@ export class FileUploadClient {
     file: File,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
-    // TODO(vdonato): Change the return type to Promise<void> once we've gotten
-    // rid of numerical file IDs.
-  ): Promise<number> {
+  ): Promise<void> {
     this.offsetPendingRequestCount(widget.formId, 1)
     return this.endpoints
       .uploadFileUploaderFile(

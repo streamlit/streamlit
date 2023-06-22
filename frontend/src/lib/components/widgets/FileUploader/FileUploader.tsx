@@ -64,14 +64,6 @@ export interface State {
    * rejected files that will not be updated.
    */
   files: UploadFileInfo[]
-
-  /**
-   * The most recent file ID we've received from the server. This gets sent
-   * back to the server during widget update so that it clean up
-   * orphaned files. File IDs start at 1 and only ever increase, so a
-   * file with a higher ID is guaranteed to be newer than one with a lower ID.
-   */
-  newestServerFileId: number
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
@@ -98,8 +90,8 @@ class FileUploader extends React.PureComponent<Props, State> {
       return emptyState
     }
 
-    const { maxFileId, uploadedFileInfo } = widgetValue
-    if (maxFileId == null || maxFileId === 0 || uploadedFileInfo == null) {
+    const { uploadedFileInfo } = widgetValue
+    if (uploadedFileInfo == null || uploadedFileInfo.length === 0) {
       return emptyState
     }
 
@@ -108,23 +100,17 @@ class FileUploader extends React.PureComponent<Props, State> {
         const name = f.name as string
         const size = f.size as number
 
-        // TODO(vdonato): Stop using the serverFileId field, and use
-        // the uploadFileUrl/deleteFileUrl/fileId fields instead of fileUrl.
-        const serverFileId = f.id as number
         const fileId = f.fileId as string
         const deleteFileURL = f.fileDeleteUrl as string
 
         return new UploadFileInfo(name, size, this.nextLocalFileId(), {
           type: "uploaded",
-          serverFileId,
-
           // TODO(vdonato / kajarenc): Use the finalized fields here
           fileId,
           uploadFileURL: "TODO",
           deleteFileURL,
         })
       }),
-      newestServerFileId: Number(maxFileId),
     }
   }
 
@@ -204,21 +190,12 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  /**
-   * When the server receives the widget value, it deletes "orphaned" uploaded
-   * files. An orphaned file is any file, associated with this uploader,
-   * whose file ID is not in the file ID list, and whose
-   * ID is <= `newestServerFileId`. This logic ensures that a FileUploader
-   * within a form doesn't have any of its "unsubmitted" uploads prematurely
-   * deleted when the script is re-run.
-   */
   private createWidgetValue(): FileUploaderStateProto | undefined {
     const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
       .filter(f => f.status.type === "uploaded")
       .map(f => {
         const { name, size, status } = f
         return new UploadedFileInfoProto({
-          id: (status as UploadedStatus).serverFileId,
           fileId: (status as UploadedStatus).fileId,
           // TODO(vdonato / kajarenc): Pass the uploadFileURL from
           // UploadedStatus -> FileUploaderStateProto
@@ -228,9 +205,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         })
       })
 
-    return new FileUploaderStateProto({
-      uploadedFileInfo,
-    })
+    return new FileUploaderStateProto({ uploadedFileInfo })
   }
 
   /**
@@ -392,7 +367,6 @@ class FileUploader extends React.PureComponent<Props, State> {
       curFile.id,
       curFile.setStatus({
         type: "uploaded",
-        serverFileId: 0,
         fileId: fileURLs.fileId as string,
         uploadFileURL: fileURLs.uploadUrl as string,
         deleteFileURL: fileURLs.deleteUrl as string,
