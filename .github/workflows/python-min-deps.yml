@@ -92,23 +92,11 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Setup virtual env
         uses: ./.github/actions/make_init
-      - name: Debug venv install
-        run: |
-          # ls
-          # ls venv
-          # ls venv/lib
-          # ls venv/lib/python3.7
-          # ls venv/lib/python3.7/site-packages
-          pip list
-          # python -c "import tests; print(tests.__file__)"
-          python -c 'import sys; print(sys.path)'
       - name: reinstall for local connection
         run: make python-init-test-min-deps
       - name: Run Python Tests
         run: make pytest
       - name: Run Integration Tests
-        run: |
-          python -c 'import sys; print(sys.path)'
-          make integration-tests
+        run: make integration-tests
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
