@@ -33,7 +33,9 @@ class ChildRecord(NamedTuple):
 
 
 class MutableExpander:
-    """A Streamlit expander that can be renamed and dynamically expanded/collapsed."""
+    """A Streamlit expander that can be renamed and dynamically expanded/collapsed.
+    Used internally by StreamlitCallbackHandler.
+    """
 
     def __init__(self, parent_container: DeltaGenerator, label: str, expanded: bool):
         """Create a new MutableExpander.

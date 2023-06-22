@@ -13,10 +13,12 @@
 # limitations under the License.
 
 """A LangChain CallbackHandler that captures all callbacks in a session for future
-offline playback."""
+offline playback. Useful for automated or manual testing of CallbackHandlers.
+"""
 
 from __future__ import annotations
 
+import math
 import pickle
 import time
 from typing import Any, TypedDict
@@ -64,8 +66,30 @@ def load_records_from_file(path: str) -> list[CallbackRecord]:
 def playback_callbacks(
     handlers: list[BaseCallbackHandler],
     records_or_filename: list[CallbackRecord] | str,
-    max_pause_time: float,
+    max_pause_time: float = math.inf,
 ) -> str:
+    """Playback a recorded list of callbacks using the given LangChain
+    CallbackHandlers. This is useful for offline testing of LangChain
+    callback handling logic.
+
+    Parameters
+    ----------
+    handlers
+        A list of LangChain CallbackHandlers to playback the callbacks on.
+    records_or_filename
+        A list of CallbackRecords, or a string path to a pickled record list
+    max_pause_time
+        The maxmimum number of seconds to pause between callbacks. By default
+        `playback_callbacks` sleeps between each callback for the same amount
+        of time as the callback's recorded delay. You can use `max_pause_time`
+        to speed up the simulation. Set `max_pause_time` to 0 to issue all
+        callbacks "instantly", with no delay in between.
+
+    Returns
+    -------
+    The Agent's recorded result string.
+
+    """
     if isinstance(records_or_filename, list):
         records = records_or_filename
     else:
@@ -113,6 +137,8 @@ def playback_callbacks(
 
 
 class CapturingCallbackHandler(BaseCallbackHandler):
+    """A LangChain CallbackHandler that records callbacks for offline playback."""
+
     def __init__(self) -> None:
         self._records: list[CallbackRecord] = []
         self._last_time: float | None = None
