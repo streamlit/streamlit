@@ -193,12 +193,6 @@ class Runtime:
         self._cache_storage_manager = config.cache_storage_manager
         self._script_cache = ScriptCache()
 
-        # Clear the ScriptCache when a user script file changes
-        self._sources_watcher = LocalSourcesWatcher(self._main_script_path)
-        self._sources_watcher.register_file_change_callback(
-            lambda _: self._script_cache.clear()
-        )
-
         self._session_mgr = config.session_manager_class(
             session_storage=config.session_storage,
             uploaded_file_manager=self._uploaded_file_mgr,
@@ -598,8 +592,10 @@ class Runtime:
             async_objs.started.set_result(None)
 
             while not async_objs.must_stop.is_set():
-                if self._state == RuntimeState.NO_SESSIONS_CONNECTED:
-                    await asyncio.wait(
+                if self._state == RuntimeState.NO_SESSIONS_CONNECTED:  # type: ignore[comparison-overlap]
+                    # mypy 1.4 incorrectly thinks this if-clause is unreachable,
+                    # because it thinks self._state must be INITIAL | ONE_OR_MORE_SESSIONS_CONNECTED.
+                    await asyncio.wait(  # type: ignore[unreachable]
                         (
                             asyncio.create_task(async_objs.must_stop.wait()),
                             asyncio.create_task(async_objs.has_connection.wait()),

@@ -18,7 +18,6 @@ import ast
 import contextlib
 import inspect
 import re
-import sys
 import types
 from typing import TYPE_CHECKING, Any, cast
 
@@ -288,8 +287,7 @@ def _get_variable_name_from_code_str(code):
 
     # If walrus, get name.
     # E.g. st.help(foo := 123) should give you "foo".
-    # (The hasattr is there to support Python 3.7)
-    elif hasattr(ast, "NamedExpr") and type(arg_node) is ast.NamedExpr:
+    elif type(arg_node) is ast.NamedExpr:
         # This next "if" will always be true, but need to add this for the type-checking test to
         # pass.
         if type(arg_node.target) is ast.Name:
@@ -324,14 +322,6 @@ def _get_variable_name_from_code_str(code):
     else:
         first_line = code_lines[0]
         end_offset = getattr(arg_node, "end_col_offset", -1)
-
-    # Python 3.7 and below have a bug where offset in some cases is off by one.
-    # See https://github.com/python/cpython/commit/b619b097923155a7034c05c4018bf06af9f994d0
-    # By the way, Python 3.7 also displays this bug when arg_node is a generator
-    # expression, but in that case there are further complications, so we're leaving it out
-    # of here. See the unit test for this for more details.
-    if sys.version_info < (3, 8) and type(arg_node) is ast.ListComp:
-        start_offset -= 1
 
     return first_line[start_offset:end_offset]
 
