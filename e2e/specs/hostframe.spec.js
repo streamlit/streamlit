@@ -30,9 +30,9 @@ describe("Host communication", () => {
                 cy.prepForElementSnapshots()
             });
 
-        cy.get("iframe").first().matchImageSnapshot("host_theme_message-before");
+        cy.get("iframe").first().matchImageSnapshot("theme-message-before");
         cy.getIndexed("#toolbar > button", 0).click();
-        cy.get("iframe").first().matchImageSnapshot("host_theme_message-after");
+        cy.get("iframe").first().matchImageSnapshot("theme-message-after");
     });
 
     it("handles a host rerun script message", () => {
