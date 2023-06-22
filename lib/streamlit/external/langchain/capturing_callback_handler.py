@@ -131,7 +131,7 @@ def playback_callbacks(
     # Return the agent's result
     for record in records:
         if record["callback_type"] == CallbackType.ON_AGENT_FINISH:
-            return record["args"][0][0]["output"]
+            return str(record["args"][0][0]["output"])
 
     return "[Missing Agent Result]"
 
