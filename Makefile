@@ -352,6 +352,12 @@ headers:
 	pre-commit run insert-license --all-files --hook-stage manual
 	pre-commit run license-headers --all-files --hook-stage manual
 
+.PHONY: gen-min-dep-constraints
+# Write the minimum versions of our dependencies to a constraints file.
+gen-min-dep-constraints:
+	make develop >/dev/null
+	python scripts/get_min_versions.py >lib/min-constraints-gen.txt
+
 .PHONY: build-test-env
 # Build docker image that mirrors circleci
 build-test-env:
