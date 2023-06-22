@@ -688,7 +688,7 @@ export const globalStyles = (theme: EmotionTheme): any => css`
 
   // Make scrollbars awesome in Chrome
 
-  ::-webkit-scrollbar {
+  :not(.dvn-scroller.glideDataEditor)::-webkit-scrollbar {
     background: transparent;
     border-radius: 100px;
     height: 6px;
