@@ -100,6 +100,12 @@ jobs:
             echo "${js_specs[@]:${startIndex}:${currentIntervalLength}}"
             scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${currentIntervalLength}}"
           fi
+      - name: Store Snapshots
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: cypress_snapshots
+          path: frontend/cypress/snapshots
       - name: Check that all screenshot have been committed
         run: |
           set -x;
@@ -117,12 +123,6 @@ jobs:
         with:
           name: cypress_videos
           path: frontend/cypress/videos
-      - name: Store Snapshots
-        uses: actions/upload-artifact@v3
-        if: ${{ matrix.specs == 22 }}
-        with:
-          name: cypress_snapshots
-          path: frontend/cypress/snapshots
 
   cypress_summary:
     runs-on: ubuntu-latest
