@@ -20,9 +20,7 @@ from pathlib import Path
 from google.protobuf.json_format import MessageToDict
 
 import streamlit as st
-from streamlit.external.langchain import LLMThoughtLabeler, StreamlitCallbackHandler
 from streamlit.external.langchain.capturing_callback_handler import playback_callbacks
-from streamlit.proto.Delta_pb2 import Delta
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -38,6 +36,11 @@ class StreamlitCallbackHandlerAPITest(unittest.TestCase):
 
     def test_stable_api(self):
         """StreamlitCallbackHandler must support its original API."""
+        from streamlit.external.langchain import (
+            LLMThoughtLabeler,
+            StreamlitCallbackHandler,
+        )
+
         StreamlitCallbackHandler(
             st.container(),
             max_thought_containers=55,
@@ -50,9 +53,13 @@ class StreamlitCallbackHandlerAPITest(unittest.TestCase):
 class StreamlitCallbackHandlerTest(DeltaGeneratorTestCase):
     def test_agent_run(self):
         """Test a complete LangChain Agent run using StreamlitCallbackHandler."""
+        from streamlit.external.langchain import StreamlitCallbackHandler
+
+        # We use max_thought_containers=2 to ensure that the "History" expander
+        # will be created.
         handler = StreamlitCallbackHandler(
             st.container(),
-            max_thought_containers=3,
+            max_thought_containers=2,
             expand_new_thoughts=True,
             collapse_completed_thoughts=True,
         )
@@ -67,8 +74,10 @@ class StreamlitCallbackHandlerTest(DeltaGeneratorTestCase):
             {'addBlock': {}},
             {'addBlock': {'expandable': {'label': ':thinking_face: **Thinking...**', 'expanded': True}, 'allowEmpty': True}},
             {'newElement': {'markdown': {'body': 'I need to find out the artist\'s full name and then search the FooBar database for their albums.  \nAction: Search  \nAction Input: "The Storm Before the Calm" artist', 'elementType': 'NATIVE'}}},
-            {'addBlock': {'expandable': {'label': ':thinking_face: **Search:** The Storm Before the Calm" artist', 'expanded': True}, 'allowEmpty': True}}, {'newElement': {'markdown': {'body': '**Alanis Morissette**', 'elementType': 'NATIVE'}}},
-            {'addBlock': {'expandable': {'label': '✅ **Search:** The Storm Before the Calm" artist'}, 'allowEmpty': True}}, {'addBlock': {'expandable': {'label': ':thinking_face: **Thinking...**', 'expanded': True}, 'allowEmpty': True}},
+            {'addBlock': {'expandable': {'label': ':thinking_face: **Search:** The Storm Before the Calm" artist', 'expanded': True}, 'allowEmpty': True}},
+            {'newElement': {'markdown': {'body': '**Alanis Morissette**', 'elementType': 'NATIVE'}}},
+            {'addBlock': {'expandable': {'label': '✅ **Search:** The Storm Before the Calm" artist'}, 'allowEmpty': True}},
+            {'addBlock': {'expandable': {'label': ':thinking_face: **Thinking...**', 'expanded': True}, 'allowEmpty': True}},
             {'newElement': {'markdown': {'body': "I now need to search the FooBar database for Alanis Morissette's albums.  \nAction: FooBar DB  \nAction Input: What albums of Alanis Morissette are in the FooBar database?", 'elementType': 'NATIVE'}}},
             {'addBlock': {'expandable': {'label': ':thinking_face: **FooBar DB:** What albums of Alanis Morissette are in the FooBar database?', 'expanded': True}, 'allowEmpty': True}},
             {'newElement': {'markdown': {'body': 'SELECT "Title" FROM "Album" INNER JOIN "Artist" ON "Album"."ArtistId" = "Artist"."ArtistId" WHERE "Name" = \'Alanis Morissette\' LIMIT 5;', 'elementType': 'NATIVE'}}},
@@ -77,7 +86,18 @@ class StreamlitCallbackHandlerTest(DeltaGeneratorTestCase):
             {'addBlock': {'expandable': {'label': '✅ **FooBar DB:** What albums of Alanis Morissette are in the FooBar database?'}, 'allowEmpty': True}},
             {'addBlock': {'expandable': {'label': ':thinking_face: **Thinking...**', 'expanded': True}, 'allowEmpty': True}},
             {'newElement': {'markdown': {'body': "I now know the final answer.  \nFinal Answer: The artist who recently released an album called 'The Storm Before the Calm' is Alanis Morissette and the albums of hers in the FooBar database are Jagged Little Pill.", 'elementType': 'NATIVE'}}},
-            {'addBlock': {'expandable': {'label': '✅ **Complete!**'}, 'allowEmpty': True}},
+            {'addBlock': {'expandable': {'label': ':books: **History**'}, 'allowEmpty': True}},
+            {'newElement': {'markdown': {'body': '✅ **Search:** The Storm Before the Calm" artist', 'elementType': 'NATIVE'}}},
+            {'newElement': {'markdown': {'body': 'I need to find out the artist\'s full name and then search the FooBar database for their albums.  \nAction: Search  \nAction Input: "The Storm Before the Calm" artist', 'elementType': 'NATIVE'}}},
+            {'newElement': {'markdown': {'body': '**Alanis Morissette**', 'elementType': 'NATIVE'}}},
+            {'newElement': {'empty': {}}},
+            {'newElement': {'markdown': {'body': '✅ **FooBar DB:** What albums of Alanis Morissette are in the FooBar database?', 'elementType': 'NATIVE'}}},
+            {'newElement': {'markdown': {'body': "I now need to search the FooBar database for Alanis Morissette's albums.  \nAction: FooBar DB  \nAction Input: What albums of Alanis Morissette are in the FooBar database?", 'elementType': 'NATIVE'}}},
+            {'newElement': {'markdown': {'body': 'SELECT "Title" FROM "Album" INNER JOIN "Artist" ON "Album"."ArtistId" = "Artist"."ArtistId" WHERE "Name" = \'Alanis Morissette\' LIMIT 5;', 'elementType': 'NATIVE'}}},
+            {'newElement': {'markdown': {'body': 'The albums of Alanis Morissette in the FooBar database are Jagged Little Pill.', 'elementType': 'NATIVE'}}},
+            {'newElement': {'markdown': {'body': '**The albums of Alanis Morissette in the FooBar database are Jagged Little Pill.**', 'elementType': 'NATIVE'}}},
+            {'newElement': {'empty': {}}},
+            {'addBlock': {'expandable': {'label': '✅ **Complete!**'}, 'allowEmpty': True}}
         ]
         # fmt: on
 
