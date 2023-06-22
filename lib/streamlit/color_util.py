@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Tuple, Union, cast
+from typing import Any, Callable, Tuple, Union, cast
 
 from typing_extensions import TypeAlias
 
-from streamlit.errors import StreamlitAPIException, StreamlitModuleNotFoundError
+from streamlit.errors import StreamlitAPIException
 
 # components go from 0.0 to 1.0
 # Supported by Pillow and pretty common.
@@ -46,7 +46,7 @@ CSSColorStr = Union[IntRGBAColorTuple, MixedRGBAColorTuple]
 ColorStr: TypeAlias = str
 
 Color: TypeAlias = Union[ColorTuple, ColorStr]
-MaybeColor: TypeAlias = Union[str, Tuple]
+MaybeColor: TypeAlias = Union[str, Tuple[Any]]
 
 
 def to_int_color_tuple(color: MaybeColor) -> IntColorTuple:
@@ -68,14 +68,15 @@ def to_css_color(color: MaybeColor) -> Color:
     See tests for more info.
     """
     if is_css_color_like(color):
-        return color
+        return cast(Color, color)
 
     if is_color_tuple_like(color):
-        color = _normalize_tuple(color, _int_formatter, _float_formatter)
-        if len(color) == 3:
-            return f"rgb({color[0]}, {color[1]}, {color[2]})"
-        else:
-            return f"rgba({color[0]}, {color[1]}, {color[2]}, {color[3]})"
+        ctuple = cast(ColorTuple, color)
+        ctuple = _normalize_tuple(ctuple, _int_formatter, _float_formatter)
+        if len(ctuple) == 3:
+            return f"rgb({ctuple[0]}, {ctuple[1]}, {ctuple[2]})"
+        elif len(ctuple) == 4:
+            return f"rgba({ctuple[0]}, {ctuple[1]}, {ctuple[2]}, {ctuple[3]})"
 
     raise InvalidColorException(color)
 
@@ -148,8 +149,8 @@ def is_color_like(color: MaybeColor) -> bool:
 # Wrote our own hex-to-tuple parser to avoid bringing in a dependency.
 def _to_color_tuple(
     color: MaybeColor,
-    rgb_formatter: Callable[[float], float],
-    alpha_formatter: Callable[[float], float],
+    rgb_formatter: Callable[[float, MaybeColor], float],
+    alpha_formatter: Callable[[float, MaybeColor], float],
 ):
     if is_css_color_like(color):
         hex_len = len(color)
@@ -191,9 +192,9 @@ def _to_color_tuple(
 
 
 def _normalize_tuple(
-    color: Tuple,
-    rgb_formatter: Callable[[float], float],
-    alpha_formatter: Callable[[float], float],
+    color: ColorTuple,
+    rgb_formatter: Callable[[float, ColorTuple], float],
+    alpha_formatter: Callable[[float, ColorTuple], float],
 ) -> ColorTuple:
     if 3 <= len(color) <= 4:
         rgb = [rgb_formatter(c, color) for c in color[:3]]
