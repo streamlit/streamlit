@@ -145,8 +145,8 @@ class Radio extends React.PureComponent<Props, State> {
                 },
                 RadioMarkInner: {
                   style: ({ $checked }: { $checked: boolean }) => ({
-                    height: $checked ? "6px" : ".75rem",
-                    width: $checked ? "6px" : ".75rem",
+                    height: $checked ? "6px" : "14px",
+                    width: $checked ? "6px" : "14px",
                   }),
                 },
                 Label: {

@@ -917,6 +917,41 @@ describe("App.onHistoryChange", () => {
       expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
     })
   })
+
+  it("doesn't rerun when we are on the same page and the url contains an anchor", () => {
+    const pushStateSpy = jest.spyOn(window.history, "pushState")
+
+    window.history.pushState({}, "", "#foo_bar")
+    jest.spyOn(instance, "onPageChange")
+    instance.onHistoryChange()
+
+    expect(instance.onPageChange).not.toHaveBeenCalled()
+
+    pushStateSpy.mockRestore()
+  })
+
+  it("does rerun when we are navigating to a different page and the last window history url contains an anchor", () => {
+    const pushStateSpy = jest.spyOn(window.history, "pushState")
+
+    jest.spyOn(instance, "onPageChange")
+
+    // navigate to current page with anchor
+    window.history.pushState({}, "", "#foo_bar")
+    instance.onHistoryChange()
+    expect(instance.onPageChange).not.toHaveBeenCalled()
+
+    // navigate to new page
+    instance.handleNewSession(
+      new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
+    )
+    window.history.back()
+
+    waitFor(() => {
+      expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
+    })
+
+    pushStateSpy.mockRestore()
+  })
 })
 
 describe("App.handlePageConfigChanged", () => {

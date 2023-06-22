@@ -25,6 +25,7 @@ import "streamlit/proto/BokehChart.proto";
 import "streamlit/proto/Button.proto";
 import "streamlit/proto/DownloadButton.proto";
 import "streamlit/proto/CameraInput.proto";
+import "streamlit/proto/ChatInput.proto";
 import "streamlit/proto/Checkbox.proto";
 import "streamlit/proto/Code.proto";
 import "streamlit/proto/ColorPicker.proto";
@@ -75,6 +76,7 @@ message Element {
     Button button = 19;
     DownloadButton download_button = 43;
     CameraInput camera_input = 45;
+    ChatInput chat_input = 49;
     Checkbox checkbox = 20;
     ColorPicker color_picker = 35;
     ComponentInstance component_instance = 37;
@@ -110,7 +112,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 49
+    // Next ID: 50
   }
 
   reserved 9;

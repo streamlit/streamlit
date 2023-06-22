@@ -220,7 +220,7 @@ class SelectSliderMixin:
         >>> st.write('You selected wavelengths between', start_color, 'and', end_color)
 
         .. output::
-           https://doc-select-slider.streamlitapp.com/
+           https://doc-select-slider.streamlit.app/
            height: 450px
 
         """

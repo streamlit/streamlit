@@ -96,8 +96,10 @@ const WebcamComponent = ({
   const videoRef = useRef<Webcam>(null)
 
   const [debouncedWidth, setDebouncedWidth] = useState(width)
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const memoizedSetDebouncedCallback = useCallback(
-    (width: number) => debounce(1000, setDebouncedWidth(width)),
+    debounce(1000, setDebouncedWidth),
     []
   )
 
@@ -142,7 +144,7 @@ const WebcamComponent = ({
             // The aspect ration of video stream may be different depending on a camera.
             height={(debouncedWidth * 9) / 16}
             style={{
-              borderRadius: `${theme.radii.md} ${theme.radii.md} 0 0`,
+              borderRadius: `${theme.radii.lg} ${theme.radii.lg} 0 0`,
             }}
             onUserMediaError={() => {
               setWebcamPermissionState(WebcamPermission.ERROR)

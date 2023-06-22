@@ -23,7 +23,6 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, SessionClientDisconnectedError
 from streamlit.web.server.server import BrowserWebSocketHandler
-from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 from tests.streamlit.web.server.server_test_case import ServerTestCase
 from tests.testutil import patch_config_options
 
