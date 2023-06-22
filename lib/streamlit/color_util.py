@@ -46,7 +46,7 @@ CSSColorStr = Union[IntRGBAColorTuple, MixedRGBAColorTuple]
 ColorStr: TypeAlias = str
 
 Color: TypeAlias = Union[ColorTuple, ColorStr]
-MaybeColor: TypeAlias = Union[str, Tuple[Any]]
+MaybeColor: TypeAlias = Union[str, Tuple[Any, ...]]
 
 
 def to_int_color_tuple(color: MaybeColor) -> IntColorTuple:
@@ -76,7 +76,8 @@ def to_css_color(color: MaybeColor) -> Color:
         if len(ctuple) == 3:
             return f"rgb({ctuple[0]}, {ctuple[1]}, {ctuple[2]})"
         elif len(ctuple) == 4:
-            return f"rgba({ctuple[0]}, {ctuple[1]}, {ctuple[2]}, {ctuple[3]})"
+            c4tuple = cast(MixedRGBAColorTuple, ctuple)
+            return f"rgba({c4tuple[0]}, {c4tuple[1]}, {c4tuple[2]}, {c4tuple[3]})"
 
     raise InvalidColorException(color)
 
@@ -152,31 +153,30 @@ def _to_color_tuple(
     rgb_formatter: Callable[[float, MaybeColor], float],
     alpha_formatter: Callable[[float, MaybeColor], float],
 ):
-    if is_css_color_like(color):
+    if is_hex_color_like(color):
         hex_len = len(color)
+        color_hex = cast(str, color)
 
         if hex_len == 4:
-            r, g, b = color[1:4]
-            r = 2 * r
-            g = 2 * g
-            b = 2 * b
+            r = 2 * color_hex[1]
+            g = 2 * color_hex[2]
+            b = 2 * color_hex[3]
             a = "ff"
         elif hex_len == 5:
-            r, g, b, a = color[1:5]
-            r = 2 * r
-            g = 2 * g
-            b = 2 * b
-            a = 2 * a
+            r = 2 * color_hex[1]
+            g = 2 * color_hex[2]
+            b = 2 * color_hex[3]
+            a = 2 * color_hex[4]
         elif hex_len == 7:
-            r = color[1:3]
-            g = color[3:5]
-            b = color[5:7]
+            r = color_hex[1:3]
+            g = color_hex[3:5]
+            b = color_hex[5:7]
             a = "ff"
         elif hex_len == 9:
-            r = color[1:3]
-            g = color[3:5]
-            b = color[5:7]
-            a = color[7:9]
+            r = color_hex[1:3]
+            g = color_hex[3:5]
+            b = color_hex[5:7]
+            a = color_hex[7:9]
         else:
             raise InvalidColorException(color)
 
@@ -186,21 +186,27 @@ def _to_color_tuple(
             raise InvalidColorException(color)
 
     if is_color_tuple_like(color):
-        return _normalize_tuple(color, rgb_formatter, alpha_formatter)
+        color_tuple = cast(ColorTuple, color)
+        return _normalize_tuple(color_tuple, rgb_formatter, alpha_formatter)
 
     raise InvalidColorException(color)
 
 
 def _normalize_tuple(
     color: ColorTuple,
-    rgb_formatter: Callable[[float, ColorTuple], float],
-    alpha_formatter: Callable[[float, ColorTuple], float],
+    rgb_formatter: Callable[[float, MaybeColor], float],
+    alpha_formatter: Callable[[float, MaybeColor], float],
 ) -> ColorTuple:
     if 3 <= len(color) <= 4:
-        rgb = [rgb_formatter(c, color) for c in color[:3]]
+        rgb = (
+            rgb_formatter(color[0], color),
+            rgb_formatter(color[1], color),
+            rgb_formatter(color[2], color),
+        )
         if len(color) == 4:
-            alpha = alpha_formatter(color[3], color)
-            return [*rgb, alpha]
+            color_4tuple = cast(Tuple[float, float, float, float], color)
+            alpha = alpha_formatter(color_4tuple[3], color)
+            return (*rgb, alpha)
         return rgb
 
     raise InvalidColorException(color)
