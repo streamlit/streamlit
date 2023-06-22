@@ -25,14 +25,13 @@ describe("Host communication", () => {
     });
 
     it("handles a host theme message", () => {
-        cy.get("iframe").first().matchImageSnapshot("host_theme_message-before");
-
-        cy.getIndexed("#toolbar > button", 0).click();
         cy.get("iframe")
             .iframe(() => {
                 cy.prepForElementSnapshots()
             });
 
+        cy.get("iframe").first().matchImageSnapshot("host_theme_message-before");
+        cy.getIndexed("#toolbar > button", 0).click();
         cy.get("iframe").first().matchImageSnapshot("host_theme_message-after");
     });
 
