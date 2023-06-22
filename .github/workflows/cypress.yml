@@ -100,12 +100,6 @@ jobs:
             echo "${js_specs[@]:${startIndex}:${currentIntervalLength}}"
             scripts/run_e2e_tests.py -a "${js_specs[@]:${startIndex}:${currentIntervalLength}}"
           fi
-      - name: Store Snapshots
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: cypress_snapshots
-          path: frontend/cypress/snapshots
       - name: Check that all screenshot have been committed
         run: |
           set -x;
@@ -136,6 +130,12 @@ jobs:
         shell: bash --login -eo pipefail {0}
 
     steps:
+      - name: Store Snapshots
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: cypress_snapshots
+          path: frontend/cypress/snapshots
       - name: Check Cypress test matrix status
         if: ${{ needs.test.result == 'failure' }}
         run: exit 1
