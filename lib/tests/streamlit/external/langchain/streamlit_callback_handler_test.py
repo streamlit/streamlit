@@ -49,6 +49,21 @@ class StreamlitCallbackHandlerAPITest(unittest.TestCase):
             thought_labeler=LLMThoughtLabeler(),
         )
 
+    def test_import_from_langchain(self):
+        """We can import and use the callback handler from LangChain itself."""
+        # TODO: when LangChain adds our StreamlitCallbackHandler implementation,
+        #  uncomment this test
+        # from langchain.callbacks.streamlit import StreamlitCallbackHandler as LCStreamlitCallbackHandler
+        # from streamlit.external.langchain import StreamlitCallbackHandler
+        # handler = LCStreamlitCallbackHandler(
+        #     st.container(),
+        #     max_thought_containers=55,
+        #     expand_new_thoughts=True,
+        #     collapse_completed_thoughts=False,
+        #     thought_labeler=None,
+        # )
+        # self.assertIsInstance(handler, StreamlitCallbackHandler)
+
 
 class StreamlitCallbackHandlerTest(DeltaGeneratorTestCase):
     def test_agent_run(self):

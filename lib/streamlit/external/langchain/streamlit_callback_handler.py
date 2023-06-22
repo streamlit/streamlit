@@ -12,7 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Callback Handler that prints to streamlit."""
+"""
+LangChain CallbackHandler that prints to streamlit.
+
+This is a special API that's imported and used by LangChain itself. Any updates
+to the public API (the StreamlitCallbackHandler constructor, and the entirety
+of LLMThoughtLabeler) *must* remain backwards-compatible to avoid breaking
+LangChain.
+
+This means that it's acceptable to add new optional kwargs to StreamlitCallbackHandler,
+but no new positional args or required kwargs should be added, and no existing
+args should be removed. If we need to overhaul the API, we must ensure that a
+compatible API continues to exist.
+
+Any major change to the StreamlitCallbackHandler should be tested by importing
+the API *from LangChain itself*.
+"""
 
 from __future__ import annotations
 
