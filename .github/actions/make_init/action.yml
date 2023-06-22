@@ -54,13 +54,21 @@ runs:
       run: |
         echo "./vendor/protoc-3.20.3-linux-x86_64/bin" >> $GITHUB_PATH
       shell: bash --login -eo pipefail {0}
-    # Combine hashes of the Python interpreter, requirements files, and today's
+    # Combine hashes of the Python interpreter, Pipfile, and today's
     # date into a file whose hash will key the Python virtualenv.
+    #
+    # This means that our virtualenv cache will expire each day. We do
+    # this because we are not using a lockfile to pin dependencies -
+    # instead, each time Github Actions rebuilds the virtualenv, it uses the
+    # latest compatible version of each dependency (which mirrors what
+    # happens when a user installs Streamlit locally). So we expire our
+    # virtualenv cache daily to prevent it from getting far out of sync
+    # with what a fresh Streamlit installation would look like.
     - if: inputs.use_cached_venv == 'true'
       name: Create Python environment cache key
       run: |
         md5sum $(which python) > $GITHUB_WORKSPACE/python_cache_key.md5
-        md5sum lib/min-constraints-gen.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/dev-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
         date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
@@ -71,15 +79,14 @@ runs:
       uses: actions/cache@v3
       with:
         path: venv
-        key: v1-python-venv-min-${{ hashFiles('**/python_cache_key.md5') }}
+        key: v1-python-venv-${{ hashFiles('**/python_cache_key.md5') }}
     - if: steps.cache-virtualenv.outputs.cache-hit != 'true'
       name: Create Virtual Env
       run: |
         python -m venv venv
         source venv/bin/activate
         pip install --upgrade pip
-        make python-init-test-min-deps
-        # make python-init
+        make python-init
         deactivate
       shell: bash --login -eo pipefail {0}
     - name: Activate virtualenv
