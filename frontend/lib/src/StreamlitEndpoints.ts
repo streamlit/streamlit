@@ -70,9 +70,7 @@ export interface StreamlitEndpoints {
     sessionId: string,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
-    // TODO(vdonato): Eventually change the return type to Promise<void> since
-    // we'll be getting rid of numerical file IDs.
-  ): Promise<number>
+  ): Promise<void>
 
   /**
    * Request that the file at the given URL be deleted.

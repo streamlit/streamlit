@@ -80,14 +80,6 @@ export interface State {
   files: UploadFileInfo[]
 
   /**
-   * The most recent file ID we've received from the server. This gets sent
-   * back to the server during widget update so that it clean up
-   * orphaned files. File IDs start at 1 and only ever increase, so a
-   * file with a higher ID is guaranteed to be newer than one with a lower ID.
-   */
-  newestServerFileId: number
-
-  /**
    * Represents whether the component is in clear photo mode,
    * when snapshot removed and new Webcam component is not shown yet.
    * Time interval between `Clear Photo` button clicked and access to Webcam received again
@@ -195,7 +187,6 @@ class CameraInput extends React.PureComponent<Props, State> {
   get initialValue(): State {
     const emptyState = {
       files: [],
-      newestServerFileId: 0,
       imgSrc: null,
       shutter: false,
       minShutterEffectPassed: true,
@@ -210,8 +201,8 @@ class CameraInput extends React.PureComponent<Props, State> {
       return emptyState
     }
 
-    const { maxFileId, uploadedFileInfo } = widgetValue
-    if (maxFileId == null || maxFileId === 0 || uploadedFileInfo == null) {
+    const { uploadedFileInfo } = widgetValue
+    if (uploadedFileInfo == null || uploadedFileInfo.length === 0) {
       return emptyState
     }
 
@@ -219,14 +210,12 @@ class CameraInput extends React.PureComponent<Props, State> {
       files: uploadedFileInfo.map(f => {
         const name = f.name as string
         const size = f.size as number
-        const serverFileId = f.id as number
 
         const fileId = f.fileId as string
         const deleteFileURL = f.fileDeleteUrl as string
 
         return new UploadFileInfo(name, size, this.nextLocalFileId(), {
           type: "uploaded",
-          serverFileId,
 
           // TODO(vdonato / kajarenc): Use the finalized fields here
           fileId,
@@ -234,7 +223,6 @@ class CameraInput extends React.PureComponent<Props, State> {
           deleteFileURL,
         })
       }),
-      newestServerFileId: Number(maxFileId),
       imgSrc:
         uploadedFileInfo.length === 0 ? "" : this.RESTORED_FROM_WIDGET_STRING,
       shutter: false,
@@ -312,21 +300,12 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
   }
 
-  /**
-   * When the server receives the widget value, it deletes "orphaned" uploaded
-   * files. An orphaned file is any file, associated with this uploader,
-   * whose file ID is not in the file ID list, and whose
-   * ID is <= `newestServerFileId`. This logic ensures that a FileUploader
-   * within a form doesn't have any of its "unsubmitted" uploads prematurely
-   * deleted when the script is re-run.
-   */
   private createWidgetValue(): FileUploaderStateProto | undefined {
     const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
       .filter(f => f.status.type === "uploaded")
       .map(f => {
         const { name, size, status } = f
         return new UploadedFileInfoProto({
-          id: (status as UploadedStatus).serverFileId,
           fileId: (status as UploadedStatus).fileId,
           fileDeleteUrl: (status as UploadedStatus).deleteFileURL,
           name,
@@ -334,9 +313,7 @@ class CameraInput extends React.PureComponent<Props, State> {
         })
       })
 
-    return new FileUploaderStateProto({
-      uploadedFileInfo,
-    })
+    return new FileUploaderStateProto({ uploadedFileInfo })
   }
 
   /**
@@ -524,7 +501,6 @@ class CameraInput extends React.PureComponent<Props, State> {
       curFile.id,
       curFile.setStatus({
         type: "uploaded",
-        serverFileId: 0,
         fileId: fileURLs.fileId as string,
         uploadFileURL: fileURLs.uploadUrl as string,
         deleteFileURL: fileURLs.deleteUrl as string,
