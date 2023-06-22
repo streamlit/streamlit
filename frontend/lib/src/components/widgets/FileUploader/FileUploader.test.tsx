@@ -148,10 +148,8 @@ describe("FileUploader widget", () => {
           name: "filename.txt",
           size: 15,
           status: { type: "uploaded", serverFileId: 1 },
-          id: 1,
         },
       ],
-      newestServerFileId: 1,
     })
   })
 

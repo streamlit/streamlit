@@ -71,7 +71,7 @@ class Endpoints implements StreamlitEndpoints {
     sessionId: string,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
-  ): Promise<number> {
+  ): Promise<void> {
     return Promise.reject(new Error("Unimplemented"))
   }
 
