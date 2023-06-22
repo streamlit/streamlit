@@ -156,8 +156,13 @@ class TextInput extends React.PureComponent<Props, State> {
   private onKeyPress = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    if (e.key === "Enter" && this.state.dirty) {
-      this.commitWidgetValue({ fromUi: true })
+    if (e.key === "Enter") {
+      if (isInForm(this.props.element)) {
+        // This needs to be the correct form id
+        this.props.widgetMgr.submitForm(this.props.element)
+      } else if (this.state.dirty) {
+        this.commitWidgetValue({ fromUi: true })
+      }
     }
   }
 

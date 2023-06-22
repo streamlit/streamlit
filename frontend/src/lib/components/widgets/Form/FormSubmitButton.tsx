@@ -34,7 +34,7 @@ export interface Props {
 
 export function FormSubmitButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, hasInProgressUpload, width } = props
-  const { formId } = element
+  const { formId, id: submitButtonId } = element
   const style = { width }
   const kind =
     element.type === "primary"
@@ -42,8 +42,8 @@ export function FormSubmitButton(props: Props): ReactElement {
       : BaseButtonKind.SECONDARY_FORM_SUBMIT
 
   useEffect(() => {
-    widgetMgr.incrementSubmitButtonCount(formId)
-    return () => widgetMgr.decrementSubmitButtonCount(formId)
+    widgetMgr.addSubmitButton(formId, submitButtonId)
+    return () => widgetMgr.removeSubmitButton(formId, submitButtonId)
   }, [widgetMgr, formId])
 
   return (

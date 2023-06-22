@@ -52,10 +52,10 @@ export interface FormsData {
   readonly formsWithUploads: Set<string>
 
   /**
-   * Mapping of formID:numberOfSubmitButtons. (Most forms will have only one,
+   * Mapping of formID:array of submitButtonIds. (Most forms will have only one,
    * but it's not an error to have multiple.)
    */
-  readonly submitButtonCount: Map<string, number>
+  readonly submitButtons: Map<string, Array<string>>
 }
 
 /** Create an empty FormsData instance. */
@@ -63,7 +63,7 @@ export function createFormsData(): FormsData {
   return {
     formsWithPendingChanges: new Set(),
     formsWithUploads: new Set(),
-    submitButtonCount: new Map(),
+    submitButtons: new Map(),
   }
 }
 
@@ -581,32 +581,31 @@ export class WidgetStateManager {
    * Called by FormSubmitButton on creation. Increment submitButtonCount for
    * the given form, and update FormsData.
    */
-  public incrementSubmitButtonCount(formId: string): void {
-    this.setSubmitButtonCount(
-      formId,
-      WidgetStateManager.getSubmitButtonCount(this.formsData, formId) + 1
-    )
+  public addSubmitButton(formId: string, submitButtonId: string): void {
+    if (this.formsData.submitButtons.has(formId)) {
+      const formSubmitButtons = this.formsData.submitButtons.get(formId)
+      if (formSubmitButtons !== undefined) {
+        formSubmitButtons.push(submitButtonId)
+      }
+    } else {
+      this.formsData.submitButtons.set(formId, [submitButtonId])
+    }
   }
 
   /**
    * Called by FormSubmitButton on creation. Decrement submitButtonCount for
    * the given form, and update FormsData.
    */
-  public decrementSubmitButtonCount(formId: string): void {
-    this.setSubmitButtonCount(
-      formId,
-      WidgetStateManager.getSubmitButtonCount(this.formsData, formId) - 1
-    )
-  }
-
-  private setSubmitButtonCount(formId: string, count: number): void {
-    if (count < 0) {
-      throw new Error(`Bad submitButtonCount value ${count} (must be >= 0)`)
+  public removeSubmitButton(formId: string, submitButtonId: string): void {
+    if (this.formsData.submitButtons.has(formId)) {
+      const formSubmitButtons = this.formsData.submitButtons.get(formId)
+      if (formSubmitButtons !== undefined) {
+        const index = formSubmitButtons.indexOf(submitButtonId, 0)
+        if (index > -1) {
+          formSubmitButtons.splice(index, 1)
+        }
+      }
     }
-
-    this.updateFormsData(draft => {
-      draft.submitButtonCount.set(formId, count)
-    })
   }
 
   /**
@@ -619,14 +618,6 @@ export class WidgetStateManager {
       this.formsData = newData
       this.props.formsDataChanged(this.formsData)
     }
-  }
-
-  private static getSubmitButtonCount(
-    data: FormsData,
-    formId: string
-  ): number {
-    const count = data.submitButtonCount.get(formId)
-    return count !== undefined ? count : 0
   }
 }
 
