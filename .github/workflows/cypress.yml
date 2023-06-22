@@ -111,6 +111,12 @@ jobs:
             git ls-files --others --exclude-standard | grep cypress;
             exit 1;
           fi
+      - name: Store Snapshots
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: cypress_snapshots
+          path: frontend/cypress/snapshots
       - name: Store Videos
         uses: actions/upload-artifact@v3
         if: always()
@@ -130,12 +136,6 @@ jobs:
         shell: bash --login -eo pipefail {0}
 
     steps:
-      - name: Store Snapshots
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: cypress_snapshots
-          path: frontend/cypress/snapshots
       - name: Check Cypress test matrix status
         if: ${{ needs.test.result == 'failure' }}
         run: exit 1
