@@ -113,9 +113,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     sessionId: string,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
-    // TODO(vdonato): Eventually change this type to Promise<void> once we've
-    // removed numerical file IDs.
-  ): Promise<number> {
+  ): Promise<void> {
     const form = new FormData()
     form.append("sessionId", sessionId)
     form.append(file.name, file)
@@ -126,12 +124,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       data: form,
       responseType: "text",
       onUploadProgress,
-    }).then(response => {
-      // Sanity check. Axios should be returning a number here.
-      if (typeof response.data === "number") {
-        return response.data
-      }
-    })
+    }).then(() => undefined) // If the request succeeds, we don't care about the response body
   }
 
   /**
