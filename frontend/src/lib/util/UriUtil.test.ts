@@ -181,10 +181,10 @@ describe("isValidOrigin", () => {
     ).toBeFalsy()
   })
 
-  it("returns true if testUrl's hostname is localhost", () => {
+  it("returns true if testUrl's hostname is localhost w/ various ports", () => {
     expect(
       isValidOrigin(
-        "https://devel.streamlit.io",
+        "http:localhost",
         // Example of localhost url used for manual testing
         "http://localhost:8000"
       )
@@ -192,7 +192,7 @@ describe("isValidOrigin", () => {
 
     expect(
       isValidOrigin(
-        "https://devel.streamlit.io",
+        "http://localhost",
         // Example of localhost url used by Cypress
         "http://localhost:35475"
       )
