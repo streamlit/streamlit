@@ -197,16 +197,18 @@ def _normalize_tuple(
     rgb_formatter: Callable[[float, MaybeColor], float],
     alpha_formatter: Callable[[float, MaybeColor], float],
 ) -> ColorTuple:
-    if 3 <= len(color) <= 4:
+    if len(color) == 3:
         r = rgb_formatter(color[0], color)
         g = rgb_formatter(color[1], color)
         b = rgb_formatter(color[2], color)
-
-        if len(color) == 4:
-            color_4tuple = cast(Tuple[float, float, float, float], color)
-            alpha = alpha_formatter(color_4tuple[3], color)
-            return r, g, b, alpha
         return r, g, b
+
+    elif len(color) == 4:
+        r = rgb_formatter(color[0], color)
+        g = rgb_formatter(color[1], color)
+        b = rgb_formatter(color[2], color)
+        alpha = alpha_formatter(color[3], color)
+        return r, g, b, alpha
 
     raise InvalidColorException(color)
 
