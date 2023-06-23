@@ -18,7 +18,7 @@ syntax = "proto3";
 
 message Toast {
     // Display message
-    string text = 1;
+    string body = 1;
 
     // Emoji
     string icon = 2;

@@ -25,7 +25,7 @@ class ToastTest(DeltaGeneratorTestCase):
         st.toast("toast text")
 
         c = self.get_delta_from_queue().new_element.toast
-        self.assertEqual(c.text, "toast text")
+        self.assertEqual(c.body, "toast text")
         self.assertEqual(c.icon, "")
 
     def test_no_text(self):
@@ -34,7 +34,7 @@ class ToastTest(DeltaGeneratorTestCase):
             st.toast("")
         self.assertEqual(
             str(e.exception),
-            "Toast text cannot be blank - please provide a message.",
+            "Toast body cannot be blank - please provide a message.",
         )
 
     def test_valid_icon(self):
@@ -42,7 +42,7 @@ class ToastTest(DeltaGeneratorTestCase):
         st.toast("toast text", icon="🦄")
 
         c = self.get_delta_from_queue().new_element.toast
-        self.assertEqual(c.text, "toast text")
+        self.assertEqual(c.body, "toast text")
         self.assertEqual(c.icon, "🦄")
 
     def test_invalid_icon(self):

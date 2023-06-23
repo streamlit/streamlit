@@ -33,7 +33,7 @@ import AlertElement from "src/lib/components/elements/AlertElement/AlertElement"
 
 export interface ToastProps {
   theme: EmotionTheme
-  text: string
+  body: string
   icon?: string
   width: number
 }
@@ -94,8 +94,8 @@ function shortenMessage(fullMessage: string): string {
   return fullMessage
 }
 
-export function Toast({ theme, text, icon, width }: ToastProps): ReactElement {
-  const fullMessage = icon ? `${icon}&ensp;${text}` : text
+export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
+  const fullMessage = icon ? `${icon}&ensp;${body}` : body
   const displayMessage = shortenMessage(fullMessage)
   const shortened = fullMessage !== displayMessage
 

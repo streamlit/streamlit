@@ -37,7 +37,7 @@ function EventContainer({
     <>
       <ToasterContainer
         placement={PLACEMENT.bottomRight}
-        autoHideDuration={4000}
+        autoHideDuration={4 * 1000} // in milliseconds
         overrides={{
           Root: {
             style: {

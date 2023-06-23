@@ -25,17 +25,19 @@ if TYPE_CHECKING:
 
 
 def validate_text(toast_text: SupportsStr) -> None:
-    if toast_text is "":
+    if str(toast_text) == "":
         raise StreamlitAPIException(
-            f"Toast text cannot be blank - please provide a message."
+            f"Toast body cannot be blank - please provide a message."
         )
+    else:
+        return toast_text
 
 
 class ToastMixin:
     @gather_metrics("toast")
     def toast(
         self,
-        text: SupportsStr,
+        body: SupportsStr,
         *,  # keyword-only args:
         icon: Optional[str] = None,
     ) -> "DeltaGenerator":
@@ -44,7 +46,7 @@ class ToastMixin:
 
         Parameters
         ----------
-        text : str
+        body : str
             Short message for the toast.
         icon : str or None
             An optional, keyword-only argument that specifies an emoji to use as
@@ -58,9 +60,8 @@ class ToastMixin:
         >>>
         >>> st.toast('Your edited image was saved!', icon='😍')
         """
-        validate_text(text)
         toast_proto = ToastProto()
-        toast_proto.text = clean_text(text)
+        toast_proto.body = clean_text(validate_text(body))
         toast_proto.icon = validate_emoji(icon)
         return self.dg._enqueue("toast", toast_proto)
 

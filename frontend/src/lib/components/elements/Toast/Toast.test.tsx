@@ -52,7 +52,7 @@ const getProps = (
   elementProps: Partial<ToastProto> = {},
   themeProps: Partial<EmotionTheme> = {}
 ): ToastProps => ({
-  text: "This is a toast message",
+  body: "This is a toast message",
   icon: "🐶",
   theme: {
     ...mockTheme.emotion,
@@ -62,14 +62,13 @@ const getProps = (
   ...elementProps,
 })
 
-const renderComponent = (props: ToastProps): RenderResult => {
-  return render(
+const renderComponent = (props: ToastProps): RenderResult =>
+  render(
     <>
       {createContainer()}
       <Toast {...props} />
     </>
   )
-}
 
 describe("Toast Component", () => {
   test("renders default toast", () => {
@@ -89,7 +88,7 @@ describe("Toast Component", () => {
   test("renders long toast messages with expand option", () => {
     const props = getProps({
       icon: "",
-      text: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
+      body: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
     })
     renderComponent(props)
 
@@ -102,46 +101,31 @@ describe("Toast Component", () => {
     expect(toast).toContainElement(expandButton)
   })
 
-  test("can expand to see full toast message", () => {
+  test("can expand to see the full toast message & collapse to truncate", () => {
     const props = getProps({
       icon: "",
-      text: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
+      body: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
     })
     renderComponent(props)
 
     const toast = screen.getByRole("alert")
     const expandButton = screen.getByRole("button", { name: "view more" })
+    // Initial state
     expect(toast).toBeInTheDocument()
     expect(toast).toHaveTextContent(
       "Random toast message that is a really really really really really really really really really long message,"
     )
     expect(toast).toContainElement(expandButton)
 
+    // Click view more button & expand the message
     fireEvent.click(expandButton)
     expect(toast).toHaveTextContent(
       "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit"
     )
+
+    // Click view less button & collapse the message
     const collapseButton = screen.getByRole("button", { name: "view less" })
     expect(toast).toContainElement(collapseButton)
-  })
-
-  test("can collapse to see truncated toast message", () => {
-    const props = getProps({
-      icon: "",
-      text: "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit",
-    })
-    renderComponent(props)
-
-    const toast = screen.getByRole("alert")
-    const expandButton = screen.getByRole("button", { name: "view more" })
-    // Click view more button (expand the message)
-    fireEvent.click(expandButton)
-    expect(toast).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit"
-    )
-
-    // Click view less button (collapse the message)
-    const collapseButton = screen.getByRole("button", { name: "view less" })
     fireEvent.click(collapseButton)
     expect(toast).toHaveTextContent(
       "Random toast message that is a really really really really really really really really really long message,"

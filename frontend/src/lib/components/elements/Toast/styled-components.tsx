@@ -39,7 +39,7 @@ interface StyledToastMessageProps {
 }
 
 export const StyledToastMessage = styled.div<StyledToastMessageProps>(
-  ({ expanded }) => ({
-    maxHeight: expanded ? "none" : "68px",
+  ({ theme, expanded }) => ({
+    maxHeight: expanded ? "none" : theme.breakpoints.toast,
   })
 )
