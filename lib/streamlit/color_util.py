@@ -88,19 +88,19 @@ def to_css_color(color: MaybeColor) -> Color:
 
 
 def is_css_color_like(color: MaybeColor) -> bool:
-    """Check whether the input looks like something to_css_color() can produce.
+    """Check whether the input looks like something Vega can use.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
     to convert and see if an error is thrown.
+
+    NOTE: We only accept hex colors and color tuples as user input. So do not use this function to
+    validate user input! Instead use is_hex_color_like and is_color_tuple_like.
     """
     return is_hex_color_like(color) or _is_cssrgb_color_like(color)
 
 
 def is_hex_color_like(color: MaybeColor) -> bool:
     """Check whether the input looks like a hex color.
-
-    NOTE: We only accept hex colors and color tuples as user input. So you should use
-    is_hex_color_like and is_color_tuple_like whenever checking your inputs.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
     to convert and see if an error is thrown.
@@ -116,11 +116,11 @@ def is_hex_color_like(color: MaybeColor) -> bool:
 def _is_cssrgb_color_like(color: MaybeColor) -> bool:
     """Check whether the input looks like a CSS rgb() or rgba() color string.
 
-    NOTE: We only accept hex colors and color tuples as user input. So you should use
-    is_hex_color_like and is_color_tuple_like whenever checking your inputs.
-
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
     to convert and see if an error is thrown.
+
+    NOTE: We only accept hex colors and color tuples as user input. So do not use this function to
+    validate user input! Instead use is_hex_color_like and is_color_tuple_like.
     """
     return isinstance(color, str) and (
         color.startswith("rgb(") or color.startswith("rgba(")
@@ -129,9 +129,6 @@ def _is_cssrgb_color_like(color: MaybeColor) -> bool:
 
 def is_color_tuple_like(color: MaybeColor) -> bool:
     """Check whether the input looks like a tuple color.
-
-    NOTE: We only accept hex colors and color tuples as user input. So you should use
-    is_hex_color_like and is_color_tuple_like whenever checking your inputs.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
     to convert and see if an error is thrown.
