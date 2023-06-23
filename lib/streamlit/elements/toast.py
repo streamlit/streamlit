@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-def validate_text(toast_text: SupportsStr) -> None:
+def validate_text(toast_text: SupportsStr) -> SupportsStr:
     if str(toast_text) == "":
         raise StreamlitAPIException(
             f"Toast body cannot be blank - please provide a message."

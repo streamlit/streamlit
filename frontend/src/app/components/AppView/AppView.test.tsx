@@ -53,6 +53,7 @@ function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
     showColoredLine: false,
     pageLinkBaseUrl: "",
     sidebarChevronDownshift: 0,
+    toastAdjustment: false,
     ...context,
   }
 }
