@@ -32,13 +32,18 @@ IntRGBAColorTuple: TypeAlias = Tuple[int, int, int, int]
 # CSS uses these.
 MixedRGBAColorTuple: TypeAlias = Tuple[int, int, int, float]
 
-ColorTuple: TypeAlias = Union[
-    FloatRGBColorTuple,
+Color4Tuple: TypeAlias = Union[
     FloatRGBAColorTuple,
-    IntRGBColorTuple,
     IntRGBAColorTuple,
     MixedRGBAColorTuple,
 ]
+
+Color3Tuple: TypeAlias = Union[
+    FloatRGBColorTuple,
+    IntRGBColorTuple,
+]
+
+ColorTuple: TypeAlias = Union[Color4Tuple, Color3Tuple]
 
 IntColorTuple = Union[IntRGBColorTuple, IntRGBAColorTuple]
 CSSColorStr = Union[IntRGBAColorTuple, MixedRGBAColorTuple]
@@ -83,19 +88,19 @@ def to_css_color(color: MaybeColor) -> Color:
 
 
 def is_css_color_like(color: MaybeColor) -> bool:
-    """Check whether the input looks like something to_css_color() can produce.
+    """Check whether the input looks like something Vega can use.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
     to convert and see if an error is thrown.
+
+    NOTE: We only accept hex colors and color tuples as user input. So do not use this function to
+    validate user input! Instead use is_hex_color_like and is_color_tuple_like.
     """
     return is_hex_color_like(color) or _is_cssrgb_color_like(color)
 
 
 def is_hex_color_like(color: MaybeColor) -> bool:
     """Check whether the input looks like a hex color.
-
-    NOTE: We only accept hex colors and color tuples as user input. So you should use
-    is_hex_color_like and is_color_tuple_like whenever checking your inputs.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
     to convert and see if an error is thrown.
@@ -111,11 +116,11 @@ def is_hex_color_like(color: MaybeColor) -> bool:
 def _is_cssrgb_color_like(color: MaybeColor) -> bool:
     """Check whether the input looks like a CSS rgb() or rgba() color string.
 
-    NOTE: We only accept hex colors and color tuples as user input. So you should use
-    is_hex_color_like and is_color_tuple_like whenever checking your inputs.
-
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
     to convert and see if an error is thrown.
+
+    NOTE: We only accept hex colors and color tuples as user input. So do not use this function to
+    validate user input! Instead use is_hex_color_like and is_color_tuple_like.
     """
     return isinstance(color, str) and (
         color.startswith("rgb(") or color.startswith("rgba(")
@@ -124,9 +129,6 @@ def _is_cssrgb_color_like(color: MaybeColor) -> bool:
 
 def is_color_tuple_like(color: MaybeColor) -> bool:
     """Check whether the input looks like a tuple color.
-
-    NOTE: We only accept hex colors and color tuples as user input. So you should use
-    is_hex_color_like and is_color_tuple_like whenever checking your inputs.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
     to convert and see if an error is thrown.
@@ -153,6 +155,16 @@ def _to_color_tuple(
     rgb_formatter: Callable[[float, MaybeColor], float],
     alpha_formatter: Callable[[float, MaybeColor], float],
 ):
+    """Convert a potential color to a color tuple.
+
+    The exact type of color tuple this outputs is dictated by the formatter parameters.
+
+    The R, G, B components are transformed by rgb_formatter, and the alpha component is transformed
+    by alpha_formatter.
+
+    For example, to output a (float, float, float, int) color tuple, set rgb_formatter
+    to _float_formatter and alpha_formatter to _int_formatter.
+    """
     if is_hex_color_like(color):
         hex_len = len(color)
         color_hex = cast(str, color)
@@ -197,6 +209,14 @@ def _normalize_tuple(
     rgb_formatter: Callable[[float, MaybeColor], float],
     alpha_formatter: Callable[[float, MaybeColor], float],
 ) -> ColorTuple:
+    """Parse color tuple using the specified color formatters.
+
+    The R, G, B components are transformed by rgb_formatter, and the alpha component is transformed
+    by alpha_formatter.
+
+    For example, to output a (float, float, float, int) color tuple, set rgb_formatter
+    to _float_formatter and alpha_formatter to _int_formatter.
+    """
     if len(color) == 3:
         r = rgb_formatter(color[0], color)
         g = rgb_formatter(color[1], color)
@@ -204,16 +224,21 @@ def _normalize_tuple(
         return r, g, b
 
     elif len(color) == 4:
-        r = rgb_formatter(color[0], color)
-        g = rgb_formatter(color[1], color)
-        b = rgb_formatter(color[2], color)
-        alpha = alpha_formatter(color[3], color)
+        color_4tuple = cast(Color4Tuple, color)
+        r = rgb_formatter(color_4tuple[0], color_4tuple)
+        g = rgb_formatter(color_4tuple[1], color_4tuple)
+        b = rgb_formatter(color_4tuple[2], color_4tuple)
+        alpha = alpha_formatter(color_4tuple[3], color_4tuple)
         return r, g, b, alpha
 
     raise InvalidColorException(color)
 
 
 def _int_formatter(component: float, color: MaybeColor) -> int:
+    """Convert a color component (float or int) to an int from 0 to 255.
+
+    Anything too small will become a 0, and anythign too large will become 255.
+    """
     if isinstance(component, float):
         component = int(component * 255)
 
@@ -224,6 +249,10 @@ def _int_formatter(component: float, color: MaybeColor) -> int:
 
 
 def _float_formatter(component: float, color: MaybeColor) -> float:
+    """Convert a color component (float or int) to a float from 0.0 to 1.0.
+
+    Anything too small will become a 0.0, and anythign too large will become 1.0.
+    """
     if isinstance(component, int):
         component = component / 255.0
 
