@@ -48,15 +48,14 @@ IGNORE_PATTERN = re.compile(
     r"|^(\.dockerignore|\.editorconfig|\.gitignore|\.gitmodules)$"
     r"|^frontend/(\.dockerignore|\.eslintrc|\.prettierignore)$"
     r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini|pytest\.ini)$"
-    r"|^lib/(test-requirements-with-tensorflow\.txt|(test|dev)-requirements\.txt)$"
+    r"|^lib/(test|dev)-requirements\.txt$"
     r"|\.isort\.cfg$"
     r"|\.credentials/\.gitignore$"
     # Excluding test files, because adding headers may cause tests to fail.
     r"|/(fixtures|__snapshots__|test_data|data)/"
     # Exclude vendored files.
     r"|/vendor/|^vendor/|^component-lib/declarations/apache-arrow"
-    r"|proto/streamlit/proto/openmetrics_data_model\.proto"
-    r"|lib/tests/isolated_asyncio_test_case\.py",
+    r"|proto/streamlit/proto/openmetrics_data_model\.proto",
     re.IGNORECASE,
 )
 
