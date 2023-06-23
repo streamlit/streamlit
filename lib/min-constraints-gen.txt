@@ -1,4 +1,4 @@
-altair==4.2
+altair==4.0
 blinker==1.0.0
 cachetools==4.0
 click==7.0
