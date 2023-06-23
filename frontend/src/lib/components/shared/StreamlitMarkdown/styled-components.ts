@@ -56,9 +56,6 @@ export const StyledStreamlitMarkdown =
         fontFamily: theme.genericFonts.bodyFont,
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
         ...sharedMarkdownStyle(theme),
-        div: {
-          display: isToast ? "inline-flex" : "",
-        },
 
         p: {
           wordBreak: "break-word",
@@ -80,6 +77,14 @@ export const StyledStreamlitMarkdown =
           padding: "6px 13px",
           border: `1px solid ${theme.colors.fadedText10}`,
         },
+
+        ...(isToast
+          ? {
+              div: {
+                display: "inline-flex",
+              },
+            }
+          : {}),
 
         ...(isCaption
           ? {

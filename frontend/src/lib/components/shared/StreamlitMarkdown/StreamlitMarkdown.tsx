@@ -97,7 +97,7 @@ export interface Props {
   isCheckbox?: boolean
 
   /**
-   * Toast has smaller font sizing & doesn't allow colored text
+   * Toast has smaller font sizing
    */
   isToast?: boolean
 }
@@ -236,11 +236,6 @@ export interface RenderedMarkdownProps {
    * Does not allow links
    */
   isButton?: boolean
-
-  /**
-   * Does not allow colored text
-   */
-  isToast?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -276,7 +271,6 @@ export function RenderedMarkdown({
   overrideComponents,
   isLabel,
   isButton,
-  isToast,
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
@@ -324,45 +318,33 @@ export function RenderedMarkdown({
     remarkColoring,
   ]
 
-  if (isToast) {
-    // Removes remarkColoring plugin
-    plugins.pop()
-  }
-
-  const rehypePlugins: PluggableList = [rehypeKatex]
-
-  if (allowHTML) {
-    rehypePlugins.push(rehypeRaw)
-  }
+  const rehypePlugins: PluggableList = [
+    rehypeKatex,
+    ...(allowHTML ? [rehypeRaw] : []),
+  ]
 
   // Sets disallowed markdown for widget labels
-  let disallowed
-  if (isLabel) {
+  const disallowed = [
     // Restricts images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
-    disallowed = [
-      "img",
-      "table",
-      "thead",
-      "tbody",
-      "tr",
-      "th",
-      "td",
-      "h1",
-      "h2",
-      "h3",
-      "ul",
-      "ol",
-      "li",
-      "input",
-      "hr",
-      "blockquote",
-    ]
-
-    if (isButton) {
-      // Button labels additionally restrict links
-      disallowed.push("a")
-    }
-  }
+    "img",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "h1",
+    "h2",
+    "h3",
+    "ul",
+    "ol",
+    "li",
+    "input",
+    "hr",
+    "blockquote",
+    // Button labels additionally restrict links
+    ...(isButton ? ["a"] : []),
+  ]
 
   return (
     <ErrorBoundary>
@@ -371,7 +353,7 @@ export function RenderedMarkdown({
         rehypePlugins={rehypePlugins}
         components={renderers}
         transformLinkUri={transformLinkUri}
-        disallowedElements={disallowed}
+        disallowedElements={isLabel ? disallowed : []}
         // unwrap and render children from invalid markdown
         unwrapDisallowed={true}
       >
@@ -427,7 +409,6 @@ class StreamlitMarkdown extends PureComponent<Props> {
           allowHTML={allowHTML}
           isLabel={isLabel}
           isButton={isButton}
-          isToast={isToast}
         />
       </StyledStreamlitMarkdown>
     )

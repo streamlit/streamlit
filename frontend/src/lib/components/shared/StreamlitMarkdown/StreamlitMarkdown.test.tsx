@@ -256,16 +256,12 @@ describe("StreamlitMarkdown", () => {
     expect(container).toHaveTextContent("Link: ")
   })
 
-  it("doesn't render colored text when isToast is true", () => {
-    // Valid markdown further restricted with toast messages to eliminate colored text
-    const source = ":red[Colored text]"
+  it("renders smaller text sizing when isToast is true", () => {
+    const source = "Here is some toast text"
     render(<StreamlitMarkdown source={source} allowHTML={false} isToast />)
 
-    const container = screen.getByTestId("stMarkdownContainer")
-    expect(container).toHaveTextContent("Colored text")
-    const textTag = screen.getByText("Colored text")
-    // Colored text renders within a span tag
-    expect(textTag.nodeName).toBe("DIV")
+    const textTag = screen.getByText("Here is some toast text")
+    expect(textTag).toHaveStyle("font-size: 14px")
   })
 
   it("colours text properly", () => {

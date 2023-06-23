@@ -89,7 +89,7 @@ export const StyledAppViewBlockContainer =
       const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
       return {
         // Don't want to display this element for events (which are outside main/sidebar flow)
-        display: events ? "none" : "",
+        ...(events && { display: "none" }),
         width: theme.sizes.full,
         paddingLeft: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
         paddingRight: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
