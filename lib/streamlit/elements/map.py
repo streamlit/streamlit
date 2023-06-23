@@ -16,14 +16,24 @@
 
 import copy
 import json
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Collection,
+    Dict,
+    Iterable,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 
 import pandas as pd
 from typing_extensions import Final, TypeAlias
 
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 from streamlit import config, type_util
-from streamlit.color_util import Color, is_color_like, to_int_color_tuple
+from streamlit.color_util import Color, IntColorTuple, is_color_like, to_int_color_tuple
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -251,7 +261,7 @@ def to_deckgl_json(
     lat: Optional[str],
     lon: Optional[str],
     size: Union[str, float],
-    color: Union[str, Iterable[float]],
+    color: Union[str, Collection[float]],
     map_style: Optional[str],
     zoom: Optional[int],
 ) -> str:
@@ -264,21 +274,24 @@ def to_deckgl_json(
     if hasattr(data, "empty") and data.empty:
         return json.dumps(_DEFAULT_MAP)
 
-    data = type_util.convert_anything_to_df(data)
+    df = type_util.convert_anything_to_df(data)
 
     lat_col_name = _get_lat_or_lon_col_name(
-        data, "latitude", lat, {"lat", "latitude", "LAT", "LATITUDE"}
+        df, "latitude", lat, {"lat", "latitude", "LAT", "LATITUDE"}
     )
     lon_col_name = _get_lat_or_lon_col_name(
-        data, "longitude", lon, {"lon", "longitude", "LON", "LONGITUDE"}
+        df, "longitude", lon, {"lon", "longitude", "LON", "LONGITUDE"}
     )
-    size, size_col_name = _get_size_arg_and_col_name(data, size)
-    color, color_col_name, data = _get_color_arg_and_calc_color_col(
-        data, color, lat_col_name, lon_col_name, size_col_name
+    size, size_col_name = _get_size_arg_and_col_name(df, size)
+
+    # TODO XXX: Move used_columns stuff here to avoid double-copying.
+
+    color, color_col_name, df = _get_color_arg_and_calc_color_col(
+        df, color, lat_col_name, lon_col_name, size_col_name
     )
 
     zoom, center_lat, center_lon = _get_viewport_details(
-        data, lat_col_name, lon_col_name, zoom
+        df, lat_col_name, lon_col_name, zoom
     )
 
     # Drop columns we're not using.
@@ -290,7 +303,7 @@ def to_deckgl_json(
             if c is not None
         ]
     )
-    data = data[used_columns]
+    df = df[used_columns]
 
     default = copy.deepcopy(_DEFAULT_MAP)
     default["initialViewState"]["latitude"] = center_lat
@@ -304,7 +317,7 @@ def to_deckgl_json(
             "radiusScale": 10,
             "radiusMinPixels": 3,
             "getFillColor": color,
-            "data": data.to_dict("records"),
+            "data": df.to_dict("records"),
         }
     ]
 
@@ -326,14 +339,16 @@ def _get_lat_or_lon_col_name(
     default_col_names: set[str],
 ) -> str:
 
-    if col_name_from_user in data.columns:
+    if isinstance(col_name_from_user, str) and col_name_from_user in data.columns:
         col_name = col_name_from_user
 
     else:
         # Try one of the default col_names:
-        col_name = next((d for d in default_col_names if d in data.columns), None)
+        candidate_col_name = next(
+            (d for d in default_col_names if d in data.columns), None
+        )
 
-        if col_name is None:
+        if candidate_col_name is None:
             formatted_allowed_col_name = ", ".join(map(repr, sorted(default_col_names)))
             formmated_col_names = ", ".join(map(repr, list(data.columns)))
 
@@ -341,6 +356,8 @@ def _get_lat_or_lon_col_name(
                 f"Map data must contain a {human_readable_name} column named: "
                 f"{formatted_allowed_col_name}. Existing columns: {formmated_col_names}"
             )
+        else:
+            col_name = candidate_col_name
 
     if data[col_name].isnull().values.any():
         raise StreamlitAPIException(
@@ -353,10 +370,12 @@ def _get_lat_or_lon_col_name(
 
 def _get_size_arg_and_col_name(
     data: pd.DataFrame,
-    size: Optional[str],
-) -> [str, str]:
+    size: Union[str, float],
+) -> Tuple[Union[str, float], Optional[str]]:
 
-    if size in data.columns:
+    size_arg: Union[str, float]
+
+    if isinstance(size, str) and size in data.columns:
         col_name = size
         size_arg = f"@@={col_name}"
     else:
@@ -368,20 +387,24 @@ def _get_size_arg_and_col_name(
 
 def _get_color_arg_and_calc_color_col(
     data: pd.DataFrame,
-    color: str,
+    color: Union[str, Collection[float]],
     lat_col_name: str,
     lon_col_name: str,
-    size_col_name: str,
-) -> [str, pd.DataFrame]:
-    if color in data.columns:
+    size_col_name: Optional[str],
+) -> Tuple[Union[str, IntColorTuple], Optional[str], pd.DataFrame]:
+
+    color_arg: Union[str, IntColorTuple]
+
+    if isinstance(color, str) and color in data.columns:
         col_name = color
         color_arg = f"@@={col_name}"
 
-        # Convert colors to the right format.
+        # Convert color column to the right format.
+        # (But do this by clone the data to avoid transforming the original dataframe)
         if len(data[col_name]) > 0 and is_color_like(data[col_name][0]):
             parsed_color = data[col_name].apply(to_int_color_tuple)
 
-            # Clone data to avoid transforming the original dataframe.
+            # Clone only the important parts of the data.
             new_data = data[[lat_col_name, lon_col_name]].copy()
 
             if size_col_name:
