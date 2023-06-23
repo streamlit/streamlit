@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Tuple, Union, cast
+from typing import Any, Callable, Collection, Tuple, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -46,7 +46,7 @@ CSSColorStr = Union[IntRGBAColorTuple, MixedRGBAColorTuple]
 ColorStr: TypeAlias = str
 
 Color: TypeAlias = Union[ColorTuple, ColorStr]
-MaybeColor: TypeAlias = Union[str, Tuple[Any, ...]]
+MaybeColor: TypeAlias = Union[str, Collection[Any]]
 
 
 def to_int_color_tuple(color: MaybeColor) -> IntColorTuple:
@@ -198,16 +198,15 @@ def _normalize_tuple(
     alpha_formatter: Callable[[float, MaybeColor], float],
 ) -> ColorTuple:
     if 3 <= len(color) <= 4:
-        rgb = (
-            rgb_formatter(color[0], color),
-            rgb_formatter(color[1], color),
-            rgb_formatter(color[2], color),
-        )
+        r = rgb_formatter(color[0], color)
+        g = rgb_formatter(color[1], color)
+        b = rgb_formatter(color[2], color)
+
         if len(color) == 4:
             color_4tuple = cast(Tuple[float, float, float, float], color)
             alpha = alpha_formatter(color_4tuple[3], color)
-            return (*rgb, alpha)
-        return rgb
+            return r, g, b, alpha
+        return r, g, b
 
     raise InvalidColorException(color)
 
