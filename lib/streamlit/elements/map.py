@@ -55,6 +55,9 @@ Data: TypeAlias = Union[
 # Map used as the basis for st.map.
 _DEFAULT_MAP: Final[Dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 
+_DEFAULT_COLOR = (200, 30, 0, 160)
+_DEFAULT_SIZE = 10
+
 # Other default parameters for st.map.
 _DEFAULT_ZOOM_LEVEL: Final = 12
 _ZOOM_LEVELS: Final = [
@@ -90,8 +93,8 @@ class MapMixin:
         *,
         latitude: Optional[str] = None,
         longitude: Optional[str] = None,
-        color: Union[str, Color] = (200, 30, 0, 160),
-        size: Union[str, float] = 10,
+        color: Union[None, str, Color] = None,
+        size: Union[None, str, float] = None,
         zoom: Optional[int] = None,
         map_style: Optional[str] = None,
         use_container_width: bool = True,
@@ -260,8 +263,8 @@ def to_deckgl_json(
     data: Data,
     lat: Optional[str],
     lon: Optional[str],
-    size: Union[str, float],
-    color: Union[str, Collection[float]],
+    size: Union[None, str, float],
+    color: Union[None, str, Collection[float]],
     map_style: Optional[str],
     zoom: Optional[int],
 ) -> str:
@@ -282,8 +285,8 @@ def to_deckgl_json(
     lon_col_name = _get_lat_or_lon_col_name(
         df, "longitude", lon, {"lon", "longitude", "LON", "LONGITUDE"}
     )
-    size_arg, size_col_name = _get_value_and_col_name(df, size)
-    color_arg, color_col_name = _get_value_and_col_name(df, color)
+    size_arg, size_col_name = _get_value_and_col_name(df, size, _DEFAULT_SIZE)
+    color_arg, color_col_name = _get_value_and_col_name(df, color, _DEFAULT_COLOR)
 
     # Drop columns we're not using.
     # (Sort for tests)
@@ -371,6 +374,7 @@ def _get_lat_or_lon_col_name(
 def _get_value_and_col_name(
     data: pd.DataFrame,
     value_or_name: Any,
+    default_value: Any,
 ) -> Tuple[Any, Optional[str]]:
 
     pydeck_arg: Union[str, float]
@@ -380,7 +384,11 @@ def _get_value_and_col_name(
         pydeck_arg = f"@@={col_name}"
     else:
         col_name = None
-        pydeck_arg = value_or_name
+
+        if value_or_name is None:
+            pydeck_arg = default_value
+        else:
+            pydeck_arg = value_or_name
 
     return pydeck_arg, col_name
 
