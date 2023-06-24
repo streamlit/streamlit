@@ -282,17 +282,8 @@ def to_deckgl_json(
     lon_col_name = _get_lat_or_lon_col_name(
         df, "longitude", lon, {"lon", "longitude", "LON", "LONGITUDE"}
     )
-    size, size_col_name = _get_size_arg_and_col_name(df, size)
-
-    # TODO XXX: Move used_columns stuff here to avoid double-copying.
-
-    color, color_col_name, df = _get_color_arg_and_calc_color_col(
-        df, color, lat_col_name, lon_col_name, size_col_name
-    )
-
-    zoom, center_lat, center_lon = _get_viewport_details(
-        df, lat_col_name, lon_col_name, zoom
-    )
+    size_arg, size_col_name = _get_value_and_col_name(df, size)
+    color_arg, color_col_name = _get_value_and_col_name(df, color)
 
     # Drop columns we're not using.
     # (Sort for tests)
@@ -305,6 +296,12 @@ def to_deckgl_json(
     )
     df = df[used_columns]
 
+    color_arg = _convert_color_arg_or_column(df, color_arg, color_col_name)
+
+    zoom, center_lat, center_lon = _get_viewport_details(
+        df, lat_col_name, lon_col_name, zoom
+    )
+
     default = copy.deepcopy(_DEFAULT_MAP)
     default["initialViewState"]["latitude"] = center_lat
     default["initialViewState"]["longitude"] = center_lon
@@ -313,10 +310,10 @@ def to_deckgl_json(
         {
             "@@type": "ScatterplotLayer",
             "getPosition": f"@@=[{lon_col_name}, {lat_col_name}]",
-            "getRadius": size,
+            "getRadius": size_arg,
             "radiusScale": 10,
             "radiusMinPixels": 3,
-            "getFillColor": color,
+            "getFillColor": color_arg,
             "data": df.to_dict("records"),
         }
     ]
@@ -359,7 +356,10 @@ def _get_lat_or_lon_col_name(
         else:
             col_name = candidate_col_name
 
-    if data[col_name].isnull().values.any():
+    # Can't use isnull().values.any() because ExtensionArrays don't have .any()
+    # (Read about ExtensionArrays here: https://pandas.pydata.org/community/blog/extension-arrays.html)
+    # However, after a performance test I found this runs basically as fast as .values.any().
+    if any(data[col_name].isnull().array):
         raise StreamlitAPIException(
             f"Column {col_name} is not allowed to contain null values, such "
             "as NaN, NaT, or None."
@@ -368,59 +368,48 @@ def _get_lat_or_lon_col_name(
     return col_name
 
 
-def _get_size_arg_and_col_name(
+def _get_value_and_col_name(
     data: pd.DataFrame,
-    size: Union[str, float],
-) -> Tuple[Union[str, float], Optional[str]]:
+    value_or_name: Any,
+) -> Tuple[Any, Optional[str]]:
 
-    size_arg: Union[str, float]
+    pydeck_arg: Union[str, float]
 
-    if isinstance(size, str) and size in data.columns:
-        col_name = size
-        size_arg = f"@@={col_name}"
+    if isinstance(value_or_name, str) and value_or_name in data.columns:
+        col_name = value_or_name
+        pydeck_arg = f"@@={col_name}"
     else:
         col_name = None
-        size_arg = size
+        pydeck_arg = value_or_name
 
-    return size_arg, col_name
+    return pydeck_arg, col_name
 
 
-def _get_color_arg_and_calc_color_col(
+def _convert_color_arg_or_column(
     data: pd.DataFrame,
-    color: Union[str, Collection[float]],
-    lat_col_name: str,
-    lon_col_name: str,
-    size_col_name: Optional[str],
-) -> Tuple[Union[str, IntColorTuple], Optional[str], pd.DataFrame]:
+    color_arg: Union[str, Color],
+    color_col_name: Optional[str],
+) -> Union[str, IntColorTuple]:
 
-    color_arg: Union[str, IntColorTuple]
+    color_arg_out: Union[str, IntColorTuple]
 
-    if isinstance(color, str) and color in data.columns:
-        col_name = color
-        color_arg = f"@@={col_name}"
-
+    if color_col_name is not None:
         # Convert color column to the right format.
-        # (But do this by clone the data to avoid transforming the original dataframe)
-        if len(data[col_name]) > 0 and is_color_like(data[col_name][0]):
-            parsed_color = data[col_name].apply(to_int_color_tuple)
-
-            # Clone only the important parts of the data.
-            new_data = data[[lat_col_name, lon_col_name]].copy()
-
-            if size_col_name:
-                new_data[size_col_name] = data[size_col_name]
-
-            new_data[col_name] = parsed_color
-            data = new_data
+        if len(data[color_col_name]) > 0 and is_color_like(data[color_col_name][0]):
+            data[color_col_name] = data[color_col_name].apply(to_int_color_tuple)
         else:
             raise StreamlitAPIException(
-                f'Column "{col_name}" does not appear to contain valid colors.'
+                f'Column "{color_col_name}" does not appear to contain valid colors.'
             )
-    else:
-        color_arg = to_int_color_tuple(color)
-        col_name = None
 
-    return color_arg, col_name, data
+        # This is guaranteed to be a str because of _get_value_and_col_name
+        assert isinstance(color_arg, str)
+        color_arg_out = color_arg
+
+    elif color_arg is not None:
+        color_arg_out = to_int_color_tuple(color_arg)
+
+    return color_arg_out
 
 
 def _get_viewport_details(data, lat_col_name, lon_col_name, zoom):
