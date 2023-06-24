@@ -174,8 +174,8 @@ class MapMixin:
             One of Mapbox's map style URLs. A full list can be found here:
             https://docs.mapbox.com/api/maps/styles/#mapbox-styles
 
-            This feature requires a Mapbox token. See above for information on
-            how to get one and set it up in Streamlit.
+            This feature requires a Mapbox token. See the top of these docs
+            for information on how to get one and set it up in Streamlit.
 
         use_container_width: bool
             If True, set the chart width to the column width. This takes
