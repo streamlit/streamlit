@@ -33,20 +33,19 @@ st.map()
 ### st.map with pyspark.sql.DataFrame
 """
 
-st.map(pyspark_mocks.DataFrame(is_map=True))
+st.map(pyspark_mocks.DataFrame(is_map=True))  # type: ignore
 
 """
 ### st.map with unevaluated Snowpark Table
 """
 
-st.map(MockedSnowparkTable(is_map=True, num_of_rows=50000))
+st.map(MockedSnowparkTable(is_map=True, num_of_rows=50000))  # type: ignore
 
 """
 ### st.map with unevaluated Snowpark DataFrame
 """
 
-st.map(MockedSnowparkDataFrame(is_map=True, num_of_rows=50000))
-
+st.map(MockedSnowparkDataFrame(is_map=True, num_of_rows=50000))  # type: ignore
 
 """
 ### Simple map
