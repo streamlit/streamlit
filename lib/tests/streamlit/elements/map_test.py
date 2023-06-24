@@ -83,18 +83,18 @@ class StMapTest(DeltaGeneratorTestCase):
             {
                 "lat": [38.8762997, 38.8742997, 38.9025842],
                 "lon": [-77.0037, -77.0057, -77.0556545],
-                "int_color": [[255, 0, 0, 128], [0, 255, 0, 128], [0, 0, 255, 128]],
+                "color": [[255, 0, 0, 128], [0, 255, 0, 128], [0, 0, 255, 128]],
                 "size": [100, 50, 30],
                 "xlat": [-38.8762997, -38.8742997, -38.9025842],
                 "xlon": [77.0037, 77.0057, 77.0556545],
             }
         )
 
-        st.map(df, latitude="xlat", longitude="xlon", color="int_color", size="size")
+        st.map(df, latitude="xlat", longitude="xlon", color="color", size="size")
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
 
         self.assertEqual(c.get("layers")[0].get("getPosition"), "@@=[xlon, xlat]")
-        self.assertEqual(c.get("layers")[0].get("getFillColor"), "@@=int_color")
+        self.assertEqual(c.get("layers")[0].get("getFillColor"), "@@=color")
         self.assertEqual(c.get("layers")[0].get("getRadius"), "@@=size")
 
         # Also test that the radius property is set up correctly.
