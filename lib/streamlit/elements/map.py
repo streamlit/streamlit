@@ -96,7 +96,7 @@ class MapMixin:
         map_style: Optional[str] = None,
         use_container_width: bool = True,
     ) -> "DeltaGenerator":
-        """Display a map with a scatterpoint overlayed onto it.
+        """Display a map with a scatterplot overlayed onto it.
 
         This is a wrapper around ``st.pydeck_chart`` to quickly create
         scatterplot charts on top of a map, with auto-centering and auto-zoom.
