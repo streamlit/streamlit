@@ -205,9 +205,9 @@ class MapMixin:
 
         >>> st.map(df, size=200, color='#0044ff')
 
-        And, finally, you can also choose different columns to use for the
-        latitude and longitude components, as well as set size and color of
-        each datapoint dynamically based on other columns:
+        And, finally, you can choose different columns to use for the latitude
+        and longitude components, as well as set size and color of each
+        datapoint dynamically based on other columns:
 
         >>> df = pd.DataFrame(
         ...     np.random.randn(1000, 3) / [50, 50] + [37.76, -122.4],
