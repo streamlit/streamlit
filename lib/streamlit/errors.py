@@ -16,6 +16,13 @@ from streamlit import util
 
 
 class Error(Exception):
+    """The base class for all exceptions thrown by Streamlit.
+
+    Should be used for exceptions raised due to user errors (typically via
+    StreamlitAPIException) as well as exceptions raised by Streamlit's internal
+    code.
+    """
+
     pass
 
 
@@ -23,15 +30,15 @@ class DeprecationError(Error):
     pass
 
 
-class NoStaticFiles(Exception):
+class NoStaticFiles(Error):
     pass
 
 
-class NoSessionContext(Exception):
+class NoSessionContext(Error):
     pass
 
 
-class MarkdownFormattedException(Exception):
+class MarkdownFormattedException(Error):
     """Exceptions with Markdown in their description.
 
     Instances of this class can use markdown in their messages, which will get
@@ -41,7 +48,7 @@ class MarkdownFormattedException(Exception):
     pass
 
 
-class UncaughtAppException(Exception):
+class UncaughtAppException(Error):
     """Catchall exception type for uncaught exceptions that occur during script execution."""
 
     def __init__(self, exc):
@@ -125,3 +132,15 @@ or in your `.streamlit/config.toml`
 
     def __repr__(self) -> str:
         return util.repr_(self)
+
+
+class StreamlitModuleNotFoundError(StreamlitAPIWarning):
+    """Print a pretty message when a Streamlit command requires a dependency
+    that is not one of our core dependencies."""
+
+    def __init__(self, module_name, *args):
+        message = (
+            f'This Streamlit command requires module "{module_name}" to be '
+            "installed."
+        )
+        super().__init__(message, *args)
