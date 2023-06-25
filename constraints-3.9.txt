@@ -37,7 +37,7 @@ jaraco.classes==3.2.3
 jeepney==0.8.0
 Jinja2==3.1.2
 jsonschema==4.17.3
-keyring==24.1.0
+keyring==24.2.0
 kiwisolver==1.4.4
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
