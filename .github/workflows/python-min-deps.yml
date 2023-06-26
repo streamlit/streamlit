@@ -155,6 +155,8 @@ jobs:
         run: make protobuf
       # End of inlined make_init action
 
+      - name: Reinstall, for some reason
+        run: make python-init-test-min-deps
       - name: Run Python Tests
         run: make pytest
       - name: Run Integration Tests
