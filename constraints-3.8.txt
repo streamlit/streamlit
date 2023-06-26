@@ -52,7 +52,7 @@ mypy-extensions==1.0.0
 mypy-protobuf==3.3.0
 mysqlclient==2.2.0
 nodeenv==1.8.0
-numpy==1.24.3
+numpy==1.24.4
 opencv-python==4.7.0.72
 oscrypto==1.3.0
 packaging==23.1
