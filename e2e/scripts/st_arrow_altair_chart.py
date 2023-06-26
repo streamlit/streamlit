@@ -62,7 +62,9 @@ st._arrow_altair_chart(chart.configure_mark(color="black"), theme="streamlit")
 major, minor, patch = alt.__version__.split(".")
 if not (major == 4 and minor < 2):
 
-    source = pd.DataFrame({"category": [1, 2, 3, 4, 5, 6], "value": [4, 6, 10, 3, 7, 8]})
+    source = pd.DataFrame(
+        {"category": [1, 2, 3, 4, 5, 6], "value": [4, 6, 10, 3, 7, 8]}
+    )
 
     chart = (
         alt.Chart(source)
