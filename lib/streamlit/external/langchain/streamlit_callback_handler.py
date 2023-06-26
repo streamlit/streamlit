@@ -254,7 +254,9 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         collapse_completed_thoughts: bool = True,
         thought_labeler: Optional[LLMThoughtLabeler] = None,
     ):
-        """Create a StreamlitCallbackHandler instance.
+        """Construct a new StreamlitCallbackHandler. This CallbackHandler is geared
+        towards use with a LangChain Agent; it displays the Agent's LLM and tool-usage
+        "thoughts" inside a series of Streamlit expanders.
 
         Parameters
         ----------
