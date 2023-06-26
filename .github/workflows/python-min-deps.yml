@@ -20,7 +20,7 @@ on:
 
 # Avoid duplicate workflows on same branch
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-python
+  group: ${{ github.workflow }}-${{ github.ref }}-python-min
   cancel-in-progress: true
 
 defaults:
