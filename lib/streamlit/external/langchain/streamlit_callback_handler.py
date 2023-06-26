@@ -49,8 +49,8 @@ def _convert_newlines(text: str) -> str:
 
 
 CHECKMARK_EMOJI = "✅"
-THINKING_EMOJI = ":thinking_face:"
-HISTORY_EMOJI = ":books:"
+THINKING_EMOJI = "🤔"
+HISTORY_EMOJI = "📚️"
 EXCEPTION_EMOJI = "⚠️"
 
 
