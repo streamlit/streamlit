@@ -132,6 +132,13 @@ class LLMThoughtLabeler:
 
 
 class LLMThought:
+    """Encapsulates the Streamlit UI for a single LLM 'thought' during a LangChain Agent
+    run. Each tool usage gets its own thought; and runs also generally having a
+    concluding thought where the Agent determines that it has an answer to the prompt.
+
+    Each thought gets its own expander UI.
+    """
+
     def __init__(
         self,
         parent_container: DeltaGenerator,
