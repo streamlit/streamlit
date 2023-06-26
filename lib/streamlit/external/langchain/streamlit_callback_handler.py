@@ -50,7 +50,7 @@ def _convert_newlines(text: str) -> str:
 
 CHECKMARK_EMOJI = "✅"
 THINKING_EMOJI = "🤔"
-HISTORY_EMOJI = "📚️"
+HISTORY_EMOJI = "📚"
 EXCEPTION_EMOJI = "⚠️"
 
 # The maximum length of the "input_str" portion of a tool label.
