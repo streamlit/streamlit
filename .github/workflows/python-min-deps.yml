@@ -147,7 +147,6 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
-          make python-init-test-min-deps
           deactivate
       - name: Activate virtualenv
         run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
@@ -155,7 +154,7 @@ jobs:
         run: make protobuf
       # End of inlined make_init action
 
-      - name: Reinstall, for some reason
+      - name: Install deps
         run: make python-init-test-min-deps
       - name: Run Python Tests
         run: make pytest
