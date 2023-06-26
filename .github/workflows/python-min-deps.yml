@@ -162,3 +162,17 @@ jobs:
         run: make integration-tests
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
+      - name: Validate min-constraints-gen
+        run: |
+          make gen-min-dep-constraints
+
+          git_status=$(git status --porcelain -- lib/min-constraints-gen.txt)
+          if [[ -n $git_status ]]; then
+            echo "::error::The min constraints file is out of date! Please run \`make gen-min-dep-constraints\` and commit the result."
+            echo "::group::git diff lib/min-constraints-gen.txt"
+            git diff lib/min-constraints-gen.txt
+            echo "::endgroup::"
+            exit 1
+          else
+            echo "min constraints file is up to date."
+          fi
