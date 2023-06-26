@@ -158,6 +158,9 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         max_selections: Optional[int] = None,
+        placeholder: Optional[str] = "Choose an option",
+        placeholder_no_options: Optional[str] = "No options to select.",
+        placeholder_no_results: Optional[str] = "No results",
     ) -> List[T]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -225,6 +228,12 @@ class MultiSelectMixin:
         max_selections : int
             The max selections that can be selected at a time.
             This argument can only be supplied by keyword.
+        placeholder : str
+            An optional string to display when no option is selected.
+        placeholder_no_options : str
+            An optional string to display when there are no options to select.
+        placeholder_no_results : str
+            An optional string to display when there are no results for the search.
 
         Returns
         -------
@@ -262,6 +271,9 @@ class MultiSelectMixin:
             label_visibility=label_visibility,
             ctx=ctx,
             max_selections=max_selections,
+            placeholder=placeholder,
+            placeholder_no_options=placeholder_no_options,
+            placeholder_no_results=placeholder_no_results,
         )
 
     def _multiselect(
@@ -280,6 +292,9 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
         max_selections: Optional[int] = None,
+        placeholder: Optional[str] = "Choose an option",
+        placeholder_no_options: Optional[str] = "No options to select.",
+        placeholder_no_results: Optional[str] = "No results",
     ) -> List[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
@@ -296,6 +311,9 @@ class MultiSelectMixin:
         multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
         multiselect_proto.form_id = current_form_id(self.dg)
         multiselect_proto.max_selections = max_selections or 0
+        multiselect_proto.placeholder = placeholder
+        multiselect_proto.placeholder_no_options = placeholder_no_options
+        multiselect_proto.placeholder_no_results = placeholder_no_results
         if help is not None:
             multiselect_proto.help = dedent(help)
 

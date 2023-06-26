@@ -30,4 +30,7 @@ message MultiSelect {
   bool disabled = 9;
   LabelVisibilityMessage label_visibility = 10;
   int32 max_selections = 11;
+  string placeholder = 12;
+  string placeholder_no_options = 13;
+  string placeholder_no_results = 14;
 }
