@@ -53,6 +53,10 @@ THINKING_EMOJI = "🤔"
 HISTORY_EMOJI = "📚️"
 EXCEPTION_EMOJI = "⚠️"
 
+# The maximum length of the "input_str" portion of a tool label.
+# Strings that are longer than this will be truncated with "..."
+MAX_TOOL_INPUT_STR_LENGTH = 60
+
 
 class LLMThoughtState(Enum):
     # The LLM is thinking about what to do next. We don't know which tool we'll run.
@@ -105,9 +109,9 @@ class LLMThoughtLabeler:
         if name == "_Exception":
             emoji = EXCEPTION_EMOJI
             name = "Parsing error"
-        idx = min([60, len(input)])
-        input = input[0:idx]
-        if len(tool.input_str) > idx:
+        input_str_len = min(MAX_TOOL_INPUT_STR_LENGTH, len(input))
+        input = input[0:input_str_len]
+        if len(tool.input_str) > input_str_len:
             input = input + "..."
         input = input.replace("\n", " ")
         label = f"{emoji} **{name}:** {input}"
