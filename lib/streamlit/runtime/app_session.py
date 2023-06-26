@@ -23,7 +23,7 @@ from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
-from streamlit.proto.Common_pb2 import FileURLsRequest, FileURLsResponse
+from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
 from streamlit.proto.NewSession_pb2 import (
@@ -752,7 +752,7 @@ class AppSession:
 
         for upload_url_info in upload_url_infos:
             msg.file_urls_response.file_urls.append(
-                FileURLsResponse.FileURLs(
+                FileURLs(
                     file_id=upload_url_info.file_id,
                     upload_url=upload_url_info.upload_url,
                     delete_url=upload_url_info.delete_url,

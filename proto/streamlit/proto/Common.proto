@@ -52,16 +52,14 @@ message FileURLsRequest {
   string session_id = 3;
 }
 
+message FileURLs {
+  string file_id = 1;
+  string upload_url = 2;
+  string delete_url = 3;
+}
+
 message FileURLsResponse {
   // TODO(vdonato): Maybe come up with a better name for this proto type.
-  // TODO(vdonato / kajarenc): Maybe move this outside of FileURLsResponse so that
-  //                we can use this type in UploadedFileInfo.
-  message FileURLs {
-    string file_id = 1;
-    string upload_url = 2;
-    string delete_url = 3;
-  }
-
   string response_id = 1;
   repeated FileURLs file_urls = 2;
   string error_msg = 3;
@@ -80,11 +78,8 @@ message UploadedFileInfo {
   // ID that can be used to retrieve a file.
   string file_id = 4;
 
-  // TODO(vdonato / kajarenc): Add a file_upload_url field. Or use the factored
-  // out FileURLs type from the above TODO.
-
-  // URL to delete the file
-  string file_delete_url = 5;
+  // Metadata containing information about file_urls.
+  FileURLs file_urls = 5;
 }
 
 message FileUploaderState {

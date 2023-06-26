@@ -18,7 +18,9 @@ import { CancelToken } from "axios"
 import _ from "lodash"
 import { v4 as uuidv4 } from "uuid"
 
-import { FileURLsResponse, IFileURLsResponse } from "src/lib/proto"
+import { IFileURLsResponse } from "src/lib/proto"
+import { IFileURLs } from "src/lib/proto"
+
 import { SessionInfo } from "src/lib/SessionInfo"
 import { logWarning } from "src/lib/util/log"
 import Resolver from "src/lib/util/Resolver"
@@ -75,7 +77,7 @@ export class FileUploadClient {
    */
   private readonly pendingFileURLsRequests = new Map<
     string,
-    Resolver<FileURLsResponse.IFileURLs[]>
+    Resolver<IFileURLs[]>
   >()
 
   public constructor(props: Props) {
@@ -140,8 +142,8 @@ export class FileUploadClient {
   // TODO(vdonato): Look into how awkward a pattern like this will be for
   //                the notebooks team / where else the code to fetch file URLs
   //                via websocket can live.
-  public fetchFileURLs(files: File[]): Promise<FileURLsResponse.IFileURLs[]> {
-    const resolver = new Resolver<FileURLsResponse.IFileURLs[]>()
+  public fetchFileURLs(files: File[]): Promise<IFileURLs[]> {
+    const resolver = new Resolver<IFileURLs[]>()
 
     const requestId = uuidv4()
     this.pendingFileURLsRequests.set(requestId, resolver)
