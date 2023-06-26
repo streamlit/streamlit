@@ -30,17 +30,15 @@ for requirement in package.requires():  # type: ignore
     for comparator, version in requirement.specs:
         if comparator == "==":
             if len(requirement.specs) != 1:
-                raise ValueError(
-                    "Invalid dependency: {requirement}".format(requirement=requirement)
-                )
+                raise ValueError(f"Invalid dependency: {requirement}")
             dependency += "==" + version
         elif comparator == "<=":
             if len(requirement.specs) != 2:
-                raise ValueError(
-                    "Invalid dependency: {requirement}".format(requirement=requirement)
-                )
+                raise ValueError(f"Invalid dependency: {requirement}")
         elif comparator == ">=":
             dependency += "==" + version
+        else:
+            raise ValueError(f"Invalid dependency: {requirement}")
 
     oldest_dependencies.append(dependency)
 
