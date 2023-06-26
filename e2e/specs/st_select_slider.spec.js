@@ -21,7 +21,7 @@ describe("st.select_slider", () => {
   });
 
   it("displays correct number of elements", () => {
-    cy.get(".element-container .stSlider").should("have.length", 8);
+    cy.get(".element-container .stSlider").should("have.length", 9);
   });
 
   it("looks right when disabled", () => {
@@ -165,5 +165,17 @@ describe("st.select_slider", () => {
       "contain.text",
       "Value 8: 2" + "Select slider changed: True"
     );
+  });
+
+  it("realigns label values when expander re-opened", () => {
+    // Closes the expander
+    cy.get(".streamlit-expanderHeader").click();
+
+    // Reopens the expander
+    cy.get(".streamlit-expanderHeader").click();
+
+    // Positioning error occurs on overflow of expander container
+    // which occurs when position left set to 0px
+    cy.getIndexed(".StyledThumbValue", 11).should("not.have.css", "left", "0px")
   });
 });
