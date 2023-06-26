@@ -53,7 +53,7 @@ class StreamlitCallbackHandlerAPITest(unittest.TestCase):
 
     def test_import_from_langchain(self):
         """We can import and use the callback handler from LangChain itself."""
-        from langchain.callbacks.streamlit import (
+        from langchain.callbacks import (
             StreamlitCallbackHandler as LangChainStreamlitCallbackHandler,
         )
 
