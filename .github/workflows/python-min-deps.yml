@@ -13,16 +13,6 @@ on:
       ref:
         required: true
         type: string
-      force-canary:
-        description: |
-          Forces the current build to be canary.
-          Canary builds test all Python versions and do not use constraints.
-        default: false
-        type: boolean
-      constraints-branch:
-        description: "The name of the branch from which the constraints files will be downloaded or compared with."
-        default: "constraints-develop"
-        type: string
     secrets:
       PARAMETER_PASSWORD:
         description: "Token passed from caller workflows for snowflake integration tests"
@@ -58,7 +48,7 @@ jobs:
         id: build_info
         uses: ./.github/actions/build_info
         with:
-          force-canary: ${{ inputs.force-canary || false }}
+          force-canary: ${{ false }}
 
     outputs:
       PYTHON_MIN_VERSION: ${{ steps.build_info.outputs.PYTHON_MIN_VERSION }}
@@ -163,6 +153,7 @@ jobs:
         run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
       - name: Generate Protobufs
         run: make protobuf
+      # End of inlined make_init action
 
       - name: Run Python Tests
         run: make pytest
