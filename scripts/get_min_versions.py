@@ -27,6 +27,8 @@ for requirement in package.requires():  # type: ignore
     dependency = requirement.project_name
     if requirement.extras:
         dependency += "[" + ",".join(requirement.extras) + "]"
+    # We will see both the lower bound and upper bound parts of each requriment
+    # So we ignore the ones that aren't the lower bound.
     for comparator, version in requirement.specs:
         if comparator == "==":
             if len(requirement.specs) != 1:
@@ -37,8 +39,6 @@ for requirement in package.requires():  # type: ignore
                 raise ValueError(f"Invalid dependency: {requirement}")
         elif comparator == ">=":
             dependency += "==" + version
-        else:
-            raise ValueError(f"Invalid dependency: {requirement}")
 
     oldest_dependencies.append(dependency)
 
