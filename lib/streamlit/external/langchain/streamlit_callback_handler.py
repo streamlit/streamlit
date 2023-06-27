@@ -39,6 +39,7 @@ from langchain.schema import AgentAction, AgentFinish, LLMResult
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.external.langchain.mutable_expander import MutableExpander
+from streamlit.runtime.metrics_util import gather_metrics
 
 
 def _convert_newlines(text: str) -> str:
@@ -252,6 +253,7 @@ class LLMThought:
 
 
 class StreamlitCallbackHandler(BaseCallbackHandler):
+    @gather_metrics("external.langchain.StreamlitCallbackHandler")
     def __init__(
         self,
         parent_container: DeltaGenerator,
