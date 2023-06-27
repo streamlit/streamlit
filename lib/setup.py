@@ -28,6 +28,7 @@ NAME = "streamlit"
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
 # - Include relevant lower bound for any features we use from our dependencies
+# - Always include the lower bound as >= VERSION, to keep testing min versions easy
 # - And include an upper bound that's < NEXT_MAJOR_VERSION
 INSTALL_REQUIRES = [
     "altair>=4.0, <6",
@@ -36,10 +37,11 @@ INSTALL_REQUIRES = [
     "click>=7.0, <9",
     # 1.4 introduced the functionality found in python 3.8's importlib.metadata module
     "importlib-metadata>=1.4, <7",
-    "numpy>=1, <2",
-    "packaging>=14.1, <24",
-    "pandas>=0.25, <3",
-    "pillow>=6.2.0, <10",
+    "numpy>=1.19.3, <2",
+    "packaging>=16.8, <24",
+    # Lowest version with available wheel for 3.7 + amd64 + linux
+    "pandas>=1.3.0, <3",
+    "pillow>=7.1.0, <10",
     # Python protobuf 4.21 (the first 4.x version) is compatible with protobufs
     # generated from `protoc` >= 3.20. (`protoc` is installed separately from the Python
     # protobuf package, so this pin doesn't actually enforce a `protoc` minimum version.
@@ -48,19 +50,19 @@ INSTALL_REQUIRES = [
     # pyarrow is not semantically versioned, gets new major versions frequently, and
     # doesn't tend to break the API on major version upgrades, so we don't put an
     # upper bound on it.
-    "pyarrow>=4.0",
+    "pyarrow>=6.0",
     "pympler>=0.9, <2",
-    "python-dateutil>=2, <3",
-    "requests>=2.4, <3",
-    "rich>=10.11.0, <14",
+    "python-dateutil>=2.7.3, <3",
+    "requests>=2.18, <3",
+    "rich>=10.14.0, <14",
     "tenacity>=8.0.0, <9",
-    "toml<2",
-    "typing-extensions>=4.0.1, <5",
+    "toml>=0.10.1, <2",
+    "typing-extensions>=4.1.0, <5",
     "tzlocal>=1.1, <5",
     "validators>=0.2, <1",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
-    "watchdog; platform_system != 'Darwin'",
+    "watchdog>=2.1.5; platform_system != 'Darwin'",
 ]
 
 # We want to exclude some dependencies in our internal Snowpark conda distribution of
@@ -68,8 +70,8 @@ INSTALL_REQUIRES = [
 # and PyPI builds (that is, for people installing streamlit using either
 # `pip install streamlit` or `conda install -c conda-forge streamlit`)
 SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
-    "gitpython>=3, <4, !=3.1.19",
-    "pydeck>=0.1.dev5, <1",
+    "gitpython>=3.0.7, <4, !=3.1.19",
+    "pydeck>=0.8, <1",
     # Tornado 6.0.3 was the current Tornado version when Python 3.8, our earliest supported Python version,
     # was released (Oct 14, 2019).
     "tornado>=6.0.3, <7",

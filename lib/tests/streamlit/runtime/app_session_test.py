@@ -336,6 +336,7 @@ class AppSessionTest(unittest.TestCase):
         session.request_rerun = MagicMock()
         session._on_source_file_changed()
 
+        session._script_cache.clear.assert_called_once()
         session.request_rerun.assert_called_once_with(session._client_state)
 
     @patch(
@@ -347,6 +348,9 @@ class AppSessionTest(unittest.TestCase):
         session._run_on_save = True
         session.request_rerun = MagicMock()
         session._on_source_file_changed("/fake/script_path.py")
+
+        # Clearing the cache should still have been called
+        session._script_cache.clear.assert_called_once()
 
         self.assertEqual(session.request_rerun.called, False)
 

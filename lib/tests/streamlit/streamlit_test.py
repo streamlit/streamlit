@@ -70,6 +70,8 @@ class StreamlitTest(unittest.TestCase):
                 "button",
                 "caption",
                 "camera_input",
+                "chat_input",
+                "chat_message",
                 "checkbox",
                 "code",
                 "columns",

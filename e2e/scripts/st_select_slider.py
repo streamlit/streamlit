@@ -88,3 +88,12 @@ if runtime.exists():
     )
     st.write("Value 8:", st.session_state.select_slider8)
     st.write("Select slider changed:", "select_slider_changed" in st.session_state)
+
+with st.expander("Expander", expanded=True):
+    w9 = st.select_slider(
+        label="Label 9",
+        options=["foo", "bar", "baz", "This is a very, very long option"],
+        value="This is a very, very long option",
+    )
+
+    st.write("Value 9:", w9)

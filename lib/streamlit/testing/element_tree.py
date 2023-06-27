@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
-from typing_extensions import Literal, Self, TypeAlias
+from typing_extensions import Literal, TypeAlias
 
 from streamlit import util
 from streamlit.elements.heading import HeadingProtoTag
@@ -98,8 +98,11 @@ class Element:
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self) -> ElementTree:
-        return self.root.run()
+    def run(self, timeout: float = 3) -> ElementTree:
+        """Run the script with updated widget values.
+        Timeout is a number of seconds.
+        """
+        return self.root.run(timeout=timeout)
 
     def __repr__(self):
         return util.repr_(self)
@@ -115,7 +118,7 @@ class Widget(ABC, Element):
     key: str | None
     _value: Any
 
-    def set_value(self, v: Any) -> Self:
+    def set_value(self, v: Any):
         self._value = v
         return self
 
@@ -1215,8 +1218,11 @@ class Block:
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self) -> ElementTree:
-        return self.root.run()
+    def run(self, timeout: float = 3) -> ElementTree:
+        """Run the script with updated widget values.
+        Timeout is a number of seconds.
+        """
+        return self.root.run(timeout=timeout)
 
     def __repr__(self):
         return util.repr_(self)
@@ -1288,13 +1294,16 @@ class ElementTree(Block):
 
         return ws
 
-    def run(self) -> ElementTree:
+    def run(self, timeout: float = 3) -> ElementTree:
+        """Run the script with updated widget values.
+        Timeout is a number of seconds.
+        """
         assert self.script_path is not None
         from streamlit.testing.local_script_runner import LocalScriptRunner
 
         widget_states = self.get_widget_states()
         runner = LocalScriptRunner(self.script_path, self.session_state)
-        return runner.run(widget_states)
+        return runner.run(widget_states, timeout=timeout)
 
 
 def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
