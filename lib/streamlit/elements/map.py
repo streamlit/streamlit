@@ -23,6 +23,7 @@ from typing import (
     Dict,
     Iterable,
     Optional,
+    Set,
     Tuple,
     Union,
     cast,
@@ -336,7 +337,7 @@ def _get_lat_or_lon_col_name(
     data: pd.DataFrame,
     human_readable_name: str,
     col_name_from_user: Optional[str],
-    default_col_names: set[str],
+    default_col_names: Set[str],
 ) -> str:
 
     if isinstance(col_name_from_user, str) and col_name_from_user in data.columns:
