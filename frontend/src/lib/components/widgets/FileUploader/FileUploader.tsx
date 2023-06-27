@@ -247,19 +247,19 @@ class FileUploader extends React.PureComponent<Props, State> {
       }
     }
 
-    // If this is a single-file uploader that already has a file,
-    // remove that file so that it can be replaced with our new one.
-    if (
-      !multipleFiles &&
-      acceptedFiles.length > 0 &&
-      this.state.files.length > 0
-    ) {
-      this.removeFile(this.state.files[0].id)
-    }
-
     this.props.uploadClient
       .fetchFileURLs(acceptedFiles)
       .then((fileURLsArray: IFileURLs[]) => {
+        // If this is a single-file uploader that already has a file,
+        // remove that file so that it can be replaced with our new one.
+        if (
+          !multipleFiles &&
+          acceptedFiles.length > 0 &&
+          this.state.files.length > 0
+        ) {
+          this.removeFile(this.state.files[0].id)
+        }
+
         _.zip(fileURLsArray, acceptedFiles).forEach(
           ([fileURLs, acceptedFile]) => {
             this.uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
