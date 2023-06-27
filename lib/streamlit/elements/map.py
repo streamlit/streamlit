@@ -397,9 +397,9 @@ def _convert_color_arg_or_column(
     data: pd.DataFrame,
     color_arg: Union[str, Color],
     color_col_name: Optional[str],
-) -> Union[str, IntColorTuple]:
+) -> Union[None, str, IntColorTuple]:
 
-    color_arg_out: Union[str, IntColorTuple]
+    color_arg_out: Union[None, str, IntColorTuple] = None
 
     if color_col_name is not None:
         # Convert color column to the right format.
