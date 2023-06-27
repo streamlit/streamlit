@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
-from typing_extensions import Literal, Self, TypeAlias
+from typing_extensions import Literal, TypeAlias
 
 from streamlit import util
 from streamlit.elements.heading import HeadingProtoTag
@@ -118,7 +118,7 @@ class Widget(ABC, Element):
     key: str | None
     _value: Any
 
-    def set_value(self, v: Any) -> Self:
+    def set_value(self, v: Any):
         self._value = v
         return self
 
