@@ -33,7 +33,6 @@ const getProps = (elementProps: Partial<MultiSelectProto> = {}): Props => ({
     default: [0],
     options: ["a", "b", "c"],
     placeholder: "Choose an option",
-    placeholderNoOptions: "No options to select.",
     placeholderNoResults: "No results",
     ...elementProps,
   }),

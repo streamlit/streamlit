@@ -159,7 +159,6 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         max_selections: Optional[int] = None,
         placeholder: str = "Choose an option",
-        placeholder_no_options: str = "No options to select.",
         placeholder_no_results: str = "No results",
     ) -> List[T]:
         r"""Display a multiselect widget.
@@ -230,8 +229,6 @@ class MultiSelectMixin:
             This argument can only be supplied by keyword.
         placeholder : str
             An optional string to display when no option is selected.
-        placeholder_no_options : str
-            An optional string to display when there are no options to select.
         placeholder_no_results : str
             An optional string to display when there are no results for the search.
 
@@ -272,7 +269,6 @@ class MultiSelectMixin:
             ctx=ctx,
             max_selections=max_selections,
             placeholder=placeholder,
-            placeholder_no_options=placeholder_no_options,
             placeholder_no_results=placeholder_no_results,
         )
 
@@ -293,7 +289,6 @@ class MultiSelectMixin:
         ctx: Optional[ScriptRunContext] = None,
         max_selections: Optional[int] = None,
         placeholder: str = "Choose an option",
-        placeholder_no_options: str = "No options to select.",
         placeholder_no_results: str = "No results",
     ) -> List[T]:
         key = to_key(key)
@@ -312,7 +307,6 @@ class MultiSelectMixin:
         multiselect_proto.form_id = current_form_id(self.dg)
         multiselect_proto.max_selections = max_selections or 0
         multiselect_proto.placeholder = placeholder
-        multiselect_proto.placeholder_no_options = placeholder_no_options
         multiselect_proto.placeholder_no_results = placeholder_no_results
         if help is not None:
             multiselect_proto.help = dedent(help)
