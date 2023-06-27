@@ -44,7 +44,9 @@ export function FormSubmitButton(props: Props): ReactElement {
   useEffect(() => {
     widgetMgr.addSubmitButton(formId, element)
     return () => widgetMgr.removeSubmitButton(formId, element)
-  }, [widgetMgr, formId, element])
+    // FormSubmitButton proto will not always refresh so we don't include it in dependency array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [widgetMgr, formId])
 
   return (
     <div
@@ -58,7 +60,9 @@ export function FormSubmitButton(props: Props): ReactElement {
           size={BaseButtonSize.SMALL}
           fluidWidth={element.useContainerWidth || false}
           disabled={disabled || hasInProgressUpload}
-          onClick={() => widgetMgr.submitForm(element)}
+          onClick={() => {
+            widgetMgr.submitForm(element.formId)
+          }}
         >
           <StreamlitMarkdown
             source={element.label}

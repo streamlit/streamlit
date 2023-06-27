@@ -192,7 +192,7 @@ describe("Slider widget", () => {
       expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10])
 
       // "Submit" the form
-      props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+      props.widgetMgr.submitForm("form")
       wrapper.update()
 
       // Our widget should be reset, and the widgetMgr should be updated

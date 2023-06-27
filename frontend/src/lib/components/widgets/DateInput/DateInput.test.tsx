@@ -244,7 +244,7 @@ describe("DateInput widget", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    props.widgetMgr.submitForm("form")
     wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated

@@ -32,7 +32,11 @@ import {
   StyledWidgetLabelHelp,
 } from "src/lib/components/widgets/BaseWidget"
 
-import { labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
+import {
+  isInForm,
+  labelVisibilityProtoValueToEnum,
+  submitFormWidget,
+} from "src/lib/util/utils"
 
 import {
   StyledInputContainer,
@@ -266,8 +270,13 @@ class NumberInput extends React.PureComponent<Props, State> {
   private onKeyPress = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    if (e.key === "Enter" && this.state.dirty) {
-      this.commitWidgetValue({ fromUi: true })
+    if (e.key === "Enter") {
+      if (this.state.dirty) {
+        this.commitWidgetValue({ fromUi: true })
+      }
+      if (isInForm(this.props.element)) {
+        submitFormWidget(this.props.element.formId, this.props.widgetMgr)
+      }
     }
   }
 

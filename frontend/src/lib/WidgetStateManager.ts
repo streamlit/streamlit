@@ -56,7 +56,7 @@ export interface FormsData {
    * Mapping of formID:numberOfSubmitButtons. (Most forms will have only one,
    * but it's not an error to have multiple.)
    */
-  readonly submitButtons: Map<string, Set<SubmitButtonProto>>
+  readonly submitButtons: Map<string, Array<SubmitButtonProto>>
 }
 
 /** Create an empty FormsData instance. */
@@ -205,9 +205,7 @@ export class WidgetStateManager {
    * Commit pending changes for widgets that belong to the given form,
    * and send a rerunBackMsg to the server.
    */
-  public submitForm(submitButton: WidgetInfo): void {
-    const { formId } = submitButton
-
+  public submitForm(formId: string): void {
     if (!isValidFormId(formId)) {
       // This should never get thrown - only FormSubmitButton calls this
       // function.
@@ -219,7 +217,14 @@ export class WidgetStateManager {
     // Create the button's triggerValue. Just like with a regular button,
     // `st.form_submit_button()` returns True during a rerun after
     // it's clicked.
-    this.createWidgetState(submitButton, { fromUi: true }).triggerValue = true
+    const submitButtons = this.formsData.submitButtons.get(formId)
+
+    // can have an empty list of submitButtons
+    if (submitButtons !== undefined && submitButtons.length > 0) {
+      // click the first submit button. We can choose any so we just choose first.
+      this.createWidgetState(submitButtons[0], { fromUi: true }).triggerValue =
+        true
+    }
 
     // Copy the form's values into widgetStates, delete the form's pending
     // changes, and send our widgetStates back to the server.
@@ -229,8 +234,10 @@ export class WidgetStateManager {
     this.sendUpdateWidgetsMessage()
     this.syncFormsWithPendingChanges()
 
-    // Reset the button's triggerValue.
-    this.deleteWidgetState(submitButton.id)
+    if (submitButtons !== undefined && submitButtons.length !== 0) {
+      // Reset the button's triggerValue.
+      this.deleteWidgetState(submitButtons[0].id)
+    }
 
     // If the form has the clearOnSubmit flag, we emit a signal to all widgets
     // in the form. Each widget that handles this signal will reset to their
@@ -586,19 +593,19 @@ export class WidgetStateManager {
     formId: string,
     submitButtonProto: SubmitButtonProto
   ): void {
-    if (this.formsData.submitButtons.get(formId) === undefined) {
-      this.setSubmitButtons(formId, new Set([submitButtonProto]))
+    const submitButtons = this.formsData.submitButtons.get(formId)
+    if (submitButtons === undefined) {
+      this.setSubmitButtons(formId, [submitButtonProto])
     } else {
-      const newSubmitButtonProtos = new Set(
-        this.formsData.submitButtons.get(formId)
-      ).add(submitButtonProto)
-      this.setSubmitButtons(formId, newSubmitButtonProtos)
+      const copySubmitButtons = Object.assign([], submitButtons)
+      copySubmitButtons.push(submitButtonProto)
+      this.setSubmitButtons(formId, copySubmitButtons)
     }
   }
 
   /**
-   * Called by FormSubmitButton on creation. Decrement submitButtonCount for
-   * the given form, and update FormsData.
+   * Called by FormSubmitButton on creation. Remove the SubmitButtonProto for
+   * the given form and update FormsData.
    */
   public removeSubmitButton(
     formId: string,
@@ -606,19 +613,22 @@ export class WidgetStateManager {
   ): void {
     const submitButtons = this.formsData.submitButtons.get(formId)
     if (submitButtons !== undefined) {
-      const copySet = new Set(this.formsData.submitButtons.get(formId))
-      copySet.delete(submitButtonProto)
-      this.setSubmitButtons(formId, copySet)
+      const copySubmitButtons = Object.assign([], submitButtons)
+      const index = copySubmitButtons.indexOf(submitButtonProto, 0)
+      if (index > -1) {
+        copySubmitButtons.splice(index, 1)
+      }
+      this.setSubmitButtons(formId, copySubmitButtons)
     }
   }
 
   private setSubmitButtons(
     formId: string,
-    submitButtons: Set<SubmitButtonProto>
+    submitButtons: Array<SubmitButtonProto>
   ): void {
-    if (submitButtons.size < 0) {
+    if (submitButtons.length < 0) {
       throw new Error(
-        `Bad submitButtons value ${submitButtons.size} (must be >= 0)`
+        `Bad submitButtons value ${submitButtons.length} (must be >= 0)`
       )
     }
 
@@ -627,7 +637,9 @@ export class WidgetStateManager {
     })
   }
 
-  public getSubmitButton(formId: string): Set<SubmitButtonProto> | undefined {
+  public getSubmitButton(
+    formId: string
+  ): Array<SubmitButtonProto> | undefined {
     return this.formsData.submitButtons.get(formId)
   }
 

@@ -26,7 +26,11 @@ import {
 } from "src/lib/components/widgets/BaseWidget"
 import TooltipIcon from "src/lib/components/shared/TooltipIcon"
 import { Placement } from "src/lib/components/shared/Tooltip"
-import { isInForm, labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
+import {
+  isInForm,
+  labelVisibilityProtoValueToEnum,
+  submitFormWidget,
+} from "src/lib/util/utils"
 import { StyledTextInput } from "./styled-components"
 
 export interface Props {
@@ -157,18 +161,11 @@ class TextInput extends React.PureComponent<Props, State> {
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
     if (e.key === "Enter") {
-      if (isInForm(this.props.element)) {
-        const submitButton = this.props.widgetMgr.getSubmitButton(
-          this.props.element.formId
-        )
-        if (submitButton !== undefined) {
-          this.props.widgetMgr.submitForm({
-            id: submitButton.values().next().value.id,
-            formId: this.props.element.formId,
-          })
-        }
-      } else if (this.state.dirty) {
+      if (this.state.dirty) {
         this.commitWidgetValue({ fromUi: true })
+      }
+      if (isInForm(this.props.element)) {
+        submitFormWidget(this.props.element.formId, this.props.widgetMgr)
       }
     }
   }
@@ -250,7 +247,7 @@ class TextInput extends React.PureComponent<Props, State> {
           }}
         />
         <InputInstructions
-          dirty={dirty}
+          dirty={dirty || isInForm(this.props.element)}
           value={value}
           maxLength={element.maxChars}
         />

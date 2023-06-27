@@ -89,15 +89,8 @@ export function Form(props: Props): ReactElement {
 
   return (
     <StyledForm data-testid="stForm">
-      <form
-        onSubmit={() => {
-          event?.preventDefault()
-          return
-        }}
-      >
-        {children}
-        {submitWarning}
-      </form>
+      {children}
+      {submitWarning}
     </StyledForm>
   )
 }
