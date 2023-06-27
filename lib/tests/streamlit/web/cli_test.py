@@ -14,12 +14,15 @@
 
 """Unit tests for the Streamlit CLI."""
 import contextlib
+import json
 import os
 import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
+from typing import Dict, Optional
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
@@ -40,6 +43,7 @@ from streamlit.runtime.credentials import Credentials
 from streamlit.web import cli
 from streamlit.web.cli import _convert_config_option_to_click_option
 from tests import testutil
+from tests.testutil import list_files_and_directories
 
 
 class CliTest(unittest.TestCase):
@@ -435,6 +439,93 @@ class CliTest(unittest.TestCase):
         ):
             self.runner.invoke(cli, ["activate", "reset"])
             mock_credential.reset.assert_called()
+
+    def test_component_create_command(self):
+        """Tests scaffold a new project for custom component."""
+        cwd = os.getcwd()
+        try:
+            temp_dir = Path(tempfile.mkdtemp())
+            target_dir = (temp_dir / "target").absolute()
+            target_dir.mkdir()
+            os.chdir(target_dir)
+            template_archive = self.create_component_template_archive(temp_dir)
+            with mock.patch.dict(os.environ, HOME=str(temp_dir)):
+                output = self.runner.invoke(
+                    cli,
+                    [
+                        "components",
+                        "create",
+                        "--no-interactive",
+                        "--template-directory=template",
+                        f"--template-url={template_archive}",
+                    ],
+                    catch_exceptions=False,
+                )
+            self.assertEqual(
+                [
+                    "component_package",
+                    "component_package/README.md",
+                    "component_package/frontend",
+                    "component_package/frontend/node_modules",
+                    "component_package/frontend/node_modules/.package-lock.json",
+                    "component_package/frontend/node_modules/camelcase",
+                    "component_package/frontend/node_modules/camelcase/index.d.ts",
+                    "component_package/frontend/node_modules/camelcase/index.js",
+                    "component_package/frontend/node_modules/camelcase/license",
+                    "component_package/frontend/node_modules/camelcase/package.json",
+                    "component_package/frontend/node_modules/camelcase/readme.md",
+                    "component_package/frontend/package-lock.json",
+                    "component_package/frontend/package.json",
+                    "component_package/gen-file.txt",
+                    "cookiecutter.json",
+                    "hooks",
+                    "hooks/post_gen_project.py",
+                ],
+                list_files_and_directories(target_dir),
+            )
+            self.assertEqual(
+                "# component_package",
+                (target_dir / "component_package" / "README.md").read_text(),
+            )
+        finally:
+            os.chdir(cwd)
+
+    def create_component_template_archive(
+        self, target_dir: Path, files_override: Dict[str, Optional[str]] = None
+    ):
+        files_override = files_override or {}
+        zip_file = target_dir / "archive.zip"
+        files = {
+            "template/cookiecutter.json": json.dumps(
+                {"package_name": "component_package"}
+            ),
+            "template/{{ cookiecutter.package_name }}/README.md": (
+                "# {{ cookiecutter.package_name }}"
+            ),
+            "template/hooks/post_gen_project.py": (
+                "from pathlib import Path\n"
+                '(Path(".") / "{{ cookiecutter.package_name }}" / "gen-file.txt").'
+                'write_text("{{ cookiecutter.package_name }}")'
+            ),
+            "template/{{ cookiecutter.package_name }}/frontend/package.json": json.dumps(
+                {
+                    "name": "{{ cookiecutter.package_name }}",
+                    "scripts": {
+                        "build": "echo Build package > result-file.txt",
+                    },
+                    "devDependencies": {
+                        # Install a small package with no dependencies to verify that
+                        # the dependencies are installed
+                        "camelcase": "7.0.1"
+                    },
+                }
+            ),
+            **files_override,
+        }
+        with zipfile.ZipFile(zip_file, "w") as zipf:
+            for file_path, file_content in files.items():
+                zipf.writestr(file_path, file_content)
+        return zip_file
 
 
 class HTTPServerIntegrationTest(unittest.TestCase):

@@ -37,6 +37,7 @@ INSTALL_REQUIRES = [
     "click>=7.0, <9",
     # 1.4 introduced the functionality found in python 3.8's importlib.metadata module
     "importlib-metadata>=1.4, <7",
+    "jinja2>=3,<4",
     "numpy>=1.19.3, <2",
     "packaging>=16.8, <24",
     # Lowest version with available wheel for 3.7 + amd64 + linux

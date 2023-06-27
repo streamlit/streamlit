@@ -16,6 +16,7 @@
 
 import os
 import sys
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import click
@@ -24,6 +25,12 @@ import streamlit.runtime.caching as caching
 import streamlit.runtime.legacy_caching as legacy_caching
 import streamlit.web.bootstrap as bootstrap
 from streamlit import config as _config
+from streamlit.component_template import (
+    TEMPLATE_DIRECTORY,
+    TEMPLATE_URL,
+    node,
+    project_create,
+)
 from streamlit.config_option import ConfigOption
 from streamlit.runtime.credentials import Credentials, check_credentials
 from streamlit.web.cache_storage_manager_config import (
@@ -111,6 +118,23 @@ def _download_remote(main_script_path: str, url_path: str) -> None:
             fp.write(resp.content)
         except requests.exceptions.RequestException as e:
             raise click.BadParameter(f"Unable to fetch {url_path}.\n{e}")
+
+
+def _extract_zip(zip_path: str, target_dir: str) -> Path:
+    """
+    Extract local archive file at zip_path to target_dir
+    and returns first file path.
+    """
+    import zipfile
+
+    try:
+        # Extract the contents of the ZIP file to the target directory
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(target_dir)
+        # Return the path to the extracted directory
+        return Path(target_dir)
+    except zipfile.BadZipFile as e:
+        raise click.BadParameter(f"Unable to extract archive.\n{e}")
 
 
 @click.group(context_settings={"auto_envvar_prefix": "STREAMLIT"})
@@ -332,6 +356,61 @@ def activate(ctx):
 def activate_reset():
     """Reset Activation Credentials."""
     Credentials.get_current().reset()
+
+
+# SUBCOMMAND: components
+
+
+@main.group("components")
+def components():
+    """Manage Streamlit's custom components."""
+    pass
+
+
+@components.command("create")
+@click.option(
+    "--no-interactive", default=True, is_flag=True, help="Turn off interactive prompts."
+)
+@click.option(
+    "--template-url",
+    default=TEMPLATE_URL,
+    hidden=True,
+    help="The HTTP path or local path to zip archive from which the template will be used.",
+)
+@click.option(
+    "--template-directory",
+    default=TEMPLATE_DIRECTORY,
+    hidden=True,
+    help="The path in the archive where the template is located",
+)
+def components_create(no_interactive, template_url, template_directory):
+    """Scaffold a new project for Streamlit's custom component."""
+    from validators import url
+
+    from streamlit.temporary_directory import TemporaryDirectory
+
+    if node.is_node_installed():
+        raise RuntimeError("Node is not installed")
+
+    with TemporaryDirectory() as temp_dir:
+        if url(template_url):
+            # Download and extract template
+            print("Downloading project template")
+            zip_path = os.path.join(temp_dir, "temp.zip")
+            _download_remote(zip_path, TEMPLATE_URL)
+
+            template_path = _extract_zip(zip_path, temp_dir)
+            if template_directory:
+                template_path = template_path / template_directory
+            project_create(template_path, no_interactive)
+        else:
+            if not os.path.exists(template_url):
+                raise click.BadParameter(f"File does not exist: {template_url}")
+
+            template_path = _extract_zip(template_url, temp_dir)
+            if template_directory:
+                template_path = template_path / template_directory
+            project_create(template_path, no_interactive)
 
 
 # SUBCOMMAND: test

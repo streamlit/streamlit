@@ -16,6 +16,7 @@
 import json
 import sys
 from contextlib import contextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict
 from unittest.mock import patch
 
@@ -146,3 +147,19 @@ def create_snowpark_session() -> "Session":
         yield session
     finally:
         session.close()
+
+
+def list_files_and_directories(dir_path: Path):
+    """
+    Retrieves a sorted list of files and directories relative to the given directory path.
+
+    Parameters
+    ----------
+    dir_path (Path): The directory path to search for files and directories.
+
+    Returns
+    -------
+        list: A sorted list of file and directory paths, relative to the provided directory path.
+    """
+    files_and_dirs = sorted(list(dir_path.glob("**/*")))
+    return [str(d.relative_to(dir_path)) for d in files_and_dirs]

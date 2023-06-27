@@ -42,14 +42,14 @@ def _get_installed_streamlit_version() -> packaging.version.Version:
 
     Returns
     -------
-    str
-        The version string specified in setup.py.
+    packaging.version.Version
+        The version specified in setup.py.
 
     """
     return _version_str_to_obj(STREAMLIT_VERSION_STRING)
 
 
-def _get_latest_streamlit_version(timeout=None):
+def _get_latest_streamlit_version(timeout=None) -> packaging.version.Version:
     """Request the latest streamlit version string from PyPI.
 
     NB: this involves a network call, so it could raise an error
@@ -62,7 +62,7 @@ def _get_latest_streamlit_version(timeout=None):
 
     Returns
     -------
-    str
+    packaging.version.Version
         The version string for the latest version of streamlit
         on PyPI.
 
