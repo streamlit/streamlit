@@ -150,12 +150,14 @@ jobs:
           deactivate
       - name: Activate virtualenv
         run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
+      - name: Install deps
+        run: make python-init-test-min-deps
       - name: Generate Protobufs
         run: make protobuf
       # End of inlined make_init action
 
-      - name: Install deps
-        run: make python-init-test-min-deps
+      - name: Make local modules visible
+        run: pip install --editable lib --no-deps
       - name: Run Python Tests
         run: make pytest
       - name: Run Integration Tests
