@@ -15,7 +15,7 @@
  */
 
 import { renderHook } from "@testing-library/react-hooks"
-import useScrollToBottom from "./useScrollToBottom"
+import { useScrollToBottom } from "./useScrollToBottom"
 import useStateRef from "./useStateRef"
 
 jest.mock("./useScrollSpy")

@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-// added this temporarily as typescript compiler is not liking data not existing
-// @ts-nocheck
-
 import styled from "@emotion/styled"
 import axios from "axios"
 
