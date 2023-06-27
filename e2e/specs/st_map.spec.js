@@ -42,16 +42,27 @@ describe("st.map", () => {
       .should("contain", "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more.")
   })
 
-  it("displays the correct snapshot", () => {
+  it("displays a basic map correctly", () => {
     cy.get(".mapboxgl-canvas")
     // Adding a sufficient wait to ensure the map fully loads before taking the snapshot
     cy.wait(10000)
-    cy.get(".element-container", { waitForAnimations: true }).last().matchImageSnapshot("stDeckGlJsonChart")
+    cy.get(".element-container", { waitForAnimations: true }).first().matchImageSnapshot("stDeckGlJsonChart")
 
     // Need to manually change theme vs. matchThemedSnapshot to be able to add wait in right sequence
     cy.changeTheme("Dark")
     cy.wait(10000)
-    cy.get(".element-container", { waitForAnimations: true }).last().matchImageSnapshot("stDeckGlJsonChart-dark")
+    cy.get(".element-container", { waitForAnimations: true }).first().matchImageSnapshot("stDeckGlJsonChart-dark")
   })
 
+  it("displays a complex map correctly", () => {
+    cy.get(".mapboxgl-canvas")
+    // Adding a sufficient wait to ensure the map fully loads before taking the snapshot
+    cy.wait(10000)
+    cy.get(".element-container", { waitForAnimations: true }).last().matchImageSnapshot("complexMap")
+
+    // Need to manually change theme vs. matchThemedSnapshot to be able to add wait in right sequence
+    cy.changeTheme("Dark")
+    cy.wait(10000)
+    cy.get(".element-container", { waitForAnimations: true }).last().matchImageSnapshot("complexMap-dark")
+  })
 });
