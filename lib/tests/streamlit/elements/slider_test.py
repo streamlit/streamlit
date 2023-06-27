@@ -17,6 +17,7 @@
 from datetime import date, datetime, time, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 from parameterized import parameterized
 
@@ -69,6 +70,10 @@ class SliderTest(DeltaGeneratorTestCase):
             (0.5, [0.5], 0.5),  # float
             ((0.2, 0.5), [0.2, 0.5], (0.2, 0.5)),  # float tuple
             ([0.2, 0.5], [0.2, 0.5], (0.2, 0.5)),  # float list
+            (np.int64(1), [1], 1),  # numpy int
+            (np.int32(1), [1], 1),  # numpy int
+            (np.single(0.5), [0.5], 0.5),  # numpy float
+            (np.double(0.5), [0.5], 0.5),  # numpy float
             (AWARE_DT, [AWARE_DT_MICROS], AWARE_DT),  # datetime
             (
                 (AWARE_DT, AWARE_DT_END),  # datetime tuple
@@ -102,6 +107,34 @@ class SliderTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.default, proto_value)
+
+    @parameterized.expand(
+        [
+            "5",  # str
+            5j,  # complex
+            b"5",  # bytes
+        ]
+    )
+    def test_invalid_types(self, value):
+        """Test that it rejects invalid types, specifically things that are *almost* numbers"""
+        with pytest.raises(StreamlitAPIException):
+            st.slider("the label", value=value)
+
+    @parameterized.expand(
+        [
+            (1, 1, 1, 1),
+            (np.int64(1), 1, 1, 1),
+            (1, np.int64(1), 1, 1),
+            (1, 1, np.int64(1), 1),
+            (np.single(0.5), 0.5, 0.5, 0.5),
+        ]
+    )
+    def test_matching_types(self, min_value, max_value, value, return_value):
+        """Test that NumPy types are seen as compatible with numerical Python types"""
+        ret = st.slider(
+            "the label", min_value=min_value, max_value=max_value, value=value
+        )
+        self.assertEqual(ret, return_value)
 
     NAIVE_DT = datetime(2020, 2, 1)
     NAIVE_DT_END = datetime(2020, 2, 4)
