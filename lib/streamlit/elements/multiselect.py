@@ -158,9 +158,9 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         max_selections: Optional[int] = None,
-        placeholder: Optional[str] = "Choose an option",
-        placeholder_no_options: Optional[str] = "No options to select.",
-        placeholder_no_results: Optional[str] = "No results",
+        placeholder: str = "Choose an option",
+        placeholder_no_options: str = "No options to select.",
+        placeholder_no_results: str = "No results",
     ) -> List[T]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -292,9 +292,9 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
         max_selections: Optional[int] = None,
-        placeholder: Optional[str] = "Choose an option",
-        placeholder_no_options: Optional[str] = "No options to select.",
-        placeholder_no_results: Optional[str] = "No results",
+        placeholder: str = "Choose an option",
+        placeholder_no_options: str = "No options to select.",
+        placeholder_no_results: str = "No results",
     ) -> List[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
