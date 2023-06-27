@@ -282,7 +282,7 @@ def get_output_variables() -> Dict[str, str]:
     # Environment variables can be overridden at job level and we don't want
     # to change them then.
     for key, value in variables.copy().items():
-        variables[key] = os.environ.get(key)
+        variables[key] = os.environ.get(key, value)
     return variables
 
 
