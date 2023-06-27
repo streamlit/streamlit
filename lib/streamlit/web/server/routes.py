@@ -185,7 +185,8 @@ ALLOWED_MESSAGE_ORIGINS = [
     "https://*.head.streamlit.app",
     "https://*.staging.streamlit.app",
     "https://*.streamlit.app",
-    "http://localhost",
+    # Allow messages from localhost in dev mode for testing of host <-> guest communication
+    "http://localhost" if config.get_option("global.developmentMode") else None,
 ]
 
 
