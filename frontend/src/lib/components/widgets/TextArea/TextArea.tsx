@@ -27,11 +27,7 @@ import {
 } from "src/lib/components/widgets/BaseWidget"
 import TooltipIcon from "src/lib/components/shared/TooltipIcon"
 import { Placement } from "src/lib/components/shared/Tooltip"
-import {
-  isInForm,
-  labelVisibilityProtoValueToEnum,
-  submitFormWidget,
-} from "src/lib/util/utils"
+import { isInForm, labelVisibilityProtoValueToEnum } from "src/lib/util/utils"
 import { StyledTextAreaContainer } from "./styled-components"
 
 export interface Props {

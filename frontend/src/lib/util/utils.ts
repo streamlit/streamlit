@@ -21,7 +21,7 @@ import {
 } from "src/lib/proto"
 import _ from "lodash"
 import xxhash from "xxhashjs"
-import { WidgetStateManager } from "../WidgetStateManager"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval

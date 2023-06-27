@@ -304,7 +304,6 @@ describe("Widget State Manager", () => {
 
   // Other FormsData-related tests
   describe("formsData", () => {
-    // Commenting out for now for typescript compilation. Will uncomment and fix.git st
     it("updates submitButtonCount", () => {
       const newButtonMock = new Button()
       const secondButtonMock = new Button({ id: "newId" })

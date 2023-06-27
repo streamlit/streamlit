@@ -586,8 +586,8 @@ export class WidgetStateManager {
   }
 
   /**
-   * Called by FormSubmitButton on creation. Increment submitButtonCount for
-   * the given form, and update FormsData.
+   * Called by FormSubmitButton on creation. Add the SubmitButtonProto for
+   * the given form and update FormsData.
    */
   public addSubmitButton(
     formId: string,
