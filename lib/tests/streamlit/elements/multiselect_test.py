@@ -138,6 +138,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertListEqual(c.default[:], expected)
         self.assertEqual(c.options, ["Coffee", "Tea", "Water"])
+        self.assertEqual(c.placeholder, "Choose an option")
+        self.assertEqual(c.placeholder_no_results, "No results")
 
     @parameterized.expand(
         [
@@ -365,3 +367,16 @@ Please select at most 2 options.
             _get_over_max_options_message(current_selections, max_selections),
             expected_msg,
         )
+
+    def test_placeholder(self):
+        """Test that it can be called with placeholder and placeholder_no_results params."""
+        st.multiselect(
+            "the label",
+            ["Coffee", "Tea", "Water"],
+            placeholder="Select your beverage",
+            placeholder_no_results="There is no drink you want.",
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        self.assertEqual(c.placeholder, "Select your beverage")
+        self.assertEqual(c.placeholder_no_results, "There is no drink you want.")
