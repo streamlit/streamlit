@@ -566,3 +566,19 @@ class TimeInputTest(InteractiveScriptTests):
             time(16),
             time(2, 1),
         ]
+
+
+class TimeoutTest(InteractiveScriptTests):
+    def test_short_timeout(self):
+        script = self.script_from_string(
+            """
+            import time
+            import streamlit as st
+
+            st.write("start")
+            time.sleep(0.5)
+            st.write("end")
+            """
+        )
+        with pytest.raises(RuntimeError):
+            sr = script.run(timeout=0.2)

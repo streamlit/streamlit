@@ -54,6 +54,7 @@ export interface StyledElementContainerProps {
   elementType: string
 }
 
+const GLOBAL_ELEMENTS = ["balloons", "snow", "chatInput"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, width, elementType }) => ({
     width,
@@ -68,7 +69,9 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       overflow: "visible",
     },
 
-    ...(isStale
+    // We do not want the chat input to be faded out.
+    // TODO: Reconsider this when we implement fixed-sized chat containers
+    ...(isStale && elementType !== "chatInput"
       ? {
           opacity: 0.33,
           transition: "opacity 1s ease-in 0.5s",
@@ -80,10 +83,12 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
           display: "none",
         }
       : {}),
-    ...(elementType === "balloons"
+    ...(GLOBAL_ELEMENTS.includes(elementType)
       ? {
-          // Apply negative bottom margin to remove the flexbox gap.
-          // display: none does not work for balloons, since it needs to be visible.
+          // Global elements are rendered in their delta position, but they
+          // are not part of the flexbox layout. We apply a negative margin
+          // to remove the flexbox gap. display: none does not work for these,
+          // since they needs to be visible.
           marginBottom: `-${theme.spacing.lg}`,
         }
       : {}),

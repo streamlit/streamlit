@@ -16,6 +16,7 @@
 
 import React from "react"
 import { isMobile } from "react-device-detect"
+import { ChevronDown } from "baseui/icon"
 import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { logWarning } from "src/util/log"
 import VirtualDropdown from "src/components/shared/Dropdown/VirtualDropdown"
@@ -28,6 +29,7 @@ import {
   WidgetLabel,
   StyledWidgetLabelHelp,
 } from "src/components/widgets/BaseWidget"
+import { iconSizes } from "src/theme/primitives"
 
 export interface Props {
   disabled: boolean
@@ -247,6 +249,21 @@ class Selectbox extends React.PureComponent<Props, State> {
                   Body: {
                     style: () => ({
                       marginTop: "1px",
+                    }),
+                  },
+                },
+              },
+            },
+
+            SelectArrow: {
+              component: ChevronDown,
+
+              props: {
+                overrides: {
+                  Svg: {
+                    style: () => ({
+                      width: iconSizes.xl,
+                      height: iconSizes.xl,
                     }),
                   },
                 },

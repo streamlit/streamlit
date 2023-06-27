@@ -171,7 +171,7 @@ class NumberInputMixin:
         >>> st.write('The current number is ', number)
 
         .. output::
-           https://doc-number-input.streamlitapp.com/
+           https://doc-number-input.streamlit.app/
            height: 260px
 
         """
@@ -289,13 +289,15 @@ class NumberInputMixin:
         # Ensure that the value matches arguments' types.
         all_ints = int_value and int_args
 
-        if (min_value and min_value > value) or (max_value and max_value < value):
+        if min_value is not None and value is not None and min_value > value:
             raise StreamlitAPIException(
-                "The default `value` of %(value)s "
-                "must lie between the `min_value` of %(min)s "
-                "and the `max_value` of %(max)s, inclusively."
-                % {"value": value, "min": min_value, "max": max_value}
+                f"The default `value` {value} must be greater than or equal to the `min_value` {min_value}"
             )
+        if max_value is not None and value is not None:
+            if max_value < value:
+                raise StreamlitAPIException(
+                    f"The default `value` {value} must be less than or equal to the `max_value` {max_value}"
+                )
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.

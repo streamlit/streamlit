@@ -92,10 +92,13 @@ class Slider extends React.PureComponent<Props, State> {
       i < Math.min(this.thumbRef.length, this.thumbValueRef.length);
       i++
     ) {
-      this.thumbValueAlignment(
-        this.thumbRef[i].current,
-        this.thumbValueRef[i].current
-      )
+      // Delay the alignment to allow the page layout to complete
+      setTimeout(() => {
+        this.thumbValueAlignment(
+          this.thumbRef[i].current,
+          this.thumbValueRef[i].current
+        )
+      }, 0)
     }
 
     if (this.props.element.setValue) {

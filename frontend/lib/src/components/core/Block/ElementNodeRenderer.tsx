@@ -22,6 +22,7 @@ import {
   Button as ButtonProto,
   DownloadButton as DownloadButtonProto,
   CameraInput as CameraInputProto,
+  ChatInput as ChatInputProto,
   Checkbox as CheckboxProto,
   Code as CodeProto,
   ColorPicker as ColorPickerProto,
@@ -104,6 +105,7 @@ const ArrowVegaLiteChart = React.lazy(
 const BokehChart = React.lazy(
   () => import("src/components/elements/BokehChart")
 )
+
 const DebouncedBokehChart = debounceRender(BokehChart, 100)
 
 const DataFrame = React.lazy(() => import("src/components/elements/DataFrame"))
@@ -131,6 +133,7 @@ const DownloadButton = React.lazy(
 const CameraInput = React.lazy(
   () => import("src/components/widgets/CameraInput")
 )
+const ChatInput = React.lazy(() => import("src/components/widgets/ChatInput"))
 const Checkbox = React.lazy(() => import("src/components/widgets/Checkbox"))
 const ColorPicker = React.lazy(
   () => import("src/components/widgets/ColorPicker")
@@ -454,6 +457,19 @@ const RawElementNodeRenderer = (
           key={cameraInputProto.id}
           element={cameraInputProto}
           uploadClient={props.uploadClient}
+          width={width}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "chatInput": {
+      const chatInputProto = node.element.chatInput as ChatInputProto
+      widgetProps.disabled = widgetProps.disabled || chatInputProto.disabled
+      return (
+        <ChatInput
+          key={chatInputProto.id}
+          element={chatInputProto}
           width={width}
           {...widgetProps}
         />

@@ -98,7 +98,7 @@ class GraphvizMixin:
         ''')
 
         .. output::
-           https://doc-graphviz-chart.streamlitapp.com/
+           https://doc-graphviz-chart.streamlit.app/
            height: 600px
 
         """

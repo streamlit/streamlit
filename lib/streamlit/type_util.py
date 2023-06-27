@@ -102,6 +102,7 @@ ValueFieldName: TypeAlias = Literal[
     "json_value",
     "string_value",
     "trigger_value",
+    "string_trigger_value",
 ]
 
 V_co = TypeVar(
