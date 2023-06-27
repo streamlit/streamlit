@@ -17,7 +17,7 @@
 import { enableAllPlugins } from "immer"
 import {
   ArrowTable as ArrowTableProto,
-  Button,
+  Button as ButtonProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "src/lib/proto"
@@ -316,9 +316,9 @@ describe("Widget State Manager", () => {
 
   // Other FormsData-related tests
   describe("formsData", () => {
-    it("updates submitButtonCount", () => {
-      const newButtonMock = new Button()
-      const secondButtonMock = new Button({ id: "newId" })
+    it("updates submitButtons Array", () => {
+      const newButtonMock = new ButtonProto()
+      const secondButtonMock = new ButtonProto({ id: "newId" })
       expect(formsData.submitButtons.get("form")).not.toBeDefined()
       widgetMgr.addSubmitButton("form", newButtonMock)
       expect(formsData.submitButtons.get("form")?.length).toEqual(1)
@@ -369,8 +369,7 @@ describe("Widget State Manager", () => {
       // Submit the form
       widgetMgr.submitForm(formId)
 
-      // Our backMsg should be populated with our two widget values,
-      // plus the submitButton's value.
+      // Our backMsg should be populated with our two widget values
       expect(sendBackMsg).toHaveBeenCalledWith({
         widgets: [
           { id: "widget1", stringValue: "foo" },
@@ -421,7 +420,7 @@ describe("Widget State Manager", () => {
       // Submit the first form.
       widgetMgr.submitForm(FORM_1.formId)
 
-      // Our backMsg should be populated with the first form widget value,
+      // Our backMsg should be populated with the first form widget value
       expect(sendBackMsg).toHaveBeenCalledWith({
         widgets: [{ id: FORM_1.id, stringValue: "foo" }],
       })
@@ -439,7 +438,7 @@ describe("Widget State Manager", () => {
       widgetMgr.submitForm(FORM_1.formId)
       widgetMgr.submitForm(FORM_2.formId)
 
-      // Our most recent backMsg should be populated with the both forms' widget values,
+      // Our most recent backMsg should be populated with the both forms' widget values
       expect(sendBackMsg).toHaveBeenLastCalledWith({
         widgets: [
           { id: FORM_1.id, stringValue: "foo" },

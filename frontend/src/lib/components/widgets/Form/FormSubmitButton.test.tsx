@@ -122,7 +122,7 @@ describe("FormSubmitButton", () => {
     expect(button.disabled).toBe(true)
   })
 
-  it("increments submitButtons on mount and decrements on unmount", () => {
+  it("Adds the proto to submitButtons on mount and removes the proto on unmount", () => {
     expect(formsData.submitButtons.get("mockFormId")).toBeUndefined()
 
     const props = getProps()
@@ -137,12 +137,22 @@ describe("FormSubmitButton", () => {
 
     const wrapper1 = render(<FormSubmitButton {...props} />)
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
+    // @ts-expect-error
+    expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(props.element)
 
     const wrapper2 = render(<FormSubmitButton {...props2} />)
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(2)
+    // @ts-expect-error
+    expect(formsData.submitButtons.get("mockFormId")[1]).toEqual(
+      props2.element
+    )
 
     wrapper1.unmount()
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
+    // @ts-expect-error
+    expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(
+      props2.element
+    )
 
     wrapper2.unmount()
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(0)

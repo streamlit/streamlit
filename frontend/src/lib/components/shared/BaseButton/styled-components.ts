@@ -204,7 +204,7 @@ export const StyledMinimalButton = styled(
 }))
 
 export const StyledPrimaryFormSubmitButton =
-  styled(StyledBaseButton)<RequiredBaseButtonProps>()
+  styled(StyledPrimaryButton)<RequiredBaseButtonProps>()
 
 export const StyledSecondaryFormSubmitButton = styled(
   StyledSecondaryButton
