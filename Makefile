@@ -95,9 +95,14 @@ python-init-dev-only:
 python-init-test-only: lib/test-requirements.txt
 	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true make python-init
 
+.PHONY: python-init-test-min-deps
+# Install Streamlit and test requirements, with minimum dependency versions
+python-init-test-min-deps:
+	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true USE_CONSTRAINTS_FILE=true CONSTRAINTS_URL="lib/min-constraints-gen.txt" make python-init
+
 .PHONY: python-init
 python-init:
-	pip_args=("install" "--editable" "lib[snowflake]");\
+	pip_args=("--editable" "lib[snowflake]");\
 	if [ "${USE_CONSTRAINT_FILE}" = "true" ] ; then\
 		pip_args+=(--constraint "${CONSTRAINTS_URL}"); \
 	fi;\
@@ -346,6 +351,12 @@ notices:
 headers:
 	pre-commit run insert-license --all-files --hook-stage manual
 	pre-commit run license-headers --all-files --hook-stage manual
+
+.PHONY: gen-min-dep-constraints
+# Write the minimum versions of our dependencies to a constraints file.
+gen-min-dep-constraints:
+	make develop >/dev/null
+	python scripts/get_min_versions.py >lib/min-constraints-gen.txt
 
 .PHONY: build-test-env
 # Build docker image that mirrors circleci
