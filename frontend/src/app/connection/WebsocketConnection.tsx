@@ -65,8 +65,8 @@ const PING_TIMEOUT_MS = 15 * 1000
  */
 const WEBSOCKET_TIMEOUT_MS = 15 * 1000
 
-const HEARTBEAT_PING_INTERVAL_MS = 2 * 1000
-const HEARTBEAT_PING_TIMEOUT_MS = 2 * 1000
+const HEARTBEAT_PING_INTERVAL_MS = 5 * 1000
+const HEARTBEAT_PING_TIMEOUT_MS = 5 * 1000
 
 /**
  * If the ping retrieves a 403 status code a message will be displayed.
@@ -229,7 +229,6 @@ export class WebsocketConnection {
     this.cache = new ForwardMsgCache(props.endpoints)
     this.stepFsm("INITIALIZED")
     this.setHeartbeatPings()
-    console.log("-->baseUriPartsList:")
     for (const item of this.args.baseUriPartsList) {
       console.log(item.host, item.port, item.basePath)
     }
@@ -601,7 +600,11 @@ export class WebsocketConnection {
     window.setInterval(() => {
       if (this.websocket?.readyState === 1) {
         const healthzUri = buildHttpUri(
-          this.args.baseUriPartsList[this.uriIndex],
+          {
+            host: "ping.mlops.dp.tech",
+            port: 443,
+            basePath: "",
+          },
           SERVER_PING_PATH
         )
         axios
@@ -614,7 +617,7 @@ export class WebsocketConnection {
           })
           .catch(error => {
             if (error.code === "ECONNABORTED") {
-              console.log("Connection timed out.")
+              console.log("Connection timed out.", healthzUri)
             }
             if (error.response) {
               // The request was made and the server responded with a status code
@@ -640,7 +643,7 @@ export class WebsocketConnection {
               console.log("No Response.")
             }
             // Something happened in setting up the request that triggered an Error
-            console.log(`Ping Error Message: ${error.message}`)
+            console.log(`Ping Error Message: ${error.message}`, healthzUri)
 
             console.log(`failureCount: ${this.pingFailureCount}`)
             this.pingFailureCount += 1
