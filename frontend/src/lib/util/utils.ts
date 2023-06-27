@@ -470,7 +470,7 @@ export function isTesting(): boolean {
 export function submitFormWidget(
   formId: string,
   widgetMgr: WidgetStateManager
-) {
+): void {
   const submitButton = widgetMgr.getSubmitButton(formId)
   if (submitButton !== undefined) {
     widgetMgr.submitForm(formId)

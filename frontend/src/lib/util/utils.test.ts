@@ -26,11 +26,7 @@ import {
 
 import { Props as FormSubmitProps } from "src/lib/components/widgets/Form/FormSubmitButton"
 import { Button as ButtonProto } from "src/lib/proto"
-import {
-  createFormsData,
-  FormsData,
-  WidgetStateManager,
-} from "src/lib/WidgetStateManager"
+import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import { enableAllPlugins } from "immer"
 
 // Required by ImmerJS and for submitForm
@@ -280,16 +276,12 @@ describe("isEmbed", () => {
 })
 
 describe("submitFormWidget", () => {
-  let formsData: FormsData
   let widgetMgr: WidgetStateManager
 
   beforeEach(() => {
-    formsData = createFormsData()
     widgetMgr = new WidgetStateManager({
       sendRerunBackMsg: jest.fn(),
-      formsDataChanged: jest.fn(newData => {
-        formsData = newData
-      }),
+      formsDataChanged: jest.fn(),
     })
     WidgetStateManager.prototype.submitForm = jest.fn()
   })
