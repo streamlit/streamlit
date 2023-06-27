@@ -57,16 +57,23 @@ st._arrow_altair_chart(chart, theme="streamlit")
 st.write("Bar chart with overwritten theme props:")
 st._arrow_altair_chart(chart.configure_mark(color="black"), theme="streamlit")
 
-source = pd.DataFrame({"category": [1, 2, 3, 4, 5, 6], "value": [4, 6, 10, 3, 7, 8]})
+# mark_arc was added in 4.2, but we have to support altair 4.0-4.1, so we
+# have to skip this part of the test when testing min versions.
+major, minor, patch = alt.__version__.split(".")
+if not (major == "4" and minor < "2"):
 
-chart = (
-    alt.Chart(source)
-    .mark_arc(innerRadius=50)
-    .encode(
-        theta=alt.Theta(field="value", type="quantitative"),
-        color=alt.Color(field="category", type="nominal"),
+    source = pd.DataFrame(
+        {"category": [1, 2, 3, 4, 5, 6], "value": [4, 6, 10, 3, 7, 8]}
     )
-)
 
-st.write("Pie Chart with more than 4 Legend items")
-st._arrow_altair_chart(chart, theme="streamlit")
+    chart = (
+        alt.Chart(source)
+        .mark_arc(innerRadius=50)
+        .encode(
+            theta=alt.Theta(field="value", type="quantitative"),
+            color=alt.Color(field="category", type="nominal"),
+        )
+    )
+
+    st.write("Pie Chart with more than 4 Legend items")
+    st._arrow_altair_chart(chart, theme="streamlit")

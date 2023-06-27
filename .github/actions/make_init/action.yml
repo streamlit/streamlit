@@ -6,6 +6,8 @@ inputs:
     description: "Use Cached Virtual Env"
     default: "true"
 
+# There is an altered copy of these steps inlined in the python_min_deps
+# workflow. If you make changes to this action, apply them there too if appropriate.
 runs:
   using: composite
   steps:
