@@ -14,6 +14,7 @@
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
+from numbers import Integral, Real
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -329,7 +330,7 @@ class SliderMixin:
         >>> st.write("Start time:", start_time)
 
         .. output::
-           https://doc-slider.streamlitapp.com/
+           https://doc-slider.streamlit.app/
            height: 300px
 
         """
@@ -389,8 +390,8 @@ class SliderMixin:
                 value = min_value if min_value is not None else 0
 
         SUPPORTED_TYPES = {
-            int: SliderProto.INT,
-            float: SliderProto.FLOAT,
+            Integral: SliderProto.INT,
+            Real: SliderProto.FLOAT,
             datetime: SliderProto.DATETIME,
             date: SliderProto.DATE,
             time: SliderProto.TIME,
@@ -410,8 +411,16 @@ class SliderMixin:
         if single_value:
             value = [value]
 
+        def value_to_generic_type(v):
+            if isinstance(v, Integral):
+                return SUPPORTED_TYPES[Integral]
+            elif isinstance(v, Real):
+                return SUPPORTED_TYPES[Real]
+            else:
+                return SUPPORTED_TYPES[type(v)]
+
         def all_same_type(items):
-            return len(set(map(type, items))) < 2
+            return len(set(map(value_to_generic_type, items))) < 2
 
         if not all_same_type(value):
             raise StreamlitAPIException(
@@ -422,7 +431,7 @@ class SliderMixin:
         if len(value) == 0:
             data_type = SliderProto.INT
         else:
-            data_type = SUPPORTED_TYPES[type(value[0])]
+            data_type = value_to_generic_type(value[0])
 
         datetime_min = time.min
         datetime_max = time.max
@@ -487,8 +496,13 @@ class SliderMixin:
 
         # Ensure that all arguments are of the same type.
         slider_args = [min_value, max_value, step]
-        int_args = all(map(lambda a: isinstance(a, int), slider_args))
-        float_args = all(map(lambda a: isinstance(a, float), slider_args))
+        int_args = all(map(lambda a: isinstance(a, Integral), slider_args))
+        float_args = all(
+            map(
+                lambda a: isinstance(a, Real) and not isinstance(a, Integral),
+                slider_args,
+            )
+        )
         # When min and max_value are the same timelike, step should be a timedelta
         timelike_args = (
             data_type in TIMELIKE_TYPES
