@@ -31,6 +31,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   width: 0,
   disabled: false,
   onChange: jest.fn(),
+  placeholder: "Select...",
   ...props,
 })
 
@@ -84,6 +85,15 @@ describe("Selectbox widget", () => {
     expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
       LabelVisibilityOptions.Collapsed
     )
+  })
+
+  it("pass placeholder prop correctly", () => {
+    props = getProps({
+      placeholder: "Please select",
+    })
+    wrapper = shallow(<Selectbox {...props} />)
+
+    expect(wrapper.find(UISelect).prop("placeholder")).toEqual("Please select")
   })
 
   it("renders a placeholder with empty options", () => {

@@ -27,6 +27,7 @@ message Selectbox {
   string form_id = 6;
   int32 value = 7;
   bool set_value = 8;
-  bool disabled = 9;
-  LabelVisibilityMessage label_visibility = 10;
+  string placeholder = 9;
+  bool disabled = 10;
+  LabelVisibilityMessage label_visibility = 11;
 }
