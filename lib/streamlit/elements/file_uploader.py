@@ -108,7 +108,6 @@ class FileUploaderSerde:
             file_info.file_id = f.file_id
             file_info.name = f.name
             file_info.size = f.size
-
             file_info.file_urls.CopyFrom(f._file_urls)
 
         return state_proto
