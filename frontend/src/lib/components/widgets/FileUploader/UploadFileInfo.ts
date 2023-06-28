@@ -15,6 +15,7 @@
  */
 
 import { CancelTokenSource } from "axios"
+import { FileURLs, IFileURLs } from "src/lib/proto"
 
 export interface UploadingStatus {
   type: "uploading"
@@ -26,10 +27,7 @@ export interface UploadedStatus {
   type: "uploaded"
 
   fileId: string
-  // TODO(vdonato / kajarenc): Use the same names here as in the
-  // UploadedFileInfo proto type.
-  uploadFileURL: string
-  deleteFileURL?: string
+  fileUrls: IFileURLs
 }
 
 export interface ErrorStatus {

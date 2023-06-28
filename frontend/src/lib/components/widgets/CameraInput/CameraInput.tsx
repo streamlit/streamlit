@@ -22,7 +22,8 @@ import React from "react"
 import {
   CameraInput as CameraInputProto,
   FileUploaderState as FileUploaderStateProto,
-  FileURLsResponse as FileURLsResponseProto,
+  FileURLs as FileURLsProto,
+  IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "src/lib/proto"
 import Icon from "src/lib/components/shared/Icon"
@@ -212,15 +213,12 @@ class CameraInput extends React.PureComponent<Props, State> {
         const size = f.size as number
 
         const fileId = f.fileId as string
-        const deleteFileURL = f.fileDeleteUrl as string
+        const fileUrls = f.fileUrls as FileURLsProto
 
         return new UploadFileInfo(name, size, this.nextLocalFileId(), {
           type: "uploaded",
-
-          // TODO(vdonato / kajarenc): Use the finalized fields here
           fileId,
-          uploadFileURL: "TODO",
-          deleteFileURL,
+          fileUrls,
         })
       }),
       imgSrc:
@@ -307,7 +305,7 @@ class CameraInput extends React.PureComponent<Props, State> {
         const { name, size, status } = f
         return new UploadedFileInfoProto({
           fileId: (status as UploadedStatus).fileId,
-          fileDeleteUrl: (status as UploadedStatus).deleteFileURL,
+          fileUrls: (status as UploadedStatus).fileUrls,
           name,
           size,
         })
@@ -441,8 +439,8 @@ class CameraInput extends React.PureComponent<Props, State> {
       file.status.cancelToken.cancel()
     }
 
-    if (file.status.type === "uploaded" && file.status.deleteFileURL) {
-      this.props.uploadClient.deleteFile(file.status.deleteFileURL)
+    if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
     }
 
     this.removeFile(fileId)
@@ -484,7 +482,7 @@ class CameraInput extends React.PureComponent<Props, State> {
    */
   private onUploadComplete = (
     localFileId: number,
-    fileURLs: FileURLsResponseProto.IFileURLs
+    fileUrls: IFileURLs
   ): void => {
     this.setState(state => ({
       shutter: false,
@@ -501,9 +499,8 @@ class CameraInput extends React.PureComponent<Props, State> {
       curFile.id,
       curFile.setStatus({
         type: "uploaded",
-        fileId: fileURLs.fileId as string,
-        uploadFileURL: fileURLs.uploadUrl as string,
-        deleteFileURL: fileURLs.deleteUrl as string,
+        fileId: fileUrls.fileId as string,
+        fileUrls,
       })
     )
   }
@@ -541,10 +538,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     this.setState({ files: [], imgSrc: null })
   }
 
-  public uploadFile = (
-    fileURLs: FileURLsResponseProto.IFileURLs,
-    file: File
-  ): void => {
+  public uploadFile = (fileURLs: IFileURLs, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     const cancelToken = axios.CancelToken.source()
     const uploadingFileInfo = new UploadFileInfo(
