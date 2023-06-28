@@ -66,6 +66,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type, to_key
+from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     import numpy as np
@@ -811,9 +812,11 @@ class DataEditorMixin:
 
         if type_util.is_pandas_styler(data):
             # Pandas styler will only work for non-editable/disabled columns.
-            delta_path = self.dg._get_delta_path_str()
-            default_uuid = str(hash(delta_path))
-            marshall_styler(proto, data, default_uuid)
+            # Get first 5 chars of md5 hash of delta path as styler uuid
+            # and set it as styler uuid.
+            styler_uuid = calc_md5(self.dg._get_delta_path_str())[:5]
+            data.set_uuid(styler_uuid)
+            marshall_styler(proto, data, styler_uuid)
 
         proto.data = type_util.pyarrow_table_to_bytes(arrow_table)
 
