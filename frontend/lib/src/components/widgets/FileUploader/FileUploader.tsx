@@ -22,7 +22,8 @@ import { FileRejection } from "react-dropzone"
 import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
-  FileURLsResponse as FileURLsResponseProto,
+  FileURLs as FileURLsProto,
+  IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -101,14 +102,12 @@ class FileUploader extends React.PureComponent<Props, State> {
         const size = f.size as number
 
         const fileId = f.fileId as string
-        const deleteFileURL = f.fileDeleteUrl as string
+        const fileUrls = f.fileUrls as FileURLsProto
 
         return new UploadFileInfo(name, size, this.nextLocalFileId(), {
           type: "uploaded",
-          // TODO(vdonato / kajarenc): Use the finalized fields here
           fileId,
-          uploadFileURL: "TODO",
-          deleteFileURL,
+          fileUrls,
         })
       }),
     }
@@ -195,11 +194,10 @@ class FileUploader extends React.PureComponent<Props, State> {
       .filter(f => f.status.type === "uploaded")
       .map(f => {
         const { name, size, status } = f
+        const { fileId, fileUrls } = status as UploadedStatus
         return new UploadedFileInfoProto({
-          fileId: (status as UploadedStatus).fileId,
-          // TODO(vdonato / kajarenc): Pass the uploadFileURL from
-          // UploadedStatus -> FileUploaderStateProto
-          fileDeleteUrl: (status as UploadedStatus).deleteFileURL,
+          fileId,
+          fileUrls,
           name,
           size,
         })
@@ -261,13 +259,10 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     this.props.uploadClient
       .fetchFileURLs(acceptedFiles)
-      .then((fileURLsArray: FileURLsResponseProto.IFileURLs[]) => {
+      .then((fileURLsArray: IFileURLs[]) => {
         _.zip(fileURLsArray, acceptedFiles).forEach(
           ([fileURLs, acceptedFile]) => {
-            this.uploadFile(
-              fileURLs as FileURLsResponseProto.IFileURLs,
-              acceptedFile as File
-            )
+            this.uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
           }
         )
       })
@@ -306,10 +301,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  public uploadFile = (
-    fileURLs: FileURLsResponseProto.IFileURLs,
-    file: File
-  ): void => {
+  public uploadFile = (fileURLs: IFileURLs, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     const cancelToken = axios.CancelToken.source()
     const uploadingFileInfo = new UploadFileInfo(
@@ -354,7 +346,7 @@ class FileUploader extends React.PureComponent<Props, State> {
    */
   private onUploadComplete = (
     localFileId: number,
-    fileURLs: FileURLsResponseProto.IFileURLs
+    fileUrls: IFileURLs
   ): void => {
     const curFile = this.getFile(localFileId)
     if (curFile == null || curFile.status.type !== "uploading") {
@@ -367,9 +359,8 @@ class FileUploader extends React.PureComponent<Props, State> {
       curFile.id,
       curFile.setStatus({
         type: "uploaded",
-        fileId: fileURLs.fileId as string,
-        uploadFileURL: fileURLs.uploadUrl as string,
-        deleteFileURL: fileURLs.deleteUrl as string,
+        fileId: fileUrls.fileId as string,
+        fileUrls,
       })
     )
   }
@@ -416,8 +407,8 @@ class FileUploader extends React.PureComponent<Props, State> {
       file.status.cancelToken.cancel()
     }
 
-    if (file.status.type === "uploaded" && file.status.deleteFileURL) {
-      this.props.uploadClient.deleteFile(file.status.deleteFileURL)
+    if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
     }
 
     this.removeFile(fileId)

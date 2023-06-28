@@ -18,6 +18,7 @@ from typing import List, NamedTuple, Sequence
 from typing_extensions import Protocol
 
 from streamlit import util
+from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.runtime.stats import CacheStatsProvider
 
 
@@ -45,7 +46,7 @@ class UploadedFile(io.BytesIO):
     initialized with `bytes`.
     """
 
-    def __init__(self, record: UploadedFileRec):
+    def __init__(self, record: UploadedFileRec, file_urls: FileURLsProto):
         # BytesIO's copy-on-write semantics doesn't seem to be mentioned in
         # the Python docs - possibly because it's a CPython-only optimization
         # and not guaranteed to be in other Python runtimes. But it's detailed
@@ -55,6 +56,7 @@ class UploadedFile(io.BytesIO):
         self.name = record.name
         self.type = record.type
         self.size = len(record.data)
+        self._file_urls = file_urls
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, UploadedFile):
