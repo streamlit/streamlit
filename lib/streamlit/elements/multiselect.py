@@ -261,11 +261,11 @@ class MultiSelectMixin:
             on_change=on_change,
             args=args,
             kwargs=kwargs,
+            max_selections=max_selections,
+            placeholder=placeholder,
             disabled=disabled,
             label_visibility=label_visibility,
             ctx=ctx,
-            max_selections=max_selections,
-            placeholder=placeholder,
         )
 
     def _multiselect(
