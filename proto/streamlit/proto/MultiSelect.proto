@@ -27,9 +27,8 @@ message MultiSelect {
   string form_id = 6;
   repeated int32 value = 7;
   bool set_value = 8;
-  bool disabled = 9;
-  LabelVisibilityMessage label_visibility = 10;
-  int32 max_selections = 11;
-  string placeholder = 12;
-  string placeholder_no_results = 13;
+  int32 max_selections = 9;
+  string placeholder = 10;
+  bool disabled = 11;
+  LabelVisibilityMessage label_visibility = 12;
 }

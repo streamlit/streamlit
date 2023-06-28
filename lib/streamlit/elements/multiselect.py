@@ -155,11 +155,10 @@ class MultiSelectMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
-        disabled: bool = False,
-        label_visibility: LabelVisibility = "visible",
         max_selections: Optional[int] = None,
         placeholder: str = "Choose an option",
-        placeholder_no_results: str = "No results",
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
     ) -> List[T]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -215,6 +214,11 @@ class MultiSelectMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        max_selections : int
+            The max selections that can be selected at a time.
+            This argument can only be supplied by keyword.
+        placeholder : str
+            An optional string to display when option is not selected.
         disabled : bool
             An optional boolean, which disables the multiselect widget if set
             to True. The default is False. This argument can only be supplied
@@ -224,13 +228,6 @@ class MultiSelectMixin:
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
-        max_selections : int
-            The max selections that can be selected at a time.
-            This argument can only be supplied by keyword.
-        placeholder : str
-            An optional string to display when no option is selected.
-        placeholder_no_results : str
-            An optional string to display when there are no results for the search.
 
         Returns
         -------
@@ -269,7 +266,6 @@ class MultiSelectMixin:
             ctx=ctx,
             max_selections=max_selections,
             placeholder=placeholder,
-            placeholder_no_results=placeholder_no_results,
         )
 
     def _multiselect(
@@ -284,12 +280,11 @@ class MultiSelectMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        max_selections: Optional[int] = None,
+        placeholder: str = "Choose an option",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
-        max_selections: Optional[int] = None,
-        placeholder: str = "Choose an option",
-        placeholder_no_results: str = "No results",
     ) -> List[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
@@ -307,7 +302,6 @@ class MultiSelectMixin:
         multiselect_proto.form_id = current_form_id(self.dg)
         multiselect_proto.max_selections = max_selections or 0
         multiselect_proto.placeholder = placeholder
-        multiselect_proto.placeholder_no_results = placeholder_no_results
         if help is not None:
             multiselect_proto.help = dedent(help)
 

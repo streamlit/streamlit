@@ -76,7 +76,7 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   private getNoResultsMsg(): string {
     if (this.props.element.maxSelections === 0) {
-      return this.props.element.placeholderNoResults
+      return "No results"
     }
     const option =
       this.props.element.maxSelections !== 1 ? "options" : "option"

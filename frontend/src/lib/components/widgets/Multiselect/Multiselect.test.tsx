@@ -33,7 +33,6 @@ const getProps = (elementProps: Partial<MultiSelectProto> = {}): Props => ({
     default: [0],
     options: ["a", "b", "c"],
     placeholder: "Please select",
-    placeholderNoResults: "No results found",
     ...elementProps,
   }),
   width: 0,
@@ -301,7 +300,7 @@ describe("Multiselect widget", () => {
 
       expect(wrapper.find(UISelect).props()).toHaveProperty(
         "noResultsMsg",
-        "No results found"
+        "No results"
       )
     })
 
