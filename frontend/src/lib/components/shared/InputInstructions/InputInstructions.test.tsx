@@ -22,8 +22,8 @@ import InputInstructions, { Props } from "./InputInstructions"
 const getProps = (props: Partial<Props> = {}): Props => ({
   dirty: true,
   value: "asd",
-  ...props,
   inForm: false,
+  ...props,
 })
 
 describe("InputInstructions", () => {
@@ -117,15 +117,30 @@ describe("InputInstructions", () => {
   })
 
   describe("In Form", () => {
-    it("should show instructions for max length", () => {
+    it("should show correct instructions to submit form with chat and single line input", () => {
       const props = getProps({
         inForm: true,
+        type: "single",
       })
+      console.log(props)
       const { getByTestId } = render(<InputInstructions {...props} />)
 
       expect(getByTestId("InputInstructions").textContent).toBe(
         "Press Enter to submit form"
       )
     })
+  })
+
+  it("should show correct instructions to submit form with multiline input", () => {
+    const props = getProps({
+      inForm: true,
+      type: "multiline",
+    })
+    console.log(props)
+    const { getByTestId } = render(<InputInstructions {...props} />)
+
+    expect(getByTestId("InputInstructions").textContent).toBe(
+      "Press ⌘+Enter to submit form"
+    )
   })
 })

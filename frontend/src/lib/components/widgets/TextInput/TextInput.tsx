@@ -143,7 +143,6 @@ class TextInput extends React.PureComponent<Props, State> {
     // update its value in the WidgetMgr. This means that individual keypresses
     // won't trigger a script re-run.
     this.setState({ dirty: true, value })
-    return
   }
 
   private onKeyPress = (

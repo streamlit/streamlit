@@ -216,28 +216,6 @@ describe("TextArea widget", () => {
     expect(wrapper.find(UITextArea).prop("value")).toBe("0123456789")
   })
 
-  it("updates widget value on text changes when inside of a form", () => {
-    const props = getProps({ formId: "form" })
-    jest.spyOn(props.widgetMgr, "setStringValue")
-    const wrapper = shallow(<TextArea {...props} />)
-
-    // @ts-expect-error
-    wrapper.find(UITextArea).prop("onChange")({
-      target: { value: "TEST" },
-    } as React.ChangeEvent<HTMLTextAreaElement>)
-
-    expect(wrapper.state("dirty")).toBe(false)
-
-    // Check that the last call used the TEST value.
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
-      "TEST",
-      {
-        fromUi: true,
-      }
-    )
-  })
-
   it("does not update widget value on text changes when outside of a form", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
@@ -276,13 +254,6 @@ describe("TextArea widget", () => {
     } as React.ChangeEvent<HTMLTextAreaElement>)
 
     expect(wrapper.state("value")).toBe("TEST")
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
-      "TEST",
-      {
-        fromUi: true,
-      }
-    )
 
     // "Submit" the form
     props.widgetMgr.submitForm("form")

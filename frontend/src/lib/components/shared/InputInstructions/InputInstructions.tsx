@@ -49,16 +49,14 @@ const InputInstructions = ({
     )
   }
 
-  if (dirty && inForm) {
-    addMessage("Press Enter to submit form")
-  } else if (dirty && type === "multiline") {
-    if (isFromMac()) {
-      addMessage("Press ⌘+Enter to apply")
-    } else {
-      addMessage("Press Ctrl+Enter to apply")
+  if (dirty) {
+    const toSubmitFormOrApplyText = inForm ? "submit form" : "apply"
+    if (type === "multiline") {
+      const commandKey = isFromMac() ? "⌘" : "Ctrl"
+      addMessage(`Press ${commandKey}+Enter to ${toSubmitFormOrApplyText}`)
+    } else if (type === "single") {
+      addMessage(`Press Enter to ${toSubmitFormOrApplyText}`)
     }
-  } else if (dirty && type === "single") {
-    addMessage("Press Enter to apply")
   }
 
   if (maxLength && (type !== "chat" || dirty)) {
