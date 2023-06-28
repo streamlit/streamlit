@@ -15,7 +15,7 @@ pympler==0.9
 python-dateutil==2.7.3
 requests==2.18
 rich==10.14.0
-tenacity==8.0.0
+tenacity==8.1.0
 toml==0.10.1
 tornado==6.0.3
 typing-extensions==4.1.0
