@@ -41,7 +41,6 @@ from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings
 
 SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
 
-
 TYPE_PAIRS = [
     (".jpg", ".jpeg"),
     (".mpg", ".mpeg"),
@@ -51,9 +50,9 @@ TYPE_PAIRS = [
 ]
 
 
-def _get_file_recs(
+def _get_upload_files(
     widget_value: Optional[FileUploaderStateProto],
-) -> List[UploadedFileRec]:
+) -> List[UploadedFile]:
     if widget_value is None:
         return []
 
@@ -65,13 +64,15 @@ def _get_file_recs(
     if len(uploaded_file_info) == 0:
         return []
 
-    active_file_ids = [f.file_id for f in uploaded_file_info]
+    active_files = {f.file_id: f.file_urls for f in uploaded_file_info}
 
-    # Grab the files that correspond to our active file IDs.
-    return ctx.uploaded_file_mgr.get_files(
+    file_recs = ctx.uploaded_file_mgr.get_files(
         session_id=ctx.session_id,
-        file_ids=active_file_ids,
+        file_ids=list(active_files.keys()),
     )
+    return [
+        UploadedFile(file_rec, active_files[file_rec.file_id]) for file_rec in file_recs
+    ]
 
 
 @dataclass
@@ -82,23 +83,16 @@ class FileUploaderSerde:
     def deserialize(
         self, ui_value: Optional[FileUploaderStateProto], widget_id: str
     ) -> SomeUploadedFiles:
-        file_recs = _get_file_recs(ui_value)
+        upload_files = _get_upload_files(ui_value)
 
-        # TODO[KAREN] Extract this logic for file_uploader and camera_input into
-        #  separate method.
-        if ui_value is not None:
-            uploaded_file_info = ui_value.uploaded_file_info
-
-            for f in uploaded_file_info:
-                self.file_delete_urls[f.file_id] = f.file_delete_url
-
-        if len(file_recs) == 0:
+        if len(upload_files) == 0:
             return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
                 [] if self.accept_multiple_files else None
             )
         else:
-            files = [UploadedFile(rec) for rec in file_recs]
-            return_value = files if self.accept_multiple_files else files[0]
+            return_value = (
+                upload_files if self.accept_multiple_files else upload_files[0]
+            )
         return return_value
 
     def serialize(self, files: SomeUploadedFiles) -> FileUploaderStateProto:
@@ -114,10 +108,7 @@ class FileUploaderSerde:
             file_info.file_id = f.file_id
             file_info.name = f.name
             file_info.size = f.size
-            try:
-                file_info.file_delete_url = self.file_delete_urls[f.file_id]
-            except:
-                pass
+            file_info.file_urls.CopyFrom(f._file_urls)
 
         return state_proto
 
