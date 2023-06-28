@@ -324,7 +324,7 @@ class FileUploader extends React.PureComponent<Props, State> {
         e => this.onUploadProgress(e, uploadingFileInfo.id),
         cancelToken.token
       )
-      .then(newFileId => this.onUploadComplete(uploadingFileInfo.id, fileURLs))
+      .then(() => this.onUploadComplete(uploadingFileInfo.id, fileURLs))
       .catch(err => {
         // If this was a cancel error, we don't show the user an error -
         // the cancellation was in response to an action they took.
