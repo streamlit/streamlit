@@ -18,8 +18,7 @@ import { CancelToken } from "axios"
 import _ from "lodash"
 import { v4 as uuidv4 } from "uuid"
 
-import { IFileURLsResponse } from "src/lib/proto"
-import { IFileURLs } from "src/lib/proto"
+import { IFileURLs, IFileURLsResponse } from "src/lib/proto"
 
 import { SessionInfo } from "src/lib/SessionInfo"
 import { logWarning } from "src/lib/util/log"
