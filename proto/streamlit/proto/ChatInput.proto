@@ -29,4 +29,5 @@ message ChatInput {
   bool set_value = 6;
   string default = 7;
   Position position = 8;
+  string formId = 9;
 }

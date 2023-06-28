@@ -219,8 +219,7 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
               value={value}
               maxLength={maxChars}
               type="chat"
-              // ChatInput doesn't have a formId field in the proto
-              inForm={false}
+              inForm={isInForm({ formId: element.formId })}
             />
           </StyledInputInstructionsContainer>
           <StyledSendIconButtonContainer>
