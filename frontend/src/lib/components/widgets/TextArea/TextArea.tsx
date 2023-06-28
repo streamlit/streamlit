@@ -239,6 +239,8 @@ class TextArea extends React.PureComponent<Props, State> {
           value={value}
           maxLength={element.maxChars}
           type={"multiline"}
+          // commenting out for now as TextArea doesn't support enter in forms
+          inForm={false}
         />
       </div>
     )

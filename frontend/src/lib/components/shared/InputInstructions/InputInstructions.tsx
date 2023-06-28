@@ -25,6 +25,7 @@ export interface Props {
   maxLength?: number
   className?: string
   type?: "multiline" | "single" | "chat"
+  inForm: boolean
 }
 
 const InputInstructions = ({
@@ -33,6 +34,7 @@ const InputInstructions = ({
   maxLength,
   className,
   type = "single",
+  inForm,
 }: Props): ReactElement => {
   const messages: ReactElement[] = []
   const addMessage = (text: string, shouldBlink = false): void => {
@@ -47,16 +49,16 @@ const InputInstructions = ({
     )
   }
 
-  if (dirty) {
-    if (type === "multiline") {
-      if (isFromMac()) {
-        addMessage("Press ⌘+Enter to apply")
-      } else {
-        addMessage("Press Ctrl+Enter to apply")
-      }
-    } else if (type === "single") {
-      addMessage("Press Enter to apply")
+  if (dirty && inForm) {
+    addMessage("Press Enter to submit form")
+  } else if (dirty && type === "multiline") {
+    if (isFromMac()) {
+      addMessage("Press ⌘+Enter to apply")
+    } else {
+      addMessage("Press Ctrl+Enter to apply")
     }
+  } else if (dirty && type === "single") {
+    addMessage("Press Enter to apply")
   }
 
   if (maxLength && (type !== "chat" || dirty)) {

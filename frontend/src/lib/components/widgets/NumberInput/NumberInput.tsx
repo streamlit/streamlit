@@ -435,9 +435,10 @@ class NumberInput extends React.PureComponent<Props, State> {
         </StyledInputContainer>
         <StyledInstructionsContainer>
           <InputInstructions
-            dirty={dirty || isInForm({ formId: element.formId })}
+            dirty={dirty}
             value={formattedValue}
             className="input-instructions"
+            inForm={isInForm({ formId: element.formId })}
           />
         </StyledInstructionsContainer>
       </div>

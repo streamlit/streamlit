@@ -23,6 +23,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   dirty: true,
   value: "asd",
   ...props,
+  inForm: false,
 })
 
 describe("InputInstructions", () => {
@@ -112,6 +113,19 @@ describe("InputInstructions", () => {
       const { getByTestId } = render(<InputInstructions {...props} />)
 
       expect(getByTestId("InputInstructions").textContent).toBe("3/3")
+    })
+  })
+
+  describe("In Form", () => {
+    it("should show instructions for max length", () => {
+      const props = getProps({
+        inForm: true,
+      })
+      const { getByTestId } = render(<InputInstructions {...props} />)
+
+      expect(getByTestId("InputInstructions").textContent).toBe(
+        "Press Enter to submit form"
+      )
     })
   })
 })
