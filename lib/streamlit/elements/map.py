@@ -236,30 +236,6 @@ class MapMixin:
         return cast("DeltaGenerator", self)
 
 
-def _get_zoom_level(distance: float) -> int:
-    """Get the zoom level for a given distance in degrees.
-
-    See https://wiki.openstreetmap.org/wiki/Zoom_levels for reference.
-
-    Parameters
-    ----------
-    distance : float
-        How many degrees of longitude should fit in the map.
-
-    Returns
-    -------
-    int
-        The zoom level, from 0 to 20.
-
-    """
-    for i in range(len(_ZOOM_LEVELS) - 1):
-        if _ZOOM_LEVELS[i + 1] < distance <= _ZOOM_LEVELS[i]:
-            return i
-
-    # For small number of points the default zoom level will be used.
-    return _DEFAULT_ZOOM_LEVEL
-
-
 def to_deckgl_json(
     data: Data,
     lat: Optional[str],
@@ -339,6 +315,7 @@ def _get_lat_or_lon_col_name(
     col_name_from_user: Optional[str],
     default_col_names: Set[str],
 ) -> str:
+    """Returns the column name to be used for latitude or longitude."""
 
     if isinstance(col_name_from_user, str) and col_name_from_user in data.columns:
         col_name = col_name_from_user
@@ -377,6 +354,16 @@ def _get_value_and_col_name(
     value_or_name: Any,
     default_value: Any,
 ) -> Tuple[Any, Optional[str]]:
+    """Take a value_or_name passed in by the Streamlit developer and return a PyDeck
+    argument and column name for that property.
+
+    This is used for the size and color properties of the chart.
+
+    Example:
+    - If the user passes size=None, this returns the default size value and no column.
+    - If the user passes size=42, this returns 42 and no column.
+    - If the user passes size="my_col_123", this returns "@@=my_col_123" and "my_col_123".
+    """
 
     pydeck_arg: Union[str, float]
 
@@ -399,6 +386,15 @@ def _convert_color_arg_or_column(
     color_arg: Union[str, Color],
     color_col_name: Optional[str],
 ) -> Union[None, str, IntColorTuple]:
+    """Converts color to a format accepted by PyDeck.
+
+    For example:
+    - If color_arg is "#fff", then returns (255, 255, 255, 255).
+    - If color_col_name is "my_col_123", then it converts everything in column my_col_123 to
+      an accepted color format such as (0, 100, 200, 255).
+
+    NOTE: This function mutates the data argument.
+    """
 
     color_arg_out: Union[None, str, IntColorTuple] = None
 
@@ -422,6 +418,7 @@ def _convert_color_arg_or_column(
 
 
 def _get_viewport_details(data, lat_col_name, lon_col_name, zoom):
+    """Auto-set viewport when not fully specified by user."""
     min_lat = data[lat_col_name].min()
     max_lat = data[lat_col_name].max()
     min_lon = data[lon_col_name].min()
@@ -439,3 +436,27 @@ def _get_viewport_details(data, lat_col_name, lon_col_name, zoom):
         zoom = _get_zoom_level(longitude_distance)
 
     return zoom, center_lat, center_lon
+
+
+def _get_zoom_level(distance: float) -> int:
+    """Get the zoom level for a given distance in degrees.
+
+    See https://wiki.openstreetmap.org/wiki/Zoom_levels for reference.
+
+    Parameters
+    ----------
+    distance : float
+        How many degrees of longitude should fit in the map.
+
+    Returns
+    -------
+    int
+        The zoom level, from 0 to 20.
+
+    """
+    for i in range(len(_ZOOM_LEVELS) - 1):
+        if _ZOOM_LEVELS[i + 1] < distance <= _ZOOM_LEVELS[i]:
+            return i
+
+    # For small number of points the default zoom level will be used.
+    return _DEFAULT_ZOOM_LEVEL
