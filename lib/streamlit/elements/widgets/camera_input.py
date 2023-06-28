@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, List, Optional, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -42,9 +42,9 @@ if TYPE_CHECKING:
 SomeUploadedSnapshotFile = Optional[UploadedFile]
 
 
-def _get_file_recs_for_camera_input_widget(
+def _get_upload_files(
     widget_value: Optional[FileUploaderStateProto],
-) -> List[UploadedFileRec]:
+) -> List[UploadedFile]:
     if widget_value is None:
         return []
 
@@ -56,19 +56,19 @@ def _get_file_recs_for_camera_input_widget(
     if len(uploaded_file_info) == 0:
         return []
 
-    active_file_ids = [f.file_id for f in uploaded_file_info]
+    active_files = {f.file_id: f.file_urls for f in uploaded_file_info}
 
-    # Grab the files that correspond to our active file IDs.
-    return ctx.uploaded_file_mgr.get_files(
+    file_recs = ctx.uploaded_file_mgr.get_files(
         session_id=ctx.session_id,
-        file_ids=active_file_ids,
+        file_ids=list(active_files.keys()),
     )
+    return [
+        UploadedFile(file_rec, active_files[file_rec.file_id]) for file_rec in file_recs
+    ]
 
 
 @dataclass
 class CameraInputSerde:
-    file_delete_urls: Dict[str, str] = field(default_factory=dict)
-
     def serialize(
         self,
         snapshot: SomeUploadedSnapshotFile,
@@ -82,27 +82,18 @@ class CameraInputSerde:
         file_info.file_id = snapshot.file_id
         file_info.name = snapshot.name
         file_info.size = snapshot.size
-        file_info.file_delete_url = self.file_delete_urls[snapshot.file_id]
+        file_info.file_urls.CopyFrom(snapshot._file_urls)
 
         return state_proto
 
     def deserialize(
         self, ui_value: Optional[FileUploaderStateProto], widget_id: str
     ) -> SomeUploadedSnapshotFile:
-        file_recs = _get_file_recs_for_camera_input_widget(ui_value)
-
-        if ui_value is not None:
-            uploaded_file_info = ui_value.uploaded_file_info
-
-            for f in uploaded_file_info:
-                try:
-                    self.file_delete_urls[f.file_id] = f.file_delete_url
-                except:
-                    pass
-        if len(file_recs) == 0:
+        upload_files = _get_upload_files(ui_value)
+        if len(upload_files) == 0:
             return_value = None
         else:
-            return_value = UploadedFile(file_recs[0])
+            return_value = upload_files[0]
         return return_value
 
 
