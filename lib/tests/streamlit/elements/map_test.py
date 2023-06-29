@@ -102,7 +102,7 @@ class StMapTest(DeltaGeneratorTestCase):
         self.assertEqual(c.get("layers")[0].get("radiusMinPixels"), 3)
 
     def test_common_color_formats(self):
-        """Test that colors can be in FOO format."""
+        """Test that users can pass colors in different formats."""
         df = pd.DataFrame(
             {
                 "lat": [38.8762997, 38.8742997, 38.9025842],
@@ -225,7 +225,7 @@ class StMapTest(DeltaGeneratorTestCase):
     def test_map_style_raises_error(self):
         """Test that map_style raises error when no Mapbox token is present."""
         with self.assertRaises(StreamlitAPIException):
-            st.map(df1, map_style="FOOBAR")
+            st.map(df1, map_style="MY_MAP_STYLE")
 
     @patch_config_options({"mapbox.token": "MY_TOKEN"})
     def test_map_style(self):
