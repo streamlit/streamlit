@@ -11,9 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import time
 
 import streamlit as st
 from streamlit.elements.status_panel import StatusPanelStage
 
+st.text("start")
 s = StatusPanelStage("open_panel", expanded=True)
 st.text("outside expander")
+time.sleep(1)
+s.update_label("updated label")
