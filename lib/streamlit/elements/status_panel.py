@@ -23,12 +23,12 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
 class StatusPanelStage:
-    def __init__(self, label: str, expanded: bool = False):
+    def __init__(self, label: str):
         self._label = label
-        self._expanded = expanded
+        self._expanded = True
 
         # Create our expander
-        self._expander_dg = st.expander(label, expanded)
+        self._expander_dg = st.expander(self._label, self._expanded)
 
         # Determine our expander's cursor position so that we can mutate it later.
         # The cursor in the dg returned by `self._expander` points to the insert loc
@@ -41,12 +41,19 @@ class StatusPanelStage:
             index=cursor.parent_path[-1],
         )
 
-    def update_label(self, label: str) -> None:
+    def set_label(self, label: str) -> None:
         """Update our expander's label."""
         if self._label == label:
             return
 
         self._label = label
+        self._send_new_expander_proto()
+
+    def set_expanded(self, expanded: bool) -> None:
+        if self._expanded == expanded:
+            return
+
+        self._expanded = expanded
         self._send_new_expander_proto()
 
     def _send_new_expander_proto(self) -> None:
@@ -63,4 +70,5 @@ class StatusPanelStage:
         return self
 
     def __exit__(self, type: Any, value: Any, traceback: Any) -> None:
+        self.set_expanded(False)
         self._expander_dg.__exit__(type, value, traceback)
