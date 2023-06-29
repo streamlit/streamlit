@@ -19,22 +19,16 @@ from streamlit.elements.status_panel import StatusPanel
 status = StatusPanel(behavior="autocollapse")
 
 with status.stage("🤔 Creating files...") as s:
-    st.text("Status...")
-    st.text("Status...")
-    st.text("Status...")
+    st.text("Doing a thing...")
     time.sleep(3)
     s.set_label("✅ Created!")
 
 with status.stage("🤔 Reticulating splines...") as s:
-    st.text("Status...")
-    st.text("Status...")
-    st.text("Status...")
+    st.text("Doing a thing...")
     time.sleep(3)
     s.set_label("✅ Reticulated!")
 
 with status.stage("🤔 Watering dromedaries...") as s:
-    st.text("Status...")
-    st.text("Status...")
-    st.text("Status...")
+    st.text("Doing a thing...")
     time.sleep(3)
     s.set_label("✅ Watered!")

@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 import streamlit as st
+from streamlit import runtime
 from streamlit.cursor import LockedCursor
 from streamlit.delta_generator import _enqueue_message
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -49,11 +50,16 @@ class StatusPanelStage:
         # of the first *child* of the expander, rather than the expander itself,
         # so we compute a new cursor with the expander's actual location.
         cursor = self._expander_dg._cursor
-        self._expander_cursor = LockedCursor(
-            root_container=cursor.root_container,
-            parent_path=cursor.parent_path[:-1],
-            index=cursor.parent_path[-1],
-        )
+        if cursor is not None:
+            self._expander_cursor = LockedCursor(
+                root_container=cursor.root_container,
+                parent_path=cursor.parent_path[:-1],
+                index=cursor.parent_path[-1],
+            )
+        else:
+            # Cursor should only be none if Streamlit is running in "raw" mode.
+            assert not runtime.exists()
+            self._expander_cursor = LockedCursor(0)
 
     def set_label(self, label: str) -> None:
         """Update our expander's label."""
