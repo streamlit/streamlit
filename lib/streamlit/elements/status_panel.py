@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from typing import Any
+
 import streamlit as st
 from streamlit.cursor import LockedCursor
 from streamlit.delta_generator import _enqueue_message
@@ -23,9 +27,8 @@ class StatusPanelStage:
         self._label = label
         self._expanded = expanded
 
-        # Create an expander, and figure out its cursor position
+        # Create our expander
         self._expander_dg = st.expander(label, expanded)
-        self._expander_dg.text("inside expander")
 
         # Determine our expander's cursor position so that we can mutate it later.
         # The cursor in the dg returned by `self._expander` points to the insert loc
@@ -54,3 +57,10 @@ class StatusPanelStage:
         msg.delta.add_block.expandable.expanded = self._expanded
         msg.delta.add_block.expandable.label = self._label
         _enqueue_message(msg)
+
+    def __enter__(self) -> StatusPanelStage:
+        self._expander_dg.__enter__()
+        return self
+
+    def __exit__(self, type: Any, value: Any, traceback: Any) -> None:
+        self._expander_dg.__exit__(type, value, traceback)

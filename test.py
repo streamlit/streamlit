@@ -16,8 +16,7 @@ import time
 import streamlit as st
 from streamlit.elements.status_panel import StatusPanelStage
 
-st.text("start")
-s = StatusPanelStage("open_panel", expanded=True)
-st.text("outside expander")
-time.sleep(1)
-s.update_label("updated label")
+with StatusPanelStage("open_panel", expanded=True) as s:
+    st.text("inside expander")
+    time.sleep(1)
+    s.update_label("updated label")
