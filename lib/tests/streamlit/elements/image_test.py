@@ -93,7 +93,7 @@ def create_gif(size):
         frame = im.copy()
         draw = ImageDraw.Draw(frame)
         pos = (random.randrange(0, size), random.randrange(0, size))
-        circle_size = random.randrange(10, size / 2)
+        circle_size = random.randrange(10, int(size / 2))
         draw.ellipse([pos, tuple(p + circle_size for p in pos)], "black")
         images.append(frame.copy())
 
@@ -260,9 +260,10 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         storage backend that's able to open the file, so it's up to the manager -
         and not image_to_url - to throw an error.)
         """
+        # Mock out save_image_data to avoid polluting the cache for later tests
         with mock.patch(
             "streamlit.runtime.media_file_manager.MediaFileManager.add"
-        ) as mock_mfm_add:
+        ) as mock_mfm_add, mock.patch("streamlit.runtime.caching.save_media_data"):
             mock_mfm_add.return_value = "https://mockoutputurl.com"
 
             result = image.image_to_url(

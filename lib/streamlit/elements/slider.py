@@ -14,6 +14,7 @@
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
+from numbers import Integral, Real
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -168,7 +169,7 @@ class SliderSerde:
 
 
 class SliderMixin:
-    @gather_metrics
+    @gather_metrics("slider")
     def slider(
         self,
         label: str,
@@ -191,7 +192,7 @@ class SliderMixin:
         #  user would have to cast the return value more often than not, which
         #  can be annoying.
     ) -> Any:
-        """Display a slider widget.
+        r"""Display a slider widget.
 
         This supports int, float, date, time, and datetime types.
 
@@ -203,10 +204,37 @@ class SliderMixin:
         input, while `select_slider` accepts any datatype and takes an iterable
         set of options.
 
+        .. note::
+            Integer values exceeding +/- ``(1<<53) - 1`` cannot be accurately
+            stored or returned by the widget due to serialization contstraints
+            between the Python server and JavaScript client. You must handle
+            such numbers as floats, leading to a loss in precision.
+
         Parameters
         ----------
         label : str
             A short label explaining to the user what this slider is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
@@ -224,7 +252,7 @@ class SliderMixin:
             and upper bounds is rendered. For example, if set to `(1, 10)` the
             slider will have a selectable range between 1 and 10.
             Defaults to min_value.
-        step : int/float/timedelta or None
+        step : int, float, timedelta, or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 if a float,
             timedelta(days=1) if a date/datetime, timedelta(minutes=15) if a time
@@ -251,8 +279,8 @@ class SliderMixin:
         disabled : bool
             An optional boolean, which disables the slider if set to True. The
             default is False. This argument can only be supplied by keyword.
-        label_visibility : "visible" or "hidden" or "collapsed"
-            The visibility of the label. If "hidden", the label doesn’t show but there
+        label_visibility : "visible", "hidden", or "collapsed"
+            The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
@@ -266,11 +294,15 @@ class SliderMixin:
 
         Examples
         --------
+        >>> import streamlit as st
+        >>>
         >>> age = st.slider('How old are you?', 0, 130, 25)
         >>> st.write("I'm ", age, 'years old')
 
         And here's an example of a range slider:
 
+        >>> import streamlit as st
+        >>>
         >>> values = st.slider(
         ...     'Select a range of values',
         ...     0.0, 100.0, (25.0, 75.0))
@@ -278,7 +310,9 @@ class SliderMixin:
 
         This is a range time slider:
 
+        >>> import streamlit as st
         >>> from datetime import time
+        >>>
         >>> appointment = st.slider(
         ...     "Schedule your appointment:",
         ...     value=(time(11, 30), time(12, 45)))
@@ -286,7 +320,9 @@ class SliderMixin:
 
         Finally, a datetime slider:
 
+        >>> import streamlit as st
         >>> from datetime import datetime
+        >>>
         >>> start_time = st.slider(
         ...     "When do you start?",
         ...     value=datetime(2020, 1, 1, 9, 30),
@@ -294,7 +330,7 @@ class SliderMixin:
         >>> st.write("Start time:", start_time)
 
         .. output::
-           https://doc-slider.streamlitapp.com/
+           https://doc-slider.streamlit.app/
            height: 300px
 
         """
@@ -354,8 +390,8 @@ class SliderMixin:
                 value = min_value if min_value is not None else 0
 
         SUPPORTED_TYPES = {
-            int: SliderProto.INT,
-            float: SliderProto.FLOAT,
+            Integral: SliderProto.INT,
+            Real: SliderProto.FLOAT,
             datetime: SliderProto.DATETIME,
             date: SliderProto.DATE,
             time: SliderProto.TIME,
@@ -375,8 +411,16 @@ class SliderMixin:
         if single_value:
             value = [value]
 
+        def value_to_generic_type(v):
+            if isinstance(v, Integral):
+                return SUPPORTED_TYPES[Integral]
+            elif isinstance(v, Real):
+                return SUPPORTED_TYPES[Real]
+            else:
+                return SUPPORTED_TYPES[type(v)]
+
         def all_same_type(items):
-            return len(set(map(type, items))) < 2
+            return len(set(map(value_to_generic_type, items))) < 2
 
         if not all_same_type(value):
             raise StreamlitAPIException(
@@ -387,7 +431,7 @@ class SliderMixin:
         if len(value) == 0:
             data_type = SliderProto.INT
         else:
-            data_type = SUPPORTED_TYPES[type(value[0])]
+            data_type = value_to_generic_type(value[0])
 
         datetime_min = time.min
         datetime_max = time.max
@@ -452,8 +496,13 @@ class SliderMixin:
 
         # Ensure that all arguments are of the same type.
         slider_args = [min_value, max_value, step]
-        int_args = all(map(lambda a: isinstance(a, int), slider_args))
-        float_args = all(map(lambda a: isinstance(a, float), slider_args))
+        int_args = all(map(lambda a: isinstance(a, Integral), slider_args))
+        float_args = all(
+            map(
+                lambda a: isinstance(a, Real) and not isinstance(a, Integral),
+                slider_args,
+            )
+        )
         # When min and max_value are the same timelike, step should be a timedelta
         timelike_args = (
             data_type in TIMELIKE_TYPES
@@ -559,6 +608,7 @@ class SliderMixin:
         # decimals and/or use some heuristics for floats.
 
         slider_proto = SliderProto()
+        slider_proto.type = SliderProto.Type.SLIDER
         slider_proto.label = label
         slider_proto.format = format
         slider_proto.default[:] = value

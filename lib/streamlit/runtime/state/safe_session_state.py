@@ -17,12 +17,8 @@ from typing import Any, Dict, List, Optional, Set
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-from streamlit.runtime.state.session_state import (
-    RegisterWidgetResult,
-    SessionState,
-    T,
-    WidgetMetadata,
-)
+from streamlit.runtime.state.common import RegisterWidgetResult, T, WidgetMetadata
+from streamlit.runtime.state.session_state import SessionState
 
 
 class SafeSessionState:
@@ -78,6 +74,13 @@ class SafeSessionState:
 
             self._state.on_script_finished(widget_ids_this_run)
 
+    def maybe_check_serializable(self) -> None:
+        with self._lock:
+            if self._disconnected:
+                return
+
+            self._state.maybe_check_serializable()
+
     def get_widget_states(self) -> List[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
         with self._lock:
@@ -122,3 +125,10 @@ class SafeSessionState:
                 raise KeyError(key)
 
             del self._state[key]
+
+    def __contains__(self, key: str) -> bool:
+        with self._lock:
+            if self._disconnected:
+                return False
+
+            return key in self._state

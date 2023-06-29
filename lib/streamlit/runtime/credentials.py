@@ -14,11 +14,14 @@
 
 """Manage the user's Streamlit credentials."""
 
+import json
 import os
 import sys
 import textwrap
 from collections import namedtuple
+from datetime import datetime
 from typing import Optional
+from uuid import uuid4
 
 import click
 import toml
@@ -28,9 +31,7 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-# WT_SESSION is a Windows Terminal specific environment variable. If it exists,
-# we are on the latest Windows Terminal that supports emojis
-_SHOW_EMOJIS = not env_util.IS_WINDOWS or os.environ.get("WT_SESSION")
+
 if env_util.IS_WINDOWS:
     _CONFIG_FILE_PATH = r"%userprofile%/.streamlit/config.toml"
 else:
@@ -44,20 +45,31 @@ _Activation = namedtuple(
     ],
 )
 
-# IMPORTANT: Break the text below at 80 chars.
-_EMAIL_PROMPT = """
-  {0}%(welcome)s
 
-  If you’d like to receive helpful onboarding emails, news, offers, promotions,
-  and the occasional swag, please enter your email address below. Otherwise,
-  leave this field blank.
+def email_prompt() -> str:
+    # Emoji can cause encoding errors on non-UTF-8 terminals
+    # (See https://github.com/streamlit/streamlit/issues/2284.)
+    # WT_SESSION is a Windows Terminal specific environment variable. If it exists,
+    # we are on the latest Windows Terminal that supports emojis
+    show_emoji = sys.stdout.encoding == "utf-8" and (
+        not env_util.IS_WINDOWS or os.environ.get("WT_SESSION")
+    )
 
-  %(email)s""".format(
-    "👋 " if _SHOW_EMOJIS else ""
-) % {
-    "welcome": click.style("Welcome to Streamlit!", bold=True),
-    "email": click.style("Email: ", fg="blue"),
-}
+    # IMPORTANT: Break the text below at 80 chars.
+    return """
+      {0}%(welcome)s
+
+      If you’d like to receive helpful onboarding emails, news, offers, promotions,
+      and the occasional swag, please enter your email address below. Otherwise,
+      leave this field blank.
+
+      %(email)s""".format(
+        "👋 " if show_emoji else ""
+    ) % {
+        "welcome": click.style("Welcome to Streamlit!", bold=True),
+        "email": click.style("Email: ", fg="blue"),
+    }
+
 
 # IMPORTANT: Break the text below at 80 chars.
 _TELEMETRY_TEXT = """
@@ -93,10 +105,54 @@ _INSTRUCTIONS_TEXT = """
 }
 
 
+def _send_email(email: str) -> None:
+    """Send the user's email to segment.io, if submitted"""
+    import requests
+
+    if email is None or "@" not in email:
+        return
+
+    headers = {
+        "authority": "api.segment.io",
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "content-type": "text/plain",
+        "origin": "localhost:8501",
+        "referer": "localhost:8501/",
+    }
+
+    dt = datetime.utcnow().isoformat() + "+00:00"
+
+    data = {
+        "anonymous_id": None,
+        "context": {
+            "library": {"name": "analytics-python", "version": "2.2.2"},
+        },
+        "messageId": str(uuid4()),
+        "timestamp": dt,
+        "event": "submittedEmail",
+        "traits": {
+            "authoremail": email,
+            "source": "provided_email",
+        },
+        "type": "track",
+        "userId": email,
+        "writeKey": "iCkMy7ymtJ9qYzQRXkQpnAJEq7D4NyMU",
+    }
+
+    response = requests.post(
+        "https://api.segment.io/v1/t",
+        headers=headers,
+        data=json.dumps(data).encode(),
+    )
+
+    response.raise_for_status()
+
+
 class Credentials(object):
     """Credentials class."""
 
-    _singleton = None  # type: Optional[Credentials]
+    _singleton: Optional["Credentials"] = None
 
     @classmethod
     def get_current(cls):
@@ -135,14 +191,16 @@ class Credentials(object):
             self.activation = _verify_email(data.get("email"))
         except FileNotFoundError:
             if auto_resolve:
-                return self.activate(show_instructions=not auto_resolve)
+                self.activate(show_instructions=not auto_resolve)
+                return
             raise RuntimeError(
                 'Credentials not found. Please run "streamlit activate".'
             )
-        except Exception as e:
+        except Exception:
             if auto_resolve:
                 self.reset()
-                return self.activate(show_instructions=not auto_resolve)
+                self.activate(show_instructions=not auto_resolve)
+                return
             raise Exception(
                 textwrap.dedent(
                     """
@@ -182,7 +240,9 @@ class Credentials(object):
             LOGGER.error("Error removing credentials file: %s" % e)
 
     def save(self):
-        """Save to toml file."""
+        """Save to toml file and send email."""
+        from requests.exceptions import RequestException
+
         if self.activation is None:
             return
 
@@ -194,6 +254,11 @@ class Credentials(object):
         with open(self._conf_file, "w") as f:
             toml.dump({"general": data}, f)
 
+        try:
+            _send_email(self.activation.email)
+        except RequestException as e:
+            LOGGER.error(f"Error saving email: {e}")
+
     def activate(self, show_instructions: bool = True) -> None:
         """Activate Streamlit.
 
@@ -202,6 +267,8 @@ class Credentials(object):
         try:
             self.load()
         except RuntimeError:
+            # Runtime Error is raised if credentials file is not found. In that case,
+            # `self.activation` is None and we will show the activation prompt below.
             pass
 
         if self.activation:
@@ -217,7 +284,10 @@ class Credentials(object):
 
             while not activated:
                 email = click.prompt(
-                    text=_EMAIL_PROMPT, prompt_suffix="", default="", show_default=False
+                    text=email_prompt(),
+                    prompt_suffix="",
+                    default="",
+                    show_default=False,
                 )
 
                 self.activation = _verify_email(email)

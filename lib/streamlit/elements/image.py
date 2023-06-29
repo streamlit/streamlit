@@ -23,6 +23,7 @@ import imghdr
 import io
 import mimetypes
 import re
+from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 from urllib.parse import urlparse
 
@@ -34,6 +35,7 @@ from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -62,8 +64,28 @@ ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
 
 
+class WidthBehaviour(IntEnum):
+    """
+    Special values that are recognized by the frontend and allow us to change the
+    behavior of the displayed image.
+    """
+
+    ORIGINAL = -1
+    COLUMN = -2
+    AUTO = -3
+
+
+WidthBehaviour.ORIGINAL.__doc__ = """Display the image at its original width"""
+WidthBehaviour.COLUMN.__doc__ = (
+    """Display the image at the width of the column it's in."""
+)
+WidthBehaviour.AUTO.__doc__ = """Display the image at its original width, unless it
+would exceed the width of its column in which case clamp it to
+its column width"""
+
+
 class ImageMixin:
-    @gather_metrics
+    @gather_metrics("image")
     def image(
         self,
         image: ImageOrImageList,
@@ -95,49 +117,51 @@ class ImageMixin:
             Image width. None means use the image width,
             but do not exceed the width of the column.
             Should be set for SVG images, as they have no default image width.
-        use_column_width : 'auto' or 'always' or 'never' or bool
-            If 'auto', set the image's width to its natural size,
+        use_column_width : "auto", "always", "never", or bool
+            If "auto", set the image's width to its natural size,
             but do not exceed the width of the column.
-            If 'always' or True, set the image's width to the column width.
-            If 'never' or False, set the image's width to its natural size.
+            If "always" or True, set the image's width to the column width.
+            If "never" or False, set the image's width to its natural size.
             Note: if set, `use_column_width` takes precedence over the `width` parameter.
         clamp : bool
             Clamp image pixel values to a valid range ([0-255] per channel).
             This is only meaningful for byte array images; the parameter is
             ignored for image URLs. If this is not set, and an image has an
             out-of-range value, an error will be thrown.
-        channels : 'RGB' or 'BGR'
+        channels : "RGB" or "BGR"
             If image is an nd.array, this parameter denotes the format used to
-            represent color information. Defaults to 'RGB', meaning
+            represent color information. Defaults to "RGB", meaning
             `image[:, :, 0]` is the red channel, `image[:, :, 1]` is green, and
             `image[:, :, 2]` is blue. For images coming from libraries like
-            OpenCV you should set this to 'BGR', instead.
-        output_format : 'JPEG', 'PNG', or 'auto'
+            OpenCV you should set this to "BGR", instead.
+        output_format : "JPEG", "PNG", or "auto"
             This parameter specifies the format to use when transferring the
             image data. Photos should use the JPEG format for lossy compression
             while diagrams should use the PNG format for lossless compression.
-            Defaults to 'auto' which identifies the compression type based
+            Defaults to "auto" which identifies the compression type based
             on the type and format of the image argument.
 
         Example
         -------
+        >>> import streamlit as st
         >>> from PIL import Image
+        >>>
         >>> image = Image.open('sunrise.jpg')
         >>>
         >>> st.image(image, caption='Sunrise by the mountains')
 
         .. output::
-           https://doc-image.streamlitapp.com/
+           https://doc-image.streamlit.app/
            height: 710px
 
         """
 
         if use_column_width == "auto" or (use_column_width is None and width is None):
-            width = -3
+            width = WidthBehaviour.AUTO
         elif use_column_width == "always" or use_column_width == True:
-            width = -2
+            width = WidthBehaviour.COLUMN
         elif width is None:
-            width = -1
+            width = WidthBehaviour.ORIGINAL
         elif width <= 0:
             raise StreamlitAPIException("Image width must be positive.")
 
@@ -329,20 +353,24 @@ def image_to_url(
             if p.scheme:
                 return image
         except UnicodeDecodeError:
+            # If the string runs into a UnicodeDecodeError, we assume it is not a valid URL.
             pass
 
         # Otherwise, try to open it as a file.
         try:
             with open(image, "rb") as f:
                 image_data = f.read()
-        except:
+        except Exception:
             # When we aren't able to open the image file, we still pass the path to
             # the MediaFileManager - its storage backend may have access to files
             # that Streamlit does not.
             mimetype, _ = mimetypes.guess_type(image)
             if mimetype is None:
                 mimetype = "application/octet-stream"
-            return runtime.get_instance().media_file_mgr.add(image, mimetype, image_id)
+
+            url = runtime.get_instance().media_file_mgr.add(image, mimetype, image_id)
+            caching.save_media_data(image, mimetype, image_id)
+            return url
 
     # PIL Images
     elif isinstance(image, (ImageFile.ImageFile, Image.Image)):
@@ -390,7 +418,9 @@ def image_to_url(
     mimetype = _get_image_format_mimetype(image_format)
 
     if runtime.exists():
-        return runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
+        url = runtime.get_instance().media_file_mgr.add(image_data, mimetype, image_id)
+        caching.save_media_data(image_data, mimetype, image_id)
+        return url
     else:
         # When running in "raw mode", we can't access the MediaFileManager.
         return ""
@@ -400,7 +430,7 @@ def marshall_images(
     coordinates: str,
     image: ImageOrImageList,
     caption: Optional[Union[str, "npt.NDArray[Any]", List[str]]],
-    width: int,
+    width: Union[int, WidthBehaviour],
     proto_imgs: ImageListProto,
     clamp: bool,
     channels: Channels = "RGB",
@@ -421,12 +451,9 @@ def marshall_images(
         list of captions (one for each image).
     width
         The desired width of the image or images. This parameter will be
-        passed to the frontend, where it has some special meanings:
-        -1: "OriginalWidth" (display the image at its original width)
-        -2: "ColumnWidth" (display the image at the width of the column it's in)
-        -3: "AutoWidth" (display the image at its original width, unless it
-            would exceed the width of its column in which case clamp it to
-            its column width).
+        passed to the frontend.
+        Positive values set the image width explicitly.
+        Negative values has some special. For details, see: `WidthBehaviour`
     proto_imgs
         The ImageListProto to fill in.
     clamp
@@ -479,7 +506,7 @@ def marshall_images(
         len(images),
     )
 
-    proto_imgs.width = width
+    proto_imgs.width = int(width)
     # Each image in an image list needs to be kept track of at its own coordinates.
     for coord_suffix, (image, caption) in enumerate(zip(images, captions)):
         proto_img = proto_imgs.imgs.add()
@@ -504,6 +531,7 @@ def marshall_images(
                 else:
                     proto_img.url = f"data:image/svg+xml,{image}"
                 is_svg = True
+
         if not is_svg:
             proto_img.url = image_to_url(
                 image, width, clamp, channels, output_format, image_id

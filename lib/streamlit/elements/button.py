@@ -58,7 +58,7 @@ class ButtonSerde:
 
 
 class ButtonMixin:
-    @gather_metrics
+    @gather_metrics("button")
     def button(
         self,
         label: str,
@@ -70,13 +70,34 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
+        use_container_width: bool = False,
     ) -> bool:
-        """Display a button widget.
+        r"""Display a button widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this button is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -91,13 +112,15 @@ class ButtonMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
-        type (”primary” or “secondary”):
-            An optional string that specifies the button type. Can be “primary” for a
-            button with additional emphasis or “secondary” for a normal button. This
-            argument can only be supplied by keyword. Defaults to “secondary”.
+        type : "secondary" or "primary"
+            An optional string that specifies the button type. Can be "primary" for a
+            button with additional emphasis or "secondary" for a normal button. This
+            argument can only be supplied by keyword. Defaults to "secondary".
         disabled : bool
             An optional boolean, which disables the button if set to True. The
             default is False. This argument can only be supplied by keyword.
+        use_container_width: bool
+            An optional boolean, which makes the button stretch its width to match the parent container.
 
         Returns
         -------
@@ -107,13 +130,15 @@ class ButtonMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> if st.button('Say hello'):
         ...     st.write('Why hello there')
         ... else:
         ...     st.write('Goodbye')
 
         .. output::
-           https://doc-buton.streamlitapp.com/
+           https://doc-buton.streamlit.app/
            height: 220px
 
         """
@@ -137,10 +162,11 @@ class ButtonMixin:
             kwargs=kwargs,
             disabled=disabled,
             type=type,
+            use_container_width=use_container_width,
             ctx=ctx,
         )
 
-    @gather_metrics
+    @gather_metrics("download_button")
     def download_button(
         self,
         label: str,
@@ -154,8 +180,9 @@ class ButtonMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        use_container_width: bool = False,
     ) -> bool:
-        """Display a download button widget.
+        r"""Display a download button widget.
 
         This is useful when you would like to provide a way for your users
         to download a file directly from your app.
@@ -168,6 +195,26 @@ class ButtonMixin:
         ----------
         label : str
             A short label explaining to the user what this button is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         data : str or bytes or file
             The contents of the file to be downloaded. See example below for
             caching techniques to avoid recomputing this data unnecessarily.
@@ -198,6 +245,9 @@ class ButtonMixin:
             An optional boolean, which disables the download button if set to
             True. The default is False. This argument can only be supplied by
             keyword.
+        use_container_width: bool
+            An optional boolean, which makes the button stretch its width to match the parent container.
+
 
         Returns
         -------
@@ -209,6 +259,8 @@ class ButtonMixin:
         --------
         Download a large DataFrame as a CSV:
 
+        >>> import streamlit as st
+        >>>
         >>> @st.cache
         ... def convert_df(df):
         ...     # IMPORTANT: Cache the conversion to prevent computation on every rerun
@@ -225,17 +277,23 @@ class ButtonMixin:
 
         Download a string as a file:
 
+        >>> import streamlit as st
+        >>>
         >>> text_contents = '''This is some text'''
         >>> st.download_button('Download some text', text_contents)
 
         Download a binary file:
 
+        >>> import streamlit as st
+        >>>
         >>> binary_contents = b'example content'
         >>> # Defaults to 'application/octet-stream'
         >>> st.download_button('Download binary file', binary_contents)
 
         Download an image:
 
+        >>> import streamlit as st
+        >>>
         >>> with open("flower.png", "rb") as file:
         ...     btn = st.download_button(
         ...             label="Download image",
@@ -245,7 +303,7 @@ class ButtonMixin:
         ...           )
 
         .. output::
-           https://doc-download-buton.streamlitapp.com/
+           https://doc-download-buton.streamlit.app/
            height: 335px
 
         """
@@ -261,6 +319,7 @@ class ButtonMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            use_container_width=use_container_width,
             ctx=ctx,
         )
 
@@ -277,6 +336,7 @@ class ButtonMixin:
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        use_container_width: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
 
@@ -289,6 +349,7 @@ class ButtonMixin:
 
         download_button_proto = DownloadButtonProto()
 
+        download_button_proto.use_container_width = use_container_width
         download_button_proto.label = label
         download_button_proto.default = False
         marshall_file(
@@ -331,6 +392,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
+        use_container_width: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         if not is_form_submitter:
@@ -358,6 +420,7 @@ class ButtonMixin:
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = current_form_id(self.dg)
         button_proto.type = type
+        button_proto.use_container_width = use_container_width
         if help is not None:
             button_proto.help = dedent(help)
 

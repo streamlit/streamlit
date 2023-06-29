@@ -35,11 +35,12 @@ LOGGER: Final = get_logger(__name__)
 
 
 class PyplotMixin:
-    @gather_metrics
+    @gather_metrics("pyplot")
     def pyplot(
         self,
         fig: Optional["Figure"] = None,
         clear_figure: Optional[bool] = None,
+        use_container_width: bool = True,
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a matplotlib.pyplot figure.
@@ -61,11 +62,15 @@ class PyplotMixin:
             * If `fig` is not set, defaults to `True`. This simulates Jupyter's
               approach to matplotlib rendering.
 
+        use_container_width : bool
+            If True, set the chart width to the column width. Defaults to `True`.
+
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
 
         Example
         -------
+        >>> import streamlit as st
         >>> import matplotlib.pyplot as plt
         >>> import numpy as np
         >>>
@@ -76,7 +81,7 @@ class PyplotMixin:
         >>> st.pyplot(fig)
 
         .. output::
-           https://doc-pyplot.streamlitapp.com/
+           https://doc-pyplot.streamlit.app/
            height: 630px
 
         Notes
@@ -102,7 +107,12 @@ class PyplotMixin:
 
         image_list_proto = ImageListProto()
         marshall(
-            self.dg._get_delta_path_str(), image_list_proto, fig, clear_figure, **kwargs
+            self.dg._get_delta_path_str(),
+            image_list_proto,
+            fig,
+            clear_figure,
+            use_container_width,
+            **kwargs,
         )
         return self.dg._enqueue("imgs", image_list_proto)
 
@@ -117,6 +127,7 @@ def marshall(
     image_list_proto: ImageListProto,
     fig: Optional["Figure"] = None,
     clear_figure: Optional[bool] = True,
+    use_container_width: bool = True,
     **kwargs: Any,
 ) -> None:
     try:
@@ -148,11 +159,16 @@ def marshall(
 
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
+    image_width = (
+        image_utils.WidthBehaviour.COLUMN
+        if use_container_width
+        else image_utils.WidthBehaviour.ORIGINAL
+    )
     image_utils.marshall_images(
         coordinates=coordinates,
         image=image,
         caption=None,
-        width=-2,
+        width=image_width,
         proto_imgs=image_list_proto,
         clamp=False,
         channels="RGB",

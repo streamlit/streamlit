@@ -17,6 +17,8 @@
 describe("st.color_picker", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
+
+    cy.prepForElementSnapshots();
   });
 
   it("shows the widget correctly", () => {

@@ -20,7 +20,7 @@ describe("st.code", () => {
   });
 
   it("displays a code block", () => {
-    cy.get(".element-container .stMarkdown pre").should(
+    cy.get(".element-container pre").should(
       "contain",
       "This code is awesome!"
     );
@@ -28,5 +28,6 @@ describe("st.code", () => {
 
   it("highlights syntax correctly", () => {
     cy.get(".block-container").matchThemedSnapshots("syntax_highlighting");
+    cy.get(".element-container:first-child pre").realHover().matchThemedSnapshots("syntax_highlighting-hover");
   });
 });

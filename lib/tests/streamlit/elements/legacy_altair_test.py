@@ -59,7 +59,7 @@ class LegacyAltairTest(DeltaGeneratorTestCase):
             },
         )
         self.assertEqual(spec_dict["data"], {"name": c.datasets[0].name})
-        self.assertEqual(spec_dict["mark"], "bar")
+        self.assertIn(spec_dict["mark"], ["bar", {"type": "bar"}])
         self.assertTrue("encoding" in spec_dict)
 
     def test_date_column_utc_scale(self):
@@ -90,12 +90,17 @@ class LegacyChartsTest(DeltaGeneratorTestCase):
         """Test dg._legacy_line_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        st._legacy_line_chart(data)
+        st._legacy_line_chart(data, width=640, height=480)
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
-        self.assertEqual(chart_spec["mark"], "line")
-        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+        self.assertIn(chart_spec["mark"], ["line", {"type": "line"}])
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
+
+        self.assertEqual(
+            element.datasets[0].data.data.cols[2].int64s.data, [20, 30, 50]
+        )
 
     def test_legacy_line_chart_with_generic_index(self):
         """Test dg._legacy_line_chart with a generic index."""
@@ -106,7 +111,7 @@ class LegacyChartsTest(DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
-        self.assertEqual(chart_spec["mark"], "line")
+        self.assertIn(chart_spec["mark"], ["line", {"type": "line"}])
         self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 30)
 
     def test_legacy_line_chart_add_rows_with_generic_index(self):
@@ -119,31 +124,47 @@ class LegacyChartsTest(DeltaGeneratorTestCase):
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
-        self.assertEqual(chart_spec["mark"], "line")
+        self.assertIn(chart_spec["mark"], ["line", {"type": "line"}])
         self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 30)
 
     def test_legacy_area_chart(self):
         """Test dg._legacy_area_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        st._legacy_area_chart(data)
+        st._legacy_area_chart(data, width=640, height=480)
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
-        self.assertEqual(chart_spec["mark"], "area")
-        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+        self.assertIn(chart_spec["mark"], ["area", {"type": "area"}])
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
+        self.assertEqual(
+            element.datasets[0].data.columns.plain_index.data.strings.data,
+            ["index", "variable", "value"],
+        )
+        self.assertEqual(
+            element.datasets[0].data.data.cols[2].int64s.data, [20, 30, 50]
+        )
 
     def test_legacy_bar_chart(self):
         """Test dg._legacy_bar_chart."""
         data = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
 
-        st._legacy_bar_chart(data)
+        st._legacy_bar_chart(data, width=640, height=480)
 
         element = self.get_delta_from_queue().new_element.vega_lite_chart
         chart_spec = json.loads(element.spec)
 
-        self.assertEqual(chart_spec["mark"], "bar")
-        self.assertEqual(element.datasets[0].data.data.cols[2].int64s.data[0], 20)
+        self.assertIn(chart_spec["mark"], ["bar", {"type": "bar"}])
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
+        self.assertEqual(
+            element.datasets[0].data.columns.plain_index.data.strings.data,
+            ["index", "variable", "value"],
+        )
+        self.assertEqual(
+            element.datasets[0].data.data.cols[2].int64s.data, [20, 30, 50]
+        )
 
     def test_legacy_line_chart_with_pyarrow_table_data(self):
         """Test that an error is raised when called with `pyarrow.Table` data."""

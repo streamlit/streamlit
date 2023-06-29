@@ -14,7 +14,7 @@
 
 """Tools for working with dicts."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional
 
 
 def _unflatten_single_dict(flat_dict):
@@ -54,11 +54,11 @@ def _unflatten_single_dict(flat_dict):
         A tree made of dicts inside of dicts.
 
     """
-    out = dict()  # type: Dict[str, Any]
+    out: Dict[str, Any] = dict()
     for pathstr, v in flat_dict.items():
         path = pathstr.split("_")
 
-        prev_dict = None  # type: Optional[Dict[str, Any]]
+        prev_dict: Optional[Dict[str, Any]] = None
         curr_dict = out
 
         for k in path:
@@ -76,7 +76,8 @@ def _unflatten_single_dict(flat_dict):
 def unflatten(flat_dict, encodings=None):
     """Converts a flat dict of key-value pairs to a spec tree.
 
-    Example:
+    Example
+    -------
         unflatten({
           foo_bar_baz: 123,
           foo_bar_biz: 456,
@@ -98,8 +99,8 @@ def unflatten(flat_dict, encodings=None):
         #   }
         # }
 
-    Args:
-    -----
+    Args
+    ----
     flat_dict: dict
         A flat dict where keys are fully-qualified paths separated by
         underscores.
@@ -107,8 +108,8 @@ def unflatten(flat_dict, encodings=None):
     encodings: set
         Key names that should be automatically moved into the 'encoding' key.
 
-    Returns:
-    --------
+    Returns
+    -------
     A tree made of dicts inside of dicts.
     """
     if encodings is None:
@@ -133,3 +134,14 @@ def unflatten(flat_dict, encodings=None):
             out_dict.pop(k)
 
     return out_dict
+
+
+def remove_none_values(input_dict: Mapping[Any, Any]) -> Dict[Any, Any]:
+    """Remove all keys with None values from a dict."""
+    new_dict = {}
+    for key, val in input_dict.items():
+        if isinstance(val, dict):
+            val = remove_none_values(val)
+        if val is not None:
+            new_dict[key] = val
+    return new_dict

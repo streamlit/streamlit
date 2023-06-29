@@ -13,9 +13,13 @@
 # limitations under the License.
 
 """metric unit tests."""
+from parameterized import parameterized
+
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
+from streamlit.type_util import _LOGGER
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -28,6 +32,10 @@ class MetricTest(DeltaGeneratorTestCase):
         self.assertEqual(c.label, "label_test")
         # This is an em dash. Not a regular "-"
         self.assertEqual(c.body, "—")
+        self.assertEqual(
+            c.label_visibility.value,
+            LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
+        )
 
     def test_label_and_value(self):
         """Test that metric can be called with label and value passed in."""
@@ -38,6 +46,22 @@ class MetricTest(DeltaGeneratorTestCase):
         self.assertEqual(c.body, "123")
         self.assertEqual(c.color, MetricProto.MetricColor.GRAY)
         self.assertEqual(c.direction, MetricProto.MetricDirection.NONE)
+
+    @parameterized.expand(
+        [
+            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+        ]
+    )
+    def test_label_visibility(self, label_visibility_value, proto_value):
+        """Test that metric can be called with label_visibility param."""
+        st.metric("label_test", "123", label_visibility=label_visibility_value)
+
+        c = self.get_delta_from_queue().new_element.metric
+        self.assertEqual(c.label, "label_test")
+        self.assertEqual(c.body, "123")
+        self.assertEqual(c.label_visibility.value, proto_value)
 
     def test_label_and_value_and_delta_and_delta_color(self):
         """Test that metric can be called with label, value, delta, and delta
@@ -155,6 +179,26 @@ class MetricTest(DeltaGeneratorTestCase):
             "'123' is of type <class 'int'>, which is not an accepted type."
             " label only accepts: str. Please convert the label to an accepted type.",
             str(exc.exception),
+        )
+
+    def test_invalid_label_visibility(self):
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.metric("label_test", "123", label_visibility="wrong_value")
+        self.assertEqual(
+            str(e.exception),
+            "Unsupported label_visibility option 'wrong_value'. Valid values are "
+            "'visible', 'hidden' or 'collapsed'.",
+        )
+
+    def test_empty_label_warning(self):
+        """Test that a warning is logged if st.metric was called with empty label."""
+
+        with self.assertLogs(_LOGGER) as logs:
+            st.metric(label="", value="123")
+
+        self.assertIn(
+            "`label` got an empty value. This is discouraged for accessibility reasons",
+            logs.records[0].msg,
         )
 
     def test_invalid_value(self):

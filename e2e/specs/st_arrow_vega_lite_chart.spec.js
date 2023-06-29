@@ -77,4 +77,10 @@ describe("st._arrow_vega_lite_chart", () => {
           .matchThemedSnapshots(`arrow_vega_lite_chart_theming_${idx}`);
       });
   });
+
+  it("supports default theme", () => {
+    cy.get("[data-testid='stArrowVegaLiteChart']")
+      .eq(11)
+      .matchThemedSnapshots(`arrow_vega_lite_chart_default_theming`);
+  });
 });

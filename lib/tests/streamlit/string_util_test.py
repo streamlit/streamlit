@@ -34,6 +34,9 @@ class StringUtilTest(unittest.TestCase):
             ("😃😃", False),
             ("😃X", False),
             ("X😃", False),
+            ("️🚨", True),
+            ("️⛔️", True),
+            ("️👍🏽", True),
         ]
     )
     def test_is_emoji(self, text: str, expected: bool):
@@ -63,41 +66,15 @@ class StringUtilTest(unittest.TestCase):
     def test_extract_leading_emoji(self, text, expected):
         self.assertEqual(string_util.extract_leading_emoji(text), expected)
 
-    def test_snake_case_to_camel_case(self):
-        """Test streamlit.string_util.snake_case_to_camel_case."""
-        self.assertEqual(
-            "TestString.", string_util.snake_case_to_camel_case("test_string.")
-        )
+    def test_simplify_number(self):
+        """Test streamlit.string_util.simplify_number."""
 
-        self.assertEqual("Init", string_util.snake_case_to_camel_case("__init__"))
+        self.assertEqual(string_util.simplify_number(100), "100")
 
-    def test_clean_filename(self):
-        """Test streamlit.string_util.clean_filename."""
-        self.assertEqual("test_result", string_util.clean_filename("test re*su/lt;"))
+        self.assertEqual(string_util.simplify_number(10000), "10k")
 
-    def test_generate_download_filename_from_title(self):
-        """Test streamlit.string_util.generate_download_filename_from_title."""
+        self.assertEqual(string_util.simplify_number(1000000), "1m")
 
-        self.assertTrue(
-            string_util.generate_download_filename_from_title(
-                "app · Streamlit"
-            ).startswith("App")
-        )
+        self.assertEqual(string_util.simplify_number(1000000000), "1b")
 
-        self.assertTrue(
-            string_util.generate_download_filename_from_title(
-                "app · Streamlit"
-            ).startswith("App")
-        )
-
-        self.assertTrue(
-            string_util.generate_download_filename_from_title(
-                "App title here"
-            ).startswith("AppTitleHere")
-        )
-
-        self.assertTrue(
-            string_util.generate_download_filename_from_title(
-                "Аптека, улица, фонарь"
-            ).startswith("АптекаУлицаФонарь")
-        )
+        self.assertEqual(string_util.simplify_number(1000000000000), "1t")

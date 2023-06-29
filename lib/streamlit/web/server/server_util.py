@@ -15,6 +15,9 @@
 """Server related utility functions"""
 
 from typing import Optional
+from urllib.parse import urljoin
+
+import tornado.web
 
 from streamlit import config, net_util, url_util
 
@@ -87,6 +90,8 @@ def get_url(host_ip: str) -> str:
     str
         The URL.
     """
+    protocol = "https" if config.get_option("server.sslCertFile") else "http"
+
     port = _get_browser_address_bar_port()
     base_path = config.get_option("server.baseUrlPath").strip("/")
 
@@ -94,8 +99,7 @@ def get_url(host_ip: str) -> str:
         base_path = "/" + base_path
 
     host_ip = host_ip.strip("/")
-
-    return f"http://{host_ip}:{port}{base_path}"
+    return f"{protocol}://{host_ip}:{port}{base_path}"
 
 
 def _get_browser_address_bar_port() -> int:
@@ -109,3 +113,14 @@ def _get_browser_address_bar_port() -> int:
     if config.get_option("global.developmentMode"):
         return 3000
     return int(config.get_option("browser.serverPort"))
+
+
+def emit_endpoint_deprecation_notice(
+    handler: tornado.web.RequestHandler, new_path: str
+) -> None:
+    """
+    Emits the warning about deprecation of HTTP endpoint in the HTTP header.
+    """
+    handler.set_header("Deprecation", True)
+    new_url = urljoin(f"{handler.request.protocol}://{handler.request.host}", new_path)
+    handler.set_header("Link", f'<{new_url}>; rel="alternate"')

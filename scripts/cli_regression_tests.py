@@ -17,7 +17,6 @@
 import os
 import signal
 import subprocess
-import time
 from typing import Optional
 
 import pytest

@@ -142,7 +142,7 @@ class MultiSelectSerde(Generic[T]):
 
 
 class MultiSelectMixin:
-    @gather_metrics
+    @gather_metrics("multiselect")
     def multiselect(
         self,
         label: str,
@@ -159,13 +159,34 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         max_selections: Optional[int] = None,
     ) -> List[T]:
-        """Display a multiselect widget.
+        r"""Display a multiselect widget.
         The multiselect widget starts as empty.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this select widget is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
@@ -196,8 +217,8 @@ class MultiSelectMixin:
             An optional boolean, which disables the multiselect widget if set
             to True. The default is False. This argument can only be supplied
             by keyword.
-        label_visibility : "visible" or "hidden" or "collapsed"
-            The visibility of the label. If "hidden", the label doesn’t show but there
+        label_visibility : "visible", "hidden", or "collapsed"
+            The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
@@ -212,6 +233,8 @@ class MultiSelectMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> options = st.multiselect(
         ...     'What are your favorite colors',
         ...     ['Green', 'Yellow', 'Red', 'Blue'],
@@ -220,7 +243,7 @@ class MultiSelectMixin:
         >>> st.write('You selected:', options)
 
         .. output::
-           https://doc-multiselect.streamlitapp.com/
+           https://doc-multiselect.streamlit.app/
            height: 420px
 
         """

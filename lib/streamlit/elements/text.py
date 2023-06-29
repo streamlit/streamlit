@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -24,8 +24,13 @@ if TYPE_CHECKING:
 
 
 class TextMixin:
-    @gather_metrics
-    def text(self, body: "SupportsStr") -> "DeltaGenerator":
+    @gather_metrics("text")
+    def text(
+        self,
+        body: "SupportsStr",
+        *,  # keyword-only arguments:
+        help: Optional[str] = None,
+    ) -> "DeltaGenerator":
         """Write fixed-width and preformatted text.
 
         Parameters
@@ -33,13 +38,20 @@ class TextMixin:
         body : str
             The string to display.
 
+        help : str
+            An optional tooltip that gets displayed next to the text.
+
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.text('This is some text.')
 
         """
         text_proto = TextProto()
         text_proto.body = clean_text(body)
+        if help:
+            text_proto.help = help
         return self.dg._enqueue("text", text_proto)
 
     @property

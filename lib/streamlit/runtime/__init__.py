@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Explicitly re-export public symbols from runtime.py
+# Explicitly re-export public symbols from runtime.py and session_manager.py
 from streamlit.runtime.runtime import Runtime as Runtime
 from streamlit.runtime.runtime import RuntimeConfig as RuntimeConfig
 from streamlit.runtime.runtime import RuntimeState as RuntimeState
-from streamlit.runtime.runtime import SessionClient as SessionClient
-from streamlit.runtime.runtime import (
+from streamlit.runtime.session_manager import SessionClient as SessionClient
+from streamlit.runtime.session_manager import (
     SessionClientDisconnectedError as SessionClientDisconnectedError,
 )
 

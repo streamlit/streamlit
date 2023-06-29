@@ -22,6 +22,7 @@ import pandas as pd
 from typing_extensions import Final, TypeAlias
 
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
+from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -72,7 +73,7 @@ _ZOOM_LEVELS: Final = [
 
 
 class MapMixin:
-    @gather_metrics
+    @gather_metrics("map")
     def map(
         self,
         data: Data = None,
@@ -81,24 +82,31 @@ class MapMixin:
     ) -> "DeltaGenerator":
         """Display a map with points on it.
 
-        This is a wrapper around st.pydeck_chart to quickly create scatterplot
-        charts on top of a map, with auto-centering and auto-zoom.
+        This is a wrapper around ``st.pydeck_chart`` to quickly create
+        scatterplot charts on top of a map, with auto-centering and auto-zoom.
 
-        When using this command, we advise all users to use a personal Mapbox
-        token. This ensures the map tiles used in this chart are more
-        robust. You can do this with the mapbox.token config option.
+        When using this command, Mapbox provides the map tiles to render map
+        content. Note that Mapbox is a third-party product, the use of which is
+        governed by Mapbox's Terms of Use.
 
-        To get a token for yourself, create an account at
-        https://mapbox.com. It's free! (for moderate usage levels). For more
-        info on how to set config options, see
-        https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options
+        Mapbox requires users to register and provide a token before users can
+        request map tiles. Currently, Streamlit provides this token for you, but
+        this could change at any time. We strongly recommend all users create and
+        use their own personal Mapbox token to avoid any disruptions to their
+        experience. You can do this with the ``mapbox.token`` config option.
+
+        To get a token for yourself, create an account at https://mapbox.com.
+        For more info on how to set config options, see
+        https://docs.streamlit.io/library/advanced-features/configuration
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-            or None
-            The data to be plotted. Must have columns called 'lat', 'lon',
-            'latitude', or 'longitude'.
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
+            The data to be plotted. Must have two columns:
+
+            - latitude called 'lat', 'latitude', 'LAT', 'LATITUDE'
+            - longitude called 'lon', 'longitude', 'LON', 'LONGITUDE'.
+
         zoom : int
             Zoom level as specified in
             https://wiki.openstreetmap.org/wiki/Zoom_levels
@@ -117,7 +125,7 @@ class MapMixin:
         >>> st.map(df)
 
         .. output::
-           https://doc-map.streamlitapp.com/
+           https://doc-map.streamlit.app/
            height: 650px
 
         """
@@ -157,39 +165,44 @@ def _get_zoom_level(distance: float) -> int:
 
 
 def to_deckgl_json(data: Data, zoom: Optional[int]) -> str:
-    # TODO(harahu): The ignore statement here is because iterables don't have
-    #  the empty attribute. This is either a bug, or the documented data type
-    #  is too broad. One or the other should be addressed, and the ignore
-    #  statement removed.
-    if data is None or data.empty:  # type: ignore[union-attr]
+    if data is None:
         return json.dumps(_DEFAULT_MAP)
 
-    if "lat" in data:
-        lat = "lat"
-    elif "latitude" in data:
-        lat = "latitude"
-    else:
+    # TODO(harahu): iterables don't have the empty attribute. This is either
+    # a bug, or the documented data type is too broad. One or the other
+    # should be addressed
+    if hasattr(data, "empty") and data.empty:
+        return json.dumps(_DEFAULT_MAP)
+
+    data = type_util.convert_anything_to_df(data)
+    formmated_column_names = ", ".join(map(repr, list(data.columns)))
+
+    allowed_lat_columns = {"lat", "latitude", "LAT", "LATITUDE"}
+    lat = next((d for d in allowed_lat_columns if d in data), None)
+
+    if not lat:
+        formatted_allowed_column_name = ", ".join(
+            map(repr, sorted(allowed_lat_columns))
+        )
         raise StreamlitAPIException(
-            'Map data must contain a column named "latitude" or "lat".'
+            f"Map data must contain a latitude column named: {formatted_allowed_column_name}. "
+            f"Existing columns: {formmated_column_names}"
         )
 
-    if "lon" in data:
-        lon = "lon"
-    elif "longitude" in data:
-        lon = "longitude"
-    else:
+    allowed_lon_columns = {"lon", "longitude", "LON", "LONGITUDE"}
+    lon = next((d for d in allowed_lon_columns if d in data), None)
+
+    if not lon:
+        formatted_allowed_column_name = ", ".join(
+            map(repr, sorted(allowed_lon_columns))
+        )
         raise StreamlitAPIException(
-            'Map data must contain a column called "longitude" or "lon".'
+            f"Map data must contain a longitude column named: {formatted_allowed_column_name}. "
+            f"Existing columns: {formmated_column_names}"
         )
 
-    # TODO(harahu): The ignore statement here is because iterables don't have
-    #  the empty attribute. This is either a bug, or the documented data type
-    #  is too broad. One or the other should be addressed, and the ignore
-    #  statement removed.
-    if data[lon].isnull().values.any() or data[lat].isnull().values.any():  # type: ignore[index]
+    if data[lon].isnull().values.any() or data[lat].isnull().values.any():
         raise StreamlitAPIException("Latitude and longitude data must be numeric.")
-
-    data = pd.DataFrame(data)
 
     min_lat = data[lat].min()
     max_lat = data[lat].max()

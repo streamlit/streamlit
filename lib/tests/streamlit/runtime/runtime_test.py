@@ -18,29 +18,40 @@ import shutil
 import tempfile
 import unittest
 from typing import List
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 
+from streamlit import source_util
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
-from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-from streamlit.runtime.runtime import (
-    AsyncObjects,
+from streamlit.runtime import (
     Runtime,
     RuntimeConfig,
     RuntimeState,
-    RuntimeStoppedError,
     SessionClient,
     SessionClientDisconnectedError,
 )
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    MemoryCacheStorageManager,
+)
+from streamlit.runtime.caching.storage.local_disk_cache_storage import (
+    LocalDiskCacheStorageManager,
+)
+from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_session_storage import MemorySessionStorage
+from streamlit.runtime.runtime import AsyncObjects, RuntimeStoppedError
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.watcher import event_based_path_watcher
 from tests.streamlit.message_mocks import (
     create_dataframe_msg,
     create_script_finished_message,
 )
-from tests.streamlit.runtime.runtime_test_case import RuntimeTestCase
+from tests.streamlit.runtime.runtime_test_case import (
+    MockSessionManager,
+    RuntimeTestCase,
+)
 from tests.testutil import patch_config_options
 
 
@@ -54,6 +65,20 @@ class MockSessionClient(SessionClient):
         self.forward_msgs.append(msg)
 
 
+class RuntimeConfigTests(unittest.TestCase):
+    def test_runtime_config_defaults(self):
+        config = RuntimeConfig(
+            "/my/script.py", None, MemoryMediaFileStorage("/mock/media")
+        )
+
+        self.assertIsInstance(
+            config.cache_storage_manager, LocalDiskCacheStorageManager
+        )
+        self.assertIs(config.session_manager_class, WebsocketSessionManager)
+        self.assertIsInstance(config.session_storage, MemorySessionStorage)
+
+
+@patch("streamlit.runtime.runtime.LocalSourcesWatcher", MagicMock())
 class RuntimeSingletonTest(unittest.TestCase):
     def tearDown(self) -> None:
         Runtime._instance = None
@@ -66,19 +91,19 @@ class RuntimeSingletonTest(unittest.TestCase):
 
     def test_multiple_runtime_error(self):
         """Creating multiple Runtimes raises an error."""
-        r1 = Runtime(MagicMock())
+        Runtime(MagicMock())
         with self.assertRaises(RuntimeError):
-            r2 = Runtime(MagicMock())
+            Runtime(MagicMock())
 
     def test_instance_class_method(self):
         """Runtime.instance() returns our singleton instance."""
         with self.assertRaises(RuntimeError):
             # No Runtime: error
-            instance = Runtime.instance()
+            Runtime.instance()
 
         # Runtime instantiated: no error
         _ = Runtime(MagicMock())
-        instance = Runtime.instance()
+        Runtime.instance()
 
     def test_exists(self):
         """Runtime.exists() returns True iff the Runtime singleton exists."""
@@ -102,34 +127,106 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.stopped
         self.assertEqual(RuntimeState.STOPPED, self.runtime.state)
 
-    async def test_create_session(self):
+    async def test_connect_session(self):
         """We can create and remove a single session."""
         await self.runtime.start()
 
-        session_id = self.runtime.create_session(
+        session_id = self.runtime.connect_session(
             client=MockSessionClient(), user_info=MagicMock()
         )
         self.assertEqual(
             RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED, self.runtime.state
         )
 
-        self.runtime.close_session(session_id)
+        self.runtime.disconnect_session(session_id)
         self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
 
-    async def test_close_session_shuts_down_appsession(self):
-        """Closing a session should shutdown its associated AppSession."""
-        with self.patch_app_session():
-            await self.runtime.start()
+    async def test_connect_session_existing_session_id_plumbing(self):
+        """The existing_session_id parameter is plumbed to _session_mgr.connect_session."""
+        await self.runtime.start()
 
-            # Create a session and get its associated AppSession object.
-            session_id = self.runtime.create_session(
-                client=MockSessionClient(), user_info=MagicMock()
+        with patch.object(
+            self.runtime._session_mgr, "connect_session", new=MagicMock()
+        ) as patched_connect_session:
+            client = MockSessionClient()
+            user_info = MagicMock()
+            existing_session_id = "some_session_id"
+
+            session_id = self.runtime.connect_session(
+                client=client,
+                user_info=user_info,
+                existing_session_id=existing_session_id,
             )
-            app_session = self.runtime._get_session_info(session_id).session
 
-            # Close the session. AppSession.shutdown should be called.
+            patched_connect_session.assert_called_with(
+                client=client,
+                script_data=ANY,
+                user_info=user_info,
+                existing_session_id=existing_session_id,
+            )
+
+    @patch("streamlit.runtime.runtime.LOGGER")
+    async def test_create_session_alias(self, patched_logger):
+        """Test that create_session defers to connect_session and logs a warning."""
+        await self.runtime.start()
+
+        client = MockSessionClient()
+        user_info = MagicMock()
+
+        with patch.object(
+            self.runtime, "connect_session", new=MagicMock()
+        ) as patched_connect_session:
+            self.runtime.create_session(client=client, user_info=user_info)
+
+            patched_connect_session.assert_called_with(
+                client=client,
+                user_info=user_info,
+                existing_session_id=None,
+            )
+            patched_logger.warning.assert_called_with(
+                "create_session is deprecated! Use connect_session instead."
+            )
+
+    async def test_disconnect_session_disconnects_appsession(self):
+        """Closing a session should disconnect its associated AppSession."""
+        await self.runtime.start()
+
+        session_id = self.runtime.connect_session(
+            client=MockSessionClient(), user_info=MagicMock()
+        )
+        session = self.runtime._session_mgr.get_session_info(session_id).session
+
+        with patch.object(
+            self.runtime._session_mgr, "disconnect_session", new=MagicMock()
+        ) as patched_disconnect_session, patch.object(
+            self.runtime, "_on_session_disconnected", new=MagicMock()
+        ) as patched_on_session_disconnected, patch.object(
+            self.runtime._message_cache, "remove_refs_for_session", new=MagicMock()
+        ) as patched_remove_refs_for_session:
+            self.runtime.disconnect_session(session_id)
+            patched_disconnect_session.assert_called_once_with(session_id)
+            patched_on_session_disconnected.assert_called_once()
+            patched_remove_refs_for_session.assert_called_once_with(session)
+
+    async def test_close_session_closes_appsession(self):
+        await self.runtime.start()
+
+        session_id = self.runtime.connect_session(
+            client=MockSessionClient(), user_info=MagicMock()
+        )
+        session = self.runtime._session_mgr.get_session_info(session_id).session
+
+        with patch.object(
+            self.runtime._session_mgr, "close_session", new=MagicMock()
+        ) as patched_close_session, patch.object(
+            self.runtime, "_on_session_disconnected", new=MagicMock()
+        ) as patched_on_session_disconnected, patch.object(
+            self.runtime._message_cache, "remove_refs_for_session", new=MagicMock()
+        ) as patched_remove_refs_for_session:
             self.runtime.close_session(session_id)
-            app_session.shutdown.assert_called_once()
+            patched_close_session.assert_called_once_with(session_id)
+            patched_on_session_disconnected.assert_called_once()
+            patched_remove_refs_for_session.assert_called_once_with(session)
 
     async def test_multiple_sessions(self):
         """Multiple sessions can be connected."""
@@ -137,7 +234,7 @@ class RuntimeTest(RuntimeTestCase):
 
         session_ids = []
         for _ in range(3):
-            session_id = self.runtime.create_session(
+            session_id = self.runtime.connect_session(
                 client=MockSessionClient(),
                 user_info=MagicMock(),
             )
@@ -148,7 +245,7 @@ class RuntimeTest(RuntimeTestCase):
             session_ids.append(session_id)
 
         for i in range(len(session_ids)):
-            self.runtime.close_session(session_ids[i])
+            self.runtime.disconnect_session(session_ids[i])
             expected_state = (
                 RuntimeState.NO_SESSIONS_CONNECTED
                 if i == len(session_ids) - 1
@@ -158,6 +255,20 @@ class RuntimeTest(RuntimeTestCase):
 
         self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
 
+    async def test_disconnect_invalid_session(self):
+        """Disconnecting a session that doesn't exist is a no-op: no error raised."""
+        await self.runtime.start()
+
+        # Close a session that never existed
+        self.runtime.disconnect_session("no_such_session")
+
+        # Close a valid session twice
+        session_id = self.runtime.connect_session(
+            client=MockSessionClient(), user_info=MagicMock()
+        )
+        self.runtime.disconnect_session(session_id)
+        self.runtime.disconnect_session(session_id)
+
     async def test_close_invalid_session(self):
         """Closing a session that doesn't exist is a no-op: no error raised."""
         await self.runtime.start()
@@ -166,7 +277,7 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.close_session("no_such_session")
 
         # Close a valid session twice
-        session_id = self.runtime.create_session(
+        session_id = self.runtime.connect_session(
             client=MockSessionClient(), user_info=MagicMock()
         )
         self.runtime.close_session(session_id)
@@ -175,76 +286,81 @@ class RuntimeTest(RuntimeTestCase):
     async def test_is_active_session(self):
         """`is_active_session` should work as expected."""
         await self.runtime.start()
-        session_id = self.runtime.create_session(
+        session_id = self.runtime.connect_session(
             client=MockSessionClient(), user_info=MagicMock()
         )
         self.assertTrue(self.runtime.is_active_session(session_id))
         self.assertFalse(self.runtime.is_active_session("not_a_session_id"))
 
-        self.runtime.close_session(session_id)
+        self.runtime.disconnect_session(session_id)
         self.assertFalse(self.runtime.is_active_session(session_id))
 
-    async def test_shutdown_appsessions_on_stop(self):
-        """When the Runtime stops, it should shut down open AppSessions."""
-        with self.patch_app_session():
-            await self.runtime.start()
+    async def test_closes_app_sessions_on_stop(self):
+        """When the Runtime stops, it should close all AppSessions."""
+        await self.runtime.start()
 
-            # Create a few sessions
-            app_sessions = []
-            for _ in range(3):
-                session_id = self.runtime.create_session(
-                    MockSessionClient(), MagicMock()
-                )
-                app_session = self.runtime._get_session_info(session_id).session
-                app_sessions.append(app_session)
+        # Create a few sessions
+        app_sessions = []
+        for _ in range(3):
+            session_id = self.runtime.connect_session(MockSessionClient(), MagicMock())
+            app_session = self.runtime._session_mgr.get_active_session_info(
+                session_id
+            ).session
+            app_sessions.append(app_session)
 
-            # Sanity check
-            for app_session in app_sessions:
-                app_session.shutdown.assert_not_called()
-
+        with patch.object(
+            self.runtime._session_mgr, "close_session"
+        ) as patched_close_session:
             # Stop the Runtime
             self.runtime.stop()
             await self.runtime.stopped
 
-            # All sessions should be shut down
             self.assertEqual(RuntimeState.STOPPED, self.runtime.state)
-            for app_session in app_sessions:
-                app_session.shutdown.assert_called_once()
 
+            # All sessions should be shut down via self._session_mgr.close_session
+            patched_close_session.assert_has_calls(call(s.id) for s in app_sessions)
+
+    @patch("streamlit.runtime.app_session.AppSession.handle_backmsg", new=MagicMock())
     async def test_handle_backmsg(self):
         """BackMsgs should be delivered to the appropriate AppSession."""
-        with self.patch_app_session():
-            await self.runtime.start()
-            session_id = self.runtime.create_session(
-                client=MockSessionClient(), user_info=MagicMock()
-            )
+        await self.runtime.start()
+        session_id = self.runtime.connect_session(
+            client=MockSessionClient(), user_info=MagicMock()
+        )
 
-            back_msg = MagicMock()
-            self.runtime.handle_backmsg(session_id, back_msg)
+        back_msg = MagicMock()
+        self.runtime.handle_backmsg(session_id, back_msg)
 
-            app_session = self.runtime._get_session_info(session_id).session
-            app_session.handle_backmsg.assert_called_once_with(back_msg)
+        app_session = self.runtime._session_mgr.get_active_session_info(
+            session_id
+        ).session
+        app_session.handle_backmsg.assert_called_once_with(back_msg)
 
     async def test_handle_backmsg_invalid_session(self):
         """A BackMsg for an invalid session should get dropped without an error."""
         await self.runtime.start()
         self.runtime.handle_backmsg("not_a_session_id", MagicMock())
 
+    @patch(
+        "streamlit.runtime.app_session.AppSession.handle_backmsg_exception",
+        new=MagicMock(),
+    )
     async def test_handle_backmsg_deserialization_exception(self):
         """BackMsg deserialization Exceptions should be delivered to the
         appropriate AppSession.
         """
-        with self.patch_app_session():
-            await self.runtime.start()
-            session_id = self.runtime.create_session(
-                client=MockSessionClient(), user_info=MagicMock()
-            )
+        await self.runtime.start()
+        session_id = self.runtime.connect_session(
+            client=MockSessionClient(), user_info=MagicMock()
+        )
 
-            exception = MagicMock()
-            self.runtime.handle_backmsg_deserialization_exception(session_id, exception)
+        exception = MagicMock()
+        self.runtime.handle_backmsg_deserialization_exception(session_id, exception)
 
-            app_session = self.runtime._get_session_info(session_id).session
-            app_session.handle_backmsg_exception.assert_called_once_with(exception)
+        app_session = self.runtime._session_mgr.get_active_session_info(
+            session_id
+        ).session
+        app_session.handle_backmsg_exception.assert_called_once_with(exception)
 
     async def test_handle_backmsg_exception_invalid_session(self):
         """A BackMsg exception for an invalid session should get dropped without an
@@ -254,14 +370,14 @@ class RuntimeTest(RuntimeTestCase):
             "not_a_session_id", MagicMock()
         )
 
-    async def test_create_session_after_stop(self):
-        """After Runtime.stop is called, `create_session` is an error."""
+    async def test_connect_session_after_stop(self):
+        """After Runtime.stop is called, `connect_session` is an error."""
         await self.runtime.start()
         self.runtime.stop()
         await self.tick_runtime_loop()
 
         with self.assertRaises(RuntimeStoppedError):
-            self.runtime.create_session(MagicMock(), MagicMock())
+            self.runtime.connect_session(MagicMock(), MagicMock())
 
     async def test_handle_backmsg_after_stop(self):
         """After Runtime.stop is called, `handle_backmsg` is an error."""
@@ -279,7 +395,7 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.start()
 
         client = MagicMock(spec=SessionClient)
-        session_id = self.runtime.create_session(client, MagicMock())
+        session_id = self.runtime.connect_session(client, MagicMock())
 
         # Send the client a message. All should be well.
         self.enqueue_forward_msg(session_id, create_dataframe_msg([1, 2, 3]))
@@ -303,7 +419,7 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.start()
 
         client = MockSessionClient()
-        session_id = self.runtime.create_session(client=client, user_info=MagicMock())
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
 
         # Create a message and ensure its hash is unset; we're testing
         # that _send_message adds the hash before it goes out.
@@ -321,7 +437,7 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.start()
 
         client = MockSessionClient()
-        session_id = self.runtime.create_session(client=client, user_info=MagicMock())
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
 
         with patch_config_options({"global.minCachedMessageSize": 0}):
             cacheable_msg = create_dataframe_msg([1, 2, 3])
@@ -347,7 +463,7 @@ class RuntimeTest(RuntimeTestCase):
             await self.runtime.start()
 
             client = MockSessionClient()
-            session_id = self.runtime.create_session(
+            session_id = self.runtime.connect_session(
                 client=client, user_info=MagicMock()
             )
 
@@ -384,7 +500,7 @@ class RuntimeTest(RuntimeTestCase):
             await self.runtime.start()
 
             client = MockSessionClient()
-            session_id = self.runtime.create_session(
+            session_id = self.runtime.connect_session(
                 client=client, user_info=MagicMock()
             )
 
@@ -444,7 +560,7 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.start()
 
         client = MockSessionClient()
-        session_id = self.runtime.create_session(client=client, user_info=MagicMock())
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
 
         file = UploadedFileRec(0, "file.txt", "type", b"123")
 
@@ -462,7 +578,7 @@ class RuntimeTest(RuntimeTestCase):
         )
 
         # Disconnect the session. The file should be deleted.
-        self.runtime.close_session(session_id)
+        self.runtime.disconnect_session(session_id)
         self.assertEqual(
             self.runtime._uploaded_file_mgr.get_all_files(session_id, "widget_id"),
             [],
@@ -515,6 +631,9 @@ class ScriptCheckTest(RuntimeTestCase):
             script_path=self._path,
             command_line="mock command line",
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
+            session_manager_class=MagicMock,
+            session_storage=MagicMock(),
+            cache_storage_manager=MagicMock(),
         )
         self.runtime = Runtime(config)
         await self.runtime.start()

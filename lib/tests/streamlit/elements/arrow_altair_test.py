@@ -71,7 +71,7 @@ class ArrowAltairTest(DeltaGeneratorTestCase):
             },
         )
         self.assertEqual(spec_dict["data"], {"name": proto.datasets[0].name})
-        self.assertEqual(spec_dict["mark"], "bar")
+        self.assertIn(spec_dict["mark"], ["bar", {"type": "bar"}])
         self.assertTrue("encoding" in spec_dict)
 
     def test_date_column_utc_scale(self):
@@ -94,6 +94,37 @@ class ArrowAltairTest(DeltaGeneratorTestCase):
         y_scale = _deep_get(spec_dict, "encoding", "y", "scale", "type")
         self.assertNotEqual(y_scale, "utc")
 
+    @parameterized.expand(
+        [
+            ("streamlit", "streamlit"),
+            (None, ""),
+        ]
+    )
+    def test_theme(self, theme_value, proto_value):
+        df = pd.DataFrame(
+            {"index": [date(2019, 8, 9), date(2019, 8, 10)], "numbers": [1, 10]}
+        ).set_index("index")
+
+        chart = altair._generate_chart(ChartType.LINE, df)
+        st._arrow_altair_chart(chart, theme=theme_value)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.arrow_vega_lite_chart.theme, proto_value)
+
+    def test_bad_theme(self):
+        df = pd.DataFrame(
+            {"index": [date(2019, 8, 9), date(2019, 8, 10)], "numbers": [1, 10]}
+        ).set_index("index")
+
+        chart = altair._generate_chart(ChartType.LINE, df)
+        with self.assertRaises(StreamlitAPIException) as exc:
+            st._arrow_altair_chart(chart, theme="bad_theme")
+
+        self.assertEqual(
+            f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
+            str(exc.exception),
+        )
+
 
 class ArrowChartsTest(DeltaGeneratorTestCase):
     """Test Arrow charts."""
@@ -107,11 +138,13 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             columns=["index", "variable", "value"],
         )
 
-        st._arrow_line_chart(df)
+        st._arrow_line_chart(df, width=640, height=480)
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
-        self.assertEqual(chart_spec["mark"], "line")
+        self.assertIn(chart_spec["mark"], ["line", {"type": "line"}])
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
         pd.testing.assert_frame_equal(
             bytes_to_data_frame(proto.datasets[0].data.data),
             EXPECTED_DATAFRAME,
@@ -129,12 +162,14 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
         EXPECTED_DATAFRAME = pd.DataFrame([[20, 30]], columns=["a", "b"])
 
-        chart_command(df, x="a", y="b")
+        chart_command(df, x="a", y="b", width=640, height=480)
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
-        self.assertEqual(chart_spec["mark"], altair_type)
+        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
         self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
         self.assertEqual(chart_spec["encoding"]["y"]["field"], "b")
         pd.testing.assert_frame_equal(
@@ -163,7 +198,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
-        self.assertEqual(chart_spec["mark"], altair_type)
+        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
         self.assertEqual(chart_spec["encoding"]["x"]["field"], "a")
         self.assertEqual(chart_spec["encoding"]["y"]["field"], "value")
 
@@ -231,7 +266,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
-        self.assertEqual(chart_spec["mark"], "line")
+        self.assertIn(chart_spec["mark"], ["line", {"type": "line"}])
         pd.testing.assert_frame_equal(
             bytes_to_data_frame(proto.datasets[0].data.data),
             EXPECTED_DATAFRAME,
@@ -250,7 +285,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
-        self.assertEqual(chart_spec["mark"], "area")
+        self.assertIn(chart_spec["mark"], ["area", {"type": "area"}])
         pd.testing.assert_frame_equal(
             bytes_to_data_frame(proto.datasets[0].data.data),
             EXPECTED_DATAFRAME,
@@ -265,12 +300,14 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             columns=["index", "variable", "value"],
         )
 
-        st._arrow_bar_chart(df)
+        st._arrow_bar_chart(df, width=640, height=480)
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
-        self.assertEqual(chart_spec["mark"], "bar")
+        self.assertIn(chart_spec["mark"], ["bar", {"type": "bar"}])
+        self.assertEqual(chart_spec["width"], 640)
+        self.assertEqual(chart_spec["height"], 480)
         pd.testing.assert_frame_equal(
             bytes_to_data_frame(proto.datasets[0].data.data),
             EXPECTED_DATAFRAME,

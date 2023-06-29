@@ -14,12 +14,12 @@
 
 """A Python wrapper around Altair.
 Altair is a Python visualization library based on Vega-Lite,
-a nice JSON schema for expressing graphs and charts."""
+a nice JSON schema for expressing graphs and charts.
+"""
 
 from datetime import date
 from typing import TYPE_CHECKING, Hashable, cast
 
-import altair as alt
 import pandas as pd
 import pyarrow as pa
 
@@ -30,14 +30,14 @@ from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProt
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from altair.vegalite.v4.api import Chart
+    from altair import Chart
 
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.arrow import Data
 
 
 class LegacyAltairMixin:
-    @gather_metrics
+    @gather_metrics("_legacy_line_chart")
     def _legacy_line_chart(
         self,
         data: "Data" = None,
@@ -73,6 +73,10 @@ class LegacyAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -94,7 +98,7 @@ class LegacyAltairMixin:
             "line_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    @gather_metrics
+    @gather_metrics("_legacy_area_chart")
     def _legacy_area_chart(
         self,
         data: "Data" = None,
@@ -129,6 +133,10 @@ class LegacyAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -150,7 +158,7 @@ class LegacyAltairMixin:
             "area_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    @gather_metrics
+    @gather_metrics("_legacy_bar_chart")
     def _legacy_bar_chart(
         self,
         data: "Data" = None,
@@ -185,6 +193,10 @@ class LegacyAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(50, 3),
         ...     columns=["a", "b", "c"])
@@ -206,7 +218,7 @@ class LegacyAltairMixin:
             "bar_chart", vega_lite_chart_proto, last_index=last_index
         )
 
-    @gather_metrics
+    @gather_metrics("_legacy_altair_chart")
     def _legacy_altair_chart(
         self, altair_chart: "Chart", use_container_width: bool = False
     ) -> "DeltaGenerator":
@@ -214,7 +226,7 @@ class LegacyAltairMixin:
 
         Parameters
         ----------
-        altair_chart : altair.vegalite.v4.api.Chart
+        altair_chart : altair.Chart
             The Altair chart object to display.
 
         use_container_width : bool
@@ -224,6 +236,7 @@ class LegacyAltairMixin:
         Example
         -------
 
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>> import altair as alt
@@ -284,6 +297,8 @@ def _is_date_column(df: pd.DataFrame, name: Hashable) -> bool:
 
 
 def generate_chart(chart_type, data, width: int = 0, height: int = 0):
+    import altair as alt
+
     if data is None:
         # Use an empty-ish dict because if we use None the x axis labels rotate
         # 90 degrees. No idea why. Need to debug.
@@ -360,7 +375,8 @@ def marshall(
 
     def id_transform(data):
         """Altair data transformer that returns a fake named dataset with the
-        object id."""
+        object id.
+        """
         datasets[id(data)] = data
         return {"name": str(id(data))}
 

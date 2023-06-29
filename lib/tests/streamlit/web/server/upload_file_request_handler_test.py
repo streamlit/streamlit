@@ -65,11 +65,14 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         # doesn't include a utility for building them. We then use self.fetch()
         # to actually send the request to the test server.
         req = requests.Request(
-            method="POST", url=self.get_url("/upload_file"), files=params
+            method="POST", url=self.get_url("/_stcore/upload_file"), files=params
         ).prepare()
 
         return self.fetch(
-            "/upload_file", method=req.method, headers=req.headers, body=req.body
+            "/_stcore/upload_file",
+            method=req.method,
+            headers=req.headers,
+            body=req.body,
         )
 
     def test_upload_one_file(self):
@@ -156,11 +159,14 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
         # doesn't include a utility for building them. We then use self.fetch()
         # to actually send the request to the test server.
         req = requests.Request(
-            method="POST", url=self.get_url("/upload_file"), files=params
+            method="POST", url=self.get_url("/_stcore/upload_file"), files=params
         ).prepare()
 
         return self.fetch(
-            "/upload_file", method=req.method, headers=req.headers, body=req.body
+            "/_stcore/upload_file",
+            method=req.method,
+            headers=req.headers,
+            body=req.body,
         )
 
     def test_upload_one_file(self):

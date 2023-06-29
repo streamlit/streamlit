@@ -117,6 +117,7 @@ function getElementNextToText(text) {
   return cy
     .get("[data-testid='stText']")
     .contains(text)
+      .parent()
     .parent()
     .next();
 }

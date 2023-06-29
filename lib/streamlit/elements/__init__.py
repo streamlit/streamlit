@@ -15,6 +15,7 @@
 WIDGETS = [
     "button",
     "camera_input",
+    "chat_input",
     "checkbox",
     "color_picker",
     "component_instance",
@@ -41,6 +42,7 @@ NONWIDGET_ELEMENTS = [
     "arrow_line_chart",
     "arrow_table",
     "arrow_vega_lite_chart",
+    "audio",
     "balloons",
     "bar_chart",
     "bokeh_chart",
@@ -53,6 +55,7 @@ NONWIDGET_ELEMENTS = [
     "graphviz_chart",
     "heading",
     "iframe",
+    "imgs",
     "json",
     "legacy_altair",
     "legacy_data_frame",
@@ -67,10 +70,6 @@ NONWIDGET_ELEMENTS = [
     "table",
     "text",
     "vega_lite_chart",
-    "write",
-]
-FILESYSTEM_ELEMENTS = [
-    "audio",
-    "imgs",
     "video",
+    "write",
 ]

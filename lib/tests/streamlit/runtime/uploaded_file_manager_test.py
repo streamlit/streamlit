@@ -87,7 +87,7 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.mgr.remove_session_files("non-report")
 
         # Add two files with different session IDs, but the same widget ID.
-        f1 = self.mgr.add_file("session1", "widget", FILE_1)
+        self.mgr.add_file("session1", "widget", FILE_1)
         f2 = self.mgr.add_file("session2", "widget", FILE_1)
 
         self.mgr.remove_files("session1", "widget")
@@ -99,8 +99,8 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.mgr.remove_session_files("non-report")
 
         # Add two files with different session IDs, but the same widget ID.
-        f1 = self.mgr.add_file("session1", "widget1", FILE_1)
-        f2 = self.mgr.add_file("session1", "widget2", FILE_1)
+        self.mgr.add_file("session1", "widget1", FILE_1)
+        self.mgr.add_file("session1", "widget2", FILE_1)
         f3 = self.mgr.add_file("session2", "widget", FILE_1)
 
         self.mgr.remove_session_files("session1")

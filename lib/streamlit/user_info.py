@@ -28,9 +28,7 @@ def _get_user_info() -> UserInfo:
 
 
 class UserInfoProxy(Mapping[str, Optional[str]]):
-    """
-    A dict like proxy object for accessing information about current user.
-    """
+    """A dict like proxy object for accessing information about current user."""
 
     def __getitem__(self, key: str) -> Optional[str]:
         return _get_user_info()[key]

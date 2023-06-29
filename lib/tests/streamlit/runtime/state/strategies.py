@@ -14,11 +14,8 @@
 
 from hypothesis import strategies as hst
 
-from streamlit.runtime.state.session_state import (
-    GENERATED_WIDGET_KEY_PREFIX,
-    SessionState,
-    WidgetMetadata,
-)
+from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX
+from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
 
 ASCII = list("abcdefghijklmnopqrstuvwxyz0123456789_-")
 
@@ -26,13 +23,11 @@ USER_KEY = hst.one_of(hst.text(alphabet=ASCII, min_size=1), hst.integers().map(s
 
 NEW_SESSION_STATE = hst.dictionaries(keys=USER_KEY, values=hst.integers())
 
-UNKEYED_WIDGET_IDS = hst.uuids().map(
-    lambda s: f"{GENERATED_WIDGET_KEY_PREFIX}-{s}-None"
-)
+UNKEYED_WIDGET_IDS = hst.uuids().map(lambda s: f"{GENERATED_WIDGET_ID_PREFIX}-{s}-None")
 
 
 def as_keyed_widget_id(raw_wid, key):
-    return f"{GENERATED_WIDGET_KEY_PREFIX}-{raw_wid}-{key}"
+    return f"{GENERATED_WIDGET_ID_PREFIX}-{raw_wid}-{key}"
 
 
 def mock_metadata(widget_id: str, default_value: int) -> WidgetMetadata:

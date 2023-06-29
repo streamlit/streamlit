@@ -159,9 +159,7 @@ st._arrow_vega_lite_chart(
 df = pd.DataFrame(data, columns=["a", "b", "c"])
 
 st.write("Show streamlit theme:")
-spec["usermeta"] = {"embedOptions": {"theme": "streamlit"}}
-st._arrow_vega_lite_chart(df, spec, use_container_width=True)
+st._arrow_vega_lite_chart(df, spec, use_container_width=True, theme="streamlit")
 
 st.write("Show default theme:")
-spec["usermeta"] = {"embedOptions": {"theme": "none"}}
-st._arrow_vega_lite_chart(df, spec, use_container_width=True)
+st._arrow_vega_lite_chart(df, spec, use_container_width=True, theme=None)

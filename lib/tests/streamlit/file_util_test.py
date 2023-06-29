@@ -56,7 +56,7 @@ class FileUtilTest(unittest.TestCase):
         self.os_stat.return_value.st_size = 0
         with pytest.raises(util.Error) as e:
             with file_util.streamlit_read(FILENAME) as input:
-                data = input.read()
+                input.read()
         self.assertEqual(str(e.value), 'Read zero byte file: "/some/cache/file"')
 
     @patch("streamlit.file_util.get_streamlit_file_path", mock_get_path)
@@ -104,6 +104,25 @@ class FileUtilTest(unittest.TestCase):
             expected,
             file_util.get_project_streamlit_file_path("some", "random", "file"),
         )
+
+    def test_get_app_static_dir(self):
+        self.assertEqual(
+            file_util.get_app_static_dir("/some_path/to/app/myapp.py"),
+            "/some_path/to/app/static",
+        )
+
+    @patch("os.path.getsize", MagicMock(return_value=42))
+    @patch(
+        "os.walk",
+        MagicMock(
+            return_value=[
+                ("dir1", [], ["file1", "file2", "file3"]),
+                ("dir2", [], ["file4", "file5"]),
+            ]
+        ),
+    )
+    def test_get_directory_size(self):
+        self.assertEqual(file_util.get_directory_size("the_dir"), 42 * 5)
 
 
 class FileIsInFolderTest(unittest.TestCase):

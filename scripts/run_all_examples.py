@@ -17,7 +17,6 @@
 """Runs all the scripts in the examples folder (except this one)."""
 
 import os
-import sys
 
 import click
 

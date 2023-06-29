@@ -20,8 +20,9 @@ describe("st.help", () => {
   });
 
   it("matches the snapshot", () => {
-    cy.get(
-      ".element-container [data-testid='stDocstring']"
-    ).matchThemedSnapshots("help");
+    cy.get("[data-testid='stDocstring']").each((el, idx) => {
+      return cy.wrap(el).matchThemedSnapshots(`help-${idx}`);
+    });
   });
 });
+

@@ -14,7 +14,19 @@
 
 import os
 import threading
-from typing import Any, ItemsView, Iterator, KeysView, Mapping, Optional, ValuesView
+from copy import deepcopy
+from typing import (
+    Any,
+    Dict,
+    ItemsView,
+    Iterator,
+    KeysView,
+    List,
+    Mapping,
+    NoReturn,
+    Optional,
+    ValuesView,
+)
 
 import toml
 from blinker import Signal
@@ -22,10 +34,16 @@ from typing_extensions import Final
 
 import streamlit as st
 import streamlit.watcher.path_watcher
+from streamlit import file_util, runtime
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
-SECRETS_FILE_LOC = os.path.abspath(os.path.join(".", ".streamlit", "secrets.toml"))
+_LOGGER = get_logger(__name__)
+SECRETS_FILE_LOCS: Final[List[str]] = [
+    file_util.get_streamlit_file_path("secrets.toml"),
+    # NOTE: The order here is important! Project-level secrets should overwrite global
+    # secrets.
+    file_util.get_project_streamlit_file_path("secrets.toml"),
+]
 
 
 def _missing_attr_error_message(attr_name: str) -> str:
@@ -44,36 +62,53 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-class AttrDict(dict):  # type: ignore[type-arg]
+class AttrDict(Mapping[str, Any]):
     """
     We use AttrDict to wrap up dictionary values from secrets
     to provide dot access to nested secrets
     """
 
-    def __init__(self, *args, **kwargs) -> None:
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
+    def __init__(self, value):
+        self.__dict__["__nested_secrets__"] = dict(value)
 
     @staticmethod
     def _maybe_wrap_in_attr_dict(value) -> Any:
-        if not isinstance(value, dict):
+        if not isinstance(value, Mapping):
             return value
         else:
-            return AttrDict(**value)
+            return AttrDict(value)
+
+    def __len__(self) -> int:
+        return len(self.__nested_secrets__)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.__nested_secrets__)
+
+    def __getitem__(self, key: str) -> Any:
+        try:
+            value = self.__nested_secrets__[key]
+            return self._maybe_wrap_in_attr_dict(value)
+        except KeyError:
+            raise KeyError(_missing_key_error_message(key))
 
     def __getattr__(self, attr_name: str) -> Any:
         try:
-            value = super(AttrDict, self).__getitem__(attr_name)
+            value = self.__nested_secrets__[attr_name]
             return self._maybe_wrap_in_attr_dict(value)
         except KeyError:
             raise AttributeError(_missing_attr_error_message(attr_name))
 
-    def __getitem__(self, key: str) -> Any:
-        try:
-            value = super(AttrDict, self).__getitem__(key)
-            return self._maybe_wrap_in_attr_dict(value)
-        except KeyError:
-            raise KeyError(_missing_key_error_message(key))
+    def __repr__(self):
+        return repr(self.__nested_secrets__)
+
+    def __setitem__(self, key, value) -> NoReturn:
+        raise TypeError("Secrets does not support item assignment.")
+
+    def __setattr__(self, key, value) -> NoReturn:
+        raise TypeError("Secrets does not support attribute assignment.")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return deepcopy(self.__nested_secrets__)
 
 
 class Secrets(Mapping[str, Any]):
@@ -83,27 +118,32 @@ class Secrets(Mapping[str, Any]):
     Safe to use from multiple threads.
     """
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_paths: List[str]):
         # Our secrets dict.
         self._secrets: Optional[Mapping[str, Any]] = None
         self._lock = threading.RLock()
-        self._file_watcher_installed = False
-        self._file_path = file_path
-        self._file_change_listener = Signal(
-            doc="Emitted when the `secrets.toml` file has been changed."
+        self._file_watchers_installed = False
+        self._file_paths = file_paths
+
+        self.file_change_listener = Signal(
+            doc="Emitted when a `secrets.toml` file has been changed."
         )
 
-    def load_if_toml_exists(self) -> None:
-        """Load secrets.toml from disk if it exists. If it doesn't exist,
-        no exception will be raised. (If the file exists but is malformed,
+    def load_if_toml_exists(self) -> bool:
+        """Load secrets.toml files from disk if they exists. If none exist,
+        no exception will be raised. (If a file exists but is malformed,
         an exception *will* be raised.)
+
+        Returns True if a secrets.toml file was successfully parsed, False otherwise.
 
         Thread-safe.
         """
         try:
             self._parse(print_exceptions=False)
+            return True
         except FileNotFoundError:
-            pass
+            # No secrets.toml files exist. That's fine.
+            return False
 
     def _reset(self) -> None:
         """Clear the secrets dictionary and remove any secrets that were
@@ -120,7 +160,7 @@ class Secrets(Mapping[str, Any]):
             self._secrets = None
 
     def _parse(self, print_exceptions: bool) -> Mapping[str, Any]:
-        """Parse our secrets.toml file if it's not already parsed.
+        """Parse our secrets.toml files if they're not already parsed.
         This function is safe to call from multiple threads.
 
         Parameters
@@ -145,33 +185,53 @@ class Secrets(Mapping[str, Any]):
             if self._secrets is not None:
                 return self._secrets
 
-            try:
-                with open(self._file_path, encoding="utf-8") as f:
-                    secrets_file_str = f.read()
-            except FileNotFoundError:
-                if print_exceptions:
-                    st.error(f"Secrets file not found. Expected at: {self._file_path}")
-                raise
+            # It's fine for a user to only have one secrets.toml file defined, so
+            # we ignore individual FileNotFoundErrors when attempting to read files
+            # below and only raise an exception if we weren't able read *any* secrets
+            # file.
+            found_secrets_file = False
+            secrets = {}
 
-            try:
-                secrets = toml.loads(secrets_file_str)
-            except:
+            for path in self._file_paths:
+                try:
+                    with open(path, encoding="utf-8") as f:
+                        secrets_file_str = f.read()
+                    found_secrets_file = True
+                except FileNotFoundError:
+                    continue
+
+                try:
+                    secrets.update(toml.loads(secrets_file_str))
+                except:
+                    if print_exceptions:
+                        st.error(f"Error parsing secrets file at {path}")
+                    raise
+
+            if not found_secrets_file:
+                err_msg = f"No secrets files found. Valid paths for a secrets.toml file are: {', '.join(self._file_paths)}"
                 if print_exceptions:
-                    st.error("Error parsing Secrets file.")
-                raise
+                    st.error(err_msg)
+                raise FileNotFoundError(err_msg)
+
+            if len([p for p in self._file_paths if os.path.exists(p)]) > 1:
+                _LOGGER.info(
+                    f"Secrets found in multiple locations: {', '.join(self._file_paths)}. "
+                    "When multiple secret.toml files exist, local secrets will take precedence over global secrets."
+                )
 
             for k, v in secrets.items():
                 self._maybe_set_environment_variable(k, v)
 
             self._secrets = secrets
-            self._maybe_install_file_watcher()
+            self._maybe_install_file_watchers()
 
             return self._secrets
 
     @staticmethod
     def _maybe_set_environment_variable(k: Any, v: Any) -> None:
         """Add the given key/value pair to os.environ if the value
-        is a string, int, or float."""
+        is a string, int, or float.
+        """
         value_type = type(v)
         if value_type in (str, int, float):
             os.environ[k] = str(v)
@@ -179,38 +239,43 @@ class Secrets(Mapping[str, Any]):
     @staticmethod
     def _maybe_delete_environment_variable(k: Any, v: Any) -> None:
         """Remove the given key/value pair from os.environ if the value
-        is a string, int, or float."""
+        is a string, int, or float.
+        """
         value_type = type(v)
         if value_type in (str, int, float) and os.environ.get(k) == v:
             del os.environ[k]
 
-    def _maybe_install_file_watcher(self) -> None:
+    def _maybe_install_file_watchers(self) -> None:
         with self._lock:
-            if self._file_watcher_installed:
+            if self._file_watchers_installed:
                 return
 
-            # We force our watcher_type to 'poll' because Streamlit Cloud
-            # stores `secrets.toml` in a virtual filesystem that is
-            # incompatible with watchdog.
-            streamlit.watcher.path_watcher.watch_file(
-                self._file_path,
-                self._on_secrets_file_changed,
-                watcher_type="poll",
-            )
+            for path in self._file_paths:
+                try:
+                    streamlit.watcher.path_watcher.watch_file(
+                        path,
+                        self._on_secrets_file_changed,
+                        watcher_type="poll",
+                    )
+                except FileNotFoundError:
+                    # A user may only have one secrets.toml file defined, so we'd expect
+                    # FileNotFoundErrors to be raised when attempting to install a
+                    # watcher on the nonexistent ones.
+                    pass
 
-            # We set file_watcher_installed to True even if watch_file
-            # returns False to avoid repeatedly trying to install it.
-            self._file_watcher_installed = True
+            # We set file_watchers_installed to True even if the installation attempt
+            # failed to avoid repeatedly trying to install it.
+            self._file_watchers_installed = True
 
-    def _on_secrets_file_changed(self, _) -> None:
+    def _on_secrets_file_changed(self, changed_file_path) -> None:
         with self._lock:
-            LOGGER.debug(f"Secrets file {self._file_path} changed, reloading")
+            _LOGGER.debug("Secrets file %s changed, reloading", changed_file_path)
             self._reset()
             self._parse(print_exceptions=True)
 
         # Emit a signal to notify receivers that the `secrets.toml` file
         # has been changed.
-        self._file_change_listener.send()
+        self.file_change_listener.send()
 
     def __getattr__(self, key: str) -> Any:
         """Return the value with the given key. If no such key
@@ -220,10 +285,10 @@ class Secrets(Mapping[str, Any]):
         """
         try:
             value = self._parse(True)[key]
-            if not isinstance(value, dict):
+            if not isinstance(value, Mapping):
                 return value
             else:
-                return AttrDict(**value)
+                return AttrDict(value)
         # We add FileNotFoundError since __getattr__ is expected to only raise
         # AttributeError. Without handling FileNotFoundError, unittests.mocks
         # fails during mock creation on Python3.9
@@ -238,15 +303,21 @@ class Secrets(Mapping[str, Any]):
         """
         try:
             value = self._parse(True)[key]
-            if not isinstance(value, dict):
+            if not isinstance(value, Mapping):
                 return value
             else:
-                return AttrDict(**value)
+                return AttrDict(value)
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
     def __repr__(self) -> str:
+        # If the runtime is NOT initialized, it is a method call outside
+        # the streamlit app, so we avoid reading the secrets file as it may not exist.
+        # If the runtime is initialized, display the contents of the file and
+        # the file must already exist.
         """A string representation of the contents of the dict. Thread-safe."""
+        if not runtime.exists():
+            return f"{self.__class__.__name__}(file_paths={self._file_paths!r})"
         return repr(self._parse(True))
 
     def __len__(self) -> int:
@@ -278,4 +349,4 @@ class Secrets(Mapping[str, Any]):
         return iter(self._parse(True))
 
 
-secrets_singleton: Final = Secrets(SECRETS_FILE_LOC)
+secrets_singleton: Final = Secrets(SECRETS_FILE_LOCS)

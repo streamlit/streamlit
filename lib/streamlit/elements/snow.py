@@ -22,12 +22,14 @@ if TYPE_CHECKING:
 
 
 class SnowMixin:
-    @gather_metrics
+    @gather_metrics("snow")
     def snow(self) -> "DeltaGenerator":
         """Draw celebratory snowfall.
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.snow()
 
         ...then watch your app and get ready for a cool celebration!

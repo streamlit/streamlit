@@ -11,23 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os.path
 import sys
 import unittest
 from io import StringIO
+from unittest import IsolatedAsyncioTestCase
 from unittest.mock import Mock, patch
 
 import matplotlib
+import pytest
 
 from streamlit import config
-from streamlit.runtime.secrets import SECRETS_FILE_LOC
-from streamlit.runtime.session_data import SessionData
 from streamlit.web import bootstrap
-from streamlit.web.bootstrap import NEW_VERSION_TEXT
+from streamlit.web.bootstrap import (
+    NEW_VERSION_TEXT,
+    _fix_pydantic_duplicate_validators_error,
+)
 from tests import testutil
-from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
-
-report = SessionData("the/path", "test command line")
+from tests.testutil import patch_config_options, should_skip_pydantic_tests
 
 
 class BootstrapTest(unittest.TestCase):
@@ -63,6 +64,55 @@ class BootstrapTest(unittest.TestCase):
         sys.platform = ORIG_PLATFORM
 
 
+class BootstrapPydanticFixTest(unittest.TestCase):
+    def pydantic_model_definition(self):
+        from pydantic import BaseModel, root_validator, validator
+
+        class UserModel(BaseModel):
+            name: str
+            username: str
+            password1: str
+            password2: str
+
+            @validator("name")
+            def name_must_contain_space(cls, v):
+                if " " not in v:
+                    raise ValueError("must contain a space")
+                return v.title()
+
+            @root_validator()
+            def passwords_should_match(cls, values):
+                if values["password1"] != values["password2"]:
+                    raise ValueError("passwords do not match")
+                return values
+
+        UserModel(
+            name="John Doe",
+            username="johndoe",
+            password1="abcd",
+            password2="abcd",
+        )
+
+    @pytest.mark.skipif(
+        should_skip_pydantic_tests(), reason="We test fix only for pydantic 1.*"
+    )
+    @patch("pydantic.class_validators.in_ipython", Mock(return_value=False))
+    def test_fix_pydantic_crash(self):
+        import pydantic
+
+        # Check that without fix it crashes when model with validator
+        # defined two times (we emulate Streamlit rerun).
+        with self.assertRaises(pydantic.errors.ConfigError):
+            self.pydantic_model_definition()
+            self.pydantic_model_definition()
+
+        _fix_pydantic_duplicate_validators_error()
+
+        # Check that after fix model could be redefined without exception.
+        self.pydantic_model_definition()
+        self.pydantic_model_definition()
+
+
 class BootstrapPrintTest(IsolatedAsyncioTestCase):
     """Test bootstrap.py's printing functions.
 
@@ -92,10 +142,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(True)
 
         out = sys.stdout.getvalue()
-        self.assertTrue(
-            "Welcome to Streamlit. Check out our demo in your browser." in out
-        )
-        self.assertTrue("URL: http://the-address" in out)
+        self.assertIn("Welcome to Streamlit. Check out our demo in your browser.", out)
+        self.assertIn("URL: http://the-address", out)
 
     def test_print_new_version_message(self):
         with patch(
@@ -118,8 +166,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("You can now view your Streamlit app in your browser." in out)
-        self.assertTrue("URL: http://the-address" in out)
+        self.assertIn("You can now view your Streamlit app in your browser.", out)
+        self.assertIn("URL: http://the-address", out)
 
     @patch("streamlit.net_util.get_external_ip")
     @patch("streamlit.net_util.get_internal_ip")
@@ -140,8 +188,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Network URL: http://internal-ip" in out)
-        self.assertTrue("External URL: http://external-ip" in out)
+        self.assertIn("Network URL: http://internal-ip", out)
+        self.assertIn("External URL: http://external-ip", out)
 
     @patch("streamlit.net_util.get_external_ip")
     @patch("streamlit.net_util.get_internal_ip")
@@ -164,8 +212,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Network URL: http://internal-ip" in out)
-        self.assertTrue("External URL: http://external-ip" not in out)
+        self.assertIn("Network URL: http://internal-ip", out)
+        self.assertNotIn("External URL: http://external-ip", out)
 
     @patch("streamlit.net_util.get_external_ip")
     @patch("streamlit.net_util.get_internal_ip")
@@ -188,8 +236,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Network URL: http://internal-ip" not in out)
-        self.assertTrue("External URL: http://external-ip" in out)
+        self.assertNotIn("Network URL: http://internal-ip", out)
+        self.assertIn("External URL: http://external-ip", out)
 
     @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_local(self, mock_get_internal_ip):
@@ -208,8 +256,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Local URL: http://localhost" in out)
-        self.assertTrue("Network URL: http://internal-ip" in out)
+        self.assertIn("Local URL: http://localhost", out)
+        self.assertIn("Network URL: http://internal-ip", out)
 
     @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_port(self, mock_get_internal_ip):
@@ -232,8 +280,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Local URL: http://localhost:9988" in out)
-        self.assertTrue("Network URL: http://internal-ip:9988" in out)
+        self.assertIn("Local URL: http://localhost:9988", out)
+        self.assertIn("Network URL: http://internal-ip:9988", out)
 
     @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_base(self, mock_get_internal_ip):
@@ -257,8 +305,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Local URL: http://localhost:8501/foo" in out)
-        self.assertTrue("Network URL: http://internal-ip:8501/foo" in out)
+        self.assertIn("Local URL: http://localhost:8501/foo", out)
+        self.assertIn("Network URL: http://internal-ip:8501/foo", out)
 
     @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_base_no_internal(self, mock_get_internal_ip):
@@ -282,8 +330,25 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             bootstrap._print_url(False)
 
         out = sys.stdout.getvalue()
-        self.assertTrue("Local URL: http://localhost:8501/foo" in out)
-        self.assertTrue("Network URL: http://internal-ip:8501/foo" not in out)
+        self.assertIn("Local URL: http://localhost:8501/foo", out)
+        self.assertNotIn("Network URL: http://internal-ip:8501/foo", out)
+
+    @patch("streamlit.net_util.get_internal_ip", return_value="internal-ip")
+    def test_print_urls_ssl(self, mock_get_internal_ip):
+        with patch_config_options(
+            {
+                "server.headless": False,
+                "server.port": 9988,
+                "global.developmentMode": False,
+                "server.sslCertFile": "/tmp/aa",
+                "server.sslKeyFile": "/tmp/aa",
+            }
+        ):
+            bootstrap._print_url(False)
+
+        out = sys.stdout.getvalue()
+        self.assertIn("Local URL: https://localhost:9988", out)
+        self.assertIn("Network URL: https://internal-ip:9988", out)
 
     def test_print_socket(self):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
@@ -312,9 +377,54 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
         bootstrap._maybe_print_old_git_warning("main_script_path")
         out = sys.stdout.getvalue()
-        self.assertTrue(
-            "Streamlit requires Git 2.7.0 or later, but you have 1.2.3." in out
-        )
+        self.assertIn("Streamlit requires Git 2.7.0 or later, but you have 1.2.3.", out)
+
+    @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
+    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
+    def test_maybe_print_static_folder_warning_called_once_on_server_start(
+        self, mock_maybe_print_static_folder_warning
+    ):
+        """We should trigger _maybe_print_static_folder_warning on server start."""
+        bootstrap._on_server_start(Mock())
+        mock_maybe_print_static_folder_warning.assert_called_once()
+
+    @patch("os.path.isdir", Mock(return_value=False))
+    @patch("click.secho")
+    def test_maybe_print_static_folder_warning_if_folder_doesnt_exist(self, mock_echo):
+        """We should print a warning when static folder does not exist."""
+
+        with testutil.patch_config_options({"server.enableStaticServing": True}):
+            bootstrap._maybe_print_static_folder_warning("app_root/main_script_path")
+            mock_echo.assert_called_once_with(
+                "WARNING: Static file serving is enabled, but no static folder found "
+                f"at {os.path.abspath('app_root/static')}. To disable static file "
+                f"serving, set server.enableStaticServing to false.",
+                fg="yellow",
+            )
+
+    @patch("os.path.isdir", Mock(return_value=True))
+    @patch(
+        "streamlit.file_util.get_directory_size",
+        Mock(return_value=(2 * bootstrap.MAX_APP_STATIC_FOLDER_SIZE)),
+    )
+    @patch("click.secho")
+    def test_maybe_print_static_folder_warning_if_folder_is_too_large(self, mock_echo):
+        """
+        We should print a warning and disable static files serving when static
+        folder total size is too large.
+        """
+
+        with testutil.patch_config_options(
+            {"server.enableStaticServing": True}
+        ), patch.object(config, "set_option") as mock_set_option:
+            bootstrap._maybe_print_static_folder_warning("app_root/main_script_path")
+            mock_echo.assert_called_once_with(
+                "WARNING: Static folder size is larger than 1GB. "
+                "Static file serving has been disabled.",
+                fg="yellow",
+            )
+            mock_set_option.assert_called_once_with("server.enableStaticServing", False)
 
     @patch("streamlit.config.get_config_options")
     def test_load_config_options(self, patched_get_config_options):
@@ -344,6 +454,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         )
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
@@ -351,6 +462,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         mock_load_secrets.assert_called_once()
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap.LOGGER.error")
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_error):
@@ -360,7 +472,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
         bootstrap._on_server_start(Mock())
         mock_log_error.assert_called_once_with(
-            f"Failed to load {SECRETS_FILE_LOC}",
+            "Failed to load secrets.toml file",
             exc_info=mock_exception,
         )
 

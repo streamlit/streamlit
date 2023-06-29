@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import typing
 from abc import abstractmethod
-from typing import List
+from typing import List, NamedTuple
+
+from typing_extensions import Protocol, runtime_checkable
 
 from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
 
 
-class CacheStat(typing.NamedTuple):
+class CacheStat(NamedTuple):
     """Describes a single cache entry.
 
     Properties
@@ -61,7 +62,8 @@ class CacheStat(typing.NamedTuple):
         metric_point.gauge_value.int_value = self.byte_length
 
 
-class CacheStatsProvider:
+@runtime_checkable
+class CacheStatsProvider(Protocol):
     @abstractmethod
     def get_stats(self) -> List[CacheStat]:
         raise NotImplementedError

@@ -22,7 +22,7 @@ describe("st.radio", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stRadio").should("have.length", 9);
+    cy.get(".stRadio").should("have.length", 10);
 
     cy.get(".stRadio").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("radio" + idx);

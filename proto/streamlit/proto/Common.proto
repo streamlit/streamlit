@@ -42,6 +42,10 @@ message UInt32Array {
   repeated uint32 data = 1;
 }
 
+message StringTriggerValue {
+  optional string data = 1;
+}
+
 // Information on a file uploaded via the file_uploader widget.
 message UploadedFileInfo {
   sint64 id = 1;

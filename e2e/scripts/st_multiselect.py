@@ -16,6 +16,7 @@ from typing import Any, List
 
 import streamlit as st
 from streamlit import runtime
+from tests.streamlit import pyspark_mocks
 
 
 def set_multiselect_9_to_have_bad_state():
@@ -79,3 +80,5 @@ if runtime.exists():
     st.multiselect("multiselect 11", options, key="multiselect11", on_change=on_change)
     st.text(f"value 11: {st.session_state.multiselect11}")
     st.text(f"multiselect changed: {'multiselect_changed' in st.session_state}")
+
+st.multiselect("PySpark DataFrame", options=pyspark_mocks.DataFrame())  # type: ignore

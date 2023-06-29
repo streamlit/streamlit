@@ -18,7 +18,7 @@ from typing import Optional
 
 # Regular expression for process_gitblob_url
 _GITBLOB_RE = re.compile(
-    r"(?P<base>https:\/\/?(gist.)?github.com\/)"
+    r"(?P<base>https:\/\/?(gist\.)?github.com\/)"
     r"(?P<account>([\w\.]+\/){1,2})"
     r"(?P<blob_or_raw>(blob|raw))?"
     r"(?P<suffix>(.+)?)"

@@ -100,7 +100,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
     def test_set_page_config_sidebar_invalid(self):
         with self.assertRaises(StreamlitAPIException) as e:
             st.set_page_config(initial_sidebar_state="INVALID")
-        self.assertEquals(
+        self.assertEqual(
             str(e.exception),
             '`initial_sidebar_state` must be "auto" or "expanded" or "collapsed" (got "INVALID")',
         )
@@ -130,7 +130,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException) as e:
             menu_items = {"report a bug": "", "GET HELP": "", "about": ""}
             st.set_page_config(menu_items=menu_items)
-        self.assertEquals(str(e.exception), '"" is a not a valid URL!')
+        self.assertEqual(str(e.exception), '"" is a not a valid URL!')
 
     def test_set_page_config_menu_items_none(self):
         menu_items = {"report a bug": None, "GET HELP": None, "about": None}
@@ -144,7 +144,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException) as e:
             menu_items = {"invalid": "fdsa"}
             st.set_page_config(menu_items=menu_items)
-        self.assertEquals(
+        self.assertEqual(
             str(e.exception),
             'We only accept the keys: "Get help", "Report a bug", and "About" '
             '("invalid" is not a valid key.)',

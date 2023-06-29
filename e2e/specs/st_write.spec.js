@@ -20,7 +20,7 @@ describe("st.write", () => {
   });
 
   beforeEach(() => {
-    cy.get(".element-container").should("have.length", 3);
+    cy.get(".element-container").should("have.length", 4);
   });
 
   it("displays markdown", () => {
@@ -33,6 +33,10 @@ describe("st.write", () => {
     cy.getIndexed(".element-container .stMarkdown p", 1).contains(
       "This <b>HTML tag</b> is escaped!"
     );
+  });
+
+  it("st.write should display pyspark.sql.DataFrame as st.dataframe", () => {
+    cy.get(".stDataFrame").should("have.length", 1);
   });
 
   it("allows HTML if defined explicitly", () => {

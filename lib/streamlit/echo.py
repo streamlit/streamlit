@@ -16,7 +16,7 @@ import contextlib
 import re
 import textwrap
 import traceback
-from typing import Iterable, List, Optional
+from typing import Iterable, Optional
 
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -24,7 +24,7 @@ _SPACES_RE = re.compile("\\s*")
 _EMPTY_LINE_RE = re.compile("\\s*\n")
 
 
-@gather_metrics
+@gather_metrics("echo")
 @contextlib.contextmanager
 def echo(code_location="above"):
     """Use in a `with` block to draw some code on the app, then execute it.
@@ -37,12 +37,12 @@ def echo(code_location="above"):
 
     Example
     -------
-
+    >>> import streamlit as st
+    >>>
     >>> with st.echo():
     >>>     st.write('This code will be printed')
 
     """
-
     from streamlit import code, empty, source_util, warning
 
     if code_location == "below":

@@ -33,7 +33,7 @@ EMPTY_MAP: Final[Mapping[str, Any]] = {
 
 
 class PydeckMixin:
-    @gather_metrics
+    @gather_metrics("pydeck_chart")
     def pydeck_chart(
         self,
         pydeck_obj: Optional["Deck"] = None,
@@ -49,14 +49,19 @@ class PydeckMixin:
         - DeckGL docs: https://github.com/uber/deck.gl/tree/master/docs
         - DeckGL JSON docs: https://github.com/uber/deck.gl/tree/master/modules/json
 
-        When using this command, we advise all users to use a personal Mapbox
-        token. This ensures the map tiles used in this chart are more
-        robust. You can do this with the mapbox.token config option.
+        When using this command, Mapbox provides the map tiles to render map
+        content. Note that Mapbox is a third-party product, the use of which is
+        governed by Mapbox's Terms of Use.
 
-        To get a token for yourself, create an account at
-        https://mapbox.com. It's free! (for moderate usage levels). For more info
-        on how to set config options, see
-        https://docs.streamlit.io/library/advanced-features/configuration#set-configuration-options
+        Mapbox requires users to register and provide a token before users can
+        request map tiles. Currently, Streamlit provides this token for you, but
+        this could change at any time. We strongly recommend all users create and
+        use their own personal Mapbox token to avoid any disruptions to their
+        experience. You can do this with the ``mapbox.token`` config option.
+
+        To get a token for yourself, create an account at https://mapbox.com.
+        For more info on how to set config options, see
+        https://docs.streamlit.io/library/advanced-features/configuration
 
         Parameters
         ----------
@@ -69,7 +74,12 @@ class PydeckMixin:
         Here's a chart using a HexagonLayer and a ScatterplotLayer. It uses either the
         light or dark map style, based on which Streamlit theme is currently active:
 
-        >>> df = pd.DataFrame(
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> import pydeck as pdk
+        >>>
+        >>> chart_data = pd.DataFrame(
         ...    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
         ...    columns=['lat', 'lon'])
         >>>
@@ -84,7 +94,7 @@ class PydeckMixin:
         ...     layers=[
         ...         pdk.Layer(
         ...            'HexagonLayer',
-        ...            data=df,
+        ...            data=chart_data,
         ...            get_position='[lon, lat]',
         ...            radius=200,
         ...            elevation_scale=4,
@@ -94,7 +104,7 @@ class PydeckMixin:
         ...         ),
         ...         pdk.Layer(
         ...             'ScatterplotLayer',
-        ...             data=df,
+        ...             data=chart_data,
         ...             get_position='[lon, lat]',
         ...             get_color='[200, 30, 0, 160]',
         ...             get_radius=200,
@@ -103,7 +113,7 @@ class PydeckMixin:
         ... ))
 
         .. output::
-           https://doc-pydeck-chart.streamlitapp.com/
+           https://doc-pydeck-chart.streamlit.app/
            height: 530px
 
         .. note::

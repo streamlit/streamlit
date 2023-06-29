@@ -163,8 +163,8 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
         try:
             with open(filename, "rb") as f:
                 return f.read()
-        except BaseException as e:
-            raise MediaFileStorageError(f"Error opening '{filename}'") from e
+        except Exception as ex:
+            raise MediaFileStorageError(f"Error opening '{filename}'") from ex
 
     def get_stats(self) -> List[CacheStat]:
         # We operate on a copy of our dict, to avoid race conditions

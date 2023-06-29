@@ -52,13 +52,16 @@ from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STR
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
-from typing import Any as _Any
-
 from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
 from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
 from streamlit.runtime.caching import (
-    singleton as _singleton,
-    memo as _memo,
+    cache_resource as _cache_resource,
+    cache_data as _cache_data,
+    experimental_singleton as _experimental_singleton,
+    experimental_memo as _experimental_memo,
+)
+from streamlit.runtime.connection_factory import (
+    connection_factory as _connection_factory,
 )
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
@@ -68,11 +71,11 @@ from streamlit.commands.query_params import (
     get_query_params as _get_query_params,
     set_query_params as _set_query_params,
 )
-from streamlit.elements.show import show as _show
 
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
 
+import streamlit.column_config as _column_config
 from streamlit.echo import echo as echo
 from streamlit.runtime.legacy_caching import cache as _cache
 from streamlit.elements.spinner import spinner as spinner
@@ -82,7 +85,9 @@ from streamlit.commands.execution_control import (
     rerun as _rerun,
 )
 
-cache = _gather_metrics(_cache)
+# We add the metrics tracking for caching here,
+# since the actual cache function calls itself recursively
+cache = _gather_metrics("cache", _cache)
 
 
 def _update_logger() -> None:
@@ -113,13 +118,17 @@ bokeh_chart = _main.bokeh_chart
 button = _main.button
 caption = _main.caption
 camera_input = _main.camera_input
+chat_message = _main.chat_message
+chat_input = _main.chat_input
 checkbox = _main.checkbox
 code = _main.code
 columns = _main.columns
 tabs = _main.tabs
 container = _main.container
 dataframe = _main.dataframe
+data_editor = _main.data_editor
 date_input = _main.date_input
+divider = _main.divider
 download_button = _main.download_button
 expander = _main.expander
 pydeck_chart = _main.pydeck_chart
@@ -184,30 +193,26 @@ _arrow_vega_lite_chart = _main._arrow_vega_lite_chart
 
 # Config
 get_option = _config.get_option
-set_option = _gather_metrics(_config.set_user_option)
+# We add the metrics tracking here, since importing
+# gather_metrics in config causes a circular dependency
+set_option = _gather_metrics("set_option", _config.set_user_option)
 
 # Session State
 session_state = _SessionStateProxy()
 
-# Beta APIs
-beta_container = _gather_metrics(_main.beta_container)
-beta_expander = _gather_metrics(_main.beta_expander)
-beta_columns = _gather_metrics(_main.beta_columns)
+# Caching
+cache_data = _cache_data
+cache_resource = _cache_resource
+
+# Namespaces
+column_config = _column_config
 
 # Experimental APIs
 experimental_user = _UserInfoProxy()
-experimental_singleton = _singleton
-experimental_memo = _memo
-experimental_get_query_params = _gather_metrics(_get_query_params)
-experimental_set_query_params = _gather_metrics(_set_query_params)
-experimental_show = _gather_metrics(_show)
+experimental_singleton = _experimental_singleton
+experimental_memo = _experimental_memo
+experimental_get_query_params = _get_query_params
+experimental_set_query_params = _set_query_params
 experimental_rerun = _rerun
-
-
-@_gather_metrics
-def _transparent_write(*args: _Any) -> _Any:
-    """This is just st.write, but returns the arguments you passed to it."""
-    write(*args)
-    if len(args) == 1:
-        return args[0]
-    return args
+experimental_data_editor = _main.experimental_data_editor
+experimental_connection = _connection_factory

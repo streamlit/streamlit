@@ -22,7 +22,9 @@ from unittest.mock import MagicMock
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
-from streamlit.runtime.app_session import AppSession
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    MemoryCacheStorageManager,
+)
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
@@ -36,17 +38,15 @@ from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.web.server.server import MEDIA_ENDPOINT
 
 
-class FakeAppSession(AppSession):
-    def __init__(self):
-        self._session_state = SessionState()
-
-
 class DeltaGeneratorTestCase(unittest.TestCase):
-    def setUp(self, override_root=True):
+    def setUp(self):
         self.forward_msg_queue = ForwardMsgQueue()
-        self.override_root = override_root
-        self.orig_report_ctx = None
-        self.new_script_run_ctx = ScriptRunContext(
+
+        # Save our thread's current ScriptRunContext
+        self.orig_report_ctx = get_script_run_ctx()
+
+        # Create a new ScriptRunContext to use for the test.
+        self.script_run_ctx = ScriptRunContext(
             session_id="test session id",
             _enqueue=self.forward_msg_queue.enqueue,
             query_string="",
@@ -55,25 +55,20 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
-
-        if self.override_root:
-            self.orig_report_ctx = get_script_run_ctx()
-            add_script_run_ctx(threading.current_thread(), self.new_script_run_ctx)
-
-        self.app_session = FakeAppSession()
+        add_script_run_ctx(threading.current_thread(), self.script_run_ctx)
 
         # Create a MemoryMediaFileStorage instance, and the MediaFileManager
         # singleton.
         self.media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
 
         mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         mock_runtime.media_file_mgr = MediaFileManager(self.media_file_storage)
         Runtime._instance = mock_runtime
 
     def tearDown(self):
         self.clear_queue()
-        if self.override_root:
-            add_script_run_ctx(threading.current_thread(), self.orig_report_ctx)
+        add_script_run_ctx(threading.current_thread(), self.orig_report_ctx)
         Runtime._instance = None
 
     def get_message_from_queue(self, index=-1) -> ForwardMsg:

@@ -52,7 +52,7 @@ class UtilTest(unittest.TestCase):
         # could easily come back to bite us if a distracted coder tweaks the
         # implementation, I'm putting this here anyway.
         with patch("streamlit.watcher.util.open", mock_open(read_data=b"hello")) as m:
-            md5 = util.calc_md5_with_blocking_retries("foo")
+            util.calc_md5_with_blocking_retries("foo")
             m.assert_called_once_with("foo", "rb")
 
 

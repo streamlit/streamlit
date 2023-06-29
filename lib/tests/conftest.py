@@ -16,10 +16,13 @@
 Global pytest fixtures. This file is automatically run by pytest before tests
 are executed.
 """
-
-import logging
 import os
+import sys
 from unittest.mock import mock_open, patch
+
+import pytest
+
+from tests.constants import SNOWFLAKE_CREDENTIAL_FILE
 
 # Do not import any Streamlit modules here! See below for details.
 
@@ -62,12 +65,53 @@ with patch(
     source_util._cached_pages = {}
 
 
-def pytest_sessionfinish():
-    # We're not waiting for scriptrunner threads to cleanly close before ending the PyTest,
-    # which results in raised exception ValueError: I/O operation on closed file.
-    # This is well known issue in PyTest, check out these discussions for more:
-    # * https://github.com/pytest-dev/pytest/issues/5502
-    # * https://github.com/pytest-dev/pytest/issues/5282
-    # To prevent the exception from being raised on pytest_sessionfinish
-    # we disable exception raising in logging module
-    logging.raiseExceptions = False
+def pytest_addoption(parser: pytest.Parser):
+    group = parser.getgroup("streamlit")
+
+    group.addoption(
+        "--require-snowflake",
+        action="store_true",
+        help="only run tests that requires snowflake. ",
+    )
+
+
+def pytest_configure(config: pytest.Config):
+    config.addinivalue_line(
+        "markers",
+        "require_snowflake(name): mark test to run only on "
+        "when --require-snowflake option is passed to pytest",
+    )
+
+    is_require_snowflake = config.getoption("--require-snowflake", default=False)
+    if is_require_snowflake:
+        if sys.version_info[0:2] != (3, 8):
+            raise pytest.UsageError("Python 3.8 is required to run Snowflake tests")
+        try:
+            import snowflake.snowpark
+        except ImportError:
+            raise pytest.UsageError(
+                "The snowflake-snowpark-python package is not installed."
+            )
+        if not SNOWFLAKE_CREDENTIAL_FILE.exists():
+            raise pytest.UsageError(
+                f"Missing credential file: {SNOWFLAKE_CREDENTIAL_FILE}"
+            )
+
+
+def pytest_runtest_setup(item: pytest.Item):
+    is_require_snowflake = item.config.getoption("--require-snowflake", default=False)
+    has_require_snowflake_marker = bool(
+        list(item.iter_markers(name="require_snowflake"))
+    )
+
+    if is_require_snowflake and not has_require_snowflake_marker:
+        pytest.skip(
+            f"The test is skipped because it has require_snowflake marker. "
+            f"This tests are only run when --require-snowflake flag is passed to pytest. "
+            f"{item}"
+        )
+    if not is_require_snowflake and has_require_snowflake_marker:
+        pytest.skip(
+            f"The test is skipped because it does not have the right marker. "
+            f"Only tests marked with pytest.mark.require_snowflake() are run. {item}"
+        )

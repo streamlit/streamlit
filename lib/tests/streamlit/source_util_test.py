@@ -135,6 +135,8 @@ def test_get_pages(tmpdir):
         "page.py",
         # This file shouldn't appear as a page because it's hidden.
         ".hidden_file.py",
+        # This file shouldn't appear as a page because it's __init__.py, so also hidden.
+        "__init__.py",
         # This shouldn't appear because it's not a Python file.
         "not_a_page.rs",
     ]

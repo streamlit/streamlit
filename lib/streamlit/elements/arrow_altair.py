@@ -14,8 +14,11 @@
 
 """A Python wrapper around Altair.
 Altair is a Python visualization library based on Vega-Lite,
-a nice JSON schema for expressing graphs and charts."""
+a nice JSON schema for expressing graphs and charts.
+"""
+from __future__ import annotations
 
+from contextlib import nullcontext
 from datetime import date
 from enum import Enum
 from typing import (
@@ -30,10 +33,9 @@ from typing import (
     cast,
 )
 
-import altair as alt
 import pandas as pd
-from altair.vegalite.v4.api import Chart
 from pandas.api.types import infer_dtype, is_integer_dtype
+from typing_extensions import Literal
 
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
@@ -46,16 +48,9 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from altair import Chart
+
     from streamlit.delta_generator import DeltaGenerator
-
-# Create and enable streamlit theme
-STREAMLIT_THEME = {"embedOptions": {"theme": "streamlit"}}
-
-# This allows to use alt.themes.enable("streamlit") to activate Streamlit theme.
-alt.themes.register("streamlit", lambda: {"usermeta": STREAMLIT_THEME})
-# We don't want to activate the Streamlit theme for all Altair as default for now.
-# However, the Streamlit theme will be activated as default for our built-in charts.
-alt.themes.enable("none")
 
 
 class ChartType(Enum):
@@ -65,7 +60,7 @@ class ChartType(Enum):
 
 
 class ArrowAltairMixin:
-    @gather_metrics
+    @gather_metrics("_arrow_line_chart")
     def _arrow_line_chart(
         self,
         data: Data = None,
@@ -75,7 +70,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a line chart.
 
         This is syntax-sugar around st._arrow_altair_chart. The main difference
@@ -116,6 +111,10 @@ class ArrowAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -129,12 +128,12 @@ class ArrowAltairMixin:
         """
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.LINE, data, x, y, width, height)
-        marshall(proto, chart, use_container_width)
+        marshall(proto, chart, use_container_width, theme="streamlit")
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
 
-    @gather_metrics
+    @gather_metrics("_arrow_area_chart")
     def _arrow_area_chart(
         self,
         data: Data = None,
@@ -144,7 +143,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display an area chart.
 
         This is just syntax-sugar around st._arrow_altair_chart. The main difference
@@ -184,6 +183,10 @@ class ArrowAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
@@ -195,14 +198,15 @@ class ArrowAltairMixin:
            height: 220px
 
         """
+
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.AREA, data, x, y, width, height)
-        marshall(proto, chart, use_container_width)
+        marshall(proto, chart, use_container_width, theme="streamlit")
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
 
-    @gather_metrics
+    @gather_metrics("_arrow_bar_chart")
     def _arrow_bar_chart(
         self,
         data: Data = None,
@@ -212,7 +216,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a bar chart.
 
         This is just syntax-sugar around st._arrow_altair_chart. The main difference
@@ -253,6 +257,10 @@ class ArrowAltairMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(50, 3),
         ...     columns=["a", "b", "c"])
@@ -264,24 +272,26 @@ class ArrowAltairMixin:
            height: 220px
 
         """
+
         proto = ArrowVegaLiteChartProto()
         chart = _generate_chart(ChartType.BAR, data, x, y, width, height)
-        marshall(proto, chart, use_container_width)
+        marshall(proto, chart, use_container_width, theme="streamlit")
         last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
 
-    @gather_metrics
+    @gather_metrics("_arrow_altair_chart")
     def _arrow_altair_chart(
         self,
         altair_chart: Chart,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
+    ) -> DeltaGenerator:
         """Display a chart using the Altair library.
 
         Parameters
         ----------
-        altair_chart : altair.vegalite.v2.api.Chart
+        altair_chart : altair.Chart
             The Altair chart object to display.
 
         use_container_width : bool
@@ -290,7 +300,7 @@ class ArrowAltairMixin:
 
         Example
         -------
-
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>> import altair as alt
@@ -312,17 +322,22 @@ class ArrowAltairMixin:
         https://altair-viz.github.io/gallery/.
 
         """
+        if theme != "streamlit" and theme != None:
+            raise StreamlitAPIException(
+                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
+            )
         proto = ArrowVegaLiteChartProto()
         marshall(
             proto,
             altair_chart,
             use_container_width=use_container_width,
+            theme=theme,
         )
 
         return self.dg._enqueue("arrow_vega_lite_chart", proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -477,7 +492,8 @@ def _generate_chart(
     width: int = 0,
     height: int = 0,
 ) -> Chart:
-    """This function uses the chart's type, data columns and indices to figure out the chart's spec."""
+    """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
+    import altair as alt
 
     if data is None:
         # Use an empty-ish dict because if we use None the x axis labels rotate
@@ -532,13 +548,12 @@ def _generate_chart(
             color_column,
             title=color_title,
             type="nominal",
-            legend=alt.Legend(titlePadding=0, offset=10),
+            legend=alt.Legend(titlePadding=0, offset=10, orient="bottom"),
         )
         tooltips.append(alt.Tooltip(color_column, title="label"))
 
     chart = getattr(
-        # Built-in charts use the streamlit theme as default. So, we set usermeta explicitly here.
-        alt.Chart(data, width=width, height=height, usermeta=STREAMLIT_THEME),
+        alt.Chart(data, width=width, height=height),
         "mark_" + chart_type.value,
     )().encode(
         x=alt.X(
@@ -565,6 +580,7 @@ def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
     altair_chart: Chart,
     use_container_width: bool = False,
+    theme: Union[None, Literal["streamlit"]] = "streamlit",
     **kwargs: Any,
 ) -> None:
     """Marshall chart's data into proto."""
@@ -579,22 +595,28 @@ def marshall(
 
     def id_transform(data) -> Dict[str, str]:
         """Altair data transformer that returns a fake named dataset with the
-        object id."""
+        object id.
+        """
         datasets[id(data)] = data
         return {"name": str(id(data))}
 
     alt.data_transformers.register("id", id_transform)
 
-    with alt.data_transformers.enable("id"):
-        chart_dict = altair_chart.to_dict()
+    # The default altair theme has some width/height defaults defined
+    # which are not useful for Streamlit. Therefore, we change the theme to
+    # "none" to avoid those defaults.
+    with alt.themes.enable("none") if alt.themes.active == "default" else nullcontext():
+        with alt.data_transformers.enable("id"):
+            chart_dict = altair_chart.to_dict()
 
-        # Put datasets back into the chart dict but note how they weren't
-        # transformed.
-        chart_dict["datasets"] = datasets
+            # Put datasets back into the chart dict but note how they weren't
+            # transformed.
+            chart_dict["datasets"] = datasets
 
-        arrow_vega_lite.marshall(
-            vega_lite_chart,
-            chart_dict,
-            use_container_width=use_container_width,
-            **kwargs,
-        )
+            arrow_vega_lite.marshall(
+                vega_lite_chart,
+                chart_dict,
+                use_container_width=use_container_width,
+                theme=theme,
+                **kwargs,
+            )

@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, cast
+from enum import Enum
+from typing import TYPE_CHECKING, Optional, Union, cast
 
+from typing_extensions import Literal
+
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
@@ -23,65 +27,129 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
+class HeadingProtoTag(Enum):
+    TITLE_TAG = "h1"
+    HEADER_TAG = "h2"
+    SUBHEADER_TAG = "h3"
+
+
+Anchor = Optional[Union[str, Literal[False]]]
+
+
 class HeadingMixin:
-    @gather_metrics
+    @gather_metrics("header")
     def header(
-        self, body: SupportsStr, anchor: Optional[str] = None
+        self,
+        body: SupportsStr,
+        anchor: Anchor = None,
+        *,  # keyword-only arguments:
+        help: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display text in header formatting.
 
         Parameters
         ----------
         body : str
-            The text to display.
+            The text to display as Github-flavored Markdown. Syntax
+            information can be found at: https://github.github.com/gfm.
 
-        anchor : str
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+        anchor : str or False
             The anchor name of the header that can be accessed with #anchor
             in the URL. If omitted, it generates an anchor using the body.
+            If False, the anchor is not shown in the UI.
 
-        Example
-        -------
+        help : str
+            An optional tooltip that gets displayed next to the header.
+
+        Examples
+        --------
+        >>> import streamlit as st
+        >>>
         >>> st.header('This is a header')
+        >>> st.header('A header with _italics_ :blue[colors] and emojis :sunglasses:')
 
         """
-        header_proto = HeadingProto()
-        if anchor is not None:
-            header_proto.anchor = anchor
-        header_proto.body = clean_text(body)
-        header_proto.tag = "h2"
-        return self.dg._enqueue("heading", header_proto)
+        return self.dg._enqueue(
+            "heading",
+            HeadingMixin._create_heading_proto(
+                tag=HeadingProtoTag.HEADER_TAG, body=body, anchor=anchor, help=help
+            ),
+        )
 
-    @gather_metrics
+    @gather_metrics("subheader")
     def subheader(
-        self, body: SupportsStr, anchor: Optional[str] = None
+        self,
+        body: SupportsStr,
+        anchor: Anchor = None,
+        *,  # keyword-only arguments:
+        help: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display text in subheader formatting.
 
         Parameters
         ----------
         body : str
-            The text to display.
+            The text to display as Github-flavored Markdown. Syntax
+            information can be found at: https://github.github.com/gfm.
 
-        anchor : str
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+        anchor : str or False
             The anchor name of the header that can be accessed with #anchor
             in the URL. If omitted, it generates an anchor using the body.
+            If False, the anchor is not shown in the UI.
 
-        Example
-        -------
+        help : str
+            An optional tooltip that gets displayed next to the subheader.
+
+        Examples
+        --------
+        >>> import streamlit as st
+        >>>
         >>> st.subheader('This is a subheader')
+        >>> st.subheader('A subheader with _italics_ :blue[colors] and emojis :sunglasses:')
 
         """
-        subheader_proto = HeadingProto()
-        if anchor is not None:
-            subheader_proto.anchor = anchor
-        subheader_proto.body = clean_text(body)
-        subheader_proto.tag = "h3"
+        return self.dg._enqueue(
+            "heading",
+            HeadingMixin._create_heading_proto(
+                tag=HeadingProtoTag.SUBHEADER_TAG, body=body, anchor=anchor, help=help
+            ),
+        )
 
-        return self.dg._enqueue("heading", subheader_proto)
-
-    @gather_metrics
+    @gather_metrics("title")
     def title(
-        self, body: SupportsStr, anchor: Optional[str] = None
+        self,
+        body: SupportsStr,
+        anchor: Anchor = None,
+        *,  # keyword-only arguments:
+        help: Optional[str] = None,
     ) -> "DeltaGenerator":
         """Display text in title formatting.
 
@@ -91,26 +159,78 @@ class HeadingMixin:
         Parameters
         ----------
         body : str
-            The text to display.
+            The text to display as Github-flavored Markdown. Syntax
+            information can be found at: https://github.github.com/gfm.
 
-        anchor : str
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+        anchor : str or False
             The anchor name of the header that can be accessed with #anchor
             in the URL. If omitted, it generates an anchor using the body.
+            If False, the anchor is not shown in the UI.
 
-        Example
-        -------
+        help : str
+            An optional tooltip that gets displayed next to the title.
+
+        Examples
+        --------
+        >>> import streamlit as st
+        >>>
         >>> st.title('This is a title')
+        >>> st.title('A title with _italics_ :blue[colors] and emojis :sunglasses:')
 
         """
-        title_proto = HeadingProto()
-        if anchor is not None:
-            title_proto.anchor = anchor
-        title_proto.body = clean_text(body)
-        title_proto.tag = "h1"
-
-        return self.dg._enqueue("heading", title_proto)
+        return self.dg._enqueue(
+            "heading",
+            HeadingMixin._create_heading_proto(
+                tag=HeadingProtoTag.TITLE_TAG, body=body, anchor=anchor, help=help
+            ),
+        )
 
     @property
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+    @staticmethod
+    def _create_heading_proto(
+        tag: HeadingProtoTag,
+        body: SupportsStr,
+        anchor: Anchor = None,
+        help: Optional[str] = None,
+    ) -> HeadingProto:
+        proto = HeadingProto()
+        proto.tag = tag.value
+        proto.body = clean_text(body)
+        if anchor is not None:
+            if anchor is False:
+                proto.hide_anchor = True
+            elif isinstance(anchor, str):
+                proto.anchor = anchor
+            elif anchor is True:  # type: ignore
+                raise StreamlitAPIException(
+                    "Anchor parameter has invalid value: %s. "
+                    "Supported values: None, any string or False" % anchor
+                )
+            else:
+                raise StreamlitAPIException(
+                    "Anchor parameter has invalid type: %s. "
+                    "Supported values: None, any string or False"
+                    % type(anchor).__name__
+                )
+
+        if help:
+            proto.help = help
+        return proto

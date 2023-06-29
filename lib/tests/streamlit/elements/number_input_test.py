@@ -125,14 +125,6 @@ class NumberInputTest(DeltaGeneratorTestCase):
         self.assertEqual(c.format, "%f")
         self.assertEqual("%0.2f" % c.step, "0.01")
 
-    def test_value_outrange(self):
-        with pytest.raises(StreamlitAPIException) as exc_message:
-            st.number_input("the label", 11, 0, 10)
-        assert (
-            "The default `value` of 10 must lie between the `min_value` of "
-            "11 and the `max_value` of 0, inclusively." == str(exc_message.value)
-        )
-
     def test_accept_valid_formats(self):
         # note: We decided to accept %u even though it is slightly problematic.
         #       See https://github.com/streamlit/streamlit/pull/943
@@ -285,7 +277,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
     def test_label_visibility_wrong_value(self):
         with self.assertRaises(StreamlitAPIException) as e:
             st.number_input("the label", label_visibility="wrong_value")
-        self.assertEquals(
+        self.assertEqual(
             str(e.exception),
             "Unsupported label_visibility option 'wrong_value'. Valid values are "
             "'visible', 'hidden' or 'collapsed'.",
@@ -294,14 +286,14 @@ class NumberInputTest(DeltaGeneratorTestCase):
     def test_should_keep_type_of_return_value_after_rerun(self):
         # Generate widget id and reset context
         st.number_input("a number", min_value=1, max_value=100, key="number")
-        widget_id = self.new_script_run_ctx.session_state.get_widget_states()[0].id
-        self.new_script_run_ctx.reset()
+        widget_id = self.script_run_ctx.session_state.get_widget_states()[0].id
+        self.script_run_ctx.reset()
 
         # Set the state of the widgets to the test state
         widget_state = WidgetState()
         widget_state.id = widget_id
         widget_state.double_value = 42.0
-        self.new_script_run_ctx.session_state._state._new_widget_state.set_widget_from_proto(
+        self.script_run_ctx.session_state._state._new_widget_state.set_widget_from_proto(
             widget_state
         )
 
@@ -311,3 +303,33 @@ class NumberInputTest(DeltaGeneratorTestCase):
         # Assert output
         self.assertEqual(number, 42)
         self.assertEqual(type(number), int)
+
+    @parameterized.expand(
+        [
+            # Integer tests
+            (6, -10, 0),
+            (-11, -10, 0),
+            # Float tests
+            (-11.0, -10.0, 0.0),
+            (6.0, -10.0, 0.0),
+        ]
+    )
+    def test_should_raise_exception_when_default_out_of_bounds_min_and_max_defined(
+        self, value, min_value, max_value
+    ):
+        with pytest.raises(StreamlitAPIException):
+            st.number_input(
+                "My Label", value=value, min_value=min_value, max_value=max_value
+            )
+
+    def test_should_raise_exception_when_default_lt_min_and_max_is_none(self):
+        value = -11.0
+        min_value = -10.0
+        with pytest.raises(StreamlitAPIException):
+            st.number_input("My Label", value=value, min_value=min_value)
+
+    def test_should_raise_exception_when_default_gt_max_and_min_is_none(self):
+        value = 11
+        max_value = 10
+        with pytest.raises(StreamlitAPIException):
+            st.number_input("My Label", value=value, max_value=max_value)

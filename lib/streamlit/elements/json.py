@@ -25,14 +25,14 @@ if TYPE_CHECKING:
 
 
 def _ensure_serialization(o: object) -> Union[str, List[Any]]:
-    """repr function for json.dumps default arg, which tries to serialize sets as lists"""
+    """A repr function for json.dumps default arg, which tries to serialize sets as lists"""
     if isinstance(o, set):
         return list(o)
     return repr(o)
 
 
 class JsonMixin:
-    @gather_metrics
+    @gather_metrics("json")
     def json(
         self,
         body: object,
@@ -55,6 +55,8 @@ class JsonMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.json({
         ...     'foo': 'bar',
         ...     'baz': 'boz',
@@ -67,7 +69,7 @@ class JsonMixin:
         ... })
 
         .. output::
-           https://doc-json.streamlitapp.com/
+           https://doc-json.streamlit.app/
            height: 385px
 
         """

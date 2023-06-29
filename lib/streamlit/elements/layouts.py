@@ -11,10 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 
-from streamlit.beta_util import function_beta_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -26,7 +24,7 @@ SpecType = Union[int, Sequence[Union[int, float]]]
 
 
 class LayoutsMixin:
-    @gather_metrics
+    @gather_metrics("container")
     def container(self) -> "DeltaGenerator":
         """Insert a multi-element container.
 
@@ -40,9 +38,10 @@ class LayoutsMixin:
 
         Examples
         --------
-
         Inserting elements using "with" notation:
 
+        >>> import streamlit as st
+        >>>
         >>> with st.container():
         ...    st.write("This is inside the container")
         ...
@@ -52,11 +51,13 @@ class LayoutsMixin:
         >>> st.write("This is outside the container")
 
         .. output ::
-            https://doc-container1.streamlitapp.com/
+            https://doc-container1.streamlit.app/
             height: 520px
 
         Inserting elements out of order:
 
+        >>> import streamlit as st
+        >>>
         >>> container = st.container()
         >>> container.write("This is inside the container")
         >>> st.write("This is outside the container")
@@ -65,13 +66,13 @@ class LayoutsMixin:
         >>> container.write("This is inside too")
 
         .. output ::
-            https://doc-container2.streamlitapp.com/
+            https://doc-container2.streamlit.app/
             height: 480px
         """
         return self.dg._block()
 
     # TODO: Enforce that columns are not nested or in Sidebar
-    @gather_metrics
+    @gather_metrics("columns")
     def columns(
         self, spec: SpecType, *, gap: Optional[str] = "small"
     ) -> List["DeltaGenerator"]:
@@ -84,28 +85,27 @@ class LayoutsMixin:
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
+        Columns can only be placed inside other columns up to one level of nesting.
+
         .. warning::
-            Currently, you may not put columns inside another column.
+            Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app.
 
         Parameters
         ----------
-        spec : int or list of numbers
-            If an int
-                Specifies the number of columns to insert, and all columns
-                have equal width.
+        spec : int or iterable of numbers
+            Controls the number and width of columns to insert. Can be one of:
 
-            If a list of numbers
-                Creates a column for each number, and each
-                column's width is proportional to the number provided. Numbers can
-                be ints or floats, but they must be positive.
+            * An integer that specifies the number of columns. All columns have equal
+              width in this case.
+            * An iterable of numbers (int or float) that specify the relative width of
+              each column. E.g. ``[0.7, 0.3]`` creates two columns where the first
+              one takes up 70% of the available with and the second one takes up 30%.
+              Or ``[1, 2, 3]`` creates three columns where the second one is two times
+              the width of the first one, and the third one is three times that width.
 
-                For example, `st.columns([3, 1, 2])` creates 3 columns where
-                the first column is 3 times the width of the second, and the last
-                column is 2 times that width.
-        gap : string ("small", "medium", or "large")
-            An optional string, which indicates the size of the gap between each column.
-            The default is a small gap between columns. This argument can only be supplied by
-            keyword.
+        gap : "small", "medium", or "large"
+            The size of the gap between the columns. Defaults to "small". This
+            argument can only be supplied by keyword.
 
         Returns
         -------
@@ -114,9 +114,10 @@ class LayoutsMixin:
 
         Examples
         --------
-
         You can use `with` notation to insert any element into a column:
 
+        >>> import streamlit as st
+        >>>
         >>> col1, col2, col3 = st.columns(3)
         >>>
         >>> with col1:
@@ -132,11 +133,14 @@ class LayoutsMixin:
         ...    st.image("https://static.streamlit.io/examples/owl.jpg")
 
         .. output ::
-            https://doc-columns1.streamlitapp.com/
+            https://doc-columns1.streamlit.app/
             height: 620px
 
         Or you can just call methods directly in the returned objects:
 
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>>
         >>> col1, col2 = st.columns([3, 1])
         >>> data = np.random.randn(10, 1)
         >>>
@@ -147,7 +151,7 @@ class LayoutsMixin:
         >>> col2.write(data)
 
         .. output ::
-            https://doc-columns2.streamlitapp.com/
+            https://doc-columns2.streamlit.app/
             height: 550px
 
         """
@@ -196,9 +200,9 @@ class LayoutsMixin:
         total_weight = sum(weights)
         return [row._block(column_proto(w / total_weight)) for w in weights]
 
-    @gather_metrics
+    @gather_metrics("tabs")
     def tabs(self, tabs: Sequence[str]) -> Sequence["DeltaGenerator"]:
-        """Insert containers separated into tabs.
+        r"""Insert containers separated into tabs.
 
         Inserts a number of multi-element containers as tabs.
         Tabs are a navigational element that allows users to easily
@@ -215,8 +219,28 @@ class LayoutsMixin:
         Parameters
         ----------
         tabs : list of strings
-            Creates a tab for each string in the list. The string is used as the name of the tab.
-            The first tab is selected by default.
+            Creates a tab for each string in the list. The first tab is selected by default.
+            The string is used as the name of the tab and can optionally contain Markdown,
+            supporting the following elements: Bold, Italics, Strikethroughs, Inline Code,
+            Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
 
         Returns
         -------
@@ -225,9 +249,10 @@ class LayoutsMixin:
 
         Examples
         --------
-
         You can use `with` notation to insert any element into a tab:
 
+        >>> import streamlit as st
+        >>>
         >>> tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "Owl"])
         >>>
         >>> with tab1:
@@ -243,11 +268,14 @@ class LayoutsMixin:
         ...    st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
 
         .. output ::
-            https://doc-tabs1.streamlitapp.com/
+            https://doc-tabs1.streamlit.app/
             height: 620px
 
         Or you can just call methods directly in the returned objects:
 
+        >>> import streamlit as st
+        >>> import numpy as np
+        >>>
         >>> tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
         >>> data = np.random.randn(10, 1)
         >>>
@@ -259,7 +287,7 @@ class LayoutsMixin:
 
 
         .. output ::
-            https://doc-tabs2.streamlitapp.com/
+            https://doc-tabs2.streamlit.app/
             height: 700px
 
         """
@@ -284,9 +312,9 @@ class LayoutsMixin:
         tab_container = self.dg._block(block_proto)
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
-    @gather_metrics
+    @gather_metrics("expander")
     def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
-        """Insert a multi-element container that can be expanded/collapsed.
+        r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
         and can be expanded or collapsed by the user. When collapsed, all that is
@@ -302,16 +330,37 @@ class LayoutsMixin:
         Parameters
         ----------
         label : str
-            A string to use as the header for the expander.
+            A string to use as the header for the expander. The label can optionally
+            contain Markdown and supports the following elements: Bold, Italics,
+            Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
 
         Examples
         --------
-
         You can use `with` notation to insert any element into an expander
 
+        >>> import streamlit as st
+        >>>
         >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
         >>> with st.expander("See explanation"):
@@ -323,11 +372,13 @@ class LayoutsMixin:
         ...     st.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
-            https://doc-expander.streamlitapp.com/
+            https://doc-expander.streamlit.app/
             height: 750px
 
         Or you can just call methods directly in the returned objects:
 
+        >>> import streamlit as st
+        >>>
         >>> st.bar_chart({"data": [1, 5, 2, 6, 2, 1]})
         >>>
         >>> expander = st.expander("See explanation")
@@ -339,7 +390,7 @@ class LayoutsMixin:
         >>> expander.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
-            https://doc-expander.streamlitapp.com/
+            https://doc-expander.streamlit.app/
             height: 750px
 
         """
@@ -360,8 +411,3 @@ class LayoutsMixin:
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-    # Deprecated beta_ functions
-    beta_container = function_beta_warning(container, "2021-11-02")
-    beta_expander = function_beta_warning(expander, "2021-11-02")
-    beta_columns = function_beta_warning(columns, "2021-11-02")

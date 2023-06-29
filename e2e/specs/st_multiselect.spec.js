@@ -49,7 +49,7 @@ describe("st.multiselect", () => {
 
   describe("when first loaded", () => {
     it("should show widget correctly", () => {
-      cy.get(".stMultiSelect").should("have.length", 11);
+      cy.get(".stMultiSelect").should("have.length", 12);
 
       cy.get(".stMultiSelect").each((el, idx) => {
         return cy.wrap(el).matchThemedSnapshots("multiselect" + idx);

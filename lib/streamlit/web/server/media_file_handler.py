@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from typing import Optional
-from urllib.parse import quote, unquote_plus
+from urllib.parse import quote
 
 import tornado.web
 
@@ -23,10 +23,9 @@ from streamlit.runtime.memory_media_file_storage import (
     MemoryMediaFileStorage,
     get_extension_for_mimetype,
 )
-from streamlit.string_util import generate_download_filename_from_title
 from streamlit.web.server import allow_cross_origin_requests
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 class MediaFileHandler(tornado.web.StaticFileHandler):
@@ -62,12 +61,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
             filename = media_file.filename
 
             if not filename:
-                title = self.get_argument("title", "", True)
-                title = unquote_plus(title)
-                filename = generate_download_filename_from_title(title)
-                filename = (
-                    f"{filename}{get_extension_for_mimetype(media_file.mimetype)}"
-                )
+                filename = f"streamlit_download{get_extension_for_mimetype(media_file.mimetype)}"
 
             try:
                 # Check that the value can be encoded in latin1. Latin1 is
@@ -92,7 +86,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
         try:
             self._storage.get_file(absolute_path)
         except MediaFileStorageError:
-            LOGGER.error("MediaFileHandler: Missing file %s", absolute_path)
+            _LOGGER.error("MediaFileHandler: Missing file %s", absolute_path)
             raise tornado.web.HTTPError(404, "not found")
 
         return absolute_path
@@ -120,16 +114,16 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
     def get_content(
         cls, abspath: str, start: Optional[int] = None, end: Optional[int] = None
     ):
-        LOGGER.debug("MediaFileHandler: GET %s", abspath)
+        _LOGGER.debug("MediaFileHandler: GET %s", abspath)
 
         try:
             # abspath is the hash as used `get_absolute_path`
             media_file = cls._storage.get_file(abspath)
-        except:
-            LOGGER.error("MediaFileHandler: Missing file %s", abspath)
-            return
+        except Exception:
+            _LOGGER.error("MediaFileHandler: Missing file %s", abspath)
+            return None
 
-        LOGGER.debug(
+        _LOGGER.debug(
             "MediaFileHandler: Sending %s file %s", media_file.mimetype, abspath
         )
 

@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable, Counter, Dict, List, Optional, Set
 
 from typing_extensions import Final, TypeAlias
 
@@ -27,7 +28,6 @@ from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 LOGGER: Final = get_logger(__name__)
-
 
 UserInfo: TypeAlias = Dict[str, Optional[str]]
 
@@ -56,6 +56,7 @@ class ScriptRunContext:
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
     tracked_commands: List[Command] = field(default_factory=list)
+    tracked_commands_counter: Counter[str] = field(default_factory=collections.Counter)
     _set_page_config_allowed: bool = True
     _has_script_started: bool = False
     widget_ids_this_run: Set[str] = field(default_factory=set)
@@ -78,6 +79,7 @@ class ScriptRunContext:
         self._has_script_started = False
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
+        self.tracked_commands_counter = collections.Counter()
 
     def on_script_start(self) -> None:
         self._has_script_started = True
@@ -86,7 +88,7 @@ class ScriptRunContext:
         """Enqueue a ForwardMsg for this context's session."""
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
             raise StreamlitAPIException(
-                "`set_page_config()` can only be called once per app, "
+                "`set_page_config()` can only be called once per app page, "
                 + "and must be called as the first Streamlit command in your script.\n\n"
                 + "For more information refer to the [docs]"
                 + "(https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config)."
@@ -138,8 +140,12 @@ def add_script_run_ctx(
     return thread
 
 
-def get_script_run_ctx() -> Optional[ScriptRunContext]:
+def get_script_run_ctx(suppress_warning: bool = False) -> Optional[ScriptRunContext]:
     """
+    Parameters
+    ----------
+    suppress_warning : bool
+        If True, don't log a warning if there's no ScriptRunContext.
     Returns
     -------
     ScriptRunContext | None
@@ -150,9 +156,9 @@ def get_script_run_ctx() -> Optional[ScriptRunContext]:
     ctx: Optional[ScriptRunContext] = getattr(
         thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None
     )
-    if ctx is None and runtime.exists():
-        # Only warn about a missing ScriptRunContext if we were started
-        # via `streamlit run`. Otherwise, the user is likely running a
+    if ctx is None and runtime.exists() and not suppress_warning:
+        # Only warn about a missing ScriptRunContext if suppress_warning is False, and
+        # we were started via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit
         # bits that are irrelevant when not connected to a session.
         LOGGER.warning("Thread '%s': missing ScriptRunContext", thread.name)

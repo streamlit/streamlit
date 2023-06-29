@@ -20,8 +20,6 @@ from typing import Dict, Union
 
 from typing_extensions import Final
 
-from streamlit import config
-
 DEFAULT_LOG_MESSAGE: Final = "%(asctime)s %(levelname) -7s " "%(name)s: %(message)s"
 
 # Loggers for each name are saved here.
@@ -61,12 +59,14 @@ def set_log_level(level: Union[str, int]) -> None:
 
 def setup_formatter(logger: logging.Logger) -> None:
     """Set up the console formatter for a given logger."""
-
     # Deregister any previous console loggers.
     if hasattr(logger, "streamlit_console_handler"):
-        logger.removeHandler(logger.streamlit_console_handler)  # type: ignore[attr-defined]
+        logger.removeHandler(logger.streamlit_console_handler)
 
     logger.streamlit_console_handler = logging.StreamHandler()  # type: ignore[attr-defined]
+
+    # Import here to avoid circular imports
+    from streamlit import config
 
     if config._config_options:
         # logger is required in ConfigOption.set_value
@@ -117,7 +117,7 @@ def get_logger(name: str) -> logging.Logger:
         return _loggers[name]
 
     if name == "root":
-        logger = logging.getLogger()
+        logger = logging.getLogger("streamlit")
     else:
         logger = logging.getLogger(name)
 

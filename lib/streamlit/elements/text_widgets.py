@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import Optional, cast
 
+from typing_extensions import Literal
+
 import streamlit
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -66,14 +68,14 @@ class TextAreaSerde:
 
 
 class TextWidgetsMixin:
-    @gather_metrics
+    @gather_metrics("text_input")
     def text_input(
         self,
         label: str,
         value: SupportsStr = "",
         max_chars: Optional[int] = None,
         key: Optional[Key] = None,
-        type: str = "default",
+        type: Literal["default", "password"] = "default",
         help: Optional[str] = None,
         autocomplete: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -84,12 +86,33 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> str:
-        """Display a single-line text input widget.
+        r"""Display a single-line text input widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this input is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
@@ -103,7 +126,7 @@ class TextWidgetsMixin:
             If this is omitted, a key will be generated for the widget
             based on its content. Multiple widgets of the same type may
             not share the same key.
-        type : str
+        type : "default" or "password"
             The type of the text input. This can be either "default" (for
             a regular text input), or "password" (for a text input that
             masks the user's typed value). Defaults to "default".
@@ -115,7 +138,7 @@ class TextWidgetsMixin:
             "new-password" for "password" inputs, and the empty string for
             "default" inputs. For more details, see https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
         on_change : callable
-            An optional callback invoked when this text_input's value changes.
+            An optional callback invoked when this text input's value changes.
         args : tuple
             An optional tuple of args to pass to the callback.
         kwargs : dict
@@ -126,8 +149,8 @@ class TextWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the text input if set to True.
             The default is False. This argument can only be supplied by keyword.
-        label_visibility : "visible" or "hidden" or "collapsed"
-            The visibility of the label. If "hidden", the label doesn’t show but there
+        label_visibility : "visible", "hidden", or "collapsed"
+            The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
@@ -139,11 +162,13 @@ class TextWidgetsMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> title = st.text_input('Movie title', 'Life of Brian')
         >>> st.write('The current movie title is', title)
 
         .. output::
-           https://doc-text-input.streamlitapp.com/
+           https://doc-text-input.streamlit.app/
            height: 260px
 
         """
@@ -246,7 +271,7 @@ class TextWidgetsMixin:
         self.dg._enqueue("text_input", text_input_proto)
         return widget_state.value
 
-    @gather_metrics
+    @gather_metrics("text_area")
     def text_area(
         self,
         label: str,
@@ -263,12 +288,33 @@ class TextWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> str:
-        """Display a multi-line text input widget.
+        r"""Display a multi-line text input widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this input is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
@@ -299,8 +345,8 @@ class TextWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the text area if set to True.
             The default is False. This argument can only be supplied by keyword.
-        label_visibility : "visible" or "hidden" or "collapsed"
-            The visibility of the label. If "hidden", the label doesn’t show but there
+        label_visibility : "visible", "hidden", or "collapsed"
+            The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
@@ -312,6 +358,8 @@ class TextWidgetsMixin:
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> txt = st.text_area('Text to analyze', '''
         ...     It was the best of times, it was the worst of times, it was
         ...     the age of wisdom, it was the age of foolishness, it was

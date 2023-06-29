@@ -14,7 +14,6 @@
 
 import re
 import textwrap
-from datetime import datetime
 from typing import TYPE_CHECKING, Any, Tuple, cast
 
 from streamlit.emojis import ALL_EMOJIS
@@ -43,7 +42,7 @@ def clean_text(text: "SupportsStr") -> str:
 
 def is_emoji(text: str) -> bool:
     """Check if input string is a valid emoji."""
-    return text in ALL_EMOJIS
+    return text.replace("\U0000FE0F", "") in ALL_EMOJIS
 
 
 def extract_leading_emoji(text: str) -> Tuple[str, str]:
@@ -62,7 +61,7 @@ def extract_leading_emoji(text: str) -> Tuple[str, str]:
 
 
 def escape_markdown(raw_string: str) -> str:
-    """Returns a new string which escapes all markdown metacharacters.
+    r"""Returns a new string which escapes all markdown metacharacters.
 
     Args
     ----
@@ -94,53 +93,25 @@ def is_binary_string(inp):
     return bool(inp.translate(None, TEXTCHARS))
 
 
-def clean_filename(name: str) -> str:
-    """
-    Taken from https://github.com/django/django/blob/196a99da5d9c4c33a78259a58d38fb114a4d2ee8/django/utils/text.py#L225-L238
-
-    Return the given string converted to a string that can be used for a clean
-    filename. Remove leading and trailing spaces; convert other spaces to
-    underscores; and remove anything that is not an alphanumeric, dash,
-    underscore, or dot.
-    """
-    s = str(name).strip().replace(" ", "_")
-    s = re.sub(r"(?u)[^-\w.]", "", s)
-
-    if s in {"", ".", ".."}:
-        raise StreamlitAPIException("Could not derive file name from '%s'" % name)
-    return s
+def simplify_number(num: int) -> str:
+    """Simplifies number into Human readable format, returns str"""
+    num_converted = float("{:.2g}".format(num))
+    magnitude = 0
+    while abs(num_converted) >= 1000:
+        magnitude += 1
+        num_converted /= 1000.0
+    return "{}{}".format(
+        "{:f}".format(num_converted).rstrip("0").rstrip("."),
+        ["", "k", "m", "b", "t"][magnitude],
+    )
 
 
-def snake_case_to_camel_case(snake_case_string: str) -> str:
-    """Transform input string from snake_case to CamelCase."""
-    words = snake_case_string.split("_")
-    capitalized_words_arr = []
-
-    for word in words:
-        if word:
-            try:
-                capitalized_words_arr.append(word.title())
-            except Exception:
-                capitalized_words_arr.append(word)
-    return "".join(capitalized_words_arr)
+_OBJ_MEM_ADDRESS = re.compile(r"^\<[a-zA-Z_]+[a-zA-Z0-9<>._ ]* at 0x[0-9a-f]+\>$")
 
 
-def append_date_time_to_string(input_string: str) -> str:
-    """Append datetime string to input string.
-    Returns datetime string if input is empty string.
-    """
-    now = datetime.now()
+def is_mem_address_str(string):
+    """Returns True if the string looks like <foo blarg at 0x15ee6f9a0>."""
+    if _OBJ_MEM_ADDRESS.match(string):
+        return True
 
-    if not input_string:
-        return now.strftime("%Y-%m-%d_%H-%M-%S")
-    else:
-        return f'{input_string}_{now.strftime("%Y-%m-%d_%H-%M-%S")}'
-
-
-def generate_download_filename_from_title(title_string: str) -> str:
-    """Generated download filename from page title string."""
-
-    title_string = title_string.replace(" · Streamlit", "")
-    file_name_string = clean_filename(title_string)
-    title_string = snake_case_to_camel_case(file_name_string)
-    return append_date_time_to_string(title_string)
+    return False

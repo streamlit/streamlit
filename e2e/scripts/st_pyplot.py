@@ -17,6 +17,10 @@ from matplotlib import pyplot
 
 import streamlit as st
 
+st.set_page_config(layout="wide")
+# Change default plot height, so they fit in cypress canvas.
+pyplot.rcParams["figure.figsize"] = [6.4, 4.8 / 2]
+
 np.random.seed(0xDEADBEEF)
 data = np.random.normal(1, 1, size=100)
 plot = pyplot.plot(data)
@@ -29,5 +33,9 @@ st.pyplot()
 st.set_option("deprecation.showPyplotGlobalUse", True)
 
 fig, ax = pyplot.subplots()
+
+# Resize plot. It is now 4 times smaller than the default value.
+fig.set_size_inches(6.4 / 4, 4.8 / 4)
 ax.plot(data)
 st.pyplot(fig)
+st.pyplot(fig, use_container_width=False)

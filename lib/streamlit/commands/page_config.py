@@ -102,7 +102,7 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
             output_format="auto",
             image_id="favicon",
         )
-    except BaseException:
+    except Exception:
         if isinstance(page_icon, str):
             # This fall-thru handles emoji shortcode strings (e.g. ":shark:"),
             # which aren't valid filenames and so will cause an Exception from
@@ -111,7 +111,7 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
         raise
 
 
-@gather_metrics
+@gather_metrics("set_page_config")
 def set_page_config(
     page_title: Optional[str] = None,
     page_icon: Optional[PageIcon] = None,
@@ -123,8 +123,8 @@ def set_page_config(
     Configures the default settings of the page.
 
     .. note::
-        This must be the first Streamlit command used in your app, and must only
-        be set once.
+        This must be the first Streamlit command used on an app page, and must only
+        be set once per page.
 
     Parameters
     ----------
@@ -141,7 +141,7 @@ def set_page_config(
         How the page content should be laid out. Defaults to "centered",
         which constrains the elements into a centered column of fixed width;
         "wide" uses the entire screen.
-    initial_sidebar_state: "auto" or "expanded" or "collapsed"
+    initial_sidebar_state: "auto", "expanded", or "collapsed"
         How the sidebar should start out. Defaults to "auto",
         which hides the sidebar on mobile-sized devices, and shows it otherwise.
         "expanded" shows the sidebar initially; "collapsed" hides it.
@@ -163,6 +163,8 @@ def set_page_config(
 
     Example
     -------
+    >>> import streamlit as st
+    >>>
     >>> st.set_page_config(
     ...     page_title="Ex-stream-ly Cool App",
     ...     page_icon="🧊",
@@ -224,7 +226,6 @@ def set_page_config(
 
 
 def get_random_emoji() -> str:
-
     # Weigh our emojis 10x, cuz we're awesome!
     # TODO: fix the random seed with a hash of the user's app code, for stability?
     return random.choice(RANDOM_EMOJIS + 10 * ENG_EMOJIS)
@@ -266,14 +267,11 @@ def valid_menu_item_key(key: str) -> "TypeGuard[MenuKey]":
 
 
 def valid_url(url: str) -> bool:
-    """
-    This code is copied and pasted from:
-    https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
-    """
+    # Function taken from https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
     try:
         result = urlparse(url)
         if result.scheme == "mailto":
             return all([result.scheme, result.path])
         return all([result.scheme, result.netloc])
-    except:
+    except Exception:
         return False

@@ -33,7 +33,7 @@ LOGGER: Final = get_logger(__name__)
 
 
 class LegacyVegaLiteMixin:
-    @gather_metrics
+    @gather_metrics("_legacy_vega_lite_chart")
     def _legacy_vega_lite_chart(
         self,
         data: "Data" = None,
@@ -65,6 +65,7 @@ class LegacyVegaLiteMixin:
         Example
         -------
 
+        >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>>

@@ -3,8 +3,8 @@ name: Javascript
 on:
   push:
     branches:
-      - 'develop'
-      - 'feature/**'
+      - "develop"
+      - "feature/**"
   pull_request:
     types: [opened, synchronize, reopened]
   # Allows workflow to be called from other workflows
@@ -15,7 +15,7 @@ on:
         type: string
 
 # Avoid duplicate workflows on same branch
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-javascript
   cancel-in-progress: true
 
@@ -25,27 +25,80 @@ jobs:
 
     defaults:
       run:
-        shell: bash -ileo pipefail {0}
+        shell: bash --login -eo pipefail {0}
 
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
-        with: 
+        with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-          submodules: 'recursive'
-      - name: Set up Python 3.10
+          submodules: "recursive"
+          fetch-depth: 2
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
+      - name: Audit frontend licenses
+        run: ./scripts/audit_frontend_licenses.py
       - name: Run linters
         run: |
           # Run eslint as a standalone command to generate the test report.
-          PRE_COMMIT_NO_CONCURRENCY=true SKIP=eslint pipenv run pre-commit run --show-diff-on-failure --color=always --all-files
+          # We need to --hook-stage manual to trigger Typecheck too
+          PRE_COMMIT_NO_CONCURRENCY=true SKIP=eslint pre-commit run --hook-stage manual --show-diff-on-failure --color=always --all-files
+          # Run eslint using Makefile omitting the pre-commit
           make jslint
+      - name: Validate NOTICES
+        run: |
+          # Run `make notices`. If it results in changes, warn the user and fail.
+          make notices
+
+          git_status=$(git status --porcelain -- NOTICES)
+          if [[ -n $git_status ]]; then
+            echo "::error::The NOTICES file is out of date! Please run \`make notices\` and commit the result."
+            echo "::group::git diff NOTICES"
+            git diff NOTICES
+            echo "::endgroup::"
+            exit 1
+          else
+            echo "NOTICES is up to date."
+          fi
       - name: Run frontend tests
         run: make jstest
+
+  components_lib_tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash --login -eo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 2
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20.x"
+          cache: "yarn"
+          cache-dependency-path: "component-lib/yarn.lock"
+      - name: Install node dependencies
+        working-directory: component-lib
+        run: yarn install
+      - name: Run frontend tests
+        working-directory: component-lib
+        run: yarn test
+      - name: Build package
+        working-directory: component-lib
+        run: yarn build

@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
-import textwrap
 from urllib.error import URLError
 
 import altair as alt
@@ -24,9 +22,9 @@ from streamlit.hello.utils import show_code
 
 
 def data_frame_demo():
-    @st.cache
+    @st.cache_data
     def get_UN_data():
-        AWS_BUCKET_URL = "http://streamlit-demo-data.s3-us-west-2.amazonaws.com"
+        AWS_BUCKET_URL = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
         df = pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
         return df.set_index("Region")
 

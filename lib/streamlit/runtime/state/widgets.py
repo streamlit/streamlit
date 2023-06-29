@@ -12,33 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 import textwrap
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Dict, Mapping, Optional, Union
+from typing import TYPE_CHECKING, Dict, Mapping, Optional
 
 from typing_extensions import Final, TypeAlias
 
 from streamlit.errors import DuplicateWidgetID
-from streamlit.proto.Button_pb2 import Button
-from streamlit.proto.CameraInput_pb2 import CameraInput
-from streamlit.proto.Checkbox_pb2 import Checkbox
-from streamlit.proto.ColorPicker_pb2 import ColorPicker
-from streamlit.proto.Components_pb2 import ComponentInstance
-from streamlit.proto.DateInput_pb2 import DateInput
-from streamlit.proto.DownloadButton_pb2 import DownloadButton
-from streamlit.proto.FileUploader_pb2 import FileUploader
-from streamlit.proto.MultiSelect_pb2 import MultiSelect
-from streamlit.proto.NumberInput_pb2 import NumberInput
-from streamlit.proto.Radio_pb2 import Radio
-from streamlit.proto.Selectbox_pb2 import Selectbox
-from streamlit.proto.Slider_pb2 import Slider
-from streamlit.proto.TextArea_pb2 import TextArea
-from streamlit.proto.TextInput_pb2 import TextInput
-from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
-from streamlit.runtime.state.session_state import (
-    GENERATED_WIDGET_KEY_PREFIX,
+from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
     WidgetArgs,
@@ -46,32 +28,15 @@ from streamlit.runtime.state.session_state import (
     WidgetDeserializer,
     WidgetKwargs,
     WidgetMetadata,
+    WidgetProto,
     WidgetSerializer,
+    compute_widget_id,
+    user_key_from_widget_id,
 )
 from streamlit.type_util import ValueFieldName
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner import ScriptRunContext
-
-# Protobuf types for all widgets.
-WidgetProto: TypeAlias = Union[
-    Button,
-    CameraInput,
-    Checkbox,
-    ColorPicker,
-    ComponentInstance,
-    DateInput,
-    DownloadButton,
-    FileUploader,
-    MultiSelect,
-    NumberInput,
-    Radio,
-    Selectbox,
-    Slider,
-    TextArea,
-    TextInput,
-    TimeInput,
-]
 
 ElementType: TypeAlias = str
 
@@ -88,6 +53,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
         "button": "trigger_value",
         "download_button": "trigger_value",
         "checkbox": "bool_value",
+        "chat_input": "string_trigger_value",
         "camera_input": "file_uploader_state_value",
         "color_picker": "string_value",
         "date_input": "string_array_value",
@@ -101,6 +67,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
         "text_input": "string_value",
         "time_input": "string_value",
         "component_instance": "json_value",
+        "data_editor": "string_value",
     }
 )
 
@@ -181,13 +148,46 @@ def register_widget(
         For both paths a widget return value is provided, allowing the widgets
         to be used in a non-streamlit setting.
     """
-    widget_id = _get_widget_id(element_type, element_proto, user_key)
+    widget_id = compute_widget_id(element_type, element_proto, user_key)
     element_proto.id = widget_id
+
+    # Create the widget's updated metadata, and register it with session_state.
+    metadata = WidgetMetadata(
+        widget_id,
+        deserializer,
+        serializer,
+        value_type=ELEMENT_TYPE_TO_VALUE_TYPE[element_type],
+        callback=on_change_handler,
+        callback_args=args,
+        callback_kwargs=kwargs,
+    )
+    return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
+
+
+def register_widget_from_metadata(
+    metadata: WidgetMetadata[T],
+    ctx: Optional["ScriptRunContext"],
+    widget_func_name: Optional[str],
+    element_type: ElementType,
+) -> RegisterWidgetResult[T]:
+    """Register a widget and return its value, using an already constructed
+    `WidgetMetadata`.
+
+    This is split out from `register_widget` to allow caching code to replay
+    widgets by saving and reusing the completed metadata.
+
+    See `register_widget` for details on what this returns.
+    """
+    # Local import to avoid import cycle
+    import streamlit.runtime.caching as caching
 
     if ctx is None:
         # Early-out if we don't have a script run context (which probably means
         # we're running as a "bare" Python script, and not via `streamlit run`).
-        return RegisterWidgetResult.failure(deserializer=deserializer)
+        return RegisterWidgetResult.failure(deserializer=metadata.deserializer)
+
+    widget_id = metadata.id
+    user_key = user_key_from_widget_id(widget_id)
 
     # Ensure another widget with the same user key hasn't already been registered.
     if user_key is not None:
@@ -212,17 +212,8 @@ def register_widget(
                 user_key,
             )
         )
-
-    # Create the widget's updated metadata, and register it with session_state.
-    metadata = WidgetMetadata(
-        widget_id,
-        deserializer,
-        serializer,
-        value_type=ELEMENT_TYPE_TO_VALUE_TYPE[element_type],
-        callback=on_change_handler,
-        callback_args=args,
-        callback_kwargs=kwargs,
-    )
+    # Save the widget metadata for cached result replay
+    caching.save_widget_metadata(metadata)
     return ctx.session_state.register_widget(metadata, user_key)
 
 
@@ -242,18 +233,22 @@ def coalesce_widget_states(
         wstate.id: wstate for wstate in new_states.widgets
     }
 
+    trigger_value_types = [("trigger_value", False), ("string_trigger_value", None)]
     for old_state in old_states.widgets:
-        if old_state.WhichOneof("value") == "trigger_value" and old_state.trigger_value:
-
-            # Ensure the corresponding new_state is also a trigger;
-            # otherwise, a widget that was previously a button but no longer is
-            # could get a bad value.
-            new_trigger_val = states_by_id.get(old_state.id)
+        for trigger_value_type, unset_value in trigger_value_types:
             if (
-                new_trigger_val
-                and new_trigger_val.WhichOneof("value") == "trigger_value"
+                old_state.WhichOneof("value") == trigger_value_type
+                and old_state.trigger_value != unset_value
             ):
-                states_by_id[old_state.id] = old_state
+                # Ensure the corresponding new_state is also a trigger;
+                # otherwise, a widget that was previously a button but no longer is
+                # could get a bad value.
+                new_trigger_val = states_by_id.get(old_state.id)
+                if (
+                    new_trigger_val
+                    and new_trigger_val.WhichOneof("value") == trigger_value_type
+                ):
+                    states_by_id[old_state.id] = old_state
 
     coalesced = WidgetStates()
     coalesced.widgets.extend(states_by_id.values())
@@ -267,11 +262,10 @@ def _build_duplicate_widget_message(
     if user_key is not None:
         message = textwrap.dedent(
             """
-            There are multiple identical `st.{widget_type}` widgets with
-            `key='{user_key}'`.
+            There are multiple widgets with the same `key='{user_key}'`.
 
-            To fix this, please make sure that the `key` argument is unique for
-            each `st.{widget_type}` you create.
+            To fix this, please make sure that the `key` argument is unique for each
+            widget you create.
             """
         )
     else:
@@ -290,22 +284,3 @@ def _build_duplicate_widget_message(
         )
 
     return message.strip("\n").format(widget_type=widget_func_name, user_key=user_key)
-
-
-def _get_widget_id(
-    element_type: str, element_proto: WidgetProto, user_key: Optional[str] = None
-) -> str:
-    """Generate a widget id for the given widget.
-
-    The widget id includes the user_key so widgets with identical arguments can
-    use it to be distinct.
-
-    The widget id includes an easily identified prefix, and the user_key as a
-    suffix, to make it easy to identify it and know if a key maps to it.
-
-    Does not mutate the element_proto object.
-    """
-    h = hashlib.new("md5")
-    h.update(element_type.encode("utf-8"))
-    h.update(element_proto.SerializeToString())
-    return f"{GENERATED_WIDGET_KEY_PREFIX}-{h.hexdigest()}-{user_key}"

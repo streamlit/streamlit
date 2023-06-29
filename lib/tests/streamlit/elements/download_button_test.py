@@ -45,3 +45,17 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.download_button
         self.assertTrue("/media/" in c.url)
+
+    def test_use_container_width_can_be_set_to_true(self):
+        """Test use_container_width can be set to true."""
+        st.download_button("the label", data="juststring", use_container_width=True)
+
+        c = self.get_delta_from_queue().new_element.download_button
+        self.assertEqual(c.use_container_width, True)
+
+    def test_use_container_width_is_false_by_default(self):
+        """Test use_container_width is false by default."""
+        st.download_button("the label", data="juststring")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        self.assertEqual(c.use_container_width, False)

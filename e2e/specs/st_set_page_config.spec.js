@@ -22,7 +22,7 @@ describe("st.set_page_config", () => {
   it("sets the page favicon", () => {
     cy.get("link[rel='shortcut icon']")
       .invoke("attr", "href")
-      .should("eq", "https://twemoji.maxcdn.com/2/72x72/1f988.png");
+      .should("eq", "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f988.png");
   });
 
   it("sets the page title", () => {
@@ -71,7 +71,7 @@ describe("st.set_page_config", () => {
       cy.getIndexed(".stButton button", 2).click();
 
       cy.get(".stException")
-        .contains("set_page_config() can only be called once per app")
+        .contains("set_page_config() can only be called once per app page")
         .should("exist");
       // Ensure that the first set_page_config worked
       cy.title().should("eq", "Change 1");
@@ -81,7 +81,7 @@ describe("st.set_page_config", () => {
       cy.getIndexed(".stButton button", 3).click();
 
       cy.get(".stException")
-        .contains("set_page_config() can only be called once per app")
+        .contains("set_page_config() can only be called once per app page")
         .should("exist");
       // Ensure that the first set_page_config worked
       cy.title().should("eq", "Change 3");

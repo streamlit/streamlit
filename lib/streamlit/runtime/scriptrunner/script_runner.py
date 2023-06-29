@@ -28,7 +28,7 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner import magic
+from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_requests import (
     RerunData,
     ScriptRequests,
@@ -45,8 +45,9 @@ from streamlit.runtime.state import (
     SessionState,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 class ScriptRunnerEvent(Enum):
@@ -101,6 +102,7 @@ class ScriptRunner:
         client_state: ClientState,
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
+        script_cache: ScriptCache,
         initial_rerun_data: RerunData,
         user_info: Dict[str, Optional[str]],
     ):
@@ -110,19 +112,22 @@ class ScriptRunner:
 
         Parameters
         ----------
-        session_id : str
+        session_id
             The AppSession's id.
 
-        main_script_path : str
+        main_script_path
             Path to our main app script.
 
-        client_state : ClientState
+        client_state
             The current state from the client (widgets and query params).
 
-        uploaded_file_mgr : UploadedFileManager
+        uploaded_file_mgr
             The File manager to store the data uploaded by the file_uploader widget.
 
-        user_info: Dict
+        script_cache
+            A ScriptCache instance.
+
+        user_info
             A dict that contains information about the current user. For now,
             it only contains the user's email address.
 
@@ -137,6 +142,7 @@ class ScriptRunner:
         self._session_id = session_id
         self._main_script_path = main_script_path
         self._uploaded_file_mgr = uploaded_file_mgr
+        self._script_cache = script_cache
         self._user_info = user_info
 
         # Initialize SessionState with the latest widget states
@@ -274,7 +280,7 @@ class ScriptRunner:
         """
         assert self._is_in_script_thread()
 
-        LOGGER.debug("Beginning script thread")
+        _LOGGER.debug("Beginning script thread")
 
         # Create and attach the thread's ScriptRunContext
         ctx = ScriptRunContext(
@@ -409,9 +415,10 @@ class ScriptRunner:
         """
         assert self._is_in_script_thread()
 
-        LOGGER.debug("Running script %s", rerun_data)
+        _LOGGER.debug("Running script %s", rerun_data)
 
         start_time: float = timer()
+        prep_time: float = 0  # This will be overwritten once preparations are done.
 
         # Reset DeltaGenerators, widgets, media files.
         runtime.get_instance().media_file_mgr.clear_session_refs()
@@ -484,34 +491,16 @@ class ScriptRunner:
                 msg.page_not_found.page_name = rerun_data.page_name
                 ctx.enqueue(msg)
 
-            with source_util.open_python_file(script_path) as f:
-                filebody = f.read()
+            code = self._script_cache.get_bytecode(script_path)
 
-            if config.get_option("runner.magicEnabled"):
-                filebody = magic.add_magic(filebody, script_path)
-
-            code = compile(
-                filebody,
-                # Pass in the file path so it can show up in exceptions.
-                script_path,
-                # We're compiling entire blocks of Python, so we need "exec"
-                # mode (as opposed to "eval" or "single").
-                mode="exec",
-                # Don't inherit any flags or "future" statements.
-                flags=0,
-                dont_inherit=1,
-                # Use the default optimization options.
-                optimize=-1,
-            )
-
-        except BaseException as e:
+        except Exception as ex:
             # We got a compile error. Send an error event and bail immediately.
-            LOGGER.debug("Fatal script error: %s", e)
+            _LOGGER.debug("Fatal script error: %s", ex)
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
-                exception=e,
+                exception=ex,
             )
             return
 
@@ -561,16 +550,19 @@ class ScriptRunner:
                 ctx.on_script_start()
                 prep_time = timer() - start_time
                 exec(code, module.__dict__)
+                self._session_state.maybe_check_serializable()
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
             rerun_exception_data = e.rerun_data
 
         except StopException:
+            # This is thrown when the script executes `st.stop()`.
+            # We don't have to do anything here.
             pass
 
-        except BaseException as e:
+        except Exception as ex:
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
-            uncaught_exception = e
+            uncaught_exception = ex
             handle_uncaught_app_exception(uncaught_exception)
 
         finally:
@@ -601,7 +593,7 @@ class ScriptRunner:
                 except Exception as ex:
                     # Always capture all exceptions since we want to make sure that
                     # the telemetry never causes any issues.
-                    LOGGER.debug("Failed to create page profile", exc_info=ex)
+                    _LOGGER.debug("Failed to create page profile", exc_info=ex)
             self._on_script_finished(ctx, finished_event)
 
         # Use _log_if_error() to make sure we never ever ever stop running the
@@ -672,14 +664,16 @@ def _clean_problem_modules() -> None:
         try:
             keras = sys.modules["keras"]
             keras.backend.clear_session()
-        except:
+        except Exception:
+            # We don't want to crash the app if we can't clear the Keras session.
             pass
 
     if "matplotlib.pyplot" in sys.modules:
         try:
             plt = sys.modules["matplotlib.pyplot"]
             plt.close("all")
-        except:
+        except Exception:
+            # We don't want to crash the app if we can't close matplotlib
             pass
 
 
@@ -688,38 +682,10 @@ def _new_module(name: str) -> types.ModuleType:
     return types.ModuleType(name)
 
 
-# Code modified from IPython (BSD license)
-# Source: https://github.com/ipython/ipython/blob/master/IPython/utils/syspathcontext.py#L42
-class modified_sys_path:
-    """A context for prepending a directory to sys.path for a second."""
-
-    def __init__(self, main_script_path: str):
-        self._main_script_path = main_script_path
-        self._added_path = False
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    def __enter__(self):
-        if self._main_script_path not in sys.path:
-            sys.path.insert(0, self._main_script_path)
-            self._added_path = True
-
-    def __exit__(self, type, value, traceback):
-        if self._added_path:
-            try:
-                sys.path.remove(self._main_script_path)
-            except ValueError:
-                pass
-
-        # Returning False causes any exceptions to be re-raised.
-        return False
-
-
 # The reason this is not a decorator is because we want to make it clear at the
 # calling location that this function is being used.
 def _log_if_error(fn: Callable[[], None]) -> None:
     try:
         fn()
     except Exception as e:
-        LOGGER.warning(e)
+        _LOGGER.warning(e)

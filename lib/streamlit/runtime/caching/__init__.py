@@ -13,27 +13,23 @@
 # limitations under the License.
 
 import contextlib
-from typing import TYPE_CHECKING, Iterator
+from typing import Any, Iterator, Union
 
 from google.protobuf.message import Message
 
 from streamlit.proto.Block_pb2 import Block
-
-if TYPE_CHECKING:
-    from streamlit.delta_generator import DeltaGenerator
-
-from streamlit.runtime.caching.memo_decorator import (
-    MEMO_CALL_STACK,
-    MEMO_MESSAGES_CALL_STACK,
-    MemoAPI,
-    _memo_caches,
+from streamlit.runtime.caching.cache_data_api import (
+    CACHE_DATA_MESSAGE_REPLAY_CTX,
+    CacheDataAPI,
+    _data_caches,
 )
-from streamlit.runtime.caching.singleton_decorator import (
-    SINGLETON_CALL_STACK,
-    SINGLETON_MESSAGE_CALL_STACK,
-    SingletonAPI,
-    _singleton_caches,
+from streamlit.runtime.caching.cache_errors import CACHE_DOCS_URL as CACHE_DOCS_URL
+from streamlit.runtime.caching.cache_resource_api import (
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
+    CacheResourceAPI,
+    _resource_caches,
 )
+from streamlit.runtime.state.common import WidgetMetadata
 
 
 def save_element_message(
@@ -43,10 +39,14 @@ def save_element_message(
     used_dg_id: str,
     returned_dg_id: str,
 ) -> None:
-    MEMO_MESSAGES_CALL_STACK.save_element_message(
+    """Save the message for an element to a thread-local callstack, so it can
+    be used later to replay the element when a cache-decorated function's
+    execution is skipped.
+    """
+    CACHE_DATA_MESSAGE_REPLAY_CTX.save_element_message(
         delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
-    SINGLETON_MESSAGE_CALL_STACK.save_element_message(
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_element_message(
         delta_type, element_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
 
@@ -57,33 +57,76 @@ def save_block_message(
     used_dg_id: str,
     returned_dg_id: str,
 ) -> None:
-    MEMO_MESSAGES_CALL_STACK.save_block_message(
+    """Save the message for a block to a thread-local callstack, so it can
+    be used later to replay the block when a cache-decorated function's
+    execution is skipped.
+    """
+    CACHE_DATA_MESSAGE_REPLAY_CTX.save_block_message(
         block_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
-    SINGLETON_MESSAGE_CALL_STACK.save_block_message(
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_block_message(
         block_proto, invoked_dg_id, used_dg_id, returned_dg_id
     )
+
+
+def save_widget_metadata(metadata: WidgetMetadata[Any]) -> None:
+    """Save a widget's metadata to a thread-local callstack, so the widget
+    can be registered again when that widget is replayed.
+    """
+    CACHE_DATA_MESSAGE_REPLAY_CTX.save_widget_metadata(metadata)
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_widget_metadata(metadata)
+
+
+def save_media_data(
+    image_data: Union[bytes, str], mimetype: str, image_id: str
+) -> None:
+    CACHE_DATA_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
 
 
 def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
-    MEMO_CALL_STACK.maybe_show_cached_st_function_warning(dg, st_func_name)
-    SINGLETON_CALL_STACK.maybe_show_cached_st_function_warning(dg, st_func_name)
+    CACHE_DATA_MESSAGE_REPLAY_CTX.maybe_show_cached_st_function_warning(
+        dg, st_func_name
+    )
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.maybe_show_cached_st_function_warning(
+        dg, st_func_name
+    )
 
 
 @contextlib.contextmanager
 def suppress_cached_st_function_warning() -> Iterator[None]:
-    with MEMO_CALL_STACK.suppress_cached_st_function_warning(), SINGLETON_CALL_STACK.suppress_cached_st_function_warning():
+    with CACHE_DATA_MESSAGE_REPLAY_CTX.suppress_cached_st_function_warning(), CACHE_RESOURCE_MESSAGE_REPLAY_CTX.suppress_cached_st_function_warning():
         yield
 
 
 # Explicitly export public symbols
-from streamlit.runtime.caching.memo_decorator import (
-    get_memo_stats_provider as get_memo_stats_provider,
+from streamlit.runtime.caching.cache_data_api import (
+    get_data_cache_stats_provider as get_data_cache_stats_provider,
 )
-from streamlit.runtime.caching.singleton_decorator import (
-    get_singleton_stats_provider as get_singleton_stats_provider,
+from streamlit.runtime.caching.cache_resource_api import (
+    get_resource_cache_stats_provider as get_resource_cache_stats_provider,
 )
 
 # Create and export public API singletons.
-memo = MemoAPI()
-singleton = SingletonAPI()
+cache_data = CacheDataAPI(decorator_metric_name="cache_data")
+cache_resource = CacheResourceAPI(decorator_metric_name="cache_resource")
+
+# Deprecated singletons
+_MEMO_WARNING = (
+    f"`st.experimental_memo` is deprecated. Please use the new command `st.cache_data` instead, "
+    f"which has the same behavior. More information [in our docs]({CACHE_DOCS_URL})."
+)
+
+experimental_memo = CacheDataAPI(
+    decorator_metric_name="experimental_memo", deprecation_warning=_MEMO_WARNING
+)
+
+_SINGLETON_WARNING = (
+    f"`st.experimental_singleton` is deprecated. Please use the new command `st.cache_resource` instead, "
+    f"which has the same behavior. More information [in our docs]({CACHE_DOCS_URL})."
+)
+
+experimental_singleton = CacheResourceAPI(
+    decorator_metric_name="experimental_singleton",
+    deprecation_warning=_SINGLETON_WARNING,
+)

@@ -15,7 +15,6 @@
 import socket
 from typing import Optional
 
-import requests
 from typing_extensions import Final
 
 from streamlit import util
@@ -77,20 +76,20 @@ def get_internal_ip() -> Optional[str]:
     if _internal_ip is not None:
         return _internal_ip
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        # Doesn't even have to be reachable
-        s.connect(("8.8.8.8", 1))
-        _internal_ip = s.getsockname()[0]
-    except Exception:
-        _internal_ip = "127.0.0.1"
-    finally:
-        s.close()
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        try:
+            # Doesn't even have to be reachable
+            s.connect(("8.8.8.8", 1))
+            _internal_ip = s.getsockname()[0]
+        except Exception:
+            _internal_ip = "127.0.0.1"
 
     return _internal_ip
 
 
 def _make_blocking_http_get(url: str, timeout: float = 5) -> Optional[str]:
+    import requests
+
     try:
         text = requests.get(url, timeout=timeout).text
         if isinstance(text, str):

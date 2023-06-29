@@ -123,6 +123,15 @@ Cypress.Commands.overwrite(
   "matchImageSnapshot",
   (originalFn, subject, name, options) => {
     cy.wrap(subject).trigger("blur", _.pick(options, ["force"]))
+
+    const headerHeight = 2.875 // In rem
+    const fontSizeMedium = 16 // In px
+    cy.get(subject).scrollIntoView({
+      offset: {
+        top: -1 * headerHeight * fontSizeMedium,
+      },
+    })
+
     return originalFn(subject, name, options)
   }
 )
@@ -130,18 +139,22 @@ Cypress.Commands.overwrite(
 Cypress.Commands.add("loadApp", appUrl => {
   cy.visit(appUrl)
 
+  cy.waitForScriptFinish()
+})
+
+Cypress.Commands.add("waitForScriptFinish", () => {
   // Wait until we know the script has started. We have to do this
   // because the status widget is initially hidden (so that it doesn't quickly
   // appear and disappear if the user has it configured to be hidden). Without
   // waiting here, it's possible to pass the status widget check below before
   // it initially renders.
-  cy.get("[data-testid='stAppViewContainer']", { timeout: 10000 }).should(
+  cy.get("[data-testid='stAppViewContainer']", { timeout: 20000 }).should(
     "not.contain",
     "Please wait..."
   )
 
   // Wait until the script is no longer running.
-  cy.get("[data-testid='stStatusWidget']", { timeout: 10000 }).should(
+  cy.get("[data-testid='stStatusWidget']", { timeout: 20000 }).should(
     "not.exist"
   )
 })
@@ -162,15 +175,38 @@ Cypress.Commands.add("getIndexed", (selector, index) =>
 // attempting to take snapshots. This command removes the problematic parts to
 // avoid this issue.
 Cypress.Commands.add("prepForElementSnapshots", () => {
-  // Make the ribbon decoration line disappear as it can occasionally get
+  // Look for the ribbon and if its found,
+  // make the ribbon decoration line disappear as it can occasionally get
   // caught when a snapshot is taken.
-  cy.get("[data-testid='stDecoration']").invoke("css", "display", "none")
+  cy.get(".stApp").then($body => {
+    if ($body.find("[data-testid='stDecoration']").length > 0) {
+      cy.get("[data-testid='stDecoration']").invoke("css", "display", "none")
+    }
+  })
 
   // Similarly, the header styling can sometimes interfere with the snapshot
   // for elements near the top of the page.
   cy.get(".stApp > header").invoke("css", "background", "none")
   cy.get(".stApp > header").invoke("css", "backdropFilter", "none")
 })
+
+// Allows the user to execute code within the iframe itself
+// This is useful for testing/changing examples of Streamlit embeddings
+Cypress.Commands.add(
+  "iframe",
+  { prevSubject: "element" },
+  ($iframe, callback = () => {}) => {
+    // For more info on targeting inside iframes refer to this GitHub issue:
+    // https://github.com/cypress-io/cypress/issues/136
+    cy.log("Getting iframe body")
+
+    return cy
+      .wrap($iframe)
+      .should(iframe => expect(iframe.contents().find("body")).to.exist)
+      .then(iframe => cy.wrap(iframe.contents().find("body")))
+      .within({}, callback)
+  }
+)
 
 // Rerun the script by simulating the user pressing the 'r' key.
 Cypress.Commands.add("rerunScript", () => {
@@ -179,4 +215,11 @@ Cypress.Commands.add("rerunScript", () => {
     which: 82, // "r"
     force: true,
   })
+})
+
+Cypress.Commands.add("waitForRerun", () => {
+  cy.get("[data-testid='stStatusWidget']", { timeout: 10000 }).should("exist")
+  cy.get("[data-testid='stStatusWidget']", { timeout: 10000 }).should(
+    "not.exist"
+  )
 })

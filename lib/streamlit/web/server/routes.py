@@ -19,8 +19,9 @@ import tornado.web
 from streamlit import config, file_util
 from streamlit.logger import get_logger
 from streamlit.runtime.runtime_util import serialize_forward_msg
+from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 def allow_cross_origin_requests():
@@ -86,13 +87,6 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             super().write_error(status_code, **kwargs)
 
 
-class AssetsFileHandler(tornado.web.StaticFileHandler):
-    # CORS protection should be disabled as we need access
-    # to this endpoint from the inner iframe.
-    def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Origin", "*")
-
-
 class AddSlashHandler(tornado.web.RequestHandler):
     @tornado.web.addslash
     def get(self):
@@ -141,6 +135,14 @@ class HealthHandler(_SpecialRequestHandler):
         self._callback = callback
 
     async def get(self):
+        if self.request.uri and "_stcore/" not in self.request.uri:
+            new_path = (
+                "/_stcore/script-health-check"
+                if "script-health-check" in self.request.uri
+                else "/_stcore/health"
+            )
+            emit_endpoint_deprecation_notice(self, new_path=new_path)
+
         ok, msg = await self._callback()
         if ok:
             self.write(msg)
@@ -158,6 +160,47 @@ class HealthHandler(_SpecialRequestHandler):
             # 503 = SERVICE_UNAVAILABLE
             self.set_status(503)
             self.write(msg)
+
+
+# NOTE: We eventually want to get rid of this hard-coded list entirely as we don't want
+# to have links to Community Cloud live in the open source library in a way that affects
+# functionality (links advertising Community Cloud are probably okay 🙂). In the long
+# run, this list will most likely be replaced by a config option allowing us to more
+# granularly control what domains a Streamlit app should accept cross-origin iframe
+# messages from.
+ALLOWED_MESSAGE_ORIGINS = [
+    "https://devel.streamlit.test",
+    "https://*.streamlit.apptest",
+    "https://*.streamlitapp.test",
+    "https://*.streamlitapp.com",
+    "https://share.streamlit.io",
+    "https://share-demo.streamlit.io",
+    "https://share-head.streamlit.io",
+    "https://share-staging.streamlit.io",
+    "https://*.demo.streamlit.run",
+    "https://*.head.streamlit.run",
+    "https://*.staging.streamlit.run",
+    "https://*.streamlit.run",
+    "https://*.demo.streamlit.app",
+    "https://*.head.streamlit.app",
+    "https://*.staging.streamlit.app",
+    "https://*.streamlit.app",
+]
+
+
+class AllowedMessageOriginsHandler(_SpecialRequestHandler):
+    async def get(self) -> None:
+        # ALLOWED_MESSAGE_ORIGINS must be wrapped in a dictionary because Tornado
+        # disallows writing lists directly into responses due to potential XSS
+        # vulnerabilities.
+        # See https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write
+        self.write(
+            {
+                "allowedOrigins": ALLOWED_MESSAGE_ORIGINS,
+                "useExternalAuthToken": False,
+            }
+        )
+        self.set_status(200)
 
 
 class MessageCacheHandler(tornado.web.RequestHandler):
@@ -181,8 +224,8 @@ class MessageCacheHandler(tornado.web.RequestHandler):
         msg_hash = self.get_argument("hash", None)
         if msg_hash is None:
             # Hash is missing! This is a malformed request.
-            LOGGER.error(
-                "HTTP request for cached message is " "missing the hash attribute."
+            _LOGGER.error(
+                "HTTP request for cached message is missing the hash attribute."
             )
             self.set_status(404)
             raise tornado.web.Finish()
@@ -190,14 +233,14 @@ class MessageCacheHandler(tornado.web.RequestHandler):
         message = self._cache.get_message(msg_hash)
         if message is None:
             # Message not in our cache.
-            LOGGER.error(
+            _LOGGER.error(
                 "HTTP request for cached message could not be fulfilled. "
-                "No such message: %s" % msg_hash
+                "No such message"
             )
             self.set_status(404)
             raise tornado.web.Finish()
 
-        LOGGER.debug("MessageCache HIT [hash=%s]" % msg_hash)
+        _LOGGER.debug("MessageCache HIT")
         msg_str = serialize_forward_msg(message)
         self.set_header("Content-Type", "application/octet-stream")
         self.write(msg_str)

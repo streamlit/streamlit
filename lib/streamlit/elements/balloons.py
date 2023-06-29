@@ -22,12 +22,14 @@ if TYPE_CHECKING:
 
 
 class BalloonsMixin:
-    @gather_metrics
+    @gather_metrics("balloons")
     def balloons(self) -> "DeltaGenerator":
         """Draw celebratory balloons.
 
         Example
         -------
+        >>> import streamlit as st
+        >>>
         >>> st.balloons()
 
         ...then watch your app and get ready for a celebration!

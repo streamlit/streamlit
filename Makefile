@@ -16,6 +16,14 @@
 # /bin/sh is POSIX compliant, ie it's not bash.  So let's be explicit:
 SHELL=/bin/bash
 
+INSTALL_DEV_REQS ?= true
+INSTALL_TEST_REQS ?= true
+USE_CONSTRAINT_FILE ?= true
+PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
+GITHUB_REPOSITORY ?= streamlit/streamlit
+CONSTRAINTS_BRANCH ?= constraints-develop
+CONSTRAINTS_URL ?= https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${CONSTRAINTS_BRANCH}/constraints-${PYTHON_VERSION}.txt
+
 # Black magic to get module directories
 PYTHON_MODULES := $(foreach initpy, $(foreach dir, $(wildcard lib/*), $(wildcard $(dir)/__init__.py)), $(realpath $(dir $(initpy))))
 
@@ -40,52 +48,72 @@ all-devel: init develop pre-commit-install
 	@echo ""
 
 .PHONY: mini-devel
-# Get minimal dependencies and install Streamlit into Python environment -- but do not build the frontend.
+# Get minimal dependencies for development and install Streamlit into Python
+# environment -- but do not build the frontend.
 mini-devel: mini-init develop pre-commit-install
+
+.PHONY: build-deps
+# An even smaller installation than mini-devel. Installs the bare minimum
+# necessary to build Streamlit (by leaving out some dependencies necessary for
+# the development process). Does not build the frontend.
+build-deps: mini-init develop
 
 .PHONY: init
 # Install all Python and JS dependencies.
-init: setup pipenv-install react-init protobuf
+init: python-init-all react-init protobuf
 
 .PHONY: mini-init
 # Install minimal Python and JS dependencies for development.
-mini-init: setup pipenv-dev-install react-init protobuf
+mini-init: python-init-dev-only react-init protobuf
 
 .PHONY: frontend
 # Build frontend into static files.
 frontend: react-build
 
-.PHONY: setup
-setup:
-	pip install pip-tools pipenv ;
+.PHONY: install
+# Install Streamlit into your Python environment.
+install:
+	cd lib ; python setup.py install
 
-.PHONY: pipenv-install
-pipenv-install: pipenv-dev-install py-test-install
+.PHONY: develop
+# Install Streamlit as links in your Python environment, pointing to local workspace.
+develop:
+	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=false make python-init
 
-.PHONY: pipenv-dev-install
-pipenv-dev-install: lib/Pipfile
-	# Run pipenv install; don't update the Pipfile.lock.
-	# The lockfile is created to force resolution of all dependencies at once,
-	# but we don't actually want to use the lockfile.
-	cd lib; \
-		rm Pipfile.lock; \
-		pipenv install --dev
+.PHONY: python-init-all
+# Install Streamlit and all (test and dev) requirements
+python-init-all:
+	INSTALL_DEV_REQS=true INSTALL_TEST_REQS=true make python-init
 
-SHOULD_INSTALL_TENSORFLOW := $(shell python scripts/should_install_tensorflow.py)
-.PHONY: py-test-install
-py-test-install: lib/test-requirements.txt
-	# As of Python 3.9, we're using pip's legacy-resolver when installing
-	# test-requirements.txt, because otherwise pip takes literal hours to finish.
-	pip install -r lib/test-requirements.txt --use-deprecated=legacy-resolver
-ifeq (${SHOULD_INSTALL_TENSORFLOW},true)
-	pip install -r lib/test-requirements-with-tensorflow.txt --use-deprecated=legacy-resolver
-else
-	@echo ""
-	@echo "Your system does not support the official, pre-built tensorflow binaries."
-	@echo "This generally happens because you are running Python 3.10 or have an Apple Silicon machine."
-	@echo "Skipping incompatible dependencies."
-	@echo ""
-endif
+.PHONY: python-init-dev-only
+# Install Streamlit and dev requirements
+python-init-dev-only:
+	INSTALL_DEV_REQS=true INSTALL_TEST_REQS=false make python-init
+
+.PHONY: python-init-test-only
+# Install Streamlit and test requirements
+python-init-test-only: lib/test-requirements.txt
+	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true make python-init
+
+.PHONY: python-init-test-min-deps
+# Install Streamlit and test requirements, with minimum dependency versions
+python-init-test-min-deps:
+	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true USE_CONSTRAINTS_FILE=true CONSTRAINTS_URL="lib/min-constraints-gen.txt" make python-init
+
+.PHONY: python-init
+python-init:
+	pip_args=("--editable" "lib[snowflake]");\
+	if [ "${USE_CONSTRAINT_FILE}" = "true" ] ; then\
+		pip_args+=(--constraint "${CONSTRAINTS_URL}"); \
+	fi;\
+	if [ "${INSTALL_DEV_REQS}" = "true" ] ; then\
+		pip_args+=("--requirement" "lib/dev-requirements.txt"); \
+	fi;\
+	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+		pip_args+=("--requirement" "lib/test-requirements.txt"); \
+	fi;\
+	echo "Running command: pip install $${pip_args[@]}";\
+	pip install $${pip_args[@]};
 
 .PHONY: pylint
 # Verify that our Python files are properly formatted.
@@ -103,8 +131,8 @@ pylint:
 .PHONY: pyformat
 # Fix Python files that are not properly formatted.
 pyformat:
-	pre-commit run black --all-files
-	pre-commit run isort --all-files
+	pre-commit run black --all-files --hook-stage manual
+	pre-commit run isort --all-files --hook-stage manual
 
 .PHONY: pytest
 # Run Python unit tests.
@@ -113,6 +141,16 @@ pytest:
 		PYTHONPATH=. \
 		pytest -v \
 			--junitxml=test-reports/pytest/junit.xml \
+			-l tests/ \
+			$(PYTHON_MODULES)
+
+# Run Python integration tests for snowflake.
+pytest-snowflake:
+	cd lib; \
+		PYTHONPATH=. \
+		pytest -v \
+			--junitxml=test-reports/pytest/junit.xml \
+			--require-snowflake \
 			-l tests/ \
 			$(PYTHON_MODULES)
 
@@ -136,17 +174,6 @@ cli-smoke-tests:
 cli-regression-tests: install
 	pytest scripts/cli_regression_tests.py
 
-.PHONY: install
-# Install Streamlit into your Python environment.
-install:
-	cd lib ; python setup.py install
-
-.PHONY: develop
-# Install Streamlit as links in your Python environment, pointing to local workspace.
-develop:
-	cd lib; \
-		pipenv install --skip-lock
-
 .PHONY: distribution
 # Create Python distribution files in dist/.
 distribution:
@@ -156,7 +183,7 @@ distribution:
 
 .PHONY: package
 # Build lib and frontend, and then run 'distribution'.
-package: mini-devel frontend distribution
+package: build-deps frontend distribution
 
 .PHONY: conda-distribution
 # Create conda distribution files in lib/conda-recipe/dist.
@@ -166,12 +193,11 @@ conda-distribution:
 	# This can take upwards of 20 minutes to complete in a fresh conda installation! (Dependency solving is slow.)
 	# NOTE: Running the following command requires both conda and conda-build to
 	# be installed.
-	ST_CONDA_BUILD=1 GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
+	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
 
 .PHONY: conda-package
 # Build lib and frontend, and then run 'conda-distribution'
-conda-package: mini-devel frontend conda-distribution
-
+conda-package: build-deps frontend conda-distribution
 
 .PHONY: clean
 # Remove all generated files.
@@ -188,48 +214,41 @@ clean:
 	rm -rf frontend/build
 	rm -rf frontend/node_modules
 	rm -rf frontend/test_results
-	rm -f frontend/src/autogen/proto.js
-	rm -f frontend/src/autogen/proto.d.ts
+	rm -f frontend/src/lib/proto.js
+	rm -f frontend/src/lib/proto.d.ts
 	rm -rf frontend/public/reports
 	rm -rf ~/.cache/pre-commit
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
-.PHONY: protobuf
-# Recompile Protobufs for Python and the frontend.
-protobuf:
-	@# Python protobuf generation
-	if ! command -v protoc &> /dev/null ; then \
+MIN_PROTOC_VERSION = 3.20
+.PHONY: check-protoc
+# Ensure protoc is installed and is >= MIN_PROTOC_VERSION.
+check-protoc:
+	@# We support Python protobuf 4.21, which is incompatible with code generated from
+	@# protoc < 3.20
+	@if ! command -v protoc &> /dev/null ; then \
 		echo "protoc not installed."; \
 		exit 1; \
+	fi; \
+	\
+	PROTOC_VERSION=$$(protoc --version | cut -d ' ' -f 2); \
+	\
+	if [[ $$(echo -e "$$PROTOC_VERSION\n$(MIN_PROTOC_VERSION)" | sort -V | head -n1) != $(MIN_PROTOC_VERSION) ]]; then \
+	  echo "Error: protoc version $${PROTOC_VERSION} is < $(MIN_PROTOC_VERSION)"; \
+	  exit 1; \
+	else \
+	  echo "protoc version $${PROTOC_VERSION} is >= than $(MIN_PROTOC_VERSION)"; \
 	fi
-	protoc_version=$$(protoc --version | cut -d ' ' -f 2);
-	protobuf_version=$$(pip show protobuf | grep Version | cut -d " " -f 2-);
-ifndef CIRCLECI
-			if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
-				echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
-				echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
-				echo "protoc version: $${protoc_version}"; \
-				echo "protobuf version: $${protobuf_version}"; \
-				echo -n "Do you want to continue anyway? [y/N] " && read ans && [ $${ans:-N} = y ]; \
-			fi
-else
-		if [[ "$${protoc_version%.*.*}" != "$${protobuf_version%.*.*}" ]] ; then \
-				echo -e '\033[31m WARNING: Protoc and protobuf version mismatch \033[0m'; \
-				echo "To avoid compatibility issues, please ensure that the protoc version matches the protobuf version you have installed."; \
-				echo "protoc version: $${protoc_version}"; \
-				echo "protobuf version: $${protobuf_version}"; \
-				echo "Since we're on CI we try to continue anyway..."; \
-		fi
-endif
+
+.PHONY: protobuf
+# Recompile Protobufs for Python and the frontend.
+protobuf: check-protoc
 	protoc \
 		--proto_path=proto \
 		--python_out=lib \
 		--mypy_out=lib \
 		proto/streamlit/proto/*.proto
-
-	@# Create a folder for autogenerated files
-	mkdir -p frontend/src/autogen
 
 	@# JS protobuf generation. The --es6 flag generates a proper es6 module.
 	cd frontend/ ; ( \
@@ -238,14 +257,14 @@ endif
 		yarn --silent pbjs \
 			../proto/streamlit/proto/*.proto \
 			-t static-module --wrap es6 \
-	) > ./src/autogen/proto.js
+	) > ./src/lib/proto.js
 
 	@# Typescript type declarations for our generated protobufs
 	cd frontend/ ; ( \
 		echo "/* eslint-disable */" ; \
 		echo ; \
-		yarn --silent pbts ./src/autogen/proto.js \
-	) > ./src/autogen/proto.d.ts
+		yarn --silent pbts ./src/lib/proto.js \
+	) > ./src/lib/proto.d.ts
 
 .PHONY: react-init
 react-init:
@@ -257,42 +276,34 @@ react-build:
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/build/ lib/streamlit/static/
 
+.PHONY: frontend-fast
+# Build frontend into static files faster by setting BUILD_AS_FAST_AS_POSSIBLE=true flag, which disables eslint and typechecking.
+frontend-fast:
+	cd frontend/ ; yarn run buildFast
+	rsync -av --delete --delete-excluded --exclude=reports \
+		frontend/build/ lib/streamlit/static/
+
 .PHONY: jslint
 # Lint the JS code
 jslint:
-	@# max-warnings 0 means we'll exit with a non-zero status on any lint warning
-ifndef CIRCLECI
+	./scripts/validate_frontend_lib_imports.py frontend/src/lib
 	cd frontend; \
 		yarn lint;
-else
-	cd frontend; \
-		yarn lint \
-			--format junit \
-			--output-file test-reports/eslint/eslint.xml \
-			./src
-endif #CIRCLECI
 
 .PHONY: tstypecheck
 # Type check the JS/TS code
 tstypecheck:
-	pre-commit run typecheck --all-files
+	pre-commit run typecheck --all-files --hook-stage manual
 
 .PHONY: jsformat
 # Fix formatting issues in our JavaScript & TypeScript files.
 jsformat:
-	pre-commit run prettier --all-files
+	pre-commit run prettier --all-files --hook-stage manual
 
 .PHONY: jstest
 # Run JS unit tests.
 jstest:
-ifndef CIRCLECI
-	cd frontend; yarn run test
-else
-	# Previously we used --runInBand here, which just completely turns off parallelization.
-	# But since our CircleCI instance has 2 CPUs, use maxWorkers instead:
-	# https://jestjs.io/docs/troubleshooting#tests-are-extremely-slow-on-docker-andor-continuous-integration-ci-server
-	cd frontend; yarn run test --maxWorkers=2
-endif
+	cd frontend; TESTPATH=$(TESTPATH) yarn run test
 
 .PHONY: jscoverage
 # Run JS unit tests and generate a coverage report.
@@ -322,22 +333,30 @@ distribute:
 # Rebuild the NOTICES file.
 notices:
 	cd frontend; \
-		yarn licenses generate-disclaimer --silent --production > ../NOTICES
-	# NOTE: This file may need to be manually edited. Look at the Git diff and
-	# the parts that should be edited will be obvious.
+		yarn licenses generate-disclaimer --silent --production --ignore-platform > ../NOTICES
 
-	./scripts/append_license.sh frontend/src/assets/font/Source_Code_Pro/Source-Code-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/font/Source_Sans_Pro/Source-Sans-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/font/Source_Serif_Pro/Source-Serif-Pro.LICENSE
+	./scripts/append_license.sh frontend/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
+	./scripts/append_license.sh frontend/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
+	./scripts/append_license.sh frontend/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Noto-Emoji-Font.LICENSE
 	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/src/lib/vendor/bokeh/bokeh-LICENSE.txt
+	./scripts/append_license.sh frontend/src/lib/vendor/twemoji-LICENSE.txt
+	./scripts/append_license.sh frontend/src/app/vendor/Segment-LICENSE.txt
+	./scripts/append_license.sh frontend/src/lib/vendor/react-bootstrap-LICENSE.txt
+	./scripts/append_license.sh lib/streamlit/vendor/ipython/IPython-LICENSE.txt
 
 .PHONY: headers
 # Update the license header on all source files.
 headers:
-	pre-commit run insert-license --all-files
-	pre-commit run license-headers --all-files
+	pre-commit run insert-license --all-files --hook-stage manual
+	pre-commit run license-headers --all-files --hook-stage manual
+
+.PHONY: gen-min-dep-constraints
+# Write the minimum versions of our dependencies to a constraints file.
+gen-min-dep-constraints:
+	make develop >/dev/null
+	python scripts/get_min_versions.py >lib/min-constraints-gen.txt
 
 .PHONY: build-test-env
 # Build docker image that mirrors circleci
@@ -350,7 +369,6 @@ build-test-env:
 		echo "Proto files not generated."; \
 		exit 1; \
 	fi
-ifndef CIRCLECI
 	docker build \
 		--build-arg UID=$$(id -u) \
 		--build-arg GID=$$(id -g) \
@@ -359,17 +377,6 @@ ifndef CIRCLECI
 		-t streamlit_e2e_tests \
 		-f e2e/Dockerfile \
 		.
-else
-	docker build \
-		--build-arg UID=$$(id -u) \
-		--build-arg GID=$$(id -g) \
-		--build-arg OSTYPE=$$(uname) \
-		--build-arg NODE_VERSION=$$(node --version) \
-		-t streamlit_e2e_tests \
-		-f e2e/Dockerfile \
-		--progress plain \
-		.
-endif #CIRCLECI
 
 .PHONY: run-test-env
 # Run test env image with volume mounts

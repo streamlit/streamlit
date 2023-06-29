@@ -15,6 +15,13 @@
 import ast
 import sys
 
+from typing_extensions import Final
+
+# When a Streamlit app is magicified, we insert a `magic_funcs` import near the top of
+# its module's AST:
+# import streamlit.runtime.scriptrunner.magic_funcs as __streamlitmagic__
+MAGIC_MODULE_NAME: Final = "__streamlitmagic__"
+
 
 def add_magic(code, script_path):
     """Modifies the code to support magic Streamlit commands.
@@ -45,7 +52,9 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
     for i, node in enumerate(body):
         node_type = type(node)
 
-        # Parse the contents of functions, With statements, and for statements
+        # Recursively parses the content of the statements
+        # `with`, `for` and `while`, as well as function definitions.
+        # Also covers their async counterparts
         if (
             node_type is ast.FunctionDef
             or node_type is ast.With
@@ -57,7 +66,8 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
         ):
             _modify_ast_subtree(node)
 
-        # Parse the contents of try statements
+        # Recursively parses the contents of try statements,
+        # all their handlers (except and else) and the finally body
         elif node_type is ast.Try:
             for j, inner_node in enumerate(node.handlers):
                 node.handlers[j] = _modify_ast_subtree(inner_node)
@@ -65,7 +75,9 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
             node.finalbody = finally_node.finalbody
             _modify_ast_subtree(node)
 
-        # Convert if expressions to st.write
+        # Recursively parses if blocks, as well as their else/elif blocks
+        # (else/elif are both mapped to orelse)
+        # it intentionally does not parse the test expression.
         elif node_type is ast.If:
             _modify_ast_subtree(node)
             _modify_ast_subtree(node, "orelse")
@@ -110,16 +122,23 @@ def _insert_import_statement(tree):
 
 
 def _build_st_import_statement():
-    """Build AST node for `import streamlit as __streamlit__`."""
-    return ast.Import(names=[ast.alias(name="streamlit", asname="__streamlit__")])
+    """Build AST node for `import magic_funcs as __streamlitmagic__`."""
+    return ast.Import(
+        names=[
+            ast.alias(
+                name="streamlit.runtime.scriptrunner.magic_funcs",
+                asname=MAGIC_MODULE_NAME,
+            )
+        ]
+    )
 
 
 def _build_st_write_call(nodes):
-    """Build AST node for `__streamlit__._transparent_write(*nodes)`."""
+    """Build AST node for `__streamlitmagic__.transparent_write(*nodes)`."""
     return ast.Call(
         func=ast.Attribute(
-            attr="_transparent_write",
-            value=ast.Name(id="__streamlit__", ctx=ast.Load()),
+            attr="transparent_write",
+            value=ast.Name(id=MAGIC_MODULE_NAME, ctx=ast.Load()),
             ctx=ast.Load(),
         ),
         args=nodes,

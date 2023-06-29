@@ -15,22 +15,20 @@
 """Tests widget-related functionality"""
 
 import unittest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
-import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit import errors
 from streamlit.proto.Button_pb2 import Button as ButtonProto
+from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import coalesce_widget_states
-from streamlit.runtime.state.session_state import (
-    GENERATED_WIDGET_KEY_PREFIX,
-    SessionState,
-    WidgetMetadata,
-)
-from streamlit.runtime.state.widgets import _get_widget_id
+from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX
+from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
+from streamlit.runtime.state.widgets import compute_widget_id, user_key_from_widget_id
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -76,22 +74,6 @@ class WidgetManagerTests(unittest.TestCase):
         session_state = SessionState()
         self.assertRaises(KeyError, lambda: session_state["fake_widget_id"])
 
-    @pytest.mark.skip
-    def test_get_keyed_widget_values(self):
-        states = WidgetStates()
-        _create_widget("trigger", states).trigger_value = True
-        _create_widget("trigger2", states).trigger_value = True
-
-        session_state = SessionState()
-        session_state.set_widgets_from_proto(states)
-
-        session_state._set_widget_metadata(
-            create_metadata("trigger", "trigger_value", True)
-        )
-        session_state._set_widget_metadata(create_metadata("trigger2", "trigger_value"))
-
-        self.assertEqual(dict(session_state.values()), {"trigger": True})
-
     def test_get_prev_widget_value_nonexistent(self):
         session_state = SessionState()
         self.assertRaises(KeyError, lambda: session_state["fake_widget_id"])
@@ -100,11 +82,9 @@ class WidgetManagerTests(unittest.TestCase):
         session_state = SessionState()
         session_state._set_widget_metadata(create_metadata("fake_widget_id", ""))
 
-        self.assertTrue(
-            isinstance(
-                session_state._new_widget_state.widget_metadata["fake_widget_id"],
-                WidgetMetadata,
-            )
+        self.assertIsInstance(
+            session_state._new_widget_state.widget_metadata["fake_widget_id"],
+            WidgetMetadata,
         )
 
     def test_call_callbacks(self):
@@ -202,6 +182,32 @@ class WidgetManagerTests(unittest.TestCase):
         self.assertFalse(session_state["trigger"])
         self.assertEqual(123, session_state["int"])
 
+    def test_reset_string_triggers(self):
+        states = WidgetStates()
+        session_state = SessionState()
+
+        _create_widget("string_trigger", states).string_trigger_value.CopyFrom(
+            StringTriggerValueProto(data="Some Value")
+        )
+        _create_widget("int", states).int_value = 123
+        session_state.set_widgets_from_proto(states)
+        session_state._set_widget_metadata(
+            WidgetMetadata(
+                "string_trigger", lambda x, s: x, None, "string_trigger_value"
+            )
+        )
+        session_state._set_widget_metadata(
+            WidgetMetadata("int", lambda x, s: x, None, "int_value")
+        )
+
+        self.assertEqual("Some Value", session_state["string_trigger"].data)
+        self.assertEqual(123, session_state["int"])
+
+        session_state._reset_triggers()
+
+        self.assertIsNone(session_state["string_trigger"])
+        self.assertEqual(123, session_state["int"])
+
     def test_coalesce_widget_states(self):
         session_state = SessionState()
 
@@ -209,6 +215,15 @@ class WidgetManagerTests(unittest.TestCase):
 
         _create_widget("old_set_trigger", old_states).trigger_value = True
         _create_widget("old_unset_trigger", old_states).trigger_value = False
+        _create_widget(
+            "old_set_string_trigger", old_states
+        ).string_trigger_value.CopyFrom(StringTriggerValueProto(data="Some String"))
+        _create_widget(
+            "old_set_empty_string_trigger", old_states
+        ).string_trigger_value.CopyFrom(StringTriggerValueProto(data=""))
+        _create_widget(
+            "old_unset_string_trigger", old_states
+        ).string_trigger_value.CopyFrom(StringTriggerValueProto(data=None))
         _create_widget("missing_in_new", old_states).int_value = 123
         _create_widget("shape_changing_trigger", old_states).trigger_value = True
 
@@ -217,6 +232,15 @@ class WidgetManagerTests(unittest.TestCase):
         )
         session_state._set_widget_metadata(
             create_metadata("old_unset_trigger", "trigger_value")
+        )
+        session_state._set_widget_metadata(
+            create_metadata("old_set_string_trigger", "string_trigger_value")
+        )
+        session_state._set_widget_metadata(
+            create_metadata("old_set_empty_string_trigger", "string_trigger_value")
+        )
+        session_state._set_widget_metadata(
+            create_metadata("old_unset_string_trigger", "string_trigger_value")
         )
         session_state._set_widget_metadata(
             create_metadata("missing_in_new", "int_value")
@@ -229,10 +253,24 @@ class WidgetManagerTests(unittest.TestCase):
 
         _create_widget("old_set_trigger", new_states).trigger_value = False
         _create_widget("new_set_trigger", new_states).trigger_value = True
+        _create_widget(
+            "old_set_string_trigger", new_states
+        ).string_trigger_value.CopyFrom(StringTriggerValueProto(data=None))
+        _create_widget(
+            "old_set_empty_string_trigger", new_states
+        ).string_trigger_value.CopyFrom(StringTriggerValueProto(data=None))
+        _create_widget(
+            "new_set_string_trigger", new_states
+        ).string_trigger_value.CopyFrom(
+            StringTriggerValueProto(data="Some other string")
+        )
         _create_widget("added_in_new", new_states).int_value = 456
         _create_widget("shape_changing_trigger", new_states).int_value = 3
         session_state._set_widget_metadata(
             create_metadata("new_set_trigger", "trigger_value")
+        )
+        session_state._set_widget_metadata(
+            create_metadata("new_set_string_trigger", "string_trigger_value")
         )
         session_state._set_widget_metadata(create_metadata("added_in_new", "int_value"))
         session_state._set_widget_metadata(
@@ -245,10 +283,16 @@ class WidgetManagerTests(unittest.TestCase):
 
         self.assertRaises(KeyError, lambda: session_state["old_unset_trigger"])
         self.assertRaises(KeyError, lambda: session_state["missing_in_new"])
+        self.assertRaises(KeyError, lambda: session_state["old_unset_string_trigger"])
 
         self.assertEqual(True, session_state["old_set_trigger"])
         self.assertEqual(True, session_state["new_set_trigger"])
         self.assertEqual(456, session_state["added_in_new"])
+        self.assertEqual("Some String", session_state["old_set_string_trigger"].data)
+        self.assertEqual("", session_state["old_set_empty_string_trigger"].data)
+        self.assertEqual(
+            "Some other string", session_state["new_set_string_trigger"].data
+        )
 
         # Widgets that were triggers before, but no longer are, will *not*
         # be coalesced
@@ -260,8 +304,8 @@ class WidgetHelperTests(unittest.TestCase):
         button_proto = ButtonProto()
         button_proto.label = "the label"
         self.assertTrue(
-            _get_widget_id("button", button_proto).startswith(
-                GENERATED_WIDGET_KEY_PREFIX
+            compute_widget_id("button", button_proto).startswith(
+                GENERATED_WIDGET_ID_PREFIX
             )
         )
 
@@ -310,3 +354,36 @@ class WidgetIdDisabledTests(DeltaGeneratorTestCase):
 
         with self.assertRaises(errors.DuplicateWidgetID):
             widget_func("my_widget", options, disabled=True)
+
+
+@patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))
+class WidgetUserKeyTests(DeltaGeneratorTestCase):
+    def test_get_widget_user_key(self):
+        state = get_script_run_ctx().session_state._state
+        st.checkbox("checkbox", key="c")
+
+        k = list(state._keys())[0]
+        assert user_key_from_widget_id(k) == "c"
+
+    def test_get_widget_user_key_none(self):
+        state = get_script_run_ctx().session_state._state
+        st.selectbox("selectbox", options=["foo", "bar"])
+
+        k = list(state._keys())[0]
+        # Absence of a user key is represented as None throughout our code
+        assert user_key_from_widget_id(k) is None
+
+    def test_get_widget_user_key_hyphens(self):
+        state = get_script_run_ctx().session_state._state
+        st.slider("slider", key="my-slider")
+
+        k = list(state._keys())[0]
+        assert user_key_from_widget_id(k) == "my-slider"
+
+    def test_get_widget_user_key_incorrect_none(self):
+        state = get_script_run_ctx().session_state._state
+        st.checkbox("checkbox", key="None")
+
+        k = list(state._keys())[0]
+        # Incorrectly inidcates no user key
+        assert user_key_from_widget_id(k) == None

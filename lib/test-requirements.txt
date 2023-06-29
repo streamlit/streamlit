@@ -4,19 +4,43 @@
 bokeh==2.4.3
 cffi>=1.14
 chart-studio>=1.1.0
-# 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
-cx-Oracle<8.0.0
 graphviz>=0.17
+langchain>=0.0.216
 matplotlib>=3.3.4
-mysqlclient>=2.0.3
 opencv-python>=4.5.3
 plotly>=5.3.1
-psycopg2-binary>=2.9.1
+pyspark>=3.1.1
 pydot>=1.4.2
-pyodbc>=4.0.32
-scipy<=1.7.3
+scipy>=1.7.3
 seaborn>=0.11.2
-setuptools<50.0.0
-sqlalchemy>=1.4.25
-watchdog==2.1.5
-rich>=11.2.0
+setuptools>=65.5.1
+watchdog>=2.1.5
+
+urllib3>=1.9
+
+hypothesis>=6.17.4
+parameterized
+pytest
+pytest-cov
+requests-mock
+testfixtures
+
+
+mypy-protobuf>=3.2
+
+# These requirements exist only for `@st.cache` tests. st.cache is deprecated, and
+# we're not going to update its associated tests anymore. Please don't modify
+# these pinned versions!
+
+# 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
+cx-Oracle<8.0.0
+mysqlclient>=2.0.3
+psycopg2-binary>=2.9.1
+pyodbc>=4.0.32
+# SQLAlchemy 2.0 causes hashing tests to fail (and we're deliberately
+# choosing not to support it.)
+sqlalchemy[mypy]>=1.4.25, <2.0
+
+# Pydantic 1.* fails to initialize validators, we add it to requirements
+# to test the fix. Pydantic 2 should not have that issue.
+pydantic>=1.0, <2.0

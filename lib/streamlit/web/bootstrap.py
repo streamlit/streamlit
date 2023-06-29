@@ -21,21 +21,24 @@ from typing import Any, Dict, List, Optional
 
 import click
 
-from streamlit import config, env_util, net_util, secrets, url_util, util, version
+from streamlit import (
+    config,
+    env_util,
+    file_util,
+    net_util,
+    secrets,
+    url_util,
+    util,
+    version,
+)
 from streamlit.config import CONFIG_FILENAMES
 from streamlit.git_util import MIN_GIT_VERSION, GitRepo
 from streamlit.logger import get_logger
-from streamlit.runtime.secrets import SECRETS_FILE_LOC
 from streamlit.source_util import invalidate_pages_cache
 from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
 
 LOGGER = get_logger(__name__)
-
-# Wait for 1 second before opening a browser. This gives old tabs a chance to
-# reconnect.
-# This must be >= 2 * WebSocketConnection.ts#RECONNECT_WAIT_TIME_MS.
-BROWSER_WAIT_TIMEOUT_SEC = 1
 
 NEW_VERSION_TEXT = """
   %(new_version)s
@@ -51,6 +54,11 @@ NEW_VERSION_TEXT = """
     "prompt": click.style("$", fg="blue"),
     "command": click.style("pip install streamlit --upgrade", bold=True),
 }
+
+# The maximum possible total size of a static directory.
+# We agreed on these limitations for the initial release of static file sharing,
+# based on security concerns from the SiS and Community Cloud teams
+MAX_APP_STATIC_FOLDER_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
 
 
 def _set_up_signal_handler(server: Server) -> None:
@@ -102,6 +110,7 @@ def _fix_matplotlib_crash() -> None:
 
             matplotlib.use("Agg")
         except ImportError:
+            # Matplotlib is not installed. No need to do anything.
             pass
 
 
@@ -122,8 +131,6 @@ def _fix_tornado_crash() -> None:
     remove and bump tornado requirement for py38
     """
     if env_util.IS_WINDOWS and sys.version_info >= (3, 8):
-        import asyncio
-
         try:
             from asyncio import (  # type: ignore[attr-defined]
                 WindowsProactorEventLoopPolicy,
@@ -150,6 +157,7 @@ def _fix_sys_argv(main_script_path: str, args: List[str]) -> None:
 
 def _on_server_start(server: Server) -> None:
     _maybe_print_old_git_warning(server.main_script_path)
+    _maybe_print_static_folder_warning(server.main_script_path)
     _print_url(server.is_running_hello)
     report_watchdog_availability()
     _print_new_version_message()
@@ -159,18 +167,12 @@ def _on_server_start(server: Server) -> None:
     # errors and display them here.
     try:
         secrets.load_if_toml_exists()
-    except BaseException as e:
-        LOGGER.error(f"Failed to load {SECRETS_FILE_LOC}", exc_info=e)
+    except Exception as ex:
+        LOGGER.error(f"Failed to load secrets.toml file", exc_info=ex)
 
     def maybe_open_browser():
         if config.get_option("server.headless"):
             # Don't open browser when in headless mode.
-            return
-
-        if server.browser_is_connected:
-            # Don't auto-open browser if there's already a browser connected.
-            # This can happen if there's an old tab repeatedly trying to
-            # connect, and it happens to success before we launch the browser.
             return
 
         if config.is_manually_set("browser.serverAddress"):
@@ -185,9 +187,8 @@ def _on_server_start(server: Server) -> None:
 
         util.open_browser(server_util.get_url(addr))
 
-    # Schedule the browser to open on the main thread, but only if no other
-    # browser connects within 1s.
-    asyncio.get_running_loop().call_later(BROWSER_WAIT_TIMEOUT_SEC, maybe_open_browser)
+    # Schedule the browser to open on the main thread.
+    asyncio.get_running_loop().call_soon(maybe_open_browser)
 
 
 def _fix_pydeck_mapbox_api_warning() -> None:
@@ -196,9 +197,59 @@ def _fix_pydeck_mapbox_api_warning() -> None:
     os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
 
 
+def _fix_pydantic_duplicate_validators_error():
+    """Pydantic by default disallows to reuse of validators with the same name,
+    this combined with the Streamlit execution model leads to an error on the second
+    Streamlit script rerun if the Pydantic validator is registered
+    in the streamlit script.
+
+    It is important to note that the same issue exists for Pydantic validators inside
+    Jupyter notebooks, https://github.com/pydantic/pydantic/issues/312 and in order
+    to fix that in Pydantic they use the `in_ipython` function that checks that
+    Pydantic runs not in `ipython` environment.
+
+    Inside this function we patch `in_ipython` function to always return `True`.
+
+    This change will relax rules for writing Pydantic validators inside
+    Streamlit script a little bit, similar to how it works in jupyter,
+    which should not be critical.
+    """
+    try:
+        from pydantic import class_validators
+
+        class_validators.in_ipython = lambda: True  # type: ignore[attr-defined]
+    except ImportError:
+        pass
+
+
 def _print_new_version_message() -> None:
     if version.should_show_new_version_notice():
         click.secho(NEW_VERSION_TEXT)
+
+
+def _maybe_print_static_folder_warning(main_script_path: str) -> None:
+    """Prints a warning if the static folder is misconfigured."""
+
+    if config.get_option("server.enableStaticServing"):
+        static_folder_path = file_util.get_app_static_dir(main_script_path)
+        if not os.path.isdir(static_folder_path):
+            click.secho(
+                f"WARNING: Static file serving is enabled, but no static folder found "
+                f"at {static_folder_path}. To disable static file serving, "
+                f"set server.enableStaticServing to false.",
+                fg="yellow",
+            )
+        else:
+            # Raise warning when static folder size is larger than 1 GB
+            static_folder_size = file_util.get_directory_size(static_folder_path)
+
+            if static_folder_size > MAX_APP_STATIC_FOLDER_SIZE:
+                config.set_option("server.enableStaticServing", False)
+                click.secho(
+                    "WARNING: Static folder size is larger than 1GB. "
+                    "Static file serving has been disabled.",
+                    fg="yellow",
+                )
 
 
 def _print_url(is_running_hello: bool) -> None:
@@ -355,6 +406,7 @@ def run(
     _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)
     _fix_pydeck_mapbox_api_warning()
+    _fix_pydantic_duplicate_validators_error()
     _install_config_watchers(flag_options)
     _install_pages_watcher(main_script_path)
 

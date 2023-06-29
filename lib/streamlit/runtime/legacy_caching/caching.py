@@ -44,10 +44,13 @@ from pympler.asizeof import asizeof
 
 import streamlit as st
 from streamlit import config, file_util, util
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.elements.spinner import spinner
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIWarning
 from streamlit.logger import get_logger
+from streamlit.runtime.caching import CACHE_DOCS_URL
+from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
 from streamlit.runtime.legacy_caching.hashing import (
     HashFuncsDict,
     HashReason,
@@ -65,6 +68,88 @@ _TTLCACHE_TIMER = time.monotonic
 
 _CacheEntry = namedtuple("_CacheEntry", ["value", "hash"])
 _DiskCacheEntry = namedtuple("_DiskCacheEntry", ["value"])
+
+# When we show the "st.cache is deprecated" warning, we make a recommendation about which new
+# cache decorator to switch to for the following data types:
+NEW_CACHE_FUNC_RECOMMENDATIONS: Dict[str, CacheType] = {
+    # cache_data recommendations:
+    "str": CacheType.DATA,
+    "float": CacheType.DATA,
+    "int": CacheType.DATA,
+    "bytes": CacheType.DATA,
+    "bool": CacheType.DATA,
+    "datetime.datetime": CacheType.DATA,
+    "pandas.DataFrame": CacheType.DATA,
+    "pandas.Series": CacheType.DATA,
+    "numpy.bool_": CacheType.DATA,
+    "numpy.bool8": CacheType.DATA,
+    "numpy.ndarray": CacheType.DATA,
+    "numpy.float_": CacheType.DATA,
+    "numpy.float16": CacheType.DATA,
+    "numpy.float32": CacheType.DATA,
+    "numpy.float64": CacheType.DATA,
+    "numpy.float96": CacheType.DATA,
+    "numpy.float128": CacheType.DATA,
+    "numpy.int_": CacheType.DATA,
+    "numpy.int8": CacheType.DATA,
+    "numpy.int16": CacheType.DATA,
+    "numpy.int32": CacheType.DATA,
+    "numpy.int64": CacheType.DATA,
+    "numpy.intp": CacheType.DATA,
+    "numpy.uint8": CacheType.DATA,
+    "numpy.uint16": CacheType.DATA,
+    "numpy.uint32": CacheType.DATA,
+    "numpy.uint64": CacheType.DATA,
+    "numpy.uintp": CacheType.DATA,
+    "PIL.Image.Image": CacheType.DATA,
+    "plotly.graph_objects.Figure": CacheType.DATA,
+    "matplotlib.figure.Figure": CacheType.DATA,
+    "altair.Chart": CacheType.DATA,
+    # cache_resource recommendations:
+    "pyodbc.Connection": CacheType.RESOURCE,
+    "pymongo.mongo_client.MongoClient": CacheType.RESOURCE,
+    "mysql.connector.MySQLConnection": CacheType.RESOURCE,
+    "psycopg2.connection": CacheType.RESOURCE,
+    "psycopg2.extensions.connection": CacheType.RESOURCE,
+    "snowflake.connector.connection.SnowflakeConnection": CacheType.RESOURCE,
+    "snowflake.snowpark.sessions.Session": CacheType.RESOURCE,
+    "sqlalchemy.engine.base.Engine": CacheType.RESOURCE,
+    "sqlite3.Connection": CacheType.RESOURCE,
+    "torch.nn.Module": CacheType.RESOURCE,
+    "tensorflow.keras.Model": CacheType.RESOURCE,
+    "tensorflow.Module": CacheType.RESOURCE,
+    "tensorflow.compat.v1.Session": CacheType.RESOURCE,
+    "transformers.Pipeline": CacheType.RESOURCE,
+    "transformers.PreTrainedTokenizer": CacheType.RESOURCE,
+    "transformers.PreTrainedTokenizerFast": CacheType.RESOURCE,
+    "transformers.PreTrainedTokenizerBase": CacheType.RESOURCE,
+    "transformers.PreTrainedModel": CacheType.RESOURCE,
+    "transformers.TFPreTrainedModel": CacheType.RESOURCE,
+    "transformers.FlaxPreTrainedModel": CacheType.RESOURCE,
+}
+
+
+def _make_deprecation_warning(cached_value: Any) -> str:
+    """Build a deprecation warning string for a cache function that has returned the given
+    value.
+    """
+    typename = type(cached_value).__qualname__
+    cache_type_rec = NEW_CACHE_FUNC_RECOMMENDATIONS.get(typename)
+    if cache_type_rec is not None:
+        # We have a recommended cache func for the cached value:
+        return (
+            f"`st.cache` is deprecated. Please use one of Streamlit's new caching commands,\n"
+            f"`st.cache_data` or `st.cache_resource`. Based on this function's return value\n"
+            f"of type `{typename}`, we recommend using `st.{get_decorator_api_name(cache_type_rec)}`.\n\n"
+            f"More information [in our docs]({CACHE_DOCS_URL})."
+        )
+
+    # We do not have a recommended cache func for the cached value:
+    return (
+        f"`st.cache` is deprecated. Please use one of Streamlit's new caching commands,\n"
+        f"`st.cache_data` or `st.cache_resource`.\n\n"
+        f"More information [in our docs]({CACHE_DOCS_URL})."
+    )
 
 
 @dataclass
@@ -312,6 +397,7 @@ def _write_to_disk_cache(key: str, value: Any) -> None:
         try:
             os.remove(path)
         except (FileNotFoundError, IOError, OSError):
+            # If we can't remove the file, it's not a big deal.
             pass
         raise CacheError("Unable to write to cache: %s" % e)
 
@@ -349,7 +435,7 @@ def _read_from_cache(
         raise e
 
 
-@gather_metrics
+@gather_metrics("_cache_object")
 def _write_to_cache(
     mem_cache: MemCache,
     key: str,
@@ -428,7 +514,7 @@ def cache(
         a cache miss.
 
     suppress_st_warning : boolean
-        Suppress warnings about calling Streamlit functions from within
+        Suppress warnings about calling Streamlit commands from within
         the cached function.
 
     hash_funcs : dict or None
@@ -449,6 +535,8 @@ def cache(
 
     Example
     -------
+    >>> import streamlit as st
+    >>>
     >>> @st.cache
     ... def fetch_and_clean_data(url):
     ...     # Fetch data from URL here, and then clean it up.
@@ -522,9 +610,10 @@ def cache(
 
     @functools.wraps(non_optional_func)
     def wrapped_func(*args, **kwargs):
-        """This function wrapper will only call the underlying function in
-        the case of a cache miss. Cached objects are stored in the cache/
-        directory."""
+        """Wrapper function that only calls the underlying function on a cache miss.
+
+        Cached objects are stored in the cache/ directory.
+        """
 
         if not config.get_option("client.caching"):
             _LOGGER.debug("Purposefully skipping cache")
@@ -616,6 +705,9 @@ def cache(
                     hash_funcs=hash_funcs,
                 )
 
+            # st.cache is deprecated. We show a warning every time it's used.
+            show_deprecation_warning(_make_deprecation_warning(return_value))
+
             return return_value
 
         if show_spinner:
@@ -629,6 +721,7 @@ def cache(
     try:
         wrapped_func.__dict__.update(non_optional_func.__dict__)
     except AttributeError:
+        # For normal functions this should never happen, but if so it's not problematic.
         pass
 
     return cast(F, wrapped_func)
@@ -725,10 +818,8 @@ class CacheKeyNotFoundError(Exception):
 
 
 class CachedObjectMutationError(ValueError):
-    """This is used internally, but never shown to the user.
-
-    Users see CachedObjectMutationWarning instead.
-    """
+    # This is used internally, but never shown to the user.
+    # Users see CachedObjectMutationWarning instead.
 
     def __init__(self, cached_value, func_or_code):
         self.cached_value = cached_value

@@ -15,7 +15,7 @@
 from typing import TYPE_CHECKING, Any, Hashable, Optional, Union, cast
 
 import streamlit
-from streamlit import runtime, type_util
+from streamlit import config, runtime, type_util
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
@@ -50,6 +50,11 @@ def check_callback_rules(
 
 _shown_default_value_warning: bool = False
 
+SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT = """
+Values for st.button, st.download_button, st.file_uploader, st.data_editor,
+st.chat_input, and st.form cannot be set using st.session_state.
+"""
+
 
 def check_session_state_rules(
     default_value: Any, key: Optional[str], writes_allowed: bool = True
@@ -64,12 +69,13 @@ def check_session_state_rules(
         return
 
     if not writes_allowed:
-        raise StreamlitAPIException(
-            "Values for st.button, st.download_button, st.file_uploader, and "
-            "st.form cannot be set using st.session_state."
-        )
+        raise StreamlitAPIException(SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT)
 
-    if default_value is not None and not _shown_default_value_warning:
+    if (
+        default_value is not None
+        and not _shown_default_value_warning
+        and not config.get_option("global.disableWidgetStateDuplicationWarning")
+    ):
         streamlit.warning(
             f'The widget with key "{key}" was created with a default value but'
             " also had its value set via the Session State API."
@@ -79,10 +85,8 @@ def check_session_state_rules(
 
 def get_label_visibility_proto_value(
     label_visibility_string: type_util.LabelVisibility,
-) -> Any:
-    """
-    Returns one of LabelVisibilityMessage enum constants based on string value
-    """
+) -> "LabelVisibilityMessage.LabelVisibilityOptions.ValueType":
+    """Returns one of LabelVisibilityMessage enum constants.py based on string value."""
 
     if label_visibility_string == "visible":
         return LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
@@ -90,3 +94,5 @@ def get_label_visibility_proto_value(
         return LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN
     elif label_visibility_string == "collapsed":
         return LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
+
+    raise ValueError(f"Unknown label visibility value: {label_visibility_string}")

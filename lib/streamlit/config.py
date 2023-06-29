@@ -59,6 +59,9 @@ _USER_DEFINED = "<user defined>"
 # or via command-line flag.
 _DEFINED_BY_FLAG = "command-line argument or environment variable"
 
+# Indicates that a config option was defined in an environment variable
+_DEFINED_BY_ENV_VAR = "environment variable"
+
 
 def set_option(key: str, value: Any, where_defined: str = _USER_DEFINED) -> None:
     """Set config option.
@@ -80,7 +83,6 @@ def set_option(key: str, value: Any, where_defined: str = _USER_DEFINED) -> None
     where_defined : str
         Tells the config system where this was set.
     """
-
     with _config_lock:
         # Ensure that our config files have been parsed.
         get_config_options()
@@ -156,7 +158,7 @@ def get_options_for_section(section: str) -> Dict[str, Any]:
         The name of the config section to fetch options for.
 
     Returns
-    ----------
+    -------
     Dict[str, Any]
         A dict mapping the names of the options in the given section (without
         the section name as a prefix) to their values.
@@ -190,6 +192,7 @@ def _create_option(
     expiration_date: Optional[str] = None,
     replaced_by: Optional[str] = None,
     type_: type = str,
+    sensitive: bool = False,
 ) -> ConfigOption:
     '''Create a ConfigOption and store it globally in this module.
 
@@ -237,6 +240,7 @@ def _create_option(
         expiration_date=expiration_date,
         replaced_by=replaced_by,
         type_=type_,
+        sensitive=sensitive,
     )
     assert (
         option.section in _section_descriptions
@@ -258,6 +262,7 @@ def _delete_option(key: str) -> None:
         del _config_options_template[key]
         del cast(Dict[str, ConfigOption], _config_options)[key]
     except Exception:
+        # We don't care if the option already doesn't exist.
         pass
 
 
@@ -272,6 +277,20 @@ _create_option(
         and, if not, prints a warning asking for you to install it. The watchdog
         module is not required, but highly recommended. It improves Streamlit's
         ability to detect changes to files in your filesystem.
+
+        If you'd like to turn off this warning, set this to True.
+        """,
+    default_val=False,
+    type_=bool,
+)
+
+
+_create_option(
+    "global.disableWidgetStateDuplicationWarning",
+    description="""
+        By default, Streamlit displays a warning when a user sets both a widget
+        default value in the function defining the widget and a widget value via
+        the widget's key in `st.session_state`.
 
         If you'd like to turn off this warning, set this to True.
         """,
@@ -377,7 +396,6 @@ def _logger_log_level() -> str:
 
     Default: 'info'
     """
-
     if get_option("global.logLevel"):
         return str(get_option("global.logLevel"))
     elif get_option("global.developmentMode"):
@@ -442,15 +460,36 @@ _create_option(
 _create_option(
     "client.showErrorDetails",
     description="""
-        Controls whether uncaught app exceptions are displayed in the browser.
-        By default, this is set to True and Streamlit displays app exceptions
-        and associated tracebacks in the browser.
+        Controls whether uncaught app exceptions and deprecation warnings
+        are displayed in the browser. By default, this is set to True and
+        Streamlit displays app exceptions and associated tracebacks, and
+        deprecation warnings, in the browser.
 
-        If set to False, an exception will result in a generic message being
-        shown in the browser, and exceptions and tracebacks will be printed to
-        the console only.""",
+        If set to False, an exception or deprecation warning will result in
+        a generic message being shown in the browser, and exceptions, tracebacks,
+        and deprecation warnings will be printed to the console only.""",
     default_val=True,
     type_=bool,
+    scriptable=True,
+)
+
+_create_option(
+    "client.toolbarMode",
+    description="""
+        Change the visibility of items in the toolbar, options menu,
+        and settings dialog (top right of the app).
+
+        Allowed values:
+        * "auto"      : Show the developer options if the app is accessed through
+                        localhost and hide them otherwise.
+        * "developer" : Show the developer options.
+        * "viewer"    : Hide the developer options.
+        * "minimal"   : Show only options set externally (e.g. through
+                        Streamlit Community Cloud) or through st.set_page_config.
+                        If there are no options left, hide the menu.
+""",
+    default_val="auto",
+    type_=str,
     scriptable=True,
 )
 
@@ -504,11 +543,23 @@ _create_option(
 _create_option(
     "runner.fastReruns",
     description="""
-        Handle script rerun requests immediately, rather than waiting for
-        script execution to reach a yield point. Enabling this will
-        make Streamlit much more responsive to user interaction, but it can
-        lead to race conditions in apps that mutate session_state data outside
-        of explicit session_state assignment statements.
+        Handle script rerun requests immediately, rather than waiting for script
+        execution to reach a yield point. This makes Streamlit much more
+        responsive to user interaction, but it can lead to race conditions in
+        apps that mutate session_state data outside of explicit session_state
+        assignment statements.
+    """,
+    default_val=True,
+    type_=bool,
+)
+
+_create_option(
+    "runner.enforceSerializableSessionState",
+    description="""
+        Raise an exception after adding unserializable data to Session State.
+        Some execution environments may require serializing all data in Session
+        State, so it may be useful to detect incompatibility during development,
+        or when the execution environment will stop supporting it in the future.
     """,
     default_val=False,
     type_=bool,
@@ -548,7 +599,7 @@ _create_option(
 )
 
 
-@_create_option("server.cookieSecret", type_=str)
+@_create_option("server.cookieSecret", type_=str, sensitive=True)
 @util.memoize
 def _server_cookie_secret() -> str:
     """Symmetric key used to produce signed cookies. If deploying on multiple replicas, this should
@@ -645,7 +696,7 @@ _create_option(
 _create_option(
     "server.enableCORS",
     description="""
-    Enables support for Cross-Origin Request Sharing (CORS) protection, for added security.
+    Enables support for Cross-Origin Resource Sharing (CORS) protection, for added security.
 
     Due to conflicts between CORS and XSRF, if `server.enableXsrfProtection` is on and
     `server.enableCORS` is off at the same time, we will prioritize `server.enableXsrfProtection`.
@@ -694,6 +745,14 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "server.enableStaticServing",
+    description="""
+        Enable serving files from a `static` directory in the running app's directory.
+        """,
+    default_val=False,
+    type_=bool,
+)
 
 # Config Section: Browser #
 
@@ -741,6 +800,36 @@ def _browser_server_port() -> int:
     return int(get_option("server.port"))
 
 
+_SSL_PRODUCTION_WARNING = [
+    "DO NOT USE THIS OPTION IN A PRODUCTION ENVIRONMENT. It has not gone through "
+    "security audits or performance tests. For the production environment, "
+    "we recommend performing SSL termination by the load balancer or the reverse proxy."
+]
+
+_create_option(
+    "server.sslCertFile",
+    description=(
+        f"""
+        Server certificate file for connecting via HTTPS.
+        Must be set at the same time as "server.sslKeyFile".
+
+        {_SSL_PRODUCTION_WARNING}
+        """
+    ),
+)
+
+_create_option(
+    "server.sslKeyFile",
+    description=(
+        f"""
+        Cryptographic key file for connecting via HTTPS.
+        Must be set at the same time as "server.sslCertFile".
+
+        {_SSL_PRODUCTION_WARNING}
+        """
+    ),
+)
+
 # Config Section: UI #
 
 # NOTE: We currently hide the ui config section in the `streamlit config show`
@@ -781,6 +870,7 @@ _create_option(
                 To get a token for yourself, create an account at
                 https://mapbox.com. It's free (for moderate usage levels)!""",
     default_val="",
+    sensitive=True,
 )
 
 
@@ -956,6 +1046,20 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
         _config_options[key].set_value(value, where_defined)
 
 
+def _update_config_with_sensitive_env_var(config_options: Dict[str, ConfigOption]):
+    """Update the config system by parsing the environment variable.
+
+    This should only be called from get_config_options.
+    """
+    for opt_name, opt_val in config_options.items():
+        if not opt_val.sensitive:
+            continue
+        env_var_value = os.environ.get(opt_val.env_var)
+        if env_var_value is None:
+            continue
+        _set_option(opt_name, env_var_value, _DEFINED_BY_ENV_VAR)
+
+
 def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
     """Update the config system by parsing this string.
 
@@ -994,7 +1098,6 @@ def _maybe_read_env_variable(value: Any) -> Any:
         variable.
 
     """
-
     if isinstance(value, str) and value.startswith("env:"):
         var_name = value[len("env:") :]
         env_var = os.environ.get(var_name)
@@ -1060,7 +1163,7 @@ def get_config_options(
         Config options that we received via CLI flag.
 
     Returns
-    ----------
+    -------
     Dict[str, ConfigOption]
         An ordered dict that maps config option names to their values.
     """
@@ -1093,6 +1196,8 @@ def get_config_options(
                 file_contents = input.read()
 
             _update_config_with_toml(file_contents, filename)
+
+        _update_config_with_sensitive_env_var(_config_options)
 
         for opt_name, opt_val in options_from_flags.items():
             _set_option(opt_name, opt_val, _DEFINED_BY_FLAG)
@@ -1182,7 +1287,6 @@ def on_config_parsed(
     Callable[[], bool]
         A function that the caller can use to deregister func.
     """
-
     # We need to use the same receiver when we connect or disconnect on the
     # Signal. If we don't do this, then the registered receiver won't be released
     # leading to a memory leak because the Signal will keep a reference of the

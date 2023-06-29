@@ -1,10 +1,13 @@
 name: "Setup Virtual Env"
+description: Sets up virtualenv + React; compiles protobuf
 
 inputs:
   use_cached_venv:
-    description: 'Use Cached Virtual Env'
-    default: 'true'
+    description: "Use Cached Virtual Env"
+    default: "true"
 
+# There is an altered copy of these steps inlined in the python_min_deps
+# workflow. If you make changes to this action, apply them there too if appropriate.
 runs:
   using: composite
   steps:
@@ -18,28 +21,41 @@ runs:
       run: |
         pip install pre-commit
         pre-commit install-hooks
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}
     - name: Setup Node
       uses: actions/setup-node@v3
       with:
-        node-version-file: '.nvmrc'
-        cache: 'yarn'
-        cache-dependency-path: '**/yarn.lock'
+        node-version-file: ".nvmrc"
+        cache: "yarn"
+        cache-dependency-path: "**/yarn.lock"
     - name: Initialize React
-      run: make react-init
-      shell: bash -ileo pipefail {0}
-    - name: Install Dependencies
+      run: |
+        # Create the cache directory if it does not exist.
+        mkdir -p $(yarn cache dir)
+        make react-init
+      shell: bash --login -eo pipefail {0}
+    - name: Install system dependencies
       run: |
         echo "deb http://ppa.launchpad.net/maarten-fonville/protobuf/ubuntu trusty main" | sudo tee /etc/apt/sources.list.d/protobuf.list
         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4DEA8909DC6A13A3
         sudo apt update
         # protobuf, pyodbc, dot, & graphviz dependencies
         sudo apt install -y gnupg \
-            unixodbc-dev \
+            unixodbc-dev=2.3.9-5 \
             graphviz \
             libgvc6 \
             protobuf-compiler
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}
+    # We require protoc >= 3.20, but Ubuntu 22.04 - the OS that these Github
+    # Actions are running as of 2023.05.03 - doesn't have recent versions
+    # of protoc in its package repository. To work around this, we vendor in
+    # protoc 3.20.3.
+    # We can remove the vendored protoc binary and this run step once Github
+    # Actions moves to a newer version of Ubunutu.
+    - name: Add vendored `protoc` to $PATH
+      run: |
+        echo "./vendor/protoc-3.20.3-linux-x86_64/bin" >> $GITHUB_PATH
+      shell: bash --login -eo pipefail {0}
     # Combine hashes of the Python interpreter, Pipfile, and today's
     # date into a file whose hash will key the Python virtualenv.
     #
@@ -54,12 +70,11 @@ runs:
       name: Create Python environment cache key
       run: |
         md5sum $(which python) > $GITHUB_WORKSPACE/python_cache_key.md5
-        md5sum lib/Pipfile >> $GITHUB_WORKSPACE/python_cache_key.md5
+        md5sum lib/dev-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
-        md5sum lib/test-requirements-with-tensorflow.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
         date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}
     - if: inputs.use_cached_venv == 'true'
       name: Restore virtualenv from cache
       id: cache-virtualenv
@@ -73,13 +88,12 @@ runs:
         python -m venv venv
         source venv/bin/activate
         pip install --upgrade pip
-        make setup
-        make pipenv-install
+        make python-init
         deactivate
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}
     - name: Activate virtualenv
       run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}
     - name: Generate Protobufs
       run: make protobuf
-      shell: bash -ileo pipefail {0}
+      shell: bash --login -eo pipefail {0}

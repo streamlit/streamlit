@@ -13,52 +13,50 @@
 # limitations under the License.
 
 """st.memo/singleton hashing tests."""
-
+import datetime
 import functools
 import hashlib
 import os
 import re
 import tempfile
+import time
 import types
 import unittest
+import uuid
 from dataclasses import dataclass
 from enum import Enum, auto
 from io import BytesIO, StringIO
 from unittest.mock import MagicMock, Mock
 
 import cffi
+import dateutil.tz
 import numpy as np
+import pandas
 import pandas as pd
+import tzlocal
 from parameterized import parameterized
 from PIL import Image
 
+from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import (
     _NP_SIZE_LARGE,
     _PANDAS_ROWS_LARGE,
-    _CacheFuncHasher,
+    UserHashError,
+    update_hash,
 )
-
-try:
-    import keras
-except ImportError:
-    pass
-
-try:
-    import tensorflow as tf
-except ImportError:
-    pass
-
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.type_util import is_type
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
 
-def get_hash(f):
+def get_hash(value, hash_funcs=None, cache_type=None):
     hasher = hashlib.new("md5")
-    ch = _CacheFuncHasher(MagicMock())
-    ch.update(hasher, f)
+    update_hash(
+        value, hasher, cache_type=cache_type or MagicMock(), hash_funcs=hash_funcs
+    )
     return hasher.digest()
 
 
@@ -73,6 +71,78 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(-1), get_hash(1))
         self.assertNotEqual(get_hash(2**7), get_hash(2**7 - 1))
         self.assertNotEqual(get_hash(2**7), get_hash(2**7 + 1))
+
+    def test_uuid(self):
+        uuid1 = uuid.uuid4()
+        uuid1_copy = uuid.UUID(uuid1.hex)
+        uuid2 = uuid.uuid4()
+
+        # Our hashing functionality should work with UUIDs
+        # regardless of UUID factory function.
+
+        uuid3 = uuid.uuid5(uuid.NAMESPACE_DNS, "streamlit.io")
+        uuid3_copy = uuid.UUID(uuid3.hex)
+        uuid4 = uuid.uuid5(uuid.NAMESPACE_DNS, "snowflake.com")
+
+        self.assertEqual(get_hash(uuid1), get_hash(uuid1_copy))
+        self.assertNotEqual(id(uuid1), id(uuid1_copy))
+        self.assertNotEqual(get_hash(uuid1), get_hash(uuid2))
+
+        self.assertEqual(get_hash(uuid3), get_hash(uuid3_copy))
+        self.assertNotEqual(id(uuid3), id(uuid3_copy))
+        self.assertNotEqual(get_hash(uuid3), get_hash(uuid4))
+
+    def test_datetime_naive(self):
+        naive_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55)
+        naive_datetime1_copy = datetime.datetime(2007, 12, 23, 15, 45, 55)
+        naive_datetime3 = datetime.datetime(2011, 12, 21, 15, 45, 55)
+
+        self.assertEqual(get_hash(naive_datetime1), get_hash(naive_datetime1_copy))
+        self.assertNotEqual(id(naive_datetime1), id(naive_datetime1_copy))
+        self.assertNotEqual(get_hash(naive_datetime1), get_hash(naive_datetime3))
+
+    @parameterized.expand(
+        [
+            datetime.timezone.utc,
+            tzlocal.get_localzone(),
+            dateutil.tz.gettz("America/Los_Angeles"),
+            dateutil.tz.gettz("Europe/Berlin"),
+            dateutil.tz.UTC,
+        ]
+    )
+    def test_datetime_aware(self, tz_info):
+        aware_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
+        aware_datetime1_copy = datetime.datetime(
+            2007, 12, 23, 15, 45, 55, tzinfo=tz_info
+        )
+        aware_datetime2 = datetime.datetime(2011, 12, 21, 15, 45, 55, tzinfo=tz_info)
+
+        # naive datetime1 is the same datetime that aware_datetime,
+        # but without timezone info. They should have different hashes.
+        naive_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55)
+
+        self.assertEqual(get_hash(aware_datetime1), get_hash(aware_datetime1_copy))
+        self.assertNotEqual(id(aware_datetime1), id(aware_datetime1_copy))
+        self.assertNotEqual(get_hash(aware_datetime1), get_hash(aware_datetime2))
+        self.assertNotEqual(get_hash(aware_datetime1), get_hash(naive_datetime1))
+
+    @parameterized.expand(
+        [
+            "US/Pacific",
+            "America/Los_Angeles",
+            "Europe/Berlin",
+            "UTC",
+            None,  # check for naive too
+        ]
+    )
+    def test_pandas_timestamp(self, tz_info):
+        timestamp1 = pandas.Timestamp("2017-01-01T12", tz=tz_info)
+        timestamp1_copy = pandas.Timestamp("2017-01-01T12", tz=tz_info)
+        timestamp2 = pandas.Timestamp("2019-01-01T12", tz=tz_info)
+
+        self.assertEqual(get_hash(timestamp1), get_hash(timestamp1_copy))
+        self.assertNotEqual(id(timestamp1), id(timestamp1_copy))
+        self.assertNotEqual(get_hash(timestamp1), get_hash(timestamp2))
 
     def test_mocks_do_not_result_in_infinite_recursion(self):
         try:
@@ -92,6 +162,27 @@ class HashTest(unittest.TestCase):
         b = [1, 2, 3]
         b.append(b)
         self.assertEqual(get_hash(a), get_hash(b))
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_recursive_hash_func(self, _, cache_decorator):
+        """Test that if user defined hash_func returns the value of the same type
+        that hash_funcs tries to cache, we break the recursive cycle with predefined
+        placeholder"""
+
+        def hash_int(x):
+            return x
+
+        @cache_decorator(hash_funcs={int: hash_int})
+        def foo(x):
+            return x
+
+        self.assertEqual(foo(1), foo(1))
+        # Note: We're able to break the recursive cycle caused by the identity
+        # hash func but it causes all cycles to hash to the same thing.
+        # https://github.com/streamlit/streamlit/issues/1659
+        # self.assertNotEqual(foo(2), foo(1))
 
     def test_tuple(self):
         self.assertEqual(get_hash((1, 2)), get_hash((1, 2)))
@@ -369,6 +460,72 @@ class NotHashableTest(unittest.TestCase):
     def test_generator_not_hashable(self):
         with self.assertRaises(UnhashableTypeError):
             get_hash((x for x in range(1)))
+
+    def test_hash_funcs_acceptable_keys(self):
+        """Test that hashes are equivalent when hash_func key is supplied both as a
+        type literal, and as a type name string.
+        """
+        test_generator = (x for x in range(1))
+
+        with self.assertRaises(UnhashableTypeError):
+            get_hash(test_generator)
+
+        self.assertEqual(
+            get_hash(test_generator, hash_funcs={types.GeneratorType: id}),
+            get_hash(test_generator, hash_funcs={"builtins.generator": id}),
+        )
+
+    def test_hash_funcs_error(self):
+        with self.assertRaises(UserHashError) as ctx:
+            get_hash(1, cache_type=CacheType.DATA, hash_funcs={int: lambda x: "a" + x})
+
+        expected_message = """can only concatenate str (not "int") to str
+
+This error is likely due to a bug in `<lambda>()`, which is a
+user-defined hash function that was passed into the `@st.cache_data` decorator of
+something.
+
+`<lambda>()` failed when hashing an object of type
+`builtins.int`.  If you don't know where that object is coming from,
+try looking at the hash chain below for an object that you do recognize, then
+pass that to `hash_funcs` instead:
+
+```
+Object of type builtins.int: 1
+```
+
+If you think this is actually a Streamlit bug, please
+[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""
+        self.assertEqual(str(ctx.exception), expected_message)
+
+    def test_non_hashable(self):
+        """Test user provided hash functions."""
+
+        g = (x for x in range(1))
+
+        # Unhashable object raises an error
+        with self.assertRaises(UnhashableTypeError):
+            get_hash(g)
+
+        id_hash_func = {types.GeneratorType: id}
+
+        self.assertEqual(
+            get_hash(g, hash_funcs=id_hash_func),
+            get_hash(g, hash_funcs=id_hash_func),
+        )
+
+        unique_hash_func = {types.GeneratorType: lambda x: time.time()}
+
+        self.assertNotEqual(
+            get_hash(g, hash_funcs=unique_hash_func),
+            get_hash(g, hash_funcs=unique_hash_func),
+        )
+
+    def test_override_streamlit_hash_func(self):
+        """Test that a user provided hash function has priority over a streamlit one."""
+
+        hash_funcs = {int: lambda x: "hello"}
+        self.assertNotEqual(get_hash(1), get_hash(1, hash_funcs=hash_funcs))
 
     def test_function_not_hashable(self):
         def foo():

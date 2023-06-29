@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union, cast
 
@@ -46,6 +46,8 @@ TimeValue: TypeAlias = Union[time, datetime, None]
 SingleDateValue: TypeAlias = Union[date, datetime, None]
 DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
 DateWidgetReturn: TypeAlias = Union[date, Tuple[()], Tuple[date], Tuple[date, date]]
+
+DEFAULT_STEP_MINUTES = 15
 
 
 def _parse_date_value(value: DateValue) -> Tuple[List[date], bool]:
@@ -131,7 +133,6 @@ class _DateInputValues:
         min_value: SingleDateValue,
         max_value: SingleDateValue,
     ) -> "_DateInputValues":
-
         parsed_value, is_range = _parse_date_value(value=value)
         return cls(
             value=parsed_value,
@@ -209,7 +210,7 @@ class DateInputSerde:
 
 
 class TimeWidgetsMixin:
-    @gather_metrics
+    @gather_metrics("time_input")
     def time_input(
         self,
         label: str,
@@ -222,13 +223,35 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
     ) -> time:
-        """Display a time input widget.
+        r"""Display a time input widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this time input is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
@@ -251,11 +274,14 @@ class TimeWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the time input if set to True.
             The default is False. This argument can only be supplied by keyword.
-        label_visibility : "visible" or "hidden" or "collapsed"
-            The visibility of the label. If "hidden", the label doesn’t show but there
+        label_visibility : "visible", "hidden", or "collapsed"
+            The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
+        step : int or timedelta
+            The stepping interval in seconds. Defaults to 900, i.e. 15 minutes.
+            You can also pass a datetime.timedelta object.
 
         Returns
         -------
@@ -264,11 +290,14 @@ class TimeWidgetsMixin:
 
         Example
         -------
+        >>> import datetime
+        >>> import streamlit as st
+        >>>
         >>> t = st.time_input('Set an alarm for', datetime.time(8, 45))
         >>> st.write('Alarm is set for', t)
 
         .. output::
-           https://doc-time-input.streamlitapp.com/
+           https://doc-time-input.streamlit.app/
            height: 260px
 
         """
@@ -283,6 +312,7 @@ class TimeWidgetsMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            step=step,
             ctx=ctx,
         )
 
@@ -298,6 +328,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
         ctx: Optional[ScriptRunContext] = None,
     ) -> time:
         key = to_key(key)
@@ -324,6 +355,17 @@ class TimeWidgetsMixin:
         time_input_proto.label = label
         time_input_proto.default = time.strftime(parsed_time, "%H:%M")
         time_input_proto.form_id = current_form_id(self.dg)
+        if not isinstance(step, (int, timedelta)):
+            raise StreamlitAPIException(
+                f"`step` can only be `int` or `timedelta` but {type(step)} is provided."
+            )
+        if isinstance(step, timedelta):
+            step = step.seconds
+        if step < 60 or step > timedelta(hours=23).seconds:
+            raise StreamlitAPIException(
+                f"`step` must be between 60 seconds and 23 hours but is currently set to {step} seconds."
+            )
+        time_input_proto.step = step
         if help is not None:
             time_input_proto.help = dedent(help)
 
@@ -353,7 +395,7 @@ class TimeWidgetsMixin:
         self.dg._enqueue("time_input", time_input_proto)
         return widget_state.value
 
-    @gather_metrics
+    @gather_metrics("date_input")
     def date_input(
         self,
         label: str,
@@ -369,12 +411,33 @@ class TimeWidgetsMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> DateWidgetReturn:
-        """Display a date input widget.
+        r"""Display a date input widget.
 
         Parameters
         ----------
         label : str
             A short label explaining to the user what this date input is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
@@ -404,8 +467,8 @@ class TimeWidgetsMixin:
         disabled : bool
             An optional boolean, which disables the date input if set to True.
             The default is False. This argument can only be supplied by keyword.
-        label_visibility : "visible" or "hidden" or "collapsed"
-            The visibility of the label. If "hidden", the label doesn’t show but there
+        label_visibility : "visible", "hidden", or "collapsed"
+            The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
@@ -417,13 +480,16 @@ class TimeWidgetsMixin:
 
         Example
         -------
+        >>> import datetime
+        >>> import streamlit as st
+        >>>
         >>> d = st.date_input(
         ...     "When\'s your birthday",
         ...     datetime.date(2019, 7, 6))
         >>> st.write('Your birthday is:', d)
 
         .. output::
-           https://doc-date-input.streamlitapp.com/
+           https://doc-date-input.streamlit.app/
            height: 260px
 
         """

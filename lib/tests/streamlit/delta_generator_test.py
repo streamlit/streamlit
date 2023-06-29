@@ -15,12 +15,14 @@
 """DeltaGenerator Unittest."""
 
 import functools
+import inspect
 import json
 import logging
 import re
 import unittest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -53,7 +55,7 @@ class RunWarningTest(unittest.TestCase):
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=False))
     def test_run_warning_presence(self):
         """Using Streamlit without `streamlit run` produces a warning."""
-        with self.assertLogs(level=logging.WARNING) as logs:
+        with self.assertLogs("streamlit", level=logging.WARNING) as logs:
             delta_generator._use_warning_has_been_displayed = False
             st.write("Using delta generator")
             output = "".join(logs.output)
@@ -64,13 +66,95 @@ class RunWarningTest(unittest.TestCase):
     def test_run_warning_absence(self):
         """Using Streamlit through the CLI results in a Runtime being instantiated,
         so it produces no usage warning."""
-        with self.assertLogs(level=logging.WARNING) as logs:
+        with self.assertLogs("streamlit", level=logging.WARNING) as logs:
             delta_generator._use_warning_has_been_displayed = False
             st.write("Using delta generator")
             # assertLogs is being used as a context manager, but it also checks
             # that some log output was captured, so we have to let it capture something
             get_logger("root").warning("irrelevant warning so assertLogs passes")
             self.assertNotRegex("".join(logs.output), r"streamlit run")
+
+    def test_public_api(self):
+        """Test that we don't accidentally remove (or add) symbols
+        to the public `DeltaGenerator` API.
+        """
+        api = {
+            name
+            for name, _ in inspect.getmembers(DeltaGenerator)
+            if not name.startswith("_")
+        }
+        self.assertEqual(
+            api,
+            {
+                "add_rows",
+                "altair_chart",
+                "area_chart",
+                "audio",
+                "balloons",
+                "bar_chart",
+                "bokeh_chart",
+                "button",
+                "camera_input",
+                "caption",
+                "chat_input",
+                "chat_message",
+                "checkbox",
+                "code",
+                "color_picker",
+                "columns",
+                "container",
+                "dataframe",
+                "data_editor",
+                "date_input",
+                "dg",
+                "divider",
+                "download_button",
+                "empty",
+                "error",
+                "exception",
+                "expander",
+                "experimental_data_editor",
+                "file_uploader",
+                "form",
+                "form_submit_button",
+                "graphviz_chart",
+                "header",
+                "help",
+                "id",
+                "image",
+                "info",
+                "json",
+                "latex",
+                "line_chart",
+                "map",
+                "markdown",
+                "metric",
+                "multiselect",
+                "number_input",
+                "plotly_chart",
+                "progress",
+                "pydeck_chart",
+                "pyplot",
+                "radio",
+                "select_slider",
+                "selectbox",
+                "slider",
+                "snow",
+                "subheader",
+                "success",
+                "table",
+                "tabs",
+                "text",
+                "text_area",
+                "text_input",
+                "time_input",
+                "title",
+                "vega_lite_chart",
+                "video",
+                "warning",
+                "write",
+            },
+        )
 
 
 class DeltaGeneratorTest(DeltaGeneratorTestCase):
@@ -310,17 +394,40 @@ class DeltaGeneratorColumnsTest(DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException):
             st.columns([5.0, 0.0, 1.0])
 
-    def test_nested_columns(self):
+    def test_two_levels_of_columns_does_not_raise_any_exception(self):
         level1, _ = st.columns(2)
-        with self.assertRaises(StreamlitAPIException):
-            level2, _ = level1.columns(2)
+        try:
+            _, _ = level1.columns(2)
+        except StreamlitAPIException:
+            self.fail("Error, one level of nested columns should be allowed!")
+
+    def test_three_levels_of_columns_raise_streamlit_api_exception(self):
+        level1, _ = _ = st.columns(2)
+        level2, _ = level1.columns(2)
+        exc = "Columns can only be placed inside other columns up to one level of nesting."
+        with pytest.raises(StreamlitAPIException, match=exc):
+            _, _ = level2.columns(2)
+
+    def test_one_level_of_columns_is_allowed_in_the_sidebar(self):
+        try:
+            with st.sidebar:
+                _, _ = st.columns(2)
+        except StreamlitAPIException:
+            self.fail("Error, 1 level column should be allowed in the sidebar!")
+
+    def test_two_levels_of_columns_in_the_sidebar_raise_streamlit_api_exception(self):
+        exc = "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
+        with pytest.raises(StreamlitAPIException, match=exc):
+            with st.sidebar:
+                col1, _ = st.columns(2)
+                _, _ = col1.columns(2)
 
 
 class DeltaGeneratorExpanderTest(DeltaGeneratorTestCase):
     def test_nested_expanders(self):
         level1 = st.expander("level 1")
         with self.assertRaises(StreamlitAPIException):
-            level2 = level1.expander("level 2")
+            level1.expander("level 2")
 
 
 class DeltaGeneratorWithTest(DeltaGeneratorTestCase):
@@ -491,56 +598,12 @@ class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
 
         assert element.markdown.body.startswith("<a#data>")
 
-    def test_code(self):
-        """Test st.code()"""
-        code = "print('Hello, %s!' % 'Streamlit')"
-        expected_body = "```python\n%s\n```" % code
-
-        st.code(code, language="python")
-        element = self.get_delta_from_queue().new_element
-
-        # st.code() creates a MARKDOWN text object that wraps
-        # the body inside a codeblock declaration
-        self.assertEqual(element.markdown.body, expected_body)
-
     def test_empty(self):
         """Test Empty."""
         st.empty()
 
         element = self.get_delta_from_queue().new_element
         self.assertEqual(element.empty, EmptyProto())
-
-
-class DeltaGeneratorProgressTest(DeltaGeneratorTestCase):
-    """Test DeltaGenerator Progress."""
-
-    def test_progress_int(self):
-        """Test Progress with int values."""
-        values = [0, 42, 100]
-        for value in values:
-            st.progress(value)
-
-            element = self.get_delta_from_queue().new_element
-            self.assertEqual(value, element.progress.value)
-
-    def test_progress_float(self):
-        """Test Progress with float values."""
-        values = [0.0, 0.42, 1.0]
-        for value in values:
-            st.progress(value)
-
-            element = self.get_delta_from_queue().new_element
-            self.assertEqual(int(value * 100), element.progress.value)
-
-    def test_progress_bad_values(self):
-        """Test Progress with bad values."""
-        values = [-1, 101, -0.01, 1.01]
-        for value in values:
-            with self.assertRaises(StreamlitAPIException):
-                st.progress(value)
-
-        with self.assertRaises(StreamlitAPIException):
-            st.progress("some string")
 
 
 class AutogeneratedWidgetIdTests(DeltaGeneratorTestCase):
@@ -559,12 +622,10 @@ class AutogeneratedWidgetIdTests(DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        register_widget("text_input", element1.text_input, ctx=self.new_script_run_ctx)
+        register_widget("text_input", element1.text_input, ctx=self.script_run_ctx)
 
         with self.assertRaises(DuplicateWidgetID):
-            register_widget(
-                "text_input", element2.text_input, ctx=self.new_script_run_ctx
-            )
+            register_widget("text_input", element2.text_input, ctx=self.script_run_ctx)
 
     def test_ids_are_diff_when_labels_are_diff(self):
         text_input1 = TextInput()
@@ -581,8 +642,8 @@ class AutogeneratedWidgetIdTests(DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_input.CopyFrom(text_input2)
 
-        register_widget("text_input", element1.text_input, ctx=self.new_script_run_ctx)
-        register_widget("text_input", element2.text_input, ctx=self.new_script_run_ctx)
+        register_widget("text_input", element1.text_input, ctx=self.script_run_ctx)
+        register_widget("text_input", element2.text_input, ctx=self.script_run_ctx)
 
         self.assertNotEqual(element1.text_input.id, element2.text_input.id)
 
@@ -601,8 +662,8 @@ class AutogeneratedWidgetIdTests(DeltaGeneratorTestCase):
         element2 = Element()
         element2.text_area.CopyFrom(text_area2)
 
-        register_widget("text_input", element1.text_input, ctx=self.new_script_run_ctx)
-        register_widget("text_input", element2.text_input, ctx=self.new_script_run_ctx)
+        register_widget("text_input", element1.text_input, ctx=self.script_run_ctx)
+        register_widget("text_input", element2.text_input, ctx=self.script_run_ctx)
 
         self.assertNotEqual(element1.text_input.id, element2.text_area.id)
 
@@ -627,13 +688,13 @@ class KeyWidgetIdTests(DeltaGeneratorTestCase):
             "text_input",
             element1.text_input,
             user_key="some_key1",
-            ctx=self.new_script_run_ctx,
+            ctx=self.script_run_ctx,
         )
         register_widget(
             "text_input",
             element2.text_input,
             user_key="some_key2",
-            ctx=self.new_script_run_ctx,
+            ctx=self.script_run_ctx,
         )
 
         self.assertNotEqual(element1.text_input.id, element2.text_input.id)

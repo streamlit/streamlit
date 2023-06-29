@@ -110,7 +110,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         call_args_list = sort_args_list(fob.call_args_list)
 
         args, _ = call_args_list[0]
-        self.assertTrue("__init__.py" in args[0])
+        self.assertIn("__init__.py", args[0])
         args, _ = call_args_list[1]
         self.assertEqual(args[0], DUMMY_MODULE_1_FILE)
         self.assertEqual(type(args[1]), method_type)
@@ -142,7 +142,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         call_args_list = sort_args_list(fob.call_args_list)
 
         args, _ = call_args_list[0]
-        self.assertTrue("__init__.py" in args[0])
+        self.assertIn("__init__.py", args[0])
 
         args, _ = call_args_list[1]
         self.assertEqual(args[0], DUMMY_MODULE_1_FILE)

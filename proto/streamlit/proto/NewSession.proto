@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 import "streamlit/proto/AppPage.proto";
-import "streamlit/proto/SessionState.proto";
+import "streamlit/proto/SessionStatus.proto";
 
 // This is the first message that is sent when a new session starts.
 message NewSession {
@@ -57,7 +57,7 @@ message NewSession {
   string page_script_hash = 9;
 }
 
-// Contains the session state that existed at the time the user connected.
+// Contains the session status that existed at the time the user connected.
 // The contents of this message don't change over the lifetime of the app by
 // definition.
 message Initialize {
@@ -65,8 +65,8 @@ message Initialize {
 
   EnvironmentInfo environment_info = 3;
 
-  // The session state at the time the connection was established
-  SessionState session_state = 4;
+  // The session status at the time the connection was established
+  SessionStatus session_status = 4;
 
   // the actual command line as a string
   string command_line = 5;
@@ -98,11 +98,23 @@ message Config {
   // See config option "ui.hideSidebarNav".
   bool hide_sidebar_nav = 7;
 
+  // See config option "client.toolbarMode".
+  enum ToolbarMode {
+    AUTO = 0;
+    DEVELOPER = 1;
+    VIEWER = 2;
+    MINIMAL = 3;
+  }
+  ToolbarMode toolbar_mode = 8;
+
   reserved 1;
 }
 
 // Custom theme configuration options. Like other config options, these are set
 // in .streamlit/config.toml.
+//
+// IMPORTANT: This message is passed in JSON format in a host-to-guest postMessage. So DOT NOT
+// rename its proto fields!
 message CustomThemeConfig {
   enum BaseTheme {
     LIGHT = 0;
@@ -121,6 +133,33 @@ message CustomThemeConfig {
   string text_color = 4;
   FontFamily font = 5;
   BaseTheme base = 6;
+  string widget_background_color = 7;
+  string widget_border_color = 8;
+  Radii radii = 9;
+  string body_font = 13;
+  string code_font = 14;
+  repeated FontFace font_faces = 15;
+  FontSizes font_sizes = 16;
+}
+
+message FontFace {
+  string url = 1;
+  string family = 2;
+  int32 weight = 3;
+  string style = 4;
+}
+
+message Radii {
+  // In pixels.
+  int32 baseWidgetRadius = 1;
+  int32 checkboxRadius = 2;
+}
+
+message FontSizes {
+  // In pixels.
+  int32 tinyFontSize = 1;
+  int32 smallFontSize = 2;
+  int32 baseFontSize = 3;
 }
 
 // Data that identifies the Streamlit app creator.
@@ -128,7 +167,10 @@ message CustomThemeConfig {
 message UserInfo {
   string installation_id = 1;
   string installation_id_v3 = 5;
-  string email = 2;
+
+  // DEPRECATED:
+  // string email = 2;
+  reserved 2;
 }
 
 // Data that identifies the Streamlit app's environment.

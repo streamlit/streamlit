@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-// An image which can be displayed on the screen.
 message Progress {
   uint32 value = 1;
+  string text = 2;
 }

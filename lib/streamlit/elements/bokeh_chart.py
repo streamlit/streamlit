@@ -33,7 +33,7 @@ ST_BOKEH_VERSION: Final = "2.4.3"
 
 
 class BokehMixin:
-    @gather_metrics
+    @gather_metrics("bokeh_chart")
     def bokeh_chart(
         self,
         figure: "Figure",
@@ -75,7 +75,7 @@ class BokehMixin:
         >>> st.bokeh_chart(p, use_container_width=True)
 
         .. output::
-           https://doc-bokeh-chart.streamlitapp.com/
+           https://doc-bokeh-chart.streamlit.app/
            height: 700px
 
         """

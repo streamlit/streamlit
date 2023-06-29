@@ -36,7 +36,7 @@ FigureOrDot: TypeAlias = Union["graphviz.Graph", "graphviz.Digraph", str]
 
 
 class GraphvizMixin:
-    @gather_metrics
+    @gather_metrics("graphviz_chart")
     def graphviz_chart(
         self,
         figure_or_dot: FigureOrDot,
@@ -55,7 +55,6 @@ class GraphvizMixin:
 
         Example
         -------
-
         >>> import streamlit as st
         >>> import graphviz
         >>>
@@ -99,7 +98,7 @@ class GraphvizMixin:
         ''')
 
         .. output::
-           https://doc-graphviz-chart.streamlitapp.com/
+           https://doc-graphviz-chart.streamlit.app/
            height: 600px
 
         """

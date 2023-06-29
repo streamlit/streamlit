@@ -17,12 +17,16 @@ import errno
 import fnmatch
 import io
 import os
+from pathlib import Path
 
 from streamlit import env_util, util
 from streamlit.string_util import is_binary_string
 
 # Configuration and credentials are stored inside the ~/.streamlit folder
 CONFIG_FOLDER_NAME = ".streamlit"
+
+# If enableStaticServing is enabled, static file served from the ./static folder
+APP_STATIC_FOLDER_NAME = "static"
 
 
 def get_encoded_file_data(data, encoding="auto"):
@@ -64,11 +68,11 @@ def streamlit_read(path, binary=False):
     with streamlit_read('foo.txt') as foo:
         ...
 
-    opens the file `%s/foo.txt`
+    opens the file `.streamlit/foo.txt`
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
-    """ % CONFIG_FOLDER_NAME
+    """
     filename = get_streamlit_file_path(path)
     if os.stat(filename).st_size == 0:
         raise util.Error('Read zero byte file: "%s"' % filename)
@@ -82,19 +86,18 @@ def streamlit_read(path, binary=False):
 
 @contextlib.contextmanager
 def streamlit_write(path, binary=False):
-    """
-    Opens a file for writing within the streamlit path, and
+    """Opens a file for writing within the streamlit path, and
     ensuring that the path exists. For example:
 
         with streamlit_write('foo/bar.txt') as bar:
             ...
 
-    opens the file %s/foo/bar.txt for writing,
+    opens the file .streamlit/foo/bar.txt for writing,
     creating any necessary directories along the way.
 
     path   - the path to write to (within the streamlit directory)
     binary - set to True for binary IO
-    """ % CONFIG_FOLDER_NAME
+    """
     mode = "w"
     if binary:
         mode += "b"
@@ -119,10 +122,11 @@ def get_static_dir():
     return os.path.normpath(os.path.join(dirname, "static"))
 
 
-def get_assets_dir():
-    """Get the folder where static assets live."""
-    dirname = os.path.dirname(os.path.normpath(__file__))
-    return os.path.normpath(os.path.join(dirname, "static/assets"))
+def get_app_static_dir(main_script_path: str) -> str:
+    """Get the folder where app static files live"""
+    main_script_path = Path(main_script_path)
+    static_dir = main_script_path.parent / APP_STATIC_FOLDER_NAME
+    return os.path.abspath(static_dir)
 
 
 def get_streamlit_file_path(*filepath) -> str:
@@ -169,6 +173,16 @@ def file_is_in_folder_glob(filepath, folderpath_glob) -> bool:
     return fnmatch.fnmatch(file_dir, folderpath_glob)
 
 
+def get_directory_size(directory: str) -> int:
+    """Return the size of a directory in bytes."""
+    total_size = 0
+    for dirpath, _, filenames in os.walk(directory):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    return total_size
+
+
 def file_in_pythonpath(filepath) -> bool:
     """Test whether a filepath is in the same folder of a path specified in the PYTHONPATH env variable.
 
@@ -184,7 +198,6 @@ def file_in_pythonpath(filepath) -> bool:
         True if contained in PYTHONPATH, False otherwise. False if PYTHONPATH is not defined or empty.
 
     """
-
     pythonpath = os.environ.get("PYTHONPATH", "")
     if len(pythonpath) == 0:
         return False

@@ -27,6 +27,7 @@ describe("DataFrame with different sizes", () => {
     { width: "704px", height: "400px" },
     { width: "200px", height: "400px" },
     { width: "704px", height: "400px" },
+    { width: "704px", height: "400px" },
   ];
 
   before(() => {
@@ -35,7 +36,7 @@ describe("DataFrame with different sizes", () => {
 
   it("should show as expected", () => {
     cy.get(".stDataFrame")
-      .should("have.length", 11)
+      .should("have.length", 12)
       .each(($element, index) => {
         return cy
           .wrap($element)

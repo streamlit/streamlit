@@ -24,9 +24,11 @@ import pyarrow as pa
 import pytest
 from google.protobuf import json_format
 
+import streamlit as st
 import streamlit.elements.legacy_data_frame as data_frame
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DataFrame_pb2 import AnyArray, CSSStyle, DataFrame, Index, Table
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 def _css_style(prop, value):
@@ -150,13 +152,13 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
         self.assertEqual([1, 2, 3, 4], proto.timedelta_index.data.data)
 
         # int64index
-        df_int64 = pd.Int64Index(np.arange(1, 5))
+        df_int64 = pd.Index(np.arange(1, 5), dtype="int64")
         proto = Index()
         data_frame._marshall_index(df_int64, proto)
         self.assertEqual([1, 2, 3, 4], proto.int_64_index.data.data)
 
         # float64index
-        df_float64 = pd.Float64Index(np.arange(1, 5))
+        df_float64 = pd.Index(np.arange(1, 5), dtype="float64")
         proto = Index()
         data_frame._marshall_index(df_float64, proto)
         self.assertEqual([1, 2, 3, 4], proto.float_64_index.data.data)
@@ -220,14 +222,14 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
         self.assertEqual(int_proto.int64s.data, int_data.tolist())
 
         # bool
-        bool_data = np.array([True, False], dtype=np.bool)
+        bool_data = np.array([True, False], dtype=np.bool_)
         bool_proto = AnyArray()
 
         data_frame._marshall_any_array(bool_data, bool_proto)
         self.assertEqual(bool_proto.int64s.data, bool_data.tolist())
 
         # object
-        obj_data = np.array([json.dumps, json.dumps], dtype=np.object)
+        obj_data = np.array([json.dumps, json.dumps], dtype=np.object_)
         obj_proto = AnyArray()
         truth = [str(json.dumps), str(json.dumps)]
 
@@ -263,3 +265,36 @@ class LegacyDataFrameProtoTest(unittest.TestCase):
 
         with pytest.raises(NotImplementedError, match="^Dtype <U6 not understood.$"):
             data_frame._marshall_any_array(str_data, str_proto)
+
+
+class LegacyDataframeTest(DeltaGeneratorTestCase):
+    """Test ability to marshall legacy_dataframe proto."""
+
+    def test_st_legacy_dataframe(self):
+        """Test st._legacy_dataframe."""
+        df = pd.DataFrame({"one": [1, 2], "two": [11, 22]})
+
+        st._legacy_dataframe(df)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.data_frame.data.cols[0].int64s.data, [1, 2])
+        self.assertEqual(
+            el.data_frame.columns.plain_index.data.strings.data, ["one", "two"]
+        )
+
+
+class LegacyTableAPITest(DeltaGeneratorTestCase):
+    """Test st._legacy_table API."""
+
+    def test_st_legacy_table(self):
+        """Test st._legacy_table."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+
+        st._legacy_table(df)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.table.data.cols[0].int64s.data, [1, 3])
+        self.assertEqual(el.table.data.cols[1].int64s.data, [2, 4])
+        self.assertEqual(
+            el.table.columns.plain_index.data.strings.data, ["col1", "col2"]
+        )

@@ -16,8 +16,10 @@ import json
 
 import pandas as pd
 import pyarrow as pa
+from parameterized import parameterized
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -175,6 +177,29 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
         )
 
         self.assertEqual(proto.use_container_width, True)
+
+    @parameterized.expand(
+        [
+            ("streamlit", "streamlit"),
+            (None, ""),
+        ]
+    )
+    def test_theme(self, theme_value, proto_value):
+        st._arrow_vega_lite_chart(
+            df1, {"mark": "rect"}, use_container_width=True, theme=theme_value
+        )
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.arrow_vega_lite_chart.theme, proto_value)
+
+    def test_bad_theme(self):
+        with self.assertRaises(StreamlitAPIException) as exc:
+            st._arrow_altair_chart(df1, theme="bad_theme")
+
+        self.assertEqual(
+            f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
+            str(exc.exception),
+        )
 
     def test_width_inside_spec(self):
         """Test that Vega-Lite sets the width."""

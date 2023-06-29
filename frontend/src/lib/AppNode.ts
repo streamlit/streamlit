@@ -27,21 +27,20 @@ import Protobuf, {
   IArrow,
   IArrowNamedDataSet,
   NamedDataSet,
-} from "src/autogen/proto"
+} from "src/lib/proto"
 import {
   VegaLiteChartElement,
   WrappedNamedDataset,
-} from "src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
-import { Quiver } from "src/lib/Quiver"
-import { addRows } from "./dataFrameProto"
-import { ensureError } from "./ErrorHandling"
-import { toImmutableProto } from "./immutableProto"
-import { MetricsManager } from "./MetricsManager"
+} from "src/lib/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
+import { Quiver } from "src/lib/dataframes/Quiver"
+import { addRows } from "./dataframes/dataFrameProto"
+import { ensureError } from "./util/ErrorHandling"
+import { toImmutableProto } from "./util/immutableProto"
 import {
   makeElementWithInfoText,
   makeElementWithErrorText,
   notUndefined,
-} from "./utils"
+} from "./util/utils"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
@@ -207,6 +206,7 @@ export class ElementNode implements AppNode {
       spec: proto.spec,
       datasets: modifiedDatasets,
       useContainerWidth: proto.useContainerWidth,
+      vegaLiteTheme: proto.theme,
     }
 
     this.lazyVegaLiteChartElement = toReturn
@@ -214,12 +214,12 @@ export class ElementNode implements AppNode {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  public getIn(path: number[]): AppNode | undefined {
+  public getIn(): AppNode | undefined {
     return undefined
   }
 
   // eslint-disable-next-line class-methods-use-this
-  public setIn(path: number[], node: AppNode, scriptRunId: string): AppNode {
+  public setIn(): AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
 
@@ -504,33 +504,13 @@ export class AppRoot {
     // Used to find and update the element node specified by this Delta.
     const { deltaPath } = metadata
 
-    // Update Metrics
-    MetricsManager.current.incrementDeltaCounter(
-      getRootContainerName(deltaPath)
-    )
-
     switch (delta.type) {
       case "newElement": {
         const element = delta.newElement as Element
-        if (element.type != null) {
-          MetricsManager.current.incrementDeltaCounter(element.type)
-        }
-
-        // Track component instance name.
-        if (element.type === "componentInstance") {
-          const componentName = element.componentInstance?.componentName
-          if (componentName != null) {
-            MetricsManager.current.incrementCustomComponentCounter(
-              componentName
-            )
-          }
-        }
-
         return this.addElement(deltaPath, scriptRunId, element, metadata)
       }
 
       case "addBlock": {
-        MetricsManager.current.incrementDeltaCounter("new block")
         return this.addBlock(
           deltaPath,
           delta.addBlock as BlockProto,
@@ -539,7 +519,6 @@ export class AppRoot {
       }
 
       case "addRows": {
-        MetricsManager.current.incrementDeltaCounter("add rows")
         return this.addRows(
           deltaPath,
           delta.addRows as NamedDataSet,
@@ -548,7 +527,6 @@ export class AppRoot {
       }
 
       case "arrowAddRows": {
-        MetricsManager.current.incrementDeltaCounter("arrow add rows")
         try {
           return this.arrowAddRows(
             deltaPath,
@@ -651,21 +629,6 @@ export class AppRoot {
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
     return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
-}
-
-function getRootContainerName(deltaPath: number[]): string {
-  if (deltaPath.length > 0) {
-    switch (deltaPath[0]) {
-      case Protobuf.RootContainer.MAIN:
-        return "main"
-      case Protobuf.RootContainer.SIDEBAR:
-        return "sidebar"
-      default:
-        break
-    }
-  }
-
-  throw new Error(`Unrecognized RootContainer in deltaPath: ${deltaPath}`)
 }
 
 /** Iterates over datasets and converts data to Quiver. */

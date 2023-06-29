@@ -15,6 +15,7 @@
  */
 
 const path = require("path");
+const NO_OF_BUTTONS = 4
 
 describe("st.download_button", () => {
   beforeEach(() => {
@@ -24,14 +25,14 @@ describe("st.download_button", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stDownloadButton").should("have.length", 3);
+    cy.get(".stDownloadButton").should("have.length", NO_OF_BUTTONS);
     cy.get(".stDownloadButton")
       .first()
       .matchThemedSnapshots("download-button-widget");
   });
 
   it("shows disabled widget correctly", () => {
-    cy.get(".stDownloadButton").should("have.length", 3);
+    cy.get(".stDownloadButton").should("have.length", NO_OF_BUTTONS);
     cy.getIndexed(".stDownloadButton", 1).matchThemedSnapshots(
       "disabled-download-button"
     );
@@ -49,11 +50,17 @@ describe("st.download_button", () => {
   });
 
   it("downloads RAR archive file when the button is clicked", () => {
-    cy.get(".stDownloadButton button")
-      .should("have.length.at.least", 3)
-      .last()
+    cy.getIndexed(".stDownloadButton button", 2)
+      .should("have.length.at.least", 1)
       .click();
     const downloadsFolder = Cypress.config("downloadsFolder");
     cy.readFile(path.join(downloadsFolder, "archive.rar")).should("exist");
+  });
+
+  it("renders useContainerWidth st.download_button correctly", () => {
+    cy.get(".stDownloadButton button")
+      .should("have.length.at.least", 1)
+      .last()
+      .click().matchThemedSnapshots("use-container-width-button");
   });
 });

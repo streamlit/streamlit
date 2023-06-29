@@ -24,8 +24,11 @@ describe("kill server", () => {
   it("disconnects the client", () => {
     cy.get("[data-testid='stConnectionStatus']").should("not.exist");
 
-    cy.window().then(win => {
-      win.streamlitDebug.closeConnection();
+    cy.window().then((win) => {
+      // We shut down the runtime entirely rather than just close the websocket
+      // connection as the client will immediately reconnect if we just do the
+      // latter.
+      win.streamlitDebug.shutdownRuntime();
 
       cy.get("[data-testid='stConnectionStatus'] label").should(
         "have.text",

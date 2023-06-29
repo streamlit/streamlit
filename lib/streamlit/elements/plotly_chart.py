@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Set, Union, cast
 from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit import type_util
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.legacy_caching import caching
@@ -33,6 +34,17 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
+
+try:
+    import plotly.io as pio
+
+    import streamlit.elements.lib.streamlit_plotly_theme
+
+    pio.templates.default = "streamlit"
+except ModuleNotFoundError:
+    # We have imports here because it takes too loo long to load the template default for the first graph to load
+    # We do nothing if Plotly is not installed. This is expected since Plotly is an optional dependency.
+    pass
 
 LOGGER: Final = get_logger(__name__)
 
@@ -66,12 +78,13 @@ FigureOrData: TypeAlias = Union[
 
 
 class PlotlyMixin:
-    @gather_metrics
+    @gather_metrics("plotly_chart")
     def plotly_chart(
         self,
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
         sharing: SharingMode = "streamlit",
+        theme: Union[None, Literal["streamlit"]] = "streamlit",
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display an interactive Plotly chart.
@@ -94,24 +107,27 @@ class PlotlyMixin:
             If True, set the chart width to the column width. This takes
             precedence over the figure's native `width` value.
 
-        sharing : {'streamlit', 'private', 'secret', 'public'}
-            Use 'streamlit' to insert the plot and all its dependencies
+        sharing : "streamlit", "private", "secret", or "public"
+            Use "streamlit" to insert the plot and all its dependencies
             directly in the Streamlit app using plotly's offline mode (default).
             Use any other sharing mode to send the chart to Plotly chart studio, which
             requires an account. See https://plot.ly/python/chart-studio/ for more information.
+
+        theme : "streamlit" or None
+            The theme of the chart. Currently, we only support "streamlit" for the Streamlit
+            defined design or None to fallback to the default behavior of the library.
 
         **kwargs
             Any argument accepted by Plotly's `plot()` function.
 
         Example
         -------
-
         The example below comes straight from the examples at
         https://plot.ly/python:
 
         >>> import streamlit as st
-        >>> import plotly.figure_factory as ff
         >>> import numpy as np
+        >>> import plotly.figure_factory as ff
         >>>
         >>> # Add histogram data
         >>> x1 = np.random.randn(200) - 2
@@ -131,7 +147,7 @@ class PlotlyMixin:
         >>> st.plotly_chart(fig, use_container_width=True)
 
         .. output::
-           https://doc-plotly-chart.streamlitapp.com/
+           https://doc-plotly-chart.streamlit.app/
            height: 400px
 
         """
@@ -140,8 +156,17 @@ class PlotlyMixin:
         # keep it in sync with what Plotly calls it.
 
         plotly_chart_proto = PlotlyChartProto()
+        if theme != "streamlit" and theme != None:
+            raise StreamlitAPIException(
+                f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
+            )
         marshall(
-            plotly_chart_proto, figure_or_data, use_container_width, sharing, **kwargs
+            plotly_chart_proto,
+            figure_or_data,
+            use_container_width,
+            sharing,
+            theme,
+            **kwargs,
         )
         return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
@@ -156,6 +181,7 @@ def marshall(
     figure_or_data: FigureOrData,
     use_container_width: bool,
     sharing: SharingMode,
+    theme: Union[None, Literal["streamlit"]],
     **kwargs: Any,
 ) -> None:
     """Marshall a proto with a Plotly spec.
@@ -197,6 +223,7 @@ def marshall(
             figure, sharing=sharing, auto_open=False, **kwargs
         )
         proto.url = _get_embed_url(url)
+    proto.theme = theme or ""
 
 
 @caching.cache

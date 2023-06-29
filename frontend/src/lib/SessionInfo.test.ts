@@ -15,32 +15,54 @@
  */
 
 import { SessionInfo } from "src/lib/SessionInfo"
-import { NewSession } from "src/autogen/proto"
+import { NewSession } from "src/lib/proto"
+import { mockSessionInfoProps } from "./mocks/mocks"
 
 test("Throws an error when used before initialization", () => {
-  expect(() => SessionInfo.current).toThrow()
+  const sessionInfo = new SessionInfo()
+  expect(() => sessionInfo.current).toThrow()
 })
 
-test("Clears session info", () => {
-  SessionInfo.current = new SessionInfo({
-    appId: "aid",
-    sessionId: "sessionId",
-    streamlitVersion: "sv",
-    pythonVersion: "pv",
-    installationId: "iid",
-    installationIdV3: "iid3",
-    authorEmail: "ae",
-    maxCachedMessageAge: 2,
-    commandLine: "command line",
-    userMapboxToken: "mpt",
+describe("SessionInfo.setCurrent", () => {
+  test("copies props to `current`", () => {
+    const sessionInfo = new SessionInfo()
+    sessionInfo.setCurrent(mockSessionInfoProps())
+
+    expect(sessionInfo.isSet).toBe(true)
+    expect(sessionInfo.current).toEqual(mockSessionInfoProps())
   })
-  expect(SessionInfo.isSet()).toBe(true)
 
-  SessionInfo.clearSession()
-  expect(SessionInfo.isSet()).toBe(false)
+  test("copies previous props to `last`", () => {
+    const sessionInfo = new SessionInfo()
+    sessionInfo.setCurrent(mockSessionInfoProps())
+    expect(sessionInfo.last).toBeUndefined()
+
+    sessionInfo.setCurrent(mockSessionInfoProps({ appId: "newValue" }))
+    expect(sessionInfo.current).toEqual(
+      mockSessionInfoProps({ appId: "newValue" })
+    )
+    expect(sessionInfo.last).toEqual(mockSessionInfoProps())
+  })
 })
 
-test("Can be initialized from a protobuf", () => {
+describe("SessionInfo.isHello", () => {
+  test("is true only when initialized with `streamlit hello` commandline", () => {
+    const sessionInfo = new SessionInfo()
+    expect(sessionInfo.isHello).toBe(false)
+
+    sessionInfo.setCurrent(
+      mockSessionInfoProps({ commandLine: "random command line" })
+    )
+    expect(sessionInfo.isHello).toBe(false)
+
+    sessionInfo.setCurrent(
+      mockSessionInfoProps({ commandLine: "streamlit hello" })
+    )
+    expect(sessionInfo.isHello).toBe(true)
+  })
+})
+
+test("Props can be initialized from a protobuf", () => {
   const MESSAGE = new NewSession({
     config: {
       gatherUsageStats: false,
@@ -52,13 +74,12 @@ test("Can be initialized from a protobuf", () => {
       userInfo: {
         installationId: "installationId",
         installationIdV3: "installationIdV3",
-        email: "email",
       },
       environmentInfo: {
         streamlitVersion: "streamlitVersion",
         pythonVersion: "pythonVersion",
       },
-      sessionState: {
+      sessionStatus: {
         runOnSave: false,
         scriptIsRunning: false,
       },
@@ -67,13 +88,12 @@ test("Can be initialized from a protobuf", () => {
     },
   })
 
-  const si = SessionInfo.fromNewSessionMessage(MESSAGE)
-  expect(si.sessionId).toEqual("sessionId")
-  expect(si.streamlitVersion).toEqual("streamlitVersion")
-  expect(si.pythonVersion).toEqual("pythonVersion")
-  expect(si.installationId).toEqual("installationId")
-  expect(si.installationIdV3).toEqual("installationIdV3")
-  expect(si.authorEmail).toEqual("email")
-  expect(si.maxCachedMessageAge).toEqual(31)
-  expect(si.commandLine).toEqual("commandLine")
+  const props = SessionInfo.propsFromNewSessionMessage(MESSAGE)
+  expect(props.sessionId).toEqual("sessionId")
+  expect(props.streamlitVersion).toEqual("streamlitVersion")
+  expect(props.pythonVersion).toEqual("pythonVersion")
+  expect(props.installationId).toEqual("installationId")
+  expect(props.installationIdV3).toEqual("installationIdV3")
+  expect(props.maxCachedMessageAge).toEqual(31)
+  expect(props.commandLine).toEqual("commandLine")
 })

@@ -19,10 +19,14 @@ from unittest.mock import patch
 
 import altair as alt
 import pandas as pd
+import pytest
 
 import streamlit
 from streamlit.delta_generator import DeltaGenerator
-from tests.testutil import patch_config_options
+from tests.streamlit import pyspark_mocks
+from tests.streamlit.snowpark_mocks import DataFrame as MockSnowparkDataFrame
+from tests.streamlit.snowpark_mocks import Table as MockSnowparkTable
+from tests.testutil import patch_config_options, should_skip_pyspark_tests
 
 DATAFRAME = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 ALTAIR_CHART = alt.Chart(DATAFRAME).mark_bar().encode(x="a", y="b")
@@ -48,7 +52,75 @@ class DataFrameSelectorTest(unittest.TestCase):
         streamlit.dataframe(DATAFRAME, 100, 200)
         legacy_dataframe.assert_not_called()
         arrow_dataframe.assert_called_once_with(
-            DATAFRAME, 100, 200, use_container_width=False
+            DATAFRAME,
+            100,
+            200,
+            use_container_width=False,
+            hide_index=None,
+            column_order=None,
+            column_config=None,
+        )
+
+    @patch.object(DeltaGenerator, "_legacy_dataframe")
+    @patch.object(DeltaGenerator, "_arrow_dataframe")
+    @patch_config_options({"global.dataFrameSerialization": "arrow"})
+    def test_arrow_dataframe_with_snowpark_dataframe(
+        self, arrow_dataframe, legacy_dataframe
+    ):
+        snowpark_df = MockSnowparkDataFrame()
+        streamlit.dataframe(snowpark_df, 100, 200)
+        legacy_dataframe.assert_not_called()
+        arrow_dataframe.assert_called_once_with(
+            snowpark_df,
+            100,
+            200,
+            use_container_width=False,
+            hide_index=None,
+            column_order=None,
+            column_config=None,
+        )
+
+    @pytest.mark.skipif(
+        should_skip_pyspark_tests(), reason="pyspark is incompatible with Python3.11"
+    )
+    @patch.object(DeltaGenerator, "_legacy_dataframe")
+    @patch.object(DeltaGenerator, "_arrow_dataframe")
+    @patch_config_options({"global.dataFrameSerialization": "arrow"})
+    def test_arrow_dataframe_with_pyspark_dataframe(
+        self, arrow_dataframe, legacy_dataframe
+    ):
+        pyspark_dataframe = (
+            pyspark_mocks.create_pyspark_dataframe_with_mocked_personal_data()
+        )
+        streamlit.dataframe(pyspark_dataframe, 100, 200)
+        legacy_dataframe.assert_not_called()
+        arrow_dataframe.assert_called_once_with(
+            pyspark_dataframe,
+            100,
+            200,
+            use_container_width=False,
+            hide_index=None,
+            column_order=None,
+            column_config=None,
+        )
+
+    @patch.object(DeltaGenerator, "_legacy_dataframe")
+    @patch.object(DeltaGenerator, "_arrow_dataframe")
+    @patch_config_options({"global.dataFrameSerialization": "arrow"})
+    def test_arrow_dataframe_with_snowpark_table(
+        self, arrow_dataframe, legacy_dataframe
+    ):
+        snowpark_table = MockSnowparkTable()
+        streamlit.dataframe(snowpark_table, 100, 200)
+        legacy_dataframe.assert_not_called()
+        arrow_dataframe.assert_called_once_with(
+            snowpark_table,
+            100,
+            200,
+            use_container_width=False,
+            hide_index=None,
+            column_order=None,
+            column_config=None,
         )
 
     @patch.object(DeltaGenerator, "_legacy_table")
@@ -84,7 +156,12 @@ class DataFrameSelectorTest(unittest.TestCase):
         streamlit.line_chart(DATAFRAME, width=100, height=200, use_container_width=True)
         legacy_line_chart.assert_not_called()
         arrow_line_chart.assert_called_once_with(
-            DATAFRAME, x=None, y=None, width=100, height=200, use_container_width=True
+            DATAFRAME,
+            x=None,
+            y=None,
+            width=100,
+            height=200,
+            use_container_width=True,
         )
 
     @patch.object(DeltaGenerator, "_legacy_area_chart")
@@ -104,7 +181,12 @@ class DataFrameSelectorTest(unittest.TestCase):
         streamlit.area_chart(DATAFRAME, width=100, height=200, use_container_width=True)
         legacy_area_chart.assert_not_called()
         arrow_area_chart.assert_called_once_with(
-            DATAFRAME, x=None, y=None, width=100, height=200, use_container_width=True
+            DATAFRAME,
+            x=None,
+            y=None,
+            width=100,
+            height=200,
+            use_container_width=True,
         )
 
     @patch.object(DeltaGenerator, "_legacy_bar_chart")
@@ -124,7 +206,12 @@ class DataFrameSelectorTest(unittest.TestCase):
         streamlit.bar_chart(DATAFRAME, width=100, height=200, use_container_width=True)
         legacy_bar_chart.assert_not_called()
         arrow_bar_chart.assert_called_once_with(
-            DATAFRAME, x=None, y=None, width=100, height=200, use_container_width=True
+            DATAFRAME,
+            x=None,
+            y=None,
+            width=100,
+            height=200,
+            use_container_width=True,
         )
 
     @patch.object(DeltaGenerator, "_legacy_altair_chart")
@@ -141,7 +228,7 @@ class DataFrameSelectorTest(unittest.TestCase):
     def test_arrow_altair_chart(self, arrow_altair_chart, legacy_altair_chart):
         streamlit.altair_chart(ALTAIR_CHART, True)
         legacy_altair_chart.assert_not_called()
-        arrow_altair_chart.assert_called_once_with(ALTAIR_CHART, True)
+        arrow_altair_chart.assert_called_once_with(ALTAIR_CHART, True, "streamlit")
 
     @patch.object(DeltaGenerator, "_legacy_vega_lite_chart")
     @patch.object(DeltaGenerator, "_arrow_vega_lite_chart")
@@ -181,7 +268,13 @@ class DataFrameSelectorTest(unittest.TestCase):
         )
         legacy_vega_lite_chart.assert_not_called()
         arrow_vega_lite_chart.assert_called_once_with(
-            DATAFRAME, None, True, x="foo", boink_boop=100, baz={"boz": "booz"}
+            DATAFRAME,
+            None,
+            True,
+            "streamlit",
+            x="foo",
+            boink_boop=100,
+            baz={"boz": "booz"},
         )
 
     @patch.object(DeltaGenerator, "_legacy_add_rows")

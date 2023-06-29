@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import enum
 import types
 from typing import Any, Optional
 
@@ -22,9 +21,12 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitAPIWarning,
 )
+from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
+
+CACHE_DOCS_URL = "https://docs.streamlit.io/library/advanced-features/caching"
 
 
-def get_cached_func_name_md(func) -> str:
+def get_cached_func_name_md(func: Any) -> str:
     """Get markdown representation of the function name."""
     if hasattr(func, "__name__"):
         return "`%s()`" % func.__name__
@@ -33,15 +35,10 @@ def get_cached_func_name_md(func) -> str:
     return f"`{type(func)}`"
 
 
-def get_return_value_type(return_value) -> str:
+def get_return_value_type(return_value: Any) -> str:
     if hasattr(return_value, "__module__") and hasattr(type(return_value), "__name__"):
         return f"`{return_value.__module__}.{type(return_value).__name__}`"
     return get_cached_func_name_md(return_value)
-
-
-class CacheType(enum.Enum):
-    MEMO = "experimental_memo"
-    SINGLETON = "experimental_singleton"
 
 
 class UnhashableTypeError(Exception):
@@ -81,7 +78,7 @@ To address this, you can tell Streamlit not to hash this argument by adding a
 leading underscore to the argument's name in the function signature:
 
 ```
-@st.{cache_type.value}
+@st.{get_decorator_api_name(cache_type)}
 def {func_name}({arg_replacement_name}, ...):
     ...
 ```
@@ -105,9 +102,9 @@ class CachedStFunctionWarning(StreamlitAPIWarning):
         cached_func: types.FunctionType,
     ):
         args = {
-            "st_func_name": f"`st.{st_func_name}()` or `st.write()`",
+            "st_func_name": f"`st.{st_func_name}()`",
             "func_name": self._get_cached_func_name_md(cached_func),
-            "decorator_name": cache_type.value,
+            "decorator_name": get_decorator_api_name(cache_type),
         }
 
         msg = (
@@ -118,8 +115,8 @@ a cache "miss", which can lead to unexpected results.
 
 How to fix this:
 * Move the %(st_func_name)s call outside %(func_name)s.
-* Or, if you know what you're doing, use `@st.%(decorator_name)s(suppress_st_warning=True)`
-to suppress the warning.
+* Or, if you know what you're doing, use `@st.%(decorator_name)s(experimental_allow_widgets=True)`
+to enable widget replay and suppress this warning.
             """
             % args
         ).strip("\n")
@@ -142,7 +139,7 @@ class CacheReplayClosureError(StreamlitAPIException):
         cached_func: types.FunctionType,
     ):
         func_name = get_cached_func_name_md(cached_func)
-        decorator_name = (cache_type.value,)
+        decorator_name = get_decorator_api_name(cache_type)
 
         msg = (
             f"""
@@ -165,9 +162,26 @@ class UnserializableReturnValueError(MarkdownFormattedException):
         MarkdownFormattedException.__init__(
             self,
             f"""
-            Cannot serialize the return value (of type {get_return_value_type(return_value)}) in {get_cached_func_name_md(func)}.  
-            `st.experimental_memo` uses [pickle](https://docs.python.org/3/library/pickle.html) to 
-            serialize the function’s return value and safely store it in the cache without mutating the original object. Please convert the return value to a pickle-serializable type.  
-            If you want to cache unserializable objects such as database connections or Tensorflow 
-            sessions, use `st.experimental_singleton` instead (see [our docs](https://docs.streamlit.io/library/advanced-features/experimental-cache-primitives) for differences).""",
+            Cannot serialize the return value (of type {get_return_value_type(return_value)}) in {get_cached_func_name_md(func)}.
+            `st.cache_data` uses [pickle](https://docs.python.org/3/library/pickle.html) to
+            serialize the function’s return value and safely store it in the cache without mutating the original object. Please convert the return value to a pickle-serializable type.
+            If you want to cache unserializable objects such as database connections or Tensorflow
+            sessions, use `st.cache_resource` instead (see [our docs]({CACHE_DOCS_URL}) for differences).""",
+        )
+
+
+class UnevaluatedDataFrameError(StreamlitAPIException):
+    """Used to display a message about uncollected dataframe being used"""
+
+    pass
+
+
+class BadTTLStringError(StreamlitAPIException):
+    """Raised when a bad ttl= argument string is passed."""
+
+    def __init__(self, ttl: str):
+        MarkdownFormattedException.__init__(
+            self,
+            "TTL string doesn't look right. It should be formatted as"
+            f"`'1d2h34m'` or `2 days`, for example. Got: {ttl}",
         )

@@ -103,7 +103,7 @@ class SelectSliderSerde(Generic[T]):
 
 
 class SelectSliderMixin:
-    @gather_metrics
+    @gather_metrics("select_slider")
     def select_slider(
         self,
         label: str,
@@ -119,7 +119,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> Union[T, Tuple[T, T]]:
-        """
+        r"""
         Display a slider widget to select items from a list.
 
         This also allows you to render a range slider by passing a two-element
@@ -134,6 +134,27 @@ class SelectSliderMixin:
         ----------
         label : str
             A short label explaining to the user what this slider is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
@@ -167,8 +188,8 @@ class SelectSliderMixin:
         disabled : bool
             An optional boolean, which disables the select slider if set to True.
             The default is False. This argument can only be supplied by keyword.
-        label_visibility : "visible" or "hidden" or "collapsed"
-            The visibility of the label. If "hidden", the label doesn’t show but there
+        label_visibility : "visible", "hidden", or "collapsed"
+            The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
@@ -181,6 +202,8 @@ class SelectSliderMixin:
 
         Examples
         --------
+        >>> import streamlit as st
+        >>>
         >>> color = st.select_slider(
         ...     'Select a color of the rainbow',
         ...     options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'])
@@ -188,6 +211,8 @@ class SelectSliderMixin:
 
         And here's an example of a range select slider:
 
+        >>> import streamlit as st
+        >>>
         >>> start_color, end_color = st.select_slider(
         ...     'Select a range of color wavelength',
         ...     options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'],
@@ -195,7 +220,7 @@ class SelectSliderMixin:
         >>> st.write('You selected wavelengths between', start_color, 'and', end_color)
 
         .. output::
-           https://doc-select-slider.streamlitapp.com/
+           https://doc-select-slider.streamlit.app/
            height: 450px
 
         """
@@ -260,6 +285,7 @@ class SelectSliderMixin:
         slider_value = as_index_list(value)
 
         slider_proto = SliderProto()
+        slider_proto.type = SliderProto.Type.SELECT_SLIDER
         slider_proto.label = label
         slider_proto.format = "%s"
         slider_proto.default[:] = slider_value

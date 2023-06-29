@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
+from tests.streamlit import snowpark_mocks
 
 np.random.seed(0)
 
@@ -29,3 +30,5 @@ st._arrow_area_chart(df, y=["a", "b"])
 st._arrow_area_chart(df, x="a", y="b")
 st._arrow_area_chart(df, x="b", y="a")
 st._arrow_area_chart(df, x="a", y=["b", "c"])
+
+st._arrow_area_chart(snowpark_mocks.DataFrame())
