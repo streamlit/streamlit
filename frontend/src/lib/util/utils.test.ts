@@ -284,6 +284,9 @@ describe("submitFormWidget", () => {
       formsDataChanged: jest.fn(),
     })
     WidgetStateManager.prototype.submitForm = jest.fn()
+    // createWidgetState is private but spy on it anyways
+    // @ts-expect-error
+    WidgetStateManager.prototype.createWidgetState = jest.fn()
   })
 
   function getProps(
@@ -312,5 +315,16 @@ describe("submitFormWidget", () => {
     widgetMgr.addSubmitButton(props.element.formId, props.element)
     submitFormWidget(props.element.formId, widgetMgr)
     expect(widgetMgr.submitForm).toHaveBeenCalledWith(props.element.formId)
+  })
+
+  it("should not submit the form when no submit button exists", () => {
+    const props = getProps()
+
+    widgetMgr.addSubmitButton(props.element.formId, props.element)
+    widgetMgr.removeSubmitButton(props.element.formId, props.element)
+    submitFormWidget(props.element.formId, widgetMgr)
+    // createWidgetState is private but spy on it anyways. will check if submit button is pressed
+    // @ts-expect-error
+    expect(widgetMgr.createWidgetState).not.toHaveBeenCalled()
   })
 })

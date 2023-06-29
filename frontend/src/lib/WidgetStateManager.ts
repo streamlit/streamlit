@@ -235,7 +235,7 @@ export class WidgetStateManager {
     this.sendUpdateWidgetsMessage()
     this.syncFormsWithPendingChanges()
 
-    if (submitButtons !== undefined && submitButtons.length !== 0) {
+    if (submitButtons !== undefined && submitButtons.length > 0) {
       // Reset the button's triggerValue.
       this.deleteWidgetState(submitButtons[0].id)
     }
@@ -645,7 +645,7 @@ export class WidgetStateManager {
   ): void {
     if (submitButtons.length < 0) {
       throw new Error(
-        `Bad submitButtons value ${submitButtons.length} (must be >= 0)`
+        `Bad submitButtons length ${submitButtons.length} (must be >= 0)`
       )
     }
 

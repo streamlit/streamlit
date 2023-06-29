@@ -90,8 +90,9 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   if (node.deltaBlock.type === "form") {
     const { formId, clearOnSubmit } = node.deltaBlock.form as BlockProto.Form
+    const submitButtons = props.formsData.submitButtons.get(formId)
     const hasSubmitButton =
-      props.formsData.submitButtons.get(formId) !== undefined
+      submitButtons !== undefined && submitButtons.length > 0
     return (
       <Form
         formId={formId}
