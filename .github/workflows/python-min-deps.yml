@@ -49,6 +49,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
+          fetch-depth: 2
           submodules: "recursive"
 
       - name: Set Python version vars
