@@ -57,8 +57,8 @@ Data: TypeAlias = Union[
 _DEFAULT_MAP: Final[Dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 
 # Other default parameters for st.map.
-_DEFAULT_COLOR = (200, 30, 0, 160)
-_DEFAULT_SIZE = 10
+_DEFAULT_COLOR: Final = (200, 30, 0, 160)
+_DEFAULT_SIZE: Final = 10
 _DEFAULT_ZOOM_LEVEL: Final = 12
 _ZOOM_LEVELS: Final = [
     360,
