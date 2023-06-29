@@ -29,7 +29,6 @@ class EchoTest(DeltaGeneratorTestCase):
     def test_echo(self, _, echo, echo_index, output_index):
         # The empty lines below are part of the test. Do not remove them.
         with echo():
-
             st.write("Hello")
 
             "hi"
@@ -72,6 +71,14 @@ class MyClass(object):
 
     def test_root_level_echo(self):
         import tests.streamlit.echo_test_data.root_level_echo
+
+        echo_str = "a = 123"
+
+        element = self.get_delta_from_queue(0).new_element
+        self.assertEqual(echo_str, element.code.code_text)
+
+    def test_echo_multiline_param(self):
+        import tests.streamlit.echo_test_data.multiline_param_echo
 
         echo_str = "a = 123"
 
