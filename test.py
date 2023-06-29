@@ -14,9 +14,27 @@
 import time
 
 import streamlit as st
-from streamlit.elements.status_panel import StatusPanelStage
+from streamlit.elements.status_panel import StatusPanel
 
-with StatusPanelStage("open_panel") as s:
-    st.text("inside expander")
-    time.sleep(1)
-    s.set_label("updated label")
+status = StatusPanel(behavior="autocollapse")
+
+with status.stage("🤔 Creating files...") as s:
+    st.text("Status...")
+    st.text("Status...")
+    st.text("Status...")
+    time.sleep(3)
+    s.set_label("✅ Created!")
+
+with status.stage("🤔 Reticulating splines...") as s:
+    st.text("Status...")
+    st.text("Status...")
+    st.text("Status...")
+    time.sleep(3)
+    s.set_label("✅ Reticulated!")
+
+with status.stage("🤔 Watering dromedaries...") as s:
+    st.text("Status...")
+    st.text("Status...")
+    st.text("Status...")
+    time.sleep(3)
+    s.set_label("✅ Watered!")

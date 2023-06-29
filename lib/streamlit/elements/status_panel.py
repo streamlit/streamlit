@@ -14,16 +14,30 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 import streamlit as st
 from streamlit.cursor import LockedCursor
 from streamlit.delta_generator import _enqueue_message
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
+StatusPanelBehavior = Literal["autocollapse", "stay_open"]
+
+
+class StatusPanel:
+    def __init__(self, behavior: StatusPanelBehavior = "autocollapse"):
+        self._container = st.container()
+        self._behavior = behavior
+
+    def stage(self, label: str) -> StatusPanelStage:
+        with self._container:
+            return StatusPanelStage(label, self._behavior)
+
 
 class StatusPanelStage:
-    def __init__(self, label: str):
+    def __init__(self, label: str, behavior: StatusPanelBehavior):
+        self._behavior = behavior
+
         self._label = label
         self._expanded = True
 
@@ -70,5 +84,6 @@ class StatusPanelStage:
         return self
 
     def __exit__(self, type: Any, value: Any, traceback: Any) -> None:
-        self.set_expanded(False)
+        if self._behavior == "autocollapse":
+            self.set_expanded(False)
         self._expander_dg.__exit__(type, value, traceback)
