@@ -40,6 +40,9 @@ export interface ExpandableProps {
 // Our wrapper takes the wrapped component's props plus ExpandableProps
 type WrapperProps<P> = P & ExpandableProps
 
+// TODO: there's no reason for this to be a HOC. Adapt it to follow the same
+//  pattern as the `Tabs` and `ChatMessage` containers that simply parent their
+//  children.
 function withExpandable<P>(
   WrappedComponent: ComponentType<P>
 ): ComponentType<WrapperProps<P>> {
