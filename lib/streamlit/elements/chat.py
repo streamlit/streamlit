@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING, Optional, Tuple, cast
 from typing_extensions import Literal
 
 from streamlit import runtime
-from streamlit.elements.form import current_form_id
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
@@ -300,7 +299,6 @@ class ChatMixin:
             chat_input_proto.max_chars = max_chars
 
         chat_input_proto.default = default
-        chat_input_proto.form_id = current_form_id(self.dg)
         chat_input_proto.position = ChatInputProto.Position.BOTTOM
 
         ctx = get_script_run_ctx()

@@ -39,7 +39,6 @@ import {
   StyledSendIconButton,
   StyledSendIconButtonContainer,
 } from "./styled-components"
-import { isInForm } from "src/lib/util/utils"
 
 export interface Props {
   disabled: boolean
@@ -219,7 +218,8 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
               value={value}
               maxLength={maxChars}
               type="chat"
-              inForm={isInForm({ formId: element.formId })}
+              // Chat Input are not able to be used in forms
+              inForm={false}
             />
           </StyledInputInstructionsContainer>
           <StyledSendIconButtonContainer>
