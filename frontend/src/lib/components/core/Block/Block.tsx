@@ -18,6 +18,7 @@ import React, { ReactElement } from "react"
 import { AutoSizer } from "react-virtualized"
 
 import { Block as BlockProto } from "src/lib/proto"
+import ExpandableProto = BlockProto.Expandable
 import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
 import { getElementWidgetID } from "src/lib/util/utils"
 import withExpandable from "src/lib/hocs/withExpandable"
@@ -72,21 +73,21 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     props.scriptRunId
   )
 
-  const optionalProps = node.deltaBlock.expandable
-    ? {
-        empty: node.isEmpty,
-        isStale,
-        ...node.deltaBlock.expandable,
-      }
-    : {}
-
-  const childProps = { ...props, ...optionalProps, ...{ node } }
-
-  const child = node.deltaBlock.expandable ? (
-    <ExpandableLayoutBlock {...childProps} />
-  ) : (
-    <LayoutBlock {...childProps} />
-  )
+  let child: ReactElement
+  const childProps = { ...props, ...{ node } }
+  if (node.deltaBlock.expandable) {
+    // Handle expandable blocks
+    const expandableProps = {
+      ...childProps,
+      empty: node.isEmpty,
+      isStale,
+      expandable: true,
+      ...(node.deltaBlock.expandable as ExpandableProto),
+    }
+    child = <ExpandableLayoutBlock {...expandableProps} />
+  } else {
+    child = <LayoutBlock {...childProps} />
+  }
 
   if (node.deltaBlock.type === "form") {
     const { formId, clearOnSubmit } = node.deltaBlock.form as BlockProto.Form
