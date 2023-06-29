@@ -321,9 +321,12 @@ def _get_lat_or_lon_col_name(
 
     else:
         # Try one of the default col_names:
-        candidate_col_name = next(
-            (d for d in default_col_names if d in data.columns), None
-        )
+        candidate_col_name = None
+
+        for c in default_col_names:
+            if c in data.columns:
+                candidate_col_name = c
+                break
 
         if candidate_col_name is None:
             formatted_allowed_col_name = ", ".join(map(repr, sorted(default_col_names)))
