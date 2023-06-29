@@ -812,9 +812,15 @@ class DataEditorMixin:
 
         if type_util.is_pandas_styler(data):
             # Pandas styler will only work for non-editable/disabled columns.
-            # Get first 5 chars of md5 hash of the key or delta path as styler uuid
+            # Get first 10 chars of md5 hash of the key or delta path as styler uuid
             # and set it as styler uuid.
-            styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:5]
+            # We are only using the first 10 chars to keep the uuid short since
+            # it will be used for all the cells in the dataframe. Therefore, this
+            # might have a significant impact on the message size. 10 chars
+            # should be good enough to avoid  potential collisions in this case.
+            # Even on collisions, there should not be a big issue with the
+            # rendering in the data editor.
+            styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:10]
             data.set_uuid(styler_uuid)
             marshall_styler(proto, data, styler_uuid)
 
