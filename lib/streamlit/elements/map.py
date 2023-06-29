@@ -336,9 +336,12 @@ def _get_lat_or_lon_col_name(
         else:
             col_name = candidate_col_name
 
-    # Can't use isnull().values.any() because ExtensionArrays don't have .any()
-    # (Read about ExtensionArrays here: https://pandas.pydata.org/community/blog/extension-arrays.html)
-    # However, after a performance test I found this runs basically as fast as .values.any().
+    # Check that the column is well-formed.
+    # IMPLEMENTATION NOTE: We can't use isnull().values.any() because .values can return
+    # ExtensionArrays, which don't have a .any() method.
+    # (Read about ExtensionArrays here: # https://pandas.pydata.org/community/blog/extension-arrays.html)
+    # However, after a performance test I found the solution below runs basically as
+    # fast as .values.any().
     if any(data[col_name].isnull().array):
         raise StreamlitAPIException(
             f"Column {col_name} is not allowed to contain null values, such "
