@@ -573,6 +573,21 @@ class DataEditorTest(DeltaGeneratorTestCase):
             proto.styler.styles, "#T_29028row1_col2 { background-color: yellow }"
         )
 
+        # Check that different delta paths lead to different element ids
+        st.container().data_editor(styler, width=99)
+        # delta path is: [0, 1, 0]
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(
+            proto.styler.styles, "#T_e94cdrow1_col2 { background-color: yellow }"
+        )
+
+        st.container().container().data_editor(styler, width=100)
+        # delta path is: [0, 2, 0, 0]
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        self.assertEqual(
+            proto.styler.styles, "#T_9e33arow1_col2 { background-color: yellow }"
+        )
+
     def test_duplicate_column_names_raise_exception(self):
         """Test that duplicate column names raise an exception."""
         # create a dataframe with duplicate columns
