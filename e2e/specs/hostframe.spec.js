@@ -25,10 +25,9 @@ describe("Host communication", () => {
     });
 
     it("handles a host theme message", () => {
-        cy.get("iframe")
-            .iframe(() => {
-                cy.prepForElementSnapshots()
-            });
+        cy.get("iframe").iframe(() => {
+            cy.prepForElementSnapshots()
+        });
 
         cy.get("iframe").first().matchImageSnapshot("theme-message-before");
         cy.get("#toolbar").contains("Send Theme").click();
@@ -37,29 +36,26 @@ describe("Host communication", () => {
 
     it("handles a host rerun script message", () => {
         cy.get("#toolbar").contains("Rerun Script").click();
-        cy.get("iframe")
-            .iframe(() => {
-                // Check that status widget is running
-                cy.get("[data-testid='stStatusWidget']").should("exist")
-            });
+        // Check that status widget is running
+        cy.get("iframe").iframe(() => {
+            cy.get("[data-testid='stStatusWidget']").should("exist")
+        });
     });
 
     it("handles a host stop script message", () => {
         // Make sure script is running
         cy.get("#toolbar").contains("Rerun Script").click();
-        cy.get("iframe")
-            .iframe(() => {
-                // Check that status widget is running
-                cy.get("[data-testid='stStatusWidget']").should("exist")
-            });
+        // Check that status widget is running
+        cy.get("iframe").iframe(() => {
+            cy.get("[data-testid='stStatusWidget']").should("exist")
+        });
 
         // Stop script
         cy.get("#toolbar").contains("Stop Script").click();
-        cy.get("iframe")
-            .iframe(() => {
-                // Check that status widget is no longer running
-                cy.get("[data-testid='stStatusWidget']").should("not.exist")
-            });
+        // Check that status widget is no longer running
+        cy.get("iframe").iframe(() => {
+            cy.get("[data-testid='stStatusWidget']").should("not.exist")
+        });
     });
 
     it("handles a host close modal message", () => {
@@ -73,11 +69,10 @@ describe("Host communication", () => {
             });
         // Close modal
         cy.get("#toolbar").contains("Close modal").click();
-        cy.get("iframe")
-            .iframe(() => {
-                // Check that modal is no longer open
-                cy.get("div[role='dialog']").should("not.exist")
-            });
+        // Check that modal is no longer open
+        cy.get("iframe").iframe(() => {
+            cy.get("div[role='dialog']").should("not.exist")
+        });
     });
 
     it("handles a host menu item message", () => {
@@ -105,11 +100,22 @@ describe("Host communication", () => {
             });
     });
 
+    it("handles a hide sidebar nav message", () => {
+        cy.get("iframe").iframe(() => {
+            // Check that initially, MPA sidebar nav is visible
+            cy.get("[data-testid='stSidebarNav']").should("exist")
+        });
+        // Trigger hide sidebar nav
+        cy.get("#toolbar").contains("Hide Sidebar Nav").click();
+        cy.get("iframe").iframe(() => {
+            // Check that MPA sidebar nav is hidden
+            cy.get("[data-testid='stSidebarNav']").should("not.exist")
+        });
+    });
+
     it("handles a host sidebar downshift message", () => {
         // Trigger sidebar downshift
         cy.get("#toolbar").contains("Sidebar Chevron Downshift").click();
-        // Trigger re-run of script
-        cy.get("#toolbar").contains("Rerun Script").click();
         cy.get("iframe")
             .iframe(() => {
                 // Close sidebar

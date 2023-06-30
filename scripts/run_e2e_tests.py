@@ -505,6 +505,24 @@ def run_e2e_tests(
                         ],
                         show_output=verbose,
                     )
+            elif basename(spec_path) == "hostframe.spec.js":
+                test_name, _ = splitext(basename(spec_path))
+                test_name, _ = splitext(test_name)
+                test_path = join(
+                    ctx.tests_dir, "scripts", "hostframe", "streamlit_app.py"
+                )
+                if os.path.exists(test_path):
+                    run_test(
+                        ctx,
+                        str(spec_path),
+                        [
+                            "streamlit",
+                            "run",
+                            "--ui.hideSidebarNav=false",
+                            test_path,
+                        ],
+                        show_output=verbose,
+                    )
 
             else:
                 test_name, _ = splitext(basename(spec_path))
