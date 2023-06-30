@@ -77,12 +77,30 @@ class UploadedFileManager(CacheStatsProvider, Protocol):
         - cleaning up uploaded files associated with session on session end
 
     It should be created during Runtime initialization.
+
+    Optionally UploadedFileManager could be responsible for issuing URLs which will be
+    used by frontend to upload files to.
     """
 
     @abstractmethod
     def get_files(
         self, session_id: str, file_ids: Sequence[str]
     ) -> List[UploadedFileRec]:
+        """Return a  list of UploadedFileRec for a given sequence of file_ids.
+
+        Parameters
+        ----------
+        session_id
+            The ID of the session that owns the files.
+        file_ids
+            The sequence of ids associated with files to retrieve.
+
+        Returns
+        -------
+        List[UploadedFileRec]
+            A list of URL UploadedFileRec instances, each instance contains information
+            about uploaded file.
+        """
         raise NotImplementedError
 
     @abstractmethod
