@@ -442,7 +442,9 @@ _create_section("client", "Settings for scripts that use Streamlit.")
 
 _create_option(
     "client.caching",
-    description="Whether to enable st.cache.",
+    description="""
+        Whether to enable st.cache. This does not affect st.cache_data or
+        st.cache_resource.""",
     default_val=True,
     type_=bool,
     scriptable=True,
