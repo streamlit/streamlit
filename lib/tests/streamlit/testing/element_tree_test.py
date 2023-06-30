@@ -269,6 +269,23 @@ class MarkdownTest(InteractiveScriptTests):
         assert sr.code[0].type == "code"
         assert sr.code[0].value == "import streamlit as st"
 
+    def test_echo(self):
+        script = self.script_from_string(
+            """
+            import streamlit as st
+
+            with st.echo():
+                st.write("Hello")
+            """
+        )
+
+        sr = script.run()
+
+        assert sr.code
+        assert sr.code[0].type == "code"
+        assert sr.code[0].language == "python"
+        assert sr.code[0].value == """st.write("Hello")"""
+
     def test_latex(self):
         script = self.script_from_string(
             """
