@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ast
 import contextlib
 import re
 import textwrap
@@ -64,23 +65,23 @@ def echo(code_location="above"):
             source_lines = source_file.readlines()
 
         # Use ast to parse the Python file and find the code block to display
-        import ast
+        root_node = ast.parse("".join(source_lines))
+        line_to_node_map = {}
 
-        ap = ast.parse("".join(source_lines))
-
-        ap_map = {}
-
-        def map_ast(a):
-            if not hasattr(a, "body"):
+        def collect_body_statements(node):
+            if not hasattr(node, "body"):
                 return
-            for b in a.body:
-                ap_map[b.lineno] = b
-                map_ast(b)
+            for child in node.body:
+                line_to_node_map[child.lineno] = child
+                collect_body_statements(child)
 
-        map_ast(ap)
-        lines_to_display = source_lines[
-            ap_map[start_line].body[0].lineno - 1 : ap_map[start_line].end_lineno
-        ]
+        collect_body_statements(root_node)
+
+        # In AST module the lineno (line numbers) are 1-indexed,
+        # so we decrease it by 1 to lookup in source lines list
+        echo_block_start_line = line_to_node_map[start_line].body[0].lineno - 1
+        echo_block_end_line = line_to_node_map[start_line].end_lineno
+        lines_to_display = source_lines[echo_block_start_line:echo_block_end_line]
 
         code_string = textwrap.dedent("".join(lines_to_display))
 
