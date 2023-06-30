@@ -545,7 +545,7 @@ class DataEditorMixin:
     ) -> DataTypes:
         """Display a data editor widget.
 
-        The data editor widget allows you to edit dataframes and many other data structures in a table-like UI.
+        The data editor widget allows you to edit dataframes and many other data structures in a table-like UI. 
 
         .. warning::
             When going from ``st.experimental_data_editor`` to ``st.data_editor`` in
@@ -558,7 +558,8 @@ class DataEditorMixin:
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, list, set, tuple, dict, or None
-            The data to edit in the data editor.
+            The data to edit in the data editor. Note that styles from `pandas.Styler` will
+            not be applied (unlike with `st.dataframe`). 
 
             .. note::
                 Mixing data types within a column can make the column uneditable.
