@@ -509,7 +509,7 @@ def run_e2e_tests(
                 test_name, _ = splitext(basename(spec_path))
                 test_name, _ = splitext(test_name)
                 test_path = join(
-                    ctx.tests_dir, "scripts", "hostframe", "streamlit_app.py"
+                    ctx.tests_dir, "scripts", "hostframe", "hostframe_app.py"
                 )
                 if os.path.exists(test_path):
                     run_test(
