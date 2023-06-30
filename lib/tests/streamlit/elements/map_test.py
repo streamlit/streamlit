@@ -98,7 +98,6 @@ class StMapTest(DeltaGeneratorTestCase):
         self.assertEqual(c.get("layers")[0].get("getRadius"), "@@=size")
 
         # Also test that the radius property is set up correctly.
-        self.assertEqual(c.get("layers")[0].get("radiusScale"), 10)
         self.assertEqual(c.get("layers")[0].get("radiusMinPixels"), 3)
 
     def test_common_color_formats(self):

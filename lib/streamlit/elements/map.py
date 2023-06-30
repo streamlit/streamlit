@@ -57,8 +57,10 @@ Data: TypeAlias = Union[
 _DEFAULT_MAP: Final[Dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 
 # Other default parameters for st.map.
+_DEFAULT_LAT_COL_NAMES: Final = {"lat", "latitude", "LAT", "LATITUDE"}
+_DEFAULT_LON_COL_NAMES: Final = {"lon", "longitude", "LON", "LONGITUDE"}
 _DEFAULT_COLOR: Final = (200, 30, 0, 160)
-_DEFAULT_SIZE: Final = 10
+_DEFAULT_SIZE: Final = 100
 _DEFAULT_ZOOM_LEVEL: Final = 12
 _ZOOM_LEVELS: Final = [
     360,
@@ -134,14 +136,14 @@ class MapMixin:
             'latitude', 'LAT', or 'LATITUDE'.
 
         longitude : str or None
-            The name of the column containing the latitude coordinates of
+            The name of the column containing the longitude coordinates of
             the datapoints in the chart. This argument can only be supplied
             by keyword.
 
-            If None, the latitude data will come from any column named 'lon',
+            If None, the longitude data will come from any column named 'lon',
             'longitude', 'LON', or 'LONGITUDE'.
 
-        color : str or tuple
+        color : str or tuple or None
             The color of the circles representing each datapoint. This argument
             can only be supplied by keyword.
 
@@ -155,14 +157,13 @@ class MapMixin:
               should contain colors represented as a hex string or color tuple,
               as described above.
 
-            If passing in a str, the Matplotlib library must be installed.
-
-        size : str, float, or None
-            The size of the circles representing each point. This argument can
-            only be supplied by keyword.
+        size : str or float or None
+            The size of the circles representing each point, in meters. This
+            argument can only be supplied by keyword.
 
             This can be:
 
+            - None, to use the default size.
             - A number like 100, to specify a single size to use for all
               datapoints.
             - The name of the column to use for the size. This allows each
@@ -203,18 +204,19 @@ class MapMixin:
 
         You can also customize the size and color of the datapoints:
 
-        >>> st.map(df, size=200, color='#0044ff')
+        >>> st.map(df, size=20, color='#0044ff')
 
         And, finally, you can choose different columns to use for the latitude
         and longitude components, as well as set size and color of each
         datapoint dynamically based on other columns:
 
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(1000, 3) / [50, 50] + [37.76, -122.4],
-        ...     columns=['col1', 'col2', 'col3'])
+        ... df = pd.DataFrame({
+        ...     "col1": np.random.randn(1000) / 50 + 37.76,
+        ...     "col2": np.random.randn(1000) / 50 + -122.4,
+        ...     "col3": np.random.randn(1000) * 100,
+        ...     "col4": np.random.rand(1000, 4).tolist(),
+        ... }
         ...
-        >>> df[col4] = np.arange[0, 1000]
-        >>>
         >>> st.map(df,
         ...     latitude='col1',
         ...     longitude='col2',
@@ -255,11 +257,9 @@ def to_deckgl_json(
 
     df = type_util.convert_anything_to_df(data)
 
-    lat_col_name = _get_lat_or_lon_col_name(
-        df, "latitude", lat, {"lat", "latitude", "LAT", "LATITUDE"}
-    )
+    lat_col_name = _get_lat_or_lon_col_name(df, "latitude", lat, _DEFAULT_LAT_COL_NAMES)
     lon_col_name = _get_lat_or_lon_col_name(
-        df, "longitude", lon, {"lon", "longitude", "LON", "LONGITUDE"}
+        df, "longitude", lon, _DEFAULT_LON_COL_NAMES
     )
     size_arg, size_col_name = _get_value_and_col_name(df, size, _DEFAULT_SIZE)
     color_arg, color_col_name = _get_value_and_col_name(df, color, _DEFAULT_COLOR)
@@ -290,8 +290,8 @@ def to_deckgl_json(
             "@@type": "ScatterplotLayer",
             "getPosition": f"@@=[{lon_col_name}, {lat_col_name}]",
             "getRadius": size_arg,
-            "radiusScale": 10,
             "radiusMinPixels": 3,
+            "radiusUnits": "meters",
             "getFillColor": color_arg,
             "data": df.to_dict("records"),
         }
