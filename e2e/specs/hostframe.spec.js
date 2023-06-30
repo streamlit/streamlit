@@ -31,12 +31,12 @@ describe("Host communication", () => {
             });
 
         cy.get("iframe").first().matchImageSnapshot("theme-message-before");
-        cy.getIndexed("#toolbar > button", 0).click();
+        cy.get("#toolbar").contains("Send Theme").click();
         cy.get("iframe").first().matchImageSnapshot("theme-message-after");
     });
 
     it("handles a host rerun script message", () => {
-        cy.getIndexed("#toolbar > button", 1).click();
+        cy.get("#toolbar").contains("Rerun Script").click();
         cy.get("iframe")
             .iframe(() => {
                 // Check that status widget is running
@@ -45,7 +45,8 @@ describe("Host communication", () => {
     });
 
     it("handles a host stop script message", () => {
-        cy.getIndexed("#toolbar > button", 1).click();
+        // Make sure script is running
+        cy.get("#toolbar").contains("Rerun Script").click();
         cy.get("iframe")
             .iframe(() => {
                 // Check that status widget is running
@@ -53,7 +54,7 @@ describe("Host communication", () => {
             });
 
         // Stop script
-        cy.getIndexed("#toolbar > button", 2).click();
+        cy.get("#toolbar").contains("Stop Script").click();
         cy.get("iframe")
             .iframe(() => {
                 // Check that status widget is no longer running
@@ -71,7 +72,7 @@ describe("Host communication", () => {
                 cy.get("div[role='dialog']").should("exist")
             });
         // Close modal
-        cy.getIndexed("#toolbar > button", 4).click();
+        cy.get("#toolbar").contains("Close modal").click();
         cy.get("iframe")
             .iframe(() => {
                 // Check that modal is no longer open
@@ -81,7 +82,7 @@ describe("Host communication", () => {
 
     it("handles a host menu item message", () => {
         // Add Menu Item message
-        cy.getIndexed("#toolbar > button", 5).click();
+        cy.get("#toolbar").contains("Add Menu Item").click();
         cy.get("iframe")
             .iframe(() => {
                 // Open the Main Menu
@@ -95,7 +96,7 @@ describe("Host communication", () => {
 
     it("handles a host toolbar item message", () => {
         // Add Toolbar Item message
-        cy.getIndexed("#toolbar > button", 6).click();
+        cy.get("#toolbar").contains("Add Toolbar Item").click();
         cy.get("iframe")
             .iframe(() => {
                 // Check toolbar contents
@@ -106,9 +107,9 @@ describe("Host communication", () => {
 
     it("handles a host sidebar downshift message", () => {
         // Trigger sidebar downshift
-        cy.getIndexed("#toolbar > button", 8).click();
+        cy.get("#toolbar").contains("Sidebar Chevron Downshift").click();
         // Trigger re-run of script
-        cy.getIndexed("#toolbar > button", 1).click();
+        cy.get("#toolbar").contains("Rerun Script").click();
         cy.get("iframe")
             .iframe(() => {
                 // Close sidebar
