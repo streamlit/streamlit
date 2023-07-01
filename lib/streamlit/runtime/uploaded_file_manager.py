@@ -105,9 +105,12 @@ class UploadedFileManager(CacheStatsProvider, Protocol):
 
     @abstractmethod
     def remove_session_files(self, session_id: str) -> None:
+        """Remove all files associated with a given session."""
         raise NotImplementedError
 
     def get_upload_urls(
         self, session_id: str, file_names: Sequence[str]
     ) -> List[UploadFileUrlInfo]:
+        """Return a list of UploadFileUrlInfo for a given sequence of file_names.
+        Optional to implement, issuing of URLs could be done by other service."""
         raise NotImplementedError
