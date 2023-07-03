@@ -123,7 +123,7 @@ def _download_remote(main_script_path: str, url_path: str) -> None:
 def _extract_zip(zip_path: str, target_dir: str) -> Path:
     """
     Extract local archive file at zip_path to target_dir
-    and returns first file path.
+    and returns file path.
     """
     import zipfile
 
