@@ -63,7 +63,7 @@ class HookTests(unittest.TestCase):
 
         _render_and_run_script(hook_file, self.target_directory, self.template_context)
 
-        # Verify that the generated file is created and contains the expected content
+        # Verify that _render_and_run_script creates a new file
         generated_file = self.target_directory / "gen-file.txt"
         self.assertTrue(generated_file.exists())
         self.assertEqual(generated_file.read_text(), "John")
@@ -76,5 +76,5 @@ class HookTests(unittest.TestCase):
 
         run_hook(self.template_directory, self.target_directory, self.template_context)
 
-        # Verify that _render_and_run_script is called with the correct arguments
+        # Verify that _render_and_run_script creates a new file
         self.assertTrue((self.target_directory / "gen-file.txt").exists())
