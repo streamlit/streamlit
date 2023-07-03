@@ -11,10 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, List, Optional, cast
+from typing import TYPE_CHECKING, List, Optional, Union, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -33,18 +34,18 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-SomeUploadedSnapshotFile = Optional[UploadedFile]
+SomeUploadedSnapshotFile = Union[UploadedFile, DeletedFile, None]
 
 
 def _get_upload_files(
     widget_value: Optional[FileUploaderStateProto],
-) -> List[UploadedFile]:
+) -> List[Union[UploadedFile, DeletedFile]]:
     if widget_value is None:
         return []
 
@@ -56,15 +57,24 @@ def _get_upload_files(
     if len(uploaded_file_info) == 0:
         return []
 
-    active_files = {f.file_id: f.file_urls for f in uploaded_file_info}
-
-    file_recs = ctx.uploaded_file_mgr.get_files(
+    file_recs_list = ctx.uploaded_file_mgr.get_files(
         session_id=ctx.session_id,
-        file_ids=list(active_files.keys()),
+        file_ids=[f.file_id for f in uploaded_file_info],
     )
-    return [
-        UploadedFile(file_rec, active_files[file_rec.file_id]) for file_rec in file_recs
-    ]
+
+    file_recs = {f.file_id: f for f in file_recs_list}
+
+    collected_files: List[Union[UploadedFile, DeletedFile]] = []
+
+    for f in uploaded_file_info:
+        maybe_file_rec = file_recs.get(f.file_id)
+        if maybe_file_rec is not None:
+            uploaded_file = UploadedFile(file_recs[f.file_id], f.file_urls)
+            collected_files.append(uploaded_file)
+        else:
+            collected_files.append(DeletedFile())
+
+    return collected_files
 
 
 @dataclass
@@ -75,7 +85,7 @@ class CameraInputSerde:
     ) -> FileUploaderStateProto:
         state_proto = FileUploaderStateProto()
 
-        if not snapshot:
+        if snapshot is None or isinstance(snapshot, DeletedFile):
             return state_proto
 
         file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
@@ -110,7 +120,7 @@ class CameraInputMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> SomeUploadedSnapshotFile:
+    ) -> Optional[UploadedFile]:
         r"""Display a widget that returns pictures from the user's webcam.
 
         Parameters
@@ -213,7 +223,7 @@ class CameraInputMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
-    ) -> SomeUploadedSnapshotFile:
+    ) -> Optional[UploadedFile]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -248,6 +258,9 @@ class CameraInputMixin:
         )
 
         self.dg._enqueue("camera_input", camera_input_proto)
+
+        if isinstance(camera_input_state.value, DeletedFile):
+            return None
         return camera_input_state.value
 
     @property

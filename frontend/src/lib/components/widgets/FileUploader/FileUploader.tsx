@@ -257,7 +257,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           acceptedFiles.length > 0 &&
           this.state.files.length > 0
         ) {
-          this.removeFile(this.state.files[0].id)
+          this.deleteFile(this.state.files[0].id)
         }
 
         _.zip(fileURLsArray, acceptedFiles).forEach(

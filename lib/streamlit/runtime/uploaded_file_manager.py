@@ -39,6 +39,16 @@ class UploadFileUrlInfo(NamedTuple):
     delete_url: str
 
 
+class DeletedFile:
+    """Return this from st.file_uploader and st.camera_input deserialize (so they can
+    be used in session_state), when widget value contains file record that is missing
+    from the storage.
+    DeleteFile instances filtered out before return final value to the user in script,
+    or before sending to frontend."""
+
+    pass
+
+
 class UploadedFile(io.BytesIO):
     """A mutable uploaded file.
 
