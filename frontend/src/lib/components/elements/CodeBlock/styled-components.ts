@@ -26,6 +26,7 @@ export const StyledPre = styled.pre(({ theme }) => ({
   margin: 0,
   paddingRight: "2.75rem",
   color: theme.colors.bodyText,
+  borderRadius: theme.radii.lg,
 
   // The token can consist of many lines, e.g. a triple-quote string, so
   // we need to make sure that the color is not overwritten.
