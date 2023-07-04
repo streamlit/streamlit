@@ -256,6 +256,10 @@ export const StyledHeaderButton = styled(
     marginRight: theme.spacing.threeXS,
     lineHeight: 1,
 
+    // We add this oddly-specific number, because our buttons have a set height of 38.39px, to match the rest of the widgets' height.
+    // Here, we want the header buttons that use icons to be square in width, so their hover effect is consistent.
+    minWidth: "38.39px",
+
     "&:focus": {
       outline: "none",
     },
