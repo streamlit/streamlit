@@ -87,12 +87,10 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(204, response.code, response.reason)
 
         self.assertEqual(
-            [(response.effective_url, file.name, file.data)],
+            [(file.name, file.name, file.data)],
             [
-                (rec.file_url, rec.name, rec.data)
-                for rec in self.file_mgr.get_files(
-                    "test_session_id", [response.effective_url]
-                )
+                (rec.file_id, rec.name, rec.data)
+                for rec in self.file_mgr.get_files("test_session_id", [file.name])
             ],
         )
 
@@ -188,6 +186,4 @@ class UploadFileRequestHandlerInvalidSessionTest(tornado.testing.AsyncHTTPTestCa
         response = self._upload_files(params, session_id="sessionId", file_id="fileId")
         self.assertEqual(400, response.code)
         self.assertIn("Invalid session_id: 'sessionId'", response.reason)
-        self.assertEqual(
-            self.file_mgr.get_files("sessionId", [response.effective_url]), []
-        )
+        self.assertEqual(self.file_mgr.get_files("sessionId", ["fileId"]), [])

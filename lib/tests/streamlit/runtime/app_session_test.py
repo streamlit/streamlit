@@ -27,7 +27,7 @@ import streamlit.runtime.app_session as app_session
 from streamlit import config
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
-from streamlit.proto.Common_pb2 import FileURLsRequest, FileURLsResponse
+from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
 from streamlit.runtime.app_session import AppSession, AppSessionState
@@ -47,7 +47,10 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.state import SessionState
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.runtime.uploaded_file_manager import (
+    UploadedFileManager,
+    UploadFileUrlInfo,
+)
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 from tests.testutil import patch_config_options
 
@@ -486,9 +489,21 @@ class AppSessionTest(unittest.TestCase):
         session = _create_test_session()
 
         upload_file_urls = [
-            "upload_file_url_1",
-            "upload_file_url_2",
-            "upload_file_url_3",
+            UploadFileUrlInfo(
+                file_id="file_1",
+                upload_url="upload_file_url_1",
+                delete_url="delete_file_url_1",
+            ),
+            UploadFileUrlInfo(
+                file_id="file_2",
+                upload_url="upload_file_url_2",
+                delete_url="delete_file_url_2",
+            ),
+            UploadFileUrlInfo(
+                file_id="file_3",
+                upload_url="upload_file_url_3",
+                delete_url="delete_file_url_3",
+            ),
         ]
         session._uploaded_file_mgr.get_upload_urls.return_value = upload_file_urls
 
@@ -501,17 +516,17 @@ class AppSessionTest(unittest.TestCase):
         )
 
         session._uploaded_file_mgr.get_upload_urls.assert_called_once_with(
-            session.id, 3
+            session.id, ["file_1", "file_2", "file_3"]
         )
 
         expected_msg = ForwardMsg(
             file_urls_response=FileURLsResponse(
                 response_id="my_id",
                 file_urls=[
-                    FileURLsResponse.FileURLs(
-                        file_id=url,
-                        upload_url=url,
-                        delete_url=url,
+                    FileURLs(
+                        file_id=url.file_id,
+                        upload_url=url.upload_url,
+                        delete_url=url.delete_url,
                     )
                     for url in upload_file_urls
                 ],
