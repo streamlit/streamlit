@@ -30,7 +30,7 @@ export enum BaseButtonKind {
   PRIMARY_FORM_SUBMIT = "primaryFormSubmit",
   SECONDARY_FORM_SUBMIT = "secondaryFormSubmit",
   HEADER_BUTTON = "header",
-  OVERFLOW_MENU_BUTTON = "overflow",
+  HEADER_NO_PADDING = "headerNoPadding",
 }
 
 export enum BaseButtonSize {
@@ -279,7 +279,7 @@ export const StyledHeaderButton = styled(
 })
 
 // Take out padding for this specific button, so we can ensure it's 32x32px like other buttons in Community Cloud
-export const StyledOverflowMenuButton = styled(
+export const StyledNoPaddingMenuButton = styled(
   StyledHeaderButton
 )<RequiredBaseButtonProps>(() => {
   return {

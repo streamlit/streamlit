@@ -224,7 +224,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             data-testid="collapsedControl"
           >
             <BaseButton
-              kind={BaseButtonKind.HEADER_BUTTON}
+              kind={BaseButtonKind.HEADER_NO_PADDING}
               onClick={this.toggleCollapse}
             >
               <Icon content={ChevronRight} size="lg" />

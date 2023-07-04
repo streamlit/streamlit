@@ -598,7 +598,7 @@ function MainMenu(props: Props): ReactElement {
       }}
     >
       <StyledMainMenuContainer id="MainMenu">
-        <BaseButton kind={BaseButtonKind.OVERFLOW_MENU_BUTTON}>
+        <BaseButton kind={BaseButtonKind.HEADER_NO_PADDING}>
           <Icon content={MoreVert} size="lg" />
         </BaseButton>
         {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}
