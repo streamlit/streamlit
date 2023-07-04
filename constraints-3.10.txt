@@ -43,7 +43,7 @@ jsonschema==4.17.3
 keyring==24.2.0
 kiwisolver==1.4.4
 langchain==0.0.222
-langchainplus-sdk==0.0.19
+langchainplus-sdk==0.0.20
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
 marshmallow==3.19.0
