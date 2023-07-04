@@ -51,6 +51,7 @@ import {
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
   StyledUl,
+  StyledMainMenuContainer,
 } from "./styled-components"
 
 const { GitStates } = GitInfo
@@ -596,12 +597,12 @@ function MainMenu(props: Props): ReactElement {
         },
       }}
     >
-      <span id="MainMenu">
+      <StyledMainMenuContainer id="MainMenu">
         <BaseButton kind={BaseButtonKind.OVERFLOW_MENU_BUTTON}>
           <Icon content={MoreVert} size="lg" />
         </BaseButton>
         {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}
-      </span>
+      </StyledMainMenuContainer>
     </StatefulPopover>
   )
 }

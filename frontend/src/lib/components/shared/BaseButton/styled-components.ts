@@ -278,7 +278,7 @@ export const StyledHeaderButton = styled(
   }
 })
 
-// Take out padding so we can ensure it's square
+// Take out padding for this specific button, so we can ensure it's 32x32px like other buttons in Community Cloud
 export const StyledOverflowMenuButton = styled(
   StyledHeaderButton
 )<RequiredBaseButtonProps>(() => {
