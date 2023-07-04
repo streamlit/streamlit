@@ -24,7 +24,7 @@ import React, {
   useEffect,
 } from "react"
 import { StatefulMenu } from "baseui/menu"
-import { Menu } from "@emotion-icons/material-outlined"
+import { MoreVert } from "@emotion-icons/material-rounded"
 
 import { useTheme } from "@emotion/react"
 import { EmotionTheme } from "src/lib/theme"
@@ -598,7 +598,7 @@ function MainMenu(props: Props): ReactElement {
     >
       <span id="MainMenu">
         <BaseButton kind={BaseButtonKind.HEADER_BUTTON}>
-          <Icon content={Menu} size="lg" />
+          <Icon content={MoreVert} size="lg" />
         </BaseButton>
         {props.screenCastState === "RECORDING" && <StyledRecordingIndicator />}
       </span>
