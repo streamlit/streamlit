@@ -30,6 +30,7 @@ export enum BaseButtonKind {
   PRIMARY_FORM_SUBMIT = "primaryFormSubmit",
   SECONDARY_FORM_SUBMIT = "secondaryFormSubmit",
   HEADER_BUTTON = "header",
+  OVERFLOW_MENU_BUTTON = "overflow",
 }
 
 export enum BaseButtonSize {
@@ -256,9 +257,9 @@ export const StyledHeaderButton = styled(
     marginRight: theme.spacing.threeXS,
     lineHeight: 1,
 
-    // We add this oddly-specific number, because our buttons have a set height of 38.39px, to match the rest of the widgets' height.
-    // Here, we want the header buttons that use icons to be square in width, so their hover effect is consistent.
-    minWidth: "38.39px",
+    // Override buttons min width and height, to ensure the hover state for icon buttons on the header is square
+    minWidth: theme.spacing.threeXL,
+    minHeight: theme.spacing.threeXL,
 
     "&:focus": {
       outline: "none",
@@ -274,6 +275,15 @@ export const StyledHeaderButton = styled(
       borderColor: theme.colors.transparent,
       color: theme.colors.gray,
     },
+  }
+})
+
+// Take out padding so we can ensure it's square
+export const StyledOverflowMenuButton = styled(
+  StyledHeaderButton
+)<RequiredBaseButtonProps>(() => {
+  return {
+    padding: 0,
   }
 })
 
