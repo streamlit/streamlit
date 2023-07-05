@@ -30,6 +30,7 @@ import { notUndefined } from "src/lib/util/utils"
 import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 import { ErrorStatus, UploadFileInfo, UploadingStatus } from "./UploadFileInfo"
+import { FileURLs } from "src/lib/proto"
 
 const createFile = (): File => {
   return new File(["Text in a file!"], "filename.txt", {
@@ -92,6 +93,17 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
       uploadFile: jest.fn().mockImplementation(() => {
         // Mock UploadClient to return an incremented ID for each upload.
         return Promise.resolve(mockServerFileIdCounter++)
+      }),
+      fetchFileURLs: jest.fn().mockImplementation((acceptedFiles: File[]) => {
+        return Promise.resolve(
+          acceptedFiles.map(file => {
+            return new FileURLs({
+              fileId: file.name,
+              uploadUrl: file.name,
+              deleteUrl: file.name,
+            })
+          })
+        )
       }),
     },
   }
