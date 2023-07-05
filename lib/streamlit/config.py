@@ -466,11 +466,12 @@ _create_option(
         are displayed in the browser. By default, this is set to True and
         Streamlit displays app exceptions and associated tracebacks, and
         deprecation warnings, in the browser.
-
+        
         If set to False, deprecation warnings and full exception messages 
-        will be printed to the console only. Exceptions will still display in the 
-        browser with the exception type and traceback, along with a generic 
-        error message.""",
+        will print to the console only. Exceptions will still display in the 
+        browser with a generic error message. For now, the exception type and
+        traceback show in the browser also, but they will be removed in the
+        future.""",
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -484,7 +485,8 @@ _create_option(
 
         Allowed values:
         * "auto"      : Show the developer options if the app is accessed through
-                        localhost and hide them otherwise.
+                        localhost or through Streamlit Community Cloud as a developer.
+                        Hide them otherwise.
         * "developer" : Show the developer options.
         * "viewer"    : Hide the developer options.
         * "minimal"   : Show only options set externally (e.g. through
