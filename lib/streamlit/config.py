@@ -467,10 +467,10 @@ _create_option(
         Streamlit displays app exceptions and associated tracebacks, and
         deprecation warnings, in the browser.
 
-        If set to False, exceptions will display in the browser with the
-        exception type and traceback, along with a generic error message.
-        Deprecation warnings and full exception messages will be printed to the
-        console only.""",
+        If set to False, deprecation warnings and full exception messages 
+        will be printed to the console only. Exceptions will still display in the 
+        browser with the exception type and traceback, along with a generic 
+        error message.""",
     default_val=True,
     type_=bool,
     scriptable=True,
