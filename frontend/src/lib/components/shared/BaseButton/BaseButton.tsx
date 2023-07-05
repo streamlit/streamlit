@@ -29,7 +29,7 @@ import {
   StyledPrimaryFormSubmitButton,
   StyledSecondaryFormSubmitButton,
   StyledHeaderButton,
-  StyledNoPaddingMenuButton,
+  StyledHeaderNoPaddingButton,
 } from "./styled-components"
 
 function BaseButton({
@@ -62,7 +62,7 @@ function BaseButton({
   } else if (kind === BaseButtonKind.HEADER_BUTTON) {
     ComponentType = StyledHeaderButton
   } else if (kind === BaseButtonKind.HEADER_NO_PADDING) {
-    ComponentType = StyledNoPaddingMenuButton
+    ComponentType = StyledHeaderNoPaddingButton
   }
 
   return (
