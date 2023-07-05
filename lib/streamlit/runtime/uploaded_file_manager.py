@@ -79,7 +79,7 @@ class UploadedFile(io.BytesIO):
 
 class UploadedFileManager(CacheStatsProvider, Protocol):
     """UploadedFileManager protocol, that should be implemented by the concrete
-    cache storage managers.
+    uploaded file managers.
 
     It is responsible for:
         - retrieving files by session_id and file_id for st.file_uploader and
