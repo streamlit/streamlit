@@ -442,7 +442,9 @@ _create_section("client", "Settings for scripts that use Streamlit.")
 
 _create_option(
     "client.caching",
-    description="Whether to enable st.cache.",
+    description="""
+        Whether to enable st.cache. This does not affect st.cache_data or
+        st.cache_resource.""",
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -465,9 +467,11 @@ _create_option(
         Streamlit displays app exceptions and associated tracebacks, and
         deprecation warnings, in the browser.
 
-        If set to False, an exception or deprecation warning will result in
-        a generic message being shown in the browser, and exceptions, tracebacks,
-        and deprecation warnings will be printed to the console only.""",
+        If set to False, deprecation warnings and full exception messages
+        will print to the console only. Exceptions will still display in the
+        browser with a generic error message. For now, the exception type and
+        traceback show in the browser also, but they will be removed in the
+        future.""",
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -481,7 +485,8 @@ _create_option(
 
         Allowed values:
         * "auto"      : Show the developer options if the app is accessed through
-                        localhost and hide them otherwise.
+                        localhost or through Streamlit Community Cloud as a developer.
+                        Hide them otherwise.
         * "developer" : Show the developer options.
         * "viewer"    : Hide the developer options.
         * "minimal"   : Show only options set externally (e.g. through
