@@ -18,6 +18,7 @@ import React, { ReactElement, ReactNode } from "react"
 
 import { Notification, KIND } from "baseui/notification"
 import { StyledAlertContent } from "./styled-components"
+import { radii } from "src/lib/theme/primitives"
 
 export enum Kind {
   ERROR = "error",
@@ -80,6 +81,7 @@ export default function AlertContainer({
             marginRight: 0,
             width: width ? width.toString() : undefined,
             border: 0,
+            borderRadius: radii.lg,
           },
         },
         InnerContainer: {

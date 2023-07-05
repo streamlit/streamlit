@@ -49,6 +49,7 @@ IGNORE_PATTERN = re.compile(
     r"|^frontend/(\.dockerignore|\.eslintrc|\.prettierignore)$"
     r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini|pytest\.ini)$"
     r"|^lib/(test|dev)-requirements\.txt$"
+    r"|^lib/min-constraints-gen\.txt"
     r"|\.isort\.cfg$"
     r"|\.credentials/\.gitignore$"
     # Excluding test files, because adding headers may cause tests to fail.
