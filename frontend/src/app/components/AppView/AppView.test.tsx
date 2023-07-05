@@ -199,9 +199,10 @@ describe("AppView element", () => {
 
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event])),
     })
     const { getByTestId } = render(<AppView {...props} />)
 
@@ -305,13 +306,14 @@ describe("AppView element", () => {
     )
 
     const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const main = new BlockNode(
       [chatInputElement],
       new BlockProto({ allowEmpty: true })
     )
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event])),
     })
 
     render(<AppView {...props} />)
