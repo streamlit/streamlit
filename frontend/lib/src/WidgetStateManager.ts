@@ -26,7 +26,7 @@ import {
   StringTriggerValue,
   WidgetState,
   WidgetStates,
-} from "src/proto"
+} from "./proto"
 import { Signal, SignalConnection } from "typed-signals"
 import { isValidFormId } from "./util/utils"
 

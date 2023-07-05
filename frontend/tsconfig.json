@@ -18,5 +18,5 @@
     "strict": true,
     "target": "es5"
   },
-  "include": ["lib/src", "app/src"]
+  "include": ["lib", "app"]
 }
