@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-import { LabelVisibilityOptions } from "src/util/utils"
+import { LabelVisibilityOptions } from "../../../util/utils"
 
 export interface StyledContentProps {
   visibility?: LabelVisibilityOptions

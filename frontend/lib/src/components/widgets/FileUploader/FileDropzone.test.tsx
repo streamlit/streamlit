@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { shallow } from "src/test_util"
+import { shallow } from "../../../test_util"
 import Dropzone from "react-dropzone"
 import FileDropzone, { Props } from "./FileDropzone"
 

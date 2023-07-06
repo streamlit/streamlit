@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { shallow } from "src/test_util"
+import { shallow } from "../../../test_util"
 import React from "react"
 import { StyledCameraInputBaseButton } from "./styled-components"
 import CameraInputButton, { CameraInputButtonProps } from "./CameraInputButton"

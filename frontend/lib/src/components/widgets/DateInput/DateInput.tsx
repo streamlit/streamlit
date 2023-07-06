@@ -19,18 +19,18 @@ import moment from "moment"
 import { withTheme } from "@emotion/react"
 import { Datepicker as UIDatePicker, DENSITY } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
-import { DateInput as DateInputProto } from "src/proto"
-import { FormClearHelper } from "src/components/widgets/Form"
-import { WidgetStateManager, Source } from "src/WidgetStateManager"
+import { DateInput as DateInputProto } from "../../../proto"
+import { FormClearHelper } from "../../../components/widgets/Form"
+import { WidgetStateManager, Source } from "../../../WidgetStateManager"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
-} from "src/components/widgets/BaseWidget"
-import { EmotionTheme } from "src/theme"
-import TooltipIcon from "src/components/shared/TooltipIcon"
-import { Placement } from "src/components/shared/Tooltip"
+} from "../../../components/widgets/BaseWidget"
+import { EmotionTheme } from "../../../theme"
+import TooltipIcon from "../../../components/shared/TooltipIcon"
+import { Placement } from "../../../components/shared/Tooltip"
 
-import { labelVisibilityProtoValueToEnum } from "src/util/utils"
+import { labelVisibilityProtoValueToEnum } from "../../../util/utils"
 
 export interface Props {
   disabled: boolean

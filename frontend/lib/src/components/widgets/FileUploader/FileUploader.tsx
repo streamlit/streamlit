@@ -23,19 +23,23 @@ import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "src/proto"
-import { FormClearHelper } from "src/components/widgets/Form"
+} from "../../../proto"
+import { FormClearHelper } from "../../../components/widgets/Form"
 
-import { FileSize, getSizeDisplay, sizeConverter } from "src/util/FileHelper"
-import { FileUploadClient } from "src/FileUploadClient"
-import { WidgetStateManager } from "src/WidgetStateManager"
+import {
+  FileSize,
+  getSizeDisplay,
+  sizeConverter,
+} from "../../../util/FileHelper"
+import { FileUploadClient } from "../../../FileUploadClient"
+import { WidgetStateManager } from "../../../WidgetStateManager"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
-} from "src/components/widgets/BaseWidget"
-import TooltipIcon from "src/components/shared/TooltipIcon"
-import { Placement } from "src/components/shared/Tooltip"
-import { labelVisibilityProtoValueToEnum } from "src/util/utils"
+} from "../../../components/widgets/BaseWidget"
+import TooltipIcon from "../../../components/shared/TooltipIcon"
+import { Placement } from "../../../components/shared/Tooltip"
+import { labelVisibilityProtoValueToEnum } from "../../../util/utils"
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"

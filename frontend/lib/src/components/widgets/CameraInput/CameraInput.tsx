@@ -23,24 +23,24 @@ import {
   CameraInput as CameraInputProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "src/proto"
-import Icon from "src/components/shared/Icon"
-import { Placement } from "src/components/shared/Tooltip"
-import TooltipIcon from "src/components/shared/TooltipIcon"
+} from "../../../proto"
+import Icon from "../../../components/shared/Icon"
+import { Placement } from "../../../components/shared/Tooltip"
+import TooltipIcon from "../../../components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
-} from "src/components/widgets/BaseWidget"
-import { FormClearHelper } from "src/components/widgets/Form"
-import { FileUploadClient } from "src/FileUploadClient"
-import { logError } from "src/util/log"
-import { WidgetStateManager } from "src/WidgetStateManager"
-import { labelVisibilityProtoValueToEnum } from "src/util/utils"
+} from "../../../components/widgets/BaseWidget"
+import { FormClearHelper } from "../../../components/widgets/Form"
+import { FileUploadClient } from "../../../FileUploadClient"
+import { logError } from "../../../util/log"
+import { WidgetStateManager } from "../../../WidgetStateManager"
+import { labelVisibilityProtoValueToEnum } from "../../../util/utils"
 import {
   UploadedStatus,
   UploadFileInfo,
   UploadingStatus,
-} from "src/components/widgets/FileUploader/UploadFileInfo"
+} from "../../../components/widgets/FileUploader/UploadFileInfo"
 import CameraInputButton from "./CameraInputButton"
 import { FacingMode } from "./SwitchFacingModeButton"
 import {

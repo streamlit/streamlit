@@ -19,7 +19,7 @@ import Dropzone, { FileRejection } from "react-dropzone"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
-} from "src/components/shared/BaseButton"
+} from "../../../components/shared/BaseButton"
 
 import { StyledFileDropzoneSection } from "./styled-components"
 import FileDropzoneInstructions from "./FileDropzoneInstructions"

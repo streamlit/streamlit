@@ -22,12 +22,12 @@ import {
   GridMouseEventArgs,
 } from "@glideapps/glide-data-grid"
 
-import { notNullOrUndefined } from "src/util/utils"
+import { notNullOrUndefined } from "../../../../util/utils"
 import {
   BaseColumn,
   hasTooltip,
   isMissingValueCell,
-} from "src/components/widgets/DataFrame/columns"
+} from "../../../../components/widgets/DataFrame/columns"
 
 // Debounce time for triggering the tooltip on hover.
 export const DEBOUNCE_TIME_MS = 600

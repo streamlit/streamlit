@@ -18,8 +18,8 @@ import {
   Quiver,
   Type as ArrowType,
   DataFrameCell,
-} from "src/dataframes/Quiver"
-import { Arrow as ArrowProto } from "src/proto"
+} from "../../../dataframes/Quiver"
+import { Arrow as ArrowProto } from "../../../proto"
 import {
   UNICODE,
   MULTI,
@@ -28,7 +28,7 @@ import {
   STYLER,
   DISPLAY_VALUES,
   EMPTY,
-} from "src/mocks/arrow"
+} from "../../../mocks/arrow"
 
 import {
   getTextCell,

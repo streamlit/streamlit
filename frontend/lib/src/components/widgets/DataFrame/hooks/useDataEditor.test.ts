@@ -25,9 +25,9 @@ import {
   BaseColumn,
   TextColumn,
   NumberColumn,
-} from "src/components/widgets/DataFrame/columns"
-import EditingState from "src/components/widgets/DataFrame/EditingState"
-import { notNullOrUndefined } from "src/util/utils"
+} from "../../../../components/widgets/DataFrame/columns"
+import EditingState from "../../../../components/widgets/DataFrame/EditingState"
+import { notNullOrUndefined } from "../../../../util/utils"
 
 import useDataEditor from "./useDataEditor"
 

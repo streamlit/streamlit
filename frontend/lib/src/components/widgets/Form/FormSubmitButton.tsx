@@ -15,14 +15,14 @@
  */
 
 import React, { ReactElement, useEffect } from "react"
-import { Button as ButtonProto } from "src/proto"
+import { Button as ButtonProto } from "../../../proto"
 import BaseButton, {
   BaseButtonTooltip,
   BaseButtonKind,
   BaseButtonSize,
-} from "src/components/shared/BaseButton"
-import { WidgetStateManager } from "src/WidgetStateManager"
-import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+} from "../../../components/shared/BaseButton"
+import { WidgetStateManager } from "../../../WidgetStateManager"
+import StreamlitMarkdown from "../../../components/shared/StreamlitMarkdown"
 
 export interface Props {
   disabled: boolean

@@ -15,11 +15,11 @@
  */
 
 import React from "react"
-import { ColorPicker as ColorPickerProto } from "src/proto"
-import { FormClearHelper } from "src/components/widgets/Form"
-import { WidgetStateManager, Source } from "src/WidgetStateManager"
-import BaseColorPicker from "src/components/shared/BaseColorPicker"
-import { labelVisibilityProtoValueToEnum } from "src/util/utils"
+import { ColorPicker as ColorPickerProto } from "../../../proto"
+import { FormClearHelper } from "../../../components/widgets/Form"
+import { WidgetStateManager, Source } from "../../../WidgetStateManager"
+import BaseColorPicker from "../../../components/shared/BaseColorPicker"
+import { labelVisibilityProtoValueToEnum } from "../../../util/utils"
 
 export interface Props {
   disabled: boolean

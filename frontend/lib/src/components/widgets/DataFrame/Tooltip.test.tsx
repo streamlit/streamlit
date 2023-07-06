@@ -20,7 +20,7 @@ import { screen } from "@testing-library/react"
 
 import "@testing-library/jest-dom"
 
-import { render } from "src/test_util"
+import { render } from "../../../test_util"
 
 import Tooltip, { TooltipProps } from "./Tooltip"
 

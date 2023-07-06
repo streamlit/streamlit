@@ -30,8 +30,8 @@ import moment, { Moment } from "moment"
 import "moment-duration-format"
 import "moment-timezone"
 
-import { Type as ArrowType } from "src/dataframes/Quiver"
-import { notNullOrUndefined, isNullOrUndefined } from "src/util/utils"
+import { Type as ArrowType } from "../../../../dataframes/Quiver"
+import { notNullOrUndefined, isNullOrUndefined } from "../../../../util/utils"
 
 /**
  * Interface used for defining the properties (configuration options) of a column.

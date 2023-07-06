@@ -16,17 +16,17 @@
 
 import React from "react"
 import { Input as UIInput } from "baseui/input"
-import { TextInput as TextInputProto } from "src/proto"
-import { FormClearHelper } from "src/components/widgets/Form"
-import { WidgetStateManager, Source } from "src/WidgetStateManager"
-import InputInstructions from "src/components/shared/InputInstructions/InputInstructions"
+import { TextInput as TextInputProto } from "../../../proto"
+import { FormClearHelper } from "../../../components/widgets/Form"
+import { WidgetStateManager, Source } from "../../../WidgetStateManager"
+import InputInstructions from "../../../components/shared/InputInstructions/InputInstructions"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
-} from "src/components/widgets/BaseWidget"
-import TooltipIcon from "src/components/shared/TooltipIcon"
-import { Placement } from "src/components/shared/Tooltip"
-import { isInForm, labelVisibilityProtoValueToEnum } from "src/util/utils"
+} from "../../../components/widgets/BaseWidget"
+import TooltipIcon from "../../../components/shared/TooltipIcon"
+import { Placement } from "../../../components/shared/Tooltip"
+import { isInForm, labelVisibilityProtoValueToEnum } from "../../../util/utils"
 import { StyledTextInput } from "./styled-components"
 
 export interface Props {

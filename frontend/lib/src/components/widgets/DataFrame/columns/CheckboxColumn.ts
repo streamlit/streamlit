@@ -20,7 +20,7 @@ import {
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
-import { isNullOrUndefined } from "src/util/utils"
+import { isNullOrUndefined } from "../../../../util/utils"
 
 import {
   BaseColumn,

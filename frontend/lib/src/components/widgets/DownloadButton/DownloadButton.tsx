@@ -15,15 +15,15 @@
  */
 
 import React, { ReactElement } from "react"
-import { DownloadButton as DownloadButtonProto } from "src/proto"
+import { DownloadButton as DownloadButtonProto } from "../../../proto"
 import BaseButton, {
   BaseButtonTooltip,
   BaseButtonKind,
   BaseButtonSize,
-} from "src/components/shared/BaseButton"
-import { WidgetStateManager } from "src/WidgetStateManager"
-import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
-import { StreamlitEndpoints } from "src/StreamlitEndpoints"
+} from "../../../components/shared/BaseButton"
+import { WidgetStateManager } from "../../../WidgetStateManager"
+import StreamlitMarkdown from "../../../components/shared/StreamlitMarkdown"
+import { StreamlitEndpoints } from "../../../StreamlitEndpoints"
 
 export interface Props {
   endpoints: StreamlitEndpoints

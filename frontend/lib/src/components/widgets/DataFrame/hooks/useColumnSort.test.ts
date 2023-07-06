@@ -21,7 +21,7 @@ import {
   BaseColumn,
   NumberColumn,
   TextColumn,
-} from "src/components/widgets/DataFrame/columns"
+} from "../../../../components/widgets/DataFrame/columns"
 
 import useColumnSort from "./useColumnSort"
 

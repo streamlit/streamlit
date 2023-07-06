@@ -18,15 +18,15 @@ import React from "react"
 
 import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
 
-import { Quiver } from "src/dataframes/Quiver"
-import { logError } from "src/util/log"
+import { Quiver } from "../../../../dataframes/Quiver"
+import { logError } from "../../../../util/log"
 
-import { getCellFromArrow } from "src/components/widgets/DataFrame/arrowUtils"
-import EditingState from "src/components/widgets/DataFrame/EditingState"
+import { getCellFromArrow } from "../../../../components/widgets/DataFrame/arrowUtils"
+import EditingState from "../../../../components/widgets/DataFrame/EditingState"
 import {
   BaseColumn,
   getErrorCell,
-} from "src/components/widgets/DataFrame/columns"
+} from "../../../../components/widgets/DataFrame/columns"
 
 type DataLoaderReturn = Pick<DataEditorProps, "getCellContent">
 

@@ -15,11 +15,11 @@
  */
 
 import React from "react"
-import { mount } from "src/test_util"
-import { WidgetStateManager } from "src/WidgetStateManager"
+import { mount } from "../../../test_util"
+import { WidgetStateManager } from "../../../WidgetStateManager"
 
 import { Radio as UIRadio, RadioGroup } from "baseui/radio"
-import { Radio as RadioProto } from "src/proto"
+import { Radio as RadioProto } from "../../../proto"
 import Radio, { Props } from "./Radio"
 
 const getProps = (elementProps: Partial<RadioProto> = {}): Props => ({

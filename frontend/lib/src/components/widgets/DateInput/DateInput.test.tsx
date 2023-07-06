@@ -15,15 +15,15 @@
  */
 
 import React from "react"
-import { mount } from "src/test_util"
-import { WidgetStateManager } from "src/WidgetStateManager"
+import { mount } from "../../../test_util"
+import { WidgetStateManager } from "../../../WidgetStateManager"
 import {
   DateInput as DateInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "src/proto"
+} from "../../../proto"
 
 import { Datepicker as UIDatePicker } from "baseui/datepicker"
-import { mockTheme } from "src/mocks/mockTheme"
+import { mockTheme } from "../../../mocks/mockTheme"
 import DateInput, { Props } from "./DateInput"
 
 const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({

@@ -15,13 +15,13 @@
  */
 
 import React from "react"
-import { mount, shallow } from "src/test_util"
+import { mount, shallow } from "../../../test_util"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextArea as TextAreaProto,
-} from "src/proto"
+} from "../../../proto"
 
-import { WidgetStateManager } from "src/WidgetStateManager"
+import { WidgetStateManager } from "../../../WidgetStateManager"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 import TextArea, { Props } from "./TextArea"

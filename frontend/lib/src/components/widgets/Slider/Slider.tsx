@@ -19,18 +19,18 @@ import { pick } from "lodash"
 import { StyleProps, Slider as UISlider } from "baseui/slider"
 import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
-import { FormClearHelper } from "src/components/widgets/Form"
-import { WidgetStateManager, Source } from "src/WidgetStateManager"
-import { Slider as SliderProto } from "src/proto"
-import { debounce, labelVisibilityProtoValueToEnum } from "src/util/utils"
+import { FormClearHelper } from "../../../components/widgets/Form"
+import { WidgetStateManager, Source } from "../../../WidgetStateManager"
+import { Slider as SliderProto } from "../../../proto"
+import { debounce, labelVisibilityProtoValueToEnum } from "../../../util/utils"
 import moment from "moment"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
-} from "src/components/widgets/BaseWidget"
-import TooltipIcon from "src/components/shared/TooltipIcon"
-import { Placement } from "src/components/shared/Tooltip"
-import { EmotionTheme } from "src/theme"
+} from "../../../components/widgets/BaseWidget"
+import TooltipIcon from "../../../components/shared/TooltipIcon"
+import { Placement } from "../../../components/shared/Tooltip"
+import { EmotionTheme } from "../../../theme"
 import {
   StyledThumb,
   StyledThumbValue,
