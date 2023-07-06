@@ -198,8 +198,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ hideScrollbar: newValue })
   }
 
-  // BUG(tvst): X button should have same color as hamburger.
-  // BUG(tvst): X and > buttons should have same margins as hamburger.
   public render(): ReactNode {
     const { collapsedSidebar, sidebarWidth, hideScrollbar } = this.state
     const {
