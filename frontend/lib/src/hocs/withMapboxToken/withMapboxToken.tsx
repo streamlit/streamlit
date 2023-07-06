@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import AlertElement from "src/components/elements/AlertElement"
-import { Kind } from "src/components/shared/AlertContainer"
-import { MapboxToken } from "src/hocs/withMapboxToken/MapboxToken"
-import { ensureError } from "src/util/ErrorHandling"
+import AlertElement from "../../components/elements/AlertElement"
+import { Kind } from "../../components/shared/AlertContainer"
+import { MapboxToken } from "../../hocs/withMapboxToken/MapboxToken"
+import { ensureError } from "../../util/ErrorHandling"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"
-import { SessionInfo } from "src/SessionInfo"
+import { SessionInfo } from "../../SessionInfo"
 import MapboxTokenError from "./MapboxTokenError"
 
 interface InjectedProps {

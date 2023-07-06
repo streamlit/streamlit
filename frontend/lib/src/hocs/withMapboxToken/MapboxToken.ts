@@ -15,8 +15,8 @@
  */
 
 import axios from "axios"
-import { ensureError } from "src/util/ErrorHandling"
-import { SessionInfo } from "src/SessionInfo"
+import { ensureError } from "../../util/ErrorHandling"
+import { SessionInfo } from "../../SessionInfo"
 
 export class MapboxTokenNotProvidedError extends Error {}
 export class MapboxTokenFetchingError extends Error {}

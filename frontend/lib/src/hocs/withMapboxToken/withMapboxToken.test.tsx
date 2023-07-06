@@ -15,8 +15,8 @@
  */
 
 import React from "react"
-import { shallow } from "src/test_util"
-import { mockSessionInfo } from "src/mocks/mocks"
+import { shallow } from "../../test_util"
+import { mockSessionInfo } from "../../mocks/mocks"
 import { MapboxToken } from "./MapboxToken"
 
 import withMapboxToken, { WrappedMapboxProps } from "./withMapboxToken"
