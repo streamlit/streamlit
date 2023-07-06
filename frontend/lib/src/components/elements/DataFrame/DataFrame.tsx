@@ -17,12 +17,12 @@
 import React, { ReactElement, useEffect, useState } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { MultiGrid } from "react-virtualized"
-import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import withFullScreenWrapper from "../../../hocs/withFullScreenWrapper"
 import {
   dataFrameGetDimensions,
   getSortedDataRowIndices,
   tableGetRowsAndCols,
-} from "src/dataframes/dataFrameProto"
+} from "../../../dataframes/dataFrameProto"
 import { SortDirection } from "./SortDirection"
 import {
   StyledDataFrameContainer,

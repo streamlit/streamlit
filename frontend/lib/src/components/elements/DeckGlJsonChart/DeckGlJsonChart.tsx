@@ -19,7 +19,7 @@ import { DeckGL } from "deck.gl"
 import isEqual from "lodash/isEqual"
 import { MapContext, StaticMap, NavigationControl } from "react-map-gl"
 import { withTheme } from "@emotion/react"
-import { hasLightBackgroundColor, EmotionTheme } from "src/theme"
+import { hasLightBackgroundColor, EmotionTheme } from "../../../theme"
 // We don't have Typescript defs for these imports, which makes ESLint unhappy
 /* eslint-disable import/no-extraneous-dependencies */
 import * as layers from "@deck.gl/layers"
@@ -33,12 +33,12 @@ import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
 
-import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
-import withMapboxToken from "src/hocs/withMapboxToken"
+import withFullScreenWrapper from "../../../hocs/withFullScreenWrapper"
+import withMapboxToken from "../../../hocs/withMapboxToken"
 
-import { notNullOrUndefined } from "src/util/utils"
+import { notNullOrUndefined } from "../../../util/utils"
 
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/proto"
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "../../../proto"
 import {
   StyledDeckGlChart,
   StyledNavigationControlContainer,

@@ -21,12 +21,12 @@ import React, {
   useState,
 } from "react"
 import { useTheme } from "@emotion/react"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "../../../theme"
 import {
   Figure as FigureProto,
   PlotlyChart as PlotlyChartProto,
-} from "src/proto"
-import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+} from "../../../proto"
+import withFullScreenWrapper from "../../../hocs/withFullScreenWrapper"
 import Plot from "react-plotly.js"
 import {
   applyStreamlitTheme,

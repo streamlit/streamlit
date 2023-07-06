@@ -15,14 +15,14 @@
  */
 
 import React from "react"
-import { mount } from "src/test_util"
+import { mount } from "../../../test_util"
 
-import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "../../../components/shared/StreamlitMarkdown"
 
 import {
   Metric as MetricProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "src/proto"
+} from "../../../proto"
 import Metric, { MetricProps } from "./Metric"
 
 const getProps = (elementProps: Partial<MetricProto> = {}): MetricProps => ({

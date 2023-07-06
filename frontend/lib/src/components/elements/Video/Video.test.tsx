@@ -15,9 +15,9 @@
  */
 
 import React from "react"
-import { mount, shallow } from "src/test_util"
-import { Video as VideoProto } from "src/proto"
-import { mockEndpoints } from "src/mocks/mocks"
+import { mount, shallow } from "../../../test_util"
+import { Video as VideoProto } from "../../../proto"
+import { mockEndpoints } from "../../../mocks/mocks"
 
 import Video, { VideoProps } from "./Video"
 
@@ -65,13 +65,13 @@ describe("Video Element", () => {
     expect(wrapper.find("video").prop("controls")).toBeDefined()
   })
 
-  it("creates its `src` attribute using buildMediaURL", () => {
+  it("creates its `../../..` attribute using buildMediaURL", () => {
     const wrapper = shallow(
       <Video {...getProps({ url: "/media/mockVideoFile.mp4" })} />
     )
     const videoElement = wrapper.find("video")
     expect(buildMediaURL).toHaveBeenCalledWith("/media/mockVideoFile.mp4")
-    expect(videoElement.prop("src")).toBe("https://mock.media.url")
+    expect(videoElement.prop("../../..")).toBe("https://mock.media.url")
   })
 
   describe("YouTube", () => {

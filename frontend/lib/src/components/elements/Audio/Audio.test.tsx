@@ -15,10 +15,10 @@
  */
 
 import React from "react"
-import { mount, shallow } from "src/test_util"
+import { mount, shallow } from "../../../test_util"
 
-import { Audio as AudioProto } from "src/proto"
-import { mockEndpoints } from "src/mocks/mocks"
+import { Audio as AudioProto } from "../../../proto"
+import { mockEndpoints } from "../../../mocks/mocks"
 import Audio, { AudioProps } from "./Audio"
 
 describe("Audio Element", () => {
@@ -48,11 +48,11 @@ describe("Audio Element", () => {
     expect(audioElement.prop("controls")).toBeDefined()
   })
 
-  it("creates its `src` attribute using buildMediaURL", () => {
+  it("creates its `../../..` attribute using buildMediaURL", () => {
     const wrapper = shallow(<Audio {...getProps()} />)
     const audioElement = wrapper.find("audio")
     expect(buildMediaURL).toHaveBeenCalledWith("/media/mockAudioFile.wav")
-    expect(audioElement.prop("src")).toBe("https://mock.media.url")
+    expect(audioElement.prop("../../..")).toBe("https://mock.media.url")
   })
 
   it("updates time when the prop is changed", () => {

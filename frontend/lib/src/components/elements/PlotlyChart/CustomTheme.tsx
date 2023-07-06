@@ -27,9 +27,9 @@ import {
   getSequentialColorsArray,
   getCategoricalColorsArray,
   getDivergingColorsArray,
-} from "src/theme"
-import { ensureError } from "src/util/ErrorHandling"
-import { logError } from "src/util/log"
+} from "../../../theme"
+import { ensureError } from "../../../util/ErrorHandling"
+import { logError } from "../../../util/log"
 
 /**
  * This applies general layout changes to things such as x axis,

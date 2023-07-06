@@ -16,17 +16,17 @@
 
 import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
-import { logMessage } from "src/util/log"
+import { logMessage } from "../../../util/log"
 import { Map as ImmutableMap } from "immutable"
 import merge from "lodash/merge"
-import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
+import withFullScreenWrapper from "../../../hocs/withFullScreenWrapper"
 import {
   tableGetRowsAndCols,
   indexGet,
   tableGet,
-} from "src/dataframes/dataFrameProto"
-import { ensureError } from "src/util/ErrorHandling"
-import { EmotionTheme } from "src/theme"
+} from "../../../dataframes/dataFrameProto"
+import { ensureError } from "../../../util/ErrorHandling"
+import { EmotionTheme } from "../../../theme"
 import embed from "vega-embed"
 import * as vega from "vega"
 import { expressionInterpreter } from "vega-interpreter"

@@ -15,9 +15,9 @@
  */
 
 import nodeEmoji from "node-emoji"
-import { grabTheRightIcon } from "src/vendor/twemoji"
-import { IGuestToHostMessage } from "src/hostComm/types"
-import { StreamlitEndpoints } from "src/StreamlitEndpoints"
+import { grabTheRightIcon } from "../../../vendor/twemoji"
+import { IGuestToHostMessage } from "../../../hostComm/types"
+import { StreamlitEndpoints } from "../../../StreamlitEndpoints"
 
 /**
  * Set the provided url/emoji as the page favicon.

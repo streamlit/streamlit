@@ -15,12 +15,12 @@
  */
 
 import React from "react"
-import { mount } from "src/test_util"
+import { mount } from "../../../test_util"
 
 import Snow, {
   SnowProps,
   NUM_FLAKES,
-} from "src/components/elements/Snow/index"
+} from "../../../components/elements/Snow/index"
 
 const getProps = (): SnowProps => ({
   scriptRunId: "51522269",
@@ -42,7 +42,7 @@ describe("Snow element", () => {
     expect(wrapper.find("StyledFlake").length).toBe(NUM_FLAKES)
 
     wrapper.find("StyledFlake").forEach(node => {
-      expect(node.prop("src")).toBeTruthy()
+      expect(node.prop("../../..")).toBeTruthy()
     })
   })
 

@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { mount } from "src/test_util"
+import { mount } from "../../../test_util"
 
 import Balloons, { Props, NUM_BALLOONS } from "./Balloons"
 
@@ -39,7 +39,7 @@ describe("Balloons element", () => {
     expect(wrapper.find("StyledBalloon").length).toBe(NUM_BALLOONS)
 
     wrapper.find("StyledBalloon").forEach(node => {
-      expect(node.prop("src")).toBeTruthy()
+      expect(node.prop("../../..")).toBeTruthy()
     })
   })
 

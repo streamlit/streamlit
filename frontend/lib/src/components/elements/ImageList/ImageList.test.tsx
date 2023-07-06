@@ -15,10 +15,10 @@
  */
 
 import React from "react"
-import { shallow } from "src/test_util"
+import { shallow } from "../../../test_util"
 
-import { ImageList as ImageListProto } from "src/proto"
-import { mockEndpoints } from "src/mocks/mocks"
+import { ImageList as ImageListProto } from "../../../proto"
+import { mockEndpoints } from "../../../mocks/mocks"
 import { ImageList, ImageListProps } from "./ImageList"
 
 describe("ImageList Element", () => {
@@ -54,7 +54,7 @@ describe("ImageList Element", () => {
     expect(wrapper.find("StyledImageContainer").length).toEqual(2)
   })
 
-  it("creates its `src` attribute using buildMediaURL", () => {
+  it("creates its `../../..` attribute using buildMediaURL", () => {
     const props = getProps()
     const wrapper = shallow(<ImageList {...props} />)
 
@@ -65,7 +65,7 @@ describe("ImageList Element", () => {
       .find("StyledImageContainer")
       .find("img")
       .forEach(imgWrapper => {
-        expect(imgWrapper.prop("src")).toBe("https://mock.media.url")
+        expect(imgWrapper.prop("../../..")).toBe("https://mock.media.url")
       })
   })
 

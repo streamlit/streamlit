@@ -16,11 +16,11 @@
 
 import React from "react"
 import { DeckGL } from "deck.gl"
-import { shallow } from "src/test_util"
+import { shallow } from "../../../test_util"
 
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "src/proto"
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "../../../proto"
 import { NavigationControl } from "react-map-gl"
-import { mockTheme } from "src/mocks/mockTheme"
+import { mockTheme } from "../../../mocks/mockTheme"
 import { DeckGlJsonChart, PropsWithHeight } from "./DeckGlJsonChart"
 
 const getProps = (
