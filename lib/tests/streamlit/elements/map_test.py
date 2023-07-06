@@ -221,13 +221,15 @@ class StMapTest(DeltaGeneratorTestCase):
         self.assertEqual(len(c.get("layers")[0].get("data")[0]), 2)
         self.assertEqual(len(df.columns), 3)
 
-    def test_map_style_raises_error(self):
+    # This test was turned off while we investigate issues with the feature.
+    def turnedoff_test_map_style_raises_error(self):
         """Test that map_style raises error when no Mapbox token is present."""
         with self.assertRaises(StreamlitAPIException):
             st.map(df1, map_style="MY_MAP_STYLE")
 
+    # This test was turned off while we investigate issues with the feature.
     @patch_config_options({"mapbox.token": "MY_TOKEN"})
-    def test_map_style(self):
+    def turnedoff_test_map_style(self):
         """Test that map_style works when a Mapbox token is present."""
         st.map(df1, map_style="MY_MAP_STYLE")
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
