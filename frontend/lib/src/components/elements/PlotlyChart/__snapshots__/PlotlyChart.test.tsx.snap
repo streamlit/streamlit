@@ -2,7 +2,7 @@
 
 exports[`PlotlyChart Element Render iframe should render an iframe 1`] = `
 Object {
-  "../../..": "http://url.test",
+  "src": "http://url.test",
   "style": Object {
     "height": 450,
     "width": 0,

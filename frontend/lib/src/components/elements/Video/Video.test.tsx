@@ -65,13 +65,13 @@ describe("Video Element", () => {
     expect(wrapper.find("video").prop("controls")).toBeDefined()
   })
 
-  it("creates its `../../..` attribute using buildMediaURL", () => {
+  it("creates its `src` attribute using buildMediaURL", () => {
     const wrapper = shallow(
       <Video {...getProps({ url: "/media/mockVideoFile.mp4" })} />
     )
     const videoElement = wrapper.find("video")
     expect(buildMediaURL).toHaveBeenCalledWith("/media/mockVideoFile.mp4")
-    expect(videoElement.prop("../../..")).toBe("https://mock.media.url")
+    expect(videoElement.prop("src")).toBe("https://mock.media.url")
   })
 
   describe("YouTube", () => {

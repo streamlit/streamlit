@@ -48,11 +48,11 @@ describe("Audio Element", () => {
     expect(audioElement.prop("controls")).toBeDefined()
   })
 
-  it("creates its `../../..` attribute using buildMediaURL", () => {
+  it("creates its `src` attribute using buildMediaURL", () => {
     const wrapper = shallow(<Audio {...getProps()} />)
     const audioElement = wrapper.find("audio")
     expect(buildMediaURL).toHaveBeenCalledWith("/media/mockAudioFile.wav")
-    expect(audioElement.prop("../../..")).toBe("https://mock.media.url")
+    expect(audioElement.prop("src")).toBe("https://mock.media.url")
   })
 
   it("updates time when the prop is changed", () => {

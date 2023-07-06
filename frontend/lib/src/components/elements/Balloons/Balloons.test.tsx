@@ -39,7 +39,7 @@ describe("Balloons element", () => {
     expect(wrapper.find("StyledBalloon").length).toBe(NUM_BALLOONS)
 
     wrapper.find("StyledBalloon").forEach(node => {
-      expect(node.prop("../../..")).toBeTruthy()
+      expect(node.prop("src")).toBeTruthy()
     })
   })
 

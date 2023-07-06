@@ -42,7 +42,7 @@ describe("Snow element", () => {
     expect(wrapper.find("StyledFlake").length).toBe(NUM_FLAKES)
 
     wrapper.find("StyledFlake").forEach(node => {
-      expect(node.prop("../../..")).toBeTruthy()
+      expect(node.prop("src")).toBeTruthy()
     })
   })
 

@@ -54,7 +54,7 @@ describe("ImageList Element", () => {
     expect(wrapper.find("StyledImageContainer").length).toEqual(2)
   })
 
-  it("creates its `../../..` attribute using buildMediaURL", () => {
+  it("creates its `src` attribute using buildMediaURL", () => {
     const props = getProps()
     const wrapper = shallow(<ImageList {...props} />)
 
@@ -65,7 +65,7 @@ describe("ImageList Element", () => {
       .find("StyledImageContainer")
       .find("img")
       .forEach(imgWrapper => {
-        expect(imgWrapper.prop("../../..")).toBe("https://mock.media.url")
+        expect(imgWrapper.prop("src")).toBe("https://mock.media.url")
       })
   })
 
