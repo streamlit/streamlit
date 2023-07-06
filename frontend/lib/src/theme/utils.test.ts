@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import { CustomThemeConfig } from "src/proto"
-import { LocalStore } from "src/util/storageUtils"
+import { CustomThemeConfig } from "../proto"
+import { LocalStore } from "../util/storageUtils"
 import {
   baseTheme,
   createAutoTheme,
   darkTheme,
   lightTheme,
-} from "src/theme/index"
-import { ThemeConfig } from "src/theme/types"
-import { fonts } from "src/theme/primitives/typography"
+} from "../theme/index"
+import { ThemeConfig } from "../theme/types"
+import { fonts } from "../theme/primitives/typography"
 
 import {
   AUTO_THEME_NAME,

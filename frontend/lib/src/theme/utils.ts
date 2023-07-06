@@ -20,9 +20,9 @@ import decamelize from "decamelize"
 import cloneDeep from "lodash/cloneDeep"
 import merge from "lodash/merge"
 
-import { CustomThemeConfig, ICustomThemeConfig } from "src/proto"
-import { logError } from "src/util/log"
-import { LocalStore, localStorageAvailable } from "src/util/storageUtils"
+import { CustomThemeConfig, ICustomThemeConfig } from "../proto"
+import { logError } from "../util/log"
+import { LocalStore, localStorageAvailable } from "../util/storageUtils"
 import {
   baseTheme,
   CachedTheme,
@@ -31,7 +31,7 @@ import {
   EmotionTheme,
   ThemeConfig,
   ThemeSpacing,
-} from "src/theme"
+} from "../theme"
 
 import { fonts } from "./primitives/typography"
 import {
