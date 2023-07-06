@@ -19,15 +19,18 @@ import {
   Balloons as BalloonsProto,
   ForwardMsgMetadata,
   Snow as SnowProto,
-} from "src/proto"
-import { render } from "src/test_util"
-import { ElementNode } from "src/AppNode"
-import { ScriptRunState } from "src/ScriptRunState"
+} from "../../../proto"
+import { render } from "../../../test_util"
+import { ElementNode } from "../../../AppNode"
+import { ScriptRunState } from "../../../ScriptRunState"
 import { waitFor } from "@testing-library/dom"
-import { createFormsData, WidgetStateManager } from "src/WidgetStateManager"
-import { FileUploadClient } from "src/FileUploadClient"
-import { ComponentRegistry } from "src/components/widgets/CustomComponent"
-import { mockEndpoints, mockSessionInfo } from "src/mocks/mocks"
+import {
+  createFormsData,
+  WidgetStateManager,
+} from "../../../WidgetStateManager"
+import { FileUploadClient } from "../../../FileUploadClient"
+import { ComponentRegistry } from "../../../components/widgets/CustomComponent"
+import { mockEndpoints, mockSessionInfo } from "../../../mocks/mocks"
 import ElementNodeRenderer, {
   ElementNodeRendererProps,
 } from "./ElementNodeRenderer"
