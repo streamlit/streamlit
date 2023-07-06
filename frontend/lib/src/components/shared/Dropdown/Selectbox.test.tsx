@@ -16,13 +16,13 @@
 
 import React from "react"
 import { ShallowWrapper } from "enzyme"
-import { shallow, mount } from "src/test_util"
+import { shallow, mount } from "../../../test_util"
 
 import { Select as UISelect } from "baseui/select"
-import { LabelVisibilityOptions } from "src/util/utils"
+import { LabelVisibilityOptions } from "../../../util/utils"
 import Selectbox, { Props, fuzzyFilterSelectOptions } from "./Selectbox"
 
-jest.mock("src/WidgetStateManager")
+jest.mock("../../../WidgetStateManager")
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   value: 0,

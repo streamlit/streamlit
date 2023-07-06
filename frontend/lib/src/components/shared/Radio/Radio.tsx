@@ -20,11 +20,11 @@ import { Radio as UIRadio, RadioGroup, ALIGN } from "baseui/radio"
 import {
   WidgetLabel,
   StyledWidgetLabelHelpInline,
-} from "src/components/widgets/BaseWidget"
-import TooltipIcon from "src/components/shared/TooltipIcon"
-import { LabelVisibilityOptions } from "src/util/utils"
-import { Placement } from "src/components/shared/Tooltip"
-import { EmotionTheme } from "src/theme"
+} from "../../../components/widgets/BaseWidget"
+import TooltipIcon from "../../../components/shared/TooltipIcon"
+import { LabelVisibilityOptions } from "../../../util/utils"
+import { Placement } from "../../../components/shared/Tooltip"
+import { EmotionTheme } from "../../../theme"
 
 export interface Props {
   disabled: boolean

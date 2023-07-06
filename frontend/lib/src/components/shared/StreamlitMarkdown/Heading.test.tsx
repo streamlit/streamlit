@@ -16,14 +16,14 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { mount } from "src/test_util"
-import { Heading as HeadingProto } from "src/proto"
+import { mount } from "../../../test_util"
+import { Heading as HeadingProto } from "../../../proto"
 import Heading, { HeadingProtoProps } from "./Heading"
 
 import {
   InlineTooltipIcon,
   StyledLabelHelpWrapper,
-} from "src/components/shared/TooltipIcon"
+} from "../../../components/shared/TooltipIcon"
 
 const getHeadingProps = (
   elementProps: Partial<HeadingProto> = {}

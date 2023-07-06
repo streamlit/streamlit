@@ -17,10 +17,10 @@
 import React, { ReactElement } from "react"
 import "@testing-library/jest-dom"
 import ReactMarkdown from "react-markdown"
-import { mount, render } from "src/test_util"
+import { mount, render } from "../../../test_util"
 import { cleanup } from "@testing-library/react"
-import IsSidebarContext from "src/components/core/IsSidebarContext"
-import { colors } from "src/theme/primitives/colors"
+import IsSidebarContext from "../../../components/core/IsSidebarContext"
+import { colors } from "../../../theme/primitives/colors"
 import StreamlitMarkdown, {
   LinkWithTargetBlank,
   createAnchorFromText,

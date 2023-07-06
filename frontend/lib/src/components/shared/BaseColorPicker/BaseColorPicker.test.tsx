@@ -15,12 +15,12 @@
  */
 
 import React from "react"
-import { StyledColorPicker } from "src/components/shared/BaseColorPicker/styled-components"
-import { mount, shallow } from "src/test_util"
+import { StyledColorPicker } from "../../../components/shared/BaseColorPicker/styled-components"
+import { mount, shallow } from "../../../test_util"
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker } from "react-color"
 
-import { LabelVisibilityOptions } from "src/util/utils"
+import { LabelVisibilityOptions } from "../../../util/utils"
 import BaseColorPicker, { BaseColorPickerProps } from "./BaseColorPicker"
 
 const getProps = (

@@ -16,8 +16,8 @@
 
 import React from "react"
 import { mount } from "enzyme"
-import ThemeProvider from "src/components/core/ThemeProvider"
-import { mockTheme } from "src/mocks/mockTheme"
+import ThemeProvider from "../../../components/core/ThemeProvider"
+import { mockTheme } from "../../../mocks/mockTheme"
 import TooltipIcon from "./TooltipIcon"
 
 describe("TooltipIcon element", () => {

@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { shallow } from "src/test_util"
+import { shallow } from "../../../test_util"
 
 import ErrorElement, { ErrorElementProps } from "./ErrorElement"
 

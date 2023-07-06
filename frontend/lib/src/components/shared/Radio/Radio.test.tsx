@@ -15,11 +15,11 @@
  */
 
 import React from "react"
-import { mount } from "src/test_util"
+import { mount } from "../../../test_util"
 
 import { Radio as UIRadio, RadioGroup, ALIGN } from "baseui/radio"
-import { LabelVisibilityOptions } from "src/util/utils"
-import { mockTheme } from "src/mocks/mockTheme"
+import { LabelVisibilityOptions } from "../../../util/utils"
+import { mockTheme } from "../../../mocks/mockTheme"
 import Radio, { Props } from "./Radio"
 
 const getProps = (props: Partial<Props> = {}): Props => ({

@@ -17,9 +17,9 @@
 import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
 import { FullscreenEnter, FullscreenExit } from "@emotion-icons/open-iconic"
-import Icon from "src/components/shared/Icon"
-import { LibContext } from "src/components/core/LibContext"
-import { EmotionTheme } from "src/theme"
+import Icon from "../../../components/shared/Icon"
+import { LibContext } from "../../../components/core/LibContext"
+import { EmotionTheme } from "../../../theme"
 import {
   StyledFullScreenFrame,
   StyledFullScreenButton,

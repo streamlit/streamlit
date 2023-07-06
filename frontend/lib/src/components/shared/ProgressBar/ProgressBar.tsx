@@ -16,8 +16,8 @@
 
 import React, { ReactElement } from "react"
 import { useTheme } from "@emotion/react"
-import { LibContext } from "src/components/core/LibContext"
-import { EmotionTheme, isPresetTheme } from "src/theme"
+import { LibContext } from "../../../components/core/LibContext"
+import { EmotionTheme, isPresetTheme } from "../../../theme"
 import {
   ProgressBar as UIProgressBar,
   ProgressBarOverrides,
