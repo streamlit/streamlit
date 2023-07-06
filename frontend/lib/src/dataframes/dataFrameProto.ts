@@ -20,8 +20,8 @@
 
 import camelcase from "camelcase"
 import { fromJS } from "immutable"
-import { dispatchOneOf, mapOneOf, updateOneOf } from "src/util/immutableProto"
-import { Format } from "src/util/format"
+import { dispatchOneOf, mapOneOf, updateOneOf } from "../util/immutableProto"
+import { Format } from "../util/format"
 
 // Must match dict_builder.py
 export const INDEX_COLUMN_DESIGNATOR = "(index)"

@@ -33,8 +33,8 @@ import { range, unzip, zip } from "lodash"
 import moment from "moment-timezone"
 import numbro from "numbro"
 
-import { IArrow, Styler as StylerProto } from "src/proto"
-import { notNullOrUndefined } from "src/util/utils"
+import { IArrow, Styler as StylerProto } from "../proto"
+import { notNullOrUndefined } from "../util/utils"
 
 /** Data types used by ArrowJS. */
 export type DataType =
@@ -849,7 +849,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     // Unit information:
-    // https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
+    // https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/../enum.ts#L95
     if (field?.type?.unit === 1) {
       // Milliseconds
       timeInSeconds = data / 1000
