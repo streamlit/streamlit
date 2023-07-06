@@ -131,9 +131,8 @@ class UploadFileRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
     def test_upload_missing_file_error(self):
         """Missing file should fail with 400 status."""
-        file_1 = MockFile("file1", b"123")
         file_body = {
-            file_1.name: None,
+            "file1": (None, b"123"),
         }
         response = self._upload_files(
             file_body, session_id="sessionId", file_id="fileId"
