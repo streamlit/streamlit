@@ -33,39 +33,83 @@ def validate_text(toast_text: SupportsStr) -> SupportsStr:
         return toast_text
 
 
+# class ToastMixin:
+#     @gather_metrics("toast")
+#     def toast(
+#         self,
+#         body: SupportsStr,
+#         *,  # keyword-only args:
+#         icon: Optional[str] = None,
+#         cache: Optional[bool] = False,
+#     ) -> "DeltaGenerator":
+#         """Display a short message, known as a notification "toast".
+#         The toast appears in the app's bottom-right corner and disappears after four seconds.
+
+#         Parameters
+#         ----------
+#         body : str
+#             Short message for the toast.
+#         icon : str or None
+#             An optional, keyword-only argument that specifies an emoji to use as
+#             the icon for the toast. Shortcodes are not allowed, please use a
+#             single character instead. E.g. "🚨", "🔥", "🤖", etc.
+#             Defaults to None, which means no icon is displayed.
+
+#         Example
+#         -------
+#         >>> import streamlit as st
+#         >>>
+#         >>> st.toast('Your edited image was saved!', icon='😍')
+#         """
+#         toast_proto = ToastProto()
+#         toast_proto.body = clean_text(validate_text(body))
+#         toast_proto.icon = validate_emoji(icon)
+#         toast_proto.cache = cache
+#         return self.dg._enqueue("toast", toast_proto)
+
+#     @property
+#     def dg(self) -> "DeltaGenerator":
+#         """Get our DeltaGenerator."""
+#         return cast("DeltaGenerator", self)
+
+
 class ToastMixin:
-    @gather_metrics("toast")
     def toast(
         self,
         body: SupportsStr,
         *,  # keyword-only args:
         icon: Optional[str] = None,
+        cache: Optional[bool] = False,
     ) -> "DeltaGenerator":
-        """Display a short message, known as a notification "toast".
-        The toast appears in the app's bottom-right corner and disappears after four seconds.
-
-        Parameters
-        ----------
-        body : str
-            Short message for the toast.
-        icon : str or None
-            An optional, keyword-only argument that specifies an emoji to use as
-            the icon for the toast. Shortcodes are not allowed, please use a
-            single character instead. E.g. "🚨", "🔥", "🤖", etc.
-            Defaults to None, which means no icon is displayed.
-
-        Example
-        -------
-        >>> import streamlit as st
-        >>>
-        >>> st.toast('Your edited image was saved!', icon='😍')
-        """
-        toast_proto = ToastProto()
-        toast_proto.body = clean_text(validate_text(body))
-        toast_proto.icon = validate_emoji(icon)
-        return self.dg._enqueue("toast", toast_proto)
+        return Toast(body, icon, cache, self.dg)
 
     @property
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+class Toast:
+    def __init__(self, body, icon=None, cache=False, delta_generator=None):
+        self.toast_proto = ToastProto()
+        self.toast_proto.body = clean_text(validate_text(body))
+        self.toast_proto.icon = validate_emoji(icon)
+        self.toast_proto.cache = cache
+        self.delta_reference = delta_generator._enqueue("toast", self.toast_proto)
+
+    def __enter__(self):
+        if self.toast_proto.icon == "":
+            icon = None
+        else:
+            icon = self.toast_proto.icon
+        self.delta_reference.toast(self.toast_proto.body, icon=icon, cache=True)
+        return
+
+    def __exit__(self, *args, **kwargs):
+        self.delta_reference.empty()
+
+    def update(self, body, icon=None, cache=False):
+        self.delta_reference.toast(body, icon=icon, cache=cache)
+
+    def clear(self):
+        self.delta_reference.empty()

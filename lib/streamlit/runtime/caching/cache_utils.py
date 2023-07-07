@@ -30,7 +30,9 @@ from typing import Any, Callable, overload
 
 from typing_extensions import Literal
 
+import streamlit as st
 from streamlit import type_util
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.elements.spinner import spinner
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import (
@@ -157,6 +159,15 @@ class Cache:
         raise NotImplementedError
 
 
+# We show a deprecation warning for usage of show_spinner param
+# as we are deprecating it in favor of show_toast
+_SPINNER_WARNING = (
+    f"The `show_spinner` param in caching functions is deprecated. Please use the new param `show_toast` instead, "
+    f"which displays a notification in the bottom right hand corner of the screen. "
+    f"More information [in our docs](https://docs.streamlit.io/library/api-reference/performance)."
+)
+
+
 class CachedFuncInfo:
     """Encapsulates data for a cached function instance.
 
@@ -168,11 +179,13 @@ class CachedFuncInfo:
         self,
         func: types.FunctionType,
         show_spinner: bool | str,
+        show_toast: bool | str,
         allow_widgets: bool,
         hash_funcs: HashFuncsDict | None,
     ):
         self.func = func
         self.show_spinner = show_spinner
+        self.show_toast = show_toast
         self.allow_widgets = allow_widgets
         self.hash_funcs = hash_funcs
 
@@ -226,20 +239,47 @@ class CachedFunc:
         """The wrapper. We'll only call our underlying function on a cache miss."""
 
         name = self._info.func.__qualname__
+        element = self._handle_load_element(
+            self._info.show_spinner, self._info.show_toast
+        )
 
-        if isinstance(self._info.show_spinner, bool):
-            if len(args) == 0 and len(kwargs) == 0:
-                message = f"Running `{name}()`."
-            else:
-                message = f"Running `{name}(...)`."
-        else:
-            message = self._info.show_spinner
-
-        if self._info.show_spinner or isinstance(self._info.show_spinner, str):
+        if element == "toast":
+            message = self._element_message(name, args, kwargs, self._info.show_toast)
+            with st.toast(message):
+                return self._get_or_create_cached_value(args, kwargs)
+        elif element == "spinner":
+            message = self._element_message(name, args, kwargs, self._info.show_spinner)
             with spinner(message):
                 return self._get_or_create_cached_value(args, kwargs)
         else:
             return self._get_or_create_cached_value(args, kwargs)
+
+    def _handle_load_element(
+        self, show_spinner: bool | str, show_toast: bool | str
+    ) -> Any:
+        """Handle the show_spinner and show_toast params and return the appropriate element to show"""
+
+        # If toast param set, takes precedence over spinner
+        if show_toast or isinstance(show_toast, str):
+            return "toast"
+        elif show_spinner or isinstance(show_spinner, str):
+            # Show a deprecation warning if show_spinner param is used
+            show_deprecation_warning(_SPINNER_WARNING)
+            return "spinner"
+        else:
+            return None
+
+    def _element_message(
+        self, func_name: str, func_args: Any, func_kwargs: Any, show_element: bool | str
+    ) -> str:
+        if isinstance(show_element, bool):
+            if len(func_args) == 0 and len(func_kwargs) == 0:
+                message = f"Running `{func_name}()`."
+            else:
+                message = f"Running `{func_name}(...)`."
+        else:
+            message = show_element
+        return message
 
     def _get_or_create_cached_value(
         self, func_args: tuple[Any, ...], func_kwargs: dict[str, Any]

@@ -58,6 +58,7 @@ const getProps = (
     ...mockTheme.emotion,
     ...themeProps,
   },
+  cache: false,
   width: 0,
   ...elementProps,
 })

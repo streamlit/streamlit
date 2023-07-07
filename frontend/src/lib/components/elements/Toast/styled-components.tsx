@@ -15,6 +15,27 @@
  */
 
 import styled from "@emotion/styled"
+import { Spinner } from "baseui/spinner"
+import isPropValid from "@emotion/is-prop-valid"
+
+export const ThemedStyledToastSpinner = styled(Spinner, {
+  shouldForwardProp: isPropValid,
+})(({ theme, $usingCustomTheme }) => {
+  return {
+    width: "1.5rem",
+    height: "1.5rem",
+    marginTop: theme.spacing.none,
+    marginBottom: theme.spacing.none,
+    marginRight: theme.spacing.sm,
+    marginLeft: theme.spacing.none,
+    borderColor: theme.colors.fadedText10,
+    borderTopColor: $usingCustomTheme
+      ? theme.colors.primary
+      : theme.colors.blue70,
+    flexGrow: 0,
+    flexShrink: 0,
+  }
+})
 
 export const StyledViewButton = styled.button(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
@@ -40,6 +61,9 @@ interface StyledToastMessageProps {
 
 export const StyledToastMessage = styled.div<StyledToastMessageProps>(
   ({ theme, expanded }) => ({
+    display: "flex",
+    // justifyContent: "flex-start",
+    alignItems: "center",
     maxHeight: expanded ? "none" : theme.breakpoints.toast,
   })
 )

@@ -22,4 +22,7 @@ message Toast {
 
     // Emoji
     string icon = 2;
+
+    // Used for caching
+    bool cache = 3;
 }
