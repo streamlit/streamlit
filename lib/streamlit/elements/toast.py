@@ -102,8 +102,7 @@ class Toast:
             icon = None
         else:
             icon = self.toast_proto.icon
-        self.delta_reference.toast(self.toast_proto.body, icon=icon, cache=True)
-        return
+        return self.delta_reference.toast(self.toast_proto.body, icon=icon, cache=True)
 
     def __exit__(self, *args, **kwargs):
         self.delta_reference.empty()
