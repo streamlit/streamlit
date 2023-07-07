@@ -17,7 +17,7 @@
 import {
   HandleMessageEvent,
   PerformanceEvent,
-} from "src/profiler/PerformanceEvents"
+} from "../profiler/PerformanceEvents"
 
 export type EventPredicate = (event: PerformanceEvent) => boolean
 
