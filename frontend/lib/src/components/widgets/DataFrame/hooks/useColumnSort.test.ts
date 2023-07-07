@@ -21,7 +21,7 @@ import {
   BaseColumn,
   NumberColumn,
   TextColumn,
-} from "../../../../components/widgets/DataFrame/columns"
+} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 
 import useColumnSort from "./useColumnSort"
 

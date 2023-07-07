@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { shallow } from "../../../test_util"
+import { shallow } from "@streamlit/lib/src/test_util"
 
 import BaseButton, {
   BaseButtonSize,

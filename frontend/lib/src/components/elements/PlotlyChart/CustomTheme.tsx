@@ -27,9 +27,9 @@ import {
   getSequentialColorsArray,
   getCategoricalColorsArray,
   getDivergingColorsArray,
-} from "../../../theme"
-import { ensureError } from "../../../util/ErrorHandling"
-import { logError } from "../../../util/log"
+} from "@streamlit/lib/src/theme"
+import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
+import { logError } from "@streamlit/lib/src/util/log"
 
 /**
  * This applies general layout changes to things such as x axis,

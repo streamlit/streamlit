@@ -22,7 +22,7 @@ import {
   EmotionTheme,
   baseuiLightTheme,
   BaseUILightTheme,
-} from "../../../theme"
+} from "@streamlit/lib/src/theme"
 
 export interface ThemeProviderProps {
   theme: EmotionTheme

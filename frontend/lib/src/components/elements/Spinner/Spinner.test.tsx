@@ -15,10 +15,10 @@
  */
 
 import React from "react"
-import { mount } from "../../../test_util"
+import { mount } from "@streamlit/lib/src/test_util"
 
 import { BaseProvider, LightTheme } from "baseui"
-import { Spinner as SpinnerProto } from "../../../proto"
+import { Spinner as SpinnerProto } from "@streamlit/lib/src/proto"
 import Spinner, { SpinnerProps } from "./Spinner"
 
 const getProps = (

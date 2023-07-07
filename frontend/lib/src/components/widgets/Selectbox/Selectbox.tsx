@@ -15,11 +15,14 @@
  */
 
 import React from "react"
-import { Selectbox as SelectboxProto } from "../../../proto"
-import { FormClearHelper } from "../../../components/widgets/Form"
-import { WidgetStateManager, Source } from "../../../WidgetStateManager"
-import UISelectbox from "../../../components/shared/Dropdown"
-import { labelVisibilityProtoValueToEnum } from "../../../util/utils"
+import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import {
+  WidgetStateManager,
+  Source,
+} from "@streamlit/lib/src/WidgetStateManager"
+import UISelectbox from "@streamlit/lib/src/components/shared/Dropdown"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 
 export interface Props {
   disabled: boolean

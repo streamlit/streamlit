@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { mockEndpoints } from "../../../mocks/mocks"
+import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
 import { handleFavicon } from "./Favicon"
 
 function getFaviconHref(): string {

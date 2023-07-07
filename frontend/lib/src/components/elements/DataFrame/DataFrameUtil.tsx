@@ -18,13 +18,13 @@ import {
   DataFrameCellType,
   dataFrameGet,
   dataFrameGetDimensions,
-} from "../../../dataframes/dataFrameProto"
-import { toFormattedString } from "../../../util/format"
-import { logWarning } from "../../../util/log"
-import { scrollbarSize } from "../../../vendor/dom-helpers"
+} from "@streamlit/lib/src/dataframes/dataFrameProto"
+import { toFormattedString } from "@streamlit/lib/src/util/format"
+import { logWarning } from "@streamlit/lib/src/util/log"
+import { scrollbarSize } from "@streamlit/lib/src/vendor/dom-helpers"
 import React, { ReactElement, ComponentType } from "react"
 import { Map as ImmutableMap } from "immutable"
-import { fontSizes } from "../../../theme/primitives/typography"
+import { fontSizes } from "@streamlit/lib/src/theme/primitives/typography"
 import {
   StyledDataFrameRowHeaderCell,
   StyledDataFrameDataCell,

@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-import { ScriptRunState } from "../../../ScriptRunState"
-import { AppNode } from "../../../AppNode"
-import { FormsData, WidgetStateManager } from "../../../WidgetStateManager"
-import { FileUploadClient } from "../../../FileUploadClient"
-import { ComponentRegistry } from "../../../components/widgets/CustomComponent"
-import { SessionInfo } from "../../../SessionInfo"
-import { StreamlitEndpoints } from "../../../StreamlitEndpoints"
+import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
+import { AppNode } from "@streamlit/lib/src/AppNode"
+import {
+  FormsData,
+  WidgetStateManager,
+} from "@streamlit/lib/src/WidgetStateManager"
+import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
+import { ComponentRegistry } from "@streamlit/lib/src/components/widgets/CustomComponent"
+import { SessionInfo } from "@streamlit/lib/src/SessionInfo"
+import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 
 export function shouldComponentBeEnabled(
   elementType: string,

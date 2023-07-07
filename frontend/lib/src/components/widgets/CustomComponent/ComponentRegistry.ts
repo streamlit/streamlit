@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { logWarning } from "../../../util/log"
-import { StreamlitEndpoints } from "../../../StreamlitEndpoints"
+import { logWarning } from "@streamlit/lib/src/util/log"
+import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { ComponentMessageType } from "./enums"
 
 export type ComponentMessageListener = (

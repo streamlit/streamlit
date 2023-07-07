@@ -17,8 +17,8 @@
 import React from "react"
 import "@testing-library/jest-dom"
 
-import { render } from "../../../test_util"
-import { Block as BlockProto } from "../../../proto"
+import { render } from "@streamlit/lib/src/test_util"
+import { Block as BlockProto } from "@streamlit/lib/src/proto"
 
 import ChatMessage, { ChatMessageProps } from "./ChatMessage"
 

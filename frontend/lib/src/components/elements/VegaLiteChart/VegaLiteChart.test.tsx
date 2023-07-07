@@ -15,11 +15,11 @@
  */
 
 import React from "react"
-import { mount } from "../../../test_util"
+import { mount } from "@streamlit/lib/src/test_util"
 import { fromJS, Map as ImmutableMap } from "immutable"
-import { VegaLiteChart as VegaLiteChartProto } from "../../../proto"
-import { tableGetRowsAndCols } from "../../../dataframes/dataFrameProto"
-import { mockTheme } from "../../../mocks/mockTheme"
+import { VegaLiteChart as VegaLiteChartProto } from "@streamlit/lib/src/proto"
+import { tableGetRowsAndCols } from "@streamlit/lib/src/dataframes/dataFrameProto"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 import mock from "./mock"
 import {

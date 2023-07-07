@@ -18,13 +18,13 @@ import React from "react"
 import { act } from "react-dom/test-utils"
 import { enableFetchMocks } from "jest-fetch-mock"
 
-import { mount, shallow } from "../../../test_util"
-import { WidgetStateManager } from "../../../WidgetStateManager"
+import { mount, shallow } from "@streamlit/lib/src/test_util"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   CameraInput as CameraInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "../../../proto"
-import { WidgetLabel } from "../../../components/widgets/BaseWidget"
+} from "@streamlit/lib/src/proto"
+import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import CameraInput, { Props, State } from "./CameraInput"
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent from "./WebcamComponent"

@@ -16,9 +16,9 @@
 
 import React from "react"
 import { CloudUpload } from "@emotion-icons/material-outlined"
-import Icon from "../../../components/shared/Icon"
-import { FileSize, getSizeDisplay } from "../../../util/FileHelper"
-import { Small } from "../../../components/shared/TextElements"
+import Icon from "@streamlit/lib/src/components/shared/Icon"
+import { FileSize, getSizeDisplay } from "@streamlit/lib/src/util/FileHelper"
+import { Small } from "@streamlit/lib/src/components/shared/TextElements"
 
 import {
   StyledFileDropzoneInstructions,

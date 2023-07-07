@@ -19,23 +19,29 @@ import {
   ComponentInstance as ComponentInstanceProto,
   ISpecialArg,
   SpecialArg as SpecialArgProto,
-} from "../../../proto"
-import AlertElement from "../../../components/elements/AlertElement"
-import { Kind } from "../../../components/shared/AlertContainer"
-import ErrorElement from "../../../components/shared/ErrorElement"
+} from "@streamlit/lib/src/proto"
+import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
+import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
+import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 import { withTheme } from "@emotion/react"
-import { ensureError } from "../../../util/ErrorHandling"
+import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "../../../util/IFrameUtil"
-import { logError, logWarning } from "../../../util/log"
-import { Timer } from "../../../util/Timer"
-import { Source, WidgetStateManager } from "../../../WidgetStateManager"
+} from "@streamlit/lib/src/util/IFrameUtil"
+import { logError, logWarning } from "@streamlit/lib/src/util/log"
+import { Timer } from "@streamlit/lib/src/util/Timer"
+import {
+  Source,
+  WidgetStateManager,
+} from "@streamlit/lib/src/WidgetStateManager"
 import queryString from "query-string"
 import React, { createRef, ReactNode } from "react"
-import { EmotionTheme, toExportedTheme } from "../../../theme"
-import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "../../../urls"
+import { EmotionTheme, toExportedTheme } from "@streamlit/lib/src/theme"
+import {
+  COMMUNITY_URL,
+  COMPONENT_DEVELOPER_URL,
+} from "@streamlit/lib/src/urls"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 

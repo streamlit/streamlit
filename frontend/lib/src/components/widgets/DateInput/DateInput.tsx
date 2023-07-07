@@ -19,18 +19,21 @@ import moment from "moment"
 import { withTheme } from "@emotion/react"
 import { Datepicker as UIDatePicker, DENSITY } from "baseui/datepicker"
 import { PLACEMENT } from "baseui/popover"
-import { DateInput as DateInputProto } from "../../../proto"
-import { FormClearHelper } from "../../../components/widgets/Form"
-import { WidgetStateManager, Source } from "../../../WidgetStateManager"
+import { DateInput as DateInputProto } from "@streamlit/lib/src/proto"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import {
+  WidgetStateManager,
+  Source,
+} from "@streamlit/lib/src/WidgetStateManager"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
-} from "../../../components/widgets/BaseWidget"
-import { EmotionTheme } from "../../../theme"
-import TooltipIcon from "../../../components/shared/TooltipIcon"
-import { Placement } from "../../../components/shared/Tooltip"
+} from "@streamlit/lib/src/components/widgets/BaseWidget"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 
-import { labelVisibilityProtoValueToEnum } from "../../../util/utils"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 
 export interface Props {
   disabled: boolean

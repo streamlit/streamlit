@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { mount } from "../../../test_util"
+import { mount } from "@streamlit/lib/src/test_util"
 import {
   CATEGORICAL,
   DATETIME,
@@ -25,9 +25,9 @@ import {
   RANGE,
   UNICODE,
   VEGA_LITE,
-} from "../../../mocks/arrow"
-import { Quiver } from "../../../dataframes/Quiver"
-import { mockTheme } from "../../../mocks/mockTheme"
+} from "@streamlit/lib/src/mocks/arrow"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import {
   PropsWithHeight,
   ArrowVegaLiteChart,

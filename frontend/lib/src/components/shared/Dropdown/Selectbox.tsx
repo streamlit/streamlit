@@ -18,18 +18,18 @@ import React from "react"
 import { isMobile } from "react-device-detect"
 import { ChevronDown } from "baseui/icon"
 import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
-import { logWarning } from "../../../util/log"
-import VirtualDropdown from "../../../components/shared/Dropdown/VirtualDropdown"
+import { logWarning } from "@streamlit/lib/src/util/log"
+import VirtualDropdown from "@streamlit/lib/src/components/shared/Dropdown/VirtualDropdown"
 import { hasMatch, score } from "fzy.js"
 import _ from "lodash"
-import { LabelVisibilityOptions } from "../../../util/utils"
-import { Placement } from "../../../components/shared/Tooltip"
-import TooltipIcon from "../../../components/shared/TooltipIcon"
+import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
-} from "../../../components/widgets/BaseWidget"
-import { iconSizes } from "../../../theme/primitives"
+} from "@streamlit/lib/src/components/widgets/BaseWidget"
+import { iconSizes } from "@streamlit/lib/src/theme/primitives"
 
 export interface Props {
   disabled: boolean

@@ -15,16 +15,16 @@
  */
 
 import React, { ReactElement } from "react"
-import { Metric as MetricProto } from "../../../proto"
-import { EmotionTheme } from "../../../theme"
-import { labelVisibilityProtoValueToEnum } from "../../../util/utils"
-import Icon from "../../../components/shared/Icon"
+import { Metric as MetricProto } from "@streamlit/lib/src/proto"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { useTheme } from "@emotion/react"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
-import { StyledWidgetLabelHelpInline } from "../../../components/widgets/BaseWidget"
-import TooltipIcon from "../../../components/shared/TooltipIcon"
-import { Placement } from "../../../components/shared/Tooltip"
-import StreamlitMarkdown from "../../../components/shared/StreamlitMarkdown"
+import { StyledWidgetLabelHelpInline } from "@streamlit/lib/src/components/widgets/BaseWidget"
+import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import {
   StyledTruncateText,
   StyledMetricLabelText,

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 import styled from "@emotion/styled"
-import { ChatInput as ChatInputProto } from "../../../proto"
-import { hasLightBackgroundColor } from "../../../theme"
+import { ChatInput as ChatInputProto } from "@streamlit/lib/src/proto"
+import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 
 export interface StyledChatInputContainerProps {
   width: number

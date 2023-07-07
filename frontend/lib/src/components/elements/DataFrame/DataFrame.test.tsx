@@ -25,7 +25,7 @@ import { DataFrame, DataFrameProps } from "./DataFrame"
 import { ROW_HEIGHT } from "./DataFrameUtil"
 
 const SCROLLBAR_SIZE = 10
-jest.mock("../../../vendor/dom-helpers", () => ({
+jest.mock("@streamlit/lib/src/vendor/dom-helpers", () => ({
   scrollbarSize: () => SCROLLBAR_SIZE,
 }))
 

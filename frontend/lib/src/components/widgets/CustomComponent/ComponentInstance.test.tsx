@@ -17,23 +17,23 @@
 import {
   ComponentInstance as ComponentInstanceProto,
   SpecialArg,
-} from "../../../proto"
-import AlertElement from "../../../components/elements/AlertElement"
-import ErrorElement from "../../../components/shared/ErrorElement"
+} from "@streamlit/lib/src/proto"
+import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
+import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 import { ReactWrapper } from "enzyme"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "../../../util/IFrameUtil"
-import { logWarning } from "../../../util/log"
-import { mount } from "../../../test_util"
-import { buildHttpUri } from "../../../util/UriUtil"
-import { WidgetStateManager } from "../../../WidgetStateManager"
+} from "@streamlit/lib/src/util/IFrameUtil"
+import { logWarning } from "@streamlit/lib/src/util/log"
+import { mount } from "@streamlit/lib/src/test_util"
+import { buildHttpUri } from "@streamlit/lib/src/util/UriUtil"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import React from "react"
-import { bgColorToBaseString, toExportedTheme } from "../../../theme"
-import { fonts } from "../../../theme/primitives/typography"
-import { mockEndpoints } from "../../../mocks/mocks"
-import { mockTheme } from "../../../mocks/mockTheme"
+import { bgColorToBaseString, toExportedTheme } from "@streamlit/lib/src/theme"
+import { fonts } from "@streamlit/lib/src/theme/primitives/typography"
+import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import {
   COMPONENT_READY_WARNING_TIME_MS,
   ComponentInstance,
@@ -45,18 +45,18 @@ import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // Mock log functions.
-jest.mock("../../../util/log")
+jest.mock("@streamlit/lib/src/util/log")
 
 // We have some timeouts that we want to use fake timers for.
 jest.useFakeTimers()
 
 // Mock uri utils.
-jest.mock("../../../util/UriUtil")
+jest.mock("@streamlit/lib/src/util/UriUtil")
 const mockedBuildHttpUri = buildHttpUri as jest.Mock
 mockedBuildHttpUri.mockImplementation(() => "registry/url")
 
 // Mock our WidgetStateManager
-jest.mock("../../../WidgetStateManager")
+jest.mock("@streamlit/lib/src/WidgetStateManager")
 
 const MOCK_COMPONENT_URL = "http://a.mock.url"
 const MOCK_WIDGET_ID = "mock_widget_id"

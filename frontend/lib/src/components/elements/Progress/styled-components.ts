@@ -15,7 +15,7 @@
  */
 
 import styled from "@emotion/styled"
-import { getGray90 } from "../../../theme"
+import { getGray90 } from "@streamlit/lib/src/theme"
 
 export const StyledCaptionText = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.smPx,
