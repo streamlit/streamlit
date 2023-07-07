@@ -31,7 +31,7 @@ import {
   LibContext,
   LibContextProps,
 } from "@streamlit/lib"
-import { SegmentMetricsManager } from "src/SegmentMetricsManager"
+import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import {
   StyledCheckbox,

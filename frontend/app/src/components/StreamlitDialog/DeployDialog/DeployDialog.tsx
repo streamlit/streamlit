@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, ReactNode, useCallback } from "react"
-import { SegmentMetricsManager } from "src/SegmentMetricsManager"
+import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 import Modal from "./DeployModal"
 import Card from "./DeployCard"
 import ListElement from "./DeployListElement"
@@ -28,20 +28,20 @@ import {
 import {
   DialogType,
   PlainEventHandler,
-} from "src/components/StreamlitDialog/StreamlitDialog"
+} from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
 import { BaseButton, BaseButtonKind, GitInfo, IGitInfo } from "@streamlit/lib"
-import StreamlitLogo from "src/assets/svg/logo.svg"
-import Rocket from "src/assets/svg/rocket.svg"
+import StreamlitLogo from "@streamlit/app/src/assets/svg/logo.svg"
+import Rocket from "@streamlit/app/src/assets/svg/rocket.svg"
 import {
   STREAMLIT_COMMUNITY_CLOUD_DOCS_URL,
   STREAMLIT_DEPLOY_TUTORIAL_URL,
-} from "src/urls"
+} from "@streamlit/app/src/urls"
 import {
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
-} from "src/components/StreamlitDialog/DeployErrorDialogs"
-import { getDeployAppUrl } from "src/components/MainMenu/MainMenu"
+} from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs"
+import { getDeployAppUrl } from "@streamlit/app/src/components/MainMenu/MainMenu"
 
 const { GitStates } = GitInfo
 
