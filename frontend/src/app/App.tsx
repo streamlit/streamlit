@@ -1271,7 +1271,7 @@ export class App extends PureComponent<Props, State> {
       // value in the BackMsg we send to the server.
     } else if (currentPageScriptHash) {
       // The user didn't specify which page to run, which happens when they
-      // click the "Rerun" button in the hamburger menu. In this case, we
+      // click the "Rerun" button in the main menu. In this case, we
       // rerun the current page.
       pageScriptHash = currentPageScriptHash
     } else {

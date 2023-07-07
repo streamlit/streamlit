@@ -357,7 +357,7 @@ describe("MainMenu", () => {
     })
   })
 
-  it("should hide hamburger when toolbarMode is Minimal and no host items", async () => {
+  it("should hide main menu when toolbarMode is Minimal and no host items", async () => {
     const props = getProps({
       developmentMode: false,
       toolbarMode: Config.ToolbarMode.MINIMAL,
