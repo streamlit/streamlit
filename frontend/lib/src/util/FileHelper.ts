@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { isFromWindows } from "../util/utils"
+import { isFromWindows } from "@streamlit/lib/src/util/utils"
 
 export enum FileSize {
   Gigabyte = "gb",

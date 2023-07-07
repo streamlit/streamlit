@@ -16,7 +16,7 @@
 
 import { take } from "lodash"
 
-import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "../baseconsts"
+import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "@streamlit/lib/src/baseconsts"
 import DOMPurify from "dompurify"
 
 /**
