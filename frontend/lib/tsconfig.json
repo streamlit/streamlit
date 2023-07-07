@@ -7,7 +7,6 @@
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src",
-    "declarationDir": "dist/types"
   },
   "include": ["src", "declarations.d.ts"],
   "exclude": ["node_modules/**/*", "**/proto.js"]
