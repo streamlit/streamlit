@@ -5,7 +5,7 @@
     "declaration": true,
     "declarationDir": "dist/types"
   },
-  "include": ["src"],
+  "include": ["src/*", "../lib/src/declarations.d.ts"],
   "exclude": [
     "**/node_modules",
     "**/coverage",
