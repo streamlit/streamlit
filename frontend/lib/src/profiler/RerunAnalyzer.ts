@@ -19,14 +19,14 @@ import {
   HandleMessageEvent,
   PerformanceEvent,
   RequestedRerunEvent,
-} from "../profiler/PerformanceEvents"
+} from "@streamlit/lib/src/profiler/PerformanceEvents"
 import {
   findNextEventIndex,
   findPrevEvent,
   findPrevEventIndex,
   getTimeDelta,
   isHandleMessageEvent,
-} from "../profiler/Utils"
+} from "@streamlit/lib/src/profiler/Utils"
 
 type JSON = any
 
