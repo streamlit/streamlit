@@ -33,7 +33,7 @@ const FontFaceDeclaration = ({
         font-weight: ${weight};
         font-style: normal;
         font-display: swap;
-        @streamlit/app/src: url(${url}) format("woff2");
+        src: url(${url}) format("woff2");
       }
     `
   })

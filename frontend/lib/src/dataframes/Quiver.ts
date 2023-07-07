@@ -849,7 +849,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     // Unit information:
-    // https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/../enum.ts#L95
+    // https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
     if (field?.type?.unit === 1) {
       // Milliseconds
       timeInSeconds = data / 1000

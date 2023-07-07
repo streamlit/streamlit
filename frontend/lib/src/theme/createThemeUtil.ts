@@ -100,7 +100,7 @@ export const createThemeOverrides = (
       radius400: radii.md,
 
       // Override borders that are declared from literals in
-      // https://github.com/uber/baseweb/blob/master/../themes/shared/borders.ts
+      // https://github.com/uber/baseweb/blob/master/src/themes/shared/borders.ts
 
       /** Datepicker (Range), Progress Bar, Slider, Tag */
       useRoundedCorners: true,

@@ -107,6 +107,7 @@ export function createAnchorFromText(text: string | null): string {
     .split(/[^A-Za-z0-9]/)
     .filter(Boolean)
     .join("-")
+  console.log("Hello!!")
   return newAnchor || ""
 }
 
