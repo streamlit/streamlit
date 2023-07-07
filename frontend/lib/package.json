@@ -15,7 +15,6 @@
         "build:vendor": "cp -R ./src/vendor ./dist",
         "build:assets": "cp -R ./src/assets ./dist",
         "build:proto": "cp ./src/proto* ./dist",
-        "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src",
         "typecheck": "tsc",
         "test": "env NODE_OPTIONS=--max_old_space_size=8192 jest --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
         "testWatch": "env NODE_OPTIONS=--max_old_space_size=8192 jest --watchAll --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",

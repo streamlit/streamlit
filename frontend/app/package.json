@@ -11,8 +11,7 @@
     "test": "env NODE_OPTIONS=\"--experimental-worker --max_old_space_size=8192\" craco test --watchAll=false --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "testWatch": "env NODE_OPTIONS=\"--experimental-worker --max_old_space_size=8192\" craco test --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=../jest/jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 --cache src"
+    "typecheck": "tsc --noEmit"
   },
   "jest": {
     "resetMocks": false,

@@ -23,7 +23,8 @@
   // Specifies the ESLint parser
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": "./tsconfig.json",
+    "tsconfigRootDir": ".",
+    "project": "./tsconfig.dev.json",
     "ecmaFeatures": {
       "jsx": true // Allows for the parsing of JSX
     },
@@ -155,8 +156,7 @@
       "typescript": {
         // tell eslint to look at these tsconfigs for import statements
         "project": [
-          "lib/tsconfig.json",
-          "app/tsconfig.json"
+          "./tsconfig.dev.json"
         ]
       }
     }

@@ -1,11 +1,4 @@
 {
   "extends": "../tsconfig.dev.json",
-  "include": ["src/*", "../lib/src/declarations.d.ts"],
-  "exclude": [
-    "**/node_modules",
-    "**/coverage",
-    "**/dist",
-    "**/*.spec.ts",
-    "**/*tests"
-  ]
+  "include": ["src/*", "../lib/src/declarations.d.ts"]
 }
