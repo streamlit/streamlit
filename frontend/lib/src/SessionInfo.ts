@@ -20,9 +20,9 @@ import {
   Initialize,
   NewSession,
   UserInfo,
-} from "src/proto"
+} from "./proto"
 
-import { hashString } from "src/util/utils"
+import { hashString } from "./util/utils"
 
 /**
  * SessionInfo properties. These don't change during the lifetime of a session.
