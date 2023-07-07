@@ -2,7 +2,6 @@
     "extends": "./tsconfig.json",
     "compilerOptions": {
       "paths": {
-        "@streamlit/lib": ["lib/src"],
         "@streamlit/app": ["app/src"]
       }
     }
