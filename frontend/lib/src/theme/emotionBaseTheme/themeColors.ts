@@ -15,7 +15,7 @@
  */
 
 import { transparentize } from "color2k"
-import { colors } from "../../theme/primitives/colors"
+import { colors } from "@streamlit/lib/src/theme/primitives/colors"
 
 const requiredThemeColors = {
   bgColor: colors.white,
