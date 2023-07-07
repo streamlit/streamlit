@@ -16,7 +16,7 @@
 
 import HostCommunicationManager, {
   HOST_COMM_VERSION,
-} from "../hostComm/HostCommunicationManager"
+} from "@streamlit/lib/src/hostComm/HostCommunicationManager"
 
 // Mocking "message" event listeners on the window;
 // returns function to establish a listener

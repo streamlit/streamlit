@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { ICustomThemeConfig, IAppPage } from "../proto"
-import { ExportedTheme } from "../theme"
-import { ScriptRunState } from "../ScriptRunState"
+import { ICustomThemeConfig, IAppPage } from "@streamlit/lib/src/proto"
+import { ExportedTheme } from "@streamlit/lib/src/theme"
+import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 
 export type DeployedAppMetadata = {
   hostedAt?: string
