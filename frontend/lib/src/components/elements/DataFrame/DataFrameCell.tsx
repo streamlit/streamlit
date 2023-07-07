@@ -16,7 +16,7 @@
 
 import React, { ComponentType, ReactElement } from "react"
 import { ChevronTop, ChevronBottom } from "@emotion-icons/open-iconic"
-import Icon from "../../../components/shared/Icon"
+import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { SortDirection } from "./SortDirection"
 import { StyledSortIcon } from "./styled-components"
 

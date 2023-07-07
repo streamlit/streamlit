@@ -15,10 +15,10 @@
  */
 
 import React from "react"
-import { mount } from "../../../test_util"
+import { mount } from "@streamlit/lib/src/test_util"
 
-import { UNICODE, EMPTY } from "../../../mocks/arrow"
-import { Quiver } from "../../../dataframes/Quiver"
+import { UNICODE, EMPTY } from "@streamlit/lib/src/mocks/arrow"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { ArrowTable, TableProps } from "./ArrowTable"
 
 const getProps = (data: Uint8Array): TableProps => ({

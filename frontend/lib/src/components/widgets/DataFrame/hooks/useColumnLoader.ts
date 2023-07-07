@@ -15,23 +15,26 @@
  */
 import { merge } from "lodash"
 
-import { Quiver } from "../../../../dataframes/Quiver"
-import { Arrow as ArrowProto } from "../../../../proto"
-import { notNullOrUndefined, isNullOrUndefined } from "../../../../util/utils"
-import { logWarning, logError } from "../../../../util/log"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
+import {
+  notNullOrUndefined,
+  isNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
+import { logWarning, logError } from "@streamlit/lib/src/util/log"
 
 import {
   getColumnTypeFromArrow,
   getAllColumnsFromArrow,
   getEmptyIndexColumn,
-} from "../../../../components/widgets/DataFrame/arrowUtils"
+} from "@streamlit/lib/src/components/widgets/DataFrame/arrowUtils"
 import {
   BaseColumn,
   BaseColumnProps,
   ObjectColumn,
   ColumnTypes,
   ColumnCreator,
-} from "../../../../components/widgets/DataFrame/columns"
+} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 
 // Using this ID for column config will apply the config to all index columns
 export const INDEX_IDENTIFIER = "_index"

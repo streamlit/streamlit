@@ -25,12 +25,12 @@ import {
   IToolbarItem,
   DeployedAppMetadata,
 } from "./types"
-import { isValidOrigin } from "../util/UriUtil"
+import { isValidOrigin } from "@streamlit/lib/src/util/UriUtil"
 // Uncomment this import to test host communication with
 // frontend/hostframe.html:
-// import { IS_DEV_ENV } from "../lib/baseconsts"
+// import { IS_DEV_ENV } from "@streamlit/lib/src/lib/baseconsts"
 
-import Resolver from "../util/Resolver"
+import Resolver from "@streamlit/lib/src/util/Resolver"
 
 export const HOST_COMM_VERSION = 1
 

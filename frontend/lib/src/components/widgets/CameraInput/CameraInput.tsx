@@ -23,24 +23,24 @@ import {
   CameraInput as CameraInputProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "../../../proto"
-import Icon from "../../../components/shared/Icon"
-import { Placement } from "../../../components/shared/Tooltip"
-import TooltipIcon from "../../../components/shared/TooltipIcon"
+} from "@streamlit/lib/src/proto"
+import Icon from "@streamlit/lib/src/components/shared/Icon"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import {
   StyledWidgetLabelHelp,
   WidgetLabel,
-} from "../../../components/widgets/BaseWidget"
-import { FormClearHelper } from "../../../components/widgets/Form"
-import { FileUploadClient } from "../../../FileUploadClient"
-import { logError } from "../../../util/log"
-import { WidgetStateManager } from "../../../WidgetStateManager"
-import { labelVisibilityProtoValueToEnum } from "../../../util/utils"
+} from "@streamlit/lib/src/components/widgets/BaseWidget"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
+import { logError } from "@streamlit/lib/src/util/log"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import {
   UploadedStatus,
   UploadFileInfo,
   UploadingStatus,
-} from "../../../components/widgets/FileUploader/UploadFileInfo"
+} from "@streamlit/lib/src/components/widgets/FileUploader/UploadFileInfo"
 import CameraInputButton from "./CameraInputButton"
 import { FacingMode } from "./SwitchFacingModeButton"
 import {

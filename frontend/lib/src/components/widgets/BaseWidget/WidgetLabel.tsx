@@ -15,8 +15,8 @@
  */
 
 import React from "react"
-import { LabelVisibilityOptions } from "../../../util/utils"
-import StreamlitMarkdown from "../../../components/shared/StreamlitMarkdown"
+import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import { StyledWidgetLabel } from "./styled-components"
 

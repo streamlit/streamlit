@@ -17,7 +17,7 @@
 import { Field, Utf8, vectorFromArray } from "apache-arrow"
 import { cloneDeep } from "lodash"
 
-import { IndexTypeName, Quiver } from "../dataframes/Quiver"
+import { IndexTypeName, Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import {
   // Types
   CATEGORICAL,

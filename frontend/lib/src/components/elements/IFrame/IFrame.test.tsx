@@ -16,13 +16,13 @@
 
 import React from "react"
 import { ShallowWrapper } from "enzyme"
-import { shallow } from "../../../test_util"
+import { shallow } from "@streamlit/lib/src/test_util"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "../../../util/IFrameUtil"
+} from "@streamlit/lib/src/util/IFrameUtil"
 
-import { IFrame as IFrameProto } from "../../../proto"
+import { IFrame as IFrameProto } from "@streamlit/lib/src/proto"
 import IFrame, { IFrameProps } from "./IFrame"
 
 const getProps = (elementProps: Partial<IFrameProto> = {}): IFrameProps => ({

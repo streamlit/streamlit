@@ -17,7 +17,7 @@
 import {
   HandleMessageEvent,
   PerformanceEvent,
-} from "../profiler/PerformanceEvents"
+} from "@streamlit/lib/src/profiler/PerformanceEvents"
 
 export type EventPredicate = (event: PerformanceEvent) => boolean
 

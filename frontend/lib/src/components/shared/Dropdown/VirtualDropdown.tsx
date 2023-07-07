@@ -17,7 +17,10 @@
 import React, { ReactElement } from "react"
 import { StyledList, StyledEmptyState, OptionListProps } from "baseui/menu"
 import { FixedSizeList } from "react-window"
-import { Placement, OverflowTooltip } from "../../../components/shared/Tooltip"
+import {
+  Placement,
+  OverflowTooltip,
+} from "@streamlit/lib/src/components/shared/Tooltip"
 import { ThemedStyledDropdownListItem } from "./styled-components"
 
 const LIST_ITEM_HEIGHT = 40

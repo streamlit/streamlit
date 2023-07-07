@@ -19,7 +19,7 @@ import { GridCell, TextCell, GridCellKind } from "@glideapps/glide-data-grid"
 import {
   BaseColumnProps,
   TextColumn,
-} from "../../../components/widgets/DataFrame/columns"
+} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 
 import EditingState from "./EditingState"
 

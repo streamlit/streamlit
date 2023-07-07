@@ -15,9 +15,9 @@
  */
 
 import React from "react"
-import { mount, shallow } from "../../../test_util"
-import { Video as VideoProto } from "../../../proto"
-import { mockEndpoints } from "../../../mocks/mocks"
+import { mount, shallow } from "@streamlit/lib/src/test_util"
+import { Video as VideoProto } from "@streamlit/lib/src/proto"
+import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
 
 import Video, { VideoProps } from "./Video"
 

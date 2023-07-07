@@ -15,10 +15,10 @@
  */
 
 import React from "react"
-import { mount, shallow } from "../../../test_util"
+import { mount, shallow } from "@streamlit/lib/src/test_util"
 
-import { Audio as AudioProto } from "../../../proto"
-import { mockEndpoints } from "../../../mocks/mocks"
+import { Audio as AudioProto } from "@streamlit/lib/src/proto"
+import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
 import Audio, { AudioProps } from "./Audio"
 
 describe("Audio Element", () => {

@@ -15,16 +15,16 @@
  */
 
 import React from "react"
-import { mount } from "../../../test_util"
-import { WidgetStateManager } from "../../../WidgetStateManager"
+import { mount } from "@streamlit/lib/src/test_util"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
-import StreamlitMarkdown from "../../../components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import { Checkbox as UICheckbox } from "baseui/checkbox"
 import {
   Checkbox as CheckboxProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "../../../proto"
+} from "@streamlit/lib/src/proto"
 import Checkbox, { OwnProps } from "./Checkbox"
 
 const getProps = (elementProps: Partial<CheckboxProto> = {}): OwnProps => ({

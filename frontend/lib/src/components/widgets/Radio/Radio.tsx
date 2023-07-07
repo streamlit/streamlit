@@ -15,11 +15,14 @@
  */
 
 import React from "react"
-import UIRadio from "../../../components/shared/Radio"
-import { Radio as RadioProto } from "../../../proto"
-import { FormClearHelper } from "../../../components/widgets/Form"
-import { WidgetStateManager, Source } from "../../../WidgetStateManager"
-import { labelVisibilityProtoValueToEnum } from "../../../util/utils"
+import UIRadio from "@streamlit/lib/src/components/shared/Radio"
+import { Radio as RadioProto } from "@streamlit/lib/src/proto"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import {
+  WidgetStateManager,
+  Source,
+} from "@streamlit/lib/src/WidgetStateManager"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 
 export interface Props {
   disabled: boolean

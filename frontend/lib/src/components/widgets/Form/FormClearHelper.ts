@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { isValidFormId } from "../../../util/utils"
-import { WidgetStateManager } from "../../../WidgetStateManager"
+import { isValidFormId } from "@streamlit/lib/src/util/utils"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { SignalConnection } from "typed-signals"
 
 export class FormClearHelper {

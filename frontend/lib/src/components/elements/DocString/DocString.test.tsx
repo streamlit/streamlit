@@ -17,7 +17,7 @@
 import React from "react"
 import { shallow } from "enzyme"
 
-import { DocString as DocStringProto } from "../../../proto"
+import { DocString as DocStringProto } from "@streamlit/lib/src/proto"
 import DocString, { DocStringProps, Member } from "./DocString"
 
 const getProps = (

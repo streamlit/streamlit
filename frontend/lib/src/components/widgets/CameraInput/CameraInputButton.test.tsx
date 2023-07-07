@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { shallow } from "../../../test_util"
+import { shallow } from "@streamlit/lib/src/test_util"
 import React from "react"
 import { StyledCameraInputBaseButton } from "./styled-components"
 import CameraInputButton, { CameraInputButtonProps } from "./CameraInputButton"

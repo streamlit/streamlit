@@ -19,10 +19,10 @@ import React, { ReactElement } from "react"
 import { useTheme } from "@emotion/react"
 import { Popover, PLACEMENT, ACCESSIBILITY_TYPE } from "baseui/popover"
 
-import StreamlitMarkdown from "../../../components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import { StyledTooltipContentWrapper } from "../../../components/shared/Tooltip/styled-components"
-import { hasLightBackgroundColor } from "../../../theme/utils"
-import { EmotionTheme } from "../../../theme"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { StyledTooltipContentWrapper } from "@streamlit/lib/src/components/shared/Tooltip/styled-components"
+import { hasLightBackgroundColor } from "@streamlit/lib/src/theme/utils"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface TooltipProps {
   // The top position of the tooltip.

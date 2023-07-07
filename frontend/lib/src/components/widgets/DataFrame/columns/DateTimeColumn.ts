@@ -18,7 +18,10 @@ import { GridCell, GridCellKind, TextCell } from "@glideapps/glide-data-grid"
 import moment, { Moment } from "moment"
 import "moment-timezone"
 
-import { notNullOrUndefined, isNullOrUndefined } from "../../../../util/utils"
+import {
+  notNullOrUndefined,
+  isNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 
 import {
   BaseColumn,

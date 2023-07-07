@@ -16,10 +16,10 @@
 
 import React, { ReactElement } from "react"
 import { useTheme } from "@emotion/react"
-import { EmotionTheme, isPresetTheme } from "../../../theme"
-import { Spinner as SpinnerProto } from "../../../proto"
-import StreamlitMarkdown from "../../../components/shared/StreamlitMarkdown"
-import { LibContext } from "../../../components/core/LibContext"
+import { EmotionTheme, isPresetTheme } from "@streamlit/lib/src/theme"
+import { Spinner as SpinnerProto } from "@streamlit/lib/src/proto"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
   StyledSpinnerContainer,
   ThemedStyledSpinner,

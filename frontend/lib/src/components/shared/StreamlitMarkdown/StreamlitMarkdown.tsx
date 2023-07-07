@@ -38,18 +38,18 @@ import rehypeKatex from "rehype-katex"
 import { Link as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
-import CodeBlock from "../../../components/elements/CodeBlock"
-import IsSidebarContext from "../../../components/core/IsSidebarContext"
-import ErrorBoundary from "../../../components/shared/ErrorBoundary"
+import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
+import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
+import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
 import {
   getMdBlue,
   getMdGreen,
   getMdOrange,
   getMdRed,
   getMdViolet,
-} from "../../../theme"
+} from "@streamlit/lib/src/theme"
 
-import { LibContext } from "../../../components/core/LibContext"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
   StyledHeaderContainer,
   StyledHeaderContent,
@@ -59,7 +59,7 @@ import {
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
-import StreamlitSyntaxHighlighter from "../../../components/elements/CodeBlock/StreamlitSyntaxHighlighter"
+import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 
 export enum Tags {
   H1 = "h1",
@@ -107,6 +107,7 @@ export function createAnchorFromText(text: string | null): string {
     .split(/[^A-Za-z0-9]/)
     .filter(Boolean)
     .join("-")
+  console.log("Hello!")
   return newAnchor || ""
 }
 

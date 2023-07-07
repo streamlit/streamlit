@@ -15,12 +15,12 @@
  */
 
 import React from "react"
-import { mount } from "../../../test_util"
+import { mount } from "@streamlit/lib/src/test_util"
 
 import Snow, {
   SnowProps,
   NUM_FLAKES,
-} from "../../../components/elements/Snow/index"
+} from "@streamlit/lib/src/components/elements/Snow/index"
 
 const getProps = (): SnowProps => ({
   scriptRunId: "51522269",

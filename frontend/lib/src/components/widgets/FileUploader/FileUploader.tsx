@@ -23,23 +23,23 @@ import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "../../../proto"
-import { FormClearHelper } from "../../../components/widgets/Form"
+} from "@streamlit/lib/src/proto"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 
 import {
   FileSize,
   getSizeDisplay,
   sizeConverter,
-} from "../../../util/FileHelper"
-import { FileUploadClient } from "../../../FileUploadClient"
-import { WidgetStateManager } from "../../../WidgetStateManager"
+} from "@streamlit/lib/src/util/FileHelper"
+import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
-} from "../../../components/widgets/BaseWidget"
-import TooltipIcon from "../../../components/shared/TooltipIcon"
-import { Placement } from "../../../components/shared/Tooltip"
-import { labelVisibilityProtoValueToEnum } from "../../../util/utils"
+} from "@streamlit/lib/src/components/widgets/BaseWidget"
+import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"

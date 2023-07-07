@@ -16,12 +16,12 @@
 
 import React, { ReactElement } from "react"
 
-import { Alert as AlertProto } from "../../../proto"
-import StreamlitMarkdown from "../../../components/shared/StreamlitMarkdown"
-import { EmojiIcon } from "../../../components/shared/Icon"
+import { Alert as AlertProto } from "@streamlit/lib/src/proto"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
+import { EmojiIcon } from "@streamlit/lib/src/components/shared/Icon"
 import AlertContainer, {
   Kind,
-} from "../../../components/shared/AlertContainer"
+} from "@streamlit/lib/src/components/shared/AlertContainer"
 import { StyledIconAlertContent } from "./styled-components"
 
 export function getAlertElementKind(format: AlertProto.Format): Kind {

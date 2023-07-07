@@ -20,12 +20,12 @@ import React, { FC, memo } from "react"
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
  * served from a subpath.
  */
-import Flake0 from "../../../assets/img/snow/flake-0.png"
-import Flake1 from "../../../assets/img/snow/flake-1.png"
-import Flake2 from "../../../assets/img/snow/flake-2.png"
+import Flake0 from "@streamlit/lib/src/assets/img/snow/flake-0.png"
+import Flake1 from "@streamlit/lib/src/assets/img/snow/flake-1.png"
+import Flake2 from "@streamlit/lib/src/assets/img/snow/flake-2.png"
 
-import Particles from "../../../components/elements/Particles"
-import { ParticleProps } from "../../../components/elements/Particles/Particles"
+import Particles from "@streamlit/lib/src/components/elements/Particles"
+import { ParticleProps } from "@streamlit/lib/src/components/elements/Particles/Particles"
 
 import { StyledFlake } from "./styled-components"
 

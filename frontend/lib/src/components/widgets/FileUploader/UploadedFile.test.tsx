@@ -16,10 +16,10 @@
 
 import { CancelTokenSource } from "axios"
 import React from "react"
-import { mount, shallow } from "../../../test_util"
+import { mount, shallow } from "@streamlit/lib/src/test_util"
 
-import { Small } from "../../../components/shared/TextElements"
-import ProgressBar from "../../../components/shared/ProgressBar"
+import { Small } from "@streamlit/lib/src/components/shared/TextElements"
+import ProgressBar from "@streamlit/lib/src/components/shared/ProgressBar"
 
 import UploadedFile, { Props, UploadedFileStatus } from "./UploadedFile"
 import { FileStatus, UploadFileInfo } from "./UploadFileInfo"

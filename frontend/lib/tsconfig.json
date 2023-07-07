@@ -10,5 +10,5 @@
     "rootDir": "src",
   },
   "include": ["src", "declarations.d.ts"],
-"exclude": ["node_modules/**/*", "**/proto.js"]
+  "exclude": ["node_modules/**/*", "**/proto.js"]
 }

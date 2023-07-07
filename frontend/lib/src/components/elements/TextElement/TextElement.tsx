@@ -15,11 +15,11 @@
  */
 
 import React, { ReactElement } from "react"
-import { Text as TextProto } from "../../../proto"
+import { Text as TextProto } from "@streamlit/lib/src/proto"
 import {
   InlineTooltipIcon,
   StyledLabelHelpWrapper,
-} from "../../../components/shared/TooltipIcon"
+} from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { StyledText } from "./styled-components"
 
 export interface TextProps {

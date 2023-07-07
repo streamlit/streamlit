@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { render } from "../../../test_util"
+import { render } from "@streamlit/lib/src/test_util"
 
 import InputInstructions, { Props } from "./InputInstructions"
 

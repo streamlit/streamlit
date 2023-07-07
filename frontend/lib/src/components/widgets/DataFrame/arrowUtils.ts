@@ -27,8 +27,11 @@ import {
   DataFrameCell,
   Quiver,
   Type as ArrowType,
-} from "../../../dataframes/Quiver"
-import { notNullOrUndefined, isNullOrUndefined } from "../../../util/utils"
+} from "@streamlit/lib/src/dataframes/Quiver"
+import {
+  notNullOrUndefined,
+  isNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 
 import {
   BaseColumn,

@@ -20,7 +20,7 @@ import {
   BaseColumn,
   TextColumn,
   NumberColumn,
-} from "../../../../components/widgets/DataFrame/columns"
+} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 
 import useCustomRenderer from "./useCustomRenderer"
 

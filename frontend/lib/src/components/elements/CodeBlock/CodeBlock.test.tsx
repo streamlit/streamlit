@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { render } from "../../../test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import CodeBlock, { CodeBlockProps } from "./CodeBlock"
 
 const getBlockProps = (

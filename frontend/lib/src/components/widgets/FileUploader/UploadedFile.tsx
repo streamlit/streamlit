@@ -22,11 +22,13 @@ import {
 } from "@emotion-icons/material-outlined"
 import BaseButton, {
   BaseButtonKind,
-} from "../../../components/shared/BaseButton"
-import Icon from "../../../components/shared/Icon"
-import ProgressBar, { Size } from "../../../components/shared/ProgressBar"
-import { Small } from "../../../components/shared/TextElements"
-import { FileSize, getSizeDisplay } from "../../../util/FileHelper"
+} from "@streamlit/lib/src/components/shared/BaseButton"
+import Icon from "@streamlit/lib/src/components/shared/Icon"
+import ProgressBar, {
+  Size,
+} from "@streamlit/lib/src/components/shared/ProgressBar"
+import { Small } from "@streamlit/lib/src/components/shared/TextElements"
+import { FileSize, getSizeDisplay } from "@streamlit/lib/src/util/FileHelper"
 import {
   StyledUploadedFile,
   StyledFileErrorIcon,

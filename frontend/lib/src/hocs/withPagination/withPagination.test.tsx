@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { shallow, mount } from "../../test_util"
+import { shallow, mount } from "@streamlit/lib/src/test_util"
 import Pagination from "./Pagination"
 
 import withPagination, { Props as HocProps } from "./withPagination"

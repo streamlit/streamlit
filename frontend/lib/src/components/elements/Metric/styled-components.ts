@@ -15,8 +15,8 @@
  */
 
 import styled from "@emotion/styled"
-import { StyledWidgetLabel } from "../../../components/widgets/BaseWidget/styled-components"
-import { LabelVisibilityOptions } from "../../../util/utils"
+import { StyledWidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget/styled-components"
+import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 
 export interface StyledMetricLabelTextProps {
   visibility?: LabelVisibilityOptions

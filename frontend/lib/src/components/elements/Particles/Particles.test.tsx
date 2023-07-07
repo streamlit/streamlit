@@ -15,7 +15,7 @@
  */
 
 import React, { FC } from "react"
-import { mount } from "../../../test_util"
+import { mount } from "@streamlit/lib/src/test_util"
 
 import Particles, { ParticleProps, Props } from "./Particles"
 
