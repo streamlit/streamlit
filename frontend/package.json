@@ -80,7 +80,7 @@
     "numbro": "^2.3.6",
     "plotly.js": "^2.18.1",
     "prismjs": "^1.29.0",
-    "protobufjs": "^7.2.0",
+    "protobufjs": "^7.2.4",
     "protobufjs-cli": "^1.1.0",
     "query-string": "^8.1.0",
     "re-resizable": "^6.9.9",
