@@ -18,9 +18,9 @@
 
 import { lightThemePrimitives } from "baseui"
 import { transparentize } from "color2k"
-import { ThemeConfig } from "../theme"
-import { createEmotionColors } from "../theme/getColors"
-import { createBaseUiTheme } from "../theme/createThemeUtil"
+import { ThemeConfig } from "@streamlit/lib/src/theme"
+import { createEmotionColors } from "@streamlit/lib/src/theme/getColors"
+import { createBaseUiTheme } from "@streamlit/lib/src/theme/createThemeUtil"
 import {
   breakpoints,
   fonts,
@@ -35,7 +35,7 @@ import {
   spacing,
   zIndices,
   colors,
-} from "../theme/primitives"
+} from "@streamlit/lib/src/theme/primitives"
 
 const requiredThemeColors = {
   bgColor: colors.white,
