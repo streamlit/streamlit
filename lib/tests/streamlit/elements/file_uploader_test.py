@@ -23,7 +23,11 @@ from streamlit import config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import (
+    DeletedFile,
+    UploadedFile,
+    UploadedFileRec,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -164,6 +168,46 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         file1.seek(2)
         self.assertEqual(b"3", file1.read())
         self.assertEqual(b"123", file2.read())
+
+    @patch("streamlit.elements.file_uploader._get_upload_files")
+    def test_deleted_file_omitted(self, get_upload_files_patch):
+        """We should omit DeletedFile objects for final user value ."""
+
+        uploaded_files = [DeletedFile()]
+        get_upload_files_patch.return_value = uploaded_files
+
+        result_1: UploadedFile = st.file_uploader("a", accept_multiple_files=False)
+        result_2: UploadedFile = st.file_uploader("b", accept_multiple_files=True)
+
+        self.assertEqual(result_1, None)
+        self.assertEqual(result_2, [])
+
+    @patch("streamlit.elements.file_uploader._get_upload_files")
+    def test_deleted_files_filtered_out(self, get_upload_files_patch):
+        """We should filter out DeletedFile objects for final user value."""
+
+        rec1 = UploadedFileRec("file1", "file1", "type", b"1234")
+        rec2 = UploadedFileRec("file2", "file2", "type", b"5678")
+
+        uploaded_files = [
+            DeletedFile(),
+            UploadedFile(
+                rec1, FileURLsProto(file_id="file1", delete_url="d1", upload_url="u1")
+            ),
+            DeletedFile(),
+            UploadedFile(
+                rec2, FileURLsProto(file_id="file2", delete_url="d1", upload_url="u1")
+            ),
+            DeletedFile(),
+        ]
+
+        get_upload_files_patch.return_value = uploaded_files
+
+        result_1: UploadedFile = st.file_uploader("a", accept_multiple_files=False)
+        result_2: UploadedFile = st.file_uploader("b", accept_multiple_files=True)
+
+        self.assertEqual(result_1, None)
+        self.assertEqual(result_2, [uploaded_files[1], uploaded_files[3]])
 
     @parameterized.expand(
         [
