@@ -11,7 +11,7 @@ cachetools==5.3.1
 certifi==2023.5.7
 cffi==1.15.1
 cfgv==3.3.1
-charset-normalizer==3.1.0
+charset-normalizer==3.2.0
 chart-studio==1.1.0
 click==8.1.4
 contourpy==1.1.0
@@ -34,7 +34,7 @@ greenlet==2.0.2
 hypothesis==6.80.1
 identify==2.5.24
 idna==3.4
-importlib-metadata==6.7.0
+importlib-metadata==6.8.0
 iniconfig==2.0.0
 jaraco.classes==3.2.3
 jeepney==0.8.0
@@ -43,7 +43,7 @@ jsonschema==4.18.0
 jsonschema-specifications==2023.6.1
 keyring==24.2.0
 kiwisolver==1.4.4
-langchain==0.0.225
+langchain==0.0.227
 langchainplus-sdk==0.0.20
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
