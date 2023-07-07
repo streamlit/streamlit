@@ -18,7 +18,7 @@ import React from "react"
 import { BaseProvider } from "baseui"
 import { Global, ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 
-import FontFaceDeclaration from "src/components/FontFaceDeclaration"
+import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 import {
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
@@ -36,7 +36,7 @@ import {
 } from "@streamlit/lib"
 
 import AppWithScreencast from "./App"
-import { StyledDataFrameOverlay } from "src/styled-components"
+import { StyledDataFrameOverlay } from "@streamlit/app/src/styled-components"
 
 const ThemedApp = (): JSX.Element => {
   const defaultTheme = getDefaultTheme()

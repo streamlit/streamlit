@@ -21,21 +21,21 @@ import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
 // Other local imports.
-import { AppContext } from "src/components/AppContext"
-import AppView from "src/components/AppView"
-import StatusWidget from "src/components/StatusWidget"
-import MainMenu, { isLocalhost } from "src/components/MainMenu"
-import ToolbarActions from "src/components/ToolbarActions"
-import DeployButton from "src/components/DeployButton"
-import Header from "src/components/Header"
+import { AppContext } from "@streamlit/app/src/components/AppContext"
+import AppView from "@streamlit/app/src/components/AppView"
+import StatusWidget from "@streamlit/app/src/components/StatusWidget"
+import MainMenu, { isLocalhost } from "@streamlit/app/src/components/MainMenu"
+import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
+import DeployButton from "@streamlit/app/src/components/DeployButton"
+import Header from "@streamlit/app/src/components/Header"
 import {
   DialogProps,
   DialogType,
   StreamlitDialog,
-} from "src/components/StreamlitDialog"
-import { ConnectionManager } from "src/connection/ConnectionManager"
-import { ConnectionState } from "src/connection/ConnectionState"
-import { SessionEventDispatcher } from "src/SessionEventDispatcher"
+} from "@streamlit/app/src/components/StreamlitDialog"
+import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
+import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
+import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 import {
   generateUID,
   getElementWidgetID,
@@ -108,19 +108,19 @@ import {
 } from "@streamlit/lib"
 import { concat, noop, without } from "lodash"
 
-import { UserSettings } from "src/components/StreamlitDialog/UserSettings"
+import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 
-import { DefaultStreamlitEndpoints } from "src/connection/DefaultStreamlitEndpoints"
-import { SegmentMetricsManager } from "src/SegmentMetricsManager"
+import { DefaultStreamlitEndpoints } from "@streamlit/app/src/connection/DefaultStreamlitEndpoints"
+import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
-import { StyledApp } from "src/styled-components"
+import { StyledApp } from "@streamlit/app/src/styled-components"
 
 import withScreencast, {
   ScreenCastHOC,
-} from "src/hocs/withScreencast/withScreencast"
+} from "@streamlit/app/src/hocs/withScreencast/withScreencast"
 
 // Used to import fonts + responsive reboot items
-import "src/assets/css/theme.scss"
+import "@streamlit/app/src/assets/css/theme.scss"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -912,7 +912,7 @@ export class App extends PureComponent<Props, State> {
     const targetAppPage =
       this.state.appPages.find(appPage =>
         // The page name is embedded at the end of the URL path, and if not, we are in the main page.
-        // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
+        // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/@streamlit/app/src/App.tsx#L740
         document.location.pathname.endsWith("/" + appPage.pageName)
       ) ?? this.state.appPages[0]
 

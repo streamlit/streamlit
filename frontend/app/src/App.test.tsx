@@ -48,13 +48,16 @@ import {
   mockTheme,
   HOST_COMM_VERSION,
 } from "@streamlit/lib"
-import { ConnectionState } from "src/connection/ConnectionState"
-import { DialogType, StreamlitDialog } from "src/components/StreamlitDialog"
+import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
+import {
+  DialogType,
+  StreamlitDialog,
+} from "@streamlit/app/src/components/StreamlitDialog"
 import { App, Props, showDevelopmentOptions } from "./App"
-import MainMenu from "src/components/MainMenu"
-import ToolbarActions from "src/components/ToolbarActions"
+import MainMenu from "@streamlit/app/src/components/MainMenu"
+import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
 
-jest.mock("src/connection/ConnectionManager")
+jest.mock("@streamlit/app/src/connection/ConnectionManager")
 jest.mock("@streamlit/lib/dist/baseconsts", () => {
   return {
     ...jest.requireActual("@streamlit/lib/dist/baseconsts"),
