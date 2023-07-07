@@ -190,7 +190,7 @@ ALLOWED_MESSAGE_ORIGINS = [
 
 class AllowedMessageOriginsHandler(_SpecialRequestHandler):
     def initialize(self):
-        self.allowed_message_origins = ALLOWED_MESSAGE_ORIGINS
+        self.allowed_message_origins = [*ALLOWED_MESSAGE_ORIGINS]
         if config.get_option("global.developmentMode"):
             # Allow messages from localhost in dev mode for testing of host <-> guest communication
             self.allowed_message_origins.append("http://localhost")

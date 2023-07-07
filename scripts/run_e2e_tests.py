@@ -481,7 +481,7 @@ def run_e2e_tests(
                     run_test(
                         ctx,
                         str(spec_path),
-                        ["streamlit", "run", "--ui.hideSidebarNav=false", test_path],
+                        ["streamlit", "run", test_path],
                         show_output=verbose,
                     )
             elif basename(spec_path) == "staticfiles_app.spec.js":
@@ -518,7 +518,6 @@ def run_e2e_tests(
                         [
                             "streamlit",
                             "run",
-                            "--ui.hideSidebarNav=false",
                             test_path,
                         ],
                         show_output=verbose,

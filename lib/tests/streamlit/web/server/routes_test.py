@@ -192,7 +192,7 @@ class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
             response_body,
         )
         # Check that localhost NOT appended/allowed outside dev mode
-        local_host_appended = response_body["allowedOrigins"][-1] == "http://localhost"
+        local_host_appended = "http://localhost" in response_body["allowedOrigins"]
         self.assertEqual(
             local_host_appended,
             False,
@@ -203,9 +203,8 @@ class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self.fetch("/_stcore/allowed-message-origins")
         self.assertEqual(200, response.code)
         # Check that localhost has been appended/allowed in dev mode
-        local_host_appended = (
-            json.loads(response.body)["allowedOrigins"][-1] == "http://localhost"
-        )
+        origins_list = json.loads(response.body)["allowedOrigins"]
+        local_host_appended = "http://localhost" in origins_list
         self.assertEqual(
             local_host_appended,
             True,
