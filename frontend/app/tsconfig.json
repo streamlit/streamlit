@@ -1,10 +1,5 @@
 {
   "extends": "../tsconfig.dev.json",
-  "compilerOptions": {
-    "outDir": "dist",
-    "declaration": true,
-    "declarationDir": "dist/types"
-  },
   "include": ["src/*", "../lib/src/declarations.d.ts"],
   "exclude": [
     "**/node_modules",
