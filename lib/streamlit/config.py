@@ -848,7 +848,7 @@ _create_option(
     description="""
     Flag to hide most of the UI elements found at the top of a Streamlit app.
 
-    NOTE: This does *not* hide the hamburger menu in the top-right of an app.
+    NOTE: This does *not* hide the main menu in the top-right of an app.
     """,
     default_val=False,
     type_=bool,
