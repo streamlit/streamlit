@@ -18,11 +18,11 @@ import React, { ComponentType } from "react"
 import { mount } from "src/lib/test_util"
 import StreamlitMarkdown from "src/lib/components/shared/StreamlitMarkdown"
 import { StatelessAccordion } from "baseui/accordion"
-import withExpandable, { Props } from "./withExpandable"
+import withExpandable, { ExpandableProps } from "./withExpandable"
 
 const testComponent: ComponentType = () => <div>test</div>
 
-const getProps = (props?: Partial<Props>): Props =>
+const getProps = (props?: Partial<ExpandableProps>): ExpandableProps =>
   Object({
     label: "hi",
     expandable: true,
