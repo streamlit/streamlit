@@ -32,6 +32,7 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
     label: "Label",
     default: ["1970/01/01"],
     min: "1970/1/1",
+    format: "YYYY/MM/DD",
     ...elementProps,
   }),
   width: 0,
