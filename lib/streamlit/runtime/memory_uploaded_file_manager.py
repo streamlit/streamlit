@@ -42,6 +42,21 @@ class MemoryUploadedFileManager(UploadedFileManager):
     def get_files(
         self, session_id: str, file_ids: Sequence[str]
     ) -> List[UploadedFileRec]:
+        """Return a  list of UploadedFileRec for a given sequence of file_ids.
+
+        Parameters
+        ----------
+        session_id
+            The ID of the session that owns the files.
+        file_ids
+            The sequence of ids associated with files to retrieve.
+
+        Returns
+        -------
+        List[UploadedFileRec]
+            A list of URL UploadedFileRec instances, each instance contains information
+            about uploaded file.
+        """
         session_storage = self.file_storage[session_id]
         file_recs = []
 
@@ -53,12 +68,11 @@ class MemoryUploadedFileManager(UploadedFileManager):
         return file_recs
 
     def remove_session_files(self, session_id: str) -> None:
+        """Remove all files associated with a given session."""
         self.file_storage.pop(session_id, None)
 
     def __repr__(self) -> str:
         return util.repr_(self)
-
-    # MEMORY UPLOADED FILE MANAGER SPECIFIC METHODS
 
     def add_file(
         self,
@@ -79,12 +93,14 @@ class MemoryUploadedFileManager(UploadedFileManager):
         self.file_storage[session_id][file.file_id] = file
 
     def remove_file(self, session_id, file_id):
+        """Remove file with given file_id associated with a given session."""
         session_storage = self.file_storage[session_id]
         session_storage.pop(file_id, None)
 
     def get_upload_urls(
         self, session_id: str, file_names: Sequence[str]
     ) -> List[UploadFileUrlInfo]:
+        """Return a list of UploadFileUrlInfo for a given sequence of file_names."""
         result = []
         for _ in file_names:
             file_id = str(uuid.uuid4())
