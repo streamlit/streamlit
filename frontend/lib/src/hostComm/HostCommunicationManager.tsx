@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ICustomThemeConfig, WidgetStates } from "../proto"
+import { ICustomThemeConfig, WidgetStates } from "@streamlit/lib/src/proto"
 
 import {
   IAllowedMessageOriginsResponse,

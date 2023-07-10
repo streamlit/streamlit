@@ -44,7 +44,7 @@ import {
   DIFFERENT_COLUMN_TYPES,
   CATEGORICAL_INTERVAL,
   NAMED_INDEX,
-} from "../mocks/arrow"
+} from "@streamlit/lib/src/mocks/arrow"
 
 describe("Quiver", () => {
   describe("Public methods", () => {
