@@ -21,7 +21,7 @@ import {
 } from "@streamlit/lib/src/proto"
 import _ from "lodash"
 import xxhash from "xxhashjs"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval

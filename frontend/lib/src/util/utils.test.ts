@@ -24,9 +24,9 @@ import {
   submitFormWidget,
 } from "./utils"
 
-import { Props as FormSubmitProps } from "src/lib/components/widgets/Form/FormSubmitButton"
-import { Button as ButtonProto } from "src/lib/proto"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import { Props as FormSubmitProps } from "@streamlit/lib/src/components/widgets/Form/FormSubmitButton"
+import { Button as ButtonProto } from "@streamlit/lib/src/proto"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { enableAllPlugins } from "immer"
 
 // Required by ImmerJS and for submitForm
