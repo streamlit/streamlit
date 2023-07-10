@@ -251,6 +251,6 @@ class DateInputTest(DeltaGeneratorTestCase):
     )
     def test_invalid_date_format_values(self, format: str):
         """Test that it raises an exception for invalid date formats."""
-        with self.assertRaises(StreamlitAPIException) as e:
+        with self.assertRaises(StreamlitAPIException) as ex:
             st.date_input("the label", format=format)
-        self.assertTrue(str(e.exception).startswith("The provided format"))
+        self.assertTrue(str(ex.exception).startswith("The provided format"))
