@@ -213,8 +213,8 @@ class DateInput extends React.PureComponent<Props, State> {
     const maxDate = this.getMaxDate()
 
     // We need to extract the mask and format (date-fns notation) from the provided format string
-    // The date format is only allowed to contain one of YYYY/MM/DD, DD/MM/YYYY, or MM/DD/YYYY"
-    // and can also use a period (.) or hyphen (-) as separators."
+    // The user configured date format is based on the momentJS notation and is only allowed to contain
+    // one of YYYY/MM/DD, DD/MM/YYYY, or MM/DD/YYYY" and can also use a period (.) or hyphen (-) as separators.
     const dateMask = element.format.replaceAll(/[a-zA-Z]/g, "9")
     const dateFormat = element.format.replaceAll("Y", "y").replaceAll("D", "d")
 
