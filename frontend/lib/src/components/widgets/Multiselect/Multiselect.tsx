@@ -218,7 +218,7 @@ class Multiselect extends React.PureComponent<Props, State> {
     const { options } = element
     const disabled = options.length === 0 ? true : this.props.disabled
     const placeholder =
-      options.length === 0 ? "No options to select." : "Choose an option"
+      options.length === 0 ? "No options to select." : element.placeholder
     const selectOptions: MultiselectOption[] = options.map(
       (option: string, idx: number) => {
         return {

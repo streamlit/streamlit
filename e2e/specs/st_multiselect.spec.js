@@ -79,7 +79,7 @@ describe("st.multiselect", () => {
       it("should show the correct placeholder", () => {
         cy.get(".stMultiSelect")
           .first()
-          .should("have.text", "multiselect 1Choose an optionopen");
+          .should("have.text", "multiselect 1Please selectopen");
       });
     });
 
