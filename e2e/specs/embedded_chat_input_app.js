@@ -25,11 +25,15 @@ describe("embedded app with chat input", () => {
     cy.get(".main .block-container").should(
       "have.css",
       "padding-bottom",
-      "10rem"
+      "160px" // == 10rem
     );
   });
 
   it("uses the correct top padding", () => {
-    cy.get(".main .block-container").should("have.css", "padding-top", "1rem");
+    cy.get(".main .block-container").should(
+      "have.css",
+      "padding-top",
+      "16px" // == 1rem
+    );
   });
 });
