@@ -30,6 +30,7 @@ export enum BaseButtonKind {
   PRIMARY_FORM_SUBMIT = "primaryFormSubmit",
   SECONDARY_FORM_SUBMIT = "secondaryFormSubmit",
   HEADER_BUTTON = "header",
+  HEADER_NO_PADDING = "headerNoPadding",
 }
 
 export enum BaseButtonSize {
@@ -256,6 +257,10 @@ export const StyledHeaderButton = styled(
     marginRight: theme.spacing.threeXS,
     lineHeight: 1,
 
+    // Override buttons min width and height, to ensure the hover state for icon buttons on the header is square
+    minWidth: theme.spacing.threeXL,
+    minHeight: theme.spacing.threeXL,
+
     "&:focus": {
       outline: "none",
     },
@@ -270,6 +275,15 @@ export const StyledHeaderButton = styled(
       borderColor: theme.colors.transparent,
       color: theme.colors.gray,
     },
+  }
+})
+
+// Take out padding for this specific button, so we can ensure it's 32x32px like other buttons in Community Cloud
+export const StyledHeaderNoPaddingButton = styled(
+  StyledHeaderButton
+)<RequiredBaseButtonProps>(() => {
+  return {
+    padding: 0,
   }
 })
 
