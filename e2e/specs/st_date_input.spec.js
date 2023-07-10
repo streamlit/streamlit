@@ -178,7 +178,7 @@ describe("st.date_input", () => {
   it("calls callback if one is registered", () => {
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 9: 1970-01-01" + "Date Input Changed: False"
+      "Value 12: 1970-01-01" + "Date Input Changed: False"
     );
 
     cy.get(".stDateInput").last().click();
@@ -189,7 +189,7 @@ describe("st.date_input", () => {
 
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 9: 1970-01-02" + "Date Input Changed: True"
+      "Value 12: 1970-01-02" + "Date Input Changed: True"
     );
   });
 
