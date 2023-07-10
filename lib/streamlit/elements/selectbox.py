@@ -137,7 +137,7 @@ class SelectboxMixin:
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
         placeholder : str
-            An optional string to display when option is not selected.
+            A string to display when no options are selected. Defaults to 'Select...'.
         disabled : bool
             An optional boolean, which disables the selectbox if set to True.
             The default is False. This argument can only be supplied by keyword.
