@@ -36,10 +36,12 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
-SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
+SomeUploadedFiles = Optional[
+    Union[UploadedFile, DeletedFile, List[Union[UploadedFile, DeletedFile]]]
+]
 
 TYPE_PAIRS = [
     (".jpg", ".jpeg"),
@@ -52,7 +54,7 @@ TYPE_PAIRS = [
 
 def _get_upload_files(
     widget_value: Optional[FileUploaderStateProto],
-) -> List[UploadedFile]:
+) -> List[Union[UploadedFile, DeletedFile]]:
     if widget_value is None:
         return []
 
@@ -64,15 +66,24 @@ def _get_upload_files(
     if len(uploaded_file_info) == 0:
         return []
 
-    active_files = {f.file_id: f.file_urls for f in uploaded_file_info}
-
-    file_recs = ctx.uploaded_file_mgr.get_files(
+    file_recs_list = ctx.uploaded_file_mgr.get_files(
         session_id=ctx.session_id,
-        file_ids=list(active_files.keys()),
+        file_ids=[f.file_id for f in uploaded_file_info],
     )
-    return [
-        UploadedFile(file_rec, active_files[file_rec.file_id]) for file_rec in file_recs
-    ]
+
+    file_recs = {f.file_id: f for f in file_recs_list}
+
+    collected_files: List[Union[UploadedFile, DeletedFile]] = []
+
+    for f in uploaded_file_info:
+        maybe_file_rec = file_recs.get(f.file_id)
+        if maybe_file_rec is not None:
+            uploaded_file = UploadedFile(maybe_file_rec, f.file_urls)
+            collected_files.append(uploaded_file)
+        else:
+            collected_files.append(DeletedFile(f.file_id))
+
+    return collected_files
 
 
 @dataclass
@@ -86,9 +97,7 @@ class FileUploaderSerde:
         upload_files = _get_upload_files(ui_value)
 
         if len(upload_files) == 0:
-            return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
-                [] if self.accept_multiple_files else None
-            )
+            return_value: SomeUploadedFiles = [] if self.accept_multiple_files else None
         else:
             return_value = (
                 upload_files if self.accept_multiple_files else upload_files[0]
@@ -104,6 +113,8 @@ class FileUploaderSerde:
             files = [files]
 
         for f in files:
+            if isinstance(f, DeletedFile):
+                continue
             file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
             file_info.file_id = f.file_id
             file_info.name = f.name
@@ -219,7 +230,7 @@ class FileUploaderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> SomeUploadedFiles:
+    ) -> Optional[Union[UploadedFile, List[UploadedFile]]]:
         r"""Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option. For more info
@@ -376,7 +387,7 @@ class FileUploaderMixin:
         label_visibility: LabelVisibility = "visible",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> SomeUploadedFiles:
+    ) -> Optional[Union[UploadedFile, List[UploadedFile]]]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -437,7 +448,19 @@ class FileUploaderMixin:
         )
 
         self.dg._enqueue("file_uploader", file_uploader_proto)
-        return widget_state.value
+
+        filtered_value: Union[UploadedFile, List[UploadedFile], None]
+
+        if isinstance(widget_state.value, DeletedFile):
+            filtered_value = None
+        elif isinstance(widget_state.value, list):
+            filtered_value = [
+                f for f in widget_state.value if not isinstance(f, DeletedFile)
+            ]
+        else:
+            filtered_value = widget_state.value
+
+        return filtered_value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
