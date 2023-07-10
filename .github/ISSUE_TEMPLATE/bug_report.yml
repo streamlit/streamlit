@@ -88,7 +88,6 @@ body:
         Example:
           - **Streamlit version**: 1.13.0 _(get it with `$ streamlit version`)_
           - **Python version**: 3.9 _(get it with `$ python --version`)_
-          - **Virtual environment**: Pipenv
           - **Operating System**: MacOs 12.6
           - **Browser**: Chrome
       value: |
@@ -96,7 +95,6 @@ body:
         - Python version:
         - Operating System:
         - Browser:
-        - Virtual environment:
     validations:
       required: false
   - type: textarea
@@ -109,12 +107,3 @@ body:
         _Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in._
     validations:
       required: false
-  - type: checkboxes
-    attributes:
-      label: Are you willing to submit a PR?
-      description: |
-        This is absolutely not required, but we are happy to guide you in the contribution process
-        especially if you already have a good understanding of how to implement the fix.
-      options:
-        - label: Yes, I am willing to submit a PR!
-          required: false
