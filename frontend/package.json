@@ -7,7 +7,7 @@
     "start": "yarn workspace @streamlit/app start",
     "build": "yarn workspace @streamlit/lib build && yarn workspace @streamlit/app build",
     "buildFast": "yarn buildLib && yarn workspace @streamlit/app buildFast",
-    "buildLib": "echo If you want to hot reload lib code, from the frontend dir, run: \n echo \"cd ..; make watch-frontend-lib\" && yarn workspace @streamlit/lib build",
+    "buildLib": "yarn workspace @streamlit/lib build",
     "buildApp": "yarn workspace @streamlit/app build",
     "buildAppFast": "yarn workspace @streamlit/app buildFast",
     "typecheck": "yarn workspace @streamlit/lib typecheck && yarn workspace @streamlit/app typecheck",
