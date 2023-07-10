@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from textwrap import dedent
@@ -48,6 +49,9 @@ DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
 DateWidgetReturn: TypeAlias = Union[date, Tuple[()], Tuple[date], Tuple[date, date]]
 
 DEFAULT_STEP_MINUTES = 15
+ALLOWED_DATE_FORMATS = re.compile(
+    r"^(YYYY[/-.]MM[/-.]DD|DD[/-.]MM[/-.]YYYY|MM[/-.]DD[/-.]YYYY)$"
+)
 
 
 def _parse_date_value(value: DateValue) -> Tuple[List[date], bool]:
@@ -410,6 +414,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        format: str = "YYYY/MM/DD",
     ) -> DateWidgetReturn:
         r"""Display a date input widget.
 
@@ -472,6 +477,10 @@ class TimeWidgetsMixin:
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
+        format : str
+            A format string controlling how the interface should display dates.
+            Supports “YYYY/MM/DD” (default), “DD/MM/YYYY”, or “MM/DD/YYYY”.
+            You may also use a period (.) or hyphen (-) as separators.
 
         Returns
         -------
@@ -506,6 +515,7 @@ class TimeWidgetsMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            format=format,
             ctx=ctx,
         )
 
@@ -523,6 +533,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        format: str = "YYYY/MM/DD",
         ctx: Optional[ScriptRunContext] = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
@@ -530,6 +541,12 @@ class TimeWidgetsMixin:
         check_session_state_rules(default_value=value, key=key)
 
         maybe_raise_label_warnings(label, label_visibility)
+
+        if not bool(ALLOWED_DATE_FORMATS.match(format)):
+            raise StreamlitAPIException(
+                "DateInput format should be one of YYYY/MM/DD, DD/MM/YYYY, or MM/DD/YYYY"
+                " and can also use a period (.) or hyphen (-) as separators."
+            )
 
         parsed_values = _DateInputValues.from_raw_values(
             value=value,
@@ -543,6 +560,7 @@ class TimeWidgetsMixin:
         if help is not None:
             date_input_proto.help = dedent(help)
 
+        date_input_proto.format = format
         date_input_proto.label = label
         date_input_proto.default[:] = [
             date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
