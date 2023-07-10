@@ -176,3 +176,7 @@ export const StyledUl = styled.ul(() => ({
   borderTop: "$1px solid rgba(38, 39, 48, 0.2)",
   margin: "-.20rem 0 -.5rem 0",
 }))
+
+export const StyledMainMenuContainer = styled.span(() => ({
+  lineHeight: "initial",
+}))
