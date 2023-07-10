@@ -246,8 +246,10 @@ class DateInput extends React.PureComponent<Props, State> {
         <UIDatePicker
           density={DENSITY.high}
           formatString={dateFormat}
-          mask={dateMask}
-          placeholder={element.format}
+          mask={isRange ? `${dateMask} – ${dateMask}` : dateMask}
+          placeholder={
+            isRange ? `${element.format} – ${element.format}` : element.format
+          }
           disabled={disabled}
           onChange={this.handleChange}
           onClose={this.handleClose}
