@@ -54,10 +54,10 @@ jobs:
 
       - name: Set Python version vars
         uses: ./.github/actions/build_info
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+      - name: Set up Python ${{ env.PYTHON_MIN_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+          python-version: "${{ env.PYTHON_MIN_VERSION }}"
 
       # This section is an inlined copy of the make_init action
       # Both because we need to do some parts of it differently
