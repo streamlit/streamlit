@@ -156,7 +156,8 @@
       "typescript": {
         // tell eslint to look at these tsconfigs for import statements
         "project": [
-          "./tsconfig.dev.json"
+          "lib/tsconfig.json",
+          "app/tsconfig.json"
         ]
       }
     }
