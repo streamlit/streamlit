@@ -1,6 +1,6 @@
 {
     "name": "@streamlit/lib",
-    "version": "1.23.1",
+    "version": "1.24.0",
     "private": true,
     "license": "Apache-2.0",
     "main": "dist/index.js",
@@ -146,6 +146,7 @@
         "jest-environment-jsdom": "^27.4.3",
         "jest-fetch-mock": "^3.0.3",
         "timezone-mock": "^1.3.6",
-        "tsc-alias": "^1.8.5"
+        "tsc-alias": "^1.8.5",
+        "node-fetch": "2.6.7"
     }
 }
