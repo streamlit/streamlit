@@ -28,7 +28,7 @@ import {
 import { useTheme } from "@emotion/react"
 import { StyledExpandableContainer } from "./styled-components"
 
-export interface Props {
+export interface ExpandableProps {
   expandable: boolean
   label: string
   expanded: boolean
@@ -37,10 +37,16 @@ export interface Props {
   isStale: boolean
 }
 
-function withExpandable(
-  WrappedComponent: ComponentType<any>
-): ComponentType<any> {
-  const ExpandableComponent = (props: Props): ReactElement => {
+// Our wrapper takes the wrapped component's props plus ExpandableProps
+type WrapperProps<P> = P & ExpandableProps
+
+// TODO: there's no reason for this to be a HOC. Adapt it to follow the same
+//  pattern as the `Tabs` and `ChatMessage` containers that simply parent their
+//  children.
+function withExpandable<P>(
+  WrappedComponent: ComponentType<P>
+): ComponentType<WrapperProps<P>> {
+  const ExpandableComponent = (props: WrapperProps<P>): ReactElement => {
     const {
       label,
       expanded: initialExpanded,
@@ -164,7 +170,7 @@ function withExpandable(
                 borderStyle: "solid",
                 borderWidth: "1px",
                 borderColor: colors.fadedText10,
-                borderRadius: radii.md,
+                borderRadius: radii.lg,
                 ...(isStale
                   ? {
                       borderColor: colors.fadedText05,
@@ -181,7 +187,12 @@ function withExpandable(
             }
             key="panel"
           >
-            <WrappedComponent {...componentProps} disabled={widgetsDisabled} />
+            <WrappedComponent
+              // (this.props as unknown as P) is required to work around a TS issue:
+              // https://github.com/microsoft/TypeScript/issues/28938#issuecomment-450636046
+              {...(componentProps as unknown as P)}
+              disabled={widgetsDisabled}
+            />
           </Panel>
         </Accordion>
       </StyledExpandableContainer>
