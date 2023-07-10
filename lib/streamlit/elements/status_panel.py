@@ -14,24 +14,33 @@
 
 from __future__ import annotations
 
+import typing
 from typing import Any, Literal
 
 import streamlit as st
 from streamlit import runtime
-from streamlit.cursor import LockedCursor
-from streamlit.delta_generator import _enqueue_message
+from streamlit.cursor import Cursor, LockedCursor
+from streamlit.delta_generator import DeltaGenerator, _enqueue_message
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 StatusPanelBehavior = Literal["autocollapse", "stay_open"]
 
 
-class StatusPanel:
-    def __init__(self, behavior: StatusPanelBehavior = "autocollapse"):
-        self._container = st.container()
-        self._behavior = behavior
+class StatusPanel(DeltaGenerator):
+    """A block DeltaGenerator with a special "stage" function."""
+
+    def __init__(
+        self,
+        root_container: int | None,
+        cursor: Cursor | None,
+        parent: DeltaGenerator | None,
+        block_type: str | None,
+    ):
+        super().__init__(root_container, cursor, parent, block_type)
+        self._behavior: StatusPanelBehavior = "autocollapse"
 
     def stage(self, label: str) -> StatusPanelStage:
-        with self._container:
+        with self:
             return StatusPanelStage(label, self._behavior)
 
 
@@ -93,3 +102,9 @@ class StatusPanelStage:
         if self._behavior == "autocollapse":
             self.set_expanded(False)
         self._expander_dg.__exit__(type, value, traceback)
+
+
+def create_status_panel(behavior: StatusPanelBehavior) -> StatusPanel:
+    status_panel = typing.cast(StatusPanel, st._main._block(dg_type=StatusPanel))
+    status_panel._behavior = behavior
+    return status_panel
