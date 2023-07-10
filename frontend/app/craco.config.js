@@ -23,6 +23,11 @@ module.exports = {
   },
   jest: {
     configure: jestConfig => {
+      const path = require("path")
+      jestConfig.moduleNameMapper["^@streamlit/lib$"] = path.resolve(
+        __dirname,
+        "../lib/src"
+      )
       jestConfig.setupFiles = ["jest-canvas-mock"]
 
       // There is an issue with glide data grid in combination with jest.
