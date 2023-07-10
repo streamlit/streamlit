@@ -39,7 +39,7 @@ class UploadFileUrlInfo(NamedTuple):
     delete_url: str
 
 
-class DeletedFile:
+class DeletedFile(NamedTuple):
     """Represents a deleted file in deserialized values for st.file_uploader and
     st.camera_input
     Return this from st.file_uploader and st.camera_input deserialize (so they can
@@ -48,7 +48,7 @@ class DeletedFile:
     DeleteFile instances filtered out before return final value to the user in script,
     or before sending to frontend."""
 
-    pass
+    file_id: str
 
 
 class UploadedFile(io.BytesIO):

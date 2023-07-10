@@ -121,11 +121,12 @@ class FileUploaderTest(DeltaGeneratorTestCase):
                     self.assertEqual(actual.size, expected.size)
                     self.assertEqual(actual.getvalue(), expected.getvalue())
             else:
-                self.assertEqual(return_val, uploaded_files[0])
-                self.assertEqual(return_val.name, uploaded_files[0].name)
-                self.assertEqual(return_val.type, uploaded_files[0].type)
-                self.assertEqual(return_val.size, uploaded_files[0].size)
-                self.assertEqual(return_val.getvalue(), uploaded_files[0].getvalue())
+                first_uploaded_file = uploaded_files[0]
+                self.assertEqual(return_val, first_uploaded_file)
+                self.assertEqual(return_val.name, first_uploaded_file.name)
+                self.assertEqual(return_val.type, first_uploaded_file.type)
+                self.assertEqual(return_val.size, first_uploaded_file.size)
+                self.assertEqual(return_val.getvalue(), first_uploaded_file.getvalue())
 
     def test_max_upload_size_mb(self):
         """Test that the max upload size is the configuration value."""
@@ -173,7 +174,7 @@ class FileUploaderTest(DeltaGeneratorTestCase):
     def test_deleted_file_omitted(self, get_upload_files_patch):
         """We should omit DeletedFile objects for final user value ."""
 
-        uploaded_files = [DeletedFile()]
+        uploaded_files = [DeletedFile(file_id="A")]
         get_upload_files_patch.return_value = uploaded_files
 
         result_1: UploadedFile = st.file_uploader("a", accept_multiple_files=False)
@@ -190,15 +191,15 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         rec2 = UploadedFileRec("file2", "file2", "type", b"5678")
 
         uploaded_files = [
-            DeletedFile(),
+            DeletedFile(file_id="a"),
             UploadedFile(
                 rec1, FileURLsProto(file_id="file1", delete_url="d1", upload_url="u1")
             ),
-            DeletedFile(),
+            DeletedFile(file_id="b"),
             UploadedFile(
                 rec2, FileURLsProto(file_id="file2", delete_url="d1", upload_url="u1")
             ),
-            DeletedFile(),
+            DeletedFile(file_id="c"),
         ]
 
         get_upload_files_patch.return_value = uploaded_files

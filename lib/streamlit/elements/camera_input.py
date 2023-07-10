@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
@@ -69,10 +68,10 @@ def _get_upload_files(
     for f in uploaded_file_info:
         maybe_file_rec = file_recs.get(f.file_id)
         if maybe_file_rec is not None:
-            uploaded_file = UploadedFile(file_recs[f.file_id], f.file_urls)
+            uploaded_file = UploadedFile(maybe_file_rec, f.file_urls)
             collected_files.append(uploaded_file)
         else:
-            collected_files.append(DeletedFile())
+            collected_files.append(DeletedFile(f.file_id))
 
     return collected_files
 
