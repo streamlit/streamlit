@@ -19,7 +19,7 @@
         "test": "env NODE_OPTIONS=--max_old_space_size=8192 jest --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
         "testWatch": "env NODE_OPTIONS=--max_old_space_size=8192 jest --watchAll --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
         "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 jest --env=../jest/jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
-        "jestCacheClear": "jest --clearCache"
+        "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src"
     },
     "dependencies": {
         "@deck.gl/core": "^8.8.23",

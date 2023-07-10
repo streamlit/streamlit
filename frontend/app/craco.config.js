@@ -24,7 +24,8 @@ module.exports = {
   jest: {
     configure: jestConfig => {
       const path = require("path")
-      // use local files for @streamlit/lib
+      // use local files for @streamlit/lib, specifically needed for yarn test as
+      // jest and webpack configs are different environments
       jestConfig.moduleNameMapper["^@streamlit/lib$"] = path.resolve(
         __dirname,
         "../lib/src"
