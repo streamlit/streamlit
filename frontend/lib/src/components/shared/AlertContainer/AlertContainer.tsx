@@ -18,7 +18,7 @@ import React, { ReactElement, ReactNode } from "react"
 
 import { Notification, KIND } from "baseui/notification"
 import { StyledAlertContent } from "./styled-components"
-import { radii } from "src/lib/theme/primitives"
+import { radii } from "src/theme/primitives"
 
 export enum Kind {
   ERROR = "error",

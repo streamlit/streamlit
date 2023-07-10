@@ -17,14 +17,14 @@
 import React, { ReactElement } from "react"
 import { AutoSizer } from "react-virtualized"
 
-import { Block as BlockProto } from "src/lib/proto"
+import { Block as BlockProto } from "src/proto"
 import ExpandableProto = BlockProto.Expandable
-import { BlockNode, AppNode, ElementNode } from "src/lib/AppNode"
-import { getElementWidgetID } from "src/lib/util/utils"
-import withExpandable from "src/lib/hocs/withExpandable"
-import { Form } from "src/lib/components/widgets/Form"
-import ChatMessage from "src/lib/components/elements/ChatMessage"
-import Tabs, { TabProps } from "src/lib/components/elements/Tabs"
+import { BlockNode, AppNode, ElementNode } from "src/AppNode"
+import { getElementWidgetID } from "src/util/utils"
+import withExpandable from "src/hocs/withExpandable"
+import { Form } from "src/components/widgets/Form"
+import ChatMessage from "src/components/elements/ChatMessage"
+import Tabs, { TabProps } from "src/components/elements/Tabs"
 
 import {
   BaseBlockProps,
