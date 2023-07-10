@@ -412,9 +412,9 @@ class TimeWidgetsMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        format: str = "YYYY/MM/DD",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        format: str = "YYYY/MM/DD",
     ) -> DateWidgetReturn:
         r"""Display a date input widget.
 
@@ -469,6 +469,10 @@ class TimeWidgetsMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        format : str
+            A format string controlling how the interface should display dates.
+            Supports “YYYY/MM/DD” (default), “DD/MM/YYYY”, or “MM/DD/YYYY”.
+            You may also use a period (.) or hyphen (-) as separators.
         disabled : bool
             An optional boolean, which disables the date input if set to True.
             The default is False. This argument can only be supplied by keyword.
@@ -477,10 +481,7 @@ class TimeWidgetsMixin:
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
             "visible". This argument can only be supplied by keyword.
-        format : str
-            A format string controlling how the interface should display dates.
-            Supports “YYYY/MM/DD” (default), “DD/MM/YYYY”, or “MM/DD/YYYY”.
-            You may also use a period (.) or hyphen (-) as separators.
+
 
         Returns
         -------
@@ -531,9 +532,9 @@ class TimeWidgetsMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        format: str = "YYYY/MM/DD",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        format: str = "YYYY/MM/DD",
         ctx: Optional[ScriptRunContext] = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
