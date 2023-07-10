@@ -24,6 +24,7 @@ module.exports = {
   jest: {
     configure: jestConfig => {
       const path = require("path")
+      // use local files for @streamlit/lib
       jestConfig.moduleNameMapper["^@streamlit/lib$"] = path.resolve(
         __dirname,
         "../lib/src"
