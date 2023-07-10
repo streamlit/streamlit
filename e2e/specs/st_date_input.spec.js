@@ -31,12 +31,15 @@ describe("st.date_input", () => {
         "Disabled, no date" +
         "Label hidden" +
         "Label collapsed" +
-        "Single date with callback"
+        "Single date with callback" +
+        "Single date with format" +
+        "Range, two dates with format" +
+        "Range, no date with format"
     );
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stDateInput").should("have.length", 9);
+    cy.get(".stDateInput").should("have.length", 12);
 
     cy.get(".stDateInput").each((el, idx) => {
       // @ts-expect-error
@@ -56,7 +59,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False"
+        "Date Input Changed: False" +
+        "Value 10: 1970-01-01" +
+        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 12: ()"
     );
   });
 
@@ -68,9 +74,7 @@ describe("st.date_input", () => {
 
   it("handles value changes", () => {
     // open date picker
-    cy.get(".stDateInput")
-      .first()
-      .click();
+    cy.get(".stDateInput").first().click();
 
     // select '1970/01/02'
     cy.get(
@@ -88,7 +92,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False"
+        "Date Input Changed: False" +
+        "Value 10: 1970-01-01" +
+        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 12: ()"
     );
   });
 
@@ -112,7 +119,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False"
+        "Date Input Changed: False" +
+        "Value 10: 1970-01-01" +
+        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 12: ()"
     );
   });
 
@@ -136,7 +146,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False"
+        "Date Input Changed: False" +
+        "Value 10: 1970-01-01" +
+        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 12: ()"
     );
 
     // select end date '2019/07/12'
@@ -155,7 +168,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False"
+        "Date Input Changed: False" +
+        "Value 10: 1970-01-01" +
+        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 12: ()"
     );
   });
 
@@ -165,9 +181,7 @@ describe("st.date_input", () => {
       "Value 9: 1970-01-01" + "Date Input Changed: False"
     );
 
-    cy.get(".stDateInput")
-      .last()
-      .click();
+    cy.get(".stDateInput").last().click();
 
     cy.get(
       '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
@@ -181,9 +195,7 @@ describe("st.date_input", () => {
 
   it("reset to default single value if calendar closed empty", () => {
     // open date picker
-    cy.get(".stDateInput")
-      .first()
-      .click();
+    cy.get(".stDateInput").first().click();
 
     // select '1970/01/02'
     cy.get(
@@ -201,14 +213,14 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False"
+        "Date Input Changed: False" +
+        "Value 10: 1970-01-01" +
+        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 12: ()"
     );
 
     // remove input
-    cy.get(".stDateInput")
-      .first()
-      .click()
-      .type("{del}{selectall}{backspace}");
+    cy.get(".stDateInput").first().click().type("{del}{selectall}{backspace}");
 
     // click outside of date input
     cy.contains("Single date").click();
@@ -225,7 +237,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False"
+        "Date Input Changed: False" +
+        "Value 10: 1970-01-01" +
+        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 12: ()"
     );
   });
 
@@ -249,7 +264,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False"
+        "Date Input Changed: False" +
+        "Value 10: 1970-01-01" +
+        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 12: ()"
     );
 
     // select end date '2019/07/12'
@@ -268,7 +286,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False"
+        "Date Input Changed: False" +
+        "Value 10: 1970-01-01" +
+        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 12: ()"
     );
 
     // remove input
@@ -301,39 +322,35 @@ describe("st.date_input", () => {
     cy.changeTheme("Dark");
 
     cy.get(".stDateInput").each((el, idx) => {
-      if (idx === 5 || idx === 2) {
+      if (idx === 5 || idx === 2 || idx === 11) {
         // idx = 5 -> Disabled one cannot be clicked
-        // idx = 2 -> Range with no date calendar flaky (always shows current month/yr, so snapshot fails monthly)
+        // idx = 2 & 11 -> Range with no date calendar flaky (always shows current month/yr, so snapshot fails monthly)
         return;
       }
       const testName = `date_input_calendar_${idx}`;
       cy.getIndexed(".stDateInput", idx).click();
       // Last protects against edge case in CI where two calendar objects open
-      cy.get('[data-baseweb="calendar"]').last().matchImageSnapshot(
-        `${testName}-dark`,
-        {
+      cy.get('[data-baseweb="calendar"]')
+        .last()
+        .matchImageSnapshot(`${testName}-dark`, {
           force: false,
-        }
-      );
+        });
     });
 
     // Revert back to light mode
     cy.changeTheme("Light");
     cy.get(".stDateInput").each((el, idx) => {
-      if (idx === 5 || idx === 2) {
+      if (idx === 5 || idx === 2 || idx === 11) {
         // idx = 5 -> Disabled one cannot be clicked
-        // idx = 2 -> Range with no date calendar flaky (always shows current month/yr, so snapshot fails monthly)
+        // idx = 11 -> Range with no date calendar flaky (always shows current month/yr, so snapshot fails monthly)
         return;
       }
       const testName = `date_input_calendar_${idx}`;
       cy.getIndexed(".stDateInput", idx).click();
       // Last protects against edge case in CI where two calendar objects open
-      cy.get('[data-baseweb="calendar"]').last().matchImageSnapshot(
-        testName,
-        {
-          force: false,
-        }
-      );
+      cy.get('[data-baseweb="calendar"]').last().matchImageSnapshot(testName, {
+        force: false,
+      });
       cy.screenshot();
     });
   });
