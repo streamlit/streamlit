@@ -30,8 +30,8 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   element: DateInputProto.create({
     id: "1",
     label: "Label",
-    default: ["1970/01/01"],
-    min: "1970/1/1",
+    default: ["1970/01/20"],
+    min: "1970/1/20",
     format: "YYYY/MM/DD",
     ...elementProps,
   }),
@@ -65,7 +65,7 @@ describe("DateInput widget", () => {
       <DateInput {...props} />
     )
     expect(getByPlaceholderText("DD.MM.YYYY")).toBeDefined()
-    expect(getByDisplayValue("01.01.1970")).toBeDefined()
+    expect(getByDisplayValue("20.01.1970")).toBeDefined()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -188,7 +188,7 @@ describe("DateInput widget", () => {
     wrapper.find(UIDatePicker).prop("onClose")()
     wrapper.update()
     expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([
-      new Date("1970/1/1"),
+      new Date("1970/1/20"),
     ])
   })
 
@@ -196,7 +196,7 @@ describe("DateInput widget", () => {
     const props = getProps()
     const wrapper = mount(<DateInput {...props} />)
     expect(wrapper.find(UIDatePicker).prop("minDate")).toStrictEqual(
-      new Date("1970/1/1")
+      new Date("1970/1/20")
     )
     expect(wrapper.find(UIDatePicker).prop("maxDate")).toBeUndefined()
   })
