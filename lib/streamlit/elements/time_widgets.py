@@ -50,7 +50,7 @@ DateWidgetReturn: TypeAlias = Union[date, Tuple[()], Tuple[date], Tuple[date, da
 
 DEFAULT_STEP_MINUTES = 15
 ALLOWED_DATE_FORMATS = re.compile(
-    r"^(YYYY[/-.]MM[/-.]DD|DD[/-.]MM[/-.]YYYY|MM[/-.]DD[/-.]YYYY)$"
+    r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
 
 
@@ -545,8 +545,9 @@ class TimeWidgetsMixin:
 
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
             raise StreamlitAPIException(
-                "DateInput format should be one of YYYY/MM/DD, DD/MM/YYYY, or MM/DD/YYYY"
-                " and can also use a period (.) or hyphen (-) as separators."
+                f"The provided format (`{format}`) is not valid. DateInput format "
+                "should be one of `YYYY/MM/DD`, `DD/MM/YYYY`, or `MM/DD/YYYY` "
+                "and can also use a period (.) or hyphen (-) as separators."
             )
 
         parsed_values = _DateInputValues.from_raw_values(
