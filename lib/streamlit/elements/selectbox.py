@@ -81,6 +81,7 @@ class SelectboxMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        placeholder: str = "Select...",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> Optional[T]:
@@ -135,6 +136,8 @@ class SelectboxMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        placeholder : str
+            A string to display when no options are selected. Defaults to 'Select...'.
         disabled : bool
             An optional boolean, which disables the selectbox if set to True.
             The default is False. This argument can only be supplied by keyword.
@@ -175,6 +178,7 @@ class SelectboxMixin:
             on_change=on_change,
             args=args,
             kwargs=kwargs,
+            placeholder=placeholder,
             disabled=disabled,
             label_visibility=label_visibility,
             ctx=ctx,
@@ -192,6 +196,7 @@ class SelectboxMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        placeholder: str = "Select...",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
@@ -219,6 +224,7 @@ class SelectboxMixin:
         selectbox_proto.default = index
         selectbox_proto.options[:] = [str(format_func(option)) for option in opt]
         selectbox_proto.form_id = current_form_id(self.dg)
+        selectbox_proto.placeholder = placeholder
         if help is not None:
             selectbox_proto.help = dedent(help)
 

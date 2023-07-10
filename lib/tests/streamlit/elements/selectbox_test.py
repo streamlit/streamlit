@@ -41,6 +41,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         )
         self.assertEqual(c.default, 0)
         self.assertEqual(c.disabled, False)
+        self.assertEqual(c.placeholder, "Select...")
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -180,3 +181,10 @@ class SelectboxTest(DeltaGeneratorTestCase):
             "Unsupported label_visibility option 'wrong_value'. Valid values are "
             "'visible', 'hidden' or 'collapsed'.",
         )
+
+    def test_placeholder(self):
+        """Test that it can be called with placeholder params."""
+        st.selectbox("the label", ("m", "f"), placeholder="Please select")
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        self.assertEqual(c.placeholder, "Please select")

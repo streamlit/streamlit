@@ -40,6 +40,7 @@ export interface Props {
   label?: string | null
   labelVisibility?: LabelVisibilityOptions
   help?: string
+  placeholder?: string
 }
 
 interface State {
@@ -137,7 +138,7 @@ class Selectbox extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const style = { width: this.props.width }
-    const { label, labelVisibility, help } = this.props
+    const { label, labelVisibility, help, placeholder } = this.props
     let { disabled, options } = this.props
 
     let value = [
@@ -195,6 +196,7 @@ class Selectbox extends React.PureComponent<Props, State> {
           filterOptions={this.filterOptions}
           value={value}
           valueKey="value"
+          placeholder={placeholder}
           overrides={{
             Root: {
               style: () => ({
