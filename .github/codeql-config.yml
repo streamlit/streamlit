@@ -1,6 +1,7 @@
 paths:
   - lib/streamlit
-  - frontend/src
+  - frontend/lib/src
+  - frontend/app/src
 paths-ignore:
-  - "frontend/src/lib/vendor/**"
-  - "frontend/src/app/vendor/**"
+  - "frontend/lib/src/vendor/**"
+  - "frontend/app/src/vendor/**"

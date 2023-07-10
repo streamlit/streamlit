@@ -16,4 +16,4 @@ scripts/audit_frontend_licenses.py @vdonato @kmcgrady @tconkling
 # to be extra-careful with these.
 proto/ @vdonato @tconkling @LukasMasuch @sfc-gh-mnowotka
 lib/streamlit/web/server/server.py @vdonato @tconkling @LukasMasuch @sfc-gh-mnowotka
-frontend/src/lib/DefaultStreamlitEndpoints.ts @vdonato @tconkling @LukasMasuch @sfc-gh-mnowotka
+frontend/lib/src/DefaultStreamlitEndpoints.ts @vdonato @tconkling @LukasMasuch @sfc-gh-mnowotka

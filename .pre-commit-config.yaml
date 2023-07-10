@@ -66,10 +66,20 @@ repos:
         pass_filenames: false
       # Typecheck will be run on CI using --hook-stage manual flag,
       # check out .github/workflows/js-tests.yml "Run linters" step for details.
-      - id: typecheck
-        name: Typecheck
+      - id: typecheck-app
+        name: Typecheck App
         always_run: true
-        entry: yarn --cwd frontend tsc --noEmit
+        entry: yarn --cwd frontend/app tsc --noEmit
+        files: \.(js|jsx|ts|tsx)$
+        language: node
+        pass_filenames: false
+        stages:
+          - manual
+      - id: typecheck-lib
+        name: Typecheck Lib
+        always_run: true
+        # no noEmit flag bc tsconfig.json emitDeclaration key is used
+        entry: yarn --cwd frontend/lib tsc
         files: \.(js|jsx|ts|tsx)$
         language: node
         pass_filenames: false
@@ -116,7 +126,7 @@ repos:
           /vendor/
           |^vendor/
           |^component-lib/declarations/apache-arrow
-          |^frontend/src/assets/css/variables\.scss
+          |^frontend/app/src/assets/css/variables\.scss
       - id: insert-license
         name: Add license for all Proto files
         files: \.proto$
@@ -181,7 +191,7 @@ repos:
       - id: trailing-whitespace
         exclude: |
           (?x)
-          ^frontend/src/assets/
+          ^frontend/app/src/assets/
           |^NOTICES$
           |^proto/streamlit/proto/openmetrics_data_model.proto$
           |\.snap$

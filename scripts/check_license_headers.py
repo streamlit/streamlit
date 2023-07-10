@@ -46,7 +46,7 @@ IGNORE_PATTERN = re.compile(
     # Exclude dev-tools configuration files, because they don't have any
     # degree of creativity.
     r"|^(\.dockerignore|\.editorconfig|\.gitignore|\.gitmodules)$"
-    r"|^frontend/(\.dockerignore|\.eslintrc|\.prettierignore)$"
+    r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
     r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini|pytest\.ini)$"
     r"|^lib/(test|dev)-requirements\.txt$"
     r"|^lib/min-constraints-gen\.txt"
