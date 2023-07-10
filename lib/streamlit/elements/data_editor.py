@@ -66,6 +66,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type, to_key
+from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     import numpy as np
@@ -811,9 +812,17 @@ class DataEditorMixin:
 
         if type_util.is_pandas_styler(data):
             # Pandas styler will only work for non-editable/disabled columns.
-            delta_path = self.dg._get_delta_path_str()
-            default_uuid = str(hash(delta_path))
-            marshall_styler(proto, data, default_uuid)
+            # Get first 10 chars of md5 hash of the key or delta path as styler uuid
+            # and set it as styler uuid.
+            # We are only using the first 10 chars to keep the uuid short since
+            # it will be used for all the cells in the dataframe. Therefore, this
+            # might have a significant impact on the message size. 10 chars
+            # should be good enough to avoid  potential collisions in this case.
+            # Even on collisions, there should not be a big issue with the
+            # rendering in the data editor.
+            styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:10]
+            data.set_uuid(styler_uuid)
+            marshall_styler(proto, data, styler_uuid)
 
         proto.data = type_util.pyarrow_table_to_bytes(arrow_table)
 
