@@ -71,5 +71,5 @@ if runtime.exists():
         key="date_input12",
         on_change=on_change,
     )
-    st.write("Value 12:", st.session_state.date_input9)
+    st.write("Value 12:", st.session_state.date_input12)
     st.write("Date Input Changed:", "date_input_changed" in st.session_state)
