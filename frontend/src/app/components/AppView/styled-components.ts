@@ -91,7 +91,7 @@ export const StyledAppViewBlockContainer =
       if (addPaddingForHeader && !showPadding) {
         topEmbedPadding = "3rem"
       }
-      let bottomEmbedPadding =
+      const bottomEmbedPadding =
         showPadding || addPaddingForChatInput ? "10rem" : "1rem"
       const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
       return {
