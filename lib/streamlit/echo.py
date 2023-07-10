@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ast
 import contextlib
 import re
 import textwrap
 import traceback
-from typing import Iterable, List, Optional
+from typing import Iterable, Optional
 
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -63,25 +64,24 @@ def echo(code_location="above"):
         with source_util.open_python_file(filename) as source_file:
             source_lines = source_file.readlines()
 
-        # Get the indent of the first line in the echo block, skipping over any
-        # empty lines.
-        initial_indent = _get_initial_indent(source_lines[start_line:])
+        # Use ast to parse the Python file and find the code block to display
+        root_node = ast.parse("".join(source_lines))
+        line_to_node_map = {}
 
-        # Iterate over the remaining lines in the source file
-        # until we find one that's indented less than the rest of the
-        # block. That's our end line.
-        #
-        # Note that this is *not* a perfect strategy, because
-        # de-denting is not guaranteed to signal "end of block". (A
-        # triple-quoted string might be dedented but still in the
-        # echo block, for example.)
-        # TODO: rewrite this to parse the AST to get the *actual* end of the block.
-        lines_to_display: List[str] = []
-        for line in source_lines[start_line:]:
-            indent = _get_indent(line)
-            if indent is not None and indent < initial_indent:
-                break
-            lines_to_display.append(line)
+        def collect_body_statements(node):
+            if not hasattr(node, "body"):
+                return
+            for child in node.body:
+                line_to_node_map[child.lineno] = child
+                collect_body_statements(child)
+
+        collect_body_statements(root_node)
+
+        # In AST module the lineno (line numbers) are 1-indexed,
+        # so we decrease it by 1 to lookup in source lines list
+        echo_block_start_line = line_to_node_map[start_line].body[0].lineno - 1
+        echo_block_end_line = line_to_node_map[start_line].end_lineno
+        lines_to_display = source_lines[echo_block_start_line:echo_block_end_line]
 
         code_string = textwrap.dedent("".join(lines_to_display))
 

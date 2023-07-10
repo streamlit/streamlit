@@ -17,7 +17,6 @@ import textwrap
 from typing import TYPE_CHECKING, Any, Tuple, cast
 
 from streamlit.emojis import ALL_EMOJIS
-from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
     from streamlit.type_util import SupportsStr
