@@ -218,7 +218,7 @@ class MultiSelectMixin:
             The max selections that can be selected at a time.
             This argument can only be supplied by keyword.
         placeholder : str
-            An optional string to display when option is not selected.
+            A string to display when no options are selected. Defaults to 'Choose an option'.
         disabled : bool
             An optional boolean, which disables the multiselect widget if set
             to True. The default is False. This argument can only be supplied
