@@ -25,12 +25,15 @@ import {
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
 
-import { FormClearHelper } from "src/components/widgets/Form"
-import withFullScreenWrapper from "src/hocs/withFullScreenWrapper"
-import { Quiver } from "src/dataframes/Quiver"
-import { Arrow as ArrowProto } from "src/proto"
-import { WidgetInfo, WidgetStateManager } from "src/WidgetStateManager"
-import { debounce, isNullOrUndefined } from "src/util/utils"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
+import {
+  WidgetInfo,
+  WidgetStateManager,
+} from "@streamlit/lib/src/WidgetStateManager"
+import { debounce, isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import EditingState from "./EditingState"
 import {

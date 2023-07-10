@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, useCallback, useRef, useState } from "react"
-import { AppContext } from "src/components/AppContext"
+import { AppContext } from "@streamlit/app/src/components/AppContext"
 // We import react-device-detect in this way so that tests can mock its
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"

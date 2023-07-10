@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import React, { ReactElement } from "react"
-import { Markdown as MarkdownProto } from "src/proto"
+import { Markdown as MarkdownProto } from "@streamlit/lib/src/proto"
 import {
   InlineTooltipIcon,
   StyledLabelHelpWrapper,
-} from "src/components/shared/TooltipIcon"
+} from "@streamlit/lib/src/components/shared/TooltipIcon"
 
 export interface MarkdownProps {
   width: number

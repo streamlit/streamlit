@@ -17,10 +17,14 @@
 import React, { ReactElement } from "react"
 import { SwitchCamera } from "@emotion-icons/material-rounded"
 
-import BaseButton, { BaseButtonKind } from "src/components/shared/BaseButton"
-import Icon from "src/components/shared/Icon"
-import Tooltip, { Placement } from "src/components/shared/Tooltip"
-import themeColors from "src/theme/emotionBaseTheme/themeColors"
+import BaseButton, {
+  BaseButtonKind,
+} from "@streamlit/lib/src/components/shared/BaseButton"
+import Icon from "@streamlit/lib/src/components/shared/Icon"
+import Tooltip, {
+  Placement,
+} from "@streamlit/lib/src/components/shared/Tooltip"
+import themeColors from "@streamlit/lib/src/theme/emotionBaseTheme/themeColors"
 import { StyledSwitchFacingModeButton } from "./styled-components"
 
 export enum FacingMode {

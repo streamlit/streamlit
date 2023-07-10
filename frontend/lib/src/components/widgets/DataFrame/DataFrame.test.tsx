@@ -18,10 +18,10 @@ import React from "react"
 
 import { DataEditor as GlideDataEditor } from "@glideapps/glide-data-grid"
 
-import { TEN_BY_TEN } from "src/mocks/arrow"
-import { mount } from "src/test_util"
-import { Quiver } from "src/dataframes/Quiver"
-import { Arrow as ArrowProto } from "src/proto"
+import { TEN_BY_TEN } from "@streamlit/lib/src/mocks/arrow"
+import { mount } from "@streamlit/lib/src/test_util"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 
 import { Resizable } from "re-resizable"
 import DataFrame, { DataFrameProps } from "./DataFrame"

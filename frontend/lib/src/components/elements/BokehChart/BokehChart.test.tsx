@@ -15,14 +15,14 @@
  */
 
 import React from "react"
-import { mount } from "src/test_util"
-import { BokehChart as BokehChartProto } from "src/proto"
+import { mount } from "@streamlit/lib/src/test_util"
+import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 
 import Figure from "./mock"
 
 import { BokehChartProps } from "./BokehChart"
-import Bokeh from "src/vendor/bokeh/bokeh.esm.js"
-jest.mock("src/vendor/bokeh/bokeh.esm.js", () => ({
+import Bokeh from "@streamlit/lib/src/vendor/bokeh/bokeh.esm.js"
+jest.mock("@streamlit/lib/src/vendor/bokeh/bokeh.esm.js", () => ({
   // needed to parse correctly
   __esModule: true,
   default: {

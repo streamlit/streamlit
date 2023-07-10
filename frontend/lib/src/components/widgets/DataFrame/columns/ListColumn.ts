@@ -17,7 +17,7 @@
 import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { isString } from "lodash"
 
-import { isNullOrUndefined } from "src/util/utils"
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import {
   BaseColumn,

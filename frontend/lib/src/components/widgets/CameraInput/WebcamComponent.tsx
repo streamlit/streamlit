@@ -25,12 +25,12 @@ import React, {
 } from "react"
 import { isMobile } from "react-device-detect"
 import Webcam from "react-webcam"
-import { debounce } from "src/util/utils"
+import { debounce } from "@streamlit/lib/src/util/utils"
 
-import Icon from "src/components/shared/Icon"
-import { EmotionTheme } from "src/theme"
-import themeColors from "src/theme/emotionBaseTheme/themeColors"
-import { CAMERA_PERMISSION_URL } from "src/urls"
+import Icon from "@streamlit/lib/src/components/shared/Icon"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+import themeColors from "@streamlit/lib/src/theme/emotionBaseTheme/themeColors"
+import { CAMERA_PERMISSION_URL } from "@streamlit/lib/src/urls"
 
 import CameraInputButton from "./CameraInputButton"
 import SwitchFacingModeButton, { FacingMode } from "./SwitchFacingModeButton"

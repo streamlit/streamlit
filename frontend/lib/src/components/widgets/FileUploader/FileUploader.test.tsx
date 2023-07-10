@@ -17,16 +17,16 @@
 import { ReactWrapper, ShallowWrapper } from "enzyme"
 import React from "react"
 import { FileError } from "react-dropzone"
-import { mount, shallow } from "src/test_util"
+import { mount, shallow } from "@streamlit/lib/src/test_util"
 
 import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   UploadedFileInfo as UploadedFileInfoProto,
-} from "src/proto"
-import { WidgetStateManager } from "src/WidgetStateManager"
-import { notUndefined } from "src/util/utils"
+} from "@streamlit/lib/src/proto"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { notUndefined } from "@streamlit/lib/src/util/utils"
 import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 import { ErrorStatus, UploadFileInfo, UploadingStatus } from "./UploadFileInfo"

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FileUploadClient } from "src/FileUploadClient"
+import { FileUploadClient } from "./FileUploadClient"
 import { mockSessionInfo } from "./mocks/mocks"
 
 const MOCK_FILE_ID = -111

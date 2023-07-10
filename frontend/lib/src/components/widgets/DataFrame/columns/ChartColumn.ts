@@ -21,7 +21,7 @@ import {
 } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
-import { isNullOrUndefined } from "src/util/utils"
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import {
   BaseColumn,

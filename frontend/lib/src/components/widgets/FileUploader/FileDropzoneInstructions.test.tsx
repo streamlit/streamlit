@@ -15,9 +15,9 @@
  */
 
 import React from "react"
-import { mount, shallow } from "src/test_util"
+import { mount, shallow } from "@streamlit/lib/src/test_util"
 
-import { Small } from "src/components/shared/TextElements"
+import { Small } from "@streamlit/lib/src/components/shared/TextElements"
 import FileDropzoneInstructions, { Props } from "./FileDropzoneInstructions"
 
 const getProps = (props: Partial<Props> = {}): Props => ({

@@ -17,7 +17,7 @@
 import React from "react"
 import { act } from "react-dom/test-utils"
 
-import { mount } from "src/test_util"
+import { mount } from "@streamlit/lib/src/test_util"
 import { StyledBox } from "./styled-components"
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent, { Props } from "./WebcamComponent"

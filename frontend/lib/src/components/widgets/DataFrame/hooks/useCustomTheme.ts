@@ -19,7 +19,7 @@ import { transparentize } from "color2k"
 import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
 import { useTheme } from "@emotion/react"
 
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 /**
  * Creates a glide-data-grid compatible theme based on our theme configuration.

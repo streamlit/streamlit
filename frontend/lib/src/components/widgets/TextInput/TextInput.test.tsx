@@ -15,14 +15,14 @@
  */
 
 import React from "react"
-import { shallow, mount } from "src/test_util"
-import { WidgetStateManager } from "src/WidgetStateManager"
+import { shallow, mount } from "@streamlit/lib/src/test_util"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import { Input as UIInput } from "baseui/input"
 import {
   TextInput as TextInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
-} from "src/proto"
+} from "@streamlit/lib/src/proto"
 import TextInput, { Props } from "./TextInput"
 
 const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({

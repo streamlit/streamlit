@@ -1,5 +1,5 @@
 {
-  "extends": "../tsconfig.json",
+  "extends": "../tsconfig.dev.json",
   "compilerOptions": {
     "checkJs": false,
     "baseUrl": ".",
@@ -8,7 +8,6 @@
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src",
-    "paths": { "src/*": ["src/*"] }
   },
   "include": ["src", "declarations.d.ts"],
   "exclude": ["node_modules/**/*", "**/proto.js"]

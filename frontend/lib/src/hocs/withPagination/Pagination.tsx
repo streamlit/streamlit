@@ -16,9 +16,11 @@
 
 import React from "react"
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
-import BaseButton, { BaseButtonKind } from "src/components/shared/BaseButton"
-import Icon from "src/components/shared/Icon"
-import { Small } from "src/components/shared/TextElements"
+import BaseButton, {
+  BaseButtonKind,
+} from "@streamlit/lib/src/components/shared/BaseButton"
+import Icon from "@streamlit/lib/src/components/shared/Icon"
+import { Small } from "@streamlit/lib/src/components/shared/TextElements"
 import { StyledPagination, StyledPaginators } from "./styled-components"
 
 export interface Props {

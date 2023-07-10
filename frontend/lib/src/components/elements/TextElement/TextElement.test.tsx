@@ -15,11 +15,11 @@
  */
 
 import React from "react"
-import { shallow, mount } from "src/test_util"
-import { Text as TextProto } from "src/proto"
+import { shallow, mount } from "@streamlit/lib/src/test_util"
+import { Text as TextProto } from "@streamlit/lib/src/proto"
 import TextElement, { TextProps } from "./TextElement"
 
-import { InlineTooltipIcon } from "src/components/shared/TooltipIcon"
+import { InlineTooltipIcon } from "@streamlit/lib/src/components/shared/TooltipIcon"
 
 const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({
   element: TextProto.create({

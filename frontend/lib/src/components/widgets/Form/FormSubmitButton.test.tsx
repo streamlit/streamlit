@@ -19,16 +19,16 @@ import userEvent from "@testing-library/user-event"
 import { enableAllPlugins } from "immer"
 import React from "react"
 
-import { Button as ButtonProto } from "src/proto"
+import { Button as ButtonProto } from "@streamlit/lib/src/proto"
 
-import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
-import BaseButton from "src/components/shared/BaseButton"
-import { render, shallow } from "src/test_util"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
+import BaseButton from "@streamlit/lib/src/components/shared/BaseButton"
+import { render, shallow } from "@streamlit/lib/src/test_util"
 import {
   createFormsData,
   FormsData,
   WidgetStateManager,
-} from "src/WidgetStateManager"
+} from "@streamlit/lib/src/WidgetStateManager"
 import { FormSubmitButton, Props } from "./FormSubmitButton"
 
 // Required by ImmerJS

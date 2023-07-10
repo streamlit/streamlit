@@ -17,22 +17,25 @@
 import React from "react"
 import { Plus, Minus } from "@emotion-icons/open-iconic"
 import { sprintf } from "sprintf-js"
-import { FormClearHelper } from "src/components/widgets/Form"
-import { logWarning } from "src/util/log"
-import { NumberInput as NumberInputProto } from "src/proto"
-import { WidgetStateManager, Source } from "src/WidgetStateManager"
-import TooltipIcon from "src/components/shared/TooltipIcon"
-import { Placement } from "src/components/shared/Tooltip"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import { logWarning } from "@streamlit/lib/src/util/log"
+import { NumberInput as NumberInputProto } from "@streamlit/lib/src/proto"
+import {
+  WidgetStateManager,
+  Source,
+} from "@streamlit/lib/src/WidgetStateManager"
+import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 
-import Icon from "src/components/shared/Icon"
+import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { Input as UIInput } from "baseui/input"
-import InputInstructions from "src/components/shared/InputInstructions/InputInstructions"
+import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
-} from "src/components/widgets/BaseWidget"
+} from "@streamlit/lib/src/components/widgets/BaseWidget"
 
-import { labelVisibilityProtoValueToEnum } from "src/util/utils"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 
 import {
   StyledInputContainer,

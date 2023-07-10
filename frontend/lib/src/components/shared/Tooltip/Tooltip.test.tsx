@@ -16,7 +16,7 @@
 
 import React from "react"
 import { PLACEMENT } from "baseui/tooltip"
-import { mount } from "src/test_util"
+import { mount } from "@streamlit/lib/src/test_util"
 
 import Tooltip, { Placement, TooltipProps } from "./Tooltip"
 

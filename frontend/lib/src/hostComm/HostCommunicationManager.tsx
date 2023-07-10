@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ICustomThemeConfig, WidgetStates } from "src/proto"
+import { ICustomThemeConfig, WidgetStates } from "@streamlit/lib/src/proto"
 
 import {
   IAllowedMessageOriginsResponse,
@@ -25,12 +25,12 @@ import {
   IToolbarItem,
   DeployedAppMetadata,
 } from "./types"
-import { isValidOrigin } from "src/util/UriUtil"
+import { isValidOrigin } from "@streamlit/lib/src/util/UriUtil"
 // Uncomment this import to test host communication with
 // frontend/hostframe.html:
-// import { IS_DEV_ENV } from "src/lib/baseconsts"
+// import { IS_DEV_ENV } from "@streamlit/lib/src/lib/baseconsts"
 
-import Resolver from "src/util/Resolver"
+import Resolver from "@streamlit/lib/src/util/Resolver"
 
 export const HOST_COMM_VERSION = 1
 

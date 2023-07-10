@@ -16,8 +16,8 @@
 
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
 import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
-import Icon from "src/components/shared/Icon"
-import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+import Icon from "@streamlit/lib/src/components/shared/Icon"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import classNames from "classnames"
 import {

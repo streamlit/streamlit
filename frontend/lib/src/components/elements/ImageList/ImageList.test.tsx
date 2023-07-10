@@ -15,10 +15,10 @@
  */
 
 import React from "react"
-import { shallow } from "src/test_util"
+import { shallow } from "@streamlit/lib/src/test_util"
 
-import { ImageList as ImageListProto } from "src/proto"
-import { mockEndpoints } from "src/mocks/mocks"
+import { ImageList as ImageListProto } from "@streamlit/lib/src/proto"
+import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
 import { ImageList, ImageListProps } from "./ImageList"
 
 describe("ImageList Element", () => {

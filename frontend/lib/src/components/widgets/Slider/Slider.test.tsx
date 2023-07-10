@@ -21,10 +21,10 @@ import TimezoneMock from "timezone-mock"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Slider as SliderProto,
-} from "src/proto"
-import { mount } from "src/test_util"
-import { WidgetStateManager } from "src/WidgetStateManager"
-import { mockTheme } from "src/mocks/mockTheme"
+} from "@streamlit/lib/src/proto"
+import { mount } from "@streamlit/lib/src/test_util"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import Slider, { Props } from "./Slider"
 
 const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({

@@ -1,10 +1,26 @@
-{
-  "env": {
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+module.exports = {
+  env: {
     // allow using browser-defined globals like `window` and `document`
-    "browser": true,
-    "es6": true
+    browser: true,
+    es6: true,
   },
-  "extends": [
+  extends: [
     "airbnb-typescript/base",
     // Uses the recommended rules from @eslint-plugin-react
     "plugin:react/recommended",
@@ -18,26 +34,33 @@
     // This will display prettier errors as ESLint errors.
     // Make sure this is always the last configuration in the extends array.
     "plugin:prettier/recommended",
-    "plugin:jest/recommended"
+    "plugin:jest/recommended",
   ],
   // Specifies the ESLint parser
-  "parser": "@typescript-eslint/parser",
-  "parserOptions": {
-    "project": "./tsconfig.json",
-    "ecmaFeatures": {
-      "jsx": true // Allows for the parsing of JSX
+  parser: "@typescript-eslint/parser",
+  parserOptions: {
+    // make the parser resolve the project configuration relative to .eslintrc.js
+    tsconfigRootDir: __dirname,
+    project: "./tsconfig.dev.json",
+    ecmaFeatures: {
+      jsx: true, // Allows for the parsing of JSX
     },
     // Allows for the parsing of modern ECMAScript features
-    "ecmaVersion": 2018,
+    ecmaVersion: 2018,
     // Allows for the use of imports
-    "sourceType": "module"
+    sourceType: "module",
   },
   // Ignore our auto-generated and vendored code
-  "ignorePatterns": ["lib/src/proto.js", "lib/src/proto.d.ts", "**/vendor/*", "**/node_modules/*"],
-  "plugins": ["no-relative-import-paths"],
+  ignorePatterns: [
+    "lib/src/proto.js",
+    "lib/src/proto.d.ts",
+    "**/vendor/*",
+    "**/node_modules/*",
+  ],
+  plugins: ["no-relative-import-paths"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
-  "rules": {
+  rules: {
     // Use `const` or `let` instead of `var`
     "no-var": "error",
     // We don't use PropTypes
@@ -63,22 +86,19 @@
     "@typescript-eslint/no-unused-vars": [
       "error",
       {
-        "vars": "all",
-        "args": "after-used",
-        "ignoreRestSiblings": false,
-        "argsIgnorePattern": "^_"
-      }
+        vars: "all",
+        args: "after-used",
+        ignoreRestSiblings: false,
+        argsIgnorePattern: "^_",
+      },
     ],
     // It's safe to use functions before they're defined
-    "@typescript-eslint/no-use-before-define": [
-      "warn",
-      { "functions": false }
-    ],
+    "@typescript-eslint/no-use-before-define": ["warn", { functions: false }],
     // Functions must have return types, but we allow
     // inline function expressions to omit them
     "@typescript-eslint/explicit-function-return-type": [
       "warn",
-      { "allowExpressions": true }
+      { allowExpressions: true },
     ],
     // Disallow the @ts-ignore directive in favor of the more
     // strict @ts-expect-error.
@@ -88,15 +108,15 @@
         "ts-expect-error": false,
         "ts-nocheck": false,
         "ts-check": false,
-        "ts-ignore": true
-      }
+        "ts-ignore": true,
+      },
     ],
     // Permit for-of loops (https://stackoverflow.com/a/42237667)
     "no-restricted-syntax": [
       "error",
       "ForInStatement",
       "LabeledStatement",
-      "WithStatement"
+      "WithStatement",
     ],
     // Allow foo.hasOwnProperty("bar")
     "no-prototype-builtins": "off",
@@ -107,11 +127,11 @@
       "error",
       "ignorePackages",
       {
-        "js": "never",
-        "jsx": "never",
-        "ts": "never",
-        "tsx": "never"
-      }
+        js: "never",
+        jsx: "never",
+        ts: "never",
+        tsx: "never",
+      },
     ],
     // Disable a bunch of AirBNB rules we're currently in violation of.
     // TODO: For each one, either fix and reenable, or provide a justification.
@@ -128,9 +148,9 @@
     "no-plusplus": "off",
     "no-relative-import-paths/no-relative-import-paths": [
       "error",
-      { "allowSameFolder": true, "rootDir": "src", "prefix": "src" }
+      { allowSameFolder: true, rootDir: "src", prefix: "src" },
     ],
-    "no-else-return": ["error", { "allowElseIf": true }],
+    "no-else-return": ["error", { allowElseIf: true }],
     // TODO: Go through and fix failing jest tests and re-enable these rules
     "jest/expect-expect": "off",
     "jest/no-alias-methods": "off",
@@ -142,23 +162,20 @@
     "jest/no-standalone-expect": "off",
     "jest/no-test-prefixes": "off",
     "jest/valid-expect": "off",
-    "jest/valid-title": "off"
+    "jest/valid-title": "off",
   },
-  "settings": {
-    "react": {
+  settings: {
+    react: {
       // Tells eslint-plugin-react to automatically detect
       // the version of React to use
-      "version": "detect"
+      version: "detect",
     },
     // Check for import violation in all JS-like files
     "import/resolver": {
-      "typescript": {
+      typescript: {
         // tell eslint to look at these tsconfigs for import statements
-        "project": [
-          "lib/tsconfig.json",
-          "app/tsconfig.json"
-        ]
-      }
-    }
-  }
+        project: ["lib/tsconfig.json", "app/tsconfig.json"],
+      },
+    },
+  },
 }

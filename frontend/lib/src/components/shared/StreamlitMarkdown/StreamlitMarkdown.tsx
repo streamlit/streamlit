@@ -38,18 +38,18 @@ import rehypeKatex from "rehype-katex"
 import { Link as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
-import CodeBlock from "src/components/elements/CodeBlock"
-import IsSidebarContext from "src/components/core/IsSidebarContext"
-import ErrorBoundary from "src/components/shared/ErrorBoundary"
+import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
+import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
+import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
 import {
   getMdBlue,
   getMdGreen,
   getMdOrange,
   getMdRed,
   getMdViolet,
-} from "src/theme"
+} from "@streamlit/lib/src/theme"
 
-import { LibContext } from "src/components/core/LibContext"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
   StyledHeaderContainer,
   StyledHeaderContent,
@@ -59,7 +59,7 @@ import {
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
-import StreamlitSyntaxHighlighter from "src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
+import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 
 export enum Tags {
   H1 = "h1",

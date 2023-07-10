@@ -34,7 +34,7 @@ import {
   ForwardMsg,
   IBackMsg,
 } from "@streamlit/lib"
-import { ConnectionState } from "src/connection/ConnectionState"
+import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import React, { Fragment } from "react"
 
 /**

@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-import { LabelVisibilityOptions } from "src/util/utils"
+import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 
 export interface StyledWidgetProps {
   disabled?: boolean | null

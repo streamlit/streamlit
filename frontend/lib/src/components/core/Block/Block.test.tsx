@@ -15,10 +15,10 @@
  */
 
 import React from "react"
-import { Block as BlockProto } from "src/proto"
-import { mount } from "src/test_util"
-import { BlockNode } from "src/AppNode"
-import { ScriptRunState } from "src/ScriptRunState"
+import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import { mount } from "@streamlit/lib/src/test_util"
+import { BlockNode } from "@streamlit/lib/src/AppNode"
+import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 
 import VerticalBlock from "./Block"
 

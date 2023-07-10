@@ -27,8 +27,8 @@ import {
   sizes,
   spacing,
   zIndices,
-} from "src/theme/primitives"
-import { createEmotionColors } from "src/theme/getColors"
+} from "@streamlit/lib/src/theme/primitives"
+import { createEmotionColors } from "@streamlit/lib/src/theme/getColors"
 import genericColors from "./themeColors"
 
 export default {

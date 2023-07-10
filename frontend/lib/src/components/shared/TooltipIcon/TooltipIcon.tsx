@@ -15,13 +15,15 @@
  */
 
 import React, { ReactElement, ReactNode } from "react"
-import Tooltip, { Placement } from "src/components/shared/Tooltip"
+import Tooltip, {
+  Placement,
+} from "@streamlit/lib/src/components/shared/Tooltip"
 import { HelpCircle as HelpCircleIcon } from "react-feather"
 import StreamlitMarkdown, {
   StreamlitMarkdownProps,
-} from "src/components/shared/StreamlitMarkdown"
+} from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { useTheme } from "@emotion/react"
-import { EmotionTheme } from "src/theme"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   StyledTooltipIconWrapper,
   StyledLabelHelpInline,

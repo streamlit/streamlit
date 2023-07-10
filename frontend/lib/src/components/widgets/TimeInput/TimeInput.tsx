@@ -15,18 +15,21 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { TimeInput as TimeInputProto } from "src/proto"
+import { TimeInput as TimeInputProto } from "@streamlit/lib/src/proto"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
-import { FormClearHelper } from "src/components/widgets/Form"
-import { WidgetStateManager, Source } from "src/WidgetStateManager"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import {
+  WidgetStateManager,
+  Source,
+} from "@streamlit/lib/src/WidgetStateManager"
 import {
   WidgetLabel,
   StyledWidgetLabelHelp,
-} from "src/components/widgets/BaseWidget"
-import TooltipIcon from "src/components/shared/TooltipIcon"
-import { Placement } from "src/components/shared/Tooltip"
+} from "@streamlit/lib/src/components/widgets/BaseWidget"
+import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 
-import { labelVisibilityProtoValueToEnum } from "src/util/utils"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 
 export interface Props {
   disabled: boolean

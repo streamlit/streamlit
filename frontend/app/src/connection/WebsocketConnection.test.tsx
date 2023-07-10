@@ -19,7 +19,7 @@ import { WS } from "jest-websocket-mock"
 import { zip } from "lodash"
 import React, { Fragment } from "react"
 
-import { ConnectionState } from "src/connection/ConnectionState"
+import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import {
   SessionInfo,
   mockEndpoints,
@@ -32,7 +32,7 @@ import {
   WebsocketConnection,
   doInitPings,
   Args,
-} from "src/connection/WebsocketConnection"
+} from "@streamlit/app/src/connection/WebsocketConnection"
 
 const MOCK_ALLOWED_ORIGINS_RESPONSE = {
   data: {

@@ -16,17 +16,20 @@
 
 import React from "react"
 import { withTheme } from "@emotion/react"
-import { labelVisibilityProtoValueToEnum } from "src/util/utils"
+import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
 import { Checkbox as UICheckbox } from "baseui/checkbox"
-import { Checkbox as CheckboxProto } from "src/proto"
+import { Checkbox as CheckboxProto } from "@streamlit/lib/src/proto"
 import { transparentize } from "color2k"
-import { FormClearHelper } from "src/components/widgets/Form"
-import { WidgetStateManager, Source } from "src/WidgetStateManager"
-import { EmotionTheme } from "src/theme"
-import TooltipIcon from "src/components/shared/TooltipIcon"
-import { Placement } from "src/components/shared/Tooltip"
-import { StyledWidgetLabelHelpInline } from "src/components/widgets/BaseWidget"
-import StreamlitMarkdown from "src/components/shared/StreamlitMarkdown"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
+import {
+  WidgetStateManager,
+  Source,
+} from "@streamlit/lib/src/WidgetStateManager"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+import { StyledWidgetLabelHelpInline } from "@streamlit/lib/src/components/widgets/BaseWidget"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import { StyledContent } from "./styled-components"
 

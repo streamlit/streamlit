@@ -18,12 +18,12 @@ import React from "react"
 import "@testing-library/jest-dom"
 import { fireEvent } from "@testing-library/react"
 import { act } from "react-dom/test-utils"
-import { render } from "src/test_util"
-import { WidgetStateManager } from "src/WidgetStateManager"
+import { render } from "@streamlit/lib/src/test_util"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TimeInput as TimeInputProto,
-} from "src/proto"
+} from "@streamlit/lib/src/proto"
 import TimeInput, { Props } from "./TimeInput"
 
 const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({

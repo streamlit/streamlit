@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { mount } from "src/test_util"
+import { mount } from "@streamlit/lib/src/test_util"
 
 import AlertContainer, { AlertContainerProps, Kind } from "./AlertContainer"
 

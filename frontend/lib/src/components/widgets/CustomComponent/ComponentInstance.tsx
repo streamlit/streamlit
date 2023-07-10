@@ -19,23 +19,29 @@ import {
   ComponentInstance as ComponentInstanceProto,
   ISpecialArg,
   SpecialArg as SpecialArgProto,
-} from "src/proto"
-import AlertElement from "src/components/elements/AlertElement"
-import { Kind } from "src/components/shared/AlertContainer"
-import ErrorElement from "src/components/shared/ErrorElement"
+} from "@streamlit/lib/src/proto"
+import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
+import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
+import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 import { withTheme } from "@emotion/react"
-import { ensureError } from "src/util/ErrorHandling"
+import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
-} from "src/util/IFrameUtil"
-import { logError, logWarning } from "src/util/log"
-import { Timer } from "src/util/Timer"
-import { Source, WidgetStateManager } from "src/WidgetStateManager"
+} from "@streamlit/lib/src/util/IFrameUtil"
+import { logError, logWarning } from "@streamlit/lib/src/util/log"
+import { Timer } from "@streamlit/lib/src/util/Timer"
+import {
+  Source,
+  WidgetStateManager,
+} from "@streamlit/lib/src/WidgetStateManager"
 import queryString from "query-string"
 import React, { createRef, ReactNode } from "react"
-import { EmotionTheme, toExportedTheme } from "src/theme"
-import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "src/urls"
+import { EmotionTheme, toExportedTheme } from "@streamlit/lib/src/theme"
+import {
+  COMMUNITY_URL,
+  COMPONENT_DEVELOPER_URL,
+} from "@streamlit/lib/src/urls"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 

@@ -15,15 +15,15 @@
  */
 
 import React from "react"
-import { mount } from "src/test_util"
-import { WidgetStateManager } from "src/WidgetStateManager"
+import { mount } from "@streamlit/lib/src/test_util"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import { Select as UISelect, TYPE } from "baseui/select"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   MultiSelect as MultiSelectProto,
-} from "src/proto"
-import { mockTheme } from "src/mocks/mockTheme"
+} from "@streamlit/lib/src/proto"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import Multiselect, { Props } from "./Multiselect"
 
 const getProps = (elementProps: Partial<MultiSelectProto> = {}): Props => ({

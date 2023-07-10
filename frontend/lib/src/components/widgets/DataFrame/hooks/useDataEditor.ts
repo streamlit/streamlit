@@ -24,13 +24,13 @@ import {
   ValidatedGridCell,
 } from "@glideapps/glide-data-grid"
 
-import { logWarning } from "src/util/log"
-import { notNullOrUndefined } from "src/util/utils"
+import { logWarning } from "@streamlit/lib/src/util/log"
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import {
   BaseColumn,
   isErrorCell,
-} from "src/components/widgets/DataFrame/columns"
-import EditingState from "src/components/widgets/DataFrame/EditingState"
+} from "@streamlit/lib/src/components/widgets/DataFrame/columns"
+import EditingState from "@streamlit/lib/src/components/widgets/DataFrame/EditingState"
 
 /**
  * Create return type for useDataLoader hook based on the DataEditorProps.

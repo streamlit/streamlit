@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { mount } from "src/test_util"
+import { mount } from "@streamlit/lib/src/test_util"
 import { fromJS, Map as ImmutableMap } from "immutable"
 
 import { table, emptyTable } from "./mock"

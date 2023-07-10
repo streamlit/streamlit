@@ -15,9 +15,9 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { mount } from "src/test_util"
+import { mount } from "@streamlit/lib/src/test_util"
 
-import FullScreenWrapper from "src/components/shared/FullScreenWrapper"
+import FullScreenWrapper from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import withFullScreenWrapper from "./withFullScreenWrapper"
 
 interface TestProps {

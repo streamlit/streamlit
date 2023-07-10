@@ -18,11 +18,14 @@ import React, { ReactElement } from "react"
 import { useTheme } from "@emotion/react"
 import JSON5 from "json5"
 import ReactJson from "react-json-view"
-import ErrorElement from "src/components/shared/ErrorElement"
+import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 
-import { Json as JsonProto } from "src/proto"
-import { hasLightBackgroundColor, EmotionTheme } from "src/theme"
-import { ensureError } from "src/util/ErrorHandling"
+import { Json as JsonProto } from "@streamlit/lib/src/proto"
+import {
+  hasLightBackgroundColor,
+  EmotionTheme,
+} from "@streamlit/lib/src/theme"
+import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 
 export interface JsonProps {
   width: number
