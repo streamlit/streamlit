@@ -81,7 +81,10 @@ export default function AlertContainer({
             marginRight: 0,
             width: width ? width.toString() : undefined,
             border: 0,
-            borderRadius: radii.lg,
+            borderTopRightRadius: radii.lg,
+            borderBottomRightRadius: radii.lg,
+            borderTopLeftRadius: radii.lg,
+            borderBottomLeftRadius: radii.lg,
           },
         },
         InnerContainer: {
