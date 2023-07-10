@@ -12,7 +12,7 @@
     "testWatch": "env NODE_OPTIONS=\"--experimental-worker --max_old_space_size=8192\" craco test --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=../jest/jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 --cache src"
+    "lint": "eslint --ext .js --ext .jsx --ext .ts --ext .tsx --max-warnings 0 src"
   },
   "jest": {
     "resetMocks": false,
@@ -25,13 +25,14 @@
     ]
   },
   "dependencies": {
-    "@streamlit/lib": "1.23.1",
     "@emotion-icons/emotion-icon": "^4.1.0",
     "@emotion-icons/material-outlined": "^3.14.0",
+    "@emotion-icons/material-rounded": "^3.14.0",
     "@emotion-icons/open-iconic": "^3.14.0",
     "@emotion/react": "^11.10.5",
     "@emotion/serialize": "^1.1.1",
     "@emotion/styled": "^11.10.5",
+    "@streamlit/lib": "1.23.1",
     "axios": "^0.27.2",
     "baseui": "12.2.0",
     "classnames": "^2.3.2",
