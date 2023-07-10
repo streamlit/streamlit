@@ -442,7 +442,6 @@ class CameraInput extends React.PureComponent<Props, State> {
     if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
       this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
     }
-
     this.removeFile(fileId)
   }
 
