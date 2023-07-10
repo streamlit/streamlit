@@ -244,6 +244,7 @@ class DateInput extends React.PureComponent<Props, State> {
           )}
         </WidgetLabel>
         <UIDatePicker
+          data-testid="stDateInputPicker"
           density={DENSITY.high}
           formatString={dateFormat}
           mask={isRange ? `${dateMask} – ${dateMask}` : dateMask}

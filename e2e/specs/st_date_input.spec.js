@@ -31,10 +31,10 @@ describe("st.date_input", () => {
         "Disabled, no date" +
         "Label hidden" +
         "Label collapsed" +
-        "Single date with callback" +
         "Single date with format" +
         "Range, two dates with format" +
-        "Range, no date with format"
+        "Range, no date with format" +
+        "Single date with callback"
     );
   });
 
@@ -59,10 +59,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False" +
-        "Value 10: 1970-01-01" +
-        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 12: ()"
+        "Value 10: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 11: ()" +
+        "Value 12: 1970-01-01" +
+        "Date Input Changed: False"
     );
   });
 
@@ -92,10 +92,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False" +
-        "Value 10: 1970-01-01" +
-        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 12: ()"
+        "Value 10: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 11: ()" +
+        "Value 12: 1970-01-01" +
+        "Date Input Changed: False"
     );
   });
 
@@ -119,10 +119,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False" +
-        "Value 10: 1970-01-01" +
-        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 12: ()"
+        "Value 10: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 11: ()" +
+        "Value 12: 1970-01-01" +
+        "Date Input Changed: False"
     );
   });
 
@@ -146,10 +146,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False" +
-        "Value 10: 1970-01-01" +
-        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 12: ()"
+        "Value 10: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 11: ()" +
+        "Value 12: 1970-01-01" +
+        "Date Input Changed: False"
     );
 
     // select end date '2019/07/12'
@@ -168,10 +168,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False" +
-        "Value 10: 1970-01-01" +
-        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 12: ()"
+        "Value 10: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 11: ()" +
+        "Value 12: 1970-01-01" +
+        "Date Input Changed: False"
     );
   });
 
@@ -213,10 +213,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False" +
-        "Value 10: 1970-01-01" +
-        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 12: ()"
+        "Value 10: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 11: ()" +
+        "Value 12: 1970-01-01" +
+        "Date Input Changed: False"
     );
 
     // remove input
@@ -237,10 +237,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False" +
-        "Value 10: 1970-01-01" +
-        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 12: ()"
+        "Value 10: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 11: ()" +
+        "Value 12: 1970-01-01" +
+        "Date Input Changed: False"
     );
   });
 
@@ -264,10 +264,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False" +
-        "Value 10: 1970-01-01" +
-        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 12: ()"
+        "Value 10: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 11: ()" +
+        "Value 12: 1970-01-01" +
+        "Date Input Changed: False"
     );
 
     // select end date '2019/07/12'
@@ -286,10 +286,10 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
-        "Date Input Changed: False" +
-        "Value 10: 1970-01-01" +
-        "Value 11: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
-        "Value 12: ()"
+        "Value 10: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 11: ()" +
+        "Value 12: 1970-01-01" +
+        "Date Input Changed: False"
     );
 
     // remove input
@@ -312,6 +312,9 @@ describe("st.date_input", () => {
         "Value 7: 2019-07-06" +
         "Value 8: 2019-07-06" +
         "Value 9: 1970-01-01" +
+        "Value 10: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 8))" +
+        "Value 11: ()" +
+        "Value 12: 1970-01-01" +
         "Date Input Changed: False"
     );
   });

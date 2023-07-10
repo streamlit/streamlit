@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { mount } from "src/lib/test_util"
+import { mount, render } from "src/lib/test_util"
 import { WidgetStateManager } from "src/lib/WidgetStateManager"
 import {
   DateInput as DateInputProto,
@@ -55,6 +55,17 @@ describe("DateInput widget", () => {
     const props = getProps()
     const wrapper = mount(<DateInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+  })
+
+  it("displays the correct placeholder and value for the provided format", () => {
+    const props = getProps({
+      format: "DD.MM.YYYY",
+    })
+    const { getByPlaceholderText, getByDisplayValue } = render(
+      <DateInput {...props} />
+    )
+    expect(getByPlaceholderText("DD.MM.YYYY")).toBeDefined()
+    expect(getByDisplayValue("01.01.1970")).toBeDefined()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
