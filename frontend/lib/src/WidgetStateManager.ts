@@ -206,7 +206,7 @@ export class WidgetStateManager {
    * Commit pending changes for widgets that belong to the given form,
    * and send a rerunBackMsg to the server.
    */
-  public submitForm(formId: string): void {
+  public submitForm(formId: string, actualSubmitButton?: WidgetInfo): void {
     if (!isValidFormId(formId)) {
       // This should never get thrown - only FormSubmitButton calls this
       // function.
@@ -215,16 +215,23 @@ export class WidgetStateManager {
 
     const form = this.getOrCreateFormState(formId)
 
-    // Create the button's triggerValue. Just like with a regular button,
-    // `st.form_submit_button()` returns True during a rerun after
-    // it's clicked.
     const submitButtons = this.formsData.submitButtons.get(formId)
 
-    // can have an empty list of submitButtons
-    if (submitButtons !== undefined && submitButtons.length > 0) {
-      // click the first submit button. We can choose any so we just choose first.
-      this.createWidgetState(submitButtons[0], { fromUi: true }).triggerValue =
-        true
+    if (actualSubmitButton !== undefined) {
+      // Create the button's triggerValue. Just like with a regular button,
+      // `st.form_submit_button()` returns True during a rerun after
+      // it's clicked.
+      this.createWidgetState(actualSubmitButton, {
+        fromUi: true,
+      }).triggerValue = true
+    } else {
+      // can have an empty list of submitButtons
+      if (submitButtons !== undefined && submitButtons.length > 0) {
+        // click the first submit button. We can choose any so we just choose first.
+        this.createWidgetState(submitButtons[0], {
+          fromUi: true,
+        }).triggerValue = true
+      }
     }
 
     // Copy the form's values into widgetStates, delete the form's pending
@@ -235,7 +242,9 @@ export class WidgetStateManager {
     this.sendUpdateWidgetsMessage()
     this.syncFormsWithPendingChanges()
 
-    if (submitButtons !== undefined && submitButtons.length > 0) {
+    if (actualSubmitButton !== undefined) {
+      this.deleteWidgetState(actualSubmitButton.id)
+    } else if (submitButtons !== undefined && submitButtons.length > 0) {
       // Reset the button's triggerValue.
       this.deleteWidgetState(submitButtons[0].id)
     }

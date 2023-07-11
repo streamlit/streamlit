@@ -452,6 +452,16 @@ describe("Widget State Manager", () => {
       widgetMgr.submitForm(FORM_2.formId)
       expect(formsData.formsWithPendingChanges).toEqual(new Set())
     })
+
+    it("supports two submit buttons and can click the second one", () => {
+      // Submit the first form.
+      widgetMgr.submitForm(FORM_2.formId)
+
+      // Our backMsg should be populated with the first form widget value
+      expect(sendBackMsg).toHaveBeenCalledWith({
+        widgets: [{ id: FORM_2.id, stringValue: "bar" }],
+      })
+    })
   })
 })
 

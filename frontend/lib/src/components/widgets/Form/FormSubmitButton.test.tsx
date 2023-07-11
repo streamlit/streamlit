@@ -110,7 +110,8 @@ describe("FormSubmitButton", () => {
 
     await user.click(screen.getByRole("button"))
     expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
-      props.element.formId
+      props.element.formId,
+      props.element
     )
   })
 
