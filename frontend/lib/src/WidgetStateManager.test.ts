@@ -450,7 +450,6 @@ describe("Widget State Manager", () => {
 
     it("calls sendBackMsg with data from both forms", () => {
       widgetMgr.submitForm(FORM_1.formId)
-      // Submit the first form and then the second form.
       widgetMgr.submitForm(
         FORM_2.formId,
         new ButtonProto({ id: "submitButton2" })
@@ -460,6 +459,7 @@ describe("Widget State Manager", () => {
       // plus the second submitButton's fromSubmitValue.
       expect(sendBackMsg).toHaveBeenLastCalledWith({
         widgets: [
+          { id: FORM_1.id, stringValue: "foo" },
           { id: "submitButton2", triggerValue: true },
           { id: FORM_2.id, stringValue: "bar" },
         ],
