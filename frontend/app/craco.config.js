@@ -51,9 +51,7 @@ module.exports = {
     },
   },
   webpack: {
-    configure: webpackConfig => {
-      // this file overrides the default CRA configurations (webpack, eslint, babel, etc)
-      const TsconfigPathsPlugin = require("tsconfig-paths-webpack-plugin")
+    configure: ({ webpackConfig, env }) => {
       // ignore webpack warnings by source-map-loader https://github.com/facebook/create-react-app/pull/11752
       webpackConfig.ignoreWarnings = [/Failed to parse source map from/]
       webpackConfig.resolve.mainFields = ["module", "main"]
@@ -96,21 +94,26 @@ module.exports = {
         minimizerPlugins[terserPluginIndex].options.parallel = parallel
       }
 
-      // Remove ModuleScopePlugin which throws when we try to import something
-      // outside of src/.
-      webpackConfig.resolve.plugins.pop()
+      if (env === "production") {
+        // this file overrides the default CRA configurations (webpack, eslint, babel, etc)
+        const TsconfigPathsPlugin = require("tsconfig-paths-webpack-plugin")
 
-      // Resolve the path aliases.
-      webpackConfig.resolve.plugins.push(new TsconfigPathsPlugin())
+        // Remove ModuleScopePlugin which throws when we try to import something
+        // outside of src/.
+        webpackConfig.resolve.plugins.pop()
 
-      // Let Babel compile outside of src/.
-      const oneOfRule = webpackConfig.module.rules.find(rule => rule.oneOf)
-      const tsRule = oneOfRule.oneOf.find(rule =>
-        rule.test.toString().includes("ts|tsx")
-      )
+        // Resolve the path aliases.
+        webpackConfig.resolve.plugins.push(new TsconfigPathsPlugin())
 
-      tsRule.include = undefined
-      tsRule.exclude = /node_modules/
+        // Let Babel compile outside of src/.
+        const oneOfRule = webpackConfig.module.rules.find(rule => rule.oneOf)
+        const tsRule = oneOfRule.oneOf.find(rule =>
+          rule.test.toString().includes("ts|tsx")
+        )
+
+        tsRule.include = undefined
+        tsRule.exclude = /node_modules/
+      }
 
       return webpackConfig
     },
