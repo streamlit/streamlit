@@ -393,6 +393,24 @@ describe("Widget State Manager", () => {
         `invalid formID ${MOCK_WIDGET.formId}`
       )
     })
+
+    it("submits the form for the first submitButton if an actualSubmitButton proto is passed", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "firstSubmitButton" })
+      )
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "secondSubmitButton" })
+      )
+      // Submit the form
+      widgetMgr.submitForm(formId)
+
+      expect(sendBackMsg).toHaveBeenCalledWith({
+        widgets: [{ id: "firstSubmitButton", triggerValue: true }],
+      })
+    })
   })
 
   describe("Forms don't interfere with each other", () => {
@@ -483,7 +501,10 @@ describe("Widget State Manager", () => {
       )
 
       // Submit the second form.
-      widgetMgr.submitForm(FORM_2.formId)
+      widgetMgr.submitForm(
+        FORM_2.formId,
+        new ButtonProto({ id: "submitButton2" })
+      )
 
       expect(sendBackMsg).toHaveBeenCalledWith({
         widgets: [
