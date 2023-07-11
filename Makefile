@@ -211,12 +211,15 @@ clean:
 	rm -f lib/streamlit/proto/*_pb2.py*
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock
-	rm -rf frontend/build
+	rm -rf frontend/app/build
 	rm -rf frontend/node_modules
+	rm -rf frontend/app/node_modules
+	rm -rf frontend/lib/node_modules
 	rm -rf frontend/test_results
-	rm -f frontend/src/lib/proto.js
-	rm -f frontend/src/lib/proto.d.ts
+	rm -f frontend/lib/src/proto.js
+	rm -f frontend/lib/src/proto.d.ts
 	rm -rf frontend/public/reports
+	rm -rf frontend/lib/dist
 	rm -rf ~/.cache/pre-commit
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
@@ -257,14 +260,14 @@ protobuf: check-protoc
 		yarn --silent pbjs \
 			../proto/streamlit/proto/*.proto \
 			-t static-module --wrap es6 \
-	) > ./src/lib/proto.js
+	) > ./lib/src/proto.js
 
 	@# Typescript type declarations for our generated protobufs
 	cd frontend/ ; ( \
 		echo "/* eslint-disable */" ; \
 		echo ; \
-		yarn --silent pbts ./src/lib/proto.js \
-	) > ./src/lib/proto.d.ts
+		yarn --silent pbts ./lib/src/proto.js \
+	) > ./lib/src/proto.d.ts
 
 .PHONY: react-init
 react-init:
@@ -274,26 +277,35 @@ react-init:
 react-build:
 	cd frontend/ ; yarn run build
 	rsync -av --delete --delete-excluded --exclude=reports \
-		frontend/build/ lib/streamlit/static/
+		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-fast
 # Build frontend into static files faster by setting BUILD_AS_FAST_AS_POSSIBLE=true flag, which disables eslint and typechecking.
 frontend-fast:
 	cd frontend/ ; yarn run buildFast
 	rsync -av --delete --delete-excluded --exclude=reports \
-		frontend/build/ lib/streamlit/static/
+		frontend/app/build/ lib/streamlit/static/
+
+.PHONY: frontend-lib
+# Build the frontend library
+frontend-lib:
+	cd frontend/ ; yarn run buildLib;
+
+.PHONY: frontend-app
+# Build the frontend app. One must build the frontend lib first before building the app.
+frontend-app:
+	cd frontend/ ; yarn run buildApp
 
 .PHONY: jslint
 # Lint the JS code
 jslint:
-	./scripts/validate_frontend_lib_imports.py frontend/src/lib
 	cd frontend; \
 		yarn lint;
 
 .PHONY: tstypecheck
 # Type check the JS/TS code
 tstypecheck:
-	pre-commit run typecheck --all-files --hook-stage manual
+	pre-commit run typecheck-lib --all-files --hook-stage manual && pre-commit run typecheck-app --all-files --hook-stage manual
 
 .PHONY: jsformat
 # Fix formatting issues in our JavaScript & TypeScript files.
@@ -335,15 +347,22 @@ notices:
 	cd frontend; \
 		yarn licenses generate-disclaimer --silent --production --ignore-platform > ../NOTICES
 
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
-	./scripts/append_license.sh frontend/src/lib/vendor/bokeh/bokeh-LICENSE.txt
-	./scripts/append_license.sh frontend/src/lib/vendor/twemoji-LICENSE.txt
-	./scripts/append_license.sh frontend/src/app/vendor/Segment-LICENSE.txt
-	./scripts/append_license.sh frontend/src/lib/vendor/react-bootstrap-LICENSE.txt
+	@# When `yarn licenses` is run in a yarn workspace, it misnames the project as
+	@# "WORKSPACE AGGREGATOR 2B7C80A7 6734 4A68 BB93 8CC72B9A5DEA". We fix that here.
+	@# There also isn't a portable way to invoke `sed` to edit files in-place, so we have
+	@# sed create a NOTICES.bak backup file that we immediately delete afterwards.
+	sed -i'.bak' 's/PORTIONS OF THE .*PRODUCT/PORTIONS OF THE STREAMLIT PRODUCT/' NOTICES
+	rm -f NOTICES.bak
+
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/img/Material-Icons.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/lib/src/vendor/bokeh/bokeh-LICENSE.txt
+	./scripts/append_license.sh frontend/lib/src/vendor/twemoji-LICENSE.txt
+	./scripts/append_license.sh frontend/app/src/vendor/Segment-LICENSE.txt
+	./scripts/append_license.sh frontend/lib/src/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh lib/streamlit/vendor/ipython/IPython-LICENSE.txt
 
 .PHONY: headers
