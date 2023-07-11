@@ -94,7 +94,7 @@ module.exports = {
         minimizerPlugins[terserPluginIndex].options.parallel = parallel
       }
 
-      if (env === "production") {
+      if (env === "development") {
         // this file overrides the default CRA configurations (webpack, eslint, babel, etc)
         const TsconfigPathsPlugin = require("tsconfig-paths-webpack-plugin")
 
