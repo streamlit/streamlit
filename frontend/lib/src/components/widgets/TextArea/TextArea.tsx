@@ -33,7 +33,6 @@ import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import {
   isInForm,
   labelVisibilityProtoValueToEnum,
-  submitFormWidget,
 } from "@streamlit/lib/src/util/utils"
 import { StyledTextAreaContainer } from "./styled-components"
 
@@ -166,7 +165,12 @@ class TextArea extends React.PureComponent<Props, State> {
       this.commitWidgetValue({ fromUi: true })
       const { formId } = this.props.element
       if (isInForm({ formId })) {
-        submitFormWidget(formId, this.props.widgetMgr)
+        const submitButton = this.props.widgetMgr.getSubmitButton(
+          this.props.element.formId
+        )
+        if (submitButton !== undefined) {
+          this.props.widgetMgr.submitForm(this.props.element.formId)
+        }
       }
     }
   }

@@ -21,7 +21,6 @@ import {
 } from "@streamlit/lib/src/proto"
 import _ from "lodash"
 import xxhash from "xxhashjs"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -465,14 +464,4 @@ export function isTesting(): boolean {
     }
   })
   return isTesting
-}
-
-export function submitFormWidget(
-  formId: string,
-  widgetMgr: WidgetStateManager
-): void {
-  const submitButton = widgetMgr.getSubmitButton(formId)
-  if (submitButton !== undefined) {
-    widgetMgr.submitForm(formId)
-  }
 }

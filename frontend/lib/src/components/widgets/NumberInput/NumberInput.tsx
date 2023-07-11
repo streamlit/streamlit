@@ -38,7 +38,6 @@ import {
 import {
   isInForm,
   labelVisibilityProtoValueToEnum,
-  submitFormWidget,
 } from "@streamlit/lib/src/util/utils"
 
 import {
@@ -278,7 +277,7 @@ class NumberInput extends React.PureComponent<Props, State> {
         this.commitWidgetValue({ fromUi: true })
       }
       if (isInForm(this.props.element)) {
-        submitFormWidget(this.props.element.formId, this.props.widgetMgr)
+        this.props.widgetMgr.submitForm(this.props.element.formId)
       }
     }
   }

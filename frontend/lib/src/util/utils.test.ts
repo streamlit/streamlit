@@ -21,12 +21,8 @@ import {
   getEmbedUrlParams,
   EMBED_QUERY_PARAM_VALUES,
   EMBED_QUERY_PARAM_KEY,
-  submitFormWidget,
 } from "./utils"
 
-import { Props as FormSubmitProps } from "@streamlit/lib/src/components/widgets/Form/FormSubmitButton"
-import { Button as ButtonProto } from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { enableAllPlugins } from "immer"
 
 // Required by ImmerJS and for submitForm
@@ -272,59 +268,5 @@ describe("isEmbed", () => {
       },
     }))
     expect(isEmbed()).toBe(false)
-  })
-})
-
-describe("submitFormWidget", () => {
-  let widgetMgr: WidgetStateManager
-
-  beforeEach(() => {
-    widgetMgr = new WidgetStateManager({
-      sendRerunBackMsg: jest.fn(),
-      formsDataChanged: jest.fn(),
-    })
-    WidgetStateManager.prototype.submitForm = jest.fn()
-    // createWidgetState is private but spy on it anyways
-    // @ts-expect-error
-    WidgetStateManager.prototype.createWidgetState = jest.fn()
-  })
-
-  function getProps(
-    props: Partial<FormSubmitProps> = {},
-    useContainerWidth = false
-  ): FormSubmitProps {
-    return {
-      element: ButtonProto.create({
-        id: "1",
-        label: "Submit",
-        formId: "mockFormId",
-        help: "mockHelpText",
-        useContainerWidth,
-      }),
-      disabled: false,
-      hasInProgressUpload: false,
-      width: 0,
-      widgetMgr,
-      ...props,
-    }
-  }
-
-  it("should submit the form when the submit button exists", () => {
-    const props = getProps()
-
-    widgetMgr.addSubmitButton(props.element.formId, props.element)
-    submitFormWidget(props.element.formId, widgetMgr)
-    expect(widgetMgr.submitForm).toHaveBeenCalledWith(props.element.formId)
-  })
-
-  it("should not submit the form when no submit button exists", () => {
-    const props = getProps()
-
-    widgetMgr.addSubmitButton(props.element.formId, props.element)
-    widgetMgr.removeSubmitButton(props.element.formId, props.element)
-    submitFormWidget(props.element.formId, widgetMgr)
-    // createWidgetState is private but spy on it anyways. will check if submit button is pressed
-    // @ts-expect-error
-    expect(widgetMgr.createWidgetState).not.toHaveBeenCalled()
   })
 })

@@ -32,7 +32,6 @@ import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import {
   isInForm,
   labelVisibilityProtoValueToEnum,
-  submitFormWidget,
 } from "@streamlit/lib/src/util/utils"
 import { StyledTextInput } from "./styled-components"
 
@@ -156,7 +155,12 @@ class TextInput extends React.PureComponent<Props, State> {
         this.commitWidgetValue({ fromUi: true })
       }
       if (isInForm(this.props.element)) {
-        submitFormWidget(this.props.element.formId, this.props.widgetMgr)
+        const submitButton = this.props.widgetMgr.getSubmitButton(
+          this.props.element.formId
+        )
+        if (submitButton !== undefined) {
+          this.props.widgetMgr.submitForm(this.props.element.formId)
+        }
       }
     }
   }
