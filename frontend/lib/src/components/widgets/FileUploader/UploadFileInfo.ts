@@ -15,7 +15,7 @@
  */
 
 import { CancelTokenSource } from "axios"
-import { FileURLs, IFileURLs } from "src/lib/proto"
+import { FileURLs, IFileURLs } from "@streamlit/lib/src/proto"
 
 export interface UploadingStatus {
   type: "uploading"
