@@ -139,6 +139,7 @@ function AppView(props: AppViewProps): ReactElement {
       isWideMode={wideMode}
       showPadding={showPadding}
       addPaddingForHeader={showToolbar || showColoredLine}
+      addPaddingForChatInput={containsChatInput}
     >
       <VerticalBlock
         node={node}

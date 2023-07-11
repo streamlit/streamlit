@@ -111,7 +111,7 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 
   public render(): React.ReactNode {
-    const { options, help, label, labelVisibility, formId } =
+    const { options, help, label, labelVisibility, formId, placeholder } =
       this.props.element
     const { disabled, widgetMgr } = this.props
 
@@ -134,6 +134,7 @@ class Selectbox extends React.PureComponent<Props, State> {
         onChange={this.onChange}
         value={this.state.value}
         help={help}
+        placeholder={placeholder}
       />
     )
   }

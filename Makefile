@@ -213,6 +213,8 @@ clean:
 	rm -f lib/Pipfile.lock
 	rm -rf frontend/app/build
 	rm -rf frontend/node_modules
+	rm -rf frontend/app/node_modules
+	rm -rf frontend/lib/node_modules
 	rm -rf frontend/test_results
 	rm -f frontend/lib/src/proto.js
 	rm -f frontend/lib/src/proto.d.ts
@@ -408,8 +410,3 @@ connect-test-env:
 .PHONY: pre-commit-install
 pre-commit-install:
 	pre-commit install
-
-# Watch the frontend lib for changes and run yarn buildLib whenever a change is detected
-.PHONY: watch-frontend-lib
-watch-frontend-lib:
-	python scripts/watch_frontend_lib.py

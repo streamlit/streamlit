@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,20 +14,26 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+describe("embedded app with chat input", () => {
+  before(() => {
+    cy.loadApp("http://localhost:3000/?embed=true");
 
-import "streamlit/proto/LabelVisibilityMessage.proto";
+    cy.prepForElementSnapshots();
+  });
 
-message Selectbox {
-  string id = 1;
-  string label = 2;
-  int32 default = 3;
-  repeated string options = 4;
-  string help = 5;
-  string form_id = 6;
-  int32 value = 7;
-  bool set_value = 8;
-  bool disabled = 9;
-  LabelVisibilityMessage label_visibility = 10;
-  string placeholder = 11;
-}
+  it("uses the correct bottom padding", () => {
+    cy.get(".main .block-container").should(
+      "have.css",
+      "padding-bottom",
+      "160px" // == 10rem
+    );
+  });
+
+  it("uses the correct top padding", () => {
+    cy.get(".main .block-container").should(
+      "have.css",
+      "padding-top",
+      "16px" // == 1rem
+    );
+  });
+});

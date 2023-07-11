@@ -32,6 +32,7 @@ const getProps = (elementProps: Partial<MultiSelectProto> = {}): Props => ({
     label: "Label",
     default: [0],
     options: ["a", "b", "c"],
+    placeholder: "Please select",
     ...elementProps,
   }),
   width: 0,
@@ -114,9 +115,7 @@ describe("Multiselect widget", () => {
     it("renders when it's not empty", () => {
       const props = getProps()
       const wrapper = mount(<Multiselect {...props} />)
-      expect(wrapper.find(UISelect).prop("placeholder")).toBe(
-        "Choose an option"
-      )
+      expect(wrapper.find(UISelect).prop("placeholder")).toBe("Please select")
     })
 
     it("renders with empty options", () => {
