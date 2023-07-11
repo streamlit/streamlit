@@ -44,9 +44,7 @@ export function FormSubmitButton(props: Props): ReactElement {
   useEffect(() => {
     widgetMgr.addSubmitButton(formId, element)
     return () => widgetMgr.removeSubmitButton(formId, element)
-    // FormSubmitButton proto will not always refresh so we don't include it in dependency array
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [widgetMgr, formId])
+  }, [widgetMgr, formId, element])
 
   return (
     <div

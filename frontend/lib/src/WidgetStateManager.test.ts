@@ -354,8 +354,13 @@ describe("Widget State Manager", () => {
 
   describe("submitForm", () => {
     it("calls sendBackMsg with expected data", () => {
-      // Populate a form
       const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      // Populate a form
       widgetMgr.setStringValue({ id: "widget1", formId }, "foo", {
         fromUi: true,
       })
@@ -370,8 +375,10 @@ describe("Widget State Manager", () => {
       widgetMgr.submitForm(formId)
 
       // Our backMsg should be populated with our two widget values
+      // plus the submitButton's value.
       expect(sendBackMsg).toHaveBeenCalledWith({
         widgets: [
+          { id: "submitButton", triggerValue: true },
           { id: "widget1", stringValue: "foo" },
           { id: "widget2", stringValue: "bar" },
         ],
@@ -417,12 +424,20 @@ describe("Widget State Manager", () => {
     })
 
     it("calls sendBackMsg with the first form data", () => {
+      widgetMgr.addSubmitButton(
+        FORM_1.formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
       // Submit the first form.
       widgetMgr.submitForm(FORM_1.formId)
 
       // Our backMsg should be populated with the first form widget value
       expect(sendBackMsg).toHaveBeenCalledWith({
-        widgets: [{ id: FORM_1.id, stringValue: "foo" }],
+        widgets: [
+          { id: "submitButton", triggerValue: true },
+          { id: FORM_1.id, stringValue: "foo" },
+        ],
       })
     })
 
@@ -434,14 +449,18 @@ describe("Widget State Manager", () => {
     })
 
     it("calls sendBackMsg with data from both forms", () => {
-      // Submit the first form and then the second form.
       widgetMgr.submitForm(FORM_1.formId)
-      widgetMgr.submitForm(FORM_2.formId)
+      // Submit the first form and then the second form.
+      widgetMgr.submitForm(
+        FORM_2.formId,
+        new ButtonProto({ id: "submitButton2" })
+      )
 
-      // Our most recent backMsg should be populated with the both forms' widget values
+      // Our most recent backMsg should be populated with the both forms' widget values,
+      // plus the second submitButton's fromSubmitValue.
       expect(sendBackMsg).toHaveBeenLastCalledWith({
         widgets: [
-          { id: FORM_1.id, stringValue: "foo" },
+          { id: "submitButton2", triggerValue: true },
           { id: FORM_2.id, stringValue: "bar" },
         ],
       })
@@ -454,12 +473,23 @@ describe("Widget State Manager", () => {
     })
 
     it("supports two submit buttons and can click the second one", () => {
-      // Submit the first form.
+      widgetMgr.addSubmitButton(
+        FORM_1.formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.addSubmitButton(
+        FORM_2.formId,
+        new ButtonProto({ id: "submitButton2" })
+      )
+
+      // Submit the second form.
       widgetMgr.submitForm(FORM_2.formId)
 
-      // Our backMsg should be populated with the first form widget value
       expect(sendBackMsg).toHaveBeenCalledWith({
-        widgets: [{ id: FORM_2.id, stringValue: "bar" }],
+        widgets: [
+          { id: "submitButton2", triggerValue: true },
+          { id: FORM_2.id, stringValue: "bar" },
+        ],
       })
     })
   })
