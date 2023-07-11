@@ -189,6 +189,12 @@ ALLOWED_MESSAGE_ORIGINS = [
 
 
 class AllowedMessageOriginsHandler(_SpecialRequestHandler):
+    def initialize(self):
+        self.allowed_message_origins = [*ALLOWED_MESSAGE_ORIGINS]
+        if config.get_option("global.developmentMode"):
+            # Allow messages from localhost in dev mode for testing of host <-> guest communication
+            self.allowed_message_origins.append("http://localhost")
+
     async def get(self) -> None:
         # ALLOWED_MESSAGE_ORIGINS must be wrapped in a dictionary because Tornado
         # disallows writing lists directly into responses due to potential XSS
@@ -196,7 +202,7 @@ class AllowedMessageOriginsHandler(_SpecialRequestHandler):
         # See https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write
         self.write(
             {
-                "allowedOrigins": ALLOWED_MESSAGE_ORIGINS,
+                "allowedOrigins": self.allowed_message_origins,
                 "useExternalAuthToken": False,
             }
         )
