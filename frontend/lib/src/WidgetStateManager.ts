@@ -221,7 +221,10 @@ export class WidgetStateManager {
 
     if (actualSubmitButton !== undefined) {
       selectedSubmitButton = actualSubmitButton
-    } else if (submitButtons !== undefined && submitButtons.length > 0) {
+    }
+    // can have an empty list of submitButtons
+    else if (submitButtons !== undefined && submitButtons.length > 0) {
+      // click the first submit button. We can choose any so we just choose first.
       selectedSubmitButton = submitButtons[0]
     }
 
