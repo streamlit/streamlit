@@ -18,19 +18,19 @@ import streamlit as st
 status = st.status_panel(behavior="autocollapse")
 
 with status.stage("🤔 Creating files...") as s:
-    text = st.text("Doing a thing...")
+    st.text("Doing a thing...")
     time.sleep(3)
-    text.text("Done!")
+    st.text("Done!")
     s.set_label("✅ Created!")
 
 with status.stage("🤔 Reticulating splines...") as s:
-    text = st.text("Doing a thing...")
+    st.text("Doing a thing...")
     time.sleep(3)
-    text.text("Done!")
+    st.text("Done!")
     s.set_label("✅ Reticulated!")
 
 with status.stage("🤔 Watering dromedaries...") as s:
-    text = st.text("Doing a thing...")
+    st.text("Doing a thing...")
     time.sleep(3)
-    text.text("Done!")
+    st.text("Done!")
     s.set_label("✅ Watered!")
