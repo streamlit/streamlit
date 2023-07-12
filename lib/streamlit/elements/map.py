@@ -412,7 +412,10 @@ def _convert_color_arg_or_column(
     if color_col_name is not None:
         # Convert color column to the right format.
         if len(data[color_col_name]) > 0 and is_color_like(data[color_col_name][0]):
-            data[color_col_name] = data[color_col_name].apply(to_int_color_tuple)
+            # Use .loc[] to avoid a SettingWithCopyWarning in some cases.
+            data.loc[:, color_col_name] = data.loc[:, color_col_name].map(
+                to_int_color_tuple
+            )
         else:
             raise StreamlitAPIException(
                 f'Column "{color_col_name}" does not appear to contain valid colors.'
