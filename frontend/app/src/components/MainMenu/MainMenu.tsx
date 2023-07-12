@@ -55,7 +55,7 @@ import {
   StyledMenuItemLabel,
   StyledMenuItemShortcut,
   StyledRecordingIndicator,
-  StyledUl,
+  StyledMenuContainer,
   StyledMainMenuContainer,
 } from "./styled-components"
 
@@ -270,6 +270,7 @@ const SubMenu = (props: SubMenuProps): ReactElement => {
           },
           style: {
             backgroundColor: "inherit",
+            borderRadius: 0,
 
             ":focus": {
               outline: "none",
@@ -573,7 +574,7 @@ function MainMenu(props: Props): ReactElement {
       }}
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
-        <>
+        <StyledMenuContainer>
           {menuItems.length != 0 && (
             <SubMenu
               menuItems={menuItems}
@@ -583,16 +584,14 @@ function MainMenu(props: Props): ReactElement {
             />
           )}
           {devMenuItems.length != 0 && (
-            <StyledUl>
-              <SubMenu
-                menuItems={devMenuItems}
-                closeMenu={close}
-                isDevMenu={true}
-                metricsMgr={props.metricsMgr}
-              />
-            </StyledUl>
+            <SubMenu
+              menuItems={devMenuItems}
+              closeMenu={close}
+              isDevMenu={true}
+              metricsMgr={props.metricsMgr}
+            />
           )}
-        </>
+        </StyledMenuContainer>
       )}
       overrides={{
         Body: {

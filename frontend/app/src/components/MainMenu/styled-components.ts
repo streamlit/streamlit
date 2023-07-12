@@ -171,10 +171,27 @@ export const StyledMenuItemLabel = styled.span(({ theme }) => ({
   fontFamily: theme.fonts.sansSerif,
 }))
 
-export const StyledUl = styled.ul(() => ({
-  borderBottom: "$1px solid rgba(38, 39, 48, 0.2)",
-  borderTop: "$1px solid rgba(38, 39, 48, 0.2)",
-  margin: "-.20rem 0 -.5rem 0",
+export const StyledMenuContainer = styled.div(({ theme }) => ({
+  // We start by adding border radius to all menus
+  ul: {
+    borderRadius: theme.radii.lg,
+  },
+
+  // This selects the standard menu only if there's another menu below.
+  // We use this to override the bottom border radius on the last item if the developer options menu is visible.
+  "& > ul[role=listbox]:not(:last-child)": {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+
+  // This selects the developer options menu, if it exists.
+  // We use this to override the top border radius.
+  "ul[role=listbox] ~ ul[role=listbox]": {
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    boxShadow: "none",
+    borderTop: "none",
+  },
 }))
 
 export const StyledMainMenuContainer = styled.span(() => ({

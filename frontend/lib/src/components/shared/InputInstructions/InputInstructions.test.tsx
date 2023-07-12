@@ -22,6 +22,7 @@ import InputInstructions, { Props } from "./InputInstructions"
 const getProps = (props: Partial<Props> = {}): Props => ({
   dirty: true,
   value: "asd",
+  inForm: false,
   ...props,
 })
 
@@ -113,5 +114,31 @@ describe("InputInstructions", () => {
 
       expect(getByTestId("InputInstructions").textContent).toBe("3/3")
     })
+  })
+
+  describe("In Form", () => {
+    it("should show correct instructions to submit form with single line input", () => {
+      const props = getProps({
+        inForm: true,
+        type: "single",
+      })
+      const { getByTestId } = render(<InputInstructions {...props} />)
+
+      expect(getByTestId("InputInstructions").textContent).toBe(
+        "Press Enter to submit form"
+      )
+    })
+  })
+
+  it("should show correct instructions to submit form with multiline input", () => {
+    const props = getProps({
+      inForm: true,
+      type: "multiline",
+    })
+    const { getByTestId } = render(<InputInstructions {...props} />)
+
+    expect(getByTestId("InputInstructions").textContent).toBe(
+      "Press ⌘+Enter to submit form"
+    )
   })
 })
