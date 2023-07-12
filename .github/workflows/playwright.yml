@@ -21,7 +21,7 @@ concurrency:
 
 
 jobs:
-  js_test:
+  test:
     runs-on: ubuntu-latest
 
     defaults:
@@ -51,12 +51,12 @@ jobs:
       - name: Run make protobuf
         run: make protobuf
       - name: Run make frontend
-        run: make frontend
+        run: make frontend-fast
       - name: Run your tests
-        working-directory: ./e2e/playwright
-        run: pytest --browser webkit --browser chromium --browser firefox
+        run: |
+          cd ./e2e/playwright
+          pytest --browser webkit --browser chromium --browser firefox
       - name: Check that all screenshot have been committed
-        working-directory: ./e2e/playwright
         run: |
           set -x;
 
