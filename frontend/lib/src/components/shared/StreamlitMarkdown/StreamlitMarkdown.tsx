@@ -95,6 +95,11 @@ export interface Props {
    * Checkbox has larger label font sizing
    */
   isCheckbox?: boolean
+
+  /**
+   * Toast has smaller font sizing
+   */
+  isToast?: boolean
 }
 
 /**
@@ -312,40 +317,34 @@ export function RenderedMarkdown({
     remarkDirective,
     remarkColoring,
   ]
-  const rehypePlugins: PluggableList = [rehypeKatex]
 
-  if (allowHTML) {
-    rehypePlugins.push(rehypeRaw)
-  }
+  const rehypePlugins: PluggableList = [
+    rehypeKatex,
+    ...(allowHTML ? [rehypeRaw] : []),
+  ]
 
   // Sets disallowed markdown for widget labels
-  let disallowed
-  if (isLabel) {
+  const disallowed = [
     // Restricts images, table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
-    disallowed = [
-      "img",
-      "table",
-      "thead",
-      "tbody",
-      "tr",
-      "th",
-      "td",
-      "h1",
-      "h2",
-      "h3",
-      "ul",
-      "ol",
-      "li",
-      "input",
-      "hr",
-      "blockquote",
-    ]
-
-    if (isButton) {
-      // Button labels additionally restrict links
-      disallowed.push("a")
-    }
-  }
+    "img",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "h1",
+    "h2",
+    "h3",
+    "ul",
+    "ol",
+    "li",
+    "input",
+    "hr",
+    "blockquote",
+    // Button labels additionally restrict links
+    ...(isButton ? ["a"] : []),
+  ]
 
   return (
     <ErrorBoundary>
@@ -354,7 +353,7 @@ export function RenderedMarkdown({
         rehypePlugins={rehypePlugins}
         components={renderers}
         transformLinkUri={transformLinkUri}
-        disallowedElements={disallowed}
+        disallowedElements={isLabel ? disallowed : []}
         // unwrap and render children from invalid markdown
         unwrapDisallowed={true}
       >
@@ -390,6 +389,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
       isLabel,
       isButton,
       isCheckbox,
+      isToast,
     } = this.props
     const isInSidebar = this.context
 
@@ -400,6 +400,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isLabel={isLabel}
         isButton={isButton}
         isCheckbox={isCheckbox}
+        isToast={isToast}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
       >

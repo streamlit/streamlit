@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+import React from "react"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
 
-// Constants for our three "RootContainers" - the top-level containers
-// that `st.foo` and `st.sidebar.foo` write to. Each value corresponds
-// to the first index in any `delta_path` that uses these containers.
-// (This enum is not used in any protobuf messages; we declare it here so
-// that the values remain synced between Python and the frontend.)
-enum RootContainer {
-  MAIN = 0;
-  SIDEBAR = 1;
-  EVENT = 2;
-}
+import { render } from "@streamlit/lib/src/test_util"
+
+import EventContainer from "./EventContainer"
+
+describe("EventContainer Component", () => {
+  test("renders Toast Container", () => {
+    render(<EventContainer toastAdjustment={false} scriptRunId="123" />)
+
+    const toastContainer = screen.getByTestId("toastContainer")
+    expect(toastContainer).toBeInTheDocument()
+  })
+})
