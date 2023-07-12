@@ -141,6 +141,8 @@ def wait_for_app_loaded(page: Page):
         "[data-testid='stAppViewContainer']", timeout=20000, state="attached"
     )
 
+    # Give the app a little more time to render everything
+    time.sleep(0.5)
     # Check that "Please wait..." does not exist within the 'stAppViewContainer'
     app_view_container = page.query_selector("[data-testid='stAppViewContainer']")
     if (
