@@ -45,6 +45,20 @@ d8 = st.date_input(
 )
 st.write("Value 8:", d8)
 
+d9 = st.date_input("Single date with format", date(1970, 1, 1), format="MM-DD-YYYY")
+st.write("Value 9:", d9)
+
+d10 = st.date_input(
+    "Range, two dates with format",
+    [date(2019, 7, 6), date(2019, 7, 8)],
+    format="MM/DD/YYYY",
+)
+st.write("Value 10:", d10)
+
+d11 = st.date_input("Range, no date with format", [], format="DD.MM.YYYY")
+st.write("Value 11:", d11)
+
+
 if runtime.exists():
 
     def on_change():
@@ -54,8 +68,8 @@ if runtime.exists():
         "Single date with callback",
         date(1970, 1, 1),
         min_value=date(1970, 1, 1),
-        key="date_input9",
+        key="date_input12",
         on_change=on_change,
     )
-    st.write("Value 9:", st.session_state.date_input9)
+    st.write("Value 12:", st.session_state.date_input12)
     st.write("Date Input Changed:", "date_input_changed" in st.session_state)

@@ -210,3 +210,47 @@ class DateInputTest(DeltaGeneratorTestCase):
             "Unsupported label_visibility option 'wrong_value'. Valid values are "
             "'visible', 'hidden' or 'collapsed'.",
         )
+
+    @parameterized.expand(
+        [
+            ("YYYY/MM/DD"),
+            ("DD/MM/YYYY"),
+            ("MM/DD/YYYY"),
+            ("YYYY.MM.DD"),
+            ("DD.MM.YYYY"),
+            ("MM.DD.YYYY"),
+            ("YYYY-MM-DD"),
+            ("DD-MM-YYYY"),
+            ("MM-DD-YYYY"),
+        ]
+    )
+    def test_supported_date_format_values(self, format: str):
+        """Test that it can be called with supported date formats."""
+        st.date_input("the label", format=format)
+        msg = self.get_delta_from_queue().new_element.date_input
+        self.assertEqual(msg.label, "the label")
+        self.assertEqual(msg.format, format)
+
+    @parameterized.expand(
+        [
+            ("YYYY:MM:DD"),  # Unexpected separator
+            ("DD:MM:YYYY"),  # Unexpected separator
+            ("MM:DD:YYYY"),  # Unexpected separator
+            ("YYYY/DD/MM"),  # Incorrect order
+            ("DD/YYYY/MM"),  # Incorrect order
+            ("MM/YYYY/DD"),  # Incorrect order
+            ("YYYY/MM/DDo"),  # Unsupported format
+            ("DDo/MM/YYYY"),  # Unsupported format
+            ("Mo/DD/YYYY"),  # Unsupported format
+            ("Q/DD/YYYY"),  # Unsupported format
+            ("YYYY/QQ/DD"),  # Unsupported format
+            ("YYYY/Q/DD"),  # Unsupported format
+            ("YYYY/MM/DD HH:mm:ss"),  # Unsupported format
+            (""),  # Empty not allowed
+        ]
+    )
+    def test_invalid_date_format_values(self, format: str):
+        """Test that it raises an exception for invalid date formats."""
+        with self.assertRaises(StreamlitAPIException) as ex:
+            st.date_input("the label", format=format)
+        self.assertTrue(str(ex.exception).startswith("The provided format"))
