@@ -84,6 +84,7 @@ from streamlit.elements.snow import SnowMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.text_widgets import TextWidgetsMixin
 from streamlit.elements.time_widgets import TimeWidgetsMixin
+from streamlit.elements.toast import ToastMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.logger import get_logger
@@ -190,6 +191,7 @@ class DeltaGenerator(
     TextMixin,
     TextWidgetsMixin,
     TimeWidgetsMixin,
+    ToastMixin,
     WriteMixin,
     ArrowMixin,
     ArrowAltairMixin,

@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.dev.json",
+  "compilerOptions": {
+    "checkJs": false,
+    "baseUrl": ".",
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src",
+  },
+  "include": ["src", "declarations.d.ts"],
+  "exclude": ["node_modules/**/*", "**/proto.js"]
+}

@@ -29,4 +29,5 @@ message Selectbox {
   bool set_value = 8;
   bool disabled = 9;
   LabelVisibilityMessage label_visibility = 10;
+  string placeholder = 11;
 }
