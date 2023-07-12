@@ -233,10 +233,9 @@ class ImageCompareFunction(Protocol):
 def assert_snapshot(
     request: FixtureRequest,
 ) -> Generator[ImageCompareFunction, None, None]:
+    """Fixture that compares a screenshot with screenshot from a past run."""
     platform = str(sys.platform)
-    module_name = (
-        request.module.__name__
-    )  # Alternative: str(os.path.basename(Path(request.node.fspath))).strip(".py")
+    module_name = request.module.__name__
     test_function_name = request.node.originalname
     root_path = Path(request.node.fspath).parent.resolve()
 
@@ -256,13 +255,6 @@ def assert_snapshot(
 
     snapshot_default_file_name: str = test_function_name + snapshot_file_suffix
 
-    # print("module", request.module.__name__)
-    # print(request.node.keywords)
-    # print("nodeid", request.node.nodeid)
-    # print("originalname", request.node.originalname)
-
-    # test_name = f"{str(Path(request.node.name))}[{str(sys.platform)}]"
-    # test_dir = str(Path(request.node.name)).split("[", 1)[0]
     test_failure_messages: List[str] = []
 
     def compare(
