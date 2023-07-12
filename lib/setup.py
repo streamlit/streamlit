@@ -60,6 +60,9 @@ INSTALL_REQUIRES = [
     "typing-extensions>=4.1.0, <5",
     "tzlocal>=1.1, <5",
     "validators>=0.2, <1",
+    # jsonschema is a dependency of altair. The patch version 4.18.1 seems to be broken
+    # resulting in the error mentioned here: https://github.com/python-jsonschema/jsonschema/issues/1124
+    "jsonschema!=4.18.1",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
     "watchdog>=2.1.5; platform_system != 'Darwin'",
