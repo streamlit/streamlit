@@ -195,9 +195,9 @@ function AppView(props: AppViewProps): ReactElement {
       >
         {renderBlock(elements.main)}
         {/* Anchor indicates to the iframe resizer that this is the lowest
-        possible point to determine height. But we don't add an anchor if there is a
-        bottom pinned chat_input in the app, since those two aspects don't work well together.
-        */}
+        possible point to determine height. But we don't add an anchor if there is
+        a bottom pinned chat_input in the app, since those two aspects don't work
+        well together. */}
         {!containsChatInput && (
           <StyledIFrameResizerAnchor
             hasFooter={!embedded || showFooter}
