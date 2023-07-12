@@ -415,9 +415,7 @@ class LayoutsMixin:
     def status_panel(self, behavior: "StatusPanelBehavior") -> "StatusPanel":
         from streamlit.elements.status_panel import StatusPanel
 
-        status_panel = cast(StatusPanel, self.dg._block(dg_type=StatusPanel))
-        status_panel._behavior = behavior
-        return status_panel
+        return StatusPanel.create(self.dg, behavior)
 
     @property
     def dg(self) -> "DeltaGenerator":

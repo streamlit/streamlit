@@ -19,18 +19,18 @@ status = st.status_panel(behavior="autocollapse")
 
 with status.stage("🤔 Creating files...") as s:
     st.text("Doing a thing...")
-    time.sleep(3)
+    time.sleep(1)
     st.text("Done!")
     s.set_label("✅ Created!")
 
 with status.stage("🤔 Reticulating splines...") as s:
     st.text("Doing a thing...")
-    time.sleep(3)
+    time.sleep(1)
     st.text("Done!")
     s.set_label("✅ Reticulated!")
 
 with status.stage("🤔 Watering dromedaries...") as s:
     st.text("Doing a thing...")
-    time.sleep(3)
+    time.sleep(1)
     st.text("Done!")
     s.set_label("✅ Watered!")

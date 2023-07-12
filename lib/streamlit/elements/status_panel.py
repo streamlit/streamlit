@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
-import streamlit as st
 from streamlit import runtime
 from streamlit.cursor import Cursor, LockedCursor
 from streamlit.delta_generator import DeltaGenerator, _enqueue_message
@@ -29,6 +28,18 @@ StatusPanelBehavior = Literal["autocollapse", "stay_open"]
 class StatusPanel(DeltaGenerator):
     """A block DeltaGenerator with a special "stage" function."""
 
+    @staticmethod
+    def create(parent: DeltaGenerator, behavior: StatusPanelBehavior) -> StatusPanel:
+        # This is an ugly pattern we'll want to correct:
+        # we can just instantiate a new StatusPanel directly, because a bunch
+        # of its creation logic lives inside the DeltaGenerator._block function.
+        # So StatusPanel gets instantiated by `_block()`, and then we
+        # finish initializing its members below. (The same is true of StatusPanelStage,
+        # below.)
+        status_panel = cast(StatusPanel, parent._block(dg_type=StatusPanel))
+        status_panel._behavior = behavior
+        return status_panel
+
     def __init__(
         self,
         root_container: int | None,
@@ -37,30 +48,53 @@ class StatusPanel(DeltaGenerator):
         block_type: str | None,
     ):
         super().__init__(root_container, cursor, parent, block_type)
+
+        # Initialized in `create`
         self._behavior: StatusPanelBehavior = "autocollapse"
 
     def stage(self, label: str) -> StatusPanelStage:
-        with self:
-            return StatusPanelStage(label, self._behavior)
+        return StatusPanelStage.create(self, label, self._behavior)
 
 
-class StatusPanelStage:
-    def __init__(self, label: str, behavior: StatusPanelBehavior):
-        self._behavior = behavior
+class StatusPanelStage(DeltaGenerator):
+    """An expander DeltaGenerator with a mutable label and ExpandableState."""
 
-        self._label = label
-        self._expandable_state = BlockProto.Expandable.EXPANDED
+    @staticmethod
+    def create(
+        parent: DeltaGenerator, label: str, behavior: StatusPanelBehavior
+    ) -> StatusPanelStage:
+        expandable_proto = BlockProto.Expandable()
+        expandable_proto.state = BlockProto.Expandable.ExpandableState.EXPANDED
+        expandable_proto.label = label
 
-        # Create our expander
-        self._expander_dg = st.expander(self._label, True)
+        block_proto = BlockProto()
+        block_proto.allow_empty = True
+        block_proto.expandable.CopyFrom(expandable_proto)
 
-        # Determine our expander's cursor position so that we can mutate it later.
-        # The cursor in the dg returned by `self._expander` points to the insert loc
+        stage = cast(
+            StatusPanelStage,
+            parent._block(block_proto=block_proto, dg_type=StatusPanelStage),
+        )
+        stage._label = label
+        stage._behavior = behavior
+        return stage
+
+    def __init__(
+        self,
+        root_container: int | None,
+        cursor: Cursor | None,
+        parent: DeltaGenerator | None,
+        block_type: str | None,
+    ):
+        super().__init__(root_container, cursor, parent, block_type)
+
+        # Determine our cursor position so that we can mutate it later.
+        # The cursor in the dg returned by `self._cursor` points to the insert loc
         # of the first *child* of the expander, rather than the expander itself,
         # so we compute a new cursor with the expander's actual location.
-        cursor = self._expander_dg._cursor
+        cursor = self._cursor
         if cursor is not None:
-            self._expander_cursor = LockedCursor(
+            self._locked_cursor = LockedCursor(
                 root_container=cursor.root_container,
                 parent_path=cursor.parent_path[:-1],
                 index=cursor.parent_path[-1],
@@ -68,7 +102,12 @@ class StatusPanelStage:
         else:
             # Cursor should only be none if Streamlit is running in "raw" mode.
             assert not runtime.exists()
-            self._expander_cursor = LockedCursor(0)
+            self._locked_cursor = LockedCursor(0)
+
+        # These member vars are initialized after instantiation, in `create`.
+        self._label: str = ""
+        self._behavior: StatusPanelBehavior = "autocollapse"
+        self._expandable_state = BlockProto.Expandable.EXPANDED
 
     def set_label(self, label: str) -> None:
         """Update our expander's label."""
@@ -90,17 +129,17 @@ class StatusPanelStage:
     def _send_new_expander_proto(self) -> None:
         """Deliver an updated expander protobuf message to the frontend."""
         msg = ForwardMsg()
-        msg.metadata.delta_path[:] = self._expander_cursor.delta_path
+        msg.metadata.delta_path[:] = self._locked_cursor.delta_path
         msg.delta.add_block.allow_empty = True
         msg.delta.add_block.expandable.state = self._expandable_state
         msg.delta.add_block.expandable.label = self._label
         _enqueue_message(msg)
 
     def __enter__(self) -> StatusPanelStage:
-        self._expander_dg.__enter__()
+        super().__enter__()
         return self
 
     def __exit__(self, type: Any, value: Any, traceback: Any) -> None:
         if self._behavior == "autocollapse":
             self.set_expandable_state(BlockProto.Expandable.AUTO_COLLAPSED)
-        self._expander_dg.__exit__(type, value, traceback)
+        super().__exit__(type, value, traceback)
