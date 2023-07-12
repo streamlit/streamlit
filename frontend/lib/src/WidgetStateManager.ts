@@ -631,7 +631,7 @@ export class WidgetStateManager {
 
   /**
    * Called by FormSubmitButton on creation. Remove the SubmitButtonProto for
-   * the given form and update FormsData.
+   * the given form, and update FormsData.
    */
   public removeSubmitButton(
     formId: string,
@@ -661,12 +661,6 @@ export class WidgetStateManager {
     this.updateFormsData(draft => {
       draft.submitButtons.set(formId, submitButtons)
     })
-  }
-
-  public getSubmitButton(
-    formId: string
-  ): Array<SubmitButtonProto> | undefined {
-    return this.formsData.submitButtons.get(formId)
   }
 
   /**

@@ -374,7 +374,7 @@ describe("Widget State Manager", () => {
       // Submit the form
       widgetMgr.submitForm(formId)
 
-      // Our backMsg should be populated with our two widget values
+      // Our backMsg should be populated with our two widget values,
       // plus the submitButton's value.
       expect(sendBackMsg).toHaveBeenCalledWith({
         widgets: [
@@ -450,7 +450,8 @@ describe("Widget State Manager", () => {
       // Submit the first form.
       widgetMgr.submitForm(FORM_1.formId)
 
-      // Our backMsg should be populated with the first form widget value
+      // Our backMsg should be populated with the first form widget value,
+      // plus the first submitButton's triggerValue.
       expect(sendBackMsg).toHaveBeenCalledWith({
         widgets: [
           { id: "submitButton", triggerValue: true },
@@ -467,6 +468,7 @@ describe("Widget State Manager", () => {
     })
 
     it("calls sendBackMsg with data from both forms", () => {
+      // Submit the first form and then the second form.
       widgetMgr.submitForm(FORM_1.formId)
       widgetMgr.submitForm(
         FORM_2.formId,
@@ -490,7 +492,7 @@ describe("Widget State Manager", () => {
       expect(formsData.formsWithPendingChanges).toEqual(new Set())
     })
 
-    it("supports two submit buttons and can click the second one", () => {
+    it("supports two submit buttons and can submitForm on the second one", () => {
       widgetMgr.addSubmitButton(
         FORM_1.formId,
         new ButtonProto({ id: "submitButton" })

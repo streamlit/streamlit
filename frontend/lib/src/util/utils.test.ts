@@ -23,11 +23,6 @@ import {
   EMBED_QUERY_PARAM_KEY,
 } from "./utils"
 
-import { enableAllPlugins } from "immer"
-
-// Required by ImmerJS and for submitForm
-enableAllPlugins()
-
 describe("getCookie", () => {
   afterEach(() => {
     document.cookie.split(";").forEach(cookie => {

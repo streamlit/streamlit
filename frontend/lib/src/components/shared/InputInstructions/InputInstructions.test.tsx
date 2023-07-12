@@ -117,12 +117,11 @@ describe("InputInstructions", () => {
   })
 
   describe("In Form", () => {
-    it("should show correct instructions to submit form with chat and single line input", () => {
+    it("should show correct instructions to submit form with single line input", () => {
       const props = getProps({
         inForm: true,
         type: "single",
       })
-      console.log(props)
       const { getByTestId } = render(<InputInstructions {...props} />)
 
       expect(getByTestId("InputInstructions").textContent).toBe(
@@ -136,7 +135,6 @@ describe("InputInstructions", () => {
       inForm: true,
       type: "multiline",
     })
-    console.log(props)
     const { getByTestId } = render(<InputInstructions {...props} />)
 
     expect(getByTestId("InputInstructions").textContent).toBe(
