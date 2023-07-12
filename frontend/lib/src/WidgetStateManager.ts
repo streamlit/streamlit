@@ -217,21 +217,18 @@ export class WidgetStateManager {
 
     const submitButtons = this.formsData.submitButtons.get(formId)
 
+    let selectedSubmitButton
+
     if (actualSubmitButton !== undefined) {
-      // Create the button's triggerValue. Just like with a regular button,
-      // `st.form_submit_button()` returns True during a rerun after
-      // it's clicked.
-      this.createWidgetState(actualSubmitButton, {
+      selectedSubmitButton = actualSubmitButton
+    } else if (submitButtons !== undefined && submitButtons.length > 0) {
+      selectedSubmitButton = submitButtons[0]
+    }
+
+    if (selectedSubmitButton) {
+      this.createWidgetState(selectedSubmitButton, {
         fromUi: true,
       }).triggerValue = true
-    } else {
-      // can have an empty list of submitButtons
-      if (submitButtons !== undefined && submitButtons.length > 0) {
-        // click the first submit button. We can choose any so we just choose first.
-        this.createWidgetState(submitButtons[0], {
-          fromUi: true,
-        }).triggerValue = true
-      }
     }
 
     // Copy the form's values into widgetStates, delete the form's pending
@@ -242,11 +239,8 @@ export class WidgetStateManager {
     this.sendUpdateWidgetsMessage()
     this.syncFormsWithPendingChanges()
 
-    if (actualSubmitButton !== undefined) {
-      this.deleteWidgetState(actualSubmitButton.id)
-    } else if (submitButtons !== undefined && submitButtons.length > 0) {
-      // Reset the button's triggerValue.
-      this.deleteWidgetState(submitButtons[0].id)
+    if (selectedSubmitButton) {
+      this.deleteWidgetState(selectedSubmitButton.id)
     }
 
     // If the form has the clearOnSubmit flag, we emit a signal to all widgets
