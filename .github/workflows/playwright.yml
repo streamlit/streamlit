@@ -54,7 +54,7 @@ jobs:
       - name: Run your tests
         run: |
           cd ./e2e/playwright
-          pytest --browser webkit --browser chromium --browser firefox
+          pytest --browser webkit --browser chromium --browser firefox --tracing retain-on-failure --video retain-on-failure --screenshot only-on-failure --output debug-results
       - name: Check that all screenshot have been committed
         run: |
           set -x;
@@ -72,3 +72,9 @@ jobs:
         with:
           name: playwright_snapshots
           path: e2e/playwright/snapshots
+      - name: Store Debug Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright_debug_results
+          path: e2e/playwright/debug_results
