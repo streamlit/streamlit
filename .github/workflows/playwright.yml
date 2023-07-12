@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - "develop"
-      - "feature/**"
+      # - "feature/**"
   pull_request:
     types: [opened, synchronize, reopened]
   # Allows workflow to be called from other workflows
@@ -18,7 +18,6 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-playwright
   cancel-in-progress: true
-
 
 jobs:
   test:
