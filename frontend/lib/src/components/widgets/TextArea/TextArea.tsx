@@ -140,22 +140,9 @@ class TextArea extends React.PureComponent<Props, State> {
       return
     }
 
-    // If the TextArea is *not* part of a form, we mark it dirty but don't
-    // update its value in the WidgetMgr. This means that individual keypresses
-    // won't trigger a script re-run.
-    if (!isInForm(this.props.element)) {
-      this.setState({ dirty: true, value })
-      return
-    }
-
-    // If TextArea *is* part of a form, we immediately update its widgetValue
-    // on text changes. The widgetValue won't be passed to the Python
-    // script until the form is submitted, so this won't cause the script
-    // to re-run. (This also means that we won't show the "Press Enter
-    // to Apply" prompt because the TextArea will never be "dirty").
-    this.setState({ dirty: false, value }, () =>
-      this.commitWidgetValue({ fromUi: true })
-    )
+    // mark it dirty but don't update its value in the WidgetMgr
+    // This means that individual keypresses won't trigger a script re-run.
+    this.setState({ dirty: true, value })
   }
 
   isEnterKeyPressed = (
@@ -176,6 +163,10 @@ class TextArea extends React.PureComponent<Props, State> {
       e.preventDefault()
 
       this.commitWidgetValue({ fromUi: true })
+      const { formId } = this.props.element
+      if (isInForm({ formId })) {
+        this.props.widgetMgr.submitForm(this.props.element.formId)
+      }
     }
   }
 
@@ -245,6 +236,7 @@ class TextArea extends React.PureComponent<Props, State> {
           value={value}
           maxLength={element.maxChars}
           type={"multiline"}
+          inForm={isInForm({ formId: element.formId })}
         />
       </div>
     )

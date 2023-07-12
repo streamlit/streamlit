@@ -42,9 +42,9 @@ export function FormSubmitButton(props: Props): ReactElement {
       : BaseButtonKind.SECONDARY_FORM_SUBMIT
 
   useEffect(() => {
-    widgetMgr.incrementSubmitButtonCount(formId)
-    return () => widgetMgr.decrementSubmitButtonCount(formId)
-  }, [widgetMgr, formId])
+    widgetMgr.addSubmitButton(formId, element)
+    return () => widgetMgr.removeSubmitButton(formId, element)
+  }, [widgetMgr, formId, element])
 
   return (
     <div
@@ -58,7 +58,9 @@ export function FormSubmitButton(props: Props): ReactElement {
           size={BaseButtonSize.SMALL}
           fluidWidth={element.useContainerWidth || false}
           disabled={disabled || hasInProgressUpload}
-          onClick={() => widgetMgr.submitForm(element)}
+          onClick={() => {
+            widgetMgr.submitForm(element.formId, element)
+          }}
         >
           <StreamlitMarkdown
             source={element.label}

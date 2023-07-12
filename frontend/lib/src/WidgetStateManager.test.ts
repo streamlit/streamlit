@@ -17,6 +17,7 @@
 import { enableAllPlugins } from "immer"
 import {
   ArrowTable as ArrowTableProto,
+  Button as ButtonProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "./proto"
@@ -315,22 +316,18 @@ describe("Widget State Manager", () => {
 
   // Other FormsData-related tests
   describe("formsData", () => {
-    it("updates submitButtonCount", () => {
-      expect(formsData.submitButtonCount.get("form")).not.toBeDefined()
-      widgetMgr.incrementSubmitButtonCount("form")
-      expect(formsData.submitButtonCount.get("form")).toEqual(1)
-      widgetMgr.incrementSubmitButtonCount("form")
-      expect(formsData.submitButtonCount.get("form")).toEqual(2)
-      widgetMgr.decrementSubmitButtonCount("form")
-      expect(formsData.submitButtonCount.get("form")).toEqual(1)
-      widgetMgr.decrementSubmitButtonCount("form")
-      expect(formsData.submitButtonCount.get("form")).toEqual(0)
-    })
-
-    it("throws on unbalanced decrementSubmitButtonCount", () => {
-      widgetMgr.incrementSubmitButtonCount("form")
-      widgetMgr.decrementSubmitButtonCount("form")
-      expect(() => widgetMgr.decrementSubmitButtonCount("form")).toThrow()
+    it("updates submitButtons Array", () => {
+      const newButtonMock = new ButtonProto()
+      const secondButtonMock = new ButtonProto({ id: "newId" })
+      expect(formsData.submitButtons.get("form")).not.toBeDefined()
+      widgetMgr.addSubmitButton("form", newButtonMock)
+      expect(formsData.submitButtons.get("form")?.length).toEqual(1)
+      widgetMgr.addSubmitButton("form", secondButtonMock)
+      expect(formsData.submitButtons.get("form")?.length).toEqual(2)
+      widgetMgr.removeSubmitButton("form", newButtonMock)
+      expect(formsData.submitButtons.get("form")?.length).toEqual(1)
+      widgetMgr.removeSubmitButton("form", secondButtonMock)
+      expect(formsData.submitButtons.get("form")?.length).toEqual(0)
     })
 
     it("updates formsWithUploads", () => {
@@ -357,8 +354,13 @@ describe("Widget State Manager", () => {
 
   describe("submitForm", () => {
     it("calls sendBackMsg with expected data", () => {
-      // Populate a form
       const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      // Populate a form
       widgetMgr.setStringValue({ id: "widget1", formId }, "foo", {
         fromUi: true,
       })
@@ -370,15 +372,15 @@ describe("Widget State Manager", () => {
       expect(formsData.formsWithPendingChanges).toEqual(new Set([formId]))
 
       // Submit the form
-      widgetMgr.submitForm({ id: "submitButton", formId })
+      widgetMgr.submitForm(formId)
 
       // Our backMsg should be populated with our two widget values,
       // plus the submitButton's value.
       expect(sendBackMsg).toHaveBeenCalledWith({
         widgets: [
+          { id: "submitButton", triggerValue: true },
           { id: "widget1", stringValue: "foo" },
           { id: "widget2", stringValue: "bar" },
-          { id: "submitButton", triggerValue: true },
         ],
       })
 
@@ -387,9 +389,27 @@ describe("Widget State Manager", () => {
     })
 
     it("throws on invalid formId", () => {
-      expect(() => widgetMgr.submitForm(MOCK_WIDGET)).toThrowError(
+      expect(() => widgetMgr.submitForm(MOCK_WIDGET.formId)).toThrowError(
         `invalid formID ${MOCK_WIDGET.formId}`
       )
+    })
+
+    it("submits the form for the first submitButton if an actualSubmitButton proto is passed", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "firstSubmitButton" })
+      )
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "secondSubmitButton" })
+      )
+      // Submit the form
+      widgetMgr.submitForm(formId)
+
+      expect(sendBackMsg).toHaveBeenCalledWith({
+        widgets: [{ id: "firstSubmitButton", triggerValue: true }],
+      })
     })
   })
 
@@ -422,21 +442,26 @@ describe("Widget State Manager", () => {
     })
 
     it("calls sendBackMsg with the first form data", () => {
+      widgetMgr.addSubmitButton(
+        FORM_1.formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
       // Submit the first form.
-      widgetMgr.submitForm({ id: "submitButton", formId: FORM_1.formId })
+      widgetMgr.submitForm(FORM_1.formId)
 
       // Our backMsg should be populated with the first form widget value,
       // plus the first submitButton's triggerValue.
       expect(sendBackMsg).toHaveBeenCalledWith({
         widgets: [
-          { id: FORM_1.id, stringValue: "foo" },
           { id: "submitButton", triggerValue: true },
+          { id: FORM_1.id, stringValue: "foo" },
         ],
       })
     })
 
     it("checks that only the second form is pending after the first is submitted", () => {
-      widgetMgr.submitForm({ id: "submitButton", formId: FORM_1.formId })
+      widgetMgr.submitForm(FORM_1.formId)
       expect(formsData.formsWithPendingChanges).toEqual(
         new Set([FORM_2.formId])
       )
@@ -444,24 +469,51 @@ describe("Widget State Manager", () => {
 
     it("calls sendBackMsg with data from both forms", () => {
       // Submit the first form and then the second form.
-      widgetMgr.submitForm({ id: "submitButton1", formId: FORM_1.formId })
-      widgetMgr.submitForm({ id: "submitButton2", formId: FORM_2.formId })
+      widgetMgr.submitForm(FORM_1.formId)
+      widgetMgr.submitForm(
+        FORM_2.formId,
+        new ButtonProto({ id: "submitButton2" })
+      )
 
       // Our most recent backMsg should be populated with the both forms' widget values,
       // plus the second submitButton's fromSubmitValue.
       expect(sendBackMsg).toHaveBeenLastCalledWith({
         widgets: [
           { id: FORM_1.id, stringValue: "foo" },
-          { id: FORM_2.id, stringValue: "bar" },
           { id: "submitButton2", triggerValue: true },
+          { id: FORM_2.id, stringValue: "bar" },
         ],
       })
     })
 
     it("checks that no more pending forms exist after both are submitted", () => {
-      widgetMgr.submitForm({ id: "submitButton1", formId: FORM_1.formId })
-      widgetMgr.submitForm({ id: "submitButton2", formId: FORM_2.formId })
+      widgetMgr.submitForm(FORM_1.formId)
+      widgetMgr.submitForm(FORM_2.formId)
       expect(formsData.formsWithPendingChanges).toEqual(new Set())
+    })
+
+    it("supports two submit buttons and can submitForm on the second one", () => {
+      widgetMgr.addSubmitButton(
+        FORM_1.formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+      widgetMgr.addSubmitButton(
+        FORM_2.formId,
+        new ButtonProto({ id: "submitButton2" })
+      )
+
+      // Submit the second form.
+      widgetMgr.submitForm(
+        FORM_2.formId,
+        new ButtonProto({ id: "submitButton2" })
+      )
+
+      expect(sendBackMsg).toHaveBeenCalledWith({
+        widgets: [
+          { id: "submitButton2", triggerValue: true },
+          { id: FORM_2.id, stringValue: "bar" },
+        ],
+      })
     })
   })
 })
