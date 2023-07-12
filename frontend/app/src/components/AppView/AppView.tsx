@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+
 import {
   IAppPage,
   VerticalBlock,
@@ -31,6 +32,7 @@ import {
 } from "@streamlit/lib"
 
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
+import EventContainer from "@streamlit/app/src/components/EventContainer"
 
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 
@@ -131,8 +133,10 @@ function AppView(props: AppViewProps): ReactElement {
     showFooter,
     showToolbar,
     showColoredLine,
+    toastAdjustment,
   } = React.useContext(AppContext)
-  const renderBlock = (node: BlockNode): ReactElement => (
+
+  const renderBlock = (node: BlockNode, events = false): ReactElement => (
     <StyledAppViewBlockContainer
       className="block-container"
       data-testid="block-container"
@@ -140,6 +144,7 @@ function AppView(props: AppViewProps): ReactElement {
       showPadding={showPadding}
       addPaddingForHeader={showToolbar || showColoredLine}
       addPaddingForChatInput={containsChatInput}
+      events={events}
     >
       <VerticalBlock
         node={node}
@@ -160,6 +165,7 @@ function AppView(props: AppViewProps): ReactElement {
   const hasSidebarElements = !elements.sidebar.isEmpty
   const showSidebar =
     hasSidebarElements || (!hideSidebarNav && appPages.length > 1)
+  const hasEventElements = !elements.event.isEmpty
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
@@ -208,6 +214,14 @@ function AppView(props: AppViewProps): ReactElement {
           </StyledAppViewFooter>
         )}
       </Component>
+      {hasEventElements && (
+        <EventContainer
+          toastAdjustment={toastAdjustment}
+          scriptRunId={elements.event.scriptRunId}
+        >
+          {renderBlock(elements.event, true)}
+        </EventContainer>
+      )}
     </StyledAppViewContainer>
   )
 }

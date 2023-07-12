@@ -83,6 +83,13 @@ export interface Props {
    * @see StyledSidebarCollapsedControl
    */
   sidebarChevronDownshift: number
+
+  /**
+   * Adjustment to positioning of the app's toasts
+   * based on information sent from the host.
+   * @see EventContainer
+   */
+  toastAdjustment: boolean
 }
 
 export const AppContext = React.createContext<Props>({
@@ -96,4 +103,5 @@ export const AppContext = React.createContext<Props>({
   showColoredLine: false,
   pageLinkBaseUrl: "",
   sidebarChevronDownshift: 0,
+  toastAdjustment: false,
 })
