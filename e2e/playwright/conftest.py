@@ -141,22 +141,23 @@ def wait_for_app_loaded(page: Page):
         "[data-testid='stAppViewContainer']", timeout=20000, state="attached"
     )
 
+    page.wait_for_selector(
+        "[data-testid='block-container']", timeout=20000, state="attached"
+    )
+
     # Give the app a little more time to render everything
-    time.sleep(0.5)
+    time.sleep(0.25)
     # Check that "Please wait..." does not exist within the 'stAppViewContainer'
     app_view_container = page.query_selector("[data-testid='stAppViewContainer']")
     if (
         app_view_container
         and app_view_container.inner_text().find("Please wait...") != -1
     ):
-        raise AssertionError("Found 'Please wait...' inside the stAppViewContainer")
+        pytest.fail("Found 'Please wait...' inside the stAppViewContainer")
     # Wait until the script is no longer running.
-    status_widget = page.wait_for_selector(
-        "[data-testid='stStatusWidget']", timeout=20000, state="attached"
+    page.wait_for_selector(
+        "[data-testid='stStatusWidget']", timeout=20000, state="detached"
     )
-    if not status_widget:
-        raise AssertionError("Unable to find stStatusWidget")
-    status_widget.wait_for_element_state("hidden", timeout=20000)
     # Give the app a little more time to render everything
     time.sleep(0.5)
 
