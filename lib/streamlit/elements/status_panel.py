@@ -21,6 +21,7 @@ import streamlit as st
 from streamlit import runtime
 from streamlit.cursor import Cursor, LockedCursor
 from streamlit.delta_generator import DeltaGenerator, _enqueue_message
+from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 StatusPanelBehavior = Literal["autocollapse", "stay_open"]
@@ -49,10 +50,10 @@ class StatusPanelStage:
         self._behavior = behavior
 
         self._label = label
-        self._expanded = True
+        self._expandable_state = BlockProto.Expandable.EXPANDED
 
         # Create our expander
-        self._expander_dg = st.expander(self._label, self._expanded)
+        self._expander_dg = st.expander(self._label, True)
 
         # Determine our expander's cursor position so that we can mutate it later.
         # The cursor in the dg returned by `self._expander` points to the insert loc
@@ -78,11 +79,13 @@ class StatusPanelStage:
         self._label = label
         self._send_new_expander_proto()
 
-    def set_expanded(self, expanded: bool) -> None:
-        if self._expanded == expanded:
+    def set_expandable_state(
+        self, state: BlockProto.Expandable.ExpandableState.ValueType
+    ) -> None:
+        if self._expandable_state == state:
             return
 
-        self._expanded = expanded
+        self._expandable_state = state
         self._send_new_expander_proto()
 
     def _send_new_expander_proto(self) -> None:
@@ -90,7 +93,7 @@ class StatusPanelStage:
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._expander_cursor.delta_path
         msg.delta.add_block.allow_empty = True
-        msg.delta.add_block.expandable.expanded = self._expanded
+        msg.delta.add_block.expandable.state = self._expandable_state
         msg.delta.add_block.expandable.label = self._label
         _enqueue_message(msg)
 
@@ -100,7 +103,7 @@ class StatusPanelStage:
 
     def __exit__(self, type: Any, value: Any, traceback: Any) -> None:
         if self._behavior == "autocollapse":
-            self.set_expanded(False)
+            self.set_expandable_state(BlockProto.Expandable.AUTO_COLLAPSED)
         self._expander_dg.__exit__(type, value, traceback)
 
 

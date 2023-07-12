@@ -77,12 +77,13 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const childProps = { ...props, ...{ node } }
   if (node.deltaBlock.expandable) {
     // Handle expandable blocks
+    const expandableProto = node.deltaBlock.expandable as ExpandableProto
     const expandableProps = {
       ...childProps,
       empty: node.isEmpty,
       isStale,
-      expandable: true,
-      ...(node.deltaBlock.expandable as ExpandableProto),
+      expandableState: expandableProto.state,
+      ...expandableProto,
     }
     child = <ExpandableLayoutBlock {...expandableProps} />
   } else {

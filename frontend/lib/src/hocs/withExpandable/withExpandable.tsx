@@ -14,28 +14,31 @@
  * limitations under the License.
  */
 
-import React, { ComponentType, ReactElement, useEffect, useState } from "react"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
+import { ExpandLess, ExpandMore } from "@emotion-icons/material-outlined"
+import { useTheme } from "@emotion/react"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-
-import classNames from "classnames"
 import {
-  StatelessAccordion as Accordion,
   Panel,
   SharedStylePropsArg,
+  StatelessAccordion as Accordion,
 } from "baseui/accordion"
-import { useTheme } from "@emotion/react"
+
+import classNames from "classnames"
+import React, { ComponentType, ReactElement, useEffect, useState } from "react"
+import { Block } from "../../proto"
 import { StyledExpandableContainer } from "./styled-components"
+import ExpandableState = Block.Expandable.ExpandableState
 
 export interface ExpandableProps {
-  expandable: boolean
   label: string
-  expanded: boolean
+  expandableState: ExpandableState
   empty: boolean
   widgetsDisabled: boolean
   isStale: boolean
 }
+
+const AUTO_COLLAPSE_DELAY = 2000
 
 // Our wrapper takes the wrapped component's props plus ExpandableProps
 type WrapperProps<P> = P & ExpandableProps
@@ -49,25 +52,50 @@ function withExpandable<P>(
   const ExpandableComponent = (props: WrapperProps<P>): ReactElement => {
     const {
       label,
-      expanded: initialExpanded,
+      expandableState,
       empty,
       widgetsDisabled,
       isStale,
       ...componentProps
     } = props
 
-    const [expanded, setExpanded] = useState<boolean>(initialExpanded)
+    const [expanded, setExpanded] = useState<boolean>(
+      expandableState != ExpandableState.COLLAPSED
+    )
+
+    // useEffect(() => {
+    //   setExpanded(initialExpanded)
+    //   // Having `label` in the dependency array here is necessary because
+    //   // sometimes two distinct expanders look so similar that even the react
+    //   // diffing algorithm decides that they're the same element with updated
+    //   // props (this happens when something in the app removes one expander and
+    //   // replaces it with another in the same position).
+    //   //
+    //   // By adding `label` as a dependency, we ensure that we reset the
+    //   // expander's `expanded` state in this edge case.
+    // }, [label, initialExpanded])
+
     useEffect(() => {
-      setExpanded(initialExpanded)
-      // Having `label` in the dependency array here is necessary because
-      // sometimes two distinct expanders look so similar that even the react
-      // diffing algorithm decides that they're the same element with updated
-      // props (this happens when something in the app removes one expander and
-      // replaces it with another in the same position).
-      //
-      // By adding `label` as a dependency, we ensure that we reset the
-      // expander's `expanded` state in this edge case.
-    }, [label, initialExpanded])
+      let timer: NodeJS.Timeout | number | undefined
+
+      switch (expandableState) {
+        case ExpandableState.EXPANDED:
+          setExpanded(true)
+          break
+        case ExpandableState.COLLAPSED:
+          setExpanded(false)
+          break
+        case ExpandableState.AUTO_COLLAPSED:
+          timer = setTimeout(() => setExpanded(false), AUTO_COLLAPSE_DELAY)
+          break
+      }
+
+      return () => {
+        if (timer != null) {
+          clearTimeout(timer)
+        }
+      }
+    }, [expandableState])
 
     const toggle = (): void => setExpanded(!expanded)
     const { colors, radii, spacing, fontSizes } = useTheme()

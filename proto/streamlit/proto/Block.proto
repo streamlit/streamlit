@@ -43,8 +43,18 @@ message Block {
   }
 
   message Expandable {
+    enum ExpandableState {
+      EXPANDED = 0;
+      COLLAPSED = 1;
+      // If we're currently expanded, collapse after a short delay.
+      // If we're currently collapsed, remain collapsed.
+      AUTO_COLLAPSED = 2;
+    }
+
     string label = 1;
-    bool expanded = 2;
+    reserved 2;
+//    bool expanded = 2;
+    ExpandableState state = 3;
   }
 
   message Form {

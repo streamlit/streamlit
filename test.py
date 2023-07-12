@@ -18,24 +18,20 @@ from streamlit.elements.status_panel import create_status_panel
 
 status = create_status_panel(behavior="autocollapse")
 
-status.text("text inside panel (top)")
-st.text("text outside our panel")
-
 with status.stage("🤔 Creating files...") as s:
-    st.text("Doing a thing...")
-    time.sleep(0.25)
+    text = st.text("Doing a thing...")
+    time.sleep(3)
+    text.text("Done!")
     s.set_label("✅ Created!")
 
-status.text("text inside panel (mid)")
-
 with status.stage("🤔 Reticulating splines...") as s:
-    st.text("Doing a thing...")
-    time.sleep(0.25)
+    text = st.text("Doing a thing...")
+    time.sleep(3)
+    text.text("Done!")
     s.set_label("✅ Reticulated!")
 
 with status.stage("🤔 Watering dromedaries...") as s:
-    st.text("Doing a thing...")
-    time.sleep(0.25)
+    text = st.text("Doing a thing...")
+    time.sleep(3)
+    text.text("Done!")
     s.set_label("✅ Watered!")
-
-status.text("text inside panel (end)")

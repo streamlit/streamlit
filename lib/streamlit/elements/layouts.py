@@ -398,7 +398,11 @@ class LayoutsMixin:
             raise StreamlitAPIException("A label is required for an expander")
 
         expandable_proto = BlockProto.Expandable()
-        expandable_proto.expanded = expanded
+        expandable_proto.state = (
+            BlockProto.Expandable.ExpandableState.EXPANDED
+            if expanded
+            else BlockProto.Expandable.ExpandableState.COLLAPSED
+        )
         expandable_proto.label = label
 
         block_proto = BlockProto()
