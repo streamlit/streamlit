@@ -201,6 +201,7 @@ function AppView(props: AppViewProps): ReactElement {
         {!containsChatInput && (
           <StyledIFrameResizerAnchor
             hasFooter={!embedded || showFooter}
+            data-testid="IframeResizerAnchor"
             data-iframe-height
           />
         )}
