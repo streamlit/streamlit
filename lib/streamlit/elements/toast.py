@@ -47,9 +47,8 @@ class ToastMixin:
         Parameters
         ----------
         body : str
-            Short message for the toast. The message can optionally contain
-            Markdown and supports the following elements: Bold, Italics,
-            Strikethroughs, Inline Code, Emojis, and Links.
+            The string to display as Github-flavored Markdown. Syntax
+            information can be found at: https://github.github.com/gfm.
 
             This also supports:
 
@@ -64,10 +63,6 @@ class ToastMixin:
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet.
-
-            Unsupported elements are unwrapped so only their children (text
-            contents) render. Display unsupported elements as literal characters
-            by backslash-escaping them. E.g. 1\. Not an ordered list.
         icon : str or None
             An optional, keyword-only argument that specifies an emoji to use as
             the icon for the toast. Shortcodes are not allowed, please use a
