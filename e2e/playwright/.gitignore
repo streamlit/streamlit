@@ -1,9 +1,0 @@
-# Playwright test
-/playwright-report
-/test-results
-.cache/
-/snapshot_tests_failures
-/snapshot_updates
-# Only keep the snapshots in the linux folder
-/snapshots/*
-!/snapshots/linux

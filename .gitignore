@@ -27,6 +27,18 @@ htmlcov
 # Test fixtures
 cffi_bin
 
+# Playwright test
+/e2e/playwright/playwright-report
+/e2e/playwright/test-results
+.cache/
+/e2e/playwright/snapshot_tests_failures
+/e2e/playwright/snapshot_updates
+# Only keep the snapshots in the linux folder
+/e2e/playwright/snapshots/*
+!/e2e/playwright/snapshots/linux
+
+
+
 # Pyenv Stuff
 .python-version
 venv
