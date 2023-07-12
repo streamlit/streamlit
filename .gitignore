@@ -24,6 +24,11 @@ test-reports
 htmlcov
 .hypothesis
 
+# Playwright test
+playwright-results/
+playwright-report/
+.cache/
+
 # Test fixtures
 cffi_bin
 

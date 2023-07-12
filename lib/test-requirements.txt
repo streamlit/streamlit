@@ -24,7 +24,8 @@ pytest
 pytest-cov
 requests-mock
 testfixtures
-
+pytest-playwright
+pytest-playwright-visual
 
 mypy-protobuf>=3.2
 
