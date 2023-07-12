@@ -57,7 +57,7 @@ module.exports = {
     "**/vendor/*",
     "**/node_modules/*",
   ],
-  plugins: ["no-relative-import-paths"],
+  plugins: ["no-relative-import-paths", "testing-library"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
   rules: {
@@ -163,6 +163,9 @@ module.exports = {
     "jest/no-test-prefixes": "off",
     "jest/valid-expect": "off",
     "jest/valid-title": "off",
+    // React Testing Library rules:
+    "testing-library/no-container": "warn",
+    "testing-library/no-unnecessary-act": "warn",
   },
   settings: {
     react: {
