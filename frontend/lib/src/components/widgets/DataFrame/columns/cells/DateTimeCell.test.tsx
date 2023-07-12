@@ -186,7 +186,7 @@ describe("editor", () => {
       },
     })
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)
-    expect(mockCellOnChange).toBeCalledWith({
+    expect(mockCellOnChange).toHaveBeenCalledWith({
       kind: GridCellKind.Custom,
       allowOverlay: true,
       copyData: "4",
@@ -219,7 +219,7 @@ describe("editor", () => {
     expect(result.findByTestId(TEST_ID)).not.toBeUndefined()
     fireEvent.change(input, { target: { value: "" } })
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)
-    expect(mockCellOnChange).toBeCalledWith({
+    expect(mockCellOnChange).toHaveBeenCalledWith({
       kind: GridCellKind.Custom,
       allowOverlay: true,
       copyData: "4",

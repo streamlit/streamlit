@@ -74,13 +74,13 @@ describe("Metric element", () => {
     )
   })
 
-  it("renders direction icon based on props", () => {
+  it("renders direction icon based on props - red/up", () => {
     const props = getProps()
     const wrapper = mount(<Metric {...props} />)
     expect(wrapper.find("StyledMetricDeltaText").find("svg")).toBeDefined()
   })
 
-  it("renders direction icon based on props", () => {
+  it("renders direction icon based on props - green/down", () => {
     const props = getProps({
       color: MetricProto.MetricColor.GREEN,
       direction: MetricProto.MetricDirection.DOWN,

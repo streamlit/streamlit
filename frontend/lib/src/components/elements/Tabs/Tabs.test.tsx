@@ -65,12 +65,12 @@ describe("st.tabs", () => {
     const wrapper = mount(<Tabs {...getProps({ widgetsDisabled: true })} />)
 
     wrapper.find("StyledTab").forEach((option, index) => {
+      let expected = true
       if (index === 0) {
         // the selected tab does not have the disabled prop as true in baseweb
-        expect(option.prop("disabled")).toBe(false)
-      } else {
-        expect(option.prop("disabled")).toBe(true)
+        expected = false
       }
+      expect(option.prop("disabled")).toBe(expected)
     })
   })
 })

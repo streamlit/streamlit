@@ -110,6 +110,6 @@ describe("sizeConverter", () => {
     ).toEqual(BYTE_CONVERSION_SIZE)
     expect(() =>
       sizeConverter(-1, FileSize.Gigabyte, FileSize.Gigabyte)
-    ).toThrowError()
+    ).toThrow()
   })
 })

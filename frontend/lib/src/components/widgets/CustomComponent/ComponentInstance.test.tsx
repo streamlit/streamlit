@@ -310,9 +310,7 @@ describe("ComponentInstance", () => {
     )
   })
 
-  it("sends dataframe args to iframe", () => {
-    // TODO for Henrikh
-  })
+  // TODO: implement test to check sends dataframe args to iframe
 
   it("sends theme object to iframe", () => {
     const mc = new MockComponent()
@@ -515,9 +513,7 @@ describe("ComponentInstance", () => {
       )
     })
 
-    it("handles dataframe values", () => {
-      // TODO by Henrikh
-    })
+    // TODO: implement test to check handling of daataframe values
 
     it("warns if called before COMPONENT_READY", () => {
       const jsonValue = {

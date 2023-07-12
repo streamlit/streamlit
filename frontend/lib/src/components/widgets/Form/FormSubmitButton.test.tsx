@@ -15,6 +15,7 @@
  */
 
 import { screen } from "@testing-library/dom"
+import "@testing-library/jest-dom"
 import userEvent from "@testing-library/user-event"
 import { enableAllPlugins } from "immer"
 import React from "react"
@@ -70,6 +71,7 @@ describe("FormSubmitButton", () => {
 
   it("renders without crashing", () => {
     render(<FormSubmitButton {...getProps()} />)
+    expect(screen.getByTestId("stFormSubmitButton")).toBeInTheDocument()
   })
 
   it("has correct className and style", () => {

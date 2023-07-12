@@ -51,12 +51,12 @@ describe("ComponentRegistry", () => {
     onMessageEvent(
       new MessageEvent("message", { source: msgSource1, data: messageData })
     )
-    expect(msgListener1).toBeCalledWith(messageData.type, messageData)
+    expect(msgListener1).toHaveBeenCalledWith(messageData.type, messageData)
 
     // Send a message that's missing data. It should *not* be re-dispatched.
     msgListener1.mockReset()
     onMessageEvent(new MessageEvent("message", { source: msgSource1 }))
-    expect(msgListener1).not.toBeCalled()
+    expect(msgListener1).not.toHaveBeenCalled()
 
     // De-register our listener. Messages should not be re-dispatched.
     msgListener1.mockReset()
@@ -64,7 +64,7 @@ describe("ComponentRegistry", () => {
     onMessageEvent(
       new MessageEvent("message", { source: msgSource1, data: messageData })
     )
-    expect(msgListener1).not.toBeCalled()
+    expect(msgListener1).not.toHaveBeenCalled()
 
     // Ensure that listeners only receive messages for their own source.
     registry.registerListener(msgSource1, msgListener1)
@@ -75,15 +75,15 @@ describe("ComponentRegistry", () => {
     onMessageEvent(
       new MessageEvent("message", { source: msgSource1, data: messageData })
     )
-    expect(msgListener1).toBeCalledWith(messageData.type, messageData)
-    expect(msgListener2).not.toBeCalled()
+    expect(msgListener1).toHaveBeenCalledWith(messageData.type, messageData)
+    expect(msgListener2).not.toHaveBeenCalled()
 
     msgListener1.mockReset()
     msgListener2.mockReset()
     onMessageEvent(
       new MessageEvent("message", { source: msgSource2, data: messageData })
     )
-    expect(msgListener1).not.toBeCalled()
-    expect(msgListener2).toBeCalledWith(messageData.type, messageData)
+    expect(msgListener1).not.toHaveBeenCalled()
+    expect(msgListener2).toHaveBeenCalledWith(messageData.type, messageData)
   })
 })

@@ -286,7 +286,7 @@ describe("FileUploader widget", () => {
     // Upload the first file
     fileDropzone.props().onDrop([createFile()], [])
     const origFile = getFiles(wrapper)[0]
-    expect(props.uploadClient.uploadFile).toBeCalledTimes(1)
+    expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
     expect(getFiles(wrapper).length).toBe(1)
     expect(getFiles(wrapper, "uploading").length).toBe(1)
 
@@ -298,7 +298,7 @@ describe("FileUploader widget", () => {
     // Upload a replacement file
     fileDropzone.props().onDrop([createFile()], [])
     const replacementFile = getFiles(wrapper)[0]
-    expect(props.uploadClient.uploadFile).toBeCalledTimes(2)
+    expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
     expect(getFiles(wrapper).length).toBe(1)
     expect(getFiles(wrapper, "uploading").length).toBe(1)
 
@@ -558,7 +558,7 @@ describe("FileUploader widget", () => {
     // @ts-expect-error
     const resetSpy = jest.spyOn(wrapper.instance(), "reset")
     wrapper.setProps({ disabled: true })
-    expect(resetSpy).toBeCalled()
+    expect(resetSpy).toHaveBeenCalled()
   })
 
   it("resets its value when form is cleared", async () => {

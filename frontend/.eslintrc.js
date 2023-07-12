@@ -151,13 +151,16 @@ module.exports = {
       { allowSameFolder: true, rootDir: "src", prefix: "src" },
     ],
     "no-else-return": ["error", { allowElseIf: true }],
+
+    // Jest Testing Rules - 0 = off, 1 = warn, 2 = error
+    "jest/expect-expect": 2,
+    "jest/no-alias-methods": 2,
+    "jest/no-conditional-expect": 2,
+    "jest/no-disabled-tests": 2,
+    "jest/no-done-callback": 2,
+    "jest/no-identical-title": 2,
+
     // TODO: Go through and fix failing jest tests and re-enable these rules
-    "jest/expect-expect": "off",
-    "jest/no-alias-methods": "off",
-    "jest/no-conditional-expect": "off",
-    "jest/no-disabled-tests": "off",
-    "jest/no-done-callback": "off",
-    "jest/no-identical-title": "off",
     "jest/no-jasmine-globals": "off",
     "jest/no-standalone-expect": "off",
     "jest/no-test-prefixes": "off",
