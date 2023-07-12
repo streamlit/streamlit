@@ -237,7 +237,7 @@ def _normalize_tuple(
 def _int_formatter(component: float, color: MaybeColor) -> int:
     """Convert a color component (float or int) to an int from 0 to 255.
 
-    Anything too small will become a 0, and anythign too large will become 255.
+    Anything too small will become 0, and anything too large will become 255.
     """
     if isinstance(component, float):
         component = int(component * 255)
@@ -251,7 +251,7 @@ def _int_formatter(component: float, color: MaybeColor) -> int:
 def _float_formatter(component: float, color: MaybeColor) -> float:
     """Convert a color component (float or int) to a float from 0.0 to 1.0.
 
-    Anything too small will become a 0.0, and anythign too large will become 1.0.
+    Anything too small will become 0.0, and anything too large will become 1.0.
     """
     if isinstance(component, int):
         component = component / 255.0

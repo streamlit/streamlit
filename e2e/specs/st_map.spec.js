@@ -19,39 +19,43 @@ describe("st.map", () => {
     cy.loadApp("http://localhost:3000/");
 
     // Wait for all the maps to be loaded.
-    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 6);
+    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 7);
   });
 
-  it("displays 6 maps", () => {
-    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 6)
+  it("displays 7 maps", () => {
+    cy.get(".element-container .stDeckGlJsonChart").should("have.length", 7)
   });
 
-  it("displays 6 zoom buttons", () => {
-    cy.get(".element-container .zoomButton").should("have.length", 6)
+  it("displays 7 zoom buttons", () => {
+    cy.get(".element-container .zoomButton").should("have.length", 7)
   })
 
-  it("warning about data being capped exists", () => {
+  it("displays warning about data being capped", () => {
     cy.get("div [data-testid='stCaptionContainer']")
       .should("have.length", 2)
-  })
 
-  it("warning about data being capped has proper message value", () => {
+    // Check warning body.
     cy.getIndexed("div [data-testid='stCaptionContainer']", 0)
       .should("contain", "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more.")
     cy.getIndexed("div [data-testid='stCaptionContainer']", 1)
       .should("contain", "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more.")
   })
 
-  it("displays the correct snapshot", () => {
+  it("displays basic and complex maps correctly", () => {
     cy.get(".mapboxgl-canvas")
     // Adding a sufficient wait to ensure the map fully loads before taking the snapshot
     cy.wait(10000)
-    cy.get(".element-container", { waitForAnimations: true }).last().matchImageSnapshot("stDeckGlJsonChart")
+    cy.get(".element-container:has(.stDeckGlJsonChart)", { waitForAnimations: true })
+      .eq(5).matchImageSnapshot("stDeckGlJsonChart")
+    cy.get(".element-container:has(.stDeckGlJsonChart)", { waitForAnimations: true })
+      .eq(6).matchImageSnapshot("stDeckGlJsonChart-complexMap")
 
     // Need to manually change theme vs. matchThemedSnapshot to be able to add wait in right sequence
     cy.changeTheme("Dark")
     cy.wait(10000)
-    cy.get(".element-container", { waitForAnimations: true }).last().matchImageSnapshot("stDeckGlJsonChart-dark")
+    cy.get(".element-container:has(.stDeckGlJsonChart)", { waitForAnimations: true })
+      .eq(5).matchImageSnapshot("stDeckGlJsonChart-dark")
+    cy.get(".element-container:has(.stDeckGlJsonChart)", { waitForAnimations: true })
+      .eq(6).matchImageSnapshot("stDeckGlJsonChart-complexMap-dark")
   })
-
 });
