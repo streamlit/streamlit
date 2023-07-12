@@ -202,6 +202,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
         widgetsDisabled={false}
         componentRegistry={this.componentRegistry}
         formsData={this.state.formsData}
+        disableFullscreenButton={true}
       />
     )
   }

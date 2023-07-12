@@ -24,6 +24,7 @@ import {
   StyledFullScreenFrame,
   StyledFullScreenButton,
 } from "./styled-components"
+import { disableFullscreenButton } from "@streamlit/lib/src/components/core/Block/Block"
 
 export type Size = {
   width: number
@@ -143,13 +144,15 @@ class FullScreenWrapper extends PureComponent<Props, State> {
 
     return (
       <StyledFullScreenFrame isExpanded={expanded}>
-        <StyledFullScreenButton
-          onClick={buttonOnClick}
-          title={buttonTitle}
-          isExpanded={expanded}
-        >
-          <Icon content={buttonImage} />
-        </StyledFullScreenButton>
+        {!disableFullscreenButton && (
+          <StyledFullScreenButton
+            onClick={buttonOnClick}
+            title={buttonTitle}
+            isExpanded={expanded}
+          >
+            <Icon content={buttonImage} />
+          </StyledFullScreenButton>
+        )}
         {expanded
           ? children({ width: fullWidth, height: fullHeight, expanded })
           : children({ width, height, expanded })}

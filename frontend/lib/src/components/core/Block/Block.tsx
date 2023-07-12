@@ -42,8 +42,14 @@ import {
 
 const ExpandableLayoutBlock = withExpandable(LayoutBlock)
 
+// Singleton that will disable the fullScreenButton
+// will default to false for regular streamlit use cases
+let disableFullscreenButton = false
+export { disableFullscreenButton }
+
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
+  disableFullscreenButton: boolean
 }
 
 interface BlockPropsWithWidth extends BaseBlockProps {
@@ -134,11 +140,17 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     const renderTabContent = (
       mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
     ): ReactElement => {
+      disableFullscreenButton = mappedChildProps.disableFullscreenButton
       // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
       // eslint-disable-next-line @typescript-eslint/no-use-before-define
       return <VerticalBlock {...mappedChildProps}></VerticalBlock>
     }
-    const tabsProps: TabProps = { ...childProps, isStale, renderTabContent }
+    const tabsProps: TabProps = {
+      ...childProps,
+      isStale,
+      renderTabContent,
+      disableFullscreenButton,
+    }
     return <Tabs {...tabsProps} />
   }
 
@@ -182,6 +194,8 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
 // Currently, only VerticalBlocks will ever contain leaf elements. But this is only enforced on the
 // Python side.
 const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
+  disableFullscreenButton = props.disableFullscreenButton
+
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
@@ -219,7 +233,7 @@ function LayoutBlock(props: BlockPropsWithWidth): ReactElement {
     return <HorizontalBlock {...props} />
   }
 
-  return <VerticalBlock {...props} />
+  return <VerticalBlock {...props} disableFullscreenButton />
 }
 
 export default VerticalBlock
