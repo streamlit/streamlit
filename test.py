@@ -14,9 +14,8 @@
 import time
 
 import streamlit as st
-from streamlit.elements.status_panel import create_status_panel
 
-status = create_status_panel(behavior="autocollapse")
+status = st.status_panel(behavior="autocollapse")
 
 with status.stage("🤔 Creating files...") as s:
     text = st.text("Doing a thing...")

@@ -19,6 +19,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.status_panel import StatusPanel, StatusPanelBehavior
 
 SpecType = Union[int, Sequence[Union[int, float]]]
 
@@ -410,6 +411,13 @@ class LayoutsMixin:
         block_proto.expandable.CopyFrom(expandable_proto)
 
         return self.dg._block(block_proto=block_proto)
+
+    def status_panel(self, behavior: "StatusPanelBehavior") -> "StatusPanel":
+        from streamlit.elements.status_panel import StatusPanel
+
+        status_panel = cast(StatusPanel, self.dg._block(dg_type=StatusPanel))
+        status_panel._behavior = behavior
+        return status_panel
 
     @property
     def dg(self) -> "DeltaGenerator":

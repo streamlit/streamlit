@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import typing
 from typing import Any, Literal
 
 import streamlit as st
@@ -105,9 +104,3 @@ class StatusPanelStage:
         if self._behavior == "autocollapse":
             self.set_expandable_state(BlockProto.Expandable.AUTO_COLLAPSED)
         self._expander_dg.__exit__(type, value, traceback)
-
-
-def create_status_panel(behavior: StatusPanelBehavior) -> StatusPanel:
-    status_panel = typing.cast(StatusPanel, st._main._block(dg_type=StatusPanel))
-    status_panel._behavior = behavior
-    return status_panel
