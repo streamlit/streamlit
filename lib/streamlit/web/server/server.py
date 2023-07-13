@@ -303,7 +303,7 @@ class Server:
             (
                 make_url_path_regex(
                     base,
-                    rf"{UPLOAD_FILE_ENDPOINT}/(?P<session_id>[^/]+)/(?P<file_id>[^/]+)",
+                    rf"{UPLOAD_FILE_ENDPOINT}/(?P<file_id>[^/]+)",
                 ),
                 UploadFileRequestHandler,
                 dict(

@@ -14,11 +14,11 @@
 
 import uuid
 from collections import defaultdict
-from typing import Dict, List, Sequence
+from typing import Dict, List, Optional, Sequence
 
 from streamlit import util
 from streamlit.logger import get_logger
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.stats import CacheStat
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
     UploadedFileRec,
@@ -26,6 +26,10 @@ from streamlit.runtime.uploaded_file_manager import (
 )
 
 LOGGER = get_logger(__name__)
+
+
+class BadUploadFileUrlException(Exception):
+    """Raised when the file urls issued not by Streamlit"""
 
 
 class MemoryUploadedFileManager(UploadedFileManager):
@@ -37,12 +41,13 @@ class MemoryUploadedFileManager(UploadedFileManager):
 
     def __init__(self, upload_endpoint: str):
         self.file_storage: Dict[str, Dict[str, UploadedFileRec]] = defaultdict(dict)
+        self.file_id_to_session_id_mapping: Dict[str, str] = dict()
         self.endpoint = upload_endpoint
 
     def get_files(
         self, session_id: str, file_ids: Sequence[str]
     ) -> List[UploadedFileRec]:
-        """Return a  list of UploadedFileRec for a given sequence of file_ids.
+        """Return a list of UploadedFileRec for a given sequence of file_ids.
 
         Parameters
         ----------
@@ -71,31 +76,45 @@ class MemoryUploadedFileManager(UploadedFileManager):
         """Remove all files associated with a given session."""
         self.file_storage.pop(session_id, None)
 
+    def get_session_id_by_file_id(self, file_id: str) -> Optional[str]:
+        """Return a session_id that corresponds to file_id."""
+        return self.file_id_to_session_id_mapping.get(file_id)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def add_file(
         self,
-        session_id: str,
         file: UploadedFileRec,
     ) -> None:
-        """
-        Safe to call from any thread.
+        """Safe to call from any thread.
 
         Parameters
         ----------
-        session_id
-            The ID of the session that owns the file.
         file
             The file to add.
         """
 
-        self.file_storage[session_id][file.file_id] = file
+        session_id = self.file_id_to_session_id_mapping.get(file.file_id)
+        if session_id is not None:
+            self.file_storage[session_id][file.file_id] = file
+        else:
+            raise BadUploadFileUrlException("Bad URL")
 
-    def remove_file(self, session_id, file_id):
-        """Remove file with given file_id associated with a given session."""
-        session_storage = self.file_storage[session_id]
-        session_storage.pop(file_id, None)
+    def remove_file(self, file_id):
+        """Remove file with given file_id associated with a given session.
+
+        Parameters
+        ----------
+        file_id
+            The file_id to remove.
+        """
+        session_id = self.file_id_to_session_id_mapping.get(file_id)
+        if session_id is not None:
+            session_storage = self.file_storage[session_id]
+            session_storage.pop(file_id, None)
+        else:
+            raise BadUploadFileUrlException("Bad URL")
 
     def get_upload_urls(
         self, session_id: str, file_names: Sequence[str]
@@ -104,11 +123,12 @@ class MemoryUploadedFileManager(UploadedFileManager):
         result = []
         for _ in file_names:
             file_id = str(uuid.uuid4())
+            self.file_id_to_session_id_mapping[file_id] = session_id
             result.append(
                 UploadFileUrlInfo(
                     file_id=file_id,
-                    upload_url=f"{self.endpoint}/{session_id}/{file_id}",
-                    delete_url=f"{self.endpoint}/{session_id}/{file_id}",
+                    upload_url=f"{self.endpoint}/{file_id}",
+                    delete_url=f"{self.endpoint}/{file_id}",
                 )
             )
         return result

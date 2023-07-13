@@ -19,7 +19,10 @@ import tornado.web
 
 from streamlit import config
 from streamlit.logger import get_logger
-from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.memory_uploaded_file_manager import (
+    BadUploadFileUrlException,
+    MemoryUploadedFileManager,
+)
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager, UploadedFileRec
 from streamlit.web.server import routes, server_util
 
@@ -87,7 +90,6 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         args: Dict[str, List[bytes]] = {}
         files: Dict[str, List[Any]] = {}
 
-        session_id = self.path_kwargs["session_id"]
         file_id = self.path_kwargs["file_id"]
 
         tornado.httputil.parse_body_arguments(
@@ -97,9 +99,15 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             files=files,
         )
 
+        session_id = self._file_mgr.get_session_id_by_file_id(file_id)
+
+        if session_id is None:
+            self.send_error(400, reason="Bad file id")
+            return
+
         try:
             if not self._is_active_session(session_id):
-                raise Exception(f"Invalid session_id: '{session_id}'")
+                raise Exception("Invalid session id")
         except Exception as e:
             self.send_error(400, reason=str(e))
             return
@@ -123,13 +131,21 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             )
             return
 
-        self._file_mgr.add_file(session_id=session_id, file=uploaded_files[0])
+        try:
+            self._file_mgr.add_file(file=uploaded_files[0])
+        except BadUploadFileUrlException:
+            self.send_error(400, reason="Bad file id")
+            return
+
         self.set_status(204)
 
     def delete(self, **kwargs):
         """DELETE FILE"""
-        session_id = self.path_kwargs["session_id"]
         file_id = self.path_kwargs["file_id"]
+        try:
+            self._file_mgr.remove_file(file_id=file_id)
+        except BadUploadFileUrlException:
+            self.send_error(400, reason="Bad file id")
+            return
 
-        self._file_mgr.remove_file(session_id=session_id, file_id=file_id)
         self.set_status(204)
