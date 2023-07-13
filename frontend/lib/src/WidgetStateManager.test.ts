@@ -389,7 +389,7 @@ describe("Widget State Manager", () => {
     })
 
     it("throws on invalid formId", () => {
-      expect(() => widgetMgr.submitForm(MOCK_WIDGET.formId)).toThrowError(
+      expect(() => widgetMgr.submitForm(MOCK_WIDGET.formId)).toThrow(
         `invalid formID ${MOCK_WIDGET.formId}`
       )
     })
