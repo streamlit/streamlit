@@ -169,13 +169,16 @@ def app_port() -> int:
 
 
 @pytest.fixture(scope="module", autouse=True)
-def app_server(app_port: int) -> Generator[AsyncSubprocess, None, None]:
+def app_server(
+    app_port: int, request: FixtureRequest
+) -> Generator[AsyncSubprocess, None, None]:
     """Fixture that starts and stops the Streamlit app server."""
+    module_name = request.module.__name__
     streamlit_proc = AsyncSubprocess(
         [
             "streamlit",
             "run",
-            "st_arrow_dataframe_column_types.py",
+            module_name.replace("_test", ".py"),  # TODO: a better way?
             "--server.headless",
             "true",
             "--global.developmentMode",
