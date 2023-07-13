@@ -17,7 +17,11 @@
 import React from "react"
 import { withTheme } from "@emotion/react"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
-import { Checkbox as UICheckbox } from "baseui/checkbox"
+import {
+  Checkbox as UICheckbox,
+  STYLE_TYPE,
+  LABEL_PLACEMENT,
+} from "baseui/checkbox"
 import { Checkbox as CheckboxProto } from "@streamlit/lib/src/proto"
 import { transparentize } from "color2k"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -25,7 +29,10 @@ import {
   WidgetStateManager,
   Source,
 } from "@streamlit/lib/src/WidgetStateManager"
-import { EmotionTheme } from "@streamlit/lib/src/theme"
+import {
+  EmotionTheme,
+  hasLightBackgroundColor,
+} from "@streamlit/lib/src/theme"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { StyledWidgetLabelHelpInline } from "@streamlit/lib/src/components/widgets/BaseWidget"
@@ -129,6 +136,8 @@ class Checkbox extends React.PureComponent<Props, State> {
   public render(): React.ReactNode {
     const { theme, width, element, disabled, widgetMgr } = this.props
     const { colors, spacing } = theme
+    const lightTheme = hasLightBackgroundColor(theme)
+
     const style = { width }
     const color = disabled ? colors.fadedText40 : colors.bodyText
 
@@ -147,6 +156,16 @@ class Checkbox extends React.PureComponent<Props, State> {
           disabled={disabled}
           onChange={this.onChange}
           aria-label={element.label}
+          checkmarkType={
+            element.type === CheckboxProto.StyleType.TOGGLE
+              ? STYLE_TYPE.toggle
+              : STYLE_TYPE.default
+          }
+          labelPlacement={
+            element.type === CheckboxProto.StyleType.TOGGLE
+              ? LABEL_PLACEMENT.right
+              : undefined
+          }
           overrides={{
             Root: {
               style: ({ $isFocusVisible }: { $isFocusVisible: boolean }) => ({
@@ -157,6 +176,56 @@ class Checkbox extends React.PureComponent<Props, State> {
                 display: "flex",
                 alignItems: "start",
               }),
+            },
+            Toggle: {
+              style: ({ $checked }: { $checked: boolean }) => {
+                let backgroundColor = lightTheme
+                  ? colors.bgColor
+                  : colors.bodyText
+
+                if (disabled) {
+                  backgroundColor = lightTheme ? colors.gray60 : colors.gray90
+                }
+                return {
+                  width: "9px",
+                  height: "9px",
+                  transform: $checked ? "translateX(12px)" : "",
+                  backgroundColor,
+                  boxShadow: "",
+                }
+              },
+            },
+            ToggleTrack: {
+              style: ({
+                $checked,
+                $isHovered,
+              }: {
+                $checked: boolean
+                $isHovered: boolean
+              }) => {
+                let backgroundColor = lightTheme
+                  ? colors.gray50
+                  : colors.gray80
+
+                if ($isHovered && !disabled) {
+                  backgroundColor = lightTheme ? colors.gray60 : colors.gray70
+                }
+
+                if ($checked && !disabled) {
+                  backgroundColor = colors.primary
+                }
+
+                return {
+                  marginRight: 0,
+                  marginLeft: "2px",
+                  marginTop: spacing.sm,
+                  paddingLeft: "1.5px",
+                  paddingRight: "1.5px",
+                  width: "24px",
+                  height: "12px",
+                  backgroundColor,
+                }
+              },
             },
             Checkmark: {
               style: ({
