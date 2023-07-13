@@ -54,11 +54,19 @@ function generateToastOverrides(
       style: {
         width: "288px",
         marginTop: "8px",
-        borderRadius: "4px",
+        // Warnings logged if you use shorthand property here:
+        borderTopLeftRadius: theme.radii.lg,
+        borderTopRightRadius: theme.radii.lg,
+        borderBottomLeftRadius: theme.radii.lg,
+        borderBottomRightRadius: theme.radii.lg,
         backgroundColor: lightBackground
           ? theme.colors.gray10
           : theme.colors.gray90,
         color: theme.colors.bodyText,
+        // Take standard BaseWeb shadow and adjust for dark backgrounds
+        boxShadow: lightBackground
+          ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
+          : "0px 4px 16px rgba(0, 0, 0, 0.7)",
       },
     },
     InnerContainer: {
@@ -72,7 +80,7 @@ function generateToastOverrides(
     CloseIcon: {
       style: {
         color: theme.colors.bodyText,
-        marginLeft: "5px",
+        marginRight: "-5px",
         width: "1.2rem",
         height: "1.2rem",
       },
