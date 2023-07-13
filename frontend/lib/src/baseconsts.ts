@@ -55,6 +55,9 @@ export const RERUN_PROMPT_MODAL_DIALOG = false
  */
 export const SHOW_DEPLOY_BUTTON = false
 
-// Mutable Singleton that will disable the fullScreenButton
-// will default to false for regular streamlit use cases
+/**
+ * whether or not to disable full screen for all elements / widgets
+ * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
+ * will default to false for regular streamlit
+ */
 export const disableFullScreenButton = false

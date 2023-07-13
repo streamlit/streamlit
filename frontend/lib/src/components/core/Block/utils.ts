@@ -120,7 +120,9 @@ export interface BaseBlockProps {
   formsData: FormsData
 
   /**
-   * Whether or not disableFullScreenButton as that can cause scrollbar overlays that are unnecessary
+   * whether or not to disable full screen for all elements / widgets
+   * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
+   * will default to false for regular streamlit
    */
   disableFullScreenButton?: boolean
 }
