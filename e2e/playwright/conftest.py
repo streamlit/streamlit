@@ -232,9 +232,33 @@ class ImageCompareFunction(Protocol):
         ...
 
 
+@pytest.fixture(scope="session")
+def snapshot_updates_dir(request: FixtureRequest) -> Path:
+    """Fixture that returns the snapshot updates directory."""
+    root_path = Path(request.node.fspath).resolve()
+    return root_path / "debug-results" / "snapshot-updates"
+
+
+@pytest.fixture(scope="session")
+def snapshot_failures_dir(request: FixtureRequest) -> Path:
+    """Fixture that returns the snapshot test failures directory."""
+    root_path = Path(request.node.fspath).resolve()
+    return root_path / "debug-results" / "snapshot-tests-failures"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_snapshots(snapshot_updates_dir: Path, snapshot_failures_dir: Path):
+    """Fixture that cleans up the snapshot directories before every session."""
+    if snapshot_updates_dir.exists():
+        shutil.rmtree(snapshot_updates_dir)
+
+    if snapshot_failures_dir.exists():
+        shutil.rmtree(snapshot_failures_dir)
+
+
 @pytest.fixture(scope="function")
 def assert_snapshot(
-    request: FixtureRequest,
+    request: FixtureRequest, snapshot_updates_dir: Path, snapshot_failures_dir: Path
 ) -> Generator[ImageCompareFunction, None, None]:
     """Fixture that compares a screenshot with screenshot from a past run."""
     platform = str(sys.platform)
@@ -244,11 +268,8 @@ def assert_snapshot(
 
     snapshot_dir: Path = root_path / "snapshots" / platform / module_name
 
-    snapshot_failures_dir: Path = (
-        root_path / "snapshot_tests_failures" / platform / module_name
-    )
-
-    snapshot_updates_dir: Path = root_path / "snapshot_updates" / platform / module_name
+    module_snapshot_failures_dir: Path = snapshot_failures_dir / platform / module_name
+    module_snapshot_updates_dir: Path = snapshot_updates_dir / platform / module_name
 
     snapshot_file_suffix = ""
     # Extract the parameter ids if they exist
@@ -270,7 +291,8 @@ def assert_snapshot(
     ) -> None:
         nonlocal test_failure_messages
         nonlocal snapshot_default_file_name
-        nonlocal snapshot_failures_dir
+        nonlocal module_snapshot_updates_dir
+        nonlocal module_snapshot_failures_dir
         nonlocal snapshot_file_suffix
         file_extension = ".png"
 
@@ -282,15 +304,23 @@ def assert_snapshot(
             snapshot_dir / f"{snapshot_file_name}{file_extension}"
         )
 
+        snapshot_updates_file_path: Path = (
+            module_snapshot_updates_dir / f"{snapshot_file_name}{file_extension}"
+        )
+
         snapshot_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        test_failures_dir = snapshot_failures_dir / snapshot_file_name
+        test_failures_dir = module_snapshot_failures_dir / snapshot_file_name
         if test_failures_dir.exists():
             # Remove the past runs failure dir for this specific screenshot
             shutil.rmtree(test_failures_dir)
 
         if not snapshot_file_path.exists():
             snapshot_file_path.write_bytes(img)
+            # Update this in updates folder:
+            snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
+            snapshot_updates_file_path.write_bytes(img)
+
             test_failure_messages.append(f"Missing snapshot for {snapshot_file_name}")
             return
 
@@ -312,6 +342,10 @@ def assert_snapshot(
 
         if mismatch < max_diff_pixels:
             return
+
+        # Update this in updates folder:
+        snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
+        snapshot_updates_file_path.write_bytes(img)
 
         # Create new failures folder for this test:
         test_failures_dir.mkdir(parents=True, exist_ok=True)
