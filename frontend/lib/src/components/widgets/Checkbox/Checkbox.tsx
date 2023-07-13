@@ -187,9 +187,9 @@ class Checkbox extends React.PureComponent<Props, State> {
                   backgroundColor = lightTheme ? colors.gray60 : colors.gray90
                 }
                 return {
-                  width: "9px",
-                  height: "9px",
-                  transform: $checked ? "translateX(12px)" : "",
+                  width: "12px",
+                  height: "12px",
+                  transform: $checked ? "translateX(16px)" : "",
                   backgroundColor,
                   boxShadow: "",
                 }
@@ -218,11 +218,11 @@ class Checkbox extends React.PureComponent<Props, State> {
                 return {
                   marginRight: 0,
                   marginLeft: "2px",
-                  marginTop: spacing.sm,
-                  paddingLeft: "1.5px",
-                  paddingRight: "1.5px",
-                  width: "24px",
-                  height: "12px",
+                  // marginTop: spacing.sm,
+                  paddingLeft: "2px",
+                  paddingRight: "2px",
+                  width: "32px",
+                  height: "16px",
                   backgroundColor,
                 }
               },
