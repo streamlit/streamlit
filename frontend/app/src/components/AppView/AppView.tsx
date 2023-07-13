@@ -153,7 +153,7 @@ function AppView(props: AppViewProps): ReactElement {
         uploadClient={uploadClient}
         componentRegistry={componentRegistry}
         formsData={formsData}
-        disableFullScreenButton={true}
+        disableFullScreenButton={disableFullScreenButton}
       />
     </StyledAppViewBlockContainer>
   )
