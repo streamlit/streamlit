@@ -22,7 +22,7 @@ def test_data_editor_supports_various_configurations(
 ):
     """Test that st.data_editor supports various configuration options."""
     # Create locators for all elements with stDataFrame class
-    st_dataframe_elements = app.query_selector_all(".stDataFrame")
+    st_dataframe_elements = app.locator(".stDataFrame").all()
     assert len(st_dataframe_elements) == 23, "Unexpected number of data_editor elements"
 
     for i, element in enumerate(st_dataframe_elements):

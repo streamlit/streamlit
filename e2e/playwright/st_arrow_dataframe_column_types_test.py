@@ -20,8 +20,9 @@ from conftest import ImageCompareFunction
 def test_dataframe_column_types(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
+    """Test that st.dataframe supports various column types."""
     # Create locators for all elements with stDataFrame class
-    st_dataframe_elements = themed_app.query_selector_all(".stDataFrame")
+    st_dataframe_elements = themed_app.locator(".stDataFrame").all()
 
     # Expect the number of stDataFrame elements "to be strictly equal" to 9.
     assert len(st_dataframe_elements) == 9, "Unexpected number of dataframe elements"
