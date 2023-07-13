@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ComponentType } from "react"
-import { mount } from "@streamlit/lib/src/test_util"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
+import { mount } from "@streamlit/lib/src/test_util"
 import { StatelessAccordion } from "baseui/accordion"
+import React, { ComponentType } from "react"
+import { Block } from "../../proto"
 import withExpandable, { ExpandableProps } from "./withExpandable"
+import ExpandableState = Block.Expandable.ExpandableState
 
 const testComponent: ComponentType = () => <div>test</div>
 
@@ -59,7 +61,7 @@ describe("withExpandable HOC", () => {
 
   it("should render a collapsed component", () => {
     const props = getProps({
-      expanded: false,
+      expandableState: ExpandableState.COLLAPSED,
     })
     const WithHoc = withExpandable(testComponent)
     const wrapper = mount(<WithHoc {...props} />)
