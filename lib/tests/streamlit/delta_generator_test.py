@@ -140,6 +140,7 @@ class RunWarningTest(unittest.TestCase):
                 "selectbox",
                 "slider",
                 "snow",
+                "status_panel",
                 "subheader",
                 "success",
                 "table",

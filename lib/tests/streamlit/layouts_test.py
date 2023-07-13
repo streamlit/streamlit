@@ -14,6 +14,7 @@
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Block_pb2 import Block as BlockProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -143,7 +144,10 @@ class ExpanderTest(DeltaGeneratorTestCase):
 
         expander_block = self.get_delta_from_queue()
         self.assertEqual(expander_block.add_block.expandable.label, "label")
-        self.assertEqual(expander_block.add_block.expandable.expanded, False)
+        self.assertEqual(
+            expander_block.add_block.expandable.state,
+            BlockProto.Expandable.ExpandableState.COLLAPSED,
+        )
 
 
 class TabsTest(DeltaGeneratorTestCase):

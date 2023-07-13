@@ -412,6 +412,7 @@ class LayoutsMixin:
 
         return self.dg._block(block_proto=block_proto)
 
+    @gather_metrics("status_panel")
     def status_panel(self, behavior: "StatusPanelBehavior") -> "StatusPanel":
         from streamlit.elements.status_panel import StatusPanel
 
