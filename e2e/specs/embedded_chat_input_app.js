@@ -36,4 +36,8 @@ describe("embedded app with chat input", () => {
       "16px" // == 1rem
     );
   });
+
+  it("not have an iframe resizer anchor", () => {
+    cy.get(`[data-testid="IframeResizerAnchor"]`).should("not.exist");
+  });
 });
