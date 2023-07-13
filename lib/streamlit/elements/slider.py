@@ -386,19 +386,25 @@ class SliderMixin:
         TIMELIKE_TYPES = (SliderProto.DATETIME, SliderProto.TIME, SliderProto.DATE)
 
         if value is None:
+            # We need to know if this is a single or range slider, but don't have
+            # a default value. We will try looking at the value in session state,
+            # but we must be careful, because we don't want the slider's identity
+            # to be derived from the value, or it will change every time the value
+            # changes, which would be a problem if we stop garbage collecting
+            # widgets that haven't been used recently.
+
             single_value = True
 
-            # Set value from session_state if exists.
             session_state = get_session_state().filtered_state
 
-            # we look first to session_state value of the widget because
-            # depending on the value (single value or list/tuple) the slider should be
-            # initializing differently (either as range or single value slider)
             if key is not None and key in session_state:
                 state_value = session_state[key]
                 single_value = isinstance(state_value, tuple(SUPPORTED_TYPES.keys()))
 
-            # Set value default.
+            # Set value default. We assume single vs range doesn't change in the
+            # lifetime of a slider, so it is safe to depend on, but we use the
+            # min/max values and constants for the actual default, to prevent
+            # depending on the value.
             if single_value:
                 value = min_value if min_value is not None else 0
             else:
