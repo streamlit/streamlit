@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import { mount, render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   DateInput as DateInputProto,
@@ -30,8 +30,9 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   element: DateInputProto.create({
     id: "1",
     label: "Label",
-    default: ["1970/01/01"],
-    min: "1970/1/1",
+    default: ["1970/01/20"],
+    min: "1970/1/20",
+    format: "YYYY/MM/DD",
     ...elementProps,
   }),
   width: 0,
@@ -54,6 +55,17 @@ describe("DateInput widget", () => {
     const props = getProps()
     const wrapper = mount(<DateInput {...props} />)
     expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+  })
+
+  it("displays the correct placeholder and value for the provided format", () => {
+    const props = getProps({
+      format: "DD.MM.YYYY",
+    })
+    const { getByPlaceholderText, getByDisplayValue } = render(
+      <DateInput {...props} />
+    )
+    expect(getByPlaceholderText("DD.MM.YYYY")).toBeDefined()
+    expect(getByDisplayValue("20.01.1970")).toBeDefined()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -176,7 +188,7 @@ describe("DateInput widget", () => {
     wrapper.find(UIDatePicker).prop("onClose")()
     wrapper.update()
     expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([
-      new Date("1970/1/1"),
+      new Date("1970/1/20"),
     ])
   })
 
@@ -184,7 +196,7 @@ describe("DateInput widget", () => {
     const props = getProps()
     const wrapper = mount(<DateInput {...props} />)
     expect(wrapper.find(UIDatePicker).prop("minDate")).toStrictEqual(
-      new Date("1970/1/1")
+      new Date("1970/1/20")
     )
     expect(wrapper.find(UIDatePicker).prop("maxDate")).toBeUndefined()
   })
@@ -244,7 +256,7 @@ describe("DateInput widget", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    props.widgetMgr.submitForm("form")
     wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated
