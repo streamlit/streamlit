@@ -77,4 +77,4 @@ jobs:
         if: always()
         with:
           name: playwright_debug_results
-          path: e2e/playwright/debug_results
+          path: e2e/playwright/debug-results
