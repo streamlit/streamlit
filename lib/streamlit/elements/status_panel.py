@@ -135,11 +135,14 @@ class StatusPanelStage(DeltaGenerator):
         msg.delta.add_block.expandable.label = self._label
         _enqueue_message(msg)
 
-    def __enter__(self) -> StatusPanelStage:
+    def __enter__(self) -> StatusPanelStage:  # type: ignore[override]
+        # This is a little dubious: we're returning a different type than
+        # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
+        # should always return `self`?
         super().__enter__()
         return self
 
-    def __exit__(self, type: Any, value: Any, traceback: Any) -> None:
+    def __exit__(self, type: Any, value: Any, traceback: Any) -> Literal[False]:
         if self._behavior == "autocollapse":
             self.set_expandable_state(BlockProto.Expandable.AUTO_COLLAPSED)
-        super().__exit__(type, value, traceback)
+        return super().__exit__(type, value, traceback)
