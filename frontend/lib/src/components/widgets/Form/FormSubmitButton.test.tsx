@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/dom"
+import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { enableAllPlugins } from "immer"
 import React from "react"

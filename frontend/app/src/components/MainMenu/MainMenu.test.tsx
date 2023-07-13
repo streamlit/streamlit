@@ -35,8 +35,9 @@ import {
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import MainMenu, { Props } from "./MainMenu"
-import { waitFor } from "@testing-library/dom"
-import { fireEvent, RenderResult } from "@testing-library/react"
+import { waitFor, fireEvent, RenderResult } from "@testing-library/react"
+
+import "@testing-library/jest-dom"
 
 const { GitStates } = GitInfo
 
@@ -66,7 +67,9 @@ const getProps = (extend?: Partial<Props>): Props => ({
 
 async function openMenu(wrapper: RenderResult): Promise<void> {
   fireEvent.click(wrapper.getByRole("button"))
-  await waitFor(() => expect(wrapper.findByRole("listbox")).toBeDefined())
+  // Each SubMenu is a listbox, so need to use findAllByRole (findByRole throws error if multiple matches)
+  const menu = await wrapper.findAllByRole("listbox")
+  expect(menu).toBeDefined()
 }
 
 function getMenuStructure(
@@ -120,23 +123,23 @@ describe("MainMenu", () => {
     const wrapper = render(<MainMenu {...props} />)
     await openMenu(wrapper)
 
-    await waitFor(() =>
-      expect(
-        wrapper
-          .getAllByRole("option")
-          .map(item => item.querySelector("span:first-of-type")?.textContent)
-      ).toEqual([
-        "Rerun",
-        "Settings",
-        "Print",
-        "Record a screencast",
-        "View app source",
-        "Report bug with app",
-        "About",
-        "Developer options",
-        "Clear cache",
-      ])
-    )
+    const menuOptions = await wrapper.findAllByRole("option")
+
+    const expectedLabels = [
+      "Rerun",
+      "Settings",
+      "Print",
+      "Record a screencast",
+      "View app source",
+      "Report bug with app",
+      "About",
+      "Developer options",
+      "Clear cache",
+    ]
+
+    expectedLabels.forEach((label, index) => {
+      expect(menuOptions[index]).toHaveTextContent(label)
+    })
   })
 
   it("should render core set of menu elements", async () => {
@@ -144,22 +147,22 @@ describe("MainMenu", () => {
     const wrapper = render(<MainMenu {...props} />)
     await openMenu(wrapper)
 
-    await waitFor(() =>
-      expect(
-        wrapper
-          .getAllByRole("option")
-          .map(item => item.querySelector("span:first-of-type")?.textContent)
-      ).toEqual([
-        "Rerun",
-        "Settings",
-        "Print",
-        "Record a screencast",
-        "About",
-        "Developer options",
-        "Clear cache",
-        "Deploy this app",
-      ])
-    )
+    const menuOptions = await wrapper.findAllByRole("option")
+
+    const expectedLabels = [
+      "Rerun",
+      "Settings",
+      "Print",
+      "Record a screencast",
+      "About",
+      "Developer options",
+      "Clear cache",
+      "Deploy this app",
+    ]
+
+    expectedLabels.forEach((label, index) => {
+      expect(menuOptions[index]).toHaveTextContent(label)
+    })
   })
 
   it("should render deploy app menu item", async () => {
@@ -167,11 +170,10 @@ describe("MainMenu", () => {
     const wrapper = render(<MainMenu {...props} />)
     await openMenu(wrapper)
 
-    await waitFor(() =>
-      expect(
-        wrapper.getByRole("option", { name: "Deploy this app" })
-      ).toBeDefined()
-    )
+    const menu = await wrapper.findByRole("option", {
+      name: "Deploy this app",
+    })
+    expect(menu).toBeDefined()
   })
 
   describe("Onclick deploy button", () => {
@@ -190,7 +192,6 @@ describe("MainMenu", () => {
       const items: any = menuWrapper.find("StatefulMenu").at(1).prop("items")
 
       const deployOption = items.find(
-        // @ts-expect-error
         ({ label }) => label === "Deploy this app"
       )
 
@@ -270,7 +271,6 @@ describe("MainMenu", () => {
       .find("MenuStatefulContainer")
       .at(0)
       .prop("items")
-      // @ts-expect-error
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",
@@ -310,11 +310,10 @@ describe("MainMenu", () => {
     const wrapper = render(<MainMenu {...props} />)
     await openMenu(wrapper)
 
-    await waitFor(() =>
-      expect(
-        wrapper.getByRole("option", { name: "Report a bug" })
-      ).toBeDefined()
-    )
+    const reportOption = await wrapper.findByRole("option", {
+      name: "Report a bug",
+    })
+    expect(reportOption).toBeDefined()
   })
 
   it("should not render dev menu when developmentMode is false", () => {
@@ -329,7 +328,6 @@ describe("MainMenu", () => {
       .find("MenuStatefulContainer")
       // make sure that we only have one menu otherwise prop will fail
       .prop("items")
-      // @ts-expect-error
       .map(item => item.label)
     expect(menuLabels).toEqual([
       "Rerun",

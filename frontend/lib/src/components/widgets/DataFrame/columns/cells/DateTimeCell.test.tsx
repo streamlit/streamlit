@@ -108,7 +108,7 @@ describe("editor", () => {
     }
   )
 
-  it("renders textarea when readonly is true", () => {
+  it("renders textarea when readonly is true", async () => {
     // @ts-expect-error
     const Editor = DateTimeCellRenderer.provideEditor?.(
       getMockDateCell({ readonly: true } as DateTimeCell)
@@ -119,12 +119,15 @@ describe("editor", () => {
     }
 
     const result = render(
-      <Editor isHighlighted={false} value={getMockDateCell()} />
+      <Editor
+        isHighlighted={false}
+        value={getMockDateCell({ readonly: true } as DateTimeCell)}
+      />
     )
+
+    const textArea = await result.findByDisplayValue("04:47:44.584")
     // text-area should be found
-    expect(
-      result.findByDisplayValue("2023-02-06T04:47:44.584Z")
-    ).not.toBeUndefined()
+    expect(textArea).toBeDefined()
   })
 
   it("contains max, min, step when passed in", () => {
@@ -178,7 +181,7 @@ describe("editor", () => {
       />
     )
     const input = await result.findByTestId(TEST_ID)
-    expect(result.findByTestId(TEST_ID)).not.toBeUndefined()
+    expect(input).toBeDefined()
     fireEvent.change(input, {
       target: {
         value: "2023-02-06T18:15:33.103Z",
@@ -216,7 +219,7 @@ describe("editor", () => {
       />
     )
     const input = await result.findByTestId(TEST_ID)
-    expect(result.findByTestId(TEST_ID)).not.toBeUndefined()
+    expect(input).toBeDefined()
     fireEvent.change(input, { target: { value: "" } })
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)
     expect(mockCellOnChange).toBeCalledWith({

@@ -16,7 +16,7 @@
 
 import React from "react"
 import { ReactWrapper, ShallowWrapper } from "enzyme"
-import { waitFor } from "@testing-library/dom"
+import { waitFor } from "@testing-library/react"
 import cloneDeep from "lodash/cloneDeep"
 import {
   LocalStore,
@@ -931,7 +931,7 @@ describe("App.onHistoryChange", () => {
     pushStateSpy.mockRestore()
   })
 
-  it("does rerun when we are navigating to a different page and the last window history url contains an anchor", () => {
+  it("does rerun when we are navigating to a different page and the last window history url contains an anchor", async () => {
     const pushStateSpy = jest.spyOn(window.history, "pushState")
 
     jest.spyOn(instance, "onPageChange")
@@ -947,7 +947,7 @@ describe("App.onHistoryChange", () => {
     )
     window.history.back()
 
-    waitFor(() => {
+    await waitFor(() => {
       expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
     })
 

@@ -23,7 +23,7 @@ import {
 import { render } from "@streamlit/lib/src/test_util"
 import { ElementNode } from "@streamlit/lib/src/AppNode"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
-import { waitFor } from "@testing-library/dom"
+import { waitFor } from "@testing-library/react"
 import {
   createFormsData,
   WidgetStateManager,

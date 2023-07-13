@@ -35,6 +35,8 @@ module.exports = {
     // Make sure this is always the last configuration in the extends array.
     "plugin:prettier/recommended",
     "plugin:jest/recommended",
+    // Uses the recommended rules from React Testing Library:
+    "plugin:testing-library/react",
   ],
   // Specifies the ESLint parser
   parser: "@typescript-eslint/parser",
@@ -57,7 +59,7 @@ module.exports = {
     "**/vendor/*",
     "**/node_modules/*",
   ],
-  plugins: ["no-relative-import-paths", "testing-library"],
+  plugins: ["no-relative-import-paths"],
   // Place to specify ESLint rules.
   // Can be used to overwrite rules specified from the extended configs
   rules: {
@@ -163,9 +165,10 @@ module.exports = {
     "jest/no-test-prefixes": "off",
     "jest/valid-expect": "off",
     "jest/valid-title": "off",
-    // React Testing Library rules:
-    "testing-library/no-container": "warn",
-    "testing-library/no-unnecessary-act": "warn",
+    // TODO: Remove these rules once we've migrated to React Testing Library
+    "testing-library/no-node-access": "off",
+    "testing-library/prefer-screen-queries": "off",
+    "testing-library/render-result-naming-convention": "off",
   },
   settings: {
     react: {
