@@ -95,21 +95,21 @@ class StreamlitCallbackHandlerTest(DeltaGeneratorTestCase):
         expected_deltas = [
             {'addBlock': {}},
             {'addBlock': {}},
-            {'addBlock': {'expandable': {'label': '🤔 **Thinking...**', 'expanded': True}, 'allowEmpty': True}},
+            {'addBlock': {'expandable': {'label': '🤔 **Thinking...**'}, 'allowEmpty': True}},
             {'newElement': {'markdown': {'body': 'I need to find out the artist\'s full name and then search the FooBar database for their albums.  \nAction: Search  \nAction Input: "The Storm Before the Calm" artist', 'elementType': 'NATIVE'}}},
-            {'addBlock': {'expandable': {'label': '🤔 **Search:** The Storm Before the Calm" artist', 'expanded': True}, 'allowEmpty': True}},
+            {'addBlock': {'expandable': {'label': '🤔 **Search:** The Storm Before the Calm" artist'}, 'allowEmpty': True}},
             {'newElement': {'markdown': {'body': '**Alanis Morissette**', 'elementType': 'NATIVE'}}},
-            {'addBlock': {'expandable': {'label': '✅ **Search:** The Storm Before the Calm" artist'}, 'allowEmpty': True}},
-            {'addBlock': {'expandable': {'label': '🤔 **Thinking...**', 'expanded': True}, 'allowEmpty': True}},
+            {'addBlock': {'expandable': {'label': '✅ **Search:** The Storm Before the Calm" artist', 'state': 'COLLAPSED'}, 'allowEmpty': True}},
+            {'addBlock': {'expandable': {'label': '🤔 **Thinking...**'}, 'allowEmpty': True}},
             {'newElement': {'markdown': {'body': "I now need to search the FooBar database for Alanis Morissette's albums.  \nAction: FooBar DB  \nAction Input: What albums of Alanis Morissette are in the FooBar database?", 'elementType': 'NATIVE'}}},
-            {'addBlock': {'expandable': {'label': '🤔 **FooBar DB:** What albums of Alanis Morissette are in the FooBar database?', 'expanded': True}, 'allowEmpty': True}},
+            {'addBlock': {'expandable': {'label': '🤔 **FooBar DB:** What albums of Alanis Morissette are in the FooBar database?'}, 'allowEmpty': True}},
             {'newElement': {'markdown': {'body': 'SELECT "Title" FROM "Album" INNER JOIN "Artist" ON "Album"."ArtistId" = "Artist"."ArtistId" WHERE "Name" = \'Alanis Morissette\' LIMIT 5;', 'elementType': 'NATIVE'}}},
             {'newElement': {'markdown': {'body': 'The albums of Alanis Morissette in the FooBar database are Jagged Little Pill.', 'elementType': 'NATIVE'}}},
             {'newElement': {'markdown': {'body': '**The albums of Alanis Morissette in the FooBar database are Jagged Little Pill.**', 'elementType': 'NATIVE'}}},
-            {'addBlock': {'expandable': {'label': '✅ **FooBar DB:** What albums of Alanis Morissette are in the FooBar database?'}, 'allowEmpty': True}},
-            {'addBlock': {'expandable': {'label': '🤔 **Thinking...**', 'expanded': True}, 'allowEmpty': True}},
+            {'addBlock': {'expandable': {'label': '✅ **FooBar DB:** What albums of Alanis Morissette are in the FooBar database?', 'state': 'COLLAPSED'}, 'allowEmpty': True}},
+            {'addBlock': {'expandable': {'label': '🤔 **Thinking...**'}, 'allowEmpty': True}},
             {'newElement': {'markdown': {'body': "I now know the final answer.  \nFinal Answer: The artist who recently released an album called 'The Storm Before the Calm' is Alanis Morissette and the albums of hers in the FooBar database are Jagged Little Pill.", 'elementType': 'NATIVE'}}},
-            {'addBlock': {'expandable': {'label': '📚 **History**'}, 'allowEmpty': True}},
+            {'addBlock': {'expandable': {'label': '📚 **History**', 'state': 'COLLAPSED'}, 'allowEmpty': True}},
             {'newElement': {'markdown': {'body': '✅ **Search:** The Storm Before the Calm" artist', 'elementType': 'NATIVE'}}},
             {'newElement': {'markdown': {'body': 'I need to find out the artist\'s full name and then search the FooBar database for their albums.  \nAction: Search  \nAction Input: "The Storm Before the Calm" artist', 'elementType': 'NATIVE'}}},
             {'newElement': {'markdown': {'body': '**Alanis Morissette**', 'elementType': 'NATIVE'}}},
@@ -120,7 +120,7 @@ class StreamlitCallbackHandlerTest(DeltaGeneratorTestCase):
             {'newElement': {'markdown': {'body': 'The albums of Alanis Morissette in the FooBar database are Jagged Little Pill.', 'elementType': 'NATIVE'}}},
             {'newElement': {'markdown': {'body': '**The albums of Alanis Morissette in the FooBar database are Jagged Little Pill.**', 'elementType': 'NATIVE'}}},
             {'newElement': {'empty': {}}},
-            {'addBlock': {'expandable': {'label': '✅ **Complete!**'}, 'allowEmpty': True}}
+            {'addBlock': {'expandable': {'label': '✅ **Complete!**', 'state': 'COLLAPSED'}, 'allowEmpty': True}}
         ]
         # fmt: on
 
@@ -128,4 +128,9 @@ class StreamlitCallbackHandlerTest(DeltaGeneratorTestCase):
         actual_deltas = [
             MessageToDict(delta) for delta in self.get_all_deltas_from_queue()
         ]
+
+        # If the delta format changes, uncomment this to get a nicely-formatted string
+        # of the updated deltas, for pasting into the `expected_deltas` list.
+        # print(",\n".join([str(delta) for delta in actual_deltas]))
+
         self.assertEqual(expected_deltas, actual_deltas)
