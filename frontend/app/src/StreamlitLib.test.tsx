@@ -44,6 +44,9 @@ import {
 /**
  * Example StreamlitEndpoints implementation.
  */
+
+const disableFullScreenButton = true
+
 class Endpoints implements StreamlitEndpoints {
   public buildComponentURL(componentName: string, path: string): string {
     throw new Error("Unimplemented")
@@ -202,14 +205,12 @@ class StreamlitLibExample extends PureComponent<Props, State> {
         widgetsDisabled={false}
         componentRegistry={this.componentRegistry}
         formsData={this.state.formsData}
-        disableFullscreenButton={true}
+        disableFullScreenButton={disableFullScreenButton}
       />
     )
   }
 
-  private sendRerunBackMsg = (widgetStates: WidgetStates): void => {
-    console.log(`rerun requested (widgetStates=${widgetStates.toJSON()})`)
-  }
+  private sendRerunBackMsg = (): void => {}
 }
 
 describe("StreamlitLibExample", () => {

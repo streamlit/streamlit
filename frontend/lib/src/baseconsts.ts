@@ -54,3 +54,7 @@ export const RERUN_PROMPT_MODAL_DIALOG = false
  * If this is true, we show a deploy button in the toolbar.
  */
 export const SHOW_DEPLOY_BUTTON = false
+
+// Mutable Singleton that will disable the fullScreenButton
+// will default to false for regular streamlit use cases
+export const disableFullScreenButton = false

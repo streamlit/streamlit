@@ -39,17 +39,12 @@ import {
   StyledVerticalBlock,
   styledVerticalBlockWrapperStyles,
 } from "./styled-components"
+import { disableFullScreenButton } from "@streamlit/lib/src/baseconsts"
 
 const ExpandableLayoutBlock = withExpandable(LayoutBlock)
 
-// Singleton that will disable the fullScreenButton
-// will default to false for regular streamlit use cases
-let disableFullscreenButton = false
-export { disableFullscreenButton }
-
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
-  disableFullscreenButton: boolean
 }
 
 interface BlockPropsWithWidth extends BaseBlockProps {
@@ -140,16 +135,21 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     const renderTabContent = (
       mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
     ): ReactElement => {
-      disableFullscreenButton = mappedChildProps.disableFullscreenButton
-      // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
-      // eslint-disable-next-line @typescript-eslint/no-use-before-define
-      return <VerticalBlock {...mappedChildProps}></VerticalBlock>
+      const propsWithDisableFullScreenButton =
+        mappedChildProps.disableFullScreenButton === undefined
+          ? { disableFullScreenButton: false, ...mappedChildProps }
+          : mappedChildProps
+
+      return (
+        // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        <VerticalBlock {...propsWithDisableFullScreenButton}></VerticalBlock>
+      )
     }
     const tabsProps: TabProps = {
       ...childProps,
       isStale,
       renderTabContent,
-      disableFullscreenButton,
     }
     return <Tabs {...tabsProps} />
   }
@@ -168,9 +168,18 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
               // Put node in childProps instead of passing as a node={node} prop in React to
               // guarantee it doesn't get overwritten by {...childProps}.
               const childProps = { ...props, node: node as ElementNode }
-
               const key = getElementWidgetID(node.element) || index
-              return <ElementNodeRenderer key={key} {...childProps} />
+              return (
+                <ElementNodeRenderer
+                  disableFullScreenButton={
+                    props.disableFullScreenButton
+                      ? props.disableFullScreenButton
+                      : disableFullScreenButton
+                  }
+                  key={key}
+                  {...childProps}
+                />
+              )
             }
 
             // Recursive case: render a block, which can contain other blocks
@@ -194,8 +203,6 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
 // Currently, only VerticalBlocks will ever contain leaf elements. But this is only enforced on the
 // Python side.
 const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
-  disableFullscreenButton = props.disableFullscreenButton
-
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
@@ -203,7 +210,6 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     <AutoSizer disableHeight={true} style={styledVerticalBlockWrapperStyles}>
       {({ width }) => {
         const propsWithNewWidth = { ...props, ...{ width } }
-
         return (
           <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
             <ChildRenderer {...propsWithNewWidth} />
@@ -232,8 +238,12 @@ function LayoutBlock(props: BlockPropsWithWidth): ReactElement {
   if (props.node.deltaBlock.horizontal) {
     return <HorizontalBlock {...props} />
   }
+  const propsWithDisableFullScreenButton =
+    props.disableFullScreenButton === undefined
+      ? { disableFullScreenButton: false, ...props }
+      : props
 
-  return <VerticalBlock {...props} disableFullscreenButton />
+  return <VerticalBlock {...propsWithDisableFullScreenButton} />
 }
 
 export default VerticalBlock

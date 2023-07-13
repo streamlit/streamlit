@@ -15,7 +15,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import { mount, render } from "@streamlit/lib/src/test_util"
 
 import FullScreenWrapper from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import withFullScreenWrapper from "./withFullScreenWrapper"
@@ -24,24 +24,33 @@ interface TestProps {
   width: number
   isFullScreen: boolean
   label: string
+  height?: number
+  disableFullScreenButton: boolean
 }
 
 class TestComponent extends PureComponent<TestProps> {
   public render = (): ReactNode => this.props.label
 }
 
+const getProps = (props: Partial<TestProps> = {}): TestProps => ({
+  width: 100,
+  isFullScreen: false,
+  label: "label",
+  disableFullScreenButton: true,
+  ...props,
+})
+
 const WrappedTestComponent = withFullScreenWrapper(TestComponent)
 
 describe("withFullScreenWrapper HOC", () => {
   it("renders without crashing", () => {
-    const props = { width: 100, label: "label" }
-    const wrapper = mount(<WrappedTestComponent {...props} />)
+    const wrapper = mount(<WrappedTestComponent {...getProps()} />)
 
     expect(wrapper.find(FullScreenWrapper).exists()).toBe(true)
   })
 
   it("renders a component wrapped with FullScreenWrapper", () => {
-    const props = { width: 100, label: "label" }
+    const props = getProps()
     const wrapper = mount(<WrappedTestComponent {...props} />)
     const fullScreenWrapper = wrapper.find(FullScreenWrapper)
 
@@ -50,7 +59,7 @@ describe("withFullScreenWrapper HOC", () => {
   })
 
   it("renders FullScreenWrapper with specified height", () => {
-    const props = { width: 123, label: "label", height: 455 }
+    const props = getProps({ width: 123, label: "label", height: 455 })
     const wrapper = mount(<WrappedTestComponent {...props} />)
     const fullScreenWrapper = wrapper.find(FullScreenWrapper)
 
@@ -59,14 +68,14 @@ describe("withFullScreenWrapper HOC", () => {
   })
 
   it("passes unrelated props to wrapped component", () => {
-    const props = { width: 100, label: "label" }
+    const props = getProps()
     const wrapper = mount(<WrappedTestComponent {...props} />)
     const componentInstance = wrapper.find(TestComponent)
     expect(componentInstance.props().label).toBe("label")
   })
 
   it("passes `isFullScreen` to wrapped component", () => {
-    const props = { width: 100, label: "label" }
+    const props = getProps()
     const wrapper = mount(<WrappedTestComponent {...props} />)
 
     // by default, isFullScreen == false
@@ -91,7 +100,7 @@ describe("withFullScreenWrapper HOC", () => {
       NoFullScreenPropComponent
     )
 
-    const props = { width: 100, label: "label" }
+    const props = getProps()
     const wrapper = mount(<WrappedNoFullScreenPropComponent {...props} />)
     expect(wrapper.find(NoFullScreenPropComponent).props().label).toBe("label")
   })
@@ -100,5 +109,11 @@ describe("withFullScreenWrapper HOC", () => {
     expect(WrappedTestComponent.displayName).toEqual(
       "withFullScreenWrapper(TestComponent)"
     )
+  })
+
+  it("cannot find StyledFullScreenButton when disableFullScreenWidget is true", () => {
+    const props = getProps()
+    const { queryByTestId } = render(<WrappedTestComponent {...props} />)
+    expect(queryByTestId("StyledFullScreenButton")).toBeNull()
   })
 })

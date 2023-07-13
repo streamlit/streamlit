@@ -118,4 +118,9 @@ export interface BaseBlockProps {
    * from that callback.
    */
   formsData: FormsData
+
+  /**
+   * Whether or not disableFullScreenButton as that can cause scrollbar overlays that are unnecessary
+   */
+  disableFullScreenButton?: boolean
 }

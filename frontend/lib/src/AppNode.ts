@@ -42,6 +42,12 @@ import {
   notUndefined,
 } from "./util/utils"
 
+// Mutable Singleton that will disable the fullScreenButton
+// will default to false for regular streamlit use cases
+// eslint-disable-next-line prefer-const
+let disableFullScreenButton = false
+export { disableFullScreenButton }
+
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
 /**

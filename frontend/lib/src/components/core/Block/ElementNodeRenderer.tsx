@@ -204,6 +204,7 @@ const StreamlitSyntaxHighlighter = React.lazy(
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
   width?: number
+  disableFullScreenButton: boolean
 }
 
 interface RawElementNodeRendererProps extends ElementNodeRendererProps {
@@ -281,7 +282,11 @@ const RawElementNodeRenderer = (
 
     case "arrowTable":
       return (
-        <ArrowTable element={node.quiverElement as Quiver} width={width} />
+        <ArrowTable
+          element={node.quiverElement as Quiver}
+          width={width}
+          disableFullScreenButton={props.disableFullScreenButton}
+        />
       )
 
     case "arrowVegaLiteChart":
@@ -289,6 +294,7 @@ const RawElementNodeRenderer = (
         <ArrowVegaLiteChart
           element={node.vegaLiteChartElement as VegaLiteChartElement}
           width={width}
+          disableFullScreenButton={props.disableFullScreenButton}
         />
       )
 
@@ -297,6 +303,7 @@ const RawElementNodeRenderer = (
         <DebouncedBokehChart
           width={width}
           element={node.element.bokehChart as BokehChartProto}
+          disableFullScreenButton={props.disableFullScreenButton}
         />
       )
 
@@ -306,6 +313,7 @@ const RawElementNodeRenderer = (
           element={node.immutableElement.get("dataFrame")}
           width={width}
           height={height}
+          disableFullScreenButton={props.disableFullScreenButton}
         />
       )
 
@@ -315,6 +323,7 @@ const RawElementNodeRenderer = (
           sessionInfo={props.sessionInfo}
           width={width}
           element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
+          disableFullScreenButton={props.disableFullScreenButton}
         />
       )
 
@@ -342,6 +351,7 @@ const RawElementNodeRenderer = (
         <GraphVizChart
           element={node.element.graphvizChart as GraphVizChartProto}
           width={width}
+          disableFullScreenButton={props.disableFullScreenButton}
         />
       )
 
@@ -356,6 +366,7 @@ const RawElementNodeRenderer = (
           width={width}
           element={node.element.imgs as ImageListProto}
           endpoints={props.endpoints}
+          disableFullScreenButton={props.disableFullScreenButton}
         />
       )
 
@@ -384,6 +395,7 @@ const RawElementNodeRenderer = (
           width={width}
           height={height}
           element={node.element.plotlyChart as PlotlyChartProto}
+          disableFullScreenButton={props.disableFullScreenButton}
         />
       )
 
@@ -405,7 +417,11 @@ const RawElementNodeRenderer = (
 
     case "table":
       return (
-        <Table element={node.immutableElement.get("table")} width={width} />
+        <Table
+          element={node.immutableElement.get("table")}
+          width={width}
+          disableFullScreenButton={props.disableFullScreenButton}
+        />
       )
 
     case "text":
@@ -421,6 +437,7 @@ const RawElementNodeRenderer = (
         <VegaLiteChart
           element={node.immutableElement.get("vegaLiteChart")}
           width={width}
+          disableFullScreenButton={props.disableFullScreenButton}
         />
       )
 
@@ -452,6 +469,7 @@ const RawElementNodeRenderer = (
             key: arrowProto.id,
           })}
           {...widgetProps}
+          disableFullScreenButton={props.disableFullScreenButton}
         />
       )
     }
