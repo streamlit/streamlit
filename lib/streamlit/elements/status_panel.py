@@ -30,9 +30,9 @@ class StatusPanel(DeltaGenerator):
 
     @staticmethod
     def create(parent: DeltaGenerator, behavior: StatusPanelBehavior) -> StatusPanel:
-        # This is an ugly pattern we'll want to correct:
-        # we can just instantiate a new StatusPanel directly, because a bunch
-        # of its creation logic lives inside the DeltaGenerator._block function.
+        # This `create()` method is an ugly pattern we'll want to correct.
+        # We can't just instantiate a new StatusPanel directly, because a bunch
+        # of its creation logic lives inside the `DeltaGenerator._block()` function.
         # So StatusPanel gets instantiated by `_block()`, and then we
         # finish initializing its members below. (The same is true of StatusPanelStage,
         # below.)
@@ -49,7 +49,7 @@ class StatusPanel(DeltaGenerator):
     ):
         super().__init__(root_container, cursor, parent, block_type)
 
-        # Initialized in `create`
+        # Initialized in `create()`
         self._behavior: StatusPanelBehavior = "autocollapse"
 
     def stage(self, label: str) -> StatusPanelStage:
@@ -104,10 +104,12 @@ class StatusPanelStage(DeltaGenerator):
             assert not runtime.exists()
             self._locked_cursor = LockedCursor(0)
 
-        # These member vars are initialized after instantiation, in `create`.
+        self._expandable_state = BlockProto.Expandable.EXPANDED
+
+        # These members are initialized with their proper values after
+        # instantiation, in `create()`.
         self._label: str = ""
         self._behavior: StatusPanelBehavior = "autocollapse"
-        self._expandable_state = BlockProto.Expandable.EXPANDED
 
     def set_label(self, label: str) -> None:
         """Update our expander's label."""
