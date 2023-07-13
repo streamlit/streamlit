@@ -26,7 +26,7 @@ import {
 
 import classNames from "classnames"
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
-import { Block } from "src/proto"
+import { Block } from "@streamlit/lib/src/proto"
 import { StyledExpandableContainer } from "./styled-components"
 import ExpandableState = Block.Expandable.ExpandableState
 
