@@ -70,12 +70,16 @@ describe("DataFrame widget", () => {
   })
 
   it("renders without crashing", () => {
-    const wrapper = mount(<DataFrame {...props} />)
+    const wrapper = mount(
+      <DataFrame disableFullScreenButton={false} {...props} />
+    )
     expect(wrapper.find(GlideDataEditor).length).toBe(1)
   })
 
   it("should have correct className", () => {
-    const wrapper = mount(<DataFrame {...props} />)
+    const wrapper = mount(
+      <DataFrame disableFullScreenButton={false} {...props} />
+    )
     expect(wrapper.find(StyledResizableContainer).prop("className")).toContain(
       "stDataFrame"
     )
@@ -83,7 +87,10 @@ describe("DataFrame widget", () => {
 
   it("grid container should use full width when useContainerWidth is used", () => {
     const wrapper = mount(
-      <DataFrame {...getProps(new Quiver({ data: TEN_BY_TEN }), true)} />
+      <DataFrame
+        disableFullScreenButton={false}
+        {...getProps(new Quiver({ data: TEN_BY_TEN }), true)}
+      />
     )
     const dataFrameContainer = wrapper.find(Resizable).props() as any
     expect(dataFrameContainer.size.width).toBe(700)
@@ -91,7 +98,9 @@ describe("DataFrame widget", () => {
   })
 
   it("grid container should render with specific size", () => {
-    const wrapper = mount(<DataFrame {...props} />)
+    const wrapper = mount(
+      <DataFrame disableFullScreenButton={false} {...props} />
+    )
     const dataFrameContainer = wrapper.find(Resizable).props() as any
     expect(dataFrameContainer.size.width).toBe(400)
     expect(dataFrameContainer.size.height).toBe(400)
@@ -105,6 +114,7 @@ describe("DataFrame widget", () => {
 
     const wrapper = mount(
       <DataFrame
+        disableFullScreenButton={false}
         {...getProps(
           new Quiver({ data: TEN_BY_TEN }),
           true,
