@@ -18,7 +18,7 @@ import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMar
 import { mount } from "@streamlit/lib/src/test_util"
 import { StatelessAccordion } from "baseui/accordion"
 import React, { ComponentType } from "react"
-import { Block } from "../../proto"
+import { Block } from "src/proto"
 import withExpandable, { ExpandableProps } from "./withExpandable"
 import ExpandableState = Block.Expandable.ExpandableState
 

@@ -26,7 +26,7 @@ import {
 
 import classNames from "classnames"
 import React, { ComponentType, ReactElement, useEffect, useState } from "react"
-import { Block } from "../../proto"
+import { Block } from "src/proto"
 import { StyledExpandableContainer } from "./styled-components"
 import ExpandableState = Block.Expandable.ExpandableState
 
