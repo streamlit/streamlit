@@ -116,7 +116,7 @@ class MockComponent {
     this.instance = this.wrapper.instance()
 
     // Ensure we mounted without error.
-    expect(this.instance.state.componentError).toBeUndefined()
+    expect(this.instance.state.componentError).toBeUndefined() // eslint-disable-line jest/no-standalone-expect
 
     // Spy on the ComponentInstance's iframe's postMessage function.
     const unsafeInstance = this.instance as any
@@ -166,7 +166,7 @@ class MockComponent {
     const unsafeInstance = this.instance as any
 
     // Verify the iframe exists
-    expect(unsafeInstance.iframeRef.current).not.toBeNull()
+    expect(unsafeInstance.iframeRef.current).not.toBeNull() // eslint-disable-line jest/no-standalone-expect
 
     unsafeInstance.onBackMsg(type, data)
 

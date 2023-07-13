@@ -34,6 +34,7 @@ module.exports = {
     // This will display prettier errors as ESLint errors.
     // Make sure this is always the last configuration in the extends array.
     "plugin:prettier/recommended",
+    // Recommended Jest configuration to enforce good testing practices
     "plugin:jest/recommended",
   ],
   // Specifies the ESLint parser
@@ -151,21 +152,6 @@ module.exports = {
       { allowSameFolder: true, rootDir: "src", prefix: "src" },
     ],
     "no-else-return": ["error", { allowElseIf: true }],
-
-    // Jest Testing Rules - 0 = off, 1 = warn, 2 = error
-    "jest/expect-expect": 2,
-    "jest/no-alias-methods": 2,
-    "jest/no-conditional-expect": 2,
-    "jest/no-disabled-tests": 2,
-    "jest/no-done-callback": 2,
-    "jest/no-identical-title": 2,
-
-    // TODO: Go through and fix failing jest tests and re-enable these rules
-    "jest/no-jasmine-globals": "off",
-    "jest/no-standalone-expect": "off",
-    "jest/no-test-prefixes": "off",
-    "jest/valid-expect": "off",
-    "jest/valid-title": "off",
   },
   settings: {
     react: {
