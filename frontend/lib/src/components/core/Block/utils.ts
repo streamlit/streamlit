@@ -118,11 +118,4 @@ export interface BaseBlockProps {
    * from that callback.
    */
   formsData: FormsData
-
-  /**
-   * Whether or not to hide full screen for all elements / widgets
-   * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
-   * will default to false for regular streamlit
-   */
-  hideFullScreenButton?: boolean
 }

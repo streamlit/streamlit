@@ -45,6 +45,13 @@ const ExpandableLayoutBlock = withExpandable(LayoutBlock)
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
+
+  /**
+   * Whether or not to hide full screen for all elements / widgets
+   * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
+   * will default to false for regular streamlit
+   */
+  hideFullScreenButton?: boolean
 }
 
 interface BlockPropsWithWidth extends BaseBlockProps {
@@ -158,7 +165,6 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 }
 
 const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
-  const { hideFullScreenButton } = React.useContext(LibContext)
   return (
     <>
       {props.node.children &&
@@ -171,17 +177,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
               const childProps = { ...props, node: node as ElementNode }
 
               const key = getElementWidgetID(node.element) || index
-              return (
-                <ElementNodeRenderer
-                  hideFullScreenButton={
-                    props.hideFullScreenButton
-                      ? props.hideFullScreenButton
-                      : hideFullScreenButton
-                  }
-                  key={key}
-                  {...childProps}
-                />
-              )
+              return <ElementNodeRenderer key={key} {...childProps} />
             }
 
             // Recursive case: render a block, which can contain other blocks
@@ -246,12 +242,8 @@ function LayoutBlock(props: BlockPropsWithWidth): ReactElement {
   if (props.node.deltaBlock.horizontal) {
     return <HorizontalBlock {...props} />
   }
-  const propsWithHideFullScreenButton =
-    props.hideFullScreenButton === undefined
-      ? { hideFullScreenButton: false, ...props }
-      : props
 
-  return <VerticalBlock {...propsWithHideFullScreenButton} />
+  return <VerticalBlock {...props} />
 }
 
 export default VerticalBlock
