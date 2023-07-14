@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import React from "react"
+import "@testing-library/jest-dom"
 
 import { screen } from "@testing-library/dom"
-import "@testing-library/jest-dom"
 import userEvent from "@testing-library/user-event"
 import { enableAllPlugins } from "immer"
-import React from "react"
 
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
 
