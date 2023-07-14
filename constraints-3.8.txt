@@ -15,7 +15,7 @@ cffi==1.15.1
 cfgv==3.3.1
 charset-normalizer==3.2.0
 chart-studio==1.1.0
-click==8.1.4
+click==8.1.5
 cloudpickle==2.0.0
 contourpy==1.1.0
 coverage==7.2.7
@@ -43,12 +43,12 @@ iniconfig==2.0.0
 jaraco.classes==3.3.0
 jeepney==0.8.0
 Jinja2==3.1.2
-jsonschema==4.18.2
+jsonschema==4.18.3
 jsonschema-specifications==2023.6.1
 keyring==24.2.0
 kiwisolver==1.4.4
-langchain==0.0.231
-langchainplus-sdk==0.0.20
+langchain==0.0.232
+langsmith==0.0.5
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
 marshmallow==3.19.0
