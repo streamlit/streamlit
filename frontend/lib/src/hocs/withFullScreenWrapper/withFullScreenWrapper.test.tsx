@@ -25,7 +25,7 @@ interface TestProps {
   isFullScreen: boolean
   label: string
   height?: number
-  disableFullScreenButton: boolean
+  hideFullScreenButton: boolean
 }
 
 class TestComponent extends PureComponent<TestProps> {
@@ -36,7 +36,7 @@ const getProps = (props: Partial<TestProps> = {}): TestProps => ({
   width: 100,
   isFullScreen: false,
   label: "label",
-  disableFullScreenButton: true,
+  hideFullScreenButton: true,
   ...props,
 })
 

@@ -41,7 +41,7 @@ interface Props {
   width: number
   height?: number
   theme: EmotionTheme
-  disableFullScreenButton: boolean
+  hideFullScreenButton: boolean
 }
 
 interface State {
@@ -144,7 +144,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
 
     return (
       <StyledFullScreenFrame isExpanded={expanded}>
-        {!this.props.disableFullScreenButton && (
+        {!this.props.hideFullScreenButton && (
           <StyledFullScreenButton
             data-testid={"StyledFullScreenButton"}
             onClick={buttonOnClick}

@@ -82,7 +82,7 @@ function getProps(
     componentRegistry: new ComponentRegistry(endpoints),
     formsData: createFormsData(),
     width: 1000,
-    disableFullScreenButton: false,
+    hideFullScreenButton: false,
     ...props,
   }
 }

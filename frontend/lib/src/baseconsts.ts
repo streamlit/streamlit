@@ -60,4 +60,4 @@ export const SHOW_DEPLOY_BUTTON = false
  * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
  * will default to false for regular streamlit
  */
-export const disableFullScreenButton = false
+export const hideFullScreenButton = false

@@ -44,7 +44,7 @@ import {
   StyledAppViewBlockSpacer,
 } from "./styled-components"
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
-import { disableFullScreenButton } from "@streamlit/lib/src/baseconsts"
+import { hideFullScreenButton } from "@streamlit/lib/src/baseconsts"
 
 export interface AppViewProps {
   elements: AppRoot
@@ -153,7 +153,7 @@ function AppView(props: AppViewProps): ReactElement {
         uploadClient={uploadClient}
         componentRegistry={componentRegistry}
         formsData={formsData}
-        disableFullScreenButton={disableFullScreenButton}
+        hideFullScreenButton={hideFullScreenButton}
       />
     </StyledAppViewBlockContainer>
   )

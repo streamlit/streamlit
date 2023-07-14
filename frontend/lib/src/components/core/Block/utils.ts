@@ -124,5 +124,5 @@ export interface BaseBlockProps {
    * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
    * will default to false for regular streamlit
    */
-  disableFullScreenButton?: boolean
+  hideFullScreenButton?: boolean
 }

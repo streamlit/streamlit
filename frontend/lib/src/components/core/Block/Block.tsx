@@ -39,7 +39,7 @@ import {
   StyledVerticalBlock,
   styledVerticalBlockWrapperStyles,
 } from "./styled-components"
-import { disableFullScreenButton } from "@streamlit/lib/src/baseconsts"
+import { hideFullScreenButton } from "@streamlit/lib/src/baseconsts"
 
 const ExpandableLayoutBlock = withExpandable(LayoutBlock)
 
@@ -135,15 +135,15 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     const renderTabContent = (
       mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
     ): ReactElement => {
-      const propsWithDisableFullScreenButton =
-        mappedChildProps.disableFullScreenButton === undefined
-          ? { disableFullScreenButton: false, ...mappedChildProps }
+      const propsWithhideFullScreenButton =
+        mappedChildProps.hideFullScreenButton === undefined
+          ? { hideFullScreenButton: false, ...mappedChildProps }
           : mappedChildProps
 
       return (
         // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
-        <VerticalBlock {...propsWithDisableFullScreenButton}></VerticalBlock>
+        <VerticalBlock {...propsWithhideFullScreenButton}></VerticalBlock>
       )
     }
     const tabsProps: TabProps = {
@@ -172,10 +172,10 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
               const key = getElementWidgetID(node.element) || index
               return (
                 <ElementNodeRenderer
-                  disableFullScreenButton={
-                    props.disableFullScreenButton
-                      ? props.disableFullScreenButton
-                      : disableFullScreenButton
+                  hideFullScreenButton={
+                    props.hideFullScreenButton
+                      ? props.hideFullScreenButton
+                      : hideFullScreenButton
                   }
                   key={key}
                   {...childProps}
@@ -189,6 +189,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
               // Put node in childProps instead of passing as a node={node} prop in React to
               // guarantee it doesn't get overwritten by {...childProps}.
               const childProps = { ...props, node: node as BlockNode }
+
               return <BlockNodeRenderer key={index} {...childProps} />
             }
 
@@ -210,6 +211,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     <AutoSizer disableHeight={true} style={styledVerticalBlockWrapperStyles}>
       {({ width }) => {
         const propsWithNewWidth = { ...props, ...{ width } }
+
         return (
           <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
             <ChildRenderer {...propsWithNewWidth} />
@@ -238,12 +240,12 @@ function LayoutBlock(props: BlockPropsWithWidth): ReactElement {
   if (props.node.deltaBlock.horizontal) {
     return <HorizontalBlock {...props} />
   }
-  const propsWithDisableFullScreenButton =
-    props.disableFullScreenButton === undefined
-      ? { disableFullScreenButton: false, ...props }
+  const propsWithhideFullScreenButton =
+    props.hideFullScreenButton === undefined
+      ? { hideFullScreenButton: false, ...props }
       : props
 
-  return <VerticalBlock {...propsWithDisableFullScreenButton} />
+  return <VerticalBlock {...propsWithhideFullScreenButton} />
 }
 
 export default VerticalBlock
