@@ -30,7 +30,7 @@ describe("FullScreenWrapper", () => {
     ...props,
   })
 
-  it("cannot find StyledFullScreenButton when disableFullScreenWidget is true", () => {
+  it("cannot find StyledFullScreenButton when hideFullScreenWidget is true", () => {
     const props = getProps()
     const providerProps = {
       hideFullScreenButton: true,
