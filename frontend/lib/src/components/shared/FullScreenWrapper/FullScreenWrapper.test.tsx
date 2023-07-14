@@ -17,7 +17,7 @@
 import React from "react"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import FullScreenWrapper, { FullScreenWrapperProps } from "./FullScreenWrapper"
-import { renderWithLibContext } from "@streamlit/lib/src/test_util"
+import { renderWithCustomLibContext } from "@streamlit/lib/src/test_util"
 
 describe("FullScreenWrapper", () => {
   const getProps = (
@@ -36,7 +36,7 @@ describe("FullScreenWrapper", () => {
       hideFullScreenButton: true,
     }
 
-    const { queryByTestId } = renderWithLibContext(
+    const { queryByTestId } = renderWithCustomLibContext(
       <FullScreenWrapper {...props} />,
       { providerProps }
     )

@@ -98,7 +98,7 @@ export function mockWindowLocation(hostname: string): void {
   }
 }
 
-export const renderWithLibContext = (
+export const renderWithCustomLibContext = (
   component: ReactElement,
   // @ts-expect-error
   { providerProps, ...renderOptions }
