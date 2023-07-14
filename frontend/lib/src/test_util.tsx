@@ -31,8 +31,9 @@ import {
 /* eslint-enable */
 import React, { Component, FC, ReactElement } from "react"
 import ThemeProvider from "./components/core/ThemeProvider"
-import { EmotionTheme } from "./theme"
+import { EmotionTheme, lightTheme } from "./theme"
 import { mockTheme } from "./mocks/mockTheme"
+import { LibContext, LibContextProps } from "./components/core/LibContext"
 
 export function mount<C extends Component, P = C["props"], S = C["state"]>(
   node: ReactElement<P>,
@@ -95,4 +96,19 @@ export function mockWindowLocation(hostname: string): void {
     assign: jest.fn(),
     hostname: hostname,
   }
+}
+
+export const renderWithLibContext = (
+  component: ReactElement,
+  // @ts-expect-error
+  { providerProps, ...renderOptions }
+): RenderResult => {
+  const value = {
+    ...providerProps,
+    ...renderOptions,
+  }
+  return reactTestingLibraryRender(
+    <LibContext.Provider value={value}>{component}</LibContext.Provider>,
+    renderOptions
+  )
 }
