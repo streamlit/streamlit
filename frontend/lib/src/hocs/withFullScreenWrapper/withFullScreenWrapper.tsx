@@ -22,7 +22,6 @@ import FullScreenWrapper from "@streamlit/lib/src/components/shared/FullScreenWr
 interface Props {
   width: number
   height?: number
-  hideFullScreenButton: boolean
 }
 
 // Our wrapper takes the wrapped component's props, plus "width", "height?".
@@ -39,14 +38,10 @@ function withFullScreenWrapper<P>(
     })`
 
     public render = (): ReactNode => {
-      const { width, height, hideFullScreenButton } = this.props
+      const { width, height } = this.props
 
       return (
-        <FullScreenWrapper
-          width={width}
-          height={height}
-          hideFullScreenButton={hideFullScreenButton}
-        >
+        <FullScreenWrapper width={width} height={height}>
           {({ width, height, expanded }) => (
             // `(this.props as P)` is required due to a TS bug:
             // https://github.com/microsoft/TypeScript/issues/28938#issuecomment-450636046

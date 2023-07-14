@@ -36,12 +36,11 @@ export type Size = {
  * This function should implement the following signature:
  * ({ height, width }) => PropTypes.element
  */
-interface Props {
+export interface FullScreenWrapperProps {
   children: (props: Size) => React.ReactNode
   width: number
   height?: number
   theme: EmotionTheme
-  hideFullScreenButton: boolean
 }
 
 interface State {
@@ -55,12 +54,12 @@ interface State {
  * wrapper element. OnClick, change the element container
  * to fixed and cover all screen, updating wrapped element height and width
  */
-class FullScreenWrapper extends PureComponent<Props, State> {
+class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
   public context!: React.ContextType<typeof LibContext>
 
   public static contextType = LibContext
 
-  public constructor(props: Props) {
+  public constructor(props: FullScreenWrapperProps) {
     super(props)
     this.state = {
       expanded: false,
@@ -144,7 +143,7 @@ class FullScreenWrapper extends PureComponent<Props, State> {
 
     return (
       <StyledFullScreenFrame isExpanded={expanded}>
-        {!this.props.hideFullScreenButton && (
+        {!this.context.hideFullScreenButton && (
           <StyledFullScreenButton
             data-testid={"StyledFullScreenButton"}
             onClick={buttonOnClick}

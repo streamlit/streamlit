@@ -15,7 +15,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { mount, render } from "@streamlit/lib/src/test_util"
+import { mount } from "@streamlit/lib/src/test_util"
 
 import FullScreenWrapper from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import withFullScreenWrapper from "./withFullScreenWrapper"
@@ -25,7 +25,6 @@ interface TestProps {
   isFullScreen: boolean
   label: string
   height?: number
-  hideFullScreenButton: boolean
 }
 
 class TestComponent extends PureComponent<TestProps> {
@@ -36,7 +35,6 @@ const getProps = (props: Partial<TestProps> = {}): TestProps => ({
   width: 100,
   isFullScreen: false,
   label: "label",
-  hideFullScreenButton: true,
   ...props,
 })
 
@@ -109,11 +107,5 @@ describe("withFullScreenWrapper HOC", () => {
     expect(WrappedTestComponent.displayName).toEqual(
       "withFullScreenWrapper(TestComponent)"
     )
-  })
-
-  it("cannot find StyledFullScreenButton when disableFullScreenWidget is true", () => {
-    const props = getProps()
-    const { queryByTestId } = render(<WrappedTestComponent {...props} />)
-    expect(queryByTestId("StyledFullScreenButton")).toBeNull()
   })
 })

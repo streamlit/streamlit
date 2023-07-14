@@ -39,7 +39,7 @@ import {
   StyledVerticalBlock,
   styledVerticalBlockWrapperStyles,
 } from "./styled-components"
-import { hideFullScreenButton } from "@streamlit/lib/src/baseconsts"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 const ExpandableLayoutBlock = withExpandable(LayoutBlock)
 
@@ -158,6 +158,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 }
 
 const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
+  const { hideFullScreenButton } = React.useContext(LibContext)
   return (
     <>
       {props.node.children &&
@@ -204,6 +205,11 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
 // Currently, only VerticalBlocks will ever contain leaf elements. But this is only enforced on the
 // Python side.
 const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
+  const { setHideFullScreenButton } = React.useContext(LibContext)
+  if (props.hideFullScreenButton !== undefined) {
+    setHideFullScreenButton(props.hideFullScreenButton)
+  }
+
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.

@@ -137,6 +137,7 @@ interface State {
   connectionState: ConnectionState
   elements: AppRoot
   isFullScreen: boolean
+  hideFullScreenButton: boolean
   scriptRunId: string
   scriptName: string
   appHash: string | null
@@ -238,6 +239,7 @@ export class App extends PureComponent<Props, State> {
       connectionState: ConnectionState.INITIAL,
       elements: AppRoot.empty("Please wait..."),
       isFullScreen: false,
+      hideFullScreenButton: true,
       scriptName: "",
       scriptRunId: "<null>",
       appHash: null,
@@ -1466,6 +1468,10 @@ export class App extends PureComponent<Props, State> {
     this.setState({ isFullScreen })
   }
 
+  handleHideFullScreenButton = (hideFullScreenButton: boolean): void => {
+    this.setState({ hideFullScreenButton })
+  }
+
   addScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
@@ -1534,6 +1540,7 @@ export class App extends PureComponent<Props, State> {
       initialSidebarState,
       menuItems,
       isFullScreen,
+      hideFullScreenButton,
       scriptRunId,
       scriptRunState,
       userSettings,
@@ -1598,6 +1605,8 @@ export class App extends PureComponent<Props, State> {
             setTheme: this.setAndSendTheme,
             availableThemes: this.props.theme.availableThemes,
             addThemes: this.props.theme.addThemes,
+            hideFullScreenButton,
+            setHideFullScreenButton: this.handleHideFullScreenButton,
           }}
         >
           <HotKeys

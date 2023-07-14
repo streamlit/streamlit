@@ -51,6 +51,18 @@ export interface LibContextProps {
    * @see ThemeCreatorDialog
    */
   addThemes: (themes: ThemeConfig[]) => void
+
+  /**
+   * Whether or not to hide full screen for all elements / widgets
+   * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
+   * will default to false for regular streamlit
+   */
+  hideFullScreenButton: boolean
+
+  /**
+   * Function that sets the `hideFullScreenButton` property
+   */
+  setHideFullScreenButton: (hideFullScreenButton: boolean) => void
 }
 
 export const LibContext = React.createContext<LibContextProps>({
@@ -62,4 +74,6 @@ export const LibContext = React.createContext<LibContextProps>({
   setTheme: () => {},
   availableThemes: [],
   addThemes: () => {},
+  hideFullScreenButton: false,
+  setHideFullScreenButton: () => {},
 })

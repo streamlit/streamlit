@@ -54,10 +54,3 @@ export const RERUN_PROMPT_MODAL_DIALOG = false
  * If this is true, we show a deploy button in the toolbar.
  */
 export const SHOW_DEPLOY_BUTTON = false
-
-/**
- * Whether or not to hide full screen for all elements / widgets
- * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
- * will default to false for regular streamlit
- */
-export const hideFullScreenButton = false

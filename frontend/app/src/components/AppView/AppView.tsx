@@ -28,6 +28,7 @@ import {
   SessionInfo,
   IGuestToHostMessage,
   StreamlitEndpoints,
+  LibContext,
 } from "@streamlit/lib"
 
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
@@ -44,7 +45,6 @@ import {
   StyledAppViewBlockSpacer,
 } from "./styled-components"
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
-import { hideFullScreenButton } from "@streamlit/lib/src/baseconsts"
 
 export interface AppViewProps {
   elements: AppRoot
@@ -133,6 +133,8 @@ function AppView(props: AppViewProps): ReactElement {
     showToolbar,
     showColoredLine,
   } = React.useContext(AppContext)
+  const { hideFullScreenButton } = React.useContext(LibContext)
+
   const renderBlock = (node: BlockNode): ReactElement => (
     <StyledAppViewBlockContainer
       className="block-container"
