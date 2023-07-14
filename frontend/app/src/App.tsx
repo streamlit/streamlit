@@ -1589,6 +1589,7 @@ export class App extends PureComponent<Props, State> {
           // host communication manager elements
           pageLinkBaseUrl,
           sidebarChevronDownshift,
+          toastAdjustment: hostToolbarItems.length > 0,
         }}
       >
         <LibContext.Provider

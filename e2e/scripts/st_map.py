@@ -22,23 +22,34 @@ from tests.streamlit import pyspark_mocks
 from tests.streamlit.snowpark_mocks import DataFrame as MockedSnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Table as MockedSnowparkTable
 
-# Empty map.
+"""
+### Empty map
+"""
 
 st.map()
 
-# st.map with pyspark.sql.DataFrame
+
+"""
+### st.map with pyspark.sql.DataFrame
+"""
 
 st.map(pyspark_mocks.DataFrame(is_map=True))
 
-# st.map with unevaluated Snowpark DataFrame
+"""
+### st.map with unevaluated Snowpark Table
+"""
 
 st.map(MockedSnowparkTable(is_map=True, num_of_rows=50000))
 
-# st.map with unevaluated Snowpark Table
+"""
+### st.map with unevaluated Snowpark DataFrame
+"""
 
 st.map(MockedSnowparkDataFrame(is_map=True, num_of_rows=50000))
 
-# Simple map.
+"""
+### Simple map
+"""
 
 # Cast is needed due to mypy not understanding the outcome of dividing
 # an array by a list of numbers.
@@ -51,6 +62,31 @@ df = pd.DataFrame(coords, columns=["lat", "lon"])
 
 st.map(df)
 
-# Same but with custom zoom level:
+
+"""
+### Simple map with zoom
+"""
 
 st.map(df, zoom=8)
+
+
+"""
+### Map with color and size layers
+"""
+
+df = pd.DataFrame(
+    {
+        "xlat": [38.8762997, 38.8742997, 38.9025842],
+        "xlon": [-77.0037, -77.0057, -77.0556545],
+        "color": ["#f00", "#f0f", "#00f"],
+        "size": [1000, 500, 300],
+    }
+)
+
+st.map(
+    df,
+    latitude="xlat",
+    longitude="xlon",
+    color="color",
+    size="size",
+)

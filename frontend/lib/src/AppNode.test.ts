@@ -42,7 +42,10 @@ const BLOCK = block([
   ]),
 ])
 
-const ROOT = new AppRoot(new BlockNode([BLOCK, new BlockNode()]))
+// Initialize new AppRoot with a main block node and two child block nodes - sidebar and events.
+const ROOT = new AppRoot(
+  new BlockNode([BLOCK, new BlockNode(), new BlockNode()])
+)
 
 describe("AppNode.getIn", () => {
   it("handles shallow paths", () => {

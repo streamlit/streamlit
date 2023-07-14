@@ -15,6 +15,7 @@
  */
 
 export const breakpoints = {
+  toast: "68px",
   sm: "576px",
   columns: "640px",
   md: "768px",
