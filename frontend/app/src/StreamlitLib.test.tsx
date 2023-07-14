@@ -44,7 +44,6 @@ import {
 /**
  * Example StreamlitEndpoints implementation.
  */
-
 class Endpoints implements StreamlitEndpoints {
   public buildComponentURL(componentName: string, path: string): string {
     throw new Error("Unimplemented")
