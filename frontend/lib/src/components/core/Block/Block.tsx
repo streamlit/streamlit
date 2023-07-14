@@ -142,15 +142,10 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     const renderTabContent = (
       mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
     ): ReactElement => {
-      const propsWithhideFullScreenButton =
-        mappedChildProps.hideFullScreenButton === undefined
-          ? { hideFullScreenButton: false, ...mappedChildProps }
-          : mappedChildProps
-
       return (
         // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
-        <VerticalBlock {...propsWithhideFullScreenButton}></VerticalBlock>
+        <VerticalBlock {...mappedChildProps}></VerticalBlock>
       )
     }
     const tabsProps: TabProps = {
