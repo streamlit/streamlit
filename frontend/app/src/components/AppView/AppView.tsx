@@ -44,7 +44,7 @@ import {
   StyledAppViewBlockSpacer,
 } from "./styled-components"
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
-import { disableFullScreenButton } from "lib/src/baseconsts"
+import { disableFullScreenButton } from "@streamlit/lib/src/baseconsts"
 
 export interface AppViewProps {
   elements: AppRoot
