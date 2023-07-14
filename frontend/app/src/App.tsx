@@ -239,7 +239,7 @@ export class App extends PureComponent<Props, State> {
       connectionState: ConnectionState.INITIAL,
       elements: AppRoot.empty("Please wait..."),
       isFullScreen: false,
-      hideFullScreenButtons: true,
+      hideFullScreenButtons: false,
       scriptName: "",
       scriptRunId: "<null>",
       appHash: null,

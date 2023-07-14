@@ -45,8 +45,6 @@ import {
  * Example StreamlitEndpoints implementation.
  */
 
-const hideFullScreenButtons = true
-
 class Endpoints implements StreamlitEndpoints {
   public buildComponentURL(componentName: string, path: string): string {
     throw new Error("Unimplemented")
@@ -205,7 +203,6 @@ class StreamlitLibExample extends PureComponent<Props, State> {
         widgetsDisabled={false}
         componentRegistry={this.componentRegistry}
         formsData={this.state.formsData}
-        hideFullScreenButtons={hideFullScreenButtons}
       />
     )
   }
