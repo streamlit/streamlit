@@ -240,12 +240,12 @@ function LayoutBlock(props: BlockPropsWithWidth): ReactElement {
   if (props.node.deltaBlock.horizontal) {
     return <HorizontalBlock {...props} />
   }
-  const propsWithhideFullScreenButton =
+  const propsWithHideFullScreenButton =
     props.hideFullScreenButton === undefined
       ? { hideFullScreenButton: false, ...props }
       : props
 
-  return <VerticalBlock {...propsWithhideFullScreenButton} />
+  return <VerticalBlock {...propsWithHideFullScreenButton} />
 }
 
 export default VerticalBlock
