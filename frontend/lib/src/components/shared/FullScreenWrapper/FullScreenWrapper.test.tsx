@@ -17,7 +17,8 @@
 import React from "react"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import FullScreenWrapper, { FullScreenWrapperProps } from "./FullScreenWrapper"
-import { renderWithCustomLibContext } from "@streamlit/lib/src/test_util"
+import { customRenderLibContext } from "@streamlit/lib/src/test_util"
+import { LibContextProps } from "src/components/core/LibContext"
 
 describe("FullScreenWrapper", () => {
   const getProps = (
@@ -34,12 +35,22 @@ describe("FullScreenWrapper", () => {
     const props = getProps()
     const providerProps = {
       hideFullScreenButtons: true,
-    }
+    } as Partial<LibContextProps>
 
-    const { queryByTestId } = renderWithCustomLibContext(
+    const { queryByTestId } = customRenderLibContext(
       <FullScreenWrapper {...props} />,
-      { providerProps }
+      providerProps
     )
     expect(queryByTestId("StyledFullScreenButton")).toBeNull()
+  })
+
+  it("can find StyledFullScreenButton with default LibContext", () => {
+    const props = getProps()
+
+    const { queryByTestId } = customRenderLibContext(
+      <FullScreenWrapper {...props} />,
+      {}
+    )
+    expect(queryByTestId("StyledFullScreenButton")).not.toBeNull()
   })
 })

@@ -31,7 +31,7 @@ import {
 /* eslint-enable */
 import React, { Component, FC, ReactElement } from "react"
 import ThemeProvider from "./components/core/ThemeProvider"
-import { EmotionTheme, lightTheme } from "./theme"
+import { baseTheme, EmotionTheme, lightTheme } from "./theme"
 import { mockTheme } from "./mocks/mockTheme"
 import { LibContext, LibContextProps } from "./components/core/LibContext"
 
@@ -100,19 +100,33 @@ export function mockWindowLocation(hostname: string): void {
 
 /**
  * Use react-testing-library to render a ReactElement. The element will be
- * wrapped in our LibContextProvider.
+ * wrapped in our LibContext.Provider.
  */
-export const renderWithCustomLibContext = (
+export const customRenderLibContext = (
   component: ReactElement,
-  // @ts-expect-error
-  { providerProps: customProviderProps, ...renderOptions }
+  overrideLibContextProps: Partial<LibContextProps>
 ): RenderResult => {
-  const value = {
-    ...customProviderProps,
-    ...renderOptions,
+  const defaultLibContextProps = {
+    isFullScreen: false,
+    setFullScreen: jest.fn(),
+    addScriptFinishedHandler: jest.fn(),
+    removeScriptFinishedHandler: jest.fn(),
+    activeTheme: lightTheme,
+    setTheme: jest.fn(),
+    availableThemes: [],
+    addThemes: jest.fn(),
+    hideFullScreenButtons: false,
   }
-  return reactTestingLibraryRender(
-    <LibContext.Provider value={value}>{component}</LibContext.Provider>,
-    renderOptions
-  )
+
+  return reactTestingLibraryRender(component, {
+    wrapper: ({ children }) => (
+      <ThemeProvider theme={baseTheme.emotion}>
+        <LibContext.Provider
+          value={{ ...defaultLibContextProps, ...overrideLibContextProps }}
+        >
+          {children}
+        </LibContext.Provider>
+      </ThemeProvider>
+    ),
+  })
 }
