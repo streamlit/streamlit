@@ -31,7 +31,7 @@ import {
 /* eslint-enable */
 import React, { Component, FC, ReactElement } from "react"
 import ThemeProvider from "./components/core/ThemeProvider"
-import { baseTheme, EmotionTheme, lightTheme } from "./theme"
+import { baseTheme, EmotionTheme } from "./theme"
 import { mockTheme } from "./mocks/mockTheme"
 import { LibContext, LibContextProps } from "./components/core/LibContext"
 
@@ -111,7 +111,7 @@ export const customRenderLibContext = (
     setFullScreen: jest.fn(),
     addScriptFinishedHandler: jest.fn(),
     removeScriptFinishedHandler: jest.fn(),
-    activeTheme: lightTheme,
+    activeTheme: baseTheme,
     setTheme: jest.fn(),
     availableThemes: [],
     addThemes: jest.fn(),
