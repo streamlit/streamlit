@@ -39,19 +39,11 @@ import {
   StyledVerticalBlock,
   styledVerticalBlockWrapperStyles,
 } from "./styled-components"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 const ExpandableLayoutBlock = withExpandable(LayoutBlock)
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
-
-  /**
-   * Whether or not to hide full screen for all elements / widgets
-   * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
-   * will default to false for regular streamlit
-   */
-  hideFullScreenButtons?: boolean
 }
 
 interface BlockPropsWithWidth extends BaseBlockProps {
