@@ -163,7 +163,7 @@ export class ConnectionManager {
     }
 
     if (errMsg) {
-      this.props.onConnectionError(errMsg || "unknown")
+      this.props.onConnectionError(errMsg)
     }
   }
 
