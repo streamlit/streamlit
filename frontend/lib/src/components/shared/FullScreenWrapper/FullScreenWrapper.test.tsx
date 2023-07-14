@@ -33,7 +33,7 @@ describe("FullScreenWrapper", () => {
   it("cannot find StyledFullScreenButton when hideFullScreenWidget is true", () => {
     const props = getProps()
     const providerProps = {
-      hideFullScreenButton: true,
+      hideFullScreenButtons: true,
     }
 
     const { queryByTestId } = renderWithCustomLibContext(

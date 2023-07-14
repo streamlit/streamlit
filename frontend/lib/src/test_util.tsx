@@ -98,13 +98,17 @@ export function mockWindowLocation(hostname: string): void {
   }
 }
 
+/**
+ * Use react-testing-library to render a ReactElement. The element will be
+ * wrapped in our LibContextProvider.
+ */
 export const renderWithCustomLibContext = (
   component: ReactElement,
   // @ts-expect-error
-  { providerProps, ...renderOptions }
+  { providerProps: customProviderProps, ...renderOptions }
 ): RenderResult => {
   const value = {
-    ...providerProps,
+    ...customProviderProps,
     ...renderOptions,
   }
   return reactTestingLibraryRender(

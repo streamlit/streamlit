@@ -28,7 +28,6 @@ import {
   SessionInfo,
   IGuestToHostMessage,
   StreamlitEndpoints,
-  LibContext,
 } from "@streamlit/lib"
 
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
@@ -133,7 +132,6 @@ function AppView(props: AppViewProps): ReactElement {
     showToolbar,
     showColoredLine,
   } = React.useContext(AppContext)
-  const { hideFullScreenButton } = React.useContext(LibContext)
 
   const renderBlock = (node: BlockNode): ReactElement => (
     <StyledAppViewBlockContainer
@@ -155,7 +153,6 @@ function AppView(props: AppViewProps): ReactElement {
         uploadClient={uploadClient}
         componentRegistry={componentRegistry}
         formsData={formsData}
-        hideFullScreenButton={hideFullScreenButton}
       />
     </StyledAppViewBlockContainer>
   )

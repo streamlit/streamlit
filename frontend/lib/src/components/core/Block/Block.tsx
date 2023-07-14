@@ -51,7 +51,7 @@ export interface BlockPropsWithoutWidth extends BaseBlockProps {
    * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
    * will default to false for regular streamlit
    */
-  hideFullScreenButton?: boolean
+  hideFullScreenButtons?: boolean
 }
 
 interface BlockPropsWithWidth extends BaseBlockProps {
@@ -190,11 +190,6 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
 // Currently, only VerticalBlocks will ever contain leaf elements. But this is only enforced on the
 // Python side.
 const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
-  const { setHideFullScreenButton } = React.useContext(LibContext)
-  if (props.hideFullScreenButton !== undefined) {
-    setHideFullScreenButton(props.hideFullScreenButton)
-  }
-
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.

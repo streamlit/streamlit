@@ -141,9 +141,11 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
       buttonTitle = "Exit fullscreen"
     }
 
+    const { hideFullScreenButtons } = this.context
+
     return (
       <StyledFullScreenFrame isExpanded={expanded}>
-        {!this.context.hideFullScreenButton && (
+        {!hideFullScreenButtons && (
           <StyledFullScreenButton
             data-testid={"StyledFullScreenButton"}
             onClick={buttonOnClick}
