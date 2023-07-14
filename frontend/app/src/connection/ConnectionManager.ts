@@ -162,7 +162,9 @@ export class ConnectionManager {
       this.props.connectionStateChanged(connectionState)
     }
 
-    this.props.onConnectionError(errMsg || "unknown")
+    if (errMsg) {
+      this.props.onConnectionError(errMsg)
+    }
   }
 
   private showRetryError = (
