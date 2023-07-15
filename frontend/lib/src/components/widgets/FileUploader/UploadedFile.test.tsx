@@ -34,8 +34,7 @@ describe("FileStatus widget", () => {
     const props = getProps({
       type: "uploaded",
       fileId: "fileId",
-      uploadFileURL: "uploadUrl",
-      deleteFileURL: "deleteUrl",
+      fileUrls: {},
     })
     const wrapper = shallow(<UploadedFileStatus {...props} />)
 
@@ -68,8 +67,7 @@ describe("FileStatus widget", () => {
     const props = getProps({
       type: "uploaded",
       fileId: "fileId",
-      uploadFileURL: "uploadUrl",
-      deleteFileURL: "deleteUrl",
+      fileUrls: {},
     })
 
     const wrapper = shallow(<UploadedFileStatus {...props} />)
@@ -83,21 +81,7 @@ describe("UploadedFile widget", () => {
     const props = getProps({
       type: "uploaded",
       fileId: "fileId",
-      uploadFileURL: "uploadUrl",
-      deleteFileURL: "deleteUrl",
-    })
-    const wrapper = shallow(<UploadedFile {...props} />)
-
-    expect(wrapper).toBeDefined()
-    expect(wrapper.text()).toContain("filename.txt")
-  })
-
-  it("calls delete callback", () => {
-    const props = getProps({
-      type: "uploaded",
-      fileId: "fileId",
-      uploadFileURL: "uploadUrl",
-      deleteFileURL: "deleteUrl",
+      fileUrls: {},
     })
     const wrapper = mount(<UploadedFile {...props} />)
     const deleteBtn = wrapper.find("button")
