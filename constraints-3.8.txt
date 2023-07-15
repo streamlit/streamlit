@@ -47,7 +47,7 @@ jsonschema==4.18.3
 jsonschema-specifications==2023.6.1
 keyring==24.2.0
 kiwisolver==1.4.4
-langchain==0.0.232
+langchain==0.0.233
 langsmith==0.0.5
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
@@ -142,8 +142,8 @@ tzdata==2023.3
 tzlocal==4.3.1
 urllib3==1.26.16
 validators==0.20.0
-virtualenv==20.23.1
+virtualenv==20.24.0
 watchdog==3.0.0
 webencodings==0.5.1
 yarl==1.9.2
-zipp==3.16.1
+zipp==3.16.2
