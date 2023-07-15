@@ -62,8 +62,8 @@ const isEnterKeyPressed = (
 
   const { keyCode, key } = event
   return (
-      (key === "Enter" || keyCode === 13 || keyCode === 10) &&
-      !event.nativeEvent.isComposing
+    (key === "Enter" || keyCode === 13 || keyCode === 10) &&
+    !event.nativeEvent.isComposing
   )
 }
 

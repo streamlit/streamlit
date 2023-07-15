@@ -166,8 +166,8 @@ class TextArea extends React.PureComponent<Props, State> {
     // Using keyCode as well due to some different behaviors on Windows
     // https://bugs.chromium.org/p/chromium/issues/detail?id=79407
     return (
-        (key === "Enter" || keyCode === 13 || keyCode === 10) &&
-        !event.nativeEvent.isComposing
+      (key === "Enter" || keyCode === 13 || keyCode === 10) &&
+      !event.nativeEvent.isComposing
     )
   }
 
