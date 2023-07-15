@@ -167,6 +167,7 @@ class TextArea extends React.PureComponent<Props, State> {
     // https://bugs.chromium.org/p/chromium/issues/detail?id=79407
     return (
       (key === "Enter" || keyCode === 13 || keyCode === 10) &&
+      // Do not send the sentence being composed when Enter is typed into the IME.
       !event.nativeEvent.isComposing
     )
   }
