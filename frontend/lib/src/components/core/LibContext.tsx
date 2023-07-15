@@ -57,7 +57,7 @@ export interface LibContextProps {
    * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
    * will default to false for regular streamlit
    */
-  hideFullScreenButtons?: boolean
+  hideFullScreenButtons: boolean
 }
 
 export const LibContext = React.createContext<LibContextProps>({
