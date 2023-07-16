@@ -24,6 +24,7 @@ from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
+    Collection,
     Dict,
     List,
     Optional,
@@ -39,6 +40,14 @@ from typing_extensions import Literal
 
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
+from streamlit.color_util import (
+    Color,
+    is_color_like,
+    is_color_tuple_like,
+    is_hex_color_like,
+    to_css_color,
+)
+from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
 from streamlit.elements.utils import last_index_for_melted_dataframes
 from streamlit.errors import StreamlitAPIException
@@ -48,7 +57,7 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from altair import Chart
+    import altair as alt
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -59,14 +68,34 @@ class ChartType(Enum):
     LINE = "line"
 
 
+COLOR_LEGEND_SETTINGS = dict(titlePadding=0, offset=10, orient="bottom")
+
+# User-readable names to give the index and melted columns.
+SEPARATED_INDEX_COLUMN_TITLE = "index"
+MELTED_Y_COLUMN_TITLE = "values"
+MELTED_COLOR_COLUMN_TITLE = "color"
+
+# Crazy internal (non-user-visible) names for the index and melted columns, in order to
+# avoid collision with existing column names.
+PROTECTION_SUFFIX = "--p5bJXXpQgvPz6yvQMFiy"
+SEPARATED_INDEX_COLUMN_NAME = SEPARATED_INDEX_COLUMN_TITLE + PROTECTION_SUFFIX
+MELTED_Y_COLUMN_NAME = MELTED_Y_COLUMN_TITLE + PROTECTION_SUFFIX
+MELTED_COLOR_COLUMN_NAME = MELTED_COLOR_COLUMN_TITLE + PROTECTION_SUFFIX
+
+# Name we use for a column we know doesn't exist in the data, to address a Vega-Lite rendering bug
+# where empty charts need x, y encodings set in order to take up space.
+NON_EXISTENT_COLUMN_NAME = "DOES_NOT_EXIST" + PROTECTION_SUFFIX
+
+
 class ArrowAltairMixin:
     @gather_metrics("_arrow_line_chart")
     def _arrow_line_chart(
         self,
         data: Data = None,
         *,
-        x: Union[str, None] = None,
+        x: Optional[str] = None,
         y: Union[str, Sequence[str], None] = None,
+        color: Union[str, Color, List[Color], None] = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
@@ -87,14 +116,58 @@ class ArrowAltairMixin:
             Data to be plotted.
 
         x : str or None
-            Column name to use for the x-axis. If None, uses the data index for the x-axis.
-            This argument can only be supplied by keyword.
+            Column name to use for the x-axis. If None, uses the data index for
+            the x-axis. This argument can only be supplied by keyword.
 
         y : str, sequence of str, or None
-            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
-            on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all remaining columns as data series.
-            This argument can only be supplied by keyword.
+            Column name(s) to use for the y-axis. If a sequence of strings,
+            draws several series on the same chart by melting your wide-format
+            table into a long-format table behind the scenes. If None, draws
+            the data of all remaining columns as data series. This argument
+            can only be supplied by keyword.
+
+        color : str, tuple, sequence of str, sequence of tuple, or None
+            The color to use for different lines in this chart. This argument
+            can only be supplied by keyword.
+
+            For a line chart with just 1 line, this can be:
+
+            * None, to use the default color.
+            * A hex string like "#ffaa00" or "#ffaa0088".
+            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+              components specified as ints from 0 to 255 or floats from 0.0 to
+              1.0.
+
+            For a line chart with multiple lines, where the dataframe is in
+            long format (that is, y is None or just 1 column), this can be:
+
+            * None, to use the default colors.
+            * The name of a column in the dataset. Data points will be grouped
+              into lines of the same color based on the value of this column.
+              In addition, if the values in this column in one of the color
+              formats above (hex string or color tuple), then that color will
+              be used.
+
+              For example: if the dataset has 1000 rows, but this column can
+              only contains the values "adult", "child", "baby",
+              then those 1000 datapoints will be grouped into 3 lines, whose
+              colors will be automatically selected from the default palette.
+
+              But, if for the same 1000-row dataset, this column contained
+              the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
+              datapoints would still be grouped into 3 lines, but their
+              colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
+
+            For a line chart with multiple lines, where the dataframe is in
+            wide format (that is, y is a sequence of columns), this can be:
+
+            * None, to use the default colors.
+            * A list of string colors or color tuples to be used for each of
+              the lines in the chart. This list should have the same length
+              as the number of y values.
+
+              For example, for a chart with have 3 lines this argument can
+              be set to ``color=["#fd0", "#f0f", "#04f"]``.
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
@@ -109,8 +182,8 @@ class ArrowAltairMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
@@ -125,21 +198,61 @@ class ArrowAltairMixin:
            https://static.streamlit.io/0.50.0-td2L/index.html?id=BdxXG3MmrVBfJyqS2R2ki8
            height: 220px
 
+        You can also choose different columns to use for x and y, as well as set
+        the color dynamically based on a 3rd column (assuming your dataframe is in
+        long format):
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3'])
+        ...
+        >>> st._arrow_line_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3',
+        ... )
+
+        Finally, if your dataframe is in wide format, you can group multiple
+        columns under the y argument to show multiple lines with different
+        colors:
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3'])
+        ...
+        >>> st._arrow_line_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y=['col2', 'col3'],
+        ...     color=['red', 'black'],
+        ... )
+
         """
         proto = ArrowVegaLiteChartProto()
-        chart = _generate_chart(ChartType.LINE, data, x, y, width, height)
+        chart, add_rows_metadata = _generate_chart(
+            chart_type=ChartType.LINE,
+            data=data,
+            x_from_user=x,
+            y_from_user=y,
+            color_from_user=color,
+            width=width,
+            height=height,
+        )
         marshall(proto, chart, use_container_width, theme="streamlit")
-        last_index = last_index_for_melted_dataframes(data)
 
-        return self.dg._enqueue("arrow_line_chart", proto, last_index=last_index)
+        return self.dg._enqueue(
+            "arrow_line_chart", proto, add_rows_metadata=add_rows_metadata
+        )
 
     @gather_metrics("_arrow_area_chart")
     def _arrow_area_chart(
         self,
         data: Data = None,
         *,
-        x: Union[str, None] = None,
+        x: Optional[str] = None,
         y: Union[str, Sequence[str], None] = None,
+        color: Union[str, Color, List[Color], None] = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
@@ -160,14 +273,58 @@ class ArrowAltairMixin:
             Data to be plotted.
 
         x : str or None
-            Column name to use for the x-axis. If None, uses the data index for the x-axis.
-            This argument can only be supplied by keyword.
+            Column name to use for the x-axis. If None, uses the data index for
+            the x-axis. This argument can only be supplied by keyword.
 
         y : str, sequence of str, or None
-            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
-            on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all remaining columns as data series.
-            This argument can only be supplied by keyword.
+            Column name(s) to use for the y-axis. If a sequence of strings,
+            draws several series on the same chart by melting your wide-format
+            table into a long-format table behind the scenes. If None, draws
+            the data of all remaining columns as data series. This argument can
+            only be supplied by keyword.
+
+        color : str, tuple, sequence of str, sequence of tuple, or None
+            The color to use for different series in this chart. This argument
+            can only be supplied by keyword.
+
+            For an area chart with just 1 series, this can be:
+
+            * None, to use the default color.
+            * A hex string like "#ffaa00" or "#ffaa0088".
+            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+              components specified as ints from 0 to 255 or floats from 0.0 to
+              1.0.
+
+            For an area chart with multiple series, where the dataframe is in
+            long format (that is, y is None or just 1 column), this can be:
+
+            * None, to use the default colors.
+            * The name of a column in the dataset. Data points will be grouped
+              into series of the same color based on the value of this column.
+              In addition, if the values in this column in one of the color
+              formats above (hex string or color tuple), then that color will
+              be used.
+
+              For example: if the dataset has 1000 rows, but this column can
+              only contains the values "adult", "child", "baby",
+              then those 1000 datapoints will be grouped into 3 series, whose
+              colors will be automatically selected from the default palette.
+
+              But, if for the same 1000-row dataset, this column contained
+              the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
+              datapoints would still be grouped into 3 series, but their
+              colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
+
+            For an area chart with multiple series, where the dataframe is in
+            wide format (that is, y is a sequence of columns), this can be:
+
+            * None, to use the default colors.
+            * A list of string colors or color tuples to be used for each of
+              the series in the chart. This list should have the same length
+              as the number of y values.
+
+              For example, for a chart with have 3 series this argument can
+              be set to ``color=["#fd0", "#f0f", "#04f"]``.
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
@@ -197,22 +354,62 @@ class ArrowAltairMixin:
            https://static.streamlit.io/0.50.0-td2L/index.html?id=Pp65STuFj65cJRDfhGh4Jt
            height: 220px
 
+        You can also choose different columns to use for x and y, as well as set
+        the color dynamically based on a 3rd column (assuming your dataframe is in
+        long format):
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3'])
+        ...
+        >>> st._arrow_area_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3',
+        ... )
+
+        Finally, if your dataframe is in wide format, you can group multiple
+        columns under the y argument to show multiple lines with different
+        colors:
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3'])
+        ...
+        >>> st._arrow_area_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y=['col2', 'col3'],
+        ...     color=['red', 'black'],
+        ... )
+
         """
 
         proto = ArrowVegaLiteChartProto()
-        chart = _generate_chart(ChartType.AREA, data, x, y, width, height)
+        chart, add_rows_metadata = _generate_chart(
+            chart_type=ChartType.AREA,
+            data=data,
+            x_from_user=x,
+            y_from_user=y,
+            color_from_user=color,
+            width=width,
+            height=height,
+        )
         marshall(proto, chart, use_container_width, theme="streamlit")
-        last_index = last_index_for_melted_dataframes(data)
 
-        return self.dg._enqueue("arrow_area_chart", proto, last_index=last_index)
+        return self.dg._enqueue(
+            "arrow_area_chart", proto, add_rows_metadata=add_rows_metadata
+        )
 
     @gather_metrics("_arrow_bar_chart")
     def _arrow_bar_chart(
         self,
         data: Data = None,
         *,
-        x: Union[str, None] = None,
+        x: Optional[str] = None,
         y: Union[str, Sequence[str], None] = None,
+        color: Union[str, Color, List[Color], None] = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
@@ -233,14 +430,58 @@ class ArrowAltairMixin:
             Data to be plotted.
 
         x : str or None
-            Column name to use for the x-axis. If None, uses the data index for the x-axis.
-            This argument can only be supplied by keyword.
+            Column name to use for the x-axis. If None, uses the data index
+            for the x-axis. This argument can only be supplied by keyword.
 
         y : str, sequence of str, or None
-            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
-            on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all remaining columns as data series.
-            This argument can only be supplied by keyword.
+            Column name(s) to use for the y-axis. If a sequence of strings,
+            draws several series on the same chart by melting your wide-format
+            table into a long-format table behind the scenes. If None, draws
+            the data of all remaining columns as data series. This argument
+            can only be supplied by keyword.
+
+        color : str, tuple, sequence of str, sequence of tuple, or None
+            The color to use for different series in this chart. This argument
+            can only be supplied by keyword.
+
+            For a bar chart with just 1 series, this can be:
+
+            * None, to use the default color.
+            * A hex string like "#ffaa00" or "#ffaa0088".
+            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+              components specified as ints from 0 to 255 or floats from 0.0 to
+              1.0.
+
+            For a bar chart with multiple series, where the dataframe is in
+            long format (that is, y is None or just 1 column), this can be:
+
+            * None, to use the default colors.
+            * The name of a column in the dataset. Data points will be grouped
+              into series of the same color based on the value of this column.
+              In addition, if the values in this column in one of the color
+              formats above (hex string or color tuple), then that color will
+              be used.
+
+              For example: if the dataset has 1000 rows, but this column can
+              only contains the values "adult", "child", "baby",
+              then those 1000 datapoints will be grouped into 3 series, whose
+              colors will be automatically selected from the default palette.
+
+              But, if for the same 1000-row dataset, this column contained
+              the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
+              datapoints would still be grouped into 3 series, but their
+              colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
+
+            For a bar chart with multiple series, where the dataframe is in
+            wide format (that is, y is a sequence of columns), this can be:
+
+            * None, to use the default colors.
+            * A list of string colors or color tuples to be used for each of
+              the series in the chart. This list should have the same length
+              as the number of y values.
+
+              For example, for a chart with have 3 series this argument can
+              be set to ``color=["#fd0", "#f0f", "#04f"]``.
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
@@ -271,19 +512,58 @@ class ArrowAltairMixin:
            https://static.streamlit.io/0.66.0-2BLtg/index.html?id=GaYDn6vxskvBUkBwsGVEaL
            height: 220px
 
+        You can also choose different columns to use for x and y, as well as set
+        the color dynamically based on a 3rd column (assuming your dataframe is in
+        long format):
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3'])
+        ...
+        >>> st._arrow_bar_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3',
+        ... )
+
+        Finally, if your dataframe is in wide format, you can group multiple
+        columns under the y argument to show multiple lines with different
+        colors:
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3'])
+        ...
+        >>> st._arrow_bar_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y=['col2', 'col3'],
+        ...     color=['red', 'black'],
+        ... )
+
         """
 
         proto = ArrowVegaLiteChartProto()
-        chart = _generate_chart(ChartType.BAR, data, x, y, width, height)
+        chart, add_rows_metadata = _generate_chart(
+            chart_type=ChartType.BAR,
+            data=data,
+            x_from_user=x,
+            y_from_user=y,
+            color_from_user=color,
+            width=width,
+            height=height,
+        )
         marshall(proto, chart, use_container_width, theme="streamlit")
-        last_index = last_index_for_melted_dataframes(data)
 
-        return self.dg._enqueue("arrow_bar_chart", proto, last_index=last_index)
+        return self.dg._enqueue(
+            "arrow_bar_chart", proto, add_rows_metadata=add_rows_metadata
+        )
 
     @gather_metrics("_arrow_altair_chart")
     def _arrow_altair_chart(
         self,
-        altair_chart: Chart,
+        altair_chart: alt.Chart,
         use_container_width: bool = False,
         theme: Union[None, Literal["streamlit"]] = "streamlit",
     ) -> DeltaGenerator:
@@ -342,7 +622,7 @@ class ArrowAltairMixin:
         return cast("DeltaGenerator", self)
 
 
-def _is_date_column(df: pd.DataFrame, name: str) -> bool:
+def _is_date_column(df: pd.DataFrame, name: Optional[str]) -> bool:
     """True if the column with the given name stores datetime.date values.
 
     This function just checks the first value in the given column, so
@@ -359,6 +639,9 @@ def _is_date_column(df: pd.DataFrame, name: str) -> bool:
     bool
 
     """
+    if name is None:
+        return False
+
     column = df[name]
     if column.size == 0:
         return False
@@ -366,219 +649,561 @@ def _is_date_column(df: pd.DataFrame, name: str) -> bool:
     return isinstance(column.iloc[0], date)
 
 
-def _melt_data(
-    data_df: pd.DataFrame,
-    x_column: str,
-    y_column: str,
-    color_column: str,
-    value_columns: Optional[List[str]] = None,
-) -> pd.DataFrame:
-    """Converts a wide-format dataframe to a long-format dataframe."""
+def prep_data(
+    df: pd.DataFrame,
+    x_column: Optional[str],
+    wide_y_columns: List[str],
+    color_column: Optional[str],
+) -> Tuple[pd.DataFrame, Optional[str], List[str], Optional[str]]:
+    """Prepares the data for charting. This is also used in add_rows.
 
-    data_df = pd.melt(
-        data_df,
-        id_vars=[x_column],
-        value_vars=value_columns,
-        var_name=color_column,
-        value_name=y_column,
-    )
+    Does a few things:
+    * Resets the index if needed
+    * Removes unnecessary columns
+    * Converts colors to values we can use
+    * Runs sanity checks
 
-    y_series = data_df[y_column]
-    if (
-        y_series.dtype == "object"
-        and "mixed" in infer_dtype(y_series)
-        and len(y_series.unique()) > 100
-    ):
-        raise StreamlitAPIException(
-            "The columns used for rendering the chart contain too many values with mixed types. Please select the columns manually via the y parameter."
-        )
-
-    # Arrow has problems with object types after melting two different dtypes
-    # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
-    data_df = type_util.fix_arrow_incompatible_column_types(
-        data_df, selected_columns=[x_column, color_column, y_column]
-    )
-
-    return data_df
-
-
-def _maybe_melt(
-    data_df: pd.DataFrame,
-    x: Union[str, None] = None,
-    y: Union[str, Sequence[str], None] = None,
-) -> Tuple[pd.DataFrame, str, str, str, str, Optional[str], Optional[str]]:
-    """Determines based on the selected x & y parameter, if the data needs to
-    be converted to a long-format dataframe. If so, it returns the melted dataframe
-    and the x, y, and color columns used for rendering the chart.
+    Returns the prepared dataframe and the new names of the x column (taking the index reset into
+    consideration) as well as the y and color columns.
     """
 
-    color_column: Optional[str]
-    # This has to contain an empty space, otherwise the
-    # full y-axis disappears (maybe a bug in vega-lite)?
-    color_title: Optional[str] = " "
+    # If using index, pull it into its own column.
+    if x_column is None and wide_y_columns:
+        # Pick column name that is unlikely to collide with user-given names.
+        x_column = SEPARATED_INDEX_COLUMN_NAME
+        df = df.reset_index(names=x_column)
 
-    y_column = "value"
-    y_title = ""
+    # Drop columns we're not using.
+    selected_data = _drop_unused_columns(df, x_column, color_column, *wide_y_columns)
 
-    if x and isinstance(x, str):
-        # x is a single string -> use for x-axis
-        x_column = x
-        x_title = x
-        if x_column not in data_df.columns:
-            raise StreamlitAPIException(
-                f"{x_column} (x parameter) was not found in the data columns or keys”."
-            )
-    else:
-        # use index for x-axis
-        x_column = data_df.index.name or "index"
-        x_title = ""
-        data_df = data_df.reset_index()
+    # Maybe convert color to CSS-valid colors.
+    if color_column is not None and len(df[color_column]):
+        first_color_datum = df[color_column][0]
 
-    if y and type_util.is_sequence(y) and len(y) == 1:
-        # Sequence is only a single element
-        y = str(y[0])
+        if is_hex_color_like(first_color_datum):
+            # Hex is already CSS-valid.
+            pass
+        elif is_color_tuple_like(first_color_datum):
+            # Tuples need to be converted to CSS-valid.
+            selected_data[color_column] = selected_data[color_column].map(to_css_color)
+        else:
+            # Other kinds of colors columns (i.e. pure numbers or nominal strings) shouldn't
+            # be converted since they are treated by Vega-Lite as sequential or categorical colors.
+            pass
 
-    if y and isinstance(y, str):
-        # y is a single string -> use for y-axis
-        y_column = y
-        y_title = y
-        if y_column not in data_df.columns:
-            raise StreamlitAPIException(
-                f"{y_column} (y parameter) was not found in the data columns or keys”."
-            )
+    # Arrow has problems with object types after melting two different dtypes
+    # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object".
+    prepped_data = type_util.fix_arrow_incompatible_column_types(selected_data)
 
-        # Set var name to None since it should not be used
-        color_column = None
-    elif y and type_util.is_sequence(y):
-        color_column = "variable"
-        # y is a list -> melt dataframe into value vars provided in y
-        value_columns: List[str] = []
-        for col in y:
-            if str(col) not in data_df.columns:
-                raise StreamlitAPIException(
-                    f"{str(col)} in y parameter was not found in the data columns or keys”."
-                )
-            value_columns.append(str(col))
+    prepped_columns = _prepare_column_names(
+        prepped_data, x_column, wide_y_columns, color_column
+    )
 
-        if x_column in [y_column, color_column]:
-            raise StreamlitAPIException(
-                f"Unable to melt the table. Please rename the columns used for x ({x_column}) or y ({y_column})."
-            )
-
-        data_df = _melt_data(data_df, x_column, y_column, color_column, value_columns)
-    else:
-        color_column = "variable"
-        # -> data will be melted into the value prop for y
-        data_df = _melt_data(data_df, x_column, y_column, color_column)
-
-    relevant_columns = []
-    if x_column and x_column not in relevant_columns:
-        relevant_columns.append(x_column)
-    if color_column and color_column not in relevant_columns:
-        relevant_columns.append(color_column)
-    if y_column and y_column not in relevant_columns:
-        relevant_columns.append(y_column)
-    # Only select the relevant columns required for the chart
-    # Other columns can be ignored
-    data_df = data_df[relevant_columns]
-    return data_df, x_column, x_title, y_column, y_title, color_column, color_title
+    # Return the data, but also the new names to use for x, y, and color.
+    return prepped_data, *prepped_columns
 
 
 def _generate_chart(
     chart_type: ChartType,
-    data: Data,
-    x: Union[str, None] = None,
-    y: Union[str, Sequence[str], None] = None,
+    data: Optional[Data],
+    x_from_user: Optional[str] = None,
+    y_from_user: Union[str, Sequence[str], None] = None,
+    color_from_user: Union[str, Color, List[Color], None] = None,
     width: int = 0,
     height: int = 0,
-) -> Chart:
+) -> alt.Chart:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
 
-    if data is None:
-        # Use an empty-ish dict because if we use None the x axis labels rotate
-        # 90 degrees. No idea why. Need to debug.
-        data = {"": []}
+    df: pd.DataFrame
 
-    if not isinstance(data, pd.DataFrame):
-        data = type_util.convert_anything_to_df(data)
+    if isinstance(data, pd.DataFrame):
+        df = data
+    else:
+        df = cast(
+            pd.DataFrame, type_util.convert_anything_to_df(data, ensure_copy=True)
+        )
 
-    data, x_column, x_title, y_column, y_title, color_column, color_title = _maybe_melt(
-        data, x, y
+    # From now on, use "df" instead of "data".
+    del data
+
+    # Convert arguments received from the user to things Vega-Lite understands.
+    # Get name of column to use for x. This is never None.
+    x_column = _parse_x_column(df, x_from_user)
+    # Get name of columns to use for y. This is never None.
+    wide_y_columns = _parse_y_columns(df, y_from_user, x_column)
+    # Get name of column to use for color, or constant value to use. Any/both could be None.
+    color_column, color_value = _parse_color_column(df, color_from_user)
+
+    # Store this info for add_rows.
+    add_rows_metadata = AddRowsMetadata(
+        last_index=last_index_for_melted_dataframes(df),
+        columns=dict(
+            x_column=x_column,
+            wide_y_columns=wide_y_columns,
+            color_column=color_column,
+        ),
     )
 
-    opacity = None
-    if chart_type == ChartType.AREA and color_column:
-        opacity = {y_column: 0.7}
+    # At this point, all foo_column variables are either None or actual columns that are guaranteed
+    # to exist.
+
+    df, x_column, wide_y_columns, color_column = prep_data(
+        df, x_column, wide_y_columns, color_column
+    )
+
+    # Create a Chart with no encodings.
+    chart = alt.Chart(
+        data=df,
+        mark=chart_type.value,
+        width=width,
+        height=height,
+    )
+
+    # Set up melting (aka folding) if more than 1 item in wide_y_columns.
+    chart, y_column, color_column = _maybe_melt(chart, wide_y_columns, color_column)
+
+    # Set up x and y encodings.
+    chart = chart.encode(
+        x=_get_x_enc(df, chart_type, x_column),
+        y=_get_y_enc(df, y_column, wide_y_columns),
+    )
+
+    # Set up opacity encoding.
+    opacity_enc = _get_opacity_enc(chart_type, color_column)
+    if opacity_enc is not None:
+        chart = chart.encode(opacity=opacity_enc)
+
+    # Set up color encoding.
+    color_enc = _get_color_enc(
+        df, color_from_user, color_value, color_column, wide_y_columns
+    )
+    if color_enc is not None:
+        chart = chart.encode(color=color_enc)
+
+    if x_column is not None and y_column is not None:
+        # Set up tooltip encoding.
+        chart = chart.encode(
+            tooltip=_get_tooltip_enc(
+                x_column,
+                y_column,
+                color_column,
+                color_enc,
+            )
+        )
+
+    return chart.interactive(), add_rows_metadata
+
+
+def _prepare_column_names(
+    df: pd.DataFrame,
+    x_column: Optional[str],
+    wide_y_columns: List[str],
+    color_column: Optional[str],
+) -> Tuple[Optional[str], List[str], Optional[str]]:
+    """Converts column names to strings, since Vega-Lite does not accept ints, etc."""
+    column_names = list(df.columns)  # list() converts RangeIndex, etc, to regular list.
+    str_column_names = [str(c) for c in column_names]
+    df.columns = pd.Index(str_column_names)
+
+    return (
+        x_column,
+        [str(c) for c in wide_y_columns],
+        None if color_column is None else str(color_column),
+    )
+
+
+def _parse_color_column(
+    df: pd.DataFrame, column_or_value: Any
+) -> Tuple[Optional[str], Any]:
+    if isinstance(column_or_value, str) and column_or_value in df.columns:
+        column_name = column_or_value
+        value = None
+    else:
+        column_name = None
+        value = column_or_value
+
+    return column_name, value
+
+
+def _parse_x_column(df: pd.DataFrame, x_from_user: Optional[str]) -> Optional[str]:
+    if x_from_user is None:
+        return None
+
+    elif isinstance(x_from_user, str):
+        if x_from_user not in df.columns:
+            raise StreamlitAPIException(
+                "x parameter is a str but does not appear to be a column name. "
+                f"Value given: {x_from_user}"
+            )
+
+        return x_from_user
+
+    else:
+        raise StreamlitAPIException(
+            "x parameter should be a column name (str) or None to use the "
+            f" dataframe's index. Value given: {x_from_user}"
+        )
+
+
+def _parse_y_columns(
+    df: pd.DataFrame,
+    y_from_user: Union[str, Sequence[str], None],
+    x_column: Union[str, None],
+) -> List[str]:
+
+    wide_y_columns: List[str] = []
+
+    if y_from_user is None:
+        wide_y_columns = list(df.columns)
+
+    elif isinstance(y_from_user, str):
+        wide_y_columns = [y_from_user]
+
+    elif type_util.is_sequence(y_from_user):
+        wide_y_columns = list(str(col) for col in y_from_user)
+
+    else:
+        raise StreamlitAPIException(
+            "y parameter should be a column name (str) or list thereof. "
+            f"Value given: {y_from_user}"
+        )
+
+    for col in wide_y_columns:
+        if col not in df.columns:
+            available_columns = ", ".join(str(c) for c in list(df.columns))
+            raise StreamlitAPIException(
+                f"Dataset does not have a column named {col}. "
+                f"Available columns are: {available_columns}"
+            )
+
+    # wide_y_columns should only include x_column when user explicitly asked for it.
+    if x_column in wide_y_columns and (not y_from_user or x_column not in y_from_user):
+        wide_y_columns.remove(x_column)
+
+    return wide_y_columns
+
+
+def _drop_unused_columns(
+    df: pd.DataFrame, *column_names: Optional[str]
+) -> pd.DataFrame:
+    """Returns a subset of df, selecting only column_names that aren't None."""
+
+    # We can't just call set(col_names) because sets don't have stable ordering,
+    # which means tests that depend on ordering will fail.
+    # Performance-wise, it's not a problem, though, since this function is only ever
+    # used on very small lists.
+    seen = set()
+    keep = []
+
+    for x in column_names:
+        if x is None:
+            continue
+        if x in seen:
+            continue
+        seen.add(x)
+        keep.append(x)
+
+    return df[keep]
+
+
+def _get_opacity_enc(
+    chart_type: ChartType, color_column: Optional[str]
+) -> Union[alt.OpacityValue, alt.Undefined]:
+    import altair as alt
+
+    if color_column and chart_type == ChartType.AREA:
+        return alt.OpacityValue(0.7)
+
+    return alt.Undefined
+
+
+def _get_scale(
+    df: pd.DataFrame, column_name: Optional[str]
+) -> Union[alt.Scale, alt.Undefined]:
+    import altair as alt
+
     # Set the X and Y axes' scale to "utc" if they contain date values.
     # This causes time data to be displayed in UTC, rather the user's local
     # time zone. (By default, vega-lite displays time data in the browser's
     # local time zone, regardless of which time zone the data specifies:
     # https://vega.github.io/vega-lite/docs/timeunit.html#output).
-    x_scale = (
-        alt.Scale(type="utc") if _is_date_column(data, x_column) else alt.Undefined
-    )
-    y_scale = (
-        alt.Scale(type="utc") if _is_date_column(data, y_column) else alt.Undefined
+    if _is_date_column(df, column_name):
+        return alt.Scale(type="utc")
+
+    return alt.Undefined
+
+
+def _get_axis_config(df: pd.DataFrame, column_name: Optional[str], grid: bool):
+    import altair as alt
+
+    if column_name is not None and is_integer_dtype(df[column_name]):
+        # Use a max tick size of 1 for integer columns (prevents zoom into float numbers)
+        # and deactivate grid lines for x-axis
+        return alt.Axis(tickMinStep=1, grid=grid)
+
+    return alt.Undefined
+
+
+def _maybe_melt(
+    chart: alt.Chart, wide_y_columns: List[str], color_column: Optional[str]
+) -> Tuple[alt.Chart, Optional[str], Optional[str]]:
+    """If multiple columns are set for y, melt the dataframe into long format.
+
+    (Melting is done automatically in Vega-Lite via a "fold" transform)
+    """
+    if len(wide_y_columns) == 0:
+        y_column = None
+    elif len(wide_y_columns) == 1:
+        y_column = wide_y_columns[0]
+    else:
+        # Pick column names that are unlikely to collide with user-given names.
+        y_column = MELTED_Y_COLUMN_NAME
+        color_column = MELTED_COLOR_COLUMN_NAME
+
+        chart = chart.transform_fold(wide_y_columns, as_=[color_column, y_column])
+
+    return chart, y_column, color_column
+
+
+def _get_x_enc(
+    df: pd.DataFrame,
+    chart_type: ChartType,
+    x_column: Optional[str],
+) -> alt.X:
+    import altair as alt
+
+    if x_column is None:
+        # If no field is specified, the full axis disappears when no data is present.
+        # Maybe a bug in vega-lite? So we pass a field that doesn't exist.
+        x_field = NON_EXISTENT_COLUMN_NAME
+        x_title = ""
+    elif x_column == SEPARATED_INDEX_COLUMN_NAME:
+        # If the x column name is the crazy anti-collision name we gave it, then need to set
+        # up a title so we never show the crazy name to the user.
+        x_field = x_column
+        x_title = SEPARATED_INDEX_COLUMN_TITLE
+    else:
+        x_field = x_column
+        x_title = x_column
+
+    return alt.X(
+        x_field,
+        title=x_title,
+        type=_get_x_type(df, chart_type, x_column),
+        scale=_get_scale(df, x_column),
+        axis=_get_axis_config(df, x_column, grid=False),
     )
 
-    x_type = alt.Undefined
+
+def _get_y_enc(
+    df: pd.DataFrame, y_column: Optional[str], wide_y_columns: List[str]
+) -> alt.Y:
+    import altair as alt
+
+    first_y_column: Optional[str]
+
+    if y_column is None:
+        # If no field is specified, the full axis disappears when no data is present.
+        # Maybe a bug in vega-lite? So we pass a field that doesn't exist.
+        y_field = NON_EXISTENT_COLUMN_NAME
+        y_title = ""
+    elif y_column == MELTED_Y_COLUMN_NAME:
+        # If the y column name is the crazy anti-collision name we gave it, then need to set
+        # up a title so we never show the crazy name to the user.
+        y_field = y_column
+        y_title = MELTED_Y_COLUMN_TITLE
+    else:
+        y_field = y_column
+        y_title = y_column
+
+    if wide_y_columns:
+        # For dataframes that will be folded, we use the type of the 1st y column as a proxy to
+        # configure the chart. This is correct 99% of the times, since all y columns typically have the
+        # same data type.
+        first_y_column = wide_y_columns[0]
+    else:
+        first_y_column = y_column
+
+    return alt.Y(
+        field=y_field,
+        title=y_title,
+        type=_get_y_type(df, first_y_column),
+        scale=_get_scale(df, first_y_column),
+        axis=_get_axis_config(df, first_y_column, grid=True),
+    )
+
+
+def _get_tooltip_enc(
+    x_column: str,
+    y_column: str,
+    color_column: Optional[str],
+    color_enc: alt.Color,
+) -> list[alt.Tooltip]:
+    import altair as alt
+
+    tooltip = []
+
+    # If the x column name is the crazy anti-collision name we gave it, then need to set
+    # up a tooltip title so we never show the crazy name to the user.
+    if x_column == SEPARATED_INDEX_COLUMN_NAME:
+        tooltip.append(alt.Tooltip(x_column, title=SEPARATED_INDEX_COLUMN_TITLE))
+    else:
+        tooltip.append(alt.Tooltip(x_column))
+
+    # If the y column name is the crazy anti-collision name we gave it, then need to set
+    # up a tooltip title so we never show the crazy name to the user.
+    if y_column == MELTED_Y_COLUMN_NAME:
+        tooltip.append(
+            alt.Tooltip(
+                y_column,
+                title=MELTED_Y_COLUMN_TITLE,
+                type="quantitative",  # Just picked something random. Doesn't really matter!
+            )
+        )
+    else:
+        tooltip.append(alt.Tooltip(y_column))
+
+    # If we earlier decided that there should be no color legend, that's because the
+    # user passed a color column with actual color values (like "#ff0"), so we should
+    # not show the color values in the tooltip.
+    if color_column and color_enc["legend"] is not None:
+        # Use a human-readable title for the color.
+        if color_column == MELTED_COLOR_COLUMN_NAME:
+            tooltip.append(
+                alt.Tooltip(
+                    color_column,
+                    title=MELTED_COLOR_COLUMN_TITLE,
+                    type="nominal",
+                )
+            )
+        else:
+            tooltip.append(alt.Tooltip(color_column))
+
+    return tooltip
+
+
+def _get_color_enc(
+    df: pd.DataFrame,
+    color_from_user: Union[str, Color, List[Color], None],
+    color_value: Optional[Color],
+    color_column: Optional[str],
+    wide_y_columns: List[str],
+) -> alt.Color:
+    import altair as alt
+
+    # If not color, nothing to do here.
+    if color_value is None and color_column is None:
+        return None
+
+    # If user passed a color value, that should win over colors coming from the
+    # color column (be them manual or auto-assigned due to melting)
+    elif color_value is not None:
+
+        # If the color value is color-like, return that.
+        if is_color_like(color_value):
+            return alt.ColorValue(to_css_color(color_value))
+
+        # If the color value is a list of colors of approriate length, return that.
+        elif isinstance(color_value, (list, tuple)):
+            color_values = cast(Collection[Color], color_value)
+
+            if len(color_values) != len(wide_y_columns):
+                raise StreamlitAPIException(
+                    f"The number of provided colors in `{color_values}` does not "
+                    "match the number of columns to be colored, in "
+                    f"`{wide_y_columns}`."
+                )
+
+            return alt.Color(
+                field=color_column,
+                scale=alt.Scale(range=[to_css_color(c) for c in color_values]),
+                legend=COLOR_LEGEND_SETTINGS,
+                type="nominal",
+                title=" ",
+            )
+
+    elif color_column is not None:
+        if color_column == MELTED_COLOR_COLUMN_NAME:
+            column_type = "nominal"
+        else:
+            column_type = type_util.infer_vegalite_type(df[color_column])
+
+        color_enc = alt.Color(
+            field=color_column, legend=COLOR_LEGEND_SETTINGS, type=column_type
+        )
+
+        # Fix title if DF was melted
+        if color_column == MELTED_COLOR_COLUMN_NAME:
+            # This has to contain an empty space, otherwise the
+            # full y-axis disappears (maybe a bug in vega-lite)?
+            color_enc["title"] = " "
+
+        # If the 0th element in the color column looks like a color, we'll use the color column's
+        # values as the colors in our chart.
+        elif len(df[color_column]) and is_color_like(df[color_column][0]):
+            color_range = [to_css_color(c) for c in df[color_column].unique()]
+            color_enc["scale"] = alt.Scale(range=color_range)
+            # Don't show the color legend, because it will just show text with the color values,
+            # like #f00, #00f, etc, which are not user-readable.
+            color_enc["legend"] = None
+
+        # Otherwise, let Vega-Lite auto-assign colors.
+        # This codepath is typically reached when the color column contains numbers (in which case
+        # Vega-Lite uses a color gradient to represent them) or strings (in which case Vega-Lite
+        # assigns one color for each unique value).
+        else:
+            pass
+
+        return color_enc
+
+    return None
+
+
+def _get_x_type(
+    df: pd.DataFrame, chart_type: ChartType, x_column: Optional[str]
+) -> Any:
+    import altair as alt
+
     # Bar charts should have a discrete (ordinal) x-axis, UNLESS type is date/time
     # https://github.com/streamlit/streamlit/pull/2097#issuecomment-714802475
-    if chart_type == ChartType.BAR and not _is_date_column(data, x_column):
-        x_type = "ordinal"
+    if chart_type == ChartType.BAR and not _is_date_column(df, x_column):
+        return "ordinal"
 
-    # Use a max tick size of 1 for integer columns (prevents zoom into float numbers)
-    # and deactivate grid lines for x-axis
-    x_axis_config = alt.Axis(
-        tickMinStep=1 if is_integer_dtype(data[x_column]) else alt.Undefined, grid=False
-    )
-    y_axis_config = alt.Axis(
-        tickMinStep=1 if is_integer_dtype(data[y_column]) else alt.Undefined
-    )
+    return "quantitative"  # Pick anything. If undefined, Vega-Lite may hide the axis.
 
-    tooltips = [
-        alt.Tooltip(x_column, title=x_column),
-        alt.Tooltip(y_column, title=y_column),
-    ]
-    color = None
 
-    if color_column:
-        color = alt.Color(
-            color_column,
-            title=color_title,
-            type="nominal",
-            legend=alt.Legend(titlePadding=0, offset=10, orient="bottom"),
-        )
-        tooltips.append(alt.Tooltip(color_column, title="label"))
+def _get_y_type(df: pd.DataFrame, first_y_column: Optional[str]) -> str:
+    if first_y_column:
+        return type_util.infer_vegalite_type(df[first_y_column])
 
-    chart = getattr(
-        alt.Chart(data, width=width, height=height),
-        "mark_" + chart_type.value,
-    )().encode(
-        x=alt.X(
-            x_column,
-            title=x_title,
-            scale=x_scale,
-            type=x_type,
-            axis=x_axis_config,
-        ),
-        y=alt.Y(y_column, title=y_title, scale=y_scale, axis=y_axis_config),
-        tooltip=tooltips,
-    )
+    return "quantitative"  # Pick anything. If undefined, Vega-Lite may hide the axis.
 
-    if color:
-        chart = chart.encode(color=color)
 
-    if opacity:
-        chart = chart.encode(opacity=opacity)
+def _dedupe_and_remove_none(*items):
+    """Returns a subset of "items" where there are no dupes or Nones."""
 
-    return chart.interactive()
+    # Can't just call set(items) because sets don't have stable ordering,
+    # which means tests that depend on ordering will fail.
+    # Performance-wise, it's not a problem, though, since this function is only ever
+    # used on very small lists.
+    seen = set()
+    out = []
+
+    for x in items:
+        if x is None:
+            continue
+        if x in seen:
+            continue
+        seen.add(x)
+        out.append(x)
+
+    return out
 
 
 def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
-    altair_chart: Chart,
+    altair_chart: alt.Chart,
     use_container_width: bool = False,
     theme: Union[None, Literal["streamlit"]] = "streamlit",
     **kwargs: Any,

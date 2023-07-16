@@ -20,29 +20,29 @@ import streamlit as st
 from streamlit.type_util import bytes_to_data_frame
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
-DATAFRAME = pd.DataFrame({"a": [1], "b": [10]})
-NEW_ROWS = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-MELTED_DATAFRAME = pd.DataFrame(
-    {
-        "index": [1, 2, 3, 1, 2, 3],
-        "variable": ["a", "a", "a", "b", "b", "b"],
-        "value": [1, 2, 3, 4, 5, 6],
-    }
-)
+DATAFRAME = pd.DataFrame({"a": [10], "b": [20], "c": [30]})
+NEW_ROWS = pd.DataFrame({"a": [11, 12, 13], "b": [21, 22, 23], "c": [31, 32, 33]})
 
 
 class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
     """Test dg._arrow_add_rows."""
 
-    def _get_deltas_that_melt_dataframes(self):
-        return [
+    def test_charts_with_defaults(self):
+        deltas = [
             lambda df: st._arrow_line_chart(df),
             lambda df: st._arrow_bar_chart(df),
             lambda df: st._arrow_area_chart(df),
+            lambda df: st._arrow_scatter_chart(df),
         ]
 
-    def test_deltas_that_melt_dataframes(self):
-        deltas = self._get_deltas_that_melt_dataframes()
+        expected = pd.DataFrame(
+            {
+                "a": [11, 12, 13],
+                "b": [21, 22, 23],
+                "c": [31, 32, 33],
+                "index-4FLV4aXfCWIrl1KyIeJp": [1, 2, 3],
+            }
+        )
 
         for delta in deltas:
             element = delta(DATAFRAME)
@@ -52,4 +52,91 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
                 self.get_delta_from_queue().arrow_add_rows.data.data
             )
 
-            pd.testing.assert_frame_equal(proto, MELTED_DATAFRAME)
+            pd.testing.assert_frame_equal(proto, expected)
+
+    def test_charts_with_args(self):
+        deltas = [
+            lambda df: st._arrow_line_chart(
+                df, x="b", y=["a", "c"], color=["red", "orange"]
+            ),
+            lambda df: st._arrow_bar_chart(
+                df, x="b", y=["a", "c"], color=["red", "orange"]
+            ),
+            lambda df: st._arrow_area_chart(
+                df, x="b", y=["a", "c"], color=["red", "orange"]
+            ),
+            lambda df: st._arrow_scatter_chart(
+                df, x="b", y=["a", "c"], color=["red", "orange"], size="b"
+            ),
+        ]
+
+        expected = pd.DataFrame(
+            {
+                "a": [11, 12, 13],
+                "b": [21, 22, 23],
+                "c": [31, 32, 33],
+            }
+        )
+        expected.index = pd.RangeIndex(start=1, stop=4, step=1)
+
+        for delta in deltas:
+            element = delta(DATAFRAME)
+            element._arrow_add_rows(NEW_ROWS)
+
+            proto = bytes_to_data_frame(
+                self.get_delta_from_queue().arrow_add_rows.data.data
+            )
+
+            pd.testing.assert_frame_equal(proto, expected)
+
+    def test_charts_with_fewer_args_than_cols(self):
+        deltas = [
+            lambda df: st._arrow_line_chart(df, x="b", y="a"),
+            lambda df: st._arrow_bar_chart(df, x="b", y="a"),
+            lambda df: st._arrow_area_chart(df, x="b", y="a"),
+            lambda df: st._arrow_scatter_chart(df, x="b", y="a", size="b"),
+        ]
+
+        expected = pd.DataFrame(
+            {
+                "a": [11, 12, 13],
+                "b": [21, 22, 23],
+            }
+        )
+        expected.index = pd.RangeIndex(start=1, stop=4, step=1)
+
+        for delta in deltas:
+            element = delta(DATAFRAME)
+            element._arrow_add_rows(NEW_ROWS)
+
+            proto = bytes_to_data_frame(
+                self.get_delta_from_queue().arrow_add_rows.data.data
+            )
+
+            pd.testing.assert_frame_equal(proto, expected)
+
+    def test_charts_with_mixed_long_wide_args(self):
+        # Here "c" is used in both the a long-format property (i.e. size) and a wide-format
+        # property (y). This means it needs to appear twice in the final dataframe.
+        deltas = [
+            lambda df: st._arrow_scatter_chart(df, x="b", y=["a", "c"], size="c"),
+        ]
+
+        expected = pd.DataFrame(
+            {
+                "a": [11, 12, 13],
+                "b": [21, 22, 23],
+                "c": [31, 32, 33],
+            }
+        )
+        expected.index = pd.RangeIndex(start=1, stop=4, step=1)
+
+        for delta in deltas:
+            element = delta(DATAFRAME)
+            element._arrow_add_rows(NEW_ROWS)
+
+            proto = bytes_to_data_frame(
+                self.get_delta_from_queue().arrow_add_rows.data.data
+            )
+
+            pd.testing.assert_frame_equal(proto, expected)

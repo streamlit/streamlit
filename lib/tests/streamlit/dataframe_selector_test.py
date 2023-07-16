@@ -23,6 +23,7 @@ import pytest
 
 import streamlit
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.errors import StreamlitAPIException
 from tests.streamlit import pyspark_mocks
 from tests.streamlit.snowpark_mocks import DataFrame as MockSnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Table as MockSnowparkTable
@@ -159,6 +160,7 @@ class DataFrameSelectorTest(unittest.TestCase):
             DATAFRAME,
             x=None,
             y=None,
+            color=None,
             width=100,
             height=200,
             use_container_width=True,
@@ -184,6 +186,7 @@ class DataFrameSelectorTest(unittest.TestCase):
             DATAFRAME,
             x=None,
             y=None,
+            color=None,
             width=100,
             height=200,
             use_container_width=True,
@@ -209,6 +212,7 @@ class DataFrameSelectorTest(unittest.TestCase):
             DATAFRAME,
             x=None,
             y=None,
+            color=None,
             width=100,
             height=200,
             use_container_width=True,

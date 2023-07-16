@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Sequence, Union
 from typing_extensions import Literal
 
 from streamlit import config
+from streamlit.color_util import Color
 from streamlit.elements.lib.column_config_utils import ColumnConfigMappingInput
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -234,6 +235,7 @@ class DataFrameSelectorMixin:
         *,
         x: Union[str, None] = None,
         y: Union[str, Sequence[str], None] = None,
+        color: Union[str, Color, None] = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
@@ -267,6 +269,49 @@ class DataFrameSelectorMixin:
             the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
+        color : str, tuple, sequence of str, sequence of tuple, or None
+            The color to use for different lines in this chart. This argument
+            can only be supplied by keyword.
+
+            For a line chart with just 1 line, this can be:
+
+            * None, to use the default color.
+            * A hex string like "#ffaa00" or "#ffaa0088".
+            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+              components specified as ints from 0 to 255 or floats from 0.0 to
+              1.0.
+
+            For a line chart with multiple lines, where the dataframe is in
+            long format (that is, y is None or just 1 column), this can be:
+
+            * None, to use the default colors.
+            * The name of a column in the dataset. Data points will be grouped
+              into lines of the same color based on the value of this column.
+              In addition, if the values in this column in one of the color
+              formats above (hex string or color tuple), then that color will
+              be used.
+
+              For example: if the dataset has 1000 rows, but this column can
+              only contains the values "adult", "child", "baby",
+              then those 1000 datapoints will be grouped into 3 lines, whose
+              colors will be automatically selected from the default palette.
+
+              But, if for the same 1000-row dataset, this column contained
+              the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
+              datapoints would still be grouped into 3 lines, but their
+              colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
+
+            For a line chart with multiple lines, where the dataframe is in
+            wide format (that is, y is a sequence of columns), this can be:
+
+            * None, to use the default colors.
+            * A list of string colors or color tuples to be used for each of
+              the lines in the chart. This list should have the same length
+              as the number of y values.
+
+              For example, for a chart with have 3 lines this argument can
+              be set to ``color=["#fd0", "#f0f", "#04f"]``.
+
         width : int
             The chart width in pixels. If 0, selects the width automatically.
             This argument can only be supplied by keyword.
@@ -296,12 +341,43 @@ class DataFrameSelectorMixin:
            https://doc-line-chart.streamlit.app/
            height: 400px
 
+        You can also choose different columns to use for x and y, as well as set
+        the color dynamically based on a 3rd column (assuming your dataframe is in
+        long format):
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3'])
+        ...
+        >>> st.line_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3',
+        ... )
+
+        Finally, if your dataframe is in wide format, you can group multiple
+        columns under the y argument to show multiple lines with different
+        colors:
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3'])
+        ...
+        >>> st.line_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y=['col2', 'col3'],
+        ...     color=['red', 'black'],  # Optional
+        ... )
+
         """
         if _use_arrow():
             return self.dg._arrow_line_chart(
                 data,
                 x=x,
                 y=y,
+                color=color,
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
@@ -321,6 +397,7 @@ class DataFrameSelectorMixin:
         *,
         x: Union[str, None] = None,
         y: Union[str, Sequence[str], None] = None,
+        color: Union[str, Color, None] = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
@@ -354,6 +431,49 @@ class DataFrameSelectorMixin:
             the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
+        color : str, tuple, sequence of str, sequence of tuple, or None
+            The color to use for different series in this chart. This argument
+            can only be supplied by keyword.
+
+            For an area chart with just 1 series, this can be:
+
+            * None, to use the default color.
+            * A hex string like "#ffaa00" or "#ffaa0088".
+            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+              components specified as ints from 0 to 255 or floats from 0.0 to
+              1.0.
+
+            For an area chart with multiple series, where the dataframe is in
+            long format (that is, y is None or just 1 column), this can be:
+
+            * None, to use the default colors.
+            * The name of a column in the dataset. Data points will be grouped
+              into series of the same color based on the value of this column.
+              In addition, if the values in this column in one of the color
+              formats above (hex string or color tuple), then that color will
+              be used.
+
+              For example: if the dataset has 1000 rows, but this column can
+              only contains the values "adult", "child", "baby",
+              then those 1000 datapoints will be grouped into 3 series, whose
+              colors will be automatically selected from the default palette.
+
+              But, if for the same 1000-row dataset, this column contained
+              the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
+              datapoints would still be grouped into 3 series, but their
+              colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
+
+            For an area chart with multiple series, where the dataframe is in
+            wide format (that is, y is a sequence of columns), this can be:
+
+            * None, to use the default colors.
+            * A list of string colors or color tuples to be used for each of
+              the series in the chart. This list should have the same length
+              as the number of y values.
+
+              For example, for a chart with have 3 series this argument can
+              be set to ``color=["#fd0", "#f0f", "#04f"]``.
+
         width : int
             The chart width in pixels. If 0, selects the width automatically.
             This argument can only be supplied by keyword.
@@ -383,12 +503,43 @@ class DataFrameSelectorMixin:
            https://doc-area-chart.streamlit.app/
            height: 400px
 
+        You can also choose different columns to use for x and y, as well as set
+        the color dynamically based on a 3rd column (assuming your dataframe is in
+        long format):
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3'])
+        ...
+        >>> st.area_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3',
+        ... )
+
+        Finally, if your dataframe is in wide format, you can group multiple
+        columns under the y argument to show multiple series with different
+        colors:
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3'])
+        ...
+        >>> st.area_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y=['col2', 'col3'],
+        ...     color=['red', 'black'],  # Optional
+        ... )
+
         """
         if _use_arrow():
             return self.dg._arrow_area_chart(
                 data,
                 x=x,
                 y=y,
+                color=color,
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
@@ -408,6 +559,7 @@ class DataFrameSelectorMixin:
         *,
         x: Union[str, None] = None,
         y: Union[str, Sequence[str], None] = None,
+        color: Union[str, Color, None] = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
@@ -441,6 +593,49 @@ class DataFrameSelectorMixin:
             the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
+        color : str, tuple, sequence of str, sequence of tuple, or None
+            The color to use for different series in this chart. This argument
+            can only be supplied by keyword.
+
+            For a bar chart with just 1 series, this can be:
+
+            * None, to use the default color.
+            * A hex string like "#ffaa00" or "#ffaa0088".
+            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+              components specified as ints from 0 to 255 or floats from 0.0 to
+              1.0.
+
+            For a bar chart with multiple series, where the dataframe is in
+            long format (that is, y is None or just 1 column), this can be:
+
+            * None, to use the default colors.
+            * The name of a column in the dataset. Data points will be grouped
+              into series of the same color based on the value of this column.
+              In addition, if the values in this column in one of the color
+              formats above (hex string or color tuple), then that color will
+              be used.
+
+              For example: if the dataset has 1000 rows, but this column can
+              only contains the values "adult", "child", "baby",
+              then those 1000 datapoints will be grouped into 3 series, whose
+              colors will be automatically selected from the default palette.
+
+              But, if for the same 1000-row dataset, this column contained
+              the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
+              datapoints would still be grouped into 3 series, but their
+              colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
+
+            For a bar chart with multiple series, where the dataframe is in
+            wide format (that is, y is a sequence of columns), this can be:
+
+            * None, to use the default colors.
+            * A list of string colors or color tuples to be used for each of
+              the series in the chart. This list should have the same length
+              as the number of y values.
+
+              For example, for a chart with have 3 series this argument can
+              be set to ``color=["#fd0", "#f0f", "#04f"]``.
+
         width : int
             The chart width in pixels. If 0, selects the width automatically.
             This argument can only be supplied by keyword.
@@ -470,6 +665,36 @@ class DataFrameSelectorMixin:
            https://doc-bar-chart.streamlit.app/
            height: 400px
 
+        You can also choose different columns to use for x and y, as well as set
+        the color dynamically based on a 3rd column (assuming your dataframe is in
+        long format):
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3'])
+        ...
+        >>> st.bar_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3',
+        ... )
+
+        Finally, if your dataframe is in wide format, you can group multiple
+        columns under the y argument to show multiple series with different
+        colors:
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3'])
+        ...
+        >>> st.bar_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y=['col2', 'col3'],
+        ...     color=['red', 'black'],  # Optional
+        ... )
+
         """
 
         if _use_arrow():
@@ -477,6 +702,7 @@ class DataFrameSelectorMixin:
                 data,
                 x=x,
                 y=y,
+                color=color,
                 width=width,
                 height=height,
                 use_container_width=use_container_width,
