@@ -31,7 +31,7 @@ gitdb==4.0.10
 GitPython==3.1.32
 graphviz==0.20.1
 greenlet==2.0.2
-hypothesis==6.81.1
+hypothesis==6.81.2
 identify==2.5.24
 idna==3.4
 importlib-metadata==6.8.0
@@ -44,7 +44,7 @@ jsonschema==4.18.3
 jsonschema-specifications==2023.6.1
 keyring==24.2.0
 kiwisolver==1.4.4
-langchain==0.0.233
+langchain==0.0.234
 langsmith==0.0.5
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
@@ -69,7 +69,7 @@ parameterized==0.9.0
 pathspec==0.11.1
 Pillow==9.5.0
 pkginfo==1.9.6
-platformdirs==3.8.1
+platformdirs==3.9.1
 plotly==5.15.0
 pluggy==1.2.0
 pre-commit==3.3.3
@@ -122,7 +122,7 @@ types-protobuf==4.23.0.1
 types-python-dateutil==2.8.19.13
 types-pytz==2023.3.0.0
 types-requests==2.31.0.1
-types-setuptools==68.0.0.1
+types-setuptools==68.0.0.2
 types-toml==0.10.8.6
 types-typed-ast==1.5.8.7
 types-urllib3==1.26.25.13
