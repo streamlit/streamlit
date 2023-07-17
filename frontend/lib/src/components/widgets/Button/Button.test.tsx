@@ -34,7 +34,7 @@ const getProps = (elementProps: Partial<ButtonProto> = {}): Props => ({
     label: "Label",
     ...elementProps,
   }),
-  width: 0,
+  width: 250,
   disabled: false,
   // @ts-expect-error
   widgetMgr: new WidgetStateManager(sendBackMsg),
@@ -108,7 +108,18 @@ describe("Button widget", () => {
     expect(wrappedBaseButton.props().fluidWidth).toBe(false)
   })
 
-  it("passes useContainerWidth property correctly", () => {
+  it("passes useContainerWidth property with help correctly", () => {
+    const wrapper = shallow(
+      <Button {...getProps({ useContainerWidth: true, help: "mockHelpText" })}>
+        Hello
+      </Button>
+    )
+
+    const wrappedBaseButton = wrapper.find(BaseButton)
+    expect(wrappedBaseButton.props().fluidWidth).toBe(250)
+  })
+
+  it("passes useContainerWidth property without help correctly", () => {
     const wrapper = shallow(
       <Button {...getProps({ useContainerWidth: true })}>Hello</Button>
     )

@@ -35,7 +35,7 @@ const getProps = (elementProps: Partial<DownloadButtonProto> = {}): Props => ({
     url: "/media/mockDownloadURL",
     ...elementProps,
   }),
-  width: 0,
+  width: 250,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
@@ -117,7 +117,20 @@ describe("DownloadButton widget", () => {
       expect(wrappedBaseButton.props().fluidWidth).toBe(false)
     })
 
-    it("passes useContainerWidth property correctly", () => {
+    it("passes useContainerWidth property with help correctly", () => {
+      const wrapper = shallow(
+        <DownloadButton
+          {...getProps({ useContainerWidth: true, help: "mockHelpText" })}
+        >
+          Hello
+        </DownloadButton>
+      )
+
+      const wrappedBaseButton = wrapper.find(BaseButton)
+      expect(wrappedBaseButton.props().fluidWidth).toBe(250)
+    })
+
+    it("passes useContainerWidth property without help correctly", () => {
       const wrapper = shallow(
         <DownloadButton {...getProps({ useContainerWidth: true })}>
           Hello

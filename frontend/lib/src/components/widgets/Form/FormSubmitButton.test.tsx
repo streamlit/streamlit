@@ -51,19 +51,20 @@ describe("FormSubmitButton", () => {
 
   function getProps(
     props: Partial<Props> = {},
-    useContainerWidth = false
+    useContainerWidth = false,
+    helpText = "mockHelpText"
   ): Props {
     return {
       element: ButtonProto.create({
         id: "1",
         label: "Submit",
         formId: "mockFormId",
-        help: "mockHelpText",
+        help: helpText,
         useContainerWidth,
       }),
       disabled: false,
       hasInProgressUpload: false,
-      width: 0,
+      width: 250,
       widgetMgr,
       ...props,
     }
@@ -168,8 +169,15 @@ describe("FormSubmitButton", () => {
     expect(wrappedBaseButton.props().fluidWidth).toBe(false)
   })
 
-  it("passes useContainerWidth property correctly", () => {
+  it("passes useContainerWidth property with help correctly", () => {
     const wrapper = shallow(<FormSubmitButton {...getProps({}, true)} />)
+
+    const wrappedBaseButton = wrapper.find(BaseButton)
+    expect(wrappedBaseButton.props().fluidWidth).toBe(250)
+  })
+
+  it("passes useContainerWidth property without help correctly", () => {
+    const wrapper = shallow(<FormSubmitButton {...getProps({}, true, "")} />)
 
     const wrappedBaseButton = wrapper.find(BaseButton)
     expect(wrappedBaseButton.props().fluidWidth).toBe(true)
