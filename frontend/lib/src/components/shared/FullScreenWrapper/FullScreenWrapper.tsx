@@ -36,7 +36,7 @@ export type Size = {
  * This function should implement the following signature:
  * ({ height, width }) => PropTypes.element
  */
-interface Props {
+export interface FullScreenWrapperProps {
   children: (props: Size) => React.ReactNode
   width: number
   height?: number
@@ -54,12 +54,12 @@ interface State {
  * wrapper element. OnClick, change the element container
  * to fixed and cover all screen, updating wrapped element height and width
  */
-class FullScreenWrapper extends PureComponent<Props, State> {
+class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
   public context!: React.ContextType<typeof LibContext>
 
   public static contextType = LibContext
 
-  public constructor(props: Props) {
+  public constructor(props: FullScreenWrapperProps) {
     super(props)
     this.state = {
       expanded: false,
@@ -141,15 +141,20 @@ class FullScreenWrapper extends PureComponent<Props, State> {
       buttonTitle = "Exit fullscreen"
     }
 
+    const { hideFullScreenButtons } = this.context
+
     return (
       <StyledFullScreenFrame isExpanded={expanded}>
-        <StyledFullScreenButton
-          onClick={buttonOnClick}
-          title={buttonTitle}
-          isExpanded={expanded}
-        >
-          <Icon content={buttonImage} />
-        </StyledFullScreenButton>
+        {!hideFullScreenButtons && (
+          <StyledFullScreenButton
+            data-testid={"StyledFullScreenButton"}
+            onClick={buttonOnClick}
+            title={buttonTitle}
+            isExpanded={expanded}
+          >
+            <Icon content={buttonImage} />
+          </StyledFullScreenButton>
+        )}
         {expanded
           ? children({ width: fullWidth, height: fullHeight, expanded })
           : children({ width, height, expanded })}
