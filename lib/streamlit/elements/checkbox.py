@@ -31,6 +31,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import new_compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
@@ -169,7 +170,17 @@ class CheckboxMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        id = new_compute_widget_id(
+            "checkbox",
+            user_key=key,
+            label=label,
+            value=bool(value),
+            key=key,
+            help=help,
+        )
+
         checkbox_proto = CheckboxProto()
+        checkbox_proto.id = id
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
         checkbox_proto.form_id = current_form_id(self.dg)

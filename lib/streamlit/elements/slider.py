@@ -48,6 +48,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
+from streamlit.runtime.state.common import new_compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
@@ -376,6 +377,18 @@ class SliderMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        id = new_compute_widget_id(
+            "slider",
+            user_key=key,
+            label=label,
+            min_value=min_value,
+            value=value,
+            step=step,
+            format=format,
+            key=key,
+            help=help,
+        )
+
         SUPPORTED_TYPES = {
             Integral: SliderProto.INT,
             Real: SliderProto.FLOAT,
@@ -623,6 +636,7 @@ class SliderMixin:
 
         slider_proto = SliderProto()
         slider_proto.type = SliderProto.Type.SLIDER
+        slider_proto.id = id
         slider_proto.label = label
         slider_proto.format = format
         slider_proto.default[:] = value

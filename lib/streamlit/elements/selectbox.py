@@ -32,6 +32,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import new_compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -209,6 +210,17 @@ class SelectboxMixin:
 
         opt = ensure_indexable(options)
 
+        id = new_compute_widget_id(
+            "selectbox",
+            user_key=key,
+            label=label,
+            options=[str(format_func(option)) for option in opt],
+            index=index,
+            key=key,
+            help=help,
+            placeholder=placeholder,
+        )
+
         if not isinstance(index, int):
             raise StreamlitAPIException(
                 "Selectbox Value has invalid type: %s" % type(index).__name__
@@ -220,6 +232,7 @@ class SelectboxMixin:
             )
 
         selectbox_proto = SelectboxProto()
+        selectbox_proto.id = id
         selectbox_proto.label = label
         selectbox_proto.default = index
         selectbox_proto.options[:] = [str(format_func(option)) for option in opt]

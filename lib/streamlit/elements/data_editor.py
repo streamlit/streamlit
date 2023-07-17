@@ -726,6 +726,8 @@ class DataEditorMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
+        # TODO generate ID upfront
+
         column_config_mapping: ColumnConfigMapping = {}
 
         data_format = type_util.determine_data_format(data)

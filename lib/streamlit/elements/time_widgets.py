@@ -37,6 +37,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import new_compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
@@ -337,6 +338,15 @@ class TimeWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        id = new_compute_widget_id(
+            "time_input",
+            user_key=key,
+            value=value,
+            key=key,
+            help=help,
+            step=step,
+        )
+
         parsed_time: time
         if value is None:
             # Set value default.
@@ -352,6 +362,7 @@ class TimeWidgetsMixin:
         del value
 
         time_input_proto = TimeInputProto()
+        time_input_proto.id = id
         time_input_proto.label = label
         time_input_proto.default = time.strftime(parsed_time, "%H:%M")
         time_input_proto.form_id = current_form_id(self.dg)
@@ -531,6 +542,17 @@ class TimeWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        id = new_compute_widget_id(
+            "date_input",
+            user_key=key,
+            label=label,
+            value=value,
+            min_value=min_value,
+            max_value=max_value,
+            key=key,
+            help=help,
+        )
+
         parsed_values = _DateInputValues.from_raw_values(
             value=value,
             min_value=min_value,
@@ -539,6 +561,7 @@ class TimeWidgetsMixin:
         del value, min_value, max_value
 
         date_input_proto = DateInputProto()
+        date_input_proto.id = id
         date_input_proto.is_range = parsed_values.is_range
         if help is not None:
             date_input_proto.help = dedent(help)
