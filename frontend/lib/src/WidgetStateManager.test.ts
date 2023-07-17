@@ -95,9 +95,9 @@ describe("Widget State Manager", () => {
   /** Assert calls of our callback functions. */
   const assertCallbacks = ({ insideForm }: { insideForm: boolean }): void => {
     if (insideForm) {
-      expect(sendBackMsg).not.toBeCalled()
+      expect(sendBackMsg).not.toHaveBeenCalled()
     } else {
-      expect(sendBackMsg).toBeCalledTimes(1)
+      expect(sendBackMsg).toHaveBeenCalledTimes(1)
     }
   }
 
@@ -389,7 +389,7 @@ describe("Widget State Manager", () => {
     })
 
     it("throws on invalid formId", () => {
-      expect(() => widgetMgr.submitForm(MOCK_WIDGET.formId)).toThrowError(
+      expect(() => widgetMgr.submitForm(MOCK_WIDGET.formId)).toThrow(
         `invalid formID ${MOCK_WIDGET.formId}`
       )
     })

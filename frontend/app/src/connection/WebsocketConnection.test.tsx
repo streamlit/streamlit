@@ -450,7 +450,7 @@ describe("doInitPings", () => {
         // @ts-expect-error
         timePair => timePair[0] < timePair[1] || timePair[0] === 100
       )
-    )
+    ).toEqual(true)
   })
 
   it("backs off independently for each target url", async () => {

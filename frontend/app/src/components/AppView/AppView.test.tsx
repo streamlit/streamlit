@@ -99,6 +99,7 @@ describe("AppView element", () => {
 
   it("renders without crashing", () => {
     render(<AppView {...getProps()} />)
+    expect(screen.getByTestId("stAppViewContainer")).toBeInTheDocument()
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {

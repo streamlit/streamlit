@@ -524,9 +524,9 @@ describe("HostCommunicationManager external auth token handling", () => {
       useExternalAuthToken: false,
     })
 
-    expect(setAllowedOriginsFunc).toBeCalled()
+    expect(setAllowedOriginsFunc).toHaveBeenCalled()
     // @ts-expect-error - deferredAuthToken is private
-    expect(hostCommunicationMgr.deferredAuthToken.promise).resolves.toBe(
+    await expect(hostCommunicationMgr.deferredAuthToken.promise).resolves.toBe(
       undefined
     )
   })

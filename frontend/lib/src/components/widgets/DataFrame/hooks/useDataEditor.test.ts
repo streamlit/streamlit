@@ -119,9 +119,8 @@ describe("useDataEditor hook", () => {
 
     expect(notNullOrUndefined(editedCell)).toBe(true)
 
-    if (notNullOrUndefined(editedCell)) {
-      expect(columnToEdit.getCellValue(editedCell)).toEqual("bar")
-    }
+    // @ts-expect-error
+    expect(columnToEdit.getCellValue(editedCell)).toEqual("bar")
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
@@ -161,9 +160,8 @@ describe("useDataEditor hook", () => {
 
     expect(notNullOrUndefined(editedCell)).toBe(true)
 
-    if (notNullOrUndefined(editedCell)) {
-      expect(columnToEdit.getCellValue(editedCell)).toEqual("bar")
-    }
+    // @ts-expect-error
+    expect(columnToEdit.getCellValue(editedCell)).toEqual("bar")
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
@@ -201,16 +199,15 @@ describe("useDataEditor hook", () => {
     const cell1 = editingState.current.getCell(0, 1)
     expect(notNullOrUndefined(cell1)).toBe(true)
 
-    if (notNullOrUndefined(cell1)) {
-      expect(MOCK_COLUMNS[0].getCellValue(cell1)).toEqual(321)
-    }
+    // @ts-expect-error
+    expect(MOCK_COLUMNS[0].getCellValue(cell1)).toEqual(321)
 
     // Check data from second column
     const cell2 = editingState.current.getCell(1, 1)
     expect(cell2).not.toBeNull()
-    if (notNullOrUndefined(cell2)) {
-      expect(MOCK_COLUMNS[1].getCellValue(cell2)).toEqual("bar")
-    }
+
+    // @ts-expect-error
+    expect(MOCK_COLUMNS[1].getCellValue(cell2)).toEqual("bar")
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
@@ -424,9 +421,8 @@ describe("useDataEditor hook", () => {
 
     expect(notNullOrUndefined(cell1)).toBe(true)
 
-    if (notNullOrUndefined(cell1)) {
-      expect(MOCK_COLUMNS[0].getCellValue(cell1)).toEqual(null)
-    }
+    // @ts-expect-error
+    expect(MOCK_COLUMNS[0].getCellValue(cell1)).toEqual(null)
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(

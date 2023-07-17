@@ -239,7 +239,7 @@ describe("App", () => {
     // @ts-expect-error
     wrapper.instance().keyHandlers.STOP_RECORDING()
 
-    expect(props.screenCast.stopRecording).toBeCalled()
+    expect(props.screenCast.stopRecording).toHaveBeenCalled()
   })
 
   it("hides the top bar if hideTopBar === true", () => {
@@ -1254,7 +1254,7 @@ describe("Test Main Menu shortcut functionality", () => {
     wrapper.instance().openClearCacheDialog = jest.fn()
     wrapper.instance().keyHandlers.CLEAR_CACHE()
 
-    expect(wrapper.instance().openClearCacheDialog).not.toBeCalled()
+    expect(wrapper.instance().openClearCacheDialog).not.toHaveBeenCalled()
   })
 
   it("Tests dev menu shortcuts can be accessed as a developer", () => {
@@ -1267,7 +1267,7 @@ describe("Test Main Menu shortcut functionality", () => {
 
     wrapper.instance().keyHandlers.CLEAR_CACHE()
 
-    expect(wrapper.instance().openClearCacheDialog).toBeCalled()
+    expect(wrapper.instance().openClearCacheDialog).toHaveBeenCalled()
   })
 })
 

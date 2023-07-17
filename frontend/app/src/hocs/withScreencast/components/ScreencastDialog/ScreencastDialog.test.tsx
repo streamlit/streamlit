@@ -67,7 +67,7 @@ describe("ScreencastDialog", () => {
 
       expect(labelWrapper.text()).toBe(" Also record audio")
       expect(wrapper.find("input").props().checked).toBeTruthy()
-      expect(props.toggleRecordAudio).toBeCalled()
+      expect(props.toggleRecordAudio).toHaveBeenCalled()
     })
 
     it("should have the stop recording explanation message", () => {
@@ -84,8 +84,8 @@ describe("ScreencastDialog", () => {
       buttonWrapper.simulate("click")
 
       expect(buttonWrapper.props().children).toBe("Start recording!")
-      expect(props.startRecording).toBeCalled()
-      expect(props.onClose).toBeCalled()
+      expect(props.startRecording).toHaveBeenCalled()
+      expect(props.onClose).toHaveBeenCalled()
     })
   })
 })

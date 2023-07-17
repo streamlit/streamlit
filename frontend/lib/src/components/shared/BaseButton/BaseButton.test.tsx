@@ -105,7 +105,7 @@ describe("Button element", () => {
     )
     wrapper.find("StyledSecondaryButton").simulate("click")
 
-    expect(onClick).toBeCalled()
+    expect(onClick).toHaveBeenCalled()
   })
 
   it("does not use container width by default", () => {

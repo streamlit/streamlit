@@ -40,21 +40,11 @@ const getProps = (
   ...propOverrides,
 })
 
-describe("Tooltip element", () => {
-  it("renders a Tooltip", () => {
+describe("StatusWidget element", () => {
+  it("renders a StatusWidget", () => {
     const wrapper = mount(<StatusWidget {...getProps()} />)
 
     expect(wrapper.find("StyledAppStatus").exists()).toBeTruthy()
-  })
-
-  it("renders its tooltip when disconnected", () => {
-    const wrapper = mount(
-      <StatusWidget
-        {...getProps({ connectionState: ConnectionState.CONNECTING })}
-      />
-    )
-
-    expect(wrapper.find("Tooltip").exists()).toBeTruthy()
   })
 
   it("renders its tooltip when connecting", () => {
@@ -110,11 +100,11 @@ describe("Tooltip element", () => {
       <StatusWidget {...getProps({ sessionEventDispatcher })} />
     )
 
-    expect(connectSpy).toBeCalled()
+    expect(connectSpy).toHaveBeenCalled()
 
     wrapper.unmount()
 
-    expect(disconnectSpy).toBeCalled()
+    expect(disconnectSpy).toHaveBeenCalled()
   })
 
   it("calls stopScript when clicked", () => {
@@ -123,7 +113,7 @@ describe("Tooltip element", () => {
 
     wrapper.find("BaseButton").simulate("click")
 
-    expect(stopScript).toBeCalled()
+    expect(stopScript).toHaveBeenCalled()
   })
 
   it("shows the rerun button when script changes", () => {
@@ -151,7 +141,7 @@ describe("Tooltip element", () => {
     expect(wrapper.find("BaseButton").length).toEqual(2)
 
     wrapper.find("BaseButton").at(0).simulate("click")
-    expect(rerunScript).toBeCalledWith(false)
+    expect(rerunScript).toHaveBeenCalledWith(false)
   })
 
   it("shows the always rerun button when script changes", () => {
@@ -179,7 +169,7 @@ describe("Tooltip element", () => {
     expect(wrapper.find("BaseButton").length).toEqual(2)
 
     wrapper.find("BaseButton").at(1).simulate("click")
-    expect(rerunScript).toBeCalledWith(true)
+    expect(rerunScript).toHaveBeenCalledWith(true)
   })
 
   it("does not show the always rerun button when script changes", () => {

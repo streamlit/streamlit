@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import React from "react"
+import "@testing-library/jest-dom"
 
 import { screen } from "@testing-library/dom"
 import userEvent from "@testing-library/user-event"
 import { enableAllPlugins } from "immer"
-import React from "react"
 
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
 
@@ -70,6 +71,7 @@ describe("FormSubmitButton", () => {
 
   it("renders without crashing", () => {
     render(<FormSubmitButton {...getProps()} />)
+    expect(screen.getByTestId("stFormSubmitButton")).toBeInTheDocument()
   })
 
   it("has correct className and style", () => {

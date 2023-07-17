@@ -58,12 +58,8 @@ describe("Dataframe Tooltip", () => {
       ".stTooltipTarget"
     ) as HTMLElement
 
-    if (invisibleDiv) {
-      expect(invisibleDiv).toHaveStyle("position: fixed")
-      expect(invisibleDiv).toHaveStyle("top: 200px")
-      expect(invisibleDiv).toHaveStyle("left: 300px")
-    } else {
-      fail("Invisible div not found")
-    }
+    expect(invisibleDiv).toHaveStyle("position: fixed")
+    expect(invisibleDiv).toHaveStyle("top: 200px")
+    expect(invisibleDiv).toHaveStyle("left: 300px")
   })
 })

@@ -590,7 +590,7 @@ describe("hasLightBackgroundColor", () => {
   ]
 
   testCases.forEach(({ description, theme, expectedResult }) => {
-    it(description, () => {
+    it(`${description}`, () => {
       expect(hasLightBackgroundColor(theme.emotion)).toBe(expectedResult)
     })
   })

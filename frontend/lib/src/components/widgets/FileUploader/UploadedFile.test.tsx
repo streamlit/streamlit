@@ -82,6 +82,6 @@ describe("UploadedFile widget", () => {
     const wrapper = mount(<UploadedFile {...props} />)
     const deleteBtn = wrapper.find("button")
     deleteBtn.simulate("click")
-    expect(props.onDelete).toBeCalled()
+    expect(props.onDelete).toHaveBeenCalled()
   })
 })

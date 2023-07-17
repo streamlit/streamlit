@@ -121,10 +121,12 @@ describe("PlotlyChart Element", () => {
       expect(wrapper.find(Plot).props().layout.height).toBeUndefined()
     })
 
+    // eslint-disable-next-line jest/expect-expect -- underlying testEnterAndExitFullscreen function has expect statements
     it("renders properly when entering fullscreen and out of fullscreen and useContainerWidth is false", () => {
       testEnterAndExitFullscreen(false)
     })
 
+    // eslint-disable-next-line jest/expect-expect -- underlying testEnterAndExitFullscreen function has expect statements
     it("renders properly when entering fullscreen and out of fullscreen and useContainerWidth is true", () => {
       testEnterAndExitFullscreen(true)
     })
@@ -146,7 +148,7 @@ describe("PlotlyChart Element", () => {
       expect(wrapper.find("iframe").prop("style").height).toBe(DEFAULT_HEIGHT)
     })
 
-    it("it should render with an specific height", () => {
+    it("should render with an specific height", () => {
       const propsWithHeight = {
         ...props,
         height: 400,

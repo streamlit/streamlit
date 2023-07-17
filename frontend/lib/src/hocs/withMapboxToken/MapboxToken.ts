@@ -31,12 +31,6 @@ export class MapboxToken {
 
   static commandLine?: string
 
-  private static isRunningLocal = (): boolean => {
-    const { hostname } = window.location
-
-    return hostname === "localhost" || hostname === "127.0.0.1"
-  }
-
   /**
    * Expose a singleton MapboxToken:
    * - If the user specified a token in their streamlit config, return it.
@@ -55,13 +49,7 @@ export class MapboxToken {
       if (userMapboxToken !== "") {
         MapboxToken.token = userMapboxToken
       } else {
-        // TODO: Replace this with the block below after October 1st 2020.
         MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox")
-        // if (this.isRunningLocal() && SessionInfo.isHello) {
-        //   MapboxToken.token = await this.fetchToken(TOKENS_URL, "mapbox-localhost")
-        // } else {
-        //   throw new MapboxTokenNotProvidedError("No Mapbox token provided")
-        // }
       }
 
       MapboxToken.commandLine = commandLine.toLowerCase()

@@ -176,6 +176,6 @@ describe("ColorPicker error handler", () => {
       const props = getProps({})
       const wrapper = shallow(<BaseColorPicker {...props} />)
       wrapper.find(StyledColorPicker).simulateError(mockError)
-    }).toThrowError(mockError)
+    }).toThrow(mockError)
   })
 })
