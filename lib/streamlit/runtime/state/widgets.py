@@ -148,32 +148,13 @@ def register_widget(
         For both paths a widget return value is provided, allowing the widgets
         to be used in a non-streamlit setting.
     """
-    # Some fields are common to most widgets and not part of the widget identity,
-    # so they should not be set before registration and we can check them here.
-    # They don't exist on every widget, so we ignore fields that don't exist.
-    try:
-        assert not element_proto.disabled
-    except AttributeError:
-        pass
-    try:
-        assert not element_proto.label_visibility.value
-    except AttributeError:
-        pass
-    try:
-        assert not element_proto.value
-    except AttributeError:
-        pass
-    try:
-        assert not element_proto.set_value
-    except AttributeError:
-        pass
-
-    widget_id = compute_widget_id(element_type, element_proto, user_key)
-    element_proto.id = widget_id
+    if not element_proto.id:
+        widget_id = compute_widget_id(element_type, element_proto, user_key)
+        element_proto.id = widget_id
 
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
-        widget_id,
+        element_proto.id,
         deserializer,
         serializer,
         value_type=ELEMENT_TYPE_TO_VALUE_TYPE[element_type],

@@ -158,6 +158,27 @@ def compute_widget_id(
     return f"{GENERATED_WIDGET_ID_PREFIX}-{h.hexdigest()}-{user_key}"
 
 
+def new_compute_widget_id(
+    element_type: str, user_key: Optional[str] = None, **kwargs
+) -> str:
+    """Compute the widget id for the given widget. This id is stable: a given
+    set of inputs to this function will always produce the same widget id output.
+
+    The widget id includes the user_key so widgets with identical arguments can
+    use it to be distinct.
+
+    The widget id includes an easily identified prefix, and the user_key as a
+    suffix, to make it easy to identify it and know if a key maps to it.
+    """
+    h = hashlib.new("md5")
+    h.update(element_type.encode("utf-8"))
+    # TODO make sure this is equivalent to the protobuf approach
+    for k, v in kwargs.items():
+        h.update(str(k).encode("utf-8"))
+        h.update(str(v).encode("utf-8"))
+    return f"{GENERATED_WIDGET_ID_PREFIX}-{h.hexdigest()}-{user_key}"
+
+
 def user_key_from_widget_id(widget_id: str) -> Optional[str]:
     """Return the user key portion of a widget id, or None if the id does not
     have a user key.
