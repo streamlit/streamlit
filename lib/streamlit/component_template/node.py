@@ -15,7 +15,6 @@
 import shutil
 import subprocess
 import typing
-from typing import Optional, Tuple
 
 import packaging.version
 
@@ -54,7 +53,10 @@ def check_node_requirements(template_config: typing.Dict):
 
 def _get_supported_node_boundaries(
     template_config: typing.Dict,
-) -> Tuple[Optional[packaging.version.Version], Optional[packaging.version.Version]]:
+) -> typing.Tuple[
+    typing.Optional[packaging.version.Version],
+    typing.Optional[packaging.version.Version],
+]:
     """Retrieve the minimum and maximum supported Node.js versions from the template configuration.
 
     Parameters

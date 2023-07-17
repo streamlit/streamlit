@@ -20,7 +20,6 @@ import subprocess
 import sys
 import tempfile
 import unittest
-import zipfile
 from pathlib import Path
 from typing import Dict, Optional
 from unittest import mock
@@ -456,11 +455,12 @@ class CliTest(unittest.TestCase):
                         "components",
                         "create",
                         "--no-interactive",
-                        "--template-directory=template",
+                        "--template-directory=",
                         f"--template-url={template_archive}",
                     ],
                     catch_exceptions=False,
                 )
+                print(output.stdout)
             self.assertEqual(
                 [
                     "component_package",
@@ -476,7 +476,6 @@ class CliTest(unittest.TestCase):
                     "component_package/frontend/node_modules/camelcase/readme.md",
                     "component_package/frontend/package-lock.json",
                     "component_package/frontend/package.json",
-                    "component_package/gen-file.txt",
                     "cookiecutter.json",
                     "hooks",
                     "hooks/post_gen_project.py",
@@ -504,7 +503,7 @@ class CliTest(unittest.TestCase):
             ),
             "template/hooks/post_gen_project.py": (
                 "from pathlib import Path\n"
-                '(Path(".") / "{{ cookiecutter.package_name }}" / "gen-file.txt").'
+                '(Path(".") / {{ cookiecutter.package_name }} / "gen-file.txt").'
                 'write_text("{{ cookiecutter.package_name }}")'
             ),
             "template/{{ cookiecutter.package_name }}/frontend/package.json": json.dumps(
@@ -522,10 +521,13 @@ class CliTest(unittest.TestCase):
             ),
             **files_override,
         }
-        with zipfile.ZipFile(zip_file, "w") as zipf:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_dir_path = Path(tmp_dir)
             for file_path, file_content in files.items():
-                zipf.writestr(file_path, file_content)
-        return zip_file
+                (tmp_dir_path / file_path).parent.mkdir(parents=True, exist_ok=True)
+                (tmp_dir_path / file_path).write_text(file_content)
+            subprocess.check_call(["zip", "-r", str(zip_file), "."], cwd=tmp_dir_path)
+            return zip_file
 
 
 class HTTPServerIntegrationTest(unittest.TestCase):

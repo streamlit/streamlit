@@ -17,7 +17,7 @@ from unittest.mock import patch
 
 from packaging import version
 
-from streamlit.component_template.node_version import (
+from streamlit.component_template.node import (
     _get_installed_node_version,
     check_node_requirements,
     is_node_installed,
@@ -25,7 +25,7 @@ from streamlit.component_template.node_version import (
 
 
 class NodeRequirementsTests(unittest.TestCase):
-    @patch("streamlit.component_template.node_version._get_installed_node_version")
+    @patch("streamlit.component_template.node._get_installed_node_version")
     def test_check_node_requirements_below_min_version(
         self, mock_get_installed_node_version
     ):
@@ -48,7 +48,7 @@ class NodeRequirementsTests(unittest.TestCase):
             "Node version too old. Current version: 12.0.0. Max supported version: 14.0.0.",
         )
 
-    @patch("streamlit.component_template.node_version._get_installed_node_version")
+    @patch("streamlit.component_template.node._get_installed_node_version")
     def test_check_node_requirements_above_max_version(
         self, mock_get_installed_node_version
     ):
@@ -71,7 +71,7 @@ class NodeRequirementsTests(unittest.TestCase):
             "Node version too newer. Current version: 16.0.0. Max supported version: 14.0.0.",
         )
 
-    @patch("streamlit.component_template.node_version._get_installed_node_version")
+    @patch("streamlit.component_template.node._get_installed_node_version")
     def test_check_node_requirements_supported_version(
         self, mock_get_installed_node_version
     ):

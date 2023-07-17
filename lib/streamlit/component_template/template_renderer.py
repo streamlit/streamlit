@@ -18,6 +18,18 @@ from pathlib import Path
 
 import jinja2
 
+from streamlit.errors import Error
+
+
+def find_project_directory(template_directory_path: Path) -> Path:
+    """Find the first directory that has a templated name."""
+    directories = (d for d in template_directory_path.iterdir() if d.is_dir())
+    directories = (d for d in directories if "{{" in d.name and "}}" in d.name)
+    project_directory = next(directories, None)
+    if project_directory is None:
+        raise Error("Template need to have directory with templated name.")
+    return project_directory
+
 
 def render_template(
     template_directory_path: Path,
@@ -37,7 +49,8 @@ def render_template(
 
     """
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
-    template_dir = str(template_directory_path)
+    project_dir = find_project_directory(template_directory_path)
+    template_dir = str(project_dir)
     target_dir = str(target_directory_path)
 
     for root, dirs, files in os.walk(template_dir, topdown=True):

@@ -107,15 +107,17 @@ def configurator_options(func):
     return func
 
 
-def _download_remote(main_script_path: str, url_path: str) -> None:
-    """Fetch remote file at url_path to main_script_path"""
+def _download_remote(output_path: str, url_path: str) -> None:
+    """Fetch remote file at url_path to output_path"""
     import requests
 
-    with open(main_script_path, "wb") as fp:
+    with open(output_path, "wb") as fp:
         try:
-            resp = requests.get(url_path)
+            resp = requests.get(url_path, stream=True)
             resp.raise_for_status()
-            fp.write(resp.content)
+            for chunk in resp.iter_content(chunk_size=1024):
+                if chunk:  # filter out keep-alive new chunks
+                    fp.write(chunk)
         except requests.exceptions.RequestException as e:
             raise click.BadParameter(f"Unable to fetch {url_path}.\n{e}")
 
@@ -130,9 +132,23 @@ def _extract_zip(zip_path: str, target_dir: str) -> Path:
     try:
         # Extract the contents of the ZIP file to the target directory
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
+
+            # Verify the correctness of the ZIP archive
+            if len(zip_ref.namelist()) == 0:
+                raise click.BadParameter(f"Zip archive is empty")
+
+            first_entryname = zip_ref.namelist()[0]
+            if not first_entryname.endswith("/"):
+                raise click.BadParameter(
+                    f"Zip archive does not have a top-level directory"
+                )
+
+            # Extract files
             zip_ref.extractall(target_dir)
-        # Return the path to the extracted directory
-        return Path(target_dir)
+
+            # Return the path to the extracted directory
+            top_level_dir_name = first_entryname[:-1]
+            return Path(target_dir) / top_level_dir_name
     except zipfile.BadZipFile as e:
         raise click.BadParameter(f"Unable to extract archive.\n{e}")
 

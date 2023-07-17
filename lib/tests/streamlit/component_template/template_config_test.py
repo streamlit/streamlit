@@ -56,7 +56,7 @@ class ComponentConfigTest(unittest.TestCase):
     def test_should_raise_exception_for_invalid_type(self, interactive):
         with self.assertRaisesRegex(
             RuntimeError,
-            "Unsupported config type. Config key=dict_option, type_name=dict",
+            "Unsupported config type. Config key=dict_option, Config type name=dict",
         ):
             prepare_config({"dict_option": {"key": "value"}}, interactive)
 

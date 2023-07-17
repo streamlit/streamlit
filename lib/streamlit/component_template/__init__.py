@@ -48,7 +48,7 @@ def project_create(template_path: Path, no_interactive: bool):
         template_context=template_context,
     )
     hooks.run_hook(
-        template_directory_path=template_path,
+        template_directory_path=next(template_path.glob("*/")),
         target_directory_path=target_directory_path,
         template_context=template_context,
     )
