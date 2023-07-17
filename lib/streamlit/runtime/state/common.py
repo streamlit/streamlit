@@ -164,6 +164,11 @@ def new_compute_widget_id(
     """Compute the widget id for the given widget. This id is stable: a given
     set of inputs to this function will always produce the same widget id output.
 
+    Only stable, deterministic values should be used to compute widget ids. Using
+    nondeterministic values as inputs can cause the resulting widget id to
+    change between runs, which could leak memory if we start persisting widgets
+    that haven't been seen recently.
+
     The widget id includes the user_key so widgets with identical arguments can
     use it to be distinct.
 
