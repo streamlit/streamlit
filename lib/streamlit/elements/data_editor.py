@@ -561,11 +561,12 @@ class DataEditorMixin:
             The data to edit in the data editor.
 
             .. note::
-                Mixing data types within a column can make the column uneditable.
-                Additionally, the following data types are not yet supported for editing:
-                complex, list, tuple, bytes, bytearray, memoryview, dict, set, frozenset,
-                datetime.timedelta, decimal.Decimal, fractions.Fraction, pandas.Interval,
-                pandas.Period, pandas.Timedelta.
+                - Styles from ``pandas.Styler`` will only be applied to non-editable columns.
+                - Mixing data types within a column can make the column uneditable.
+                - Additionally, the following data types are not yet supported for editing:
+                  complex, list, tuple, bytes, bytearray, memoryview, dict, set, frozenset,
+                  datetime.timedelta, decimal.Decimal, fractions.Fraction, pandas.Interval,
+                  pandas.Period, pandas.Timedelta.
 
         width : int or None
             Desired width of the data editor expressed in pixels. If None, the width will

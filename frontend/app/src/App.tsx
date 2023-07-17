@@ -1586,6 +1586,7 @@ export class App extends PureComponent<Props, State> {
           // host communication manager elements
           pageLinkBaseUrl,
           sidebarChevronDownshift,
+          toastAdjustment: hostToolbarItems.length > 0,
         }}
       >
         <LibContext.Provider
@@ -1598,6 +1599,7 @@ export class App extends PureComponent<Props, State> {
             setTheme: this.setAndSendTheme,
             availableThemes: this.props.theme.availableThemes,
             addThemes: this.props.theme.addThemes,
+            hideFullScreenButtons: false,
           }}
         >
           <HotKeys

@@ -23,11 +23,16 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
+from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit import pyspark_mocks
 from tests.streamlit.snowpark_mocks import DataFrame as MockedSnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Table as MockedSnowparkTable
-from tests.testutil import create_snowpark_session, should_skip_pyspark_tests
+from tests.testutil import (
+    create_snowpark_session,
+    patch_config_options,
+    should_skip_pyspark_tests,
+)
 
 df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
@@ -71,6 +76,164 @@ class StMapTest(DeltaGeneratorTestCase):
 
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
         self.assertEqual(len(c.get("layers")[0].get("data")), 4)
+
+    def test_main_kwargs(self):
+        """Test that latitude, longitude, color and size propagate correctly."""
+        df = pd.DataFrame(
+            {
+                "lat": [38.8762997, 38.8742997, 38.9025842],
+                "lon": [-77.0037, -77.0057, -77.0556545],
+                "color": [[255, 0, 0, 128], [0, 255, 0, 128], [0, 0, 255, 128]],
+                "size": [100, 50, 30],
+                "xlat": [-38.8762997, -38.8742997, -38.9025842],
+                "xlon": [77.0037, 77.0057, 77.0556545],
+            }
+        )
+
+        st.map(df, latitude="xlat", longitude="xlon", color="color", size="size")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+
+        self.assertEqual(c.get("layers")[0].get("getPosition"), "@@=[xlon, xlat]")
+        self.assertEqual(c.get("layers")[0].get("getFillColor"), "@@=color")
+        self.assertEqual(c.get("layers")[0].get("getRadius"), "@@=size")
+
+        # Also test that the radius property is set up correctly.
+        self.assertEqual(c.get("layers")[0].get("radiusMinPixels"), 3)
+
+    def test_common_color_formats(self):
+        """Test that users can pass colors in different formats."""
+        df = pd.DataFrame(
+            {
+                "lat": [38.8762997, 38.8742997, 38.9025842],
+                "lon": [-77.0037, -77.0057, -77.0556545],
+                "tuple3_int_color": [[255, 0, 0], [0, 255, 0], [0, 0, 255]],
+                "tuple4_int_int_color": [
+                    [255, 0, 0, 51],
+                    [0, 255, 0, 51],
+                    [0, 0, 255, 51],
+                ],
+                "tuple4_int_float_color": [
+                    [255, 0, 0, 0.2],
+                    [0, 255, 0, 0.2],
+                    [0, 0, 255, 0.2],
+                ],
+                "tuple3_float_color": [
+                    [1.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0],
+                ],
+                "tuple4_float_float_color": [
+                    [1.0, 0.0, 0.0, 0.2],
+                    [0.0, 1.0, 0.0, 0.2],
+                    [0.0, 0.0, 1.0, 0.2],
+                ],
+                "hex3_color": ["#f00", "#0f0", "#00f"],
+                "hex4_color": ["#f008", "#0f08", "#00f8"],
+                "hex6_color": ["#ff0000", "#00ff00", "#0000ff"],
+                "hex8_color": ["#ff000088", "#00ff0088", "#0000ff88"],
+                "named_color": ["red", "green", "blue"],
+            }
+        )
+
+        color_columns = sorted(set(df.columns))
+        color_columns.remove("lat")
+        color_columns.remove("lon")
+
+        expected_values = {
+            "tuple3": [[255, 0, 0], [0, 255, 0], [0, 0, 255]],
+            "tuple4": [[255, 0, 0, 51], [0, 255, 0, 51], [0, 0, 255, 51]],
+            "hex3": [[255, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]],
+            "hex6": [[255, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]],
+            # 88 in hex = 136
+            "hex4": [[255, 0, 0, 136], [0, 255, 0, 136], [0, 0, 255, 136]],
+            "hex8": [[255, 0, 0, 136], [0, 255, 0, 136], [0, 0, 255, 136]],
+            "named": None,
+        }
+
+        def get_expected_color_values(col_name):
+            for prefix, expected_color_values in expected_values.items():
+                if col_name.startswith(prefix):
+                    return expected_color_values
+
+        for color_column in color_columns:
+            expected_color_values = get_expected_color_values(color_column)
+
+            if expected_color_values is None:
+                with self.assertRaises(StreamlitAPIException):
+                    st.map(df, color=color_column)
+
+            else:
+                st.map(df, color=color_column)
+                c = json.loads(
+                    self.get_delta_from_queue().new_element.deck_gl_json_chart.json
+                )
+
+                rows = c.get("layers")[0].get("data")
+
+                for i, row in enumerate(rows):
+                    self.assertEqual(row[color_column], expected_color_values[i])
+
+    def test_unused_columns_get_dropped(self):
+        """Test that unused columns don't get transmitted."""
+        df = pd.DataFrame(
+            {
+                "lat": [38.8762997, 38.8742997, 38.9025842],
+                "lon": [-77.0037, -77.0057, -77.0556545],
+                "int_color": [[255, 0, 0, 128], [0, 255, 0, 128], [0, 0, 255, 128]],
+                "size": [100, 50, 30],
+                "xlat": [-38.8762997, -38.8742997, -38.9025842],
+                "xlon": [77.0037, 77.0057, 77.0556545],
+            }
+        )
+
+        st.map(df)
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        self.assertEqual(len(c.get("layers")[0].get("data")[0]), 2)
+
+        st.map(df, latitude="xlat", longitude="xlon")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        self.assertEqual(len(c.get("layers")[0].get("data")[0]), 2)
+
+        st.map(df, latitude="xlat", longitude="xlon", color="int_color")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        self.assertEqual(len(c.get("layers")[0].get("data")[0]), 3)
+
+        st.map(df, latitude="xlat", longitude="xlon", size="size")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        self.assertEqual(len(c.get("layers")[0].get("data")[0]), 3)
+
+        st.map(df, latitude="xlat", longitude="xlon", color="int_color", size="size")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        self.assertEqual(len(c.get("layers")[0].get("data")[0]), 4)
+
+    def test_original_df_is_untouched(self):
+        """Test that when we modify the outgoing DF we don't mutate the input DF."""
+        df = pd.DataFrame(
+            {
+                "lat": [38.8762997, 38.8742997, 38.9025842],
+                "lon": [-77.0037, -77.0057, -77.0556545],
+                "foo": [0, 1, 2],
+            }
+        )
+
+        st.map(df)
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        self.assertEqual(len(c.get("layers")[0].get("data")[0]), 2)
+        self.assertEqual(len(df.columns), 3)
+
+    # This test was turned off while we investigate issues with the feature.
+    def turnedoff_test_map_style_raises_error(self):
+        """Test that map_style raises error when no Mapbox token is present."""
+        with self.assertRaises(StreamlitAPIException):
+            st.map(df1, map_style="MY_MAP_STYLE")
+
+    # This test was turned off while we investigate issues with the feature.
+    @patch_config_options({"mapbox.token": "MY_TOKEN"})
+    def turnedoff_test_map_style(self):
+        """Test that map_style works when a Mapbox token is present."""
+        st.map(df1, map_style="MY_MAP_STYLE")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        self.assertEqual(c.get("mapStyle"), "MY_MAP_STYLE")
 
     def test_default_map_copy(self):
         """Test that _DEFAULT_MAP is not modified as other work occurs."""
@@ -129,7 +292,7 @@ class StMapTest(DeltaGeneratorTestCase):
         with self.assertRaises(Exception) as ctx:
             st.map(df)
 
-        self.assertIn("data must be numeric.", str(ctx.exception))
+        self.assertIn("not allowed to contain null values", str(ctx.exception))
 
     def test_unevaluated_snowpark_table_mock(self):
         """Test st.map with unevaluated Snowpark Table based on mock data"""

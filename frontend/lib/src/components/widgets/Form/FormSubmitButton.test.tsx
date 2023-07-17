@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import React from "react"
+import "@testing-library/jest-dom"
 
 import { screen } from "@testing-library/dom"
 import userEvent from "@testing-library/user-event"
 import { enableAllPlugins } from "immer"
-import React from "react"
 
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
 
@@ -70,6 +71,7 @@ describe("FormSubmitButton", () => {
 
   it("renders without crashing", () => {
     render(<FormSubmitButton {...getProps()} />)
+    expect(screen.getByTestId("stFormSubmitButton")).toBeInTheDocument()
   })
 
   it("has correct className and style", () => {
@@ -109,7 +111,10 @@ describe("FormSubmitButton", () => {
     render(<FormSubmitButton {...props} />)
 
     await user.click(screen.getByRole("button"))
-    expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(props.element)
+    expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
+      props.element.formId,
+      props.element
+    )
   })
 
   it("is disabled when form has pending upload", () => {
@@ -120,22 +125,40 @@ describe("FormSubmitButton", () => {
     expect(button.disabled).toBe(true)
   })
 
-  it("increments submitButtonCount on mount and decrements on unmount", () => {
-    expect(formsData.submitButtonCount.get("mockFormId")).toBeUndefined()
+  it("Adds the proto to submitButtons on mount and removes the proto on unmount", () => {
+    expect(formsData.submitButtons.get("mockFormId")).toBeUndefined()
 
     const props = getProps()
+    const props2 = getProps({
+      element: ButtonProto.create({
+        id: "2",
+        label: "Submit",
+        formId: "mockFormId",
+        help: "mockHelpText",
+      }),
+    })
 
     const wrapper1 = render(<FormSubmitButton {...props} />)
-    expect(formsData.submitButtonCount.get("mockFormId")).toBe(1)
+    expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
+    // @ts-expect-error
+    expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(props.element)
 
-    const wrapper2 = render(<FormSubmitButton {...props} />)
-    expect(formsData.submitButtonCount.get("mockFormId")).toBe(2)
+    const wrapper2 = render(<FormSubmitButton {...props2} />)
+    expect(formsData.submitButtons.get("mockFormId")?.length).toBe(2)
+    // @ts-expect-error
+    expect(formsData.submitButtons.get("mockFormId")[1]).toEqual(
+      props2.element
+    )
 
     wrapper1.unmount()
-    expect(formsData.submitButtonCount.get("mockFormId")).toBe(1)
+    expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
+    // @ts-expect-error
+    expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(
+      props2.element
+    )
 
     wrapper2.unmount()
-    expect(formsData.submitButtonCount.get("mockFormId")).toBe(0)
+    expect(formsData.submitButtons.get("mockFormId")?.length).toBe(0)
   })
 
   it("does not use container width by default", () => {

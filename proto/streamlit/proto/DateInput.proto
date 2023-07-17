@@ -31,4 +31,5 @@ message DateInput {
   bool set_value = 10;
   bool disabled = 11;
   LabelVisibilityMessage label_visibility = 12;
+  string format = 13;
 }

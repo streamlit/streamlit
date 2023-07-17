@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 import React from "react"
+import "@testing-library/jest-dom"
 
-import { fireEvent, render } from "@testing-library/react"
+import { screen, fireEvent, render } from "@testing-library/react"
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
 import {
@@ -54,7 +55,6 @@ describe("formatValueForHTMLInput", () => {
 describe("editor", () => {
   function getMockDateCell(props: Partial<DateTimeCell> = {}): DateTimeCell {
     return {
-      ...props,
       kind: GridCellKind.Custom,
       allowOverlay: true,
       copyData: "4",
@@ -65,6 +65,7 @@ describe("editor", () => {
         displayDate: new Date("2023-02-06T04:47:44.584Z").toISOString(),
         format: "time",
       },
+      ...props,
     }
   }
 
@@ -82,16 +83,18 @@ describe("editor", () => {
     const input = result.getByTestId(TEST_ID)
     expect(input).not.toBeUndefined()
 
-    // @ts-expect-error
-    expect(result.value === "04:47:44.584")
+    expect(input).toHaveAttribute("value", "04:47:44.584")
   })
 
   it.each([["date"], ["time"], ["datetime-local"]])(
     "renders with correct format",
     (format: string) => {
+      const dateTimeCell = getMockDateCell({
+        data: { format: format as DateKind },
+      } as Partial<DateTimeCell>)
       // @ts-expect-error
       const Editor = DateTimeCellRenderer.provideEditor?.(
-        getMockDateCell({ data: { format: format } } as DateTimeCell)
+        dateTimeCell
         // @ts-expect-error
       ).editor
       if (Editor === undefined) {
@@ -99,12 +102,11 @@ describe("editor", () => {
       }
 
       const result = render(
-        <Editor isHighlighted={false} value={getMockDateCell()} />
+        <Editor isHighlighted={false} value={dateTimeCell} />
       )
       const input = result.getByTestId(TEST_ID)
       expect(input).not.toBeUndefined()
-      // @ts-expect-error
-      expect(input.format === format)
+      expect(input).toHaveAttribute("type", format)
     }
   )
 
@@ -130,7 +132,7 @@ describe("editor", () => {
   it("contains max, min, step when passed in", () => {
     const min = "2018-01-01"
     const max = "2018-12-31"
-    const step = ".001"
+    const step = "0.001"
     const extraProps = {
       data: {
         min,
@@ -138,26 +140,22 @@ describe("editor", () => {
         step,
       },
     }
+    const dateTimeCell = getMockDateCell(extraProps as Partial<DateTimeCell>)
     // @ts-expect-error
     const Editor = DateTimeCellRenderer.provideEditor(
-      getMockDateCell(extraProps as Partial<DateTimeCell>)
+      dateTimeCell
       // @ts-expect-error
     ).editor
     if (Editor === undefined) {
       throw new Error("Editor is invalid")
     }
 
-    const result = render(
-      <Editor isHighlighted={false} value={getMockDateCell()} />
-    )
-    const input = result.getByTestId(TEST_ID)
+    render(<Editor isHighlighted={false} value={dateTimeCell} />)
+    const input = screen.getByTestId(TEST_ID)
     expect(input).not.toBeUndefined()
-    // @ts-expect-error
-    expect(input.min === min)
-    // @ts-expect-error
-    expect(input.max === max)
-    // @ts-expect-error
-    expect(input.step === step)
+    expect(input).toHaveAttribute("min", min)
+    expect(input).toHaveAttribute("max", max)
+    expect(input).toHaveAttribute("step", step)
   })
 
   it('properly sets date when value is NOT ""', async () => {
@@ -186,7 +184,7 @@ describe("editor", () => {
       },
     })
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)
-    expect(mockCellOnChange).toBeCalledWith({
+    expect(mockCellOnChange).toHaveBeenCalledWith({
       kind: GridCellKind.Custom,
       allowOverlay: true,
       copyData: "4",
@@ -219,7 +217,7 @@ describe("editor", () => {
     expect(result.findByTestId(TEST_ID)).not.toBeUndefined()
     fireEvent.change(input, { target: { value: "" } })
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)
-    expect(mockCellOnChange).toBeCalledWith({
+    expect(mockCellOnChange).toHaveBeenCalledWith({
       kind: GridCellKind.Custom,
       allowOverlay: true,
       copyData: "4",

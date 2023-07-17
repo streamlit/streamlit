@@ -218,6 +218,8 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
               value={value}
               maxLength={maxChars}
               type="chat"
+              // Chat Input are not able to be used in forms
+              inForm={false}
             />
           </StyledInputInstructionsContainer>
           <StyledSendIconButtonContainer>

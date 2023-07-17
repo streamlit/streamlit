@@ -54,6 +54,7 @@ function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
     showColoredLine: false,
     pageLinkBaseUrl: "",
     sidebarChevronDownshift: 0,
+    toastAdjustment: false,
     ...context,
   }
 }
@@ -98,6 +99,7 @@ describe("AppView element", () => {
 
   it("renders without crashing", () => {
     render(<AppView {...getProps()} />)
+    expect(screen.getByTestId("stAppViewContainer")).toBeInTheDocument()
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {
@@ -121,9 +123,10 @@ describe("AppView element", () => {
     )
 
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event])),
     })
     render(<AppView {...props} />)
 
@@ -155,13 +158,14 @@ describe("AppView element", () => {
     )
 
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const appPages = [
       { pageName: "streamlit_app", pageScriptHash: "page_hash" },
       { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event])),
       appPages,
     })
     render(<AppView {...props} />)
@@ -197,9 +201,10 @@ describe("AppView element", () => {
 
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event])),
     })
     const { getByTestId } = render(<AppView {...props} />)
 
@@ -303,13 +308,14 @@ describe("AppView element", () => {
     )
 
     const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const main = new BlockNode(
       [chatInputElement],
       new BlockProto({ allowEmpty: true })
     )
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event])),
     })
 
     render(<AppView {...props} />)
