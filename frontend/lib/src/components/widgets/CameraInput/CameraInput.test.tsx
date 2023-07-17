@@ -87,7 +87,6 @@ describe("CameraInput widget", () => {
     const wrapper = shallow(<CameraInput {...props} />)
     expect(wrapper.state()).toEqual({
       files: [],
-      newestServerFileId: 0,
       clearPhotoInProgress: false,
       facingMode: FacingMode.USER,
       imgSrc: null,
@@ -198,7 +197,6 @@ describe("CameraInput widget", () => {
     await wrapper.instance().removeCapture()
     expect(wrapper.state()).toEqual({
       files: [],
-      newestServerFileId: 1,
       clearPhotoInProgress: true,
       facingMode: FacingMode.USER,
       imgSrc: null,
