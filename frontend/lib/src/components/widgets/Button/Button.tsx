@@ -40,6 +40,10 @@ function Button(props: Props): ReactElement {
       ? BaseButtonKind.PRIMARY
       : BaseButtonKind.SECONDARY
 
+  // When useContainerWidth true & has help tooltip,
+  // we need to pass the container width down to the button
+  const fluidWidth = element.help ? width : true
+
   return (
     <div className="row-widget stButton" style={style}>
       <BaseButtonTooltip help={element.help}>
@@ -47,7 +51,7 @@ function Button(props: Props): ReactElement {
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
-          fluidWidth={element.useContainerWidth || false}
+          fluidWidth={element.useContainerWidth ? fluidWidth : false}
           onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}
         >
           <StreamlitMarkdown
