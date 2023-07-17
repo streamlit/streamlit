@@ -210,7 +210,7 @@ class Secrets(Mapping[str, Any]):
             if not found_secrets_file:
                 err_msg = f"No secrets files found. Valid paths for a secrets.toml file are: {', '.join(self._file_paths)}"
                 if print_exceptions:
-                    st.error(err_msg)
+                    st.error(err_msg.replace("\\.","\\\\."))
                 raise FileNotFoundError(err_msg)
 
             if len([p for p in self._file_paths if os.path.exists(p)]) > 1:
