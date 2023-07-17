@@ -304,6 +304,7 @@ class MultiSelectMixin:
             help=help,
             max_selections=max_selections,
             placeholder=placeholder,
+            form_id=current_form_id(self.dg),
         )
 
         indices = _check_and_convert_to_indices(opt, default)

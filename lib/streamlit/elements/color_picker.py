@@ -178,6 +178,7 @@ class ColorPickerMixin:
             value=str(value),
             key=key,
             help=help,
+            form_id=current_form_id(self.dg),
         )
 
         # set value default

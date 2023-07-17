@@ -219,6 +219,7 @@ class SelectboxMixin:
             key=key,
             help=help,
             placeholder=placeholder,
+            form_id=current_form_id(self.dg),
         )
 
         if not isinstance(index, int):

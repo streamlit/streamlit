@@ -230,6 +230,7 @@ class RadioMixin:
             key=key,
             help=help,
             horizontal=horizontal,
+            form_id=current_form_id(self.dg),
         )
 
         if not isinstance(index, int):

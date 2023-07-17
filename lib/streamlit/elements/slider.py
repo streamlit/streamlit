@@ -387,6 +387,7 @@ class SliderMixin:
             format=format,
             key=key,
             help=help,
+            form_id=current_form_id(self.dg),
         )
 
         SUPPORTED_TYPES = {

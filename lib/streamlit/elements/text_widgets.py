@@ -226,6 +226,7 @@ class TextWidgetsMixin:
             help=help,
             autocomplete=autocomplete,
             placeholder=str(placeholder),
+            form_id=current_form_id(self.dg),
         )
 
         text_input_proto = TextInputProto()
@@ -435,6 +436,7 @@ class TextWidgetsMixin:
             key=key,
             help=help,
             placeholder=str(placeholder),
+            form_id=current_form_id(self.dg),
         )
 
         text_area_proto = TextAreaProto()

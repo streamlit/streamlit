@@ -293,6 +293,7 @@ class SelectSliderMixin:
             value=slider_value,
             key=key,
             help=help,
+            form_id=current_form_id(self.dg),
         )
 
         slider_proto = SliderProto()

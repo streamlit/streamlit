@@ -177,6 +177,7 @@ class CheckboxMixin:
             value=bool(value),
             key=key,
             help=help,
+            form_id=current_form_id(self.dg),
         )
 
         checkbox_proto = CheckboxProto()

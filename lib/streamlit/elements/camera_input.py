@@ -234,6 +234,7 @@ class CameraInputMixin:
             label=label,
             key=key,
             help=help,
+            form_id=current_form_id(self.dg),
         )
 
         camera_input_proto = CameraInputProto()

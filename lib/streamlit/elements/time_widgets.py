@@ -345,6 +345,7 @@ class TimeWidgetsMixin:
             key=key,
             help=help,
             step=step,
+            form_id=current_form_id(self.dg),
         )
 
         parsed_time: time
@@ -551,6 +552,7 @@ class TimeWidgetsMixin:
             max_value=max_value,
             key=key,
             help=help,
+            form_id=current_form_id(self.dg),
         )
 
         parsed_values = _DateInputValues.from_raw_values(

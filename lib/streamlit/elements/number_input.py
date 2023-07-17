@@ -230,6 +230,7 @@ class NumberInputMixin:
             format=format,
             key=key,
             help=help,
+            form_id=current_form_id(self.dg),
         )
 
         # Ensure that all arguments are of the same type.
