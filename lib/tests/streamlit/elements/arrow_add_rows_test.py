@@ -32,15 +32,14 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
             lambda df: st._arrow_line_chart(df),
             lambda df: st._arrow_bar_chart(df),
             lambda df: st._arrow_area_chart(df),
-            lambda df: st._arrow_scatter_chart(df),
         ]
 
         expected = pd.DataFrame(
             {
+                "index--p5bJXXpQgvPz6yvQMFiy": [1, 2, 3],
                 "a": [11, 12, 13],
                 "b": [21, 22, 23],
                 "c": [31, 32, 33],
-                "index-4FLV4aXfCWIrl1KyIeJp": [1, 2, 3],
             }
         )
 
@@ -57,23 +56,20 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
     def test_charts_with_args(self):
         deltas = [
             lambda df: st._arrow_line_chart(
-                df, x="b", y=["a", "c"], color=["red", "orange"]
+                df, x="b", y=["a", "c"], color=["#f00", "#0f0"]
             ),
             lambda df: st._arrow_bar_chart(
-                df, x="b", y=["a", "c"], color=["red", "orange"]
+                df, x="b", y=["a", "c"], color=["#f00", "#0f0"]
             ),
             lambda df: st._arrow_area_chart(
-                df, x="b", y=["a", "c"], color=["red", "orange"]
-            ),
-            lambda df: st._arrow_scatter_chart(
-                df, x="b", y=["a", "c"], color=["red", "orange"], size="b"
+                df, x="b", y=["a", "c"], color=["#f00", "#0f0"]
             ),
         ]
 
         expected = pd.DataFrame(
             {
-                "a": [11, 12, 13],
                 "b": [21, 22, 23],
+                "a": [11, 12, 13],
                 "c": [31, 32, 33],
             }
         )
@@ -94,39 +90,12 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
             lambda df: st._arrow_line_chart(df, x="b", y="a"),
             lambda df: st._arrow_bar_chart(df, x="b", y="a"),
             lambda df: st._arrow_area_chart(df, x="b", y="a"),
-            lambda df: st._arrow_scatter_chart(df, x="b", y="a", size="b"),
         ]
 
         expected = pd.DataFrame(
             {
-                "a": [11, 12, 13],
                 "b": [21, 22, 23],
-            }
-        )
-        expected.index = pd.RangeIndex(start=1, stop=4, step=1)
-
-        for delta in deltas:
-            element = delta(DATAFRAME)
-            element._arrow_add_rows(NEW_ROWS)
-
-            proto = bytes_to_data_frame(
-                self.get_delta_from_queue().arrow_add_rows.data.data
-            )
-
-            pd.testing.assert_frame_equal(proto, expected)
-
-    def test_charts_with_mixed_long_wide_args(self):
-        # Here "c" is used in both the a long-format property (i.e. size) and a wide-format
-        # property (y). This means it needs to appear twice in the final dataframe.
-        deltas = [
-            lambda df: st._arrow_scatter_chart(df, x="b", y=["a", "c"], size="c"),
-        ]
-
-        expected = pd.DataFrame(
-            {
                 "a": [11, 12, 13],
-                "b": [21, 22, 23],
-                "c": [31, 32, 33],
             }
         )
         expected.index = pd.RangeIndex(start=1, stop=4, step=1)

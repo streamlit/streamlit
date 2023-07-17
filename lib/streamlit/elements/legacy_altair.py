@@ -319,7 +319,6 @@ def generate_chart(chart_type, data, width: int = 0, height: int = 0):
             x_column=index_name,
             wide_y_columns=[],
             color_column=None,
-            size_column=None,
         ),
     )
 

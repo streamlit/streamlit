@@ -909,18 +909,16 @@ def _drop_unused_columns(
 
 def _get_opacity_enc(
     chart_type: ChartType, color_column: Optional[str]
-) -> Union[alt.OpacityValue, alt.Undefined]:
+) -> Optional[alt.OpacityValue]:
     import altair as alt
 
     if color_column and chart_type == ChartType.AREA:
         return alt.OpacityValue(0.7)
 
-    return alt.Undefined
+    return None
 
 
-def _get_scale(
-    df: pd.DataFrame, column_name: Optional[str]
-) -> Union[alt.Scale, alt.Undefined]:
+def _get_scale(df: pd.DataFrame, column_name: Optional[str]) -> alt.Scale:
     import altair as alt
 
     # Set the X and Y axes' scale to "utc" if they contain date values.
@@ -931,10 +929,12 @@ def _get_scale(
     if _is_date_column(df, column_name):
         return alt.Scale(type="utc")
 
-    return alt.Undefined
+    return alt.Scale()
 
 
-def _get_axis_config(df: pd.DataFrame, column_name: Optional[str], grid: bool):
+def _get_axis_config(
+    df: pd.DataFrame, column_name: Optional[str], grid: bool
+) -> alt.Axis:
     import altair as alt
 
     if column_name is not None and is_integer_dtype(df[column_name]):
@@ -942,7 +942,7 @@ def _get_axis_config(df: pd.DataFrame, column_name: Optional[str], grid: bool):
         # and deactivate grid lines for x-axis
         return alt.Axis(tickMinStep=1, grid=grid)
 
-    return alt.Undefined
+    return alt.Axis(grid=grid)
 
 
 def _maybe_melt(
@@ -1124,6 +1124,8 @@ def _get_color_enc(
             )
 
     elif color_column is not None:
+        column_type: Union[str, Tuple[str, List[Any]]]
+
         if color_column == MELTED_COLOR_COLUMN_NAME:
             column_type = "nominal"
         else:
@@ -1173,7 +1175,9 @@ def _get_x_type(
     return "quantitative"  # Pick anything. If undefined, Vega-Lite may hide the axis.
 
 
-def _get_y_type(df: pd.DataFrame, first_y_column: Optional[str]) -> str:
+def _get_y_type(
+    df: pd.DataFrame, first_y_column: Optional[str]
+) -> Union[str, Tuple[str, List[Any]]]:
     if first_y_column:
         return type_util.infer_vegalite_type(df[first_y_column])
 

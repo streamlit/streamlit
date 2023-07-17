@@ -54,6 +54,7 @@ if TYPE_CHECKING:
     import sympy
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
+    from pandas.io.formats.style_renderer import StyleRenderer
     from plotly.graph_objs import Figure
     from pydeck import Deck
 
@@ -481,6 +482,25 @@ def is_sequence(seq: Any) -> bool:
     return True
 
 
+@overload
+def convert_anything_to_df(
+    data: Any,
+    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
+    ensure_copy: bool = False,
+) -> DataFrame:
+    ...
+
+
+@overload
+def convert_anything_to_df(
+    data: Any,
+    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
+    ensure_copy: bool = False,
+    allow_styler: bool = False,
+) -> Union[DataFrame, "Styler"]:
+    ...
+
+
 def convert_anything_to_df(
     data: Any,
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
@@ -511,18 +531,23 @@ def convert_anything_to_df(
 
     """
     if is_type(data, _PANDAS_DF_TYPE_STR):
-        return data.copy() if ensure_copy else data
+        return data.copy() if ensure_copy else cast(DataFrame, data)
 
     if is_pandas_styler(data):
+        # Every Styler is a StyleRenderer. I'm casting to StyleRenderer here rather than to the more
+        # correct Styler becayse MyPy doesn't like when we cast to Styler. It complains .data
+        # doesn't exist, when it does in fact exist in the parent class StyleRenderer!
+        sr: StyleRenderer = cast(StyleRenderer, data)
+
         if allow_styler:
             if ensure_copy:
-                out = copy.deepcopy(data)
-                out.data = data.data.copy()
+                out = copy.deepcopy(sr)
+                out.data = sr.data.copy()
                 return out
             else:
-                return data
+                return sr
         else:
-            return data.data.copy() if ensure_copy else data.data
+            return sr.data.copy() if ensure_copy else sr.data
 
     if is_type(data, "numpy.ndarray"):
         if len(data.shape) == 0:
@@ -572,16 +597,16 @@ Offending object:
 
 
 @overload
-def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]:
+def ensure_iterable(obj: OptionSequence) -> Iterable[Any]:
     ...
 
 
 @overload
-def ensure_iterable(obj: DataFrame) -> Iterable[Any]:
+def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]:
     ...
 
 
-def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
+def ensure_iterable(obj: Union[OptionSequence, Iterable[V_co]]) -> Iterable[Any]:
     """Try to convert different formats to something iterable. Most inputs
     are assumed to be iterable, but if we have a DataFrame, we can just
     select the first column to iterate over. If the input is not iterable,
@@ -596,6 +621,7 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
     iterable
 
     """
+
     if is_snowpark_or_pyspark_data_object(obj):
         obj = convert_anything_to_df(obj)
 
@@ -1000,39 +1026,12 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
 
 # The code below is copied from Altair, and slightly modified.
 # We copy this code here so we don't depend on private Altair functions.
-# Source: https://github.com/altair-viz/altair/blob/62ca5e37776f5cecb27e83c1fbd5d685a173095d/altair/utils/core.py
+# Source: https://github.com/altair-viz/altair/blob/62ca5e37776f5cecb27e83c1fbd5d685a173095d/altair/utils/core.py#L193
 
-# STREAMLIT MOD: I prepended the function name with altair_ to avoid collision with our
-# own infer_dtype, above.
-def altair_infer_dtype(value: Any) -> str:
-    """Infer the dtype of the value.
-
-    This is a compatibility function for pandas infer_dtype,
-    with skipna=False regardless of the pandas version.
-    """
-    # STREAMLIT MOD: I moved this import into the function.
-    try:
-        from pandas.api.types import infer_dtype as _infer_dtype
-    except ImportError:
-        # Import for pandas < 0.20.0
-        from pandas.lib import infer_dtype as _infer_dtype  # type: ignore[no-redef]
-
-    if not hasattr(infer_dtype, "_supports_skipna"):
-        try:
-            _infer_dtype([1], skipna=False)
-        except TypeError:
-            # pandas < 0.21.0 don't support skipna keyword
-            altair_infer_dtype._supports_skipna = False
-        else:
-            altair_infer_dtype._supports_skipna = True
-    if altair_infer_dtype._supports_skipna:
-        return _infer_dtype(value, skipna=False)
-    else:
-        return _infer_dtype(value)
-
-
-# From Altair. See note above.
-def infer_vegalite_type(data: "pd.Series") -> str:
+# STREAMLIT MOD: I changed the type for the data argument from "pd.Series" to Series,
+# and the return type to a Union including a (str, list) tuple, since the function does
+# return that in some situations.
+def infer_vegalite_type(data: Series) -> Union[str, Tuple[str, List[Any]]]:
     """
     From an array-like input, infer the correct vega typecode
     ('ordinal', 'nominal', 'quantitative', or 'temporal')
@@ -1041,8 +1040,9 @@ def infer_vegalite_type(data: "pd.Series") -> str:
     ----------
     data: Numpy array or Pandas Series
     """
-    # Otherwise, infer based on the dtype of the input
-    typ = altair_infer_dtype(data)
+    # STREAMLIT MOD: I'm using infer_dtype directly here, rather than using Altair's wrapper. Their
+    # wrapper is only there to support Pandas < 0.20, but Streamlit requires Pandas 1.3.
+    typ = infer_dtype(data)
 
     if typ in [
         "floating",
