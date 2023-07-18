@@ -480,7 +480,7 @@ class CliTest(unittest.TestCase):
             )
             self.assertEqual(
                 "# component_package",
-                (target_dir / "component_package" / "README.md").read_text(),
+                (target_dir / "README.md").read_text(),
             )
         finally:
             os.chdir(cwd)
