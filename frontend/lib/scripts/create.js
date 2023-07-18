@@ -37,6 +37,8 @@ module.exports = function (api, opts, env) {
         "."
     )
   }
+  console.log("isEnvProduction: ", isEnvProduction)
+  console.log("isEnvProduction: ", isEnvDevelopment)
 
   return {
     presets: [
