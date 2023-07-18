@@ -29,7 +29,7 @@ def check_for_string_in_files(file_paths, search_string):
                 exit(1)
             else:
                 print(
-                    "Success! Did not find absolute pathing (@streamlit/lib/src) in the lib/dist folder"
+                    "Success! Did not find relative pathing (../../..) in the lib/dist folder"
                 )
 
 
