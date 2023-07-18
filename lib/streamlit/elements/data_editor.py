@@ -65,6 +65,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import new_compute_widget_id
 from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type, to_key
 from streamlit.util import calc_md5
 
@@ -727,8 +728,6 @@ class DataEditorMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
-        # TODO generate ID upfront
-
         column_config_mapping: ColumnConfigMapping = {}
 
         data_format = type_util.determine_data_format(data)
@@ -789,7 +788,23 @@ class DataEditorMixin:
         # Throws an exception if any of the configured types are incompatible.
         _check_type_compatibilities(data_df, column_config_mapping, dataframe_schema)
 
+        id = new_compute_widget_id(
+            "data_editor",
+            user_key=key,
+            data=arrow_table,
+            width=width,
+            height=height,
+            use_container_width=use_container_width,
+            hide_index=hide_index,
+            column_order=column_order,
+            column_config=column_config,
+            num_rows=num_rows,
+            key=key,
+            form_id=current_form_id(self.dg),
+        )
+
         proto = ArrowProto()
+        proto.id = id
 
         proto.use_container_width = use_container_width
 
