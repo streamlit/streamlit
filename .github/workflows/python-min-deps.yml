@@ -31,32 +31,7 @@ env:
   FORCE_COLOR: "1"
 
 jobs:
-  build_info:
-    runs-on: ubuntu-latest
-
-    name: "Build info"
-
-    steps:
-      - name: Checkout Streamlit code
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ inputs.ref }}
-          persist-credentials: false
-          submodules: "recursive"
-          fetch-depth: 2
-      - name: Set Python version vars
-        id: build_info
-        uses: ./.github/actions/build_info
-        with:
-          force-canary: ${{ false }}
-
-    outputs:
-      PYTHON_MIN_VERSION: ${{ steps.build_info.outputs.PYTHON_MIN_VERSION }}
-
   py_version:
-    needs:
-      - build_info
-
     runs-on: ubuntu-latest
 
     strategy:
@@ -74,12 +49,15 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
+          fetch-depth: 2
           submodules: "recursive"
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+      - name: Set up Python ${{ env.PYTHON_MIN_VERSION }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "${{ env.PYTHON_MIN_VERSION }}"
 
       # This section is an inlined copy of the make_init action
       # Both because we need to do some parts of it differently
@@ -126,7 +104,7 @@ jobs:
       # Actions moves to a newer version of Ubunutu.
       - name: Add vendored `protoc` to $PATH
         run: |
-          echo "./vendor/protoc-3.20.3-linux-x86_64/bin" >> $GITHUB_PATH
+          echo "$PWD/vendor/protoc-3.20.3-linux-x86_64/bin" >> $GITHUB_PATH
       # Combine hashes of the Python interpreter, requirements files, and today's
       # date into a file whose hash will key the Python virtualenv.
       - name: Create Python environment cache key
