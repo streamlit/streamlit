@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  js_test:
+  ensure_relative_imports_exist:
     runs-on: ubuntu-latest
 
     defaults:
