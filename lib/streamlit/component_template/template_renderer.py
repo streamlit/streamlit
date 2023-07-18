@@ -85,7 +85,7 @@ def prepare_target_path(
     template_dir: str,
     target_dir: str,
     template_context: Dict[str, Any],
-):
+) -> str:
     """Prepare the target path by applying Jinja2 rendering.
 
     Parameters
