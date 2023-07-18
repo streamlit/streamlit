@@ -142,6 +142,13 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         """Test arrow chart with no arguments."""
         EXPECTED_DATAFRAME = pd.DataFrame()
 
+        # Make some mutations that arrow_altair.prep_data() does.
+        column_names = list(
+            EXPECTED_DATAFRAME.columns
+        )  # list() converts RangeIndex, etc, to regular list.
+        str_column_names = [str(c) for c in column_names]
+        EXPECTED_DATAFRAME.columns = pd.Index(str_column_names)
+
         chart_command()
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
