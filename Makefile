@@ -410,3 +410,7 @@ connect-test-env:
 .PHONY: pre-commit-install
 pre-commit-install:
 	pre-commit install
+
+.PHONY: ensure-relative-imports
+ensure-relative-imports:
+	python scripts/ensure_relative_imports.py
