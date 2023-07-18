@@ -58,7 +58,7 @@ export default function AlertElement({
   return (
     <div className="stAlert">
       <AlertContainer width={width} kind={kind}>
-        <StyledIconAlertContent>
+        <StyledIconAlertContent width={width}>
           {icon && <EmojiIcon size="lg">{icon}</EmojiIcon>}
           <StreamlitMarkdown source={body} allowHTML={false} />
         </StyledIconAlertContent>
