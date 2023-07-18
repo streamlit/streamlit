@@ -96,24 +96,7 @@ describe("MapboxToken", () => {
     expect(MapboxToken.token).toBeUndefined()
   })
 
-  xit("Errors if not localhost and missing token", async () => {
-    window.location = { hostname: "https://streamlit.io" } as Location
-    const sessionInfo = createSessionInfo("")
-
-    await expect(MapboxToken.get(sessionInfo)).rejects.toThrow(
-      "No Mapbox token provided"
-    )
-  })
-
-  xit("Errors if not hello.py and missing token", async () => {
-    const sessionInfo = createSessionInfo("", "streamlit run example.py")
-
-    await expect(MapboxToken.get(sessionInfo)).rejects.toThrow(
-      "No Mapbox token provided"
-    )
-  })
-
-  xit("does not error if running hello.py and missing token", async () => {
+  it("does not error if running hello.py and missing token", async () => {
     // If we're running `streamlit hello`, we'll fetch the remote token
     const sessionInfo = createSessionInfo("", "streamlit hello")
 

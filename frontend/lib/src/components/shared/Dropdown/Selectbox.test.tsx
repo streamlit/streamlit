@@ -159,9 +159,7 @@ describe("Selectbox widget", () => {
   it("doesn't filter options based on index", () => {
     const options = wrapper.find(UISelect).prop("options")
     const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
-    if (filterOptionsFn === undefined || options === undefined) {
-      fail("Unexpected undefined value")
-    }
+
     // @ts-expect-error
     const filteredOptions = filterOptionsFn(options, "1")
     expect(filteredOptions).toEqual([])
@@ -170,9 +168,7 @@ describe("Selectbox widget", () => {
   it("filters options based on label with case insensitive", () => {
     const options = wrapper.find(UISelect).prop("options")
     const filterOptionsFn = wrapper.find(UISelect).prop("filterOptions")
-    if (filterOptionsFn === undefined || options === undefined) {
-      fail("Unexpected undefined value")
-    }
+
     // @ts-expect-error
     expect(filterOptionsFn(options, "b")).toEqual([
       {
