@@ -449,7 +449,7 @@ class CliTest(unittest.TestCase):
             os.chdir(target_dir)
             template_archive = self.create_component_template_archive(temp_dir)
             with mock.patch.dict(os.environ, HOME=str(temp_dir)):
-                output = self.runner.invoke(
+                self.runner.invoke(
                     cli,
                     [
                         "components",

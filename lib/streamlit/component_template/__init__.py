@@ -20,7 +20,9 @@ import click
 
 from streamlit.component_template import hooks, node, template_config, template_renderer
 
-TEMPLATE_URL = "https://github.com/streamlit/component-template/archive/refs/heads/cookiecutter.zip"
+TEMPLATE_URL = (
+    "https://github.com/streamlit/component-template/archive/refs/heads/master.zip"
+)
 TEMPLATE_DIRECTORY = "cookiecutter"
 
 
