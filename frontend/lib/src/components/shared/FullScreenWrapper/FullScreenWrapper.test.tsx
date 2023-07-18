@@ -41,7 +41,8 @@ describe("FullScreenWrapper", () => {
       <FullScreenWrapper {...props} />,
       providerProps
     )
-    expect(queryByTestId("StyledFullScreenButton")).toBeNull()
+    // queryBy returns null vs. error
+    expect(queryByTestId("StyledFullScreenButton")).toBeNull() // eslint-disable-line testing-library/prefer-presence-queries
   })
 
   it("can find StyledFullScreenButton with default LibContext", () => {
@@ -51,6 +52,7 @@ describe("FullScreenWrapper", () => {
       <FullScreenWrapper {...props} />,
       {}
     )
-    expect(queryByTestId("StyledFullScreenButton")).not.toBeNull()
+    // queryBy returns null vs. error
+    expect(queryByTestId("StyledFullScreenButton")).not.toBeNull() // eslint-disable-line testing-library/prefer-presence-queries
   })
 })

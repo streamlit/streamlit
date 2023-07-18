@@ -155,7 +155,7 @@ module.exports = {
     ],
     "no-else-return": ["error", { allowElseIf: true }],
     // TODO: Remove these rules once we've migrated to React Testing Library
-    "testing-library/no-node-access": "off",
+    "testing-library/no-node-access": 1,
     "testing-library/prefer-screen-queries": "off",
     "testing-library/render-result-naming-convention": "off",
   },

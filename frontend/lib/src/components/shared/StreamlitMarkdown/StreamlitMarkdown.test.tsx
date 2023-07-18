@@ -328,20 +328,21 @@ describe("CustomCodeTag Element", () => {
     const props = getCustomCodeTagProps({
       children: ["i am not empty"],
     })
-    const { baseElement } = render(<CustomCodeTag {...props} />)
-    expect(
-      baseElement.querySelectorAll('[title="Copy to clipboard"]')
-    ).toHaveLength(1)
+    render(<CustomCodeTag {...props} />)
+    const copyButton = screen.getByTitle("Copy to clipboard")
+
+    expect(copyButton).not.toBeNull()
   })
 
   it("should not render copy button when code block is empty", () => {
     const props = getCustomCodeTagProps({
       children: [""],
     })
-    const { baseElement } = render(<CustomCodeTag {...props} />)
-    expect(
-      baseElement.querySelectorAll('[title="Copy to clipboard"]')
-    ).toHaveLength(0)
+    render(<CustomCodeTag {...props} />)
+    // queryBy returns null vs. error
+    const copyButton = screen.queryByRole("button") // eslint-disable-line testing-library/prefer-presence-queries
+
+    expect(copyButton).toBeNull()
   })
 
   it("should render inline", () => {

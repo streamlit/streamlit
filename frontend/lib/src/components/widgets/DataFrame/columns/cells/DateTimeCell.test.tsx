@@ -127,7 +127,9 @@ describe("editor", () => {
       />
     )
 
-    const textArea = await result.findByDisplayValue("04:47:44.584")
+    const textArea = await result.findByDisplayValue(
+      "2023-02-06T04:47:44.584Z"
+    )
     // text-area should be found
     expect(textArea).toBeDefined()
   })
