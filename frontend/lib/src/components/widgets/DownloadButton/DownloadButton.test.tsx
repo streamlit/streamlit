@@ -15,11 +15,10 @@
  */
 
 import React from "react"
-import { shallow } from "@streamlit/lib/src/test_util"
+import { screen, fireEvent } from "@testing-library/react"
+import "@testing-library/jest-dom"
+import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-
-import BaseButton from "@streamlit/lib/src/components/shared/BaseButton"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import { DownloadButton as DownloadButtonProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
@@ -28,7 +27,10 @@ import DownloadButton, { Props } from "./DownloadButton"
 jest.mock("@streamlit/lib/src/WidgetStateManager")
 jest.mock("@streamlit/lib/src/StreamlitEndpoints")
 
-const getProps = (elementProps: Partial<DownloadButtonProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<DownloadButtonProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: DownloadButtonProto.create({
     id: "1",
     label: "Label",
@@ -42,52 +44,48 @@ const getProps = (elementProps: Partial<DownloadButtonProto> = {}): Props => ({
     formsDataChanged: jest.fn(),
   }),
   endpoints: mockEndpoints(),
+  ...widgetProps,
 })
 
 describe("DownloadButton widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<DownloadButton {...props} />)
+    render(<DownloadButton {...props} />)
 
-    expect(wrapper).toBeDefined()
+    const downloadButton = screen.getByRole("button")
+    expect(downloadButton).toBeInTheDocument()
   })
 
   it("has correct className and style", () => {
-    const wrapper = shallow(<DownloadButton {...getProps()} />)
+    const props = getProps()
+    render(<DownloadButton {...props} />)
 
-    const wrappedDiv = wrapper.find("div").first()
+    const downloadButton = screen.getByTestId("stDownloadButton")
 
-    const { className, style } = wrappedDiv.props()
-    // @ts-expect-error
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("stDownloadButton")
-
-    // @ts-expect-error
-    expect(style.width).toBe(getProps().width)
+    expect(downloadButton).toHaveClass("row-widget")
+    expect(downloadButton).toHaveClass("stDownloadButton")
+    expect(downloadButton).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label within the button", () => {
-    const wrapper = shallow(<DownloadButton {...getProps()} />)
+    const props = getProps()
+    render(<DownloadButton {...props} />)
 
-    const wrappedBaseButton = wrapper.find(BaseButton)
-    const wrappedBaseButtonLabel = wrappedBaseButton.find(StreamlitMarkdown)
+    const downloadButton = screen.getByRole("button", {
+      name: `${props.element.label}`,
+    })
 
-    expect(wrappedBaseButton.length).toBe(1)
-    expect(wrappedBaseButtonLabel.props().source).toBe(
-      getProps().element.label
-    )
-    expect(wrappedBaseButtonLabel.props().isButton).toBe(true)
+    expect(downloadButton).toBeInTheDocument()
   })
 
   describe("wrapped BaseButton", () => {
     it("sets widget triggerValue and creates a download URL on click", () => {
       const props = getProps()
-      const wrapper = shallow(<DownloadButton {...props} />)
+      render(<DownloadButton {...props} />)
 
-      const wrappedBaseButton = wrapper.find(BaseButton)
+      const downloadButton = screen.getByRole("button")
 
-      wrappedBaseButton.simulate("click")
+      fireEvent.click(downloadButton)
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
         props.element,
@@ -100,25 +98,23 @@ describe("DownloadButton widget", () => {
     })
 
     it("handles the disabled prop", () => {
-      const props = getProps()
-      const wrapper = shallow(<DownloadButton {...props} />)
+      const props = getProps({}, { disabled: true })
+      render(<DownloadButton {...props} />)
 
-      const wrappedBaseButton = wrapper.find(BaseButton)
-
-      expect(wrappedBaseButton.props().disabled).toBe(props.disabled)
+      const downloadButton = screen.getByRole("button")
+      expect(downloadButton).toBeDisabled()
     })
 
     it("does not use container width by default", () => {
-      const wrapper = shallow(
-        <DownloadButton {...getProps()}>Hello</DownloadButton>
-      )
+      const props = getProps()
+      render(<DownloadButton {...props}>Hello</DownloadButton>)
 
-      const wrappedBaseButton = wrapper.find(BaseButton)
-      expect(wrappedBaseButton.props().fluidWidth).toBe(false)
+      const downloadButton = screen.getByRole("button")
+      expect(downloadButton).toHaveStyle("width: auto")
     })
 
     it("passes useContainerWidth property with help correctly", () => {
-      const wrapper = shallow(
+      render(
         <DownloadButton
           {...getProps({ useContainerWidth: true, help: "mockHelpText" })}
         >
@@ -126,19 +122,19 @@ describe("DownloadButton widget", () => {
         </DownloadButton>
       )
 
-      const wrappedBaseButton = wrapper.find(BaseButton)
-      expect(wrappedBaseButton.props().fluidWidth).toBe(250)
+      const downloadButton = screen.getByRole("button")
+      expect(downloadButton).toHaveStyle(`width: ${250}px`)
     })
 
     it("passes useContainerWidth property without help correctly", () => {
-      const wrapper = shallow(
+      render(
         <DownloadButton {...getProps({ useContainerWidth: true })}>
           Hello
         </DownloadButton>
       )
 
-      const wrappedBaseButton = wrapper.find(BaseButton)
-      expect(wrappedBaseButton.props().fluidWidth).toBe(true)
+      const downloadButton = screen.getByRole("button")
+      expect(downloadButton).toHaveStyle("width: 100%")
     })
   })
 })

@@ -53,7 +53,11 @@ function DownloadButton(props: Props): ReactElement {
   const fluidWidth = element.help ? width : true
 
   return (
-    <div className="row-widget stDownloadButton" style={style}>
+    <div
+      className="row-widget stDownloadButton"
+      data-testid="stDownloadButton"
+      style={style}
+    >
       <BaseButtonTooltip help={element.help}>
         <BaseButton
           kind={BaseButtonKind.SECONDARY}

@@ -64,9 +64,7 @@ describe("st.download_button", () => {
   });
 
   it("renders useContainerWidth + help st.download_button correctly", () => {
-    cy.get(".stDownloadButton button")
-      .should("have.length.at.least", 1)
-      .last()
-      .click().matchThemedSnapshots("use-container-width-and-help-button");
+    cy.getIndexed(".stDownloadButton button", 4)
+      .trigger('mouseover').matchThemedSnapshots("container-width-help-button", { padding: [60, 0, 0, 0] });
   });
 });

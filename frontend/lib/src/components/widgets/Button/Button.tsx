@@ -45,7 +45,7 @@ function Button(props: Props): ReactElement {
   const fluidWidth = element.help ? width : true
 
   return (
-    <div className="row-widget stButton" style={style}>
+    <div className="row-widget stButton" data-testid="stButton" style={style}>
       <BaseButtonTooltip help={element.help}>
         <BaseButton
           kind={kind}

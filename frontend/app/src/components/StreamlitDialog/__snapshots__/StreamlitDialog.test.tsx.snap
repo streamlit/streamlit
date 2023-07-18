@@ -3,6 +3,7 @@
 exports[`StreamlitDialog renders secondary dialog buttons properly 1`] = `
 <StyledSecondaryButton
   autoFocus={true}
+  data-testid="baseButton-secondary"
   disabled={false}
   fluidWidth={false}
   kind="secondary"
@@ -262,6 +263,7 @@ exports[`StreamlitDialog renders secondary dialog buttons properly 1`] = `
   <button
     autoFocus={true}
     className="css-1v0fdp-StyledBaseButton-StyledSecondaryButton ef3psqc11"
+    data-testid="baseButton-secondary"
     disabled={false}
     kind="secondary"
     onClick={[Function]}
@@ -275,6 +277,7 @@ exports[`StreamlitDialog renders secondary dialog buttons properly 1`] = `
 exports[`StreamlitDialog renders tertiary dialog buttons properly 1`] = `
 <StyledTertiaryButton
   autoFocus={false}
+  data-testid="baseButton-tertiary"
   disabled={false}
   fluidWidth={false}
   kind="tertiary"
@@ -534,6 +537,7 @@ exports[`StreamlitDialog renders tertiary dialog buttons properly 1`] = `
   <button
     autoFocus={false}
     className="css-2v1jym-StyledBaseButton-StyledTertiaryButton ef3psqc10"
+    data-testid="baseButton-tertiary"
     disabled={false}
     kind="tertiary"
     onClick={[Function]}

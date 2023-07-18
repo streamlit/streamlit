@@ -74,12 +74,12 @@ describe("st.button", () => {
     cy.get(".stButton").should("have.length", NO_OF_BUTTONS);
 
     cy.getIndexed(".stButton", 5)
-      .matchThemedSnapshots("use-container-width-and-help-button");
+      .trigger('mouseover').matchThemedSnapshots("use-container-width-and-help-button", { padding: [60, 0, 0, 0] });
   });
 
   it("has correct default values", () => {
     cy.get(".stButton button").should("have.text",
-        "button 1" + "button 2" + "button 3" + "button 4" + "button 5" + "button 6" + CONN_TYPES_BUTTONS.join(""));
+        "button 1" + "button 2" + "button 3" + "button 4" + "button 5 - containerWidth" + "button 6 - containerWidth + help" + CONN_TYPES_BUTTONS.join(""));
   });
 
   it("sets value correctly when user clicks", () => {
