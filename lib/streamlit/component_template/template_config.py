@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import typing
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union, cast
 
 import click
 import jinja2
@@ -51,7 +50,7 @@ def _render_variable(
 def _prompt_list_value(
     result_config: TypeTemplateConfig,
     env: jinja2.Environment,
-    prompt: typing.Optional[str],
+    prompt: Optional[str],
     config_key: str,
     raw_value: List[str],
 ):
@@ -99,7 +98,7 @@ def _prompt_list_value(
 def _prompt_str_value(
     result_config: TypeTemplateConfig,
     env: jinja2.Environment,
-    prompt: typing.Optional[str],
+    prompt: Optional[str],
     config_key: str,
     raw_value: str,
 ):
@@ -145,7 +144,9 @@ def prepare_config(template_config: TypeTemplateConfig, interactive: bool):
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
 
     result_config: TypeTemplateConfig = {}
-    prompts: Dict[str, str] = template_config.get(PROMPTS_FIELD, {})
+    prompts: Dict[str, str] = cast(
+        template_config.get(PROMPTS_FIELD, {}), Dict[str, str]
+    )
 
     for config_key, raw_value in template_config.items():
         # Dont render internal fields

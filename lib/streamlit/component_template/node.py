@@ -14,7 +14,7 @@
 
 import shutil
 import subprocess
-import typing
+from typing import Any, Dict, Optional, Tuple
 
 import packaging.version
 
@@ -23,7 +23,7 @@ def _version_str_to_obj(version_str) -> packaging.version.Version:
     return packaging.version.Version(version_str)
 
 
-def check_node_requirements(template_config: typing.Dict):
+def check_node_requirements(template_config: Dict[str, Any]):
     """Checks if the installed Node.js version meets the template's Node.js requirements.
 
     Parameters
@@ -52,11 +52,8 @@ def check_node_requirements(template_config: typing.Dict):
 
 
 def _get_supported_node_boundaries(
-    template_config: typing.Dict,
-) -> typing.Tuple[
-    typing.Optional[packaging.version.Version],
-    typing.Optional[packaging.version.Version],
-]:
+    template_config: Dict[str, Any],
+) -> Tuple[Optional[packaging.version.Version], Optional[packaging.version.Version]]:
     """Retrieve the minimum and maximum supported Node.js versions from the template configuration.
 
     Parameters
@@ -102,6 +99,6 @@ def _get_installed_node_version() -> packaging.version.Version:
     return _version_str_to_obj(local_node_version)
 
 
-def is_node_installed():
+def is_node_installed() -> bool:
     """Checks if node is installed on the device."""
     return shutil.which("node") is None

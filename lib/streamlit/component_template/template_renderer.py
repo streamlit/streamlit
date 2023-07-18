@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import os
-import typing
 from pathlib import Path
+from typing import Any, Dict
 
 import jinja2
 
@@ -34,7 +34,7 @@ def find_project_directory(template_directory_path: Path) -> Path:
 def render_template(
     template_directory_path: Path,
     target_directory_path: Path,
-    template_context: typing.Dict,
+    template_context: Dict[str, Any],
 ):
     """Render a template directory and copy it to the target directory.
 
@@ -84,7 +84,7 @@ def prepare_target_path(
     src_path: str,
     template_dir: str,
     target_dir: str,
-    template_context: typing.Dict,
+    template_context: Dict,
 ):
     """Prepare the target path by applying Jinja2 rendering.
 
