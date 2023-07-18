@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This script is to ensure that relative imports exist within @streamlit/lib/dist
+# after yarn buildLibProd is done. This is important as if one is consuming @streamlit/lib/dist,
+# one will not have reference to @streamlit/lib/src and one actually needs relative pathing.
+
 import os
 import subprocess
 
@@ -29,7 +33,7 @@ def check_for_string_in_files(file_paths, search_string):
                 exit(1)
             else:
                 print(
-                    "Success! Did not find '{search_string}' so we do have relative pathing in the lib/dist folder"
+                    f"Success! Did not find '{search_string}' so we do have relative pathing in the lib/dist folder"
                 )
 
 
