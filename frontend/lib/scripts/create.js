@@ -115,6 +115,7 @@ module.exports = function (api, opts, env) {
         },
       ],
       [
+        // resolve aliasing within @streamlit/lib/dist transpiled js code
         require.resolve("babel-plugin-module-resolver"),
         {
           root: ["./src/"],
