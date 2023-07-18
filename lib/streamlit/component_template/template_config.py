@@ -145,7 +145,7 @@ def prepare_config(template_config: TypeTemplateConfig, interactive: bool):
 
     result_config: TypeTemplateConfig = {}
     prompts: Dict[str, str] = cast(
-        template_config.get(PROMPTS_FIELD, {}), Dict[str, str]
+        Dict[str, str], template_config.get(PROMPTS_FIELD, {})
     )
 
     for config_key, raw_value in template_config.items():

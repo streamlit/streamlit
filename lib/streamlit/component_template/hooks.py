@@ -46,7 +46,9 @@ def _find_hook(template_directory_path: Path):
 
 
 def _render_and_run_script(
-    current_hook_file: Path, target_directory_path: Path, template_context: typing.Dict
+    current_hook_file: Path,
+    target_directory_path: Path,
+    template_context: typing.Dict[str, typing.Any],
 ):
     """
     Render and run the hook script.
@@ -74,7 +76,7 @@ def _render_and_run_script(
 def run_hook(
     template_directory_path: Path,
     target_directory_path: Path,
-    template_context: typing.Dict,
+    template_context: typing.Dict[str, typing.Any],
 ):
     """
     Run the hook script if it exists in the template directory.
