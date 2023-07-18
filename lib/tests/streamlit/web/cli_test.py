@@ -460,7 +460,6 @@ class CliTest(unittest.TestCase):
                     ],
                     catch_exceptions=False,
                 )
-                print(output.stdout)
             self.assertEqual(
                 [
                     "README.md",
