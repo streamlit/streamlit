@@ -715,17 +715,16 @@ def _generate_chart(
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
 
-    df: pd.DataFrame
+    df = type_util.convert_anything_to_df(data)
 
-    if isinstance(data, pd.DataFrame):
-        df = data
-    else:
-        df = cast(
-            pd.DataFrame, type_util.convert_anything_to_df(data, ensure_copy=True)
-        )
-
-    # From now on, use "df" instead of "data".
+    # From now on, use "df" instead of "data". Deleting "data" to guarantee we follow this.
     del data
+
+    # Also, very important: we should NEVER mutate df. When required, we should instead
+    # copy it, like we do in prep_data(). And avoid copying, please, since it's
+    # expensive! Right now, this function should copy the DF only once.
+    # (Of course, this is checked in arrow_altair_test, so this notice is just for
+    # extra clarity!)
 
     # Convert arguments received from the user to things Vega-Lite understands.
     # Get name of column to use for x. This is never None.

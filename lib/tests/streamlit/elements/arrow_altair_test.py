@@ -29,6 +29,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import bytes_to_data_frame
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit import pyspark_mocks, snowpark_mocks
+from tests.testutil import assert_frame_not_equal
 
 
 def _deep_get(dictionary, *keys):
@@ -663,6 +664,34 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             bytes_to_data_frame(proto.datasets[0].data.data),
             EXPECTED_DATAFRAME,
         )
+
+    @parameterized.expand(
+        [
+            (st._arrow_area_chart, "area"),
+            (st._arrow_bar_chart, "bar"),
+            (st._arrow_line_chart, "line"),
+        ]
+    )
+    def test_original_df_is_untouched(self, chart_command: Callable, altair_type: str):
+        """Test that when we modify the outgoing DF we don't mutate the input DF."""
+        df = pd.DataFrame([[20, 30, 50, 60, 70]], columns=["a", "b", "c", "d", "e"])
+        EXPECTED_DATAFRAME = pd.DataFrame(
+            [[20, 60, 30, 50]], columns=["a", "d", "b", "c"]
+        )
+
+        chart_command(df, x="a", y=["b", "c"], color="d")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        output_df = bytes_to_data_frame(proto.datasets[0].data.data)
+
+        self.assertNotEqual(id(df), id(output_df))
+        self.assertNotEqual(id(df), id(EXPECTED_DATAFRAME))
+        self.assertNotEqual(id(output_df), id(EXPECTED_DATAFRAME))
+
+        assert_frame_not_equal(df, output_df)
+        assert_frame_not_equal(df, EXPECTED_DATAFRAME)
+        pd.testing.assert_frame_equal(output_df, EXPECTED_DATAFRAME)
 
     def assert_wide_format_output(self, chart_spec, x_column, y_columns):
         self.assertEqual(chart_spec["encoding"]["x"]["field"], x_column)
