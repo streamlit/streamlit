@@ -53,6 +53,8 @@ st.write("value 4:", i5)
 
 st.button("button 5", use_container_width=True)
 
+st.button("button 6", use_container_width=True, help="help text")
+
 cols = st.columns(3)
 
 # Order of conn_types matters to preserve the order in st_button.spec.js and the snapshot
