@@ -426,5 +426,5 @@ frontend-lib-prod:
 # while also doing a make init so it's a single command
 streamlit-lib-prod:
 	make mini-init;
-	cd frontend/ ; yarn run buildLibProd;
+	make frontend-lib-prod;
 
