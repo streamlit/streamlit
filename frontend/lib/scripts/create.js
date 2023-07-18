@@ -114,6 +114,15 @@ module.exports = function (api, opts, env) {
           removeImport: true,
         },
       ],
+      [
+        require.resolve("babel-plugin-module-resolver"),
+        {
+          root: ["./src/"],
+          alias: {
+            "@streamlit/lib": "./",
+          },
+        },
+      ],
     ].filter(Boolean),
     overrides: [
       {
