@@ -166,8 +166,7 @@ def new_compute_widget_id(
 
     Only stable, deterministic values should be used to compute widget ids. Using
     nondeterministic values as inputs can cause the resulting widget id to
-    change between runs, which could leak memory if we start persisting widgets
-    that haven't been seen recently.
+    change between runs.
 
     The widget id includes the user_key so widgets with identical arguments can
     use it to be distinct.
