@@ -50,6 +50,7 @@ function getNotificationKind(
 
 export interface AlertContainerProps {
   width?: number
+  icon?: string
   kind: Kind
   children: ReactNode
 }
@@ -67,6 +68,7 @@ export interface AlertContainerProps {
 export default function AlertContainer({
   kind,
   width,
+  icon,
   children,
 }: AlertContainerProps): ReactElement {
   return (
@@ -95,7 +97,7 @@ export default function AlertContainer({
         },
       }}
     >
-      <StyledAlertContent>{children}</StyledAlertContent>
+      <StyledAlertContent icon={icon}>{children}</StyledAlertContent>
     </Notification>
   )
 }

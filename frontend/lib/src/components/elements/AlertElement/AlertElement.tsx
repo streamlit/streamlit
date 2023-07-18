@@ -22,7 +22,7 @@ import { EmojiIcon } from "@streamlit/lib/src/components/shared/Icon"
 import AlertContainer, {
   Kind,
 } from "@streamlit/lib/src/components/shared/AlertContainer"
-import { StyledIconAlertContent } from "./styled-components"
+import { StyledAlertContent } from "./styled-components"
 
 export function getAlertElementKind(format: AlertProto.Format): Kind {
   switch (format) {
@@ -57,11 +57,11 @@ export default function AlertElement({
 }: AlertElementProps): ReactElement {
   return (
     <div className="stAlert">
-      <AlertContainer width={width} kind={kind}>
-        <StyledIconAlertContent width={width}>
-          {icon && <EmojiIcon size="lg">{icon}</EmojiIcon>}
+      <AlertContainer width={width} kind={kind} icon={icon}>
+        {icon && <EmojiIcon size="lg">{icon}</EmojiIcon>}
+        <StyledAlertContent icon={icon}>
           <StreamlitMarkdown source={body} allowHTML={false} />
-        </StyledIconAlertContent>
+        </StyledAlertContent>
       </AlertContainer>
     </div>
   )
