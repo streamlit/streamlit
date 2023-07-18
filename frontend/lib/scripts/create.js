@@ -116,6 +116,7 @@ module.exports = function (api, opts, env) {
       ],
       [
         // resolve aliasing within @streamlit/lib/dist transpiled js code
+        // in order to make sure relative pathing shows up in the dist folder
         require.resolve("babel-plugin-module-resolver"),
         {
           root: ["./src/"],
