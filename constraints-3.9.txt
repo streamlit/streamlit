@@ -40,7 +40,7 @@ iniconfig==2.0.0
 jaraco.classes==3.3.0
 jeepney==0.8.0
 Jinja2==3.1.2
-jsonschema==4.18.3
+jsonschema==4.18.4
 jsonschema-specifications==2023.6.1
 keyring==24.2.0
 kiwisolver==1.4.4
@@ -92,7 +92,7 @@ pytz==2023.3
 pytz-deprecation-shim==0.1.0.post0
 PyYAML==6.0.1
 readme-renderer==40.0
-referencing==0.29.1
+referencing==0.29.3
 requests==2.31.0
 requests-mock==1.11.0
 requests-toolbelt==1.0.0
