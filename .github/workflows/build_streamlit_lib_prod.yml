@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ensure_relative_imports_exist:
+  check:
     runs-on: ubuntu-latest
 
     defaults:
