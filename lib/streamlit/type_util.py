@@ -537,17 +537,17 @@ def convert_anything_to_df(
         # Every Styler is a StyleRenderer. I'm casting to StyleRenderer here rather than to the more
         # correct Styler becayse MyPy doesn't like when we cast to Styler. It complains .data
         # doesn't exist, when it does in fact exist in the parent class StyleRenderer!
-        sr: StyleRenderer = cast(StyleRenderer, data)
+        sr = cast("StyleRenderer", data)
 
         if allow_styler:
             if ensure_copy:
                 out = copy.deepcopy(sr)
                 out.data = sr.data.copy()
-                return out
+                return cast("Styler", out)
             else:
-                return sr
+                return data
         else:
-            return sr.data.copy() if ensure_copy else sr.data
+            return cast("Styler", sr.data.copy() if ensure_copy else sr.data)
 
     if is_type(data, "numpy.ndarray"):
         if len(data.shape) == 0:
@@ -568,13 +568,13 @@ def convert_anything_to_df(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
                 "Call `collect()` on the dataframe to show more."
             )
-        return data
+        return cast(DataFrame, data)
 
     # This is inefficient when data is a pyarrow.Table as it will be converted
     # back to Arrow when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
     if hasattr(data, "to_pandas"):
-        return data.to_pandas()
+        return cast(DataFrame, data.to_pandas())
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
@@ -597,16 +597,16 @@ Offending object:
 
 
 @overload
-def ensure_iterable(obj: OptionSequence) -> Iterable[Any]:
-    ...
-
-
-@overload
 def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]:
     ...
 
 
-def ensure_iterable(obj: Union[OptionSequence, Iterable[V_co]]) -> Iterable[Any]:
+@overload
+def ensure_iterable(obj: OptionSequence[V_co]) -> Iterable[Any]:
+    ...
+
+
+def ensure_iterable(obj: Union[OptionSequence[V_co], Iterable[V_co]]) -> Iterable[Any]:
     """Try to convert different formats to something iterable. Most inputs
     are assumed to be iterable, but if we have a DataFrame, we can just
     select the first column to iterate over. If the input is not iterable,
@@ -688,7 +688,7 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
+def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
     if column.dtype.kind in [
         # timedelta is supported by pyarrow but not in the Arrow JS:
@@ -816,7 +816,7 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
 
     """
     reader = pa.RecordBatchStreamReader(source)
-    return reader.read_pandas()
+    return cast(DataFrame, reader.read_pandas())
 
 
 def determine_data_format(input_data: Any) -> DataFormat:
@@ -904,7 +904,7 @@ def convert_df_to_data_format(
     df: DataFrame, data_format: DataFormat
 ) -> Union[
     DataFrame,
-    Series,
+    Series[Any],
     pa.Table,
     np.ndarray[Any, np.dtype[Any]],
     Tuple[Any],
@@ -1031,7 +1031,7 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
 # STREAMLIT MOD: I changed the type for the data argument from "pd.Series" to Series,
 # and the return type to a Union including a (str, list) tuple, since the function does
 # return that in some situations.
-def infer_vegalite_type(data: Series) -> Union[str, Tuple[str, List[Any]]]:
+def infer_vegalite_type(data: Series[Any]) -> Union[str, Tuple[str, List[Any]]]:
     """
     From an array-like input, infer the correct vega typecode
     ('ordinal', 'nominal', 'quantitative', or 'temporal')

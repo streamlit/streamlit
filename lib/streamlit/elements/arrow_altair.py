@@ -982,7 +982,9 @@ def _get_x_enc(
         # If the x column name is the crazy anti-collision name we gave it, then need to set
         # up a title so we never show the crazy name to the user.
         x_field = x_column
-        x_title = SEPARATED_INDEX_COLUMN_TITLE
+        # Don't show a label in the x axis (not even a nice label like
+        # SEPARATED_INDEX_COLUMN_TITLE) when we pull the x axis from the index.
+        x_title = ""
     else:
         x_field = x_column
         x_title = x_column
@@ -1012,15 +1014,17 @@ def _get_y_enc(
         # If the y column name is the crazy anti-collision name we gave it, then need to set
         # up a title so we never show the crazy name to the user.
         y_field = y_column
-        y_title = MELTED_Y_COLUMN_TITLE
+        # Don't show a label in the y axis (not even a nice label like
+        # MELTED_Y_COLUMN_TITLE) when we pull the x axis from the index.
+        y_title = ""
     else:
         y_field = y_column
         y_title = y_column
 
     if wide_y_columns:
-        # For dataframes that will be folded, we use the type of the 1st y column as a proxy to
-        # configure the chart. This is correct 99% of the times, since all y columns typically have the
-        # same data type.
+        # For dataframes that will be folded, we use the type of the 1st y column as a
+        # proxy to configure the chart. This is correct 99% of the times, since all y
+        # columns typically have the same data type.
         first_y_column = wide_y_columns[0]
     else:
         first_y_column = y_column
