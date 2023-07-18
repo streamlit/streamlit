@@ -226,28 +226,6 @@ describe("TextInput widget", () => {
     expect(wrapper.find(UIInput).prop("value")).toBe("0123456789")
   })
 
-  it("updates widget value on text changes when inside of a form", () => {
-    const props = getProps({ formId: "form" })
-    jest.spyOn(props.widgetMgr, "setStringValue")
-    const wrapper = shallow(<TextInput {...props} />)
-
-    // @ts-expect-error
-    wrapper.find(UIInput).prop("onChange")({
-      target: { value: "TEST" },
-    } as React.ChangeEvent<HTMLInputElement>)
-
-    expect(wrapper.state("dirty")).toBe(false)
-
-    // Check that the last call used the TEST value.
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
-      "TEST",
-      {
-        fromUi: true,
-      }
-    )
-  })
-
   it("does not update widget value on text changes when outside of a form", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
@@ -285,17 +263,8 @@ describe("TextInput widget", () => {
       target: { value: "TEST" },
     } as React.ChangeEvent<HTMLInputElement>)
 
-    expect(wrapper.state("value")).toBe("TEST")
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
-      "TEST",
-      {
-        fromUi: true,
-      }
-    )
-
     // "Submit" the form
-    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    props.widgetMgr.submitForm("form")
     wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated

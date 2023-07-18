@@ -144,26 +144,19 @@ class TextInput extends React.PureComponent<Props, State> {
     // If the TextInput is *not* part of a form, we mark it dirty but don't
     // update its value in the WidgetMgr. This means that individual keypresses
     // won't trigger a script re-run.
-    if (!isInForm(this.props.element)) {
-      this.setState({ dirty: true, value })
-      return
-    }
-
-    // If TextInput *is* part of a form, we immediately update its widgetValue
-    // on text changes. The widgetValue won't be passed to the Python
-    // script until the form is submitted, so this won't cause the script
-    // to re-run. (This also means that we won't show the "Press Enter
-    // to Apply" prompt because the TextInput will never be "dirty").
-    this.setState({ dirty: false, value }, () =>
-      this.commitWidgetValue({ fromUi: true })
-    )
+    this.setState({ dirty: true, value })
   }
 
   private onKeyPress = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
   ): void => {
-    if (e.key === "Enter" && this.state.dirty) {
-      this.commitWidgetValue({ fromUi: true })
+    if (e.key === "Enter") {
+      if (this.state.dirty) {
+        this.commitWidgetValue({ fromUi: true })
+      }
+      if (isInForm(this.props.element)) {
+        this.props.widgetMgr.submitForm(this.props.element.formId)
+      }
     }
   }
 
@@ -247,6 +240,7 @@ class TextInput extends React.PureComponent<Props, State> {
           dirty={dirty}
           value={value}
           maxLength={element.maxChars}
+          inForm={isInForm({ formId: element.formId })}
         />
       </StyledTextInput>
     )

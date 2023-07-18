@@ -207,6 +207,7 @@ describe("MainMenu", () => {
       expect(props.showDeployError.mock.calls[0][1]).toStrictEqual(dialog.body)
     }
 
+    // eslint-disable-next-line jest/expect-expect -- underlying testDeployErrorModal function has expect statements
     it("should display the correct modal if there is no repo or remote", () => {
       testDeployErrorModal(
         {
@@ -216,6 +217,7 @@ describe("MainMenu", () => {
       )
     })
 
+    // eslint-disable-next-line jest/expect-expect
     it("should display the correct modal if there is an empty repo", () => {
       testDeployErrorModal(
         {
@@ -228,6 +230,7 @@ describe("MainMenu", () => {
       )
     })
 
+    // eslint-disable-next-line jest/expect-expect
     it("should display the correct modal if the repo is detached", () => {
       testDeployErrorModal(
         {
@@ -240,6 +243,7 @@ describe("MainMenu", () => {
       )
     })
 
+    // eslint-disable-next-line jest/expect-expect
     it("should display the correct modal if the script is not added to the repo", () => {
       testDeployErrorModal(
         {

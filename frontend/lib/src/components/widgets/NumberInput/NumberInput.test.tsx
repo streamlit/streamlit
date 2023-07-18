@@ -181,18 +181,9 @@ describe("NumberInput widget", () => {
 
     // Change the widget value
     wrapper.setState({ dirty: true, value: 15 })
-    const inputWrapper = wrapper.find(UIInput)
-    // @ts-expect-error
-    inputWrapper.props().onKeyPress({ key: "Enter" })
-
-    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
-      props.element,
-      15,
-      { fromUi: true }
-    )
 
     // "Submit" the form
-    props.widgetMgr.submitForm({ id: "submitFormButtonId", formId: "form" })
+    props.widgetMgr.submitForm("form")
     wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated
