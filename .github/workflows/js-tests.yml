@@ -49,8 +49,6 @@ jobs:
         run: make protobuf
       - name: Run make frontend-lib
         run: make frontend-lib
-      - name: Ensure ensure relative imports exist in the @streamlit/lib/dist folder
-        run: make ensure-relative-imports
       - name: Audit frontend licenses
         run: ./scripts/audit_frontend_licenses.py
       - name: Run linters

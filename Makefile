@@ -412,5 +412,11 @@ pre-commit-install:
 	pre-commit install
 
 .PHONY: ensure-relative-imports
+# ensure relative imports exist within the lib/dist folder when doing yarn buildLibProd
 ensure-relative-imports:
 	python scripts/ensure_relative_imports.py
+
+.PHONY frontend-lib-prod:
+# build the production version for @streamlit/lib
+frontend-lib-prod:
+	cd frontend/ ; yarn run buildLibProd;
