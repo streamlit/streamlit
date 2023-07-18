@@ -345,6 +345,7 @@ class TimeWidgetsMixin:
         id = new_compute_widget_id(
             "time_input",
             user_key=key,
+            label=label,
             value=value,
             key=key,
             help=help,
