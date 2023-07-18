@@ -419,4 +419,5 @@ ensure-relative-imports:
 .PHONY frontend-lib-prod:
 # build the production version for @streamlit/lib
 frontend-lib-prod:
+	make mini-init;
 	cd frontend/ ; yarn run buildLibProd;

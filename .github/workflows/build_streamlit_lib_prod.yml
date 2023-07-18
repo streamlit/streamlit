@@ -35,12 +35,6 @@ jobs:
           persist-credentials: false
           submodules: "recursive"
           fetch-depth: 2
-      - name: Setup virtual env
-        uses: ./.github/actions/make_init
-      - name: Run make develop
-        run: make develop
-      - name: Run make protobuf
-        run: make protobuf
       - name: Run make frontend-lib-prod
         run: make frontend-lib-prod
       - name: Ensure ensure relative imports exist in the @streamlit/lib/dist folder
