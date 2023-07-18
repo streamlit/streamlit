@@ -39,7 +39,7 @@ def check_for_string_in_files(file_paths, search_string):
 
 def build_frontend_lib():
     try:
-        subprocess.run(["yarn", "buildLib"], check=True, cwd="./frontend")
+        subprocess.run(["yarn", "buildLibProd"], check=True, cwd="./frontend")
     except subprocess.CalledProcessError as e:
         print("Failed to build the necessary files.")
         exit(1)
