@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Dict, Mapping, Optional
 from typing_extensions import Final, TypeAlias
 
 from streamlit.errors import DuplicateWidgetID
+from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
@@ -37,6 +38,8 @@ from streamlit.type_util import ValueFieldName
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner import ScriptRunContext
+
+LOGGER = get_logger(__name__)
 
 ElementType: TypeAlias = str
 
@@ -151,6 +154,9 @@ def register_widget(
     if not element_proto.id:
         widget_id = compute_widget_id(element_type, element_proto, user_key)
         element_proto.id = widget_id
+        LOGGER.warn(
+            f"Registering a widget with no id, falling back to generating from proto. {widget_id=}"
+        )
 
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
