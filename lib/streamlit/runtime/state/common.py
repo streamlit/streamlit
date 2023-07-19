@@ -17,7 +17,17 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Generic, Optional, Tuple, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from typing_extensions import Final, TypeAlias
 
@@ -158,8 +168,13 @@ def compute_widget_id(
     return f"{GENERATED_WIDGET_ID_PREFIX}-{h.hexdigest()}-{user_key}"
 
 
+PROTO_SCALAR_VALUE = Union[float, int, bool, str, bytes]
+PROTO_REPEATED_VALUE = Sequence[PROTO_SCALAR_VALUE]
+PROTO_VALUE = Union[PROTO_SCALAR_VALUE, PROTO_REPEATED_VALUE, None]
+
+
 def new_compute_widget_id(
-    element_type: str, user_key: Optional[str] = None, **kwargs
+    element_type: str, user_key: Optional[str] = None, **kwargs: PROTO_VALUE
 ) -> str:
     """Compute the widget id for the given widget. This id is stable: a given
     set of inputs to this function will always produce the same widget id output.
@@ -177,6 +192,8 @@ def new_compute_widget_id(
     h = hashlib.new("md5")
     h.update(element_type.encode("utf-8"))
     # TODO make sure this is equivalent to the protobuf approach
+    # Values should be of the types that go into protobufs:
+    # float, int, bool, str, bytes, a list of those, or a map of those
     for k, v in kwargs.items():
         h.update(str(k).encode("utf-8"))
         h.update(str(v).encode("utf-8"))

@@ -342,6 +342,9 @@ class TimeWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        if isinstance(step, timedelta):
+            step = step.seconds
+
         id = new_compute_widget_id(
             "time_input",
             user_key=key,
@@ -376,8 +379,6 @@ class TimeWidgetsMixin:
             raise StreamlitAPIException(
                 f"`step` can only be `int` or `timedelta` but {type(step)} is provided."
             )
-        if isinstance(step, timedelta):
-            step = step.seconds
         if step < 60 or step > timedelta(hours=23).seconds:
             raise StreamlitAPIException(
                 f"`step` must be between 60 seconds and 23 hours but is currently set to {step} seconds."
@@ -556,13 +557,27 @@ class TimeWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        if isinstance(min_value, datetime):
+            parsed_min_date = date.strftime(min_value.date(), "%Y/%m/%d")
+        elif isinstance(min_value, date):
+            parsed_min_date = date.strftime(min_value, "%Y/%m/%d")
+        else:
+            parsed_min_date = None
+
+        if isinstance(max_value, datetime):
+            parsed_max_date = date.strftime(max_value.date(), "%Y/%m/%d")
+        elif isinstance(max_value, date):
+            parsed_max_date = date.strftime(max_value, "%Y/%m/%d")
+        else:
+            parsed_max_date = None
+
         id = new_compute_widget_id(
             "date_input",
             user_key=key,
             label=label,
             value=value,
-            min_value=min_value,
-            max_value=max_value,
+            min_value=parsed_min_date,
+            max_value=parsed_max_date,
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
