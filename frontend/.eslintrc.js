@@ -154,8 +154,6 @@ module.exports = {
       { allowSameFolder: true, rootDir: "src", prefix: "src" },
     ],
     "no-else-return": ["error", { allowElseIf: true }],
-    // TODO: Remove these rules once we've migrated to React Testing Library
-    "testing-library/render-result-naming-convention": "off",
   },
   settings: {
     react: {

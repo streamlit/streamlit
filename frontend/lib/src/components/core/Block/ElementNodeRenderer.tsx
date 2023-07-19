@@ -116,6 +116,8 @@ const BokehChart = React.lazy(
   () => import("@streamlit/lib/src/components/elements/BokehChart")
 )
 
+// RTL ESLint triggers a false positive on this render function
+// eslint-disable-next-line testing-library/render-result-naming-convention
 const DebouncedBokehChart = debounceRender(BokehChart, 100)
 
 const DataFrame = React.lazy(

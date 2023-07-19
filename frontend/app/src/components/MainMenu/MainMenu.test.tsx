@@ -356,10 +356,10 @@ describe("MainMenu", () => {
         { label: "Host menu item", key: "host-item", type: "text" },
       ],
     })
-    const wrapper = render(<MainMenu {...props} />)
+    const view = render(<MainMenu {...props} />)
     await openMenu(screen)
 
-    const menuStructure = getMenuStructure(wrapper)
+    const menuStructure = getMenuStructure(view)
     expect(menuStructure[0]).toContainEqual({
       type: "option",
       label: "Host menu item",
@@ -390,10 +390,10 @@ describe("MainMenu", () => {
         { type: "separator" },
       ],
     })
-    const wrapper = render(<MainMenu {...props} />)
+    const view = render(<MainMenu {...props} />)
     await openMenu(screen)
 
-    const menuStructure = getMenuStructure(wrapper)
+    const menuStructure = getMenuStructure(view)
     expect(menuStructure).toEqual([
       [{ type: "option", label: "View all apps" }],
     ])
@@ -463,10 +463,10 @@ describe("MainMenu", () => {
         ),
       })
 
-      const wrapper = render(<MainMenu {...props} />)
+      const view = render(<MainMenu {...props} />)
       await openMenu(screen)
 
-      const menuStructure = getMenuStructure(wrapper)
+      const menuStructure = getMenuStructure(view)
       expect(menuStructure).toEqual([expectedMenuItems])
     }
   )
@@ -488,10 +488,10 @@ describe("MainMenu", () => {
         aboutSectionMd: "# This is a header. This is an *extremely* cool app!",
       },
     })
-    const wrapper = render(<MainMenu {...props} />)
+    const view = render(<MainMenu {...props} />)
     await openMenu(screen)
 
-    const menuStructure = getMenuStructure(wrapper)
+    const menuStructure = getMenuStructure(view)
     expect(menuStructure).toEqual([
       [
         {
