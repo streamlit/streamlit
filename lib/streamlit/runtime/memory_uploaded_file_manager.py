@@ -18,7 +18,7 @@ from typing import Dict, List, Sequence
 
 from streamlit import util
 from streamlit.logger import get_logger
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.stats import CacheStat
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
     UploadedFileRec,
