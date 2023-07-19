@@ -761,6 +761,7 @@ const ElementNodeRenderer = (
         isStale={isStale && !isFullScreen}
         width={width}
         className={"element-container"}
+        data-testid={"element-container"}
         elementType={elementType}
       >
         <ErrorBoundary width={width}>

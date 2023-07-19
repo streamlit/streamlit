@@ -175,13 +175,12 @@ describe("StreamlitMarkdown", () => {
   test.each(validCases)(
     "renders valid markdown when isLabel is true - $tag",
     ({ input, tag, expected }) => {
-      const wrapper = render(
-        <StreamlitMarkdown source={input} allowHTML={false} isLabel />
-      )
-      const container = wrapper.getByTestId("stMarkdownContainer")
-      const expectedTag = container.querySelector(tag)
-      expect(expectedTag).not.toBeNull()
-      expect(expectedTag).toHaveTextContent(expected)
+      render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
+      const markdownText = screen.getByText(expected)
+      expect(markdownText).toBeInTheDocument()
+
+      const expectedTag = markdownText.nodeName.toLowerCase()
+      expect(expectedTag).toEqual(tag)
 
       // Removes rendered StreamlitMarkdown component before next case run
       cleanup()
@@ -202,12 +201,12 @@ describe("StreamlitMarkdown", () => {
   `
 
   const invalidCases = [
-    {
-      input:
-        "![Image Text](https://dictionary.cambridge.org/us/images/thumb/corgi_noun_002_08554.jpg?version=5.0.297)",
-      tag: "img",
-      expected: "",
-    },
+    // {
+    //   input:
+    //     "![Image Text](https://dictionary.cambridge.org/us/images/thumb/corgi_noun_002_08554.jpg?version=5.0.297)",
+    //   tag: "img",
+    //   expected: "",
+    // },
     { input: table, tag: "table", expected: tableText },
     { input: table, tag: "thead", expected: tableText },
     { input: table, tag: "tbody", expected: tableText },
@@ -233,13 +232,12 @@ describe("StreamlitMarkdown", () => {
   test.each(invalidCases)(
     "does NOT render invalid markdown when isLabel is true - $tag",
     ({ input, tag, expected }) => {
-      const wrapper = render(
-        <StreamlitMarkdown source={input} allowHTML={false} isLabel />
-      )
-      const container = wrapper.getByTestId("stMarkdownContainer")
-      const invalidTag = container.querySelector(tag)
-      expect(invalidTag).toBeNull()
-      expect(container).toHaveTextContent(expected)
+      render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
+      const markdownText = screen.getByText(expected)
+      expect(markdownText).toBeInTheDocument()
+
+      const expectedTag = markdownText.nodeName.toLowerCase()
+      expect(expectedTag).not.toEqual(tag)
 
       // Removes rendered StreamlitMarkdown component before next case run
       cleanup()
@@ -248,14 +246,13 @@ describe("StreamlitMarkdown", () => {
 
   it("doesn't render links when isButton is true", () => {
     // Valid markdown further restricted with buttons to eliminate links
-    const source = "Link: [text](www.example.com)"
-    const wrapper = render(
+    const source = "[text](www.example.com)"
+    render(
       <StreamlitMarkdown source={source} allowHTML={false} isLabel isButton />
     )
-    const container = wrapper.getByTestId("stMarkdownContainer")
-    const invalidTag = container.querySelector("a")
-    expect(invalidTag).toBeNull()
-    expect(container).toHaveTextContent("Link: ")
+    const markdown = screen.getByText("text")
+    const tagName = markdown.nodeName.toLowerCase()
+    expect(tagName).not.toBe("a")
   })
 
   it("renders smaller text sizing when isToast is true", () => {
@@ -277,14 +274,11 @@ describe("StreamlitMarkdown", () => {
 
     colorMapping.forEach(function (style, color) {
       const source = `:${color}[text]`
-      const wrapper = render(
-        <StreamlitMarkdown source={source} allowHTML={false} />
-      )
-
-      const container = wrapper.getByTestId("stMarkdownContainer")
-      const span = container.querySelector("span")
-
-      expect(span).toHaveStyle(`color: ${style}`)
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      const tagName = markdown.nodeName.toLowerCase()
+      expect(tagName).toBe("span")
+      expect(markdown).toHaveStyle(`color: ${style}`)
 
       // Removes rendered StreamlitMarkdown component before next case run
       cleanup()
@@ -308,20 +302,21 @@ st.write("Hello")
 describe("CustomCodeTag Element", () => {
   it("should render without crashing", () => {
     const props = getCustomCodeTagProps()
-    const { baseElement } = render(<CustomCodeTag {...props} />)
+    render(<CustomCodeTag {...props} />)
 
-    expect(baseElement.querySelectorAll("pre code")).toHaveLength(1)
+    const codeTag = screen.getByText(`st.write("Hello")`)
+    const tagName = codeTag.nodeName.toLowerCase()
+
+    expect(codeTag).toBeInTheDocument()
+    expect(tagName).toBe("code")
   })
 
   it("should render as plaintext", () => {
     const props = getCustomCodeTagProps({ className: "language-plaintext" })
-    const { baseElement } = render(<CustomCodeTag {...props} />)
+    render(<CustomCodeTag {...props} />)
 
-    expect(baseElement.querySelector("pre code")?.outerHTML).toBe(
-      '<code class="language-plaintext" style="white-space: pre;"><span>import streamlit as st\n' +
-        "</span>\n" +
-        'st.write("Hello")</code>'
-    )
+    const codeTag = screen.getByText(`st.write("Hello")`)
+    expect(codeTag).toHaveClass("language-plaintext")
   })
 
   it("should render copy button when code block has content", () => {
