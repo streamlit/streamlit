@@ -21,7 +21,7 @@ import pandas as pd
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.multiselect import (
+from streamlit.elements.widgets.multiselect import (
     _get_default_count,
     _get_over_max_options_message,
 )
