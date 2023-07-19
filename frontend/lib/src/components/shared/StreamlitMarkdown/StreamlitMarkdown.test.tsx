@@ -253,7 +253,6 @@ describe("StreamlitMarkdown", () => {
       <StreamlitMarkdown source={source} allowHTML={false} isLabel isButton />
     )
     const tag = screen.getByText("Link text")
-    console.log(tag)
     const isLinkTag = tag instanceof HTMLAnchorElement ? true : false
     expect(isLinkTag).toBe(false)
   })
