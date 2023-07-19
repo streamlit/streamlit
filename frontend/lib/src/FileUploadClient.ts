@@ -136,7 +136,6 @@ export class FileUploadClient {
    *
    * @return a Promise<FileURLsResponse.IFileURLs[]> resolving to the
    */
-  // TODO(vdonato): Implement timeouts.
   // TODO(vdonato): Look into how awkward a pattern like this will be for
   //                the notebooks team / where else the code to fetch file URLs
   //                via websocket can live.

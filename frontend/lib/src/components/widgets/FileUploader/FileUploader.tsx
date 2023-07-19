@@ -268,8 +268,6 @@ class FileUploader extends React.PureComponent<Props, State> {
         )
       })
       .catch((errorMessage: string) => {
-        // TODO(vdonato): Maybe generalize this + the if (rejectedFiles.length > 0) case
-        // below to not duplicate so much code.
         this.addFiles(
           acceptedFiles.map(f => {
             return new UploadFileInfo(f.name, f.size, this.nextLocalFileId(), {

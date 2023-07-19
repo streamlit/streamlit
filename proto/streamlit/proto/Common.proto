@@ -63,7 +63,6 @@ message FileURLs {
 }
 
 message FileURLsResponse {
-  // TODO(vdonato): Maybe come up with a better name for this proto type.
   string response_id = 1;
   repeated FileURLs file_urls = 2;
   string error_msg = 3;
