@@ -15,7 +15,14 @@
  */
 
 import React from "react"
-
+import "@testing-library/jest-dom"
+import {
+  screen,
+  waitFor,
+  fireEvent,
+  RenderResult,
+  Screen,
+} from "@testing-library/react"
 import {
   mount,
   render,
@@ -35,9 +42,6 @@ import {
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import MainMenu, { Props } from "./MainMenu"
-import { waitFor, fireEvent, RenderResult } from "@testing-library/react"
-
-import "@testing-library/jest-dom"
 
 const { GitStates } = GitInfo
 
@@ -65,10 +69,10 @@ const getProps = (extend?: Partial<Props>): Props => ({
   ...extend,
 })
 
-async function openMenu(wrapper: RenderResult): Promise<void> {
-  fireEvent.click(wrapper.getByRole("button"))
+async function openMenu(screen: Screen): Promise<void> {
+  fireEvent.click(screen.getByRole("button"))
   // Each SubMenu is a listbox, so need to use findAllByRole (findByRole throws error if multiple matches)
-  const menu = await wrapper.findAllByRole("listbox")
+  const menu = await screen.findAllByRole("listbox")
   expect(menu).toBeDefined()
 }
 
@@ -120,10 +124,10 @@ describe("MainMenu", () => {
     const props = getProps({
       hostMenuItems: items,
     })
-    const wrapper = render(<MainMenu {...props} />)
-    await openMenu(wrapper)
+    render(<MainMenu {...props} />)
+    await openMenu(screen)
 
-    const menuOptions = await wrapper.findAllByRole("option")
+    const menuOptions = await screen.findAllByRole("option")
 
     const expectedLabels = [
       "Rerun",
@@ -144,10 +148,10 @@ describe("MainMenu", () => {
 
   it("should render core set of menu elements", async () => {
     const props = getProps()
-    const wrapper = render(<MainMenu {...props} />)
-    await openMenu(wrapper)
+    render(<MainMenu {...props} />)
+    await openMenu(screen)
 
-    const menuOptions = await wrapper.findAllByRole("option")
+    const menuOptions = await screen.findAllByRole("option")
 
     const expectedLabels = [
       "Rerun",
@@ -167,10 +171,10 @@ describe("MainMenu", () => {
 
   it("should render deploy app menu item", async () => {
     const props = getProps({ gitInfo: {} })
-    const wrapper = render(<MainMenu {...props} />)
-    await openMenu(wrapper)
+    render(<MainMenu {...props} />)
+    await openMenu(screen)
 
-    const menu = await wrapper.findByRole("option", {
+    const menu = await screen.findByRole("option", {
       name: "Deploy this app",
     })
     expect(menu).toBeDefined()
@@ -293,13 +297,11 @@ describe("MainMenu", () => {
       aboutSectionMd: "",
     }
     const props = getProps({ menuItems })
-    const wrapper = render(<MainMenu {...props} />)
-    await openMenu(wrapper)
+    render(<MainMenu {...props} />)
+    await openMenu(screen)
 
     await waitFor(() =>
-      expect(
-        wrapper.queryByRole("option", { name: "Report a bug" })
-      ).toBeNull()
+      expect(screen.queryByRole("option", { name: "Report a bug" })).toBeNull()
     )
   })
 
@@ -311,10 +313,10 @@ describe("MainMenu", () => {
       aboutSectionMd: "",
     }
     const props = getProps({ menuItems })
-    const wrapper = render(<MainMenu {...props} />)
-    await openMenu(wrapper)
+    render(<MainMenu {...props} />)
+    await openMenu(screen)
 
-    const reportOption = await wrapper.findByRole("option", {
+    const reportOption = await screen.findByRole("option", {
       name: "Report a bug",
     })
     expect(reportOption).toBeDefined()
@@ -355,7 +357,7 @@ describe("MainMenu", () => {
       ],
     })
     const wrapper = render(<MainMenu {...props} />)
-    await openMenu(wrapper)
+    await openMenu(screen)
 
     const menuStructure = getMenuStructure(wrapper)
     expect(menuStructure[0]).toContainEqual({
@@ -371,9 +373,9 @@ describe("MainMenu", () => {
       hostMenuItems: [],
     })
 
-    const wrapper = render(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
 
-    expect(wrapper.queryByRole("button")).toBeNull()
+    expect(screen.queryByRole("button")).toBeNull()
   })
 
   it("should skip divider from host menu items if it is at the beginning and end", async () => {
@@ -389,7 +391,7 @@ describe("MainMenu", () => {
       ],
     })
     const wrapper = render(<MainMenu {...props} />)
-    await openMenu(wrapper)
+    await openMenu(screen)
 
     const menuStructure = getMenuStructure(wrapper)
     expect(menuStructure).toEqual([
@@ -462,7 +464,7 @@ describe("MainMenu", () => {
       })
 
       const wrapper = render(<MainMenu {...props} />)
-      await openMenu(wrapper)
+      await openMenu(screen)
 
       const menuStructure = getMenuStructure(wrapper)
       expect(menuStructure).toEqual([expectedMenuItems])
@@ -487,7 +489,7 @@ describe("MainMenu", () => {
       },
     })
     const wrapper = render(<MainMenu {...props} />)
-    await openMenu(wrapper)
+    await openMenu(screen)
 
     const menuStructure = getMenuStructure(wrapper)
     expect(menuStructure).toEqual([

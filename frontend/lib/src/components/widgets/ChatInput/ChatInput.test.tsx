@@ -127,10 +127,10 @@ describe("ChatInput widget", () => {
 
   it("will not show instructions when the text has changed", () => {
     const props = getProps()
-    const { getByTestId } = render(<ChatInput {...props} />)
+    render(<ChatInput {...props} />)
 
     const chatInput = screen.getByTestId("stChatInput")
-    const instructions = getByTestId("InputInstructions")
+    const instructions = screen.getByTestId("InputInstructions")
     expect(instructions).toHaveTextContent("")
 
     fireEvent.change(chatInput, { target: { value: "1234567890" } })

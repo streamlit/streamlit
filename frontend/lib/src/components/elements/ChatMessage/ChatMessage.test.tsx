@@ -45,10 +45,8 @@ describe("ChatMessage", () => {
 
   it("renders message children content", () => {
     const props = getProps()
-    const { getByLabelText } = render(
-      <ChatMessage {...props}>Hello, world!</ChatMessage>
-    )
-    expect(getByLabelText("Chat message from user").textContent).toBe(
+    render(<ChatMessage {...props}>Hello, world!</ChatMessage>)
+    expect(screen.getByLabelText("Chat message from user").textContent).toBe(
       "Hello, world!"
     )
   })
@@ -58,8 +56,8 @@ describe("ChatMessage", () => {
       avatar: "😃",
       avatarType: BlockProto.ChatMessage.AvatarType.EMOJI,
     })
-    const { getByText } = render(<ChatMessage {...props} />)
-    expect(getByText("😃")).toBeTruthy()
+    render(<ChatMessage {...props} />)
+    expect(screen.getByText("😃")).toBeTruthy()
   })
 
   it("renders with an image avatar", () => {
@@ -67,8 +65,8 @@ describe("ChatMessage", () => {
       avatar: "http://example.com/avatar.jpg",
       avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
     })
-    const { getByAltText } = render(<ChatMessage {...props} />)
-    const chatAvatar = getByAltText("user avatar")
+    render(<ChatMessage {...props} />)
+    const chatAvatar = screen.getByAltText("user avatar")
     expect(chatAvatar).toHaveAttribute("src", "http://example.com/avatar.jpg")
   })
 
@@ -78,8 +76,8 @@ describe("ChatMessage", () => {
       avatarType: undefined,
       name: "test",
     })
-    const { getByText } = render(<ChatMessage {...props} />)
-    expect(getByText("T")).toBeTruthy()
+    render(<ChatMessage {...props} />)
+    expect(screen.getByText("T")).toBeTruthy()
   })
 
   it("renders with a 'user' icon avatar", () => {
@@ -117,9 +115,9 @@ describe("ChatMessage", () => {
 
   it("sets an aria label on the chat message", () => {
     const props = getProps()
-    const { getByTestId } = render(<ChatMessage {...props} />)
+    render(<ChatMessage {...props} />)
 
-    const chatMessageContent = getByTestId("stChatMessageContent")
+    const chatMessageContent = screen.getByTestId("stChatMessageContent")
     expect(chatMessageContent.getAttribute("aria-label")).toEqual(
       "Chat message from user"
     )
