@@ -78,8 +78,10 @@ describe("st.button", () => {
   });
 
   it("has correct default values", () => {
-    cy.get(".stButton button").should("have.text",
-        "button 1" + "button 2" + "button 3" + "button 4" + "button 5 - containerWidth" + "button 6 - containerWidth + help" + CONN_TYPES_BUTTONS.join(""));
+    cy.get(".stButton > button").should("have.text",
+        "button 1" + "button 2" + "button 3" + "button 4" + "button 5 - containerWidth" + CONN_TYPES_BUTTONS.join(""));
+    // button w/ help tooltip isn't direct decendent of stButton div
+    cy.getIndexed(".stButton button", 5).should("have.text", "button 6 - containerWidth + help");
   });
 
   it("sets value correctly when user clicks", () => {
