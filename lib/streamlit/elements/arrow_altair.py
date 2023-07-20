@@ -1192,7 +1192,10 @@ def _get_color_enc(
 
 def _get_x_type(
     df: pd.DataFrame, chart_type: ChartType, x_column: Optional[str]
-) -> Any:
+) -> Union[str, Tuple[str, List[Any]]]:
+    if x_column is None:
+        return "quantitative"  # Anything. If None, Vega-Lite may hide the axis.
+
     # Bar charts should have a discrete (ordinal) x-axis, UNLESS type is date/time
     # https://github.com/streamlit/streamlit/pull/2097#issuecomment-714802475
     if chart_type == ChartType.BAR and not _is_date_column(df, x_column):
