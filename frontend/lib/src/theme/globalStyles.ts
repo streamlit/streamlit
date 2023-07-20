@@ -21,7 +21,7 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   a,
   a:visited {
-    color: ${theme.colors.primary};
+    color: ${theme.colors.linkText};
   }
 
   // Override the base font-size value here.
@@ -32,7 +32,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
   a:hover,
   a:active {
-    color: ${theme.colors.primary};
+    color: ${theme.colors.linkText};
     text-decoration: underline;
   }
 
