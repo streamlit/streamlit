@@ -1422,7 +1422,7 @@ def _get_color_enc(
 
 def _get_x_type(
     df: pd.DataFrame, chart_type: ChartType, x_column: Optional[str]
-) -> str:
+) -> Union[str, Tuple[str, List[Any]]]:
     if x_column is None:
         return "quantitative"  # Anything. If None, Vega-Lite may hide the axis.
 
