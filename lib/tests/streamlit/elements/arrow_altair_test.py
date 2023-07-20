@@ -580,14 +580,14 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    def test_arrow_line_chart_with_generic_index(self):
-        """Test st._arrow_line_chart with a generic index."""
+    def test_arrow_line_chart_with_named_index(self):
+        """Test st._arrow_line_chart with a named index."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
         df.set_index("a", inplace=True)
 
         EXPECTED_DATAFRAME = pd.DataFrame(
             [[20, 30, 50]],
-            columns=["index--p5bJXXpQgvPz6yvQMFiy", "b", "c"],
+            columns=["a", "b", "c"],
             index=pd.RangeIndex(0, 1, 1),
         )
 

@@ -667,10 +667,16 @@ def prep_data(
     consideration) as well as the y and color columns.
     """
 
-    # If using index, pull it into its own column.
-    if x_column is None and wide_y_columns:
-        # Pick column name that is unlikely to collide with user-given names.
-        x_column = SEPARATED_INDEX_COLUMN_NAME
+    # If y is provided, by x is not, we'll use the index as x.
+    # So we need to pull the index into its own column.
+    if x_column is None and len(wide_y_columns) > 0:
+        if df.index.name is None:
+            # Pick column name that is unlikely to collide with user-given names.
+            x_column = SEPARATED_INDEX_COLUMN_NAME
+        else:
+            # Reuse index's name for the new column.
+            x_column = df.index.name
+
         df = df.reset_index(names=x_column)
 
     # Drop columns we're not using.
@@ -764,8 +770,8 @@ def _generate_chart(
 
     # Set up x and y encodings.
     chart = chart.encode(
-        x=_get_x_enc(df, chart_type, x_column),
-        y=_get_y_enc(df, y_column, wide_y_columns),
+        x=_get_x_enc(df, x_column, x_from_user, chart_type),
+        y=_get_y_enc(df, y_column, y_from_user, wide_y_columns),
     )
 
     # Set up opacity encoding.
@@ -967,8 +973,9 @@ def _maybe_melt(
 
 def _get_x_enc(
     df: pd.DataFrame,
-    chart_type: ChartType,
     x_column: Optional[str],
+    x_from_user: Optional[str],
+    chart_type: ChartType,
 ) -> alt.X:
     import altair as alt
 
@@ -986,7 +993,14 @@ def _get_x_enc(
         x_title = ""
     else:
         x_field = x_column
-        x_title = x_column
+
+        # Only show a label in the x axis if the user passed a column explicitly. We
+        # could go either way here, but I'm keeping this to avoid breaking the existing
+        # behavior.
+        if x_from_user is None:
+            x_title = ""
+        else:
+            x_title = x_column
 
     return alt.X(
         x_field,
@@ -998,7 +1012,10 @@ def _get_x_enc(
 
 
 def _get_y_enc(
-    df: pd.DataFrame, y_column: Optional[str], wide_y_columns: List[str]
+    df: pd.DataFrame,
+    y_column: Optional[str],
+    y_from_user: Union[str, Sequence[str], None],
+    wide_y_columns: List[str],
 ) -> alt.Y:
     import altair as alt
 
@@ -1018,7 +1035,14 @@ def _get_y_enc(
         y_title = ""
     else:
         y_field = y_column
-        y_title = y_column
+
+        # Only show a label in the y axis if the user passed a column explicitly. We
+        # could go either way here, but I'm keeping this to avoid breaking the existing
+        # behavior.
+        if y_from_user is None:
+            y_title = ""
+        else:
+            y_title = y_column
 
     if wide_y_columns:
         # For dataframes that will be folded, we use the type of the 1st y column as a
