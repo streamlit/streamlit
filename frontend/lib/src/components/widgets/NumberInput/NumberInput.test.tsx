@@ -33,7 +33,7 @@ const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
     hasMax: false,
     ...elementProps,
   }),
-  width: 0,
+  width: 300,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
@@ -451,6 +451,13 @@ describe("NumberInput widget", () => {
 
       expect(wrapper.state("value")).toBe(2)
       expect(stepUpButton(wrapper).prop("disabled")).toBe(true)
+    })
+
+    it("hides stepUp and stepDown buttons when width is smaller than 120px", () => {
+      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
+      const wrapper = shallow(<NumberInput {...props} width={100} />)
+
+      expect(wrapper.find("button").exists()).toBe(false)
     })
   })
 })
