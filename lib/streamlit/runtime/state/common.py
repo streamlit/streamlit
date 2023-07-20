@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
+from datetime import date, datetime, time, timedelta
 from typing import (
     Any,
     Callable,
@@ -51,6 +52,7 @@ from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
+from streamlit.runtime.state.widgets import NoValue
 from streamlit.type_util import ValueFieldName
 
 # Protobuf types for all widgets.
@@ -169,12 +171,13 @@ def compute_widget_id(
 
 
 PROTO_SCALAR_VALUE = Union[float, int, bool, str, bytes]
-PROTO_REPEATED_VALUE = Sequence[PROTO_SCALAR_VALUE]
-PROTO_VALUE = Union[PROTO_SCALAR_VALUE, PROTO_REPEATED_VALUE, None]
+SAFE_VALUES = Union[date, time, datetime, timedelta, None, NoValue, PROTO_SCALAR_VALUE]
 
 
 def new_compute_widget_id(
-    element_type: str, user_key: Optional[str] = None, **kwargs: PROTO_VALUE
+    element_type: str,
+    user_key: Optional[str] = None,
+    **kwargs: Union[SAFE_VALUES, Sequence[SAFE_VALUES]],
 ) -> str:
     """Compute the widget id for the given widget. This id is stable: a given
     set of inputs to this function will always produce the same widget id output.

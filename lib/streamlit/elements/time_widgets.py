@@ -342,9 +342,6 @@ class TimeWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
-        if isinstance(step, timedelta):
-            step = step.seconds
-
         id = new_compute_widget_id(
             "time_input",
             user_key=key,
@@ -379,6 +376,8 @@ class TimeWidgetsMixin:
             raise StreamlitAPIException(
                 f"`step` can only be `int` or `timedelta` but {type(step)} is provided."
             )
+        if isinstance(step, timedelta):
+            step = step.seconds
         if step < 60 or step > timedelta(hours=23).seconds:
             raise StreamlitAPIException(
                 f"`step` must be between 60 seconds and 23 hours but is currently set to {step} seconds."
