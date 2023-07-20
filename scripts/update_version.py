@@ -59,7 +59,11 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # there.
 PYTHON = {"lib/setup.py": r"(?P<pre>.*VERSION = \").*(?P<post>\"  # PEP-440$)"}
 
-NODE = {"frontend/package.json": r'(?P<pre>^  "version": ").*(?P<post>",$)'}
+# This regex captures the "version": field in a JSON-like structure
+# allowing for any amount of whitespace before the "version": field.
+NODE_ROOT = {"frontend/package.json": r'(?P<pre>^ \s*"version": ").*(?P<post>",$)'}
+NODE_APP = {"frontend/app/package.json": r'(?P<pre>^ \s*"version": ").*(?P<post>",$)'}
+NODE_LIB = {"frontend/lib/package.json": r'(?P<pre>^ \s*"version": ").*(?P<post>",$)'}
 
 
 def verify_pep440(version):
@@ -131,7 +135,9 @@ def main():
         )
 
     update_files(PYTHON, pep440_version)
-    update_files(NODE, semver_version)
+    update_files(NODE_ROOT, semver_version)
+    update_files(NODE_APP, semver_version)
+    update_files(NODE_LIB, semver_version)
 
 
 if __name__ == "__main__":
