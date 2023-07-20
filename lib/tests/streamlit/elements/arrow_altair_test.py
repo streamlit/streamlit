@@ -40,6 +40,14 @@ def _deep_get(dictionary, *keys):
     )
 
 
+ST_CHART_ARGS = [
+    (st._arrow_area_chart, "area"),
+    (st._arrow_bar_chart, "bar"),
+    (st._arrow_line_chart, "line"),
+    (st._arrow_scatter_chart, "circle"),
+]
+
+
 class ArrowAltairTest(DeltaGeneratorTestCase):
     """Test ability to marshall arrow_altair_chart proto."""
 
@@ -131,13 +139,7 @@ class ArrowAltairTest(DeltaGeneratorTestCase):
 class ArrowChartsTest(DeltaGeneratorTestCase):
     """Test Arrow charts."""
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_empty_arrow_chart(self, chart_command: Callable, altair_type: str):
         """Test arrow chart with no arguments."""
         EXPECTED_DATAFRAME = pd.DataFrame()
@@ -160,13 +162,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_arrow_chart_with_implicit_x_and_y(
         self, chart_command: Callable, altair_type: str
     ):
@@ -189,13 +185,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_arrow_chart_with_pyspark_dataframe(
         self, chart_command: Callable, altair_type: str
     ):
@@ -220,13 +210,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_arrow_chart_with_snowpark_dataframe(
         self, chart_command: Callable, altair_type: str
     ):
@@ -252,13 +236,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_arrow_chart_with_explicit_x_and_implicit_y(
         self, chart_command: Callable, altair_type: str
     ):
@@ -277,13 +255,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_arrow_chart_with_implicit_x_and_explicit_y(
         self, chart_command: Callable, altair_type: str
     ):
@@ -304,13 +276,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_arrow_chart_with_implicit_x_and_explicit_y_sequence(
         self, chart_command: Callable, altair_type: str
     ):
@@ -333,13 +299,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_arrow_chart_with_explicit_x_and_y(
         self, chart_command: Callable, altair_type: str
     ):
@@ -362,13 +322,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_arrow_chart_with_explicit_x_and_y_sequence(
         self, chart_command: Callable, altair_type: str
     ):
@@ -389,13 +343,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_arrow_chart_with_color_value(
         self, chart_command: Callable, altair_type: str
     ):
@@ -410,13 +358,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
 
         self.assertEqual(chart_spec["encoding"]["color"]["value"], "#f00")
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_arrow_chart_with_color_column(
         self, chart_command: Callable, altair_type: str
     ):
@@ -501,13 +443,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
                 check_names=False,
             )
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_arrow_chart_with_explicit_wide_table_and_color_sequence(
         self, chart_command: Callable, altair_type: str
     ):
@@ -640,13 +576,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_unused_columns_are_dropped(
         self, chart_command: Callable, altair_type: str
     ):
@@ -657,10 +587,16 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             columns=["z", "a", "b", "c", "x", "d", "e", "f"],
         )
 
-        chart_command(df, x="a", y=["b", "c"], color="d")
-        EXPECTED_DATAFRAME = pd.DataFrame(
-            [[10, 40, 20, 30]], columns=["a", "d", "b", "c"]
-        )
+        if chart_command == st._arrow_scatter_chart:
+            chart_command(df, x="a", y=["b", "c"], color="d", size="e")
+            EXPECTED_DATAFRAME = pd.DataFrame(
+                [[10, 40, 50, 20, 30]], columns=["a", "d", "e", "b", "c"]
+            )
+        else:
+            chart_command(df, x="a", y=["b", "c"], color="d")
+            EXPECTED_DATAFRAME = pd.DataFrame(
+                [[10, 40, 20, 30]], columns=["a", "d", "b", "c"]
+            )
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         json.loads(proto.spec)
@@ -672,13 +608,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             EXPECTED_DATAFRAME,
         )
 
-    @parameterized.expand(
-        [
-            (st._arrow_area_chart, "area"),
-            (st._arrow_bar_chart, "bar"),
-            (st._arrow_line_chart, "line"),
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_original_df_is_untouched(self, chart_command: Callable, altair_type: str):
         """Test that when we modify the outgoing DF we don't mutate the input DF."""
         df = pd.DataFrame([[20, 30, 50, 60, 70]], columns=["a", "b", "c", "d", "e"])
