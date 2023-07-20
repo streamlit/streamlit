@@ -32,6 +32,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
             lambda df: st._arrow_line_chart(df),
             lambda df: st._arrow_bar_chart(df),
             lambda df: st._arrow_area_chart(df),
+            lambda df: st._arrow_scatter_chart(df),
         ]
 
         expected = pd.DataFrame(
@@ -64,6 +65,9 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
             lambda df: st._arrow_area_chart(
                 df, x="b", y=["a", "c"], color=["#f00", "#0f0"]
             ),
+            lambda df: st._arrow_scatter_chart(
+                df, x="b", y=["a", "c"], color=["#f00", "#0f0"]
+            ),
         ]
 
         expected = pd.DataFrame(
@@ -90,6 +94,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
             lambda df: st._arrow_line_chart(df, x="b", y="a"),
             lambda df: st._arrow_bar_chart(df, x="b", y="a"),
             lambda df: st._arrow_area_chart(df, x="b", y="a"),
+            lambda df: st._arrow_scatter_chart(df, x="b", y="a"),
         ]
 
         expected = pd.DataFrame(
