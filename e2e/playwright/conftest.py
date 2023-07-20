@@ -118,7 +118,7 @@ def find_available_port(
 def is_app_server_running(port: int, host: str = "localhost") -> bool:
     """Check if the app server is running."""
     try:
-        return requests.get(f"http://{host}:{port}/", timeout=1).status_code == 200
+        return requests.get(f"http://{host}:{port}/_stcore/health", timeout=1).text == "ok"
     except Exception:
         return False
 
