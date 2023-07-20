@@ -59,6 +59,8 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # there.
 PYTHON = {"lib/setup.py": r"(?P<pre>.*VERSION = \").*(?P<post>\"  # PEP-440$)"}
 
+# This regex captures the "version": field in a JSON-like structure
+# allowing for any amount of whitespace before the "version": field.
 NODE_ROOT = {"frontend/package.json": r'(?P<pre>^ \s*"version": ").*(?P<post>",$)'}
 NODE_APP = {"frontend/app/package.json": r'(?P<pre>^ \s*"version": ").*(?P<post>",$)'}
 NODE_LIB = {"frontend/lib/package.json": r'(?P<pre>^ \s*"version": ").*(?P<post>",$)'}
