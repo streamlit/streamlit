@@ -337,11 +337,11 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   // Links
 
   a {
-    color: ${theme.colors.primary};
+    color: ${theme.colors.linkText};
     text-decoration: underline;
 
     &:hover {
-      color: ${darken(theme.colors.primary, 0.15)};
+      color: ${darken(theme.colors.linkText, 0.15)};
     }
   }
 
