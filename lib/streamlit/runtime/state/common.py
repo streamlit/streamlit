@@ -30,6 +30,7 @@ from typing import (
     Union,
 )
 
+from google.protobuf.message import Message
 from typing_extensions import Final, TypeAlias
 
 from streamlit import util
@@ -171,7 +172,9 @@ def compute_widget_id(
 
 
 PROTO_SCALAR_VALUE = Union[float, int, bool, str, bytes]
-SAFE_VALUES = Union[date, time, datetime, timedelta, None, NoValue, PROTO_SCALAR_VALUE]
+SAFE_VALUES = Union[
+    date, time, datetime, timedelta, None, NoValue, Message, PROTO_SCALAR_VALUE
+]
 
 
 def new_compute_widget_id(

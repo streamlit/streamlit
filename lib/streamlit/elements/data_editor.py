@@ -728,6 +728,9 @@ class DataEditorMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
+        if column_order is not None:
+            column_order = list(column_order)
+
         column_config_mapping: ColumnConfigMapping = {}
 
         data_format = type_util.determine_data_format(data)
@@ -797,7 +800,7 @@ class DataEditorMixin:
             use_container_width=use_container_width,
             hide_index=hide_index,
             column_order=column_order,
-            column_config=column_config,
+            column_config=str(column_config),
             num_rows=num_rows,
             key=key,
             form_id=current_form_id(self.dg),
