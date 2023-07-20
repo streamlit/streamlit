@@ -95,24 +95,12 @@ class AsyncSubprocess:
             self._stdout_file = None
 
 
-def is_port_available(port: int, host: str) -> bool:
-    """Check if a port is available on the given host."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        return sock.connect_ex((host, port)) != 0
-
-
-def find_available_port(
-    min_port: int = 10000,
-    max_port: int = 65535,
-    max_tries: int = 50,
-    host: str = "localhost",
-) -> int:
+def find_available_port(host: str = "localhost") -> int:
     """Find an available port on the given host."""
-    for _ in range(max_tries):
-        selected_port = randint(min_port, max_port)
-        if is_port_available(selected_port, host):
-            return selected_port
-    raise RuntimeError("Unable to find an available port.")
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind((host, 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
 
 
 def is_app_server_running(port: int, host: str = "localhost") -> bool:
