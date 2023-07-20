@@ -134,9 +134,8 @@ class FormMixin:
         * ``st.button`` and ``st.download_button`` cannot be added to a form.
         * Forms can appear anywhere in your app (sidebar, columns, etc),
           but they cannot be embedded inside other forms.
-
-        For more information about forms, check out our `forms guide\
-        <https://docs.streamlit.io/library/advanced-features/forms>`_.
+        * Within a form, the only widget that can have a callback function is
+          ``st.form_submit_button``.
 
         Parameters
         ----------
