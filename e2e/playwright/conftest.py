@@ -76,7 +76,7 @@ class AsyncSubprocess:
         # Popen object to capture the output to its own internal buffer),
         # because large amounts of output can cause it to deadlock.
         self._stdout_file = TemporaryFile("w+")
-        print(f"Running: {self.args}")
+        print(f"Running: {shlex.join(self.args)}")
         self._proc = subprocess.Popen(
             self.args,
             cwd=self.cwd,
