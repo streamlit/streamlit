@@ -129,8 +129,8 @@ describe("st.number_input", () => {
         'value 7: " 0.01 "' +
         'value 8: " 0.01 "' +
         'value 9: " 0.01 "' +
-        "number input changed: False" +
-        'value 10: " 1 "'
+        "number input changed: True" +
+        'value 10: " 0 "'
     );
   });
 
