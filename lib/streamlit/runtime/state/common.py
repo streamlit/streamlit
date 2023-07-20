@@ -19,6 +19,7 @@ import hashlib
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -53,8 +54,11 @@ from streamlit.proto.Slider_pb2 import Slider
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
-from streamlit.runtime.state.widgets import NoValue
 from streamlit.type_util import ValueFieldName
+
+if TYPE_CHECKING:
+    from streamlit.runtime.state.widgets import NoValue
+
 
 # Protobuf types for all widgets.
 WidgetProto: TypeAlias = Union[
@@ -173,7 +177,7 @@ def compute_widget_id(
 
 PROTO_SCALAR_VALUE = Union[float, int, bool, str, bytes]
 SAFE_VALUES = Union[
-    date, time, datetime, timedelta, None, NoValue, Message, PROTO_SCALAR_VALUE
+    date, time, datetime, timedelta, None, "NoValue", Message, PROTO_SCALAR_VALUE
 ]
 
 
