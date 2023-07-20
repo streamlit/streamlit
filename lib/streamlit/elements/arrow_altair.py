@@ -701,7 +701,7 @@ def prep_data(
     # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object".
     prepped_data = type_util.fix_arrow_incompatible_column_types(selected_data)
 
-    prepped_columns = _prepare_column_names(
+    prepped_columns = _convert_col_names_to_str(
         prepped_data, x_column, wide_y_columns, color_column
     )
 
@@ -727,10 +727,8 @@ def _generate_chart(
     del data
 
     # Also, very important: we should NEVER mutate df. When required, we should instead
-    # copy it, like we do in prep_data(). And avoid copying, please, since it's
-    # expensive! Right now, this function should copy the DF only once.
-    # (Of course, this is checked in arrow_altair_test, so this notice is just for
-    # extra clarity!)
+    # copy it, like we do in prep_data(). (Of course, we have a mutation test in
+    # arrow_altair_test, so this notice is just for extra clarity!)
 
     # Convert arguments received from the user to things Vega-Lite understands.
     # Get name of column to use for x. This is never None.
@@ -756,6 +754,9 @@ def _generate_chart(
     df, x_column, wide_y_columns, color_column = prep_data(
         df, x_column, wide_y_columns, color_column
     )
+
+    # At this point, x_column is only None if user did not provide one AND df is empty.
+    # Similarly, wide_y_columns is only empty if the same conditions are true.
 
     # Create a Chart with no encodings.
     chart = alt.Chart(
@@ -800,7 +801,7 @@ def _generate_chart(
     return chart.interactive(), add_rows_metadata
 
 
-def _prepare_column_names(
+def _convert_col_names_to_str(
     df: pd.DataFrame,
     x_column: Optional[str],
     wide_y_columns: List[str],
@@ -1192,14 +1193,12 @@ def _get_color_enc(
 def _get_x_type(
     df: pd.DataFrame, chart_type: ChartType, x_column: Optional[str]
 ) -> Any:
-    import altair as alt
-
     # Bar charts should have a discrete (ordinal) x-axis, UNLESS type is date/time
     # https://github.com/streamlit/streamlit/pull/2097#issuecomment-714802475
     if chart_type == ChartType.BAR and not _is_date_column(df, x_column):
         return "ordinal"
 
-    return "quantitative"  # Pick anything. If undefined, Vega-Lite may hide the axis.
+    return type_util.infer_vegalite_type(df[x_column])
 
 
 def _get_y_type(
