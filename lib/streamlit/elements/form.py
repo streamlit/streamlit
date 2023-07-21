@@ -134,9 +134,8 @@ class FormMixin:
         * ``st.button`` and ``st.download_button`` cannot be added to a form.
         * Forms can appear anywhere in your app (sidebar, columns, etc),
           but they cannot be embedded inside other forms.
-
-        For more information about forms, check out our
-        `blog post <https://blog.streamlit.io/introducing-submit-button-and-forms/>`_.
+        * Within a form, the only widget that can have a callback function is
+          ``st.form_submit_button``.
 
         Parameters
         ----------
@@ -167,6 +166,10 @@ class FormMixin:
         ...
         >>> st.write("Outside the form")
 
+        .. output::
+           https://doc-form1.streamlit.app/
+           height: 425px
+
         Inserting elements out of order:
 
         >>> import streamlit as st
@@ -177,6 +180,10 @@ class FormMixin:
         >>>
         >>> # Now add a submit button to the form:
         >>> form.form_submit_button("Submit")
+
+        .. output::
+           https://doc-form2.streamlit.app/
+           height: 375px
 
         """
         # Import this here to avoid circular imports.

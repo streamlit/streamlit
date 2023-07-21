@@ -44,6 +44,11 @@ class ToastMixin:
         """Display a short message, known as a notification "toast".
         The toast appears in the app's bottom-right corner and disappears after four seconds.
 
+        .. warning::
+            ``st.toast`` is not compatible with Streamlit's `caching \
+            <https://docs.streamlit.io/library/advanced-features/caching>`_ and
+            cannot be called within a cached function.
+
         Parameters
         ----------
         body : str
