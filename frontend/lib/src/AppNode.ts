@@ -16,7 +16,7 @@
 
 import { produce } from "immer"
 import { Map as ImmutableMap } from "immutable"
-import Protobuf, {
+import {
   Arrow as ArrowProto,
   ArrowNamedDataSet,
   ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -495,15 +495,18 @@ export class AppRoot {
   }
 
   public get main(): BlockNode {
-    return this.root.children[Protobuf.RootContainer.MAIN] as BlockNode
+    const [main, ,] = this.root.children
+    return main as BlockNode
   }
 
   public get sidebar(): BlockNode {
-    return this.root.children[Protobuf.RootContainer.SIDEBAR] as BlockNode
+    const [, sidebar] = this.root.children
+    return sidebar as BlockNode
   }
 
   public get event(): BlockNode {
-    return this.root.children[Protobuf.RootContainer.EVENT] as BlockNode
+    const [, , event] = this.root.children
+    return event as BlockNode
   }
 
   public applyDelta(
