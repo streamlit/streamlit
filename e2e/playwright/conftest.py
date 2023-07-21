@@ -18,8 +18,10 @@ This file is automatically run by pytest before tests are executed.
 """
 from __future__ import annotations
 
+import contextlib
 import os
 import re
+import shlex
 import shutil
 import socket
 import subprocess
@@ -27,7 +29,6 @@ import sys
 import time
 from io import BytesIO
 from pathlib import Path
-from random import randint
 from tempfile import TemporaryFile
 from typing import Generator, List, Protocol
 
@@ -97,16 +98,18 @@ class AsyncSubprocess:
 
 def find_available_port(host: str = "localhost") -> int:
     """Find an available port on the given host."""
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         s.bind((host, 0))
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
+        return int(s.getsockname()[1])
 
 
 def is_app_server_running(port: int, host: str = "localhost") -> bool:
     """Check if the app server is running."""
     try:
-        return requests.get(f"http://{host}:{port}/_stcore/health", timeout=1).text == "ok"
+        return (
+            requests.get(f"http://{host}:{port}/_stcore/health", timeout=1).text == "ok"
+        )
     except Exception:
         return False
 
