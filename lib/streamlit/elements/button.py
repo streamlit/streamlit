@@ -38,7 +38,6 @@ from streamlit.type_util import Key, to_key
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-
 FORM_DOCS_INFO: Final = """
 
 For more information, refer to the
@@ -179,6 +178,7 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
@@ -308,6 +308,14 @@ class ButtonMixin:
 
         """
         ctx = get_script_run_ctx()
+
+        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
+        if type not in ["primary", "secondary"]:
+            raise StreamlitAPIException(
+                'The type argument to st.button must be "primary" or "secondary". \n'
+                f'The argument passed was "{type}".'
+            )
+
         return self._download_button(
             label=label,
             data=data,
@@ -319,6 +327,7 @@ class ButtonMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            type=type,
             use_container_width=use_container_width,
             ctx=ctx,
         )
@@ -335,6 +344,7 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
         ctx: Optional[ScriptRunContext] = None,
@@ -352,6 +362,7 @@ class ButtonMixin:
         download_button_proto.use_container_width = use_container_width
         download_button_proto.label = label
         download_button_proto.default = False
+        download_button_proto.type = type
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
