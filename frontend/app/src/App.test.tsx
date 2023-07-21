@@ -933,22 +933,22 @@ describe("App.onHistoryChange", () => {
 
   it("does rerun when we are navigating to a different page and the last window history url contains an anchor", async () => {
     const pushStateSpy = jest.spyOn(window.history, "pushState")
-
-    jest.spyOn(instance, "onPageChange")
+    const pageChangeSpy = jest.spyOn(instance, "onPageChange")
 
     // navigate to current page with anchor
     window.history.pushState({}, "", "#foo_bar")
     instance.onHistoryChange()
-    expect(instance.onPageChange).not.toHaveBeenCalled()
+    expect(pageChangeSpy).not.toHaveBeenCalled()
 
     // navigate to new page
     instance.handleNewSession(
       new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
     )
-    window.history.back()
+    instance.onHistoryChange()
 
+    // Check for rerun
     await waitFor(() => {
-      expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
+      expect(pageChangeSpy).toHaveBeenCalledWith("sub_hash")
     })
 
     pushStateSpy.mockRestore()
