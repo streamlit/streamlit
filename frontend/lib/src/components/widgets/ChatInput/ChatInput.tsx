@@ -61,7 +61,11 @@ const isEnterKeyPressed = (
   // https://bugs.chromium.org/p/chromium/issues/detail?id=79407
 
   const { keyCode, key } = event
-  return key === "Enter" || keyCode === 13 || keyCode === 10
+  return (
+    (key === "Enter" || keyCode === 13 || keyCode === 10) &&
+    // Do not send the sentence being composed when Enter is typed into the IME.
+    !(event.nativeEvent?.isComposing === true)
+  )
 }
 
 function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
