@@ -20,6 +20,7 @@ import { sprintf } from "sprintf-js"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { logWarning } from "@streamlit/lib/src/util/log"
 import { NumberInput as NumberInputProto } from "@streamlit/lib/src/proto"
+import { breakpoints } from "@streamlit/lib/src/theme/primitives/breakpoints"
 import {
   WidgetStateManager,
   Source,
@@ -410,7 +411,9 @@ class NumberInput extends React.PureComponent<Props, State> {
               },
             }}
           />
-          {width > 120 && (
+
+          {/* We only want to show the increment/decrement controls when there is sufficient room to display the value and these controls. */}
+          {width > breakpoints.numberInputControls && (
             <StyledInputControls>
               <StyledInputControl
                 className="step-down"
