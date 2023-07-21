@@ -31,7 +31,9 @@ NAME = "streamlit"
 # - Always include the lower bound as >= VERSION, to keep testing min versions easy
 # - And include an upper bound that's < NEXT_MAJOR_VERSION
 INSTALL_REQUIRES = [
-    "altair>=4.0, <6",
+    # 4 and 4.1 don't work with jsonschema 4, but doesn't block that version either.
+    # 4.2 is from Dec 2021. As of Jul 2023, 95% of Altair installs use 4.2+.
+    "altair>=4.2, <6",
     "blinker>=1.0.0, <2",
     "cachetools>=4.0, <6",
     "click>=7.0, <9",

@@ -677,7 +677,8 @@ def prep_data(
             # Reuse index's name for the new column.
             x_column = df.index.name
 
-        df = df.reset_index(names=x_column)
+        df.index.name = x_column
+        df = df.reset_index()
 
     # Drop columns we're not using.
     selected_data = _drop_unused_columns(df, x_column, color_column, *wide_y_columns)
