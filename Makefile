@@ -18,7 +18,7 @@ SHELL=/bin/bash
 
 INSTALL_DEV_REQS ?= true
 INSTALL_TEST_REQS ?= true
-USE_CONSTRAINT_FILE ?= true
+USE_CONSTRAINTS_FILE ?= true
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 GITHUB_REPOSITORY ?= streamlit/streamlit
 CONSTRAINTS_BRANCH ?= constraints-develop
@@ -103,7 +103,7 @@ python-init-test-min-deps:
 .PHONY: python-init
 python-init:
 	pip_args=("--editable" "lib[snowflake]");\
-	if [ "${USE_CONSTRAINT_FILE}" = "true" ] ; then\
+	if [ "${USE_CONSTRAINTS_FILE}" = "true" ] ; then\
 		pip_args+=(--constraint "${CONSTRAINTS_URL}"); \
 	fi;\
 	if [ "${INSTALL_DEV_REQS}" = "true" ] ; then\
