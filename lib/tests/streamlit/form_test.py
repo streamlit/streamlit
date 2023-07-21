@@ -324,7 +324,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
             self.assertEqual(submitted, False)
 
     @patch(
-        "streamlit.elements.button.register_widget",
+        "streamlit.elements.widgets.button.register_widget",
         MagicMock(return_value=RegisterWidgetResult(True, False)),
     )
     def test_return_true_when_submitted(self):
