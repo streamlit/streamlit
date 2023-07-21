@@ -495,20 +495,17 @@ export class AppRoot {
   }
 
   public get main(): BlockNode {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [main, sidebar, event] = this.root.children
+    const [main, ,] = this.root.children
     return main as BlockNode
   }
 
   public get sidebar(): BlockNode {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [main, sidebar, event] = this.root.children
+    const [, sidebar] = this.root.children
     return sidebar as BlockNode
   }
 
   public get event(): BlockNode {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [main, sidebar, event] = this.root.children
+    const [, , event] = this.root.children
     return event as BlockNode
   }
 
