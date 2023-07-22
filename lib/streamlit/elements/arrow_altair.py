@@ -774,17 +774,17 @@ def _generate_chart(
         width=width,
         height=height,
     ).encode(
-        x=_get_x_enc(df, x_column, x_from_user, chart_type),
-        y=_get_y_enc(df, y_column, y_from_user),
+        x=_get_x_encoding(df, x_column, x_from_user, chart_type),
+        y=_get_y_encoding(df, y_column, y_from_user),
     )
 
     # Set up opacity encoding.
-    opacity_enc = _get_opacity_enc(chart_type, color_column)
+    opacity_enc = _get_opacity_encoding(chart_type, color_column)
     if opacity_enc is not None:
         chart = chart.encode(opacity=opacity_enc)
 
     # Set up color encoding.
-    color_enc = _get_color_enc(
+    color_enc = _get_color_encoding(
         df, color_value, color_column, y_column_list, color_from_user
     )
     if color_enc is not None:
@@ -793,7 +793,7 @@ def _generate_chart(
     # Set up tooltip encoding.
     if x_column is not None and y_column is not None:
         chart = chart.encode(
-            tooltip=_get_tooltip_enc(
+            tooltip=_get_tooltip_encoding(
                 x_column,
                 y_column,
                 color_column,
@@ -945,7 +945,7 @@ def _parse_y_columns(
     return y_column_list
 
 
-def _get_opacity_enc(
+def _get_opacity_encoding(
     chart_type: ChartType, color_column: Optional[str]
 ) -> Optional[alt.OpacityValue]:
     import altair as alt
@@ -1012,7 +1012,7 @@ def _maybe_melt(
     return df, y_column, color_column
 
 
-def _get_x_enc(
+def _get_x_encoding(
     df: pd.DataFrame,
     x_column: Optional[str],
     x_from_user: Optional[str],
@@ -1046,13 +1046,13 @@ def _get_x_enc(
     return alt.X(
         x_field,
         title=x_title,
-        type=_get_x_type(df, chart_type, x_column),
+        type=_get_x_encoding_type(df, chart_type, x_column),
         scale=_get_scale(df, x_column),
         axis=_get_axis_config(df, x_column, grid=False),
     )
 
 
-def _get_y_enc(
+def _get_y_encoding(
     df: pd.DataFrame,
     y_column: Optional[str],
     y_from_user: Union[str, Sequence[str], None],
@@ -1085,13 +1085,13 @@ def _get_y_enc(
     return alt.Y(
         field=y_field,
         title=y_title,
-        type=_get_y_type(df, y_column),
+        type=_get_y_encoding_type(df, y_column),
         scale=_get_scale(df, y_column),
         axis=_get_axis_config(df, y_column, grid=True),
     )
 
 
-def _get_color_enc(
+def _get_color_encoding(
     df: pd.DataFrame,
     color_value: Optional[Color],
     color_column: Optional[str],
@@ -1172,7 +1172,7 @@ def _get_color_enc(
     return None
 
 
-def _get_tooltip_enc(
+def _get_tooltip_encoding(
     x_column: str,
     y_column: str,
     color_column: Optional[str],
@@ -1221,7 +1221,7 @@ def _get_tooltip_enc(
     return tooltip
 
 
-def _get_x_type(
+def _get_x_encoding_type(
     df: pd.DataFrame, chart_type: ChartType, x_column: Optional[str]
 ) -> Union[str, Tuple[str, List[Any]]]:
     if x_column is None:
@@ -1235,7 +1235,7 @@ def _get_x_type(
     return type_util.infer_vegalite_type(df[x_column])
 
 
-def _get_y_type(
+def _get_y_encoding_type(
     df: pd.DataFrame, y_column: Optional[str]
 ) -> Union[str, Tuple[str, List[Any]]]:
     if y_column:
