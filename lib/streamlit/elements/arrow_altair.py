@@ -1340,11 +1340,11 @@ def _get_color_enc(
     if has_color_value:
 
         # If the color value is color-like, return that.
-        if is_color_like(color_value):
+        if is_color_like(cast(Any, color_value)):
             if len(y_column_list) != 1:
                 raise StreamlitColorLengthError([color_value], y_column_list)
 
-            return alt.ColorValue(to_css_color(color_value))
+            return alt.ColorValue(to_css_color(cast(Any, color_value)))
 
         # If the color value is a list of colors of approriate length, return that.
         elif isinstance(color_value, (list, tuple)):
@@ -1354,7 +1354,7 @@ def _get_color_enc(
                 raise StreamlitColorLengthError(color_values, y_column_list)
 
             if len(color_value) == 1:
-                return alt.ColorValue(to_css_color(color_value[0]))
+                return alt.ColorValue(to_css_color(cast(Any, color_value[0])))
             else:
                 return alt.Color(
                     field=color_column,
