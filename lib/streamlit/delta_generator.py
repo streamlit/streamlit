@@ -120,7 +120,6 @@ ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = (
 
 Value = TypeVar("Value")
 DG = TypeVar("DG", bound="DeltaGenerator")
-DFT = TypeVar("DFT", bound=type_util.DataFrameCompatible)
 
 # Type aliases for Parent Block Types
 BlockType = str
@@ -755,7 +754,7 @@ class DeltaGenerator(
             st_method(data, **kwargs)
             return None
 
-        data, self._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
+        new_data, self._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
             data,
             self._cursor.props["delta_type"],
             self._cursor.props["add_rows_metadata"],
@@ -767,7 +766,7 @@ class DeltaGenerator(
 
         import streamlit.elements.legacy_data_frame as data_frame
 
-        data_frame.marshall_data_frame(data, msg.delta.add_rows.data)
+        data_frame.marshall_data_frame(new_data, msg.delta.add_rows.data)
 
         if name:
             msg.delta.add_rows.name = name
@@ -874,7 +873,7 @@ class DeltaGenerator(
             st_method(data, **kwargs)
             return None
 
-        data, self._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
+        new_data, self._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
             data,
             self._cursor.props["delta_type"],
             self._cursor.props["add_rows_metadata"],
@@ -887,7 +886,7 @@ class DeltaGenerator(
         import streamlit.elements.arrow as arrow_proto
 
         default_uuid = str(hash(self._get_delta_path_str()))
-        arrow_proto.marshall(msg.delta.arrow_add_rows.data, data, default_uuid)
+        arrow_proto.marshall(msg.delta.arrow_add_rows.data, new_data, default_uuid)
 
         if name:
             msg.delta.arrow_add_rows.name = name
@@ -899,14 +898,13 @@ class DeltaGenerator(
 
 
 def _prep_data_for_add_rows(
-    data: DFT,
+    data: Data,
     delta_type: str,
     add_rows_metadata: AddRowsMetadata,
     is_legacy: bool,
-) -> tuple[DFT | DataFrame, int | Any]:
-    import pandas as pd
+) -> tuple[Data, AddRowsMetadata]:
 
-    df = cast(pd.DataFrame, type_util.convert_anything_to_df(data, allow_styler=True))
+    out_data: Data
 
     # For some delta types we have to reshape the data structure
     # otherwise the input data and the actual data used
@@ -915,6 +913,10 @@ def _prep_data_for_add_rows(
         delta_type in DELTA_TYPES_THAT_MELT_DATAFRAMES
         or delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
     ):
+        import pandas as pd
+
+        df = cast(pd.DataFrame, type_util.convert_anything_to_df(data))
+
         # Make range indices start at last_index.
         if isinstance(df.index, pd.RangeIndex):
             old_step = _get_pandas_index_attr(df, "step")
@@ -940,11 +942,15 @@ def _prep_data_for_add_rows(
             if index_name is None:
                 index_name = "index"
 
-            df = pd.melt(df.reset_index(), id_vars=[index_name])
+            out_data = pd.melt(df.reset_index(), id_vars=[index_name])
         else:
-            df, *_ = prep_data(df, **add_rows_metadata.columns)
+            out_data, *_ = prep_data(df, **add_rows_metadata.columns)
 
-    return df, add_rows_metadata
+    else:
+        # When calling add_rows on st.table or st.dataframe we want styles to pass through.
+        out_data = type_util.convert_anything_to_df(data, allow_styler=True)
+
+    return out_data, add_rows_metadata
 
 
 def _get_pandas_index_attr(

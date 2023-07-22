@@ -317,7 +317,7 @@ def generate_chart(chart_type, data, width: int = 0, height: int = 0):
         # Not used:
         columns=dict(
             x_column=index_name,
-            wide_y_columns=[],
+            y_column_list=[],
             color_column=None,
         ),
     )
