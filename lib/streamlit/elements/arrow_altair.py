@@ -989,10 +989,7 @@ def _maybe_melt(
     y_column_list: List[str],
     color_column: Optional[str],
 ) -> Tuple[pd.DataFrame, Optional[str], Optional[str]]:
-    """If multiple columns are set for y, melt the dataframe into long format.
-
-    (Melting is done automatically in Vega-Lite via a "fold" transform)
-    """
+    """If multiple columns are set for y, melt the dataframe into long format."""
     y_column: Optional[str]
 
     if len(y_column_list) == 0:
@@ -1013,27 +1010,6 @@ def _maybe_melt(
         )
 
     return df, y_column, color_column
-
-
-def _maybe_melt_altair(
-    chart: alt.Chart, y_column_list: List[str], color_column: Optional[str]
-) -> Tuple[alt.Chart, Optional[str], Optional[str]]:
-    """If multiple columns are set for y, melt the dataframe into long format.
-
-    (Melting is done automatically in Vega-Lite via a "fold" transform)
-    """
-    if len(y_column_list) == 0:
-        y_column = None
-    elif len(y_column_list) == 1:
-        y_column = y_column_list[0]
-    else:
-        # Pick column names that are unlikely to collide with user-given names.
-        y_column = MELTED_Y_COLUMN_NAME
-        color_column = MELTED_COLOR_COLUMN_NAME
-
-        chart = chart.transform_fold(y_column_list, as_=[color_column, y_column])
-
-    return chart, y_column, color_column
 
 
 def _get_x_enc(
