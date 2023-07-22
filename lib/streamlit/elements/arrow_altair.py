@@ -1244,27 +1244,6 @@ def _get_y_encoding_type(
     return "quantitative"  # Pick anything. If undefined, Vega-Lite may hide the axis.
 
 
-def _dedupe_and_remove_none(*items):
-    """Returns a subset of "items" where there are no dupes or Nones."""
-
-    # Can't just call set(items) because sets don't have stable ordering,
-    # which means tests that depend on ordering will fail.
-    # Performance-wise, it's not a problem, though, since this function is only ever
-    # used on very small lists.
-    seen = set()
-    out = []
-
-    for x in items:
-        if x is None:
-            continue
-        if x in seen:
-            continue
-        seen.add(x)
-        out.append(x)
-
-    return out
-
-
 def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
     altair_chart: alt.Chart,
