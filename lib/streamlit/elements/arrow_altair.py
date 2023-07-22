@@ -981,7 +981,7 @@ def _generate_chart(
 
     # Set up color encoding.
     color_enc = _get_color_enc(
-        df, color_from_user, color_value, color_column, y_column_list
+        df, color_value, color_column, y_column_list, color_from_user
     )
     if color_enc is not None:
         chart = chart.encode(color=color_enc)
@@ -1104,10 +1104,7 @@ def _parse_x_column(df: pd.DataFrame, x_from_user: Optional[str]) -> Optional[st
 
     elif isinstance(x_from_user, str):
         if x_from_user not in df.columns:
-            raise StreamlitAPIException(
-                "x parameter does not appear to be a column name. "
-                f"Value given: {x_from_user}"
-            )
+            raise StreamlitColumnNotFoundError(df, x_from_user)
 
         return x_from_user
 
@@ -1143,11 +1140,7 @@ def _parse_y_columns(
 
     for col in y_column_list:
         if col not in df.columns:
-            available_columns = ", ".join(str(c) for c in list(df.columns))
-            raise StreamlitAPIException(
-                f"Dataset does not have a column named {col}. "
-                f"Available columns are: {available_columns}"
-            )
+            raise StreamlitColumnNotFoundError(df, col)
 
     # y_column_list should only include x_column when user explicitly asked for it.
     if x_column in y_column_list and (not y_from_user or x_column not in y_from_user):
@@ -1331,110 +1324,26 @@ def _get_y_enc(
     )
 
 
-def _get_tooltip_enc(
-    x_column: str,
-    y_column: str,
-    size_column: Optional[str],
-    color_column: Optional[str],
-    color_enc: alt.Color,
-) -> list[alt.Tooltip]:
-    import altair as alt
-
-    tooltip = []
-
-    # If the x column name is the crazy anti-collision name we gave it, then need to set
-    # up a tooltip title so we never show the crazy name to the user.
-    if x_column == SEPARATED_INDEX_COLUMN_NAME:
-        tooltip.append(alt.Tooltip(x_column, title=SEPARATED_INDEX_COLUMN_TITLE))
-    else:
-        tooltip.append(alt.Tooltip(x_column))
-
-    # If the y column name is the crazy anti-collision name we gave it, then need to set
-    # up a tooltip title so we never show the crazy name to the user.
-    if y_column == MELTED_Y_COLUMN_NAME:
-        tooltip.append(
-            alt.Tooltip(
-                y_column,
-                title=MELTED_Y_COLUMN_TITLE,
-                type="quantitative",  # Just picked something random. Doesn't really matter!
-            )
-        )
-    else:
-        tooltip.append(alt.Tooltip(y_column))
-
-    # If we earlier decided that there should be no color legend, that's because the
-    # user passed a color column with actual color values (like "#ff0"), so we should
-    # not show the color values in the tooltip.
-    if color_column and color_enc["legend"] is not None:
-        # Use a human-readable title for the color.
-        if color_column == MELTED_COLOR_COLUMN_NAME:
-            tooltip.append(
-                alt.Tooltip(
-                    color_column,
-                    title=MELTED_COLOR_COLUMN_TITLE,
-                    type="nominal",
-                )
-            )
-        else:
-            tooltip.append(alt.Tooltip(color_column))
-
-    if size_column:
-        tooltip.append(alt.Tooltip(size_column))
-
-    return tooltip
-
-
-def _get_size_enc(
-    chart_type: ChartType,
-    size_column: Optional[str],
-    size_value: Union[str, float, None],
-) -> alt.Size:
-    import altair as alt
-
-    if chart_type == ChartType.SCATTER:
-        if size_column is not None:
-            return alt.Size(
-                size_column,
-                legend=SIZE_LEGEND_SETTINGS,
-            )
-
-        elif isinstance(size_value, (float, int)):
-            return alt.SizeValue(size_value)
-        elif size_value is None:
-            return alt.SizeValue(100)
-        else:
-            raise StreamlitAPIException(
-                f"This does not look like a valid size: {repr(size_value)}"
-            )
-
-    elif size_column is not None or size_value is not None:
-        raise Error(
-            f"Chart type {chart_type.name} does not not support size argument. "
-            "This should never happen!"
-        )
-
-    return None
-
-
 def _get_color_enc(
     df: pd.DataFrame,
-    color_from_user: Union[str, Color, List[Color], None],
     color_value: Optional[Color],
     color_column: Optional[str],
     y_column_list: List[str],
+    color_from_user: Union[str, Color, List[Color], None],
 ) -> alt.Color:
     import altair as alt
 
-    # If not color, nothing to do here.
-    if color_value is None and color_column is None:
-        return None
+    has_color_value = color_value not in [None, []]
 
     # If user passed a color value, that should win over colors coming from the
-    # color column (be them manual or auto-assigned due to melting)
-    elif color_value is not None:
+    # color column (be they manual or auto-assigned due to melting)
+    if has_color_value:
 
         # If the color value is color-like, return that.
         if is_color_like(color_value):
+            if len(y_column_list) != 1:
+                raise StreamlitColorLengthError([color_value], y_column_list)
+
             return alt.ColorValue(to_css_color(color_value))
 
         # If the color value is a list of colors of approriate length, return that.
@@ -1442,19 +1351,20 @@ def _get_color_enc(
             color_values = cast(Collection[Color], color_value)
 
             if len(color_values) != len(y_column_list):
-                raise StreamlitAPIException(
-                    f"The number of provided colors in `{color_values}` does not "
-                    "match the number of columns to be colored, in "
-                    f"`{y_column_list}`."
+                raise StreamlitColorLengthError(color_values, y_column_list)
+
+            if len(color_value) == 1:
+                return alt.ColorValue(to_css_color(color_value[0]))
+            else:
+                return alt.Color(
+                    field=color_column,
+                    scale=alt.Scale(range=[to_css_color(c) for c in color_values]),
+                    legend=COLOR_LEGEND_SETTINGS,
+                    type="nominal",
+                    title=" ",
                 )
 
-            return alt.Color(
-                field=color_column,
-                scale=alt.Scale(range=[to_css_color(c) for c in color_values]),
-                legend=COLOR_LEGEND_SETTINGS,
-                type="nominal",
-                title=" ",
-            )
+        raise StreamlitInvalidColorError(df, color_from_user)
 
     elif color_column is not None:
         column_type: Union[str, Tuple[str, List[Any]]]
@@ -1493,6 +1403,91 @@ def _get_color_enc(
         return color_enc
 
     return None
+
+
+def _get_size_enc(
+    chart_type: ChartType,
+    size_column: Optional[str],
+    size_value: Union[str, float, None],
+) -> alt.Size:
+    import altair as alt
+
+    if chart_type == ChartType.SCATTER:
+        if size_column is not None:
+            return alt.Size(
+                size_column,
+                legend=SIZE_LEGEND_SETTINGS,
+            )
+
+        elif isinstance(size_value, (float, int)):
+            return alt.SizeValue(size_value)
+        elif size_value is None:
+            return alt.SizeValue(100)
+        else:
+            raise StreamlitAPIException(
+                f"This does not look like a valid size: {repr(size_value)}"
+            )
+
+    elif size_column is not None or size_value is not None:
+        raise Error(
+            f"Chart type {chart_type.name} does not not support size argument. "
+            "This should never happen!"
+        )
+
+    return None
+
+
+def _get_tooltip_enc(
+    x_column: str,
+    y_column: str,
+    size_column: Optional[str],
+    color_column: Optional[str],
+    color_enc: alt.Color,
+) -> list[alt.Tooltip]:
+    import altair as alt
+
+    tooltip = []
+
+    # If the x column name is the crazy anti-collision name we gave it, then need to set
+    # up a tooltip title so we never show the crazy name to the user.
+    if x_column == SEPARATED_INDEX_COLUMN_NAME:
+        tooltip.append(alt.Tooltip(x_column, title=SEPARATED_INDEX_COLUMN_TITLE))
+    else:
+        tooltip.append(alt.Tooltip(x_column))
+
+    # If the y column name is the crazy anti-collision name we gave it, then need to set
+    # up a tooltip title so we never show the crazy name to the user.
+    if y_column == MELTED_Y_COLUMN_NAME:
+        tooltip.append(
+            alt.Tooltip(
+                y_column,
+                title=MELTED_Y_COLUMN_TITLE,
+                type="quantitative",  # Just picked something random. Doesn't really matter!
+            )
+        )
+    else:
+        tooltip.append(alt.Tooltip(y_column))
+
+    # If we earlier decided that there should be no color legend, that's because the
+    # user passed a color column with actual color values (like "#ff0"), so we should
+    # not show the color values in the tooltip.
+    if color_column and getattr(color_enc, "legend", True) is not None:
+        # Use a human-readable title for the color.
+        if color_column == MELTED_COLOR_COLUMN_NAME:
+            tooltip.append(
+                alt.Tooltip(
+                    color_column,
+                    title=MELTED_COLOR_COLUMN_TITLE,
+                    type="nominal",
+                )
+            )
+        else:
+            tooltip.append(alt.Tooltip(color_column))
+
+    if size_column:
+        tooltip.append(alt.Tooltip(size_column))
+
+    return tooltip
 
 
 def _get_x_type(
@@ -1583,3 +1578,41 @@ def marshall(
                 theme=theme,
                 **kwargs,
             )
+
+
+class StreamlitColumnNotFoundError(StreamlitAPIException):
+    def __init__(self, df, col_name, *args):
+        available_columns = ", ".join(str(c) for c in list(df.columns))
+        message = (
+            f'Data does not have a column named `"{col_name}"`. '
+            f"Available columns are `{available_columns}`"
+        )
+        super().__init__(message, *args)
+
+
+class StreamlitInvalidColorError(StreamlitAPIException):
+    def __init__(self, df, color_from_user, *args):
+        ", ".join(str(c) for c in list(df.columns))
+        message = f"""
+This does not look like a valid color argument: `{color_from_user}`.
+
+The color argument can be:
+
+* A hex string like "#ffaa00" or "#ffaa0088".
+* An RGB or RGBA tuple with the red, green, #04f, and alpha
+  components specified as ints from 0 to 255 or floats from 0.0 to
+  1.0.
+* The name of a column.
+* Or a list of colors, matching the number of y columns to draw.
+        """
+        super().__init__(message, *args)
+
+
+class StreamlitColorLengthError(StreamlitAPIException):
+    def __init__(self, color_values, y_column_list, *args):
+        message = (
+            f"The list of colors `{color_values}` must have the same "
+            "length as the list of columns to be colored "
+            f"`{y_column_list}`."
+        )
+        super().__init__(message, *args)

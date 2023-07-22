@@ -618,6 +618,43 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
         )
 
+    @parameterized.expand(
+        [
+            (st._arrow_area_chart, "area"),
+            (st._arrow_bar_chart, "bar"),
+            (st._arrow_line_chart, "line"),
+        ]
+    )
+    def test_arrow_chart_with_bad_color_arg(
+        self, chart_command: Callable, altair_type: str
+    ):
+        """Test that we throw a pretty exception when colors arg is wrong."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        too_few_args = ["#f00", ["#f00"], (1, 0, 0, 0.5)]
+        too_many_args = [["#f00", "#0ff"], [(1, 0, 0), (0, 0, 1)]]
+        bad_args = ["foo", "blue"]
+
+        for color_arg in too_few_args:
+            with self.assertRaises(StreamlitAPIException) as exc:
+                chart_command(df, y=["a", "b"], color=color_arg)
+
+            self.assertTrue("The list of colors" in str(exc.exception))
+
+        for color_arg in too_many_args:
+            with self.assertRaises(StreamlitAPIException) as exc:
+                chart_command(df, y="a", color=color_arg)
+
+            self.assertTrue("The list of colors" in str(exc.exception))
+
+        for color_arg in bad_args:
+            with self.assertRaises(StreamlitAPIException) as exc:
+                chart_command(df, y="a", color=color_arg)
+
+            self.assertTrue(
+                "This does not look like a valid color argument" in str(exc.exception)
+            )
+
     def assert_output_df_is_correct_and_input_is_untouched(
         self, orig_df, expected_df, chart_proto
     ):
