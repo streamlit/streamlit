@@ -20,6 +20,7 @@ import { sprintf } from "sprintf-js"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { logWarning } from "@streamlit/lib/src/util/log"
 import { NumberInput as NumberInputProto } from "@streamlit/lib/src/proto"
+import { breakpoints } from "@streamlit/lib/src/theme/primitives/breakpoints"
 import {
   WidgetStateManager,
   Source,
@@ -410,30 +411,34 @@ class NumberInput extends React.PureComponent<Props, State> {
               },
             }}
           />
-          <StyledInputControls>
-            <StyledInputControl
-              className="step-down"
-              onClick={this.modifyValueUsingStep("decrement")}
-              disabled={disableDecrement}
-            >
-              <Icon
-                content={Minus}
-                size="xs"
-                color={this.canDecrement ? "inherit" : "disabled"}
-              />
-            </StyledInputControl>
-            <StyledInputControl
-              className="step-up"
-              onClick={this.modifyValueUsingStep("increment")}
-              disabled={disableIncrement}
-            >
-              <Icon
-                content={Plus}
-                size="xs"
-                color={this.canIncrement ? "inherit" : "disabled"}
-              />
-            </StyledInputControl>
-          </StyledInputControls>
+
+          {/* We only want to show the increment/decrement controls when there is sufficient room to display the value and these controls. */}
+          {width > breakpoints.numberInputControls && (
+            <StyledInputControls>
+              <StyledInputControl
+                className="step-down"
+                onClick={this.modifyValueUsingStep("decrement")}
+                disabled={disableDecrement}
+              >
+                <Icon
+                  content={Minus}
+                  size="xs"
+                  color={this.canDecrement ? "inherit" : "disabled"}
+                />
+              </StyledInputControl>
+              <StyledInputControl
+                className="step-up"
+                onClick={this.modifyValueUsingStep("increment")}
+                disabled={disableIncrement}
+              >
+                <Icon
+                  content={Plus}
+                  size="xs"
+                  color={this.canIncrement ? "inherit" : "disabled"}
+                />
+              </StyledInputControl>
+            </StyledInputControls>
+          )}
         </StyledInputContainer>
         <StyledInstructionsContainer>
           <InputInstructions

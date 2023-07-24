@@ -21,6 +21,7 @@ import {
 } from "@streamlit/lib/src/proto"
 import React from "react"
 import { mount, shallow } from "@streamlit/lib/src/test_util"
+import { StyledInputControls } from "@streamlit/lib/src/components/widgets/NumberInput/styled-components"
 import { Input as UIInput } from "baseui/input"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
@@ -33,7 +34,7 @@ const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
     hasMax: false,
     ...elementProps,
   }),
-  width: 0,
+  width: 300,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
@@ -451,6 +452,20 @@ describe("NumberInput widget", () => {
 
       expect(wrapper.state("value")).toBe(2)
       expect(stepUpButton(wrapper).prop("disabled")).toBe(true)
+    })
+
+    it("hides stepUp and stepDown buttons when width is smaller than 120px", () => {
+      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
+      const wrapper = shallow(<NumberInput {...props} width={100} />)
+
+      expect(wrapper.find(StyledInputControls).exists()).toBe(false)
+    })
+
+    it("shows stepUp and stepDown buttons when width is bigger than 120px", () => {
+      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
+      const wrapper = shallow(<NumberInput {...props} width={125} />)
+
+      expect(wrapper.find(StyledInputControls).exists()).toBe(true)
     })
   })
 })
