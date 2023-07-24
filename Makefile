@@ -410,3 +410,21 @@ connect-test-env:
 .PHONY: pre-commit-install
 pre-commit-install:
 	pre-commit install
+
+.PHONY: ensure-relative-imports
+# ensure relative imports exist within the lib/dist folder when doing yarn buildLibProd
+ensure-relative-imports:
+	./scripts/ensure_relative_imports.sh
+
+.PHONY frontend-lib-prod:
+# build the production version for @streamlit/lib
+frontend-lib-prod:
+	cd frontend/ ; yarn run buildLibProd;
+
+.PHONY streamlit-lib-prod:
+# build the production version for @streamlit/lib
+# while also doing a make init so it's a single command
+streamlit-lib-prod:
+	make mini-init;
+	make frontend-lib-prod;
+
