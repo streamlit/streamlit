@@ -794,6 +794,7 @@ class DataEditorMixin:
         id = new_compute_widget_id(
             "data_editor",
             user_key=key,
+            # TODO is this in a format where the string bytes accurately represent it?
             data=arrow_table,
             width=width,
             height=height,
