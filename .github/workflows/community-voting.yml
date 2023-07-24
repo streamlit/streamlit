@@ -1,4 +1,3 @@
-
 # This workflow automatically comments on issue labeled with 'type:enhancement'
 # and adds a thumbs up reaction to the issue to encourage community voting.
 
@@ -25,5 +24,5 @@ jobs:
       - name: Upvote issue
         uses: aidan-mundy/react-to-issue@bc84ae193d0d4a2ca36a9a411ee52e5d065cc415
         with:
-            issue-number: ${{ github.event.issue.number }}
-            reactions: '+1'
+          issue-number: ${{ github.event.issue.number }}
+          reactions: "+1"
