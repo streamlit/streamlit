@@ -387,7 +387,7 @@ class SessionStateSerdeTest(DeltaGeneratorTestCase):
         )
         check_roundtrip("date_interval", date_interval)
 
-    @patch("streamlit.elements.file_uploader._get_file_recs")
+    @patch("streamlit.elements.widgets.file_uploader._get_file_recs")
     def test_file_uploader_serde(self, get_file_recs_patch):
         file_recs = [
             UploadedFileRec(1, "file1", "type", b"123"),

@@ -27,10 +27,7 @@ source:
   path: ..
 
 build:
-  # NOTE: The build number is set because it's required, but it's essentially
-  # unused since the GIT_HASH uniquely identifies this build.
-  number: 0
-  string: {{ environ.get('GIT_HASH') }}
+  number: {{ environ.get('CONDA_BUILD_NUMBER', 0)|int }}
   noarch: python
   script: python -m pip install . -vv
   entry_points:

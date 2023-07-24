@@ -341,7 +341,7 @@ describe("formatNumber", () => {
     (input: number, format: string) => {
       expect(() => {
         formatNumber(input, format)
-      }).toThrowError()
+      }).toThrow()
     }
   )
 })

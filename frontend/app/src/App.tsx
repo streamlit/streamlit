@@ -1599,6 +1599,7 @@ export class App extends PureComponent<Props, State> {
             setTheme: this.setAndSendTheme,
             availableThemes: this.props.theme.availableThemes,
             addThemes: this.props.theme.addThemes,
+            hideFullScreenButtons: false,
           }}
         >
           <HotKeys
