@@ -294,12 +294,14 @@ class MultiSelectMixin:
         opt = ensure_indexable(options)
         maybe_raise_label_warnings(label, label_visibility)
 
+        indices = _check_and_convert_to_indices(opt, default)
+
         id = new_compute_widget_id(
             "multiselect",
             user_key=key,
             label=label,
             options=[str(format_func(option)) for option in opt],
-            default=default,
+            default=indices,
             key=key,
             help=help,
             max_selections=max_selections,
@@ -307,11 +309,11 @@ class MultiSelectMixin:
             form_id=current_form_id(self.dg),
         )
 
-        indices = _check_and_convert_to_indices(opt, default)
+        default_value: List[int] = [] if indices is None else indices
+
         multiselect_proto = MultiSelectProto()
         multiselect_proto.id = id
         multiselect_proto.label = label
-        default_value: List[int] = [] if indices is None else indices
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
         multiselect_proto.form_id = current_form_id(self.dg)
