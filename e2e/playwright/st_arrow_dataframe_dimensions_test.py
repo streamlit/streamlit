@@ -33,7 +33,6 @@ def test_data_frame_with_different_sizes(app: Page):
     ]
 
     elements = app.locator(".stDataFrame").all()
-    # .query_selector_all(".stDataFrame")
     assert len(elements) == 12
 
     for i, element in enumerate(elements):
