@@ -149,6 +149,7 @@ class RunWarningTest(unittest.TestCase):
                 "text_input",
                 "time_input",
                 "title",
+                "toast",
                 "vega_lite_chart",
                 "video",
                 "warning",

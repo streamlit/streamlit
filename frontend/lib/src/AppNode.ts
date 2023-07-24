@@ -16,7 +16,7 @@
 
 import { produce } from "immer"
 import { Map as ImmutableMap } from "immutable"
-import Protobuf, {
+import {
   Arrow as ArrowProto,
   ArrowNamedDataSet,
   ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -470,29 +470,43 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
-    return new AppRoot(new BlockNode([main, sidebar]))
+    const event = new BlockNode(
+      [],
+      new BlockProto({ allowEmpty: true }),
+      NO_SCRIPT_RUN_ID
+    )
+
+    return new AppRoot(new BlockNode([main, sidebar, event]))
   }
 
   public constructor(root: BlockNode) {
     this.root = root
 
-    // Verify that our root node has exactly 2 children: a 'main' block and
-    // a 'sidebar' block.
+    // Verify that our root node has exactly 3 children: a 'main' block,
+    // a 'sidebar' block, and an 'event' block.
     if (
-      this.root.children.length !== 2 ||
+      this.root.children.length !== 3 ||
       this.main == null ||
-      this.sidebar == null
+      this.sidebar == null ||
+      this.event == null
     ) {
       throw new Error(`Invalid root node children! ${root}`)
     }
   }
 
   public get main(): BlockNode {
-    return this.root.children[Protobuf.RootContainer.MAIN] as BlockNode
+    const [main, ,] = this.root.children
+    return main as BlockNode
   }
 
   public get sidebar(): BlockNode {
-    return this.root.children[Protobuf.RootContainer.SIDEBAR] as BlockNode
+    const [, sidebar] = this.root.children
+    return sidebar as BlockNode
+  }
+
+  public get event(): BlockNode {
+    const [, , event] = this.root.children
+    return event as BlockNode
   }
 
   public applyDelta(
@@ -557,10 +571,12 @@ export class AppRoot {
       this.main.clearStaleNodes(currentScriptRunId) || new BlockNode()
     const sidebar =
       this.sidebar.clearStaleNodes(currentScriptRunId) || new BlockNode()
+    const event =
+      this.event.clearStaleNodes(currentScriptRunId) || new BlockNode()
 
     return new AppRoot(
       new BlockNode(
-        [main, sidebar],
+        [main, sidebar, event],
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
       )
@@ -572,6 +588,7 @@ export class AppRoot {
     const elements = new Set<Element>()
     this.main.getElements(elements)
     this.sidebar.getElements(elements)
+    this.event.getElements(elements)
     return elements
   }
 

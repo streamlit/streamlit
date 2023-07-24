@@ -17,10 +17,12 @@
 import React, { ReactElement } from "react"
 import "@testing-library/jest-dom"
 import ReactMarkdown from "react-markdown"
+import { screen, cleanup } from "@testing-library/react"
+
 import { mount, render } from "@streamlit/lib/src/test_util"
-import { cleanup } from "@testing-library/react"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import { colors } from "@streamlit/lib/src/theme/primitives/colors"
+
 import StreamlitMarkdown, {
   LinkWithTargetBlank,
   createAnchorFromText,
@@ -254,6 +256,14 @@ describe("StreamlitMarkdown", () => {
     const invalidTag = container.querySelector("a")
     expect(invalidTag).toBeNull()
     expect(container).toHaveTextContent("Link: ")
+  })
+
+  it("renders smaller text sizing when isToast is true", () => {
+    const source = "Here is some toast text"
+    render(<StreamlitMarkdown source={source} allowHTML={false} isToast />)
+
+    const textTag = screen.getByText("Here is some toast text")
+    expect(textTag).toHaveStyle("font-size: 14px")
   })
 
   it("colours text properly", () => {

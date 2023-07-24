@@ -28,7 +28,12 @@ import pyarrow as pa
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.data_editor import (
+from streamlit.elements.lib.column_config_utils import (
+    INDEX_IDENTIFIER,
+    ColumnDataKind,
+    determine_dataframe_schema,
+)
+from streamlit.elements.widgets.data_editor import (
     _apply_cell_edits,
     _apply_dataframe_edits,
     _apply_row_additions,
@@ -36,11 +41,6 @@ from streamlit.elements.data_editor import (
     _check_column_names,
     _check_type_compatibilities,
     _parse_value,
-)
-from streamlit.elements.lib.column_config_utils import (
-    INDEX_IDENTIFIER,
-    ColumnDataKind,
-    determine_dataframe_schema,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto

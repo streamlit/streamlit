@@ -215,6 +215,18 @@ class DateInput extends React.PureComponent<Props, State> {
     const minDate = moment(element.min, DATE_FORMAT).toDate()
     const maxDate = this.getMaxDate()
 
+    // We need to extract the mask and format (date-fns notation) from the provided format string
+    // The user configured date format is based on the momentJS notation and is only allowed to contain
+    // one of YYYY/MM/DD, DD/MM/YYYY, or MM/DD/YYYY" and can also use a period (.) or hyphen (-) as separators.
+
+    // We need to convert the provided format into a mask supported by the Baseweb datepicker
+    // Thereby, we need to replace all letters with 9s which refers to any number.
+    const dateMask = element.format.replaceAll(/[a-zA-Z]/g, "9")
+    // The Baseweb datepicker supports the date-fns notation for date formatting which is
+    // slightly different from the momentJS notation. Therefore, we need to
+    // convert the provided format into the date-fns notation:
+    const dateFormat = element.format.replaceAll("Y", "y").replaceAll("D", "d")
+
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
       widgetMgr,
@@ -241,8 +253,13 @@ class DateInput extends React.PureComponent<Props, State> {
           )}
         </WidgetLabel>
         <UIDatePicker
+          data-testid="stDateInputPicker"
           density={DENSITY.high}
-          formatString="yyyy/MM/dd"
+          formatString={dateFormat}
+          mask={isRange ? `${dateMask} – ${dateMask}` : dateMask}
+          placeholder={
+            isRange ? `${element.format} – ${element.format}` : element.format
+          }
           disabled={disabled}
           onChange={this.handleChange}
           onClose={this.handleClose}

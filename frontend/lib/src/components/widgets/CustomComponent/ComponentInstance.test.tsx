@@ -116,7 +116,7 @@ class MockComponent {
     this.instance = this.wrapper.instance()
 
     // Ensure we mounted without error.
-    expect(this.instance.state.componentError).toBeUndefined()
+    expect(this.instance.state.componentError).toBeUndefined() // eslint-disable-line jest/no-standalone-expect
 
     // Spy on the ComponentInstance's iframe's postMessage function.
     const unsafeInstance = this.instance as any
@@ -166,7 +166,7 @@ class MockComponent {
     const unsafeInstance = this.instance as any
 
     // Verify the iframe exists
-    expect(unsafeInstance.iframeRef.current).not.toBeNull()
+    expect(unsafeInstance.iframeRef.current).not.toBeNull() // eslint-disable-line jest/no-standalone-expect
 
     unsafeInstance.onBackMsg(type, data)
 
@@ -310,9 +310,7 @@ describe("ComponentInstance", () => {
     )
   })
 
-  it("sends dataframe args to iframe", () => {
-    // TODO for Henrikh
-  })
+  // TODO: implement test to check sends dataframe args to iframe
 
   it("sends theme object to iframe", () => {
     const mc = new MockComponent()
@@ -515,9 +513,7 @@ describe("ComponentInstance", () => {
       )
     })
 
-    it("handles dataframe values", () => {
-      // TODO by Henrikh
-    })
+    // TODO: implement test to check handling of daataframe values
 
     it("warns if called before COMPONENT_READY", () => {
       const jsonValue = {

@@ -138,6 +138,10 @@ class SelectboxMixin:
             An optional dict of kwargs to pass to the callback.
         placeholder : str
             A string to display when no options are selected. Defaults to 'Select...'.
+
+            A selectbox can't be empty, so a placeholder only displays while a
+            user's cursor is in a selectbox after manually deleting the current
+            selection. A future update will allow selectboxes to be empty.
         disabled : bool
             An optional boolean, which disables the selectbox if set to True.
             The default is False. This argument can only be supplied by keyword.

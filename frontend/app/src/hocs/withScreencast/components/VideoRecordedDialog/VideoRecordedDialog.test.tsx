@@ -59,7 +59,7 @@ describe("VideoRecordedDialog", () => {
     const bodyWrapper = wrapper.find(ModalBody)
 
     expect(bodyWrapper.find("StyledVideo").length).toBe(1)
-    expect(URL.createObjectURL).toBeCalled()
+    expect(URL.createObjectURL).toHaveBeenCalled()
   })
 
   it("should render a download button", () => {
@@ -68,7 +68,7 @@ describe("VideoRecordedDialog", () => {
     buttonWrapper.simulate("click")
 
     expect(buttonWrapper.length).toBe(1)
-    expect(props.onClose).toBeCalled()
+    expect(props.onClose).toHaveBeenCalled()
   })
 
   it("should render a Modal with overridden width", () => {

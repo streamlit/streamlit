@@ -42,7 +42,7 @@ jobs:
 
     env:
       # We don't want to use constraints files because they might not exist yet.
-      USE_CONSTRAINT_FILE: "false"
+      USE_CONSTRAINTS_FILE: "false"
 
     steps:
       - name: Checkout Streamlit code

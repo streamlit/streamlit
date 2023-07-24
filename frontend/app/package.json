@@ -3,6 +3,7 @@
   "version": "1.24.1",
   "license": "Apache-2.0",
   "private": true,
+  "homepage": "./",
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",

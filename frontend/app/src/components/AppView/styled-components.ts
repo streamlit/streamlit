@@ -76,6 +76,7 @@ export interface StyledAppViewBlockContainerProps {
   showPadding: boolean
   addPaddingForHeader: boolean
   addPaddingForChatInput: boolean
+  events: boolean
 }
 
 export const StyledAppViewBlockContainer =
@@ -85,6 +86,7 @@ export const StyledAppViewBlockContainer =
       showPadding,
       addPaddingForHeader,
       addPaddingForChatInput,
+      events,
       theme,
     }) => {
       let topEmbedPadding: string = showPadding ? "6rem" : "1rem"
@@ -95,6 +97,8 @@ export const StyledAppViewBlockContainer =
         showPadding || addPaddingForChatInput ? "10rem" : "1rem"
       const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
       return {
+        // Don't want to display this element for events (which are outside main/sidebar flow)
+        ...(events && { display: "none" }),
         width: theme.sizes.full,
         paddingLeft: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
         paddingRight: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
