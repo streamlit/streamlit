@@ -99,7 +99,7 @@ class AsyncSubprocess:
 def find_available_port(host: str = "localhost") -> int:
     """Find an available port on the given host."""
     with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind((host, 0))
+        s.bind((host, 0))  # 0 means that the OS chooses a random port
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return int(s.getsockname()[1])
 
