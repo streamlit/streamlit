@@ -183,8 +183,8 @@ SAFE_VALUES = Union[
 
 def new_compute_widget_id(
     element_type: str,
-    user_key: Optional[str] = None,
-    **kwargs: Union[SAFE_VALUES, Sequence[SAFE_VALUES]],
+    user_key: str | None = None,
+    **kwargs: SAFE_VALUES | Sequence[SAFE_VALUES],
 ) -> str:
     """Compute the widget id for the given widget. This id is stable: a given
     set of inputs to this function will always produce the same widget id output.
