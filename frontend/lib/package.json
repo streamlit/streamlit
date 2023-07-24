@@ -6,13 +6,14 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "sideEffects": false,
+    "files": ["dist"],
     "scripts": {
-        "build": "yarn build:src && yarn build:vendor && yarn build:assets && yarn build:proto && yarn build:lib-type",
-        "build:lib-type": "tsc -P tsconfig.json && tsc-alias -p tsconfig.json",
-        "build:tsc": "tsc -P tsconfig.json",
-        "build:tsc-alias": "tsc-alias -p tsconfig.json",
-        "build:src": "env NODE_ENV=\"development\" ./node_modules/.bin/babel --root-mode=upward --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src",
-        "build:vendor": "cp -R ./src/vendor ./dist",
+        "build": "yarn build:src && yarn build:vendor && yarn build:assets && yarn build:proto && yarn build:lib-dev",
+        "build:prod": "yarn build:src && yarn build:vendor && yarn build:assets && yarn build:proto && yarn build:lib-type-prod",
+        "build:lib-type-prod": "tsc -p ./tsconfig.prod.json && tsc-alias -p ./tsconfig.prod.json",
+        "build:lib-dev": "tsc -p ./tsconfig.json && tsc-alias -p ./tsconfig.json",
+        "build:src": "env NODE_ENV=development ./node_modules/.bin/babel --root-mode=upward --out-dir dist --source-maps --extensions \".js,.mjs,.jsx,.ts,.tsx\" src",
+        "build:vendor": "rsync -av --exclude='*.ts' ./src/vendor/ ./dist/vendor",
         "build:assets": "cp -R ./src/assets ./dist",
         "build:proto": "cp ./src/proto* ./dist",
         "typecheck": "tsc",
@@ -141,11 +142,12 @@
         "axios-mock-adapter": "^1.21.4",
         "babel-jest": "^27.4.3",
         "babel-plugin-emotion": "^11.0.0",
+        "babel-plugin-module-resolver": "^5.0.0",
         "jest": "^27.4.3",
         "jest-environment-jsdom": "^27.4.3",
         "jest-fetch-mock": "^3.0.3",
+        "node-fetch": "2.6.7",
         "timezone-mock": "^1.3.6",
-        "tsc-alias": "^1.8.5",
-        "node-fetch": "2.6.7"
+        "tsc-alias": "^1.8.5"
     }
 }
