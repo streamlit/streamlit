@@ -38,6 +38,8 @@ from PIL import Image
 from playwright.sync_api import Page
 from pytest import FixtureRequest
 
+FAILED_TESTS_FOLDER_NAME = "failed-tests"
+
 
 class AsyncSubprocess:
     """A context manager. Wraps subprocess.Popen to capture output safely."""
@@ -131,25 +133,13 @@ def wait_for_app_loaded(page: Page):
     page.wait_for_selector(
         "[data-testid='stAppViewContainer']", timeout=20000, state="attached"
     )
-
-    page.wait_for_selector(
-        "[data-testid='block-container']", timeout=20000, state="attached"
-    )
-
-    # Give the app a little more time to render everything
-    time.sleep(0.25)
-    # Check that "Please wait..." does not exist within the 'stAppViewContainer'
-    app_view_container = page.query_selector("[data-testid='stAppViewContainer']")
-    if (
-        app_view_container
-        and app_view_container.inner_text().find("Please wait...") != -1
-    ):
-        pytest.fail("Found 'Please wait...' inside the stAppViewContainer")
     # Wait until the script is no longer running.
     page.wait_for_selector(
         "[data-testid='stStatusWidget']", timeout=20000, state="detached"
     )
     # Give the app a little more time to render everything
+    # This is mainly required by complex elements that have some delay in
+    # rendering such as dataframe or charts.
     time.sleep(0.5)
 
 
@@ -230,14 +220,14 @@ class ImageCompareFunction(Protocol):
 def snapshot_updates_dir(request: FixtureRequest) -> Path:
     """Fixture that returns the snapshot updates directory."""
     root_path = Path(request.node.fspath).resolve()
-    return root_path / "debug-results" / "snapshot-updates"
+    return root_path / FAILED_TESTS_FOLDER_NAME / "snapshot-updates"
 
 
 @pytest.fixture(scope="session")
 def snapshot_failures_dir(request: FixtureRequest) -> Path:
     """Fixture that returns the snapshot test failures directory."""
     root_path = Path(request.node.fspath).resolve()
-    return root_path / "debug-results" / "snapshot-tests-failures"
+    return root_path / FAILED_TESTS_FOLDER_NAME / "snapshot-tests-failures"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -314,7 +304,8 @@ def assert_snapshot(
             # Update this in updates folder:
             snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
             snapshot_updates_file_path.write_bytes(img)
-
+            # For missing snapshots, we don't want to directly fail in order to generate
+            # all missing snapshots in one run.
             test_failure_messages.append(f"Missing snapshot for {snapshot_file_name}")
             return
 
@@ -346,9 +337,7 @@ def assert_snapshot(
         img_diff.save(f"{test_failures_dir}/diff_{snapshot_file_name}{file_extension}")
         img_a.save(f"{test_failures_dir}/actual_{snapshot_file_name}{file_extension}")
         img_b.save(f"{test_failures_dir}/expected_{snapshot_file_name}{file_extension}")
-        test_failure_messages.append(
-            f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels)"
-        )
+        pytest.fail(f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels)")
 
     yield compare
 

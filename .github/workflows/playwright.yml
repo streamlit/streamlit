@@ -51,10 +51,8 @@ jobs:
         run: make protobuf
       - name: Run make frontend
         run: make frontend-fast
-      - name: Run your tests
-        run: |
-          cd ./e2e/playwright
-          pytest --browser webkit --browser chromium --browser firefox --tracing retain-on-failure --video retain-on-failure --screenshot only-on-failure --output debug-results
+      - name: Run make playwright
+        run: make playwright
       - name: Check that all screenshot have been committed
         run: |
           set -x;
@@ -66,15 +64,15 @@ jobs:
             git ls-files --others --exclude-standard | grep snapshots;
             exit 1;
           fi
-      - name: Store Snapshots
+      - name: Upload snapshots
         uses: actions/upload-artifact@v3
         if: always()
         with:
           name: playwright_snapshots
           path: e2e/playwright/snapshots
-      - name: Store Debug Results
+      - name: Upload failed tests
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: playwright_debug_results
-          path: e2e/playwright/debug-results
+          name: playwright_failed_tests
+          path: e2e/playwright/failed-tests
