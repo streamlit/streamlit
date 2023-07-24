@@ -30,6 +30,7 @@ import time
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryFile
+from types import ModuleType
 from typing import Generator, List, Protocol
 
 import pytest
@@ -98,6 +99,12 @@ class AsyncSubprocess:
             self._stdout_file = None
 
 
+def resolve_test_to_script(test_module: ModuleType) -> str:
+    """Resolve the test module to the corresponding test script filename."""
+    module_name = test_module.__name__
+    return module_name.replace("_test", ".py")
+
+
 def find_available_port(host: str = "localhost") -> int:
     """Find an available port on the given host."""
     with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
@@ -117,7 +124,22 @@ def is_app_server_running(port: int, host: str = "localhost") -> bool:
 
 
 def wait_for_app_server_to_start(port: int, timeout: int = 5) -> bool:
-    """Wait for the app server to start."""
+    """Wait for the app server to start.
+
+    Parameters
+    ----------
+    port : int
+        The port on which the app server is running.
+
+    timeout : int
+        The number of minutes to wait for the app server to start.
+
+    Returns
+    -------
+    bool
+        True if the app server is started, False otherwise.
+    """
+
     print(f"Waiting for app to start... {port}")
     start_time = time.time()
     while not is_app_server_running(port):
@@ -137,7 +159,7 @@ def wait_for_app_loaded(page: Page):
     page.wait_for_selector(
         "[data-testid='stStatusWidget']", timeout=20000, state="detached"
     )
-    # Give the app a little more time to render everything
+    # Give the app a little more time to render everything.
     # This is mainly required by complex elements that have some delay in
     # rendering such as dataframe or charts.
     time.sleep(0.5)
@@ -154,12 +176,11 @@ def app_server(
     app_port: int, request: FixtureRequest
 ) -> Generator[AsyncSubprocess, None, None]:
     """Fixture that starts and stops the Streamlit app server."""
-    module_name = request.module.__name__
     streamlit_proc = AsyncSubprocess(
         [
             "streamlit",
             "run",
-            module_name.replace("_test", ".py"),  # TODO: a better way?
+            resolve_test_to_script(request.module),
             "--server.headless",
             "true",
             "--global.developmentMode",
@@ -213,26 +234,50 @@ class ImageCompareFunction(Protocol):
         name: str | None = None,
         fail_fast: bool = False,
     ) -> None:
-        ...
+        """Compare a screenshot with screenshot from a past run.
+
+        Parameters
+        ----------
+        img : bytes
+            The screenshot to compare.
+        image_threshold : float, optional
+            The allowed percentage of different pixels in the image.
+        pixel_threshold : float, optional
+            The allowed percentage of difference for a single pixel.
+        name : str | None, optional
+            The name of the screenshot without an extension. If not provided, the name
+            of the test function will be used.
+        fail_fast : bool, optional
+            If True, the comparison will stop at the first pixel mismatch.
+        """
 
 
 @pytest.fixture(scope="session")
 def snapshot_updates_dir(request: FixtureRequest) -> Path:
-    """Fixture that returns the snapshot updates directory."""
+    """Fixture that returns the snapshot updates directory.
+
+    This directory contains all the snapshots that got updated in the current run
+    based on folder structure used in the main snapshots folder.
+    """
     root_path = Path(request.node.fspath).resolve()
     return root_path / FAILED_TESTS_FOLDER_NAME / "snapshot-updates"
 
 
 @pytest.fixture(scope="session")
 def snapshot_failures_dir(request: FixtureRequest) -> Path:
-    """Fixture that returns the snapshot test failures directory."""
+    """Fixture that returns the snapshot test failures directory.
+
+    This directory contains all the snapshots that did not match with the snapshots
+    from past runs. The folder structure is based on the folder structure used in the
+    main snapshots folder.
+    """
     root_path = Path(request.node.fspath).resolve()
     return root_path / FAILED_TESTS_FOLDER_NAME / "snapshot-tests-failures"
 
 
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_snapshots(snapshot_updates_dir: Path, snapshot_failures_dir: Path):
-    """Fixture that cleans up the snapshot directories before every session."""
+    """Fixture that cleans up some temp test directories before every session."""
     if snapshot_updates_dir.exists():
         shutil.rmtree(snapshot_updates_dir)
 
@@ -273,11 +318,29 @@ def assert_snapshot(
         name: str | None = None,
         fail_fast: bool = False,
     ) -> None:
+        """Compare a screenshot with screenshot from a past run.
+
+        Parameters
+        ----------
+        img : bytes
+            The screenshot to compare.
+        image_threshold : float, optional
+            The allowed percentage of different pixels in the image.
+        pixel_threshold : float, optional
+            The allowed percentage of difference for a single pixel to be considered
+            different.
+        name : str | None, optional
+            The name of the screenshot without an extension. If not provided, the name
+            of the test function will be used.
+        fail_fast : bool, optional
+            If True, the comparison will stop at the first pixel mismatch.
+        """
         nonlocal test_failure_messages
         nonlocal snapshot_default_file_name
         nonlocal module_snapshot_updates_dir
         nonlocal module_snapshot_failures_dir
         nonlocal snapshot_file_suffix
+        # It is expected that all screenshots are in PNG format
         file_extension = ".png"
 
         snapshot_file_name: str = snapshot_default_file_name
@@ -337,7 +400,10 @@ def assert_snapshot(
         img_diff.save(f"{test_failures_dir}/diff_{snapshot_file_name}{file_extension}")
         img_a.save(f"{test_failures_dir}/actual_{snapshot_file_name}{file_extension}")
         img_b.save(f"{test_failures_dir}/expected_{snapshot_file_name}{file_extension}")
-        pytest.fail(f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels)")
+
+        pytest.fail(
+            f"Snapshot mismatch for {snapshot_file_name} ({mismatch} pixels difference)"
+        )
 
     yield compare
 
