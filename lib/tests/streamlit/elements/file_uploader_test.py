@@ -183,7 +183,7 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         self.assertEqual(result_1, None)
         self.assertEqual(result_2, [])
 
-    @patch("streamlit.elements.file_uploader._get_upload_files")
+    @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
     def test_deleted_files_filtered_out(self, get_upload_files_patch):
         """We should filter out DeletedFile objects for final user value."""
 
