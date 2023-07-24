@@ -26,6 +26,3 @@ jobs:
         with:
           issue-number: ${{ github.event.issue.number }}
           reactions: "+1"
-
-
-
