@@ -87,7 +87,7 @@ export interface Props {
   isLabel?: boolean
 
   /**
-   * Checkbox & Radio Button labels have larger label font sizing
+   * Checkbox labels have larger font sizing
    */
   largerLabel?: boolean
 

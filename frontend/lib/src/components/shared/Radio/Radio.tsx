@@ -164,7 +164,7 @@ class Radio extends React.PureComponent<Props, State> {
                 source={option}
                 allowHTML={false}
                 isLabel
-                largerLabel
+                isButton
               />
             </UIRadio>
           ))}

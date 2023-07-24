@@ -24,6 +24,7 @@ markdown_options = (
     "*italics text*",
     "~strikethrough text~",
     "shortcode: :blush:",
+    # link should not work in radio options
     "[link text](www.example.com)",
     "`code text`",
     ":red[red] :blue[blue] :green[green] :violet[violet] :orange[orange]",
