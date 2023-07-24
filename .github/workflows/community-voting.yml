@@ -1,0 +1,29 @@
+
+# This workflow automatically comments on issue labeled with 'type:enhancement'
+# and adds a thumbs up reaction to the issue to encourage community voting.
+
+name: Community voting
+on:
+  issues:
+    types:
+      - labeled
+jobs:
+  add-comment:
+    if: github.event.label.name == 'type:enhancement'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add comment to issue
+        uses: peter-evans/create-or-update-comment@30a3d626642351ee2779298c1baeadb7047e1362
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            **If you'd like the Streamlit team to prioritize this feature request, please use the 👍 (thumbs up emoji) reaction in response to the initial post.**
+
+            Community voting enables the Streamlit team to understand which features are most important to our users.
+      - name: Upvote issue
+        uses: aidan-mundy/react-to-issue@bc84ae193d0d4a2ca36a9a411ee52e5d065cc415
+        with:
+            issue-number: ${{ github.event.issue.number }}
+            reactions: '+1'

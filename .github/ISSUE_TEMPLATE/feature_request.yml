@@ -1,0 +1,54 @@
+name: ✨ Feature request
+description: Suggest a feature or enhancement for Streamlit
+labels: [type:enhancement, status:needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a feature or enhancement for Streamlit!
+        We really appreciate the community's efforts to improve Streamlit ❤️
+  - type: checkboxes
+    attributes:
+      label: Checklist
+      description: Please confirm and check all the following options.
+      options:
+        - label: I have searched the [existing issues](https://github.com/streamlit/streamlit/issues) for similar feature requests.
+          required: true
+        - label: I added a descriptive title and summary to this issue.
+          required: true
+  - type: textarea
+    attributes:
+      label: Summary
+      description: Type here a clear and concise description of the feature or enhancement request. Aim for 2-3 sentences.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Problem / Motivation
+      description: Please outline the motivation for the proposal. Is your feature request related to a problem?
+      placeholder: |
+        I'm always frustrated when ...
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Solution
+      description: |
+        Please describe the solution you'd like to see. This might include suggestions for `st` commands, new parameters, or UI mockups.
+        Don't worry if you don't have a clear solution in mind, any input helps!
+      placeholder: |
+        **MVP:** What's the smallest possible solution that would get 80% of the problem out of the way?
+
+        **Preferred solution:** If you don't like the MVP above, tell us why, and what you'd like done instead.
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Additional Information
+      description: |
+        Links? References? Anything that will give us more context about the feature request here!
+        For example, did this feature request come from https://discuss.streamlit.io or another site? Link the original source here!
+
+        _Tip: You can attach images by clicking this area to highlight it and then dragging files in._
+    validations:
+      required: false
