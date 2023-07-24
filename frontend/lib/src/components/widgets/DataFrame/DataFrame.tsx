@@ -378,8 +378,8 @@ function DataFrame({
               height:
                 // Add an additional pixel if it is stretched to full width
                 // to allow the full cell border to be visible
-                maxHeight - resizableRef.current.size.height === 3
-                  ? resizableRef.current.size.height + 3
+                maxHeight - resizableRef.current.size.height === 2
+                  ? resizableRef.current.size.height + 2
                   : resizableRef.current.size.height,
             })
           }
@@ -461,7 +461,11 @@ function DataFrame({
           fixedShadowY={true}
           experimental={{
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
-            scrollbarWidthOverride: 1,
+            scrollbarWidthOverride: 0,
+            // Add negative padding to the right and bottom to allow the scrollbars in webkit to
+            // overlay the table:
+            paddingBottom: -6,
+            paddingRight: -6,
           }}
           // Apply custom rendering (e.g. for missing or required cells):
           drawCell={drawCell}
