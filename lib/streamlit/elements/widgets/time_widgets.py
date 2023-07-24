@@ -342,17 +342,6 @@ class TimeWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = new_compute_widget_id(
-            "time_input",
-            user_key=key,
-            label=label,
-            value=value,
-            key=key,
-            help=help,
-            step=step,
-            form_id=current_form_id(self.dg),
-        )
-
         parsed_time: time
         if value is None:
             # Set value default.
@@ -365,6 +354,17 @@ class TimeWidgetsMixin:
             raise StreamlitAPIException(
                 "The type of value should be one of datetime, time or None"
             )
+
+        id = new_compute_widget_id(
+            "time_input",
+            user_key=key,
+            label=label,
+            value=(None if value is None else parsed_time),
+            key=key,
+            help=help,
+            step=step,
+            form_id=current_form_id(self.dg),
+        )
         del value
 
         time_input_proto = TimeInputProto()
