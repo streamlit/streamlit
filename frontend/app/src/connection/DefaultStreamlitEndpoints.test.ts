@@ -243,23 +243,6 @@ describe("DefaultStreamlitEndpoints", () => {
       })
     })
 
-    // NOTE: We'll be getting rid of this behavior soon, but just disabling
-    // this test rather than removing it entirely until then.
-    xit("errors on unexpected return value", async () => {
-      // If our endpoint returns a non-number, we'll return a failed promise.
-      axiosMock
-        .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
-        .reply(() => [200, "invalidFileId"])
-
-      await expect(
-        endpoints.uploadFileUploaderFile("unused", MOCK_FILE, "mockSessionId")
-      ).rejects.toEqual(
-        new Error(
-          "Bad uploadFile response: expected a number but got 'invalidFileId'"
-        )
-      )
-    })
-
     it("errors on bad status", async () => {
       axiosMock
         .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
