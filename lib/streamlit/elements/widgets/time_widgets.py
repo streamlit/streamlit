@@ -589,11 +589,27 @@ class TimeWidgetsMixin:
         else:
             parsed_max_date = None
 
+        def parse_date_deterministic(v: SingleDateValue) -> str | None:
+            if isinstance(v, None):
+                parsed_value = None
+            elif isinstance(v, datetime):
+                parsed_value = date.strftime(v.date(), "%Y/%m/%d")
+            elif isinstance(v, date):
+                parsed_value = date.strftime(value, "%Y/%m/%d")
+            return parsed_value
+
+        if isinstance(value, datetime) or isinstance(value, date) or value is None:
+            parsed_value = parse_date_deterministic(value)
+        else:
+            parsed_value = [parse_date_deterministic(v) for v in value]
+
+        # TODO this is missing the error path, integrate with the dateinputvalues parsing
+
         id = new_compute_widget_id(
             "date_input",
             user_key=key,
             label=label,
-            value=value,
+            value=parsed_value,
             min_value=parsed_min_date,
             max_value=parsed_max_date,
             key=key,
