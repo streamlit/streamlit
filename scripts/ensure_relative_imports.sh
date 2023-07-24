@@ -20,6 +20,7 @@ search_files() {
     local search_string="$2"
 
     echo "Searching for @streamlit/lib/src within the frontend/lib/dist folder..."
+
     # Use find to recursively search for .ts and .js files in the folder
     while IFS= read -r -d '' file; do
         # Check if the file has a .ts or .js extension
