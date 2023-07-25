@@ -1,4 +1,5 @@
 # Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,20 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+import streamlit as st
 
-from conftest import ImageCompareFunction
+st.code("# This code is awesome!")
 
+st.code("")
 
-def test_data_editor_supports_various_configurations(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Screenshot test that st.data_editor supports various configuration options."""
-    dataframe_elements = app.locator(".stDataFrame")
-    expect(dataframe_elements).to_have_count(23)
+code = """
+def hello():
+    print("Hello, Streamlit!")
+"""
+st.code(code, language="python")
 
-    for i, element in enumerate(dataframe_elements.all()):
-        assert_snapshot(
-            element.screenshot(),
-            name=f"data_editor-config-{i}",
-        )
+st.code(code, language="python", line_numbers=True)
+
+st.code("PLAIN TEXT", language=None, line_numbers=True)

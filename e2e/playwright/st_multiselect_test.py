@@ -210,10 +210,8 @@ def test_multiselect_deselect_option(app: Page):
 def test_multiselect_option_over_max_selections(app: Page):
     """Should show an error when more than max_selections got selected."""
     app.locator(".stCheckbox").first.click()
-    expect(app.locator(".element-container .stException")).to_have_text(
-        re.compile(
-            r"Multiselect has 2 options selected but max_selections\nis set to 1"
-        )
+    expect(app.locator(".element-container .stException")).to_contain_text(
+        "Multiselect has 2 options selected but max_selections\nis set to 1"
     )
 
 
