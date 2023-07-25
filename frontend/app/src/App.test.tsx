@@ -944,11 +944,11 @@ describe("App.onHistoryChange", () => {
     instance.handleNewSession(
       new NewSession({ ...NEW_SESSION_JSON, pageScriptHash: "sub_hash" })
     )
-    instance.onHistoryChange()
+    window.history.back()
 
     // Check for rerun
     await waitFor(() => {
-      expect(pageChangeSpy).toHaveBeenCalledWith("sub_hash")
+      expect(pageChangeSpy).toHaveBeenLastCalledWith("top_hash")
     })
 
     pushStateSpy.mockRestore()
