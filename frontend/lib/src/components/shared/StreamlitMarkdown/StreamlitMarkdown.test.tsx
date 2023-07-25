@@ -253,8 +253,7 @@ describe("StreamlitMarkdown", () => {
       <StreamlitMarkdown source={source} allowHTML={false} isLabel isButton />
     )
     const tag = screen.getByText("Link text")
-    const isLinkTag = tag instanceof HTMLAnchorElement ? true : false
-    expect(isLinkTag).toBe(false)
+    expect(tag instanceof HTMLAnchorElement).toBe(false)
   })
 
   it("renders smaller text sizing when isToast is true", () => {
