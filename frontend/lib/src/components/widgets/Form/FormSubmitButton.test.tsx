@@ -129,26 +129,30 @@ describe("FormSubmitButton", () => {
       }),
     })
 
-    const { unmount: unmount1 } = render(<FormSubmitButton {...props} />)
+    const { unmount: unmountView1 } = render(<FormSubmitButton {...props} />)
+
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
     // @ts-expect-error
     expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(props.element)
 
-    const { unmount: unmount2 } = render(<FormSubmitButton {...props2} />)
+    const { unmount: unmountView2 } = render(<FormSubmitButton {...props2} />)
+
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(2)
     // @ts-expect-error
     expect(formsData.submitButtons.get("mockFormId")[1]).toEqual(
       props2.element
     )
 
-    unmount1()
+    unmountView1()
+
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
     // @ts-expect-error
     expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(
       props2.element
     )
 
-    unmount2()
+    unmountView2()
+
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(0)
   })
 
