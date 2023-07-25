@@ -401,11 +401,9 @@ class SliderMixin:
 
         if value is None:
             # We need to know if this is a single or range slider, but don't have
-            # a default value. We will try looking at the value in session state,
-            # but we must be careful, because we don't want the slider's identity
-            # to be derived from the value, or it will change every time the value
-            # changes, which would be a problem if we stop garbage collecting
-            # widgets that haven't been used recently.
+            # a default value, so we check if session_state can tell us.
+            # We already calcluated the id, so there is no risk of this causing
+            # the id to change.
 
             single_value = True
 
@@ -415,10 +413,6 @@ class SliderMixin:
                 state_value = session_state[key]
                 single_value = isinstance(state_value, tuple(SUPPORTED_TYPES.keys()))
 
-            # Set value default. We assume single vs range doesn't change in the
-            # lifetime of a slider, so it is safe to depend on, but we use the
-            # min/max values and constants for the actual default, to prevent
-            # depending on the value.
             if single_value:
                 value = min_value if min_value is not None else 0
             else:
