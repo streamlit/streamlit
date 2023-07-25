@@ -104,8 +104,6 @@ def test_multiselect_show_values_in_dropdown(
     """Screenshot test to check that values are shown in dropdown."""
     multiselect_elem = app.locator(".stMultiSelect").nth(0)
     multiselect_elem.locator("input").click()
-    # The dropdown has a fade in effect, so we wait for it to fully appear:
-    app.wait_for_timeout(100)
     dropdown_elems = app.locator("li").all()
     assert len(dropdown_elems) == 2
     for idx, el in enumerate(dropdown_elems):
@@ -118,8 +116,6 @@ def test_multiselect_long_values_in_dropdown(
     """Should show long values correctly (with ellipses) in the dropdown menu."""
     multiselect_elem = app.locator(".stMultiSelect").nth(4)
     multiselect_elem.locator("input").click()
-    # The dropdown has a fade in effect, so we wait for it to fully appear:
-    app.wait_for_timeout(100)
     dropdown_elems = app.locator("li").all()
     for idx, el in enumerate(dropdown_elems):
         assert_snapshot(el, name="multiselect-dropdown-long-label-" + str(idx))
