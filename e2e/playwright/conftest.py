@@ -154,7 +154,7 @@ def wait_for_app_run(page: Page):
         "[data-testid='stStatusWidget']", timeout=20000, state="detached"
     )
     # Give the app a little more time to render everything
-    page.wait_for_timeout(750)
+    page.wait_for_timeout(500)
 
 
 def wait_for_app_loaded(page: Page):
@@ -166,6 +166,7 @@ def wait_for_app_loaded(page: Page):
     page.wait_for_selector(
         "[data-testid='block-container']", timeout=20000, state="attached"
     )
+    page.wait_for_selector("#MainMenu", timeout=20000, state="attached")
     wait_for_app_run(page)
 
 

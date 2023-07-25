@@ -22,10 +22,11 @@ EXPANDER_HEADER_IDENTIFIER = ".streamlit-expanderHeader"
 def test_displays_expander_and_regular_containers_properly(app: Page):
     """Test that expanders and regular containers are displayed properly."""
 
-    main_expanders = app.locator(".main [data-testid='stExpander']").all()
+    main_expanders = app.locator(".main [data-testid='stExpander']")
+    expect(main_expanders).to_have_count(2)
 
-    for i in range(0, 2):
-        expect(main_expanders[i].locator(EXPANDER_HEADER_IDENTIFIER)).to_be_visible()
+    for expander in main_expanders.all():
+        expect(expander.locator(EXPANDER_HEADER_IDENTIFIER)).to_be_visible()
 
     sidebar_expander = app.locator(
         "[data-testid='stSidebar'] [data-testid='stExpander']"
@@ -48,10 +49,12 @@ def test_expander_displays_correctly(
 
 def test_expander_collapses_and_expands(app: Page):
     """Test that an expander collapses and expands."""
-    main_expanders = app.locator(".main [data-testid='stExpander']").all()
+    main_expanders = app.locator(".main [data-testid='stExpander']")
+    expect(main_expanders).to_have_count(2)
 
+    expanders = main_expanders.all()
     # Starts expanded
-    expander_header = main_expanders[0].locator(EXPANDER_HEADER_IDENTIFIER)
+    expander_header = expanders[0].locator(EXPANDER_HEADER_IDENTIFIER)
     expect(expander_header).to_be_visible()
     toggle = expander_header.locator("svg").first
     expect(toggle).to_be_visible()
@@ -60,7 +63,7 @@ def test_expander_collapses_and_expands(app: Page):
     expect(toggle).to_be_visible()
 
     # Starts collapsed
-    expander_header = main_expanders[1].locator(EXPANDER_HEADER_IDENTIFIER)
+    expander_header = expanders[1].locator(EXPANDER_HEADER_IDENTIFIER)
     expect(expander_header).to_be_visible()
     toggle = expander_header.locator("svg").first
     expect(toggle).to_be_visible()
