@@ -31,7 +31,7 @@ from streamlit.runtime.state.common import (
     WidgetMetadata,
     WidgetProto,
     WidgetSerializer,
-    compute_widget_id,
+    compute_widget_id_from_proto,
     user_key_from_widget_id,
 )
 from streamlit.type_util import ValueFieldName
@@ -152,7 +152,7 @@ def register_widget(
         to be used in a non-streamlit setting.
     """
     if not element_proto.id:
-        widget_id = compute_widget_id(element_type, element_proto, user_key)
+        widget_id = compute_widget_id_from_proto(element_type, element_proto, user_key)
         element_proto.id = widget_id
         LOGGER.warn(
             f"Registering a widget with no id, falling back to generating from proto. {widget_id=}"

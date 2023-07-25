@@ -26,9 +26,12 @@ from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueP
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import coalesce_widget_states
-from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX
+from streamlit.runtime.state.common import (
+    GENERATED_WIDGET_ID_PREFIX,
+    compute_widget_id_from_proto,
+)
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
-from streamlit.runtime.state.widgets import compute_widget_id, user_key_from_widget_id
+from streamlit.runtime.state.widgets import user_key_from_widget_id
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -304,7 +307,7 @@ class WidgetHelperTests(unittest.TestCase):
         button_proto = ButtonProto()
         button_proto.label = "the label"
         self.assertTrue(
-            compute_widget_id("button", button_proto).startswith(
+            compute_widget_id_from_proto("button", button_proto).startswith(
                 GENERATED_WIDGET_ID_PREFIX
             )
         )

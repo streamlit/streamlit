@@ -155,7 +155,7 @@ class RegisterWidgetResult(Generic[T_co]):
         return cls(value=deserializer(None, ""), value_changed=False)
 
 
-def compute_widget_id(
+def compute_widget_id_from_proto(
     element_type: str, element_proto: WidgetProto, user_key: Optional[str] = None
 ) -> str:
     """Compute the widget id for the given widget. This id is stable: a given
