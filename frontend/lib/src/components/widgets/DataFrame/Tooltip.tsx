@@ -123,6 +123,7 @@ function Tooltip({
     >
       <div
         className="stTooltipTarget"
+        data-testid="stTooltipTarget"
         style={{
           // This is an invisible div that's used to position the tooltip.
           // The position is provided from outside via the `top` and `left` properties.

@@ -76,11 +76,9 @@ describe("editor", () => {
       throw new Error("Editor is invalid")
     }
 
-    const result = render(
-      <Editor isHighlighted={false} value={getMockDateCell()} />
-    )
+    render(<Editor isHighlighted={false} value={getMockDateCell()} />)
     // Check if the element is actually there
-    const input = result.getByTestId(TEST_ID)
+    const input = screen.getByTestId(TEST_ID)
     expect(input).not.toBeUndefined()
 
     expect(input).toHaveAttribute("value", "04:47:44.584")
@@ -101,16 +99,14 @@ describe("editor", () => {
         throw new Error("Editor is invalid")
       }
 
-      const result = render(
-        <Editor isHighlighted={false} value={dateTimeCell} />
-      )
-      const input = result.getByTestId(TEST_ID)
+      render(<Editor isHighlighted={false} value={dateTimeCell} />)
+      const input = screen.getByTestId(TEST_ID)
       expect(input).not.toBeUndefined()
       expect(input).toHaveAttribute("type", format)
     }
   )
 
-  it("renders textarea when readonly is true", () => {
+  it("renders textarea when readonly is true", async () => {
     // @ts-expect-error
     const Editor = DateTimeCellRenderer.provideEditor?.(
       getMockDateCell({ readonly: true } as DateTimeCell)
@@ -120,13 +116,18 @@ describe("editor", () => {
       throw new Error("Editor is invalid")
     }
 
-    const result = render(
-      <Editor isHighlighted={false} value={getMockDateCell()} />
+    render(
+      <Editor
+        isHighlighted={false}
+        value={getMockDateCell({ readonly: true } as DateTimeCell)}
+      />
+    )
+
+    const textArea = await screen.findByDisplayValue(
+      "2023-02-06T04:47:44.584Z"
     )
     // text-area should be found
-    expect(
-      result.findByDisplayValue("2023-02-06T04:47:44.584Z")
-    ).not.toBeUndefined()
+    expect(textArea).toBeDefined()
   })
 
   it("contains max, min, step when passed in", () => {
@@ -158,7 +159,7 @@ describe("editor", () => {
     expect(input).toHaveAttribute("step", step)
   })
 
-  it('properly sets date when value is NOT ""', async () => {
+  it('properly sets date when value is NOT ""', () => {
     const valueAsNumber = 100
 
     // @ts-expect-error
@@ -168,15 +169,15 @@ describe("editor", () => {
     }
 
     const mockCellOnChange = jest.fn()
-    const result = render(
+    render(
       <Editor
         isHighlighted={false}
         value={getMockDateCell()}
         onChange={mockCellOnChange}
       />
     )
-    const input = await result.findByTestId(TEST_ID)
-    expect(result.findByTestId(TEST_ID)).not.toBeUndefined()
+    const input = screen.getByTestId(TEST_ID)
+    expect(input).toBeDefined()
     fireEvent.change(input, {
       target: {
         value: "2023-02-06T18:15:33.103Z",
@@ -198,7 +199,7 @@ describe("editor", () => {
     })
   })
 
-  it('properly sets new date to undefined when value is ""', async () => {
+  it('properly sets new date to undefined when value is ""', () => {
     // @ts-expect-error
     const Editor = DateTimeCellRenderer.provideEditor(getMockDateCell()).editor
     if (Editor === undefined) {
@@ -206,15 +207,15 @@ describe("editor", () => {
     }
 
     const mockCellOnChange = jest.fn()
-    const result = render(
+    render(
       <Editor
         isHighlighted={false}
         value={getMockDateCell()}
         onChange={mockCellOnChange}
       />
     )
-    const input = await result.findByTestId(TEST_ID)
-    expect(result.findByTestId(TEST_ID)).not.toBeUndefined()
+    const input = screen.getByTestId(TEST_ID)
+    expect(input).toBeDefined()
     fireEvent.change(input, { target: { value: "" } })
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)
     expect(mockCellOnChange).toHaveBeenCalledWith({

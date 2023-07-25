@@ -16,7 +16,7 @@
 import React from "react"
 import "@testing-library/jest-dom"
 
-import { screen } from "@testing-library/dom"
+import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { enableAllPlugins } from "immer"
 
@@ -138,26 +138,26 @@ describe("FormSubmitButton", () => {
       }),
     })
 
-    const wrapper1 = render(<FormSubmitButton {...props} />)
+    const { unmount: unmountView1 } = render(<FormSubmitButton {...props} />)
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
     // @ts-expect-error
     expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(props.element)
 
-    const wrapper2 = render(<FormSubmitButton {...props2} />)
+    const { unmount: unmountView2 } = render(<FormSubmitButton {...props2} />)
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(2)
     // @ts-expect-error
     expect(formsData.submitButtons.get("mockFormId")[1]).toEqual(
       props2.element
     )
 
-    wrapper1.unmount()
+    unmountView1()
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
     // @ts-expect-error
     expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(
       props2.element
     )
 
-    wrapper2.unmount()
+    unmountView2()
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(0)
   })
 

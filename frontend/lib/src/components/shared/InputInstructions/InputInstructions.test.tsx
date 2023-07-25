@@ -15,6 +15,8 @@
  */
 
 import React from "react"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 
 import InputInstructions, { Props } from "./InputInstructions"
@@ -30,15 +32,15 @@ describe("InputInstructions", () => {
   const props = getProps()
 
   it("renders without crashing", () => {
-    const { getByTestId } = render(<InputInstructions {...props} />)
+    render(<InputInstructions {...props} />)
 
-    expect(getByTestId("InputInstructions").textContent).toBeDefined()
+    expect(screen.getByTestId("InputInstructions").textContent).toBeDefined()
   })
 
   it("should show Enter instructions", () => {
-    const { getByTestId } = render(<InputInstructions {...props} />)
+    render(<InputInstructions {...props} />)
 
-    expect(getByTestId("InputInstructions").textContent).toBe(
+    expect(screen.getByTestId("InputInstructions").textContent).toBe(
       "Press Enter to apply"
     )
   })
@@ -49,8 +51,8 @@ describe("InputInstructions", () => {
     })
 
     it("should show Ctrl+Enter instructions", () => {
-      const { getByTestId } = render(<InputInstructions {...props} />)
-      expect(getByTestId("InputInstructions").textContent).toBe(
+      render(<InputInstructions {...props} />)
+      expect(screen.getByTestId("InputInstructions").textContent).toBe(
         "Press Ctrl+Enter to apply"
       )
     })
@@ -64,9 +66,9 @@ describe("InputInstructions", () => {
       const props = getProps({
         type: "multiline",
       })
-      const { getByTestId } = render(<InputInstructions {...props} />)
+      render(<InputInstructions {...props} />)
 
-      expect(getByTestId("InputInstructions").textContent).toBe(
+      expect(screen.getByTestId("InputInstructions").textContent).toBe(
         "Press ⌘+Enter to apply"
       )
     })
@@ -76,9 +78,9 @@ describe("InputInstructions", () => {
         type: "multiline",
         maxLength: 3,
       })
-      const { getByTestId } = render(<InputInstructions {...props} />)
+      render(<InputInstructions {...props} />)
 
-      expect(getByTestId("InputInstructions").textContent).toBe(
+      expect(screen.getByTestId("InputInstructions").textContent).toBe(
         "Press ⌘+Enter to apply3/3"
       )
     })
@@ -88,9 +90,9 @@ describe("InputInstructions", () => {
     const props = getProps({
       maxLength: 3,
     })
-    const { getByTestId } = render(<InputInstructions {...props} />)
+    render(<InputInstructions {...props} />)
 
-    expect(getByTestId("InputInstructions").textContent).toBe(
+    expect(screen.getByTestId("InputInstructions").textContent).toBe(
       "Press Enter to apply3/3"
     )
   })
@@ -101,8 +103,8 @@ describe("InputInstructions", () => {
     })
 
     it("should not show instructions", () => {
-      const { getByTestId } = render(<InputInstructions {...props} />)
-      expect(getByTestId("InputInstructions").textContent).toBe("")
+      render(<InputInstructions {...props} />)
+      expect(screen.getByTestId("InputInstructions").textContent).toBe("")
     })
 
     it("should show instructions for max length", () => {
@@ -110,9 +112,9 @@ describe("InputInstructions", () => {
         type: "chat",
         maxLength: 3,
       })
-      const { getByTestId } = render(<InputInstructions {...props} />)
+      render(<InputInstructions {...props} />)
 
-      expect(getByTestId("InputInstructions").textContent).toBe("3/3")
+      expect(screen.getByTestId("InputInstructions").textContent).toBe("3/3")
     })
   })
 
@@ -122,9 +124,9 @@ describe("InputInstructions", () => {
         inForm: true,
         type: "single",
       })
-      const { getByTestId } = render(<InputInstructions {...props} />)
+      render(<InputInstructions {...props} />)
 
-      expect(getByTestId("InputInstructions").textContent).toBe(
+      expect(screen.getByTestId("InputInstructions").textContent).toBe(
         "Press Enter to submit form"
       )
     })
@@ -135,9 +137,9 @@ describe("InputInstructions", () => {
       inForm: true,
       type: "multiline",
     })
-    const { getByTestId } = render(<InputInstructions {...props} />)
+    render(<InputInstructions {...props} />)
 
-    expect(getByTestId("InputInstructions").textContent).toBe(
+    expect(screen.getByTestId("InputInstructions").textContent).toBe(
       "Press ⌘+Enter to submit form"
     )
   })

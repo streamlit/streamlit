@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { renderHook, act } from "@testing-library/react-hooks"
+import { renderHook } from "@testing-library/react-hooks"
 import useScrollAnimation from "./useScrollAnimation"
 
 describe("useScrollAnimation", () => {
@@ -51,25 +51,17 @@ describe("useScrollAnimation", () => {
     renderHook(() => useScrollAnimation(targetElement, onEndMock, true))
 
     // Simulate scroll animation
-    act(() => {
-      jest.advanceTimersByTime(5)
-      // Trigger the callback of requestAnimationFrame
-      act(() => {
-        jest.runOnlyPendingTimers()
-      })
-    })
+    jest.advanceTimersByTime(5)
+    // Trigger the callback of requestAnimationFrame
+    jest.runOnlyPendingTimers()
 
     // Assert the updated scrollTop value
     expect(targetElement.scrollTop).toBeGreaterThan(0)
 
     // Simulate reaching the end of animation
-    act(() => {
-      jest.advanceTimersByTime(100)
-      // Trigger the callback of requestAnimationFrame
-      act(() => {
-        jest.runOnlyPendingTimers()
-      })
-    })
+    jest.advanceTimersByTime(100)
+    // Trigger the callback of requestAnimationFrame
+    jest.runOnlyPendingTimers()
 
     // Assert that onEnd callback is called
     expect(onEndMock).toHaveBeenCalled()

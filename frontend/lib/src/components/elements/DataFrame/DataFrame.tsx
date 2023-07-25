@@ -192,6 +192,9 @@ export function DataFrame({
     headerRows,
     sortedDataRowIndices,
   })
+
+  // RTL ESLint triggers a false positive on this render function
+  // eslint-disable-next-line testing-library/render-result-naming-convention
   const cellRenderer = getCellRenderer(cellContentsGetter)
 
   // Determine our rendering dimensions

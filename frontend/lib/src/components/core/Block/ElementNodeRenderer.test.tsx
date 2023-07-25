@@ -15,15 +15,17 @@
  */
 
 import React from "react"
+import "@testing-library/jest-dom"
+import { screen, waitFor } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
+
 import {
   Balloons as BalloonsProto,
   ForwardMsgMetadata,
   Snow as SnowProto,
 } from "@streamlit/lib/src/proto"
-import { render } from "@streamlit/lib/src/test_util"
 import { ElementNode } from "@streamlit/lib/src/AppNode"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
-import { waitFor } from "@testing-library/dom"
 import {
   createFormsData,
   WidgetStateManager,
@@ -94,14 +96,13 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createBalloonNode(scriptRunId),
         scriptRunId: "NEW_SCRIPT_ID",
       })
-      const wrapper = render(<ElementNodeRenderer {...props} />)
+      render(<ElementNodeRenderer {...props} />)
 
-      await waitFor(() =>
-        expect(wrapper.baseElement.textContent).not.toContain("Loading...")
-      )
-      expect(
-        wrapper.baseElement.querySelectorAll(".element-container > *")
-      ).toHaveLength(0)
+      await waitFor(() => expect(screen.queryByText("Loading...")).toBeNull())
+      const elementNodeRenderer = screen.getByTestId("element-container")
+      expect(elementNodeRenderer).toBeInTheDocument()
+      // eslint-disable-next-line testing-library/no-node-access
+      expect(elementNodeRenderer.children).toHaveLength(0)
     })
 
     it("should render a fresh component", async () => {
@@ -110,16 +111,15 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createBalloonNode(scriptRunId),
         scriptRunId,
       })
+      render(<ElementNodeRenderer {...props} />)
 
-      const wrapper = render(<ElementNodeRenderer {...props} />)
-
-      await waitFor(() =>
-        expect(wrapper.baseElement.textContent).not.toContain("Loading...")
-      )
-      expect(
-        wrapper.baseElement.querySelectorAll(".element-container > *")
-      ).toHaveLength(1)
-      expect(wrapper.baseElement.querySelectorAll(".balloons")).toHaveLength(1)
+      await waitFor(() => expect(screen.queryByText("Loading...")).toBeNull())
+      const elementNodeRenderer = screen.getByTestId("element-container")
+      expect(elementNodeRenderer).toBeInTheDocument()
+      // eslint-disable-next-line testing-library/no-node-access
+      const elementRendererChildren = elementNodeRenderer.children
+      expect(elementRendererChildren).toHaveLength(1)
+      expect(elementRendererChildren[0]).toHaveClass("balloons")
     })
   })
 
@@ -130,14 +130,13 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createSnowNode(scriptRunId),
         scriptRunId: "NEW_SCRIPT_ID",
       })
-      const wrapper = render(<ElementNodeRenderer {...props} />)
+      render(<ElementNodeRenderer {...props} />)
 
-      await waitFor(() =>
-        expect(wrapper.baseElement.textContent).not.toContain("Loading...")
-      )
-      expect(
-        wrapper.baseElement.querySelectorAll(".element-container > *")
-      ).toHaveLength(0)
+      await waitFor(() => expect(screen.queryByText("Loading...")).toBeNull())
+      const elementNodeRenderer = screen.getByTestId("element-container")
+      expect(elementNodeRenderer).toBeInTheDocument()
+      // eslint-disable-next-line testing-library/no-node-access
+      expect(elementNodeRenderer.children).toHaveLength(0)
     })
 
     it("should render a fresh component", async () => {
@@ -146,15 +145,15 @@ describe("ElementNodeRenderer Block Component", () => {
         node: createSnowNode(scriptRunId),
         scriptRunId,
       })
-      const wrapper = render(<ElementNodeRenderer {...props} />)
+      render(<ElementNodeRenderer {...props} />)
 
-      await waitFor(() =>
-        expect(wrapper.baseElement.textContent).not.toContain("Loading...")
-      )
-      expect(
-        wrapper.baseElement.querySelectorAll(".element-container > *")
-      ).toHaveLength(1)
-      expect(wrapper.baseElement.querySelectorAll(".snow")).toHaveLength(1)
+      await waitFor(() => expect(screen.queryByText("Loading...")).toBeNull())
+      const elementNodeRenderer = screen.getByTestId("element-container")
+      expect(elementNodeRenderer).toBeInTheDocument()
+      // eslint-disable-next-line testing-library/no-node-access
+      const elementRendererChildren = elementNodeRenderer.children
+      expect(elementRendererChildren).toHaveLength(1)
+      expect(elementRendererChildren[0]).toHaveClass("snow")
     })
   })
 })

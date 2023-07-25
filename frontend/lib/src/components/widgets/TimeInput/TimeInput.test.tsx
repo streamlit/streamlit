@@ -16,7 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { fireEvent } from "@testing-library/react"
+import { screen, fireEvent } from "@testing-library/react"
 import { act } from "react-dom/test-utils"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -26,7 +26,10 @@ import {
 } from "@streamlit/lib/src/proto"
 import TimeInput, { Props } from "./TimeInput"
 
-const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<TimeInputProto> = {},
+  disabled = false
+): Props => ({
   element: TimeInputProto.create({
     id: "123",
     label: "Label",
@@ -35,7 +38,7 @@ const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
     ...elementProps,
   }),
   width: 0,
-  disabled: false,
+  disabled: disabled,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
@@ -45,16 +48,17 @@ const getProps = (elementProps: Partial<TimeInputProto> = {}): Props => ({
 describe("TimeInput widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const rtlResults = render(<TimeInput {...props} />)
-    expect(rtlResults).toBeDefined()
+    render(<TimeInput {...props} />)
+    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+
+    expect(timeDisplay).toBeInTheDocument()
   })
 
   it("shows a label", () => {
     const props = getProps()
-    const { container } = render(<TimeInput {...props} />)
-    const labelQS = container.getElementsByTagName("p")
-    expect(labelQS.length).toEqual(1)
-    expect(labelQS[0].textContent).toEqual(props.element.label)
+    render(<TimeInput {...props} />)
+    const widgetLabel = screen.getByText(props.element.label)
+    expect(widgetLabel).toBeInTheDocument()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -63,10 +67,11 @@ describe("TimeInput widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
-    const { container } = render(<TimeInput {...props} />)
-    const labelQS = container.querySelector('label[aria-hidden="true"]')
-    expect(labelQS).toBeDefined()
-    expect(getComputedStyle(labelQS as Element).visibility).toEqual("hidden")
+    render(<TimeInput {...props} />)
+
+    const widgetLabel = screen.getByTestId("stWidgetLabel")
+    expect(widgetLabel).toHaveStyle("visibility: hidden")
+    expect(widgetLabel).not.toBeVisible()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
@@ -75,16 +80,18 @@ describe("TimeInput widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
-    const { container } = render(<TimeInput {...props} />)
-    const labelQS = container.querySelector('label[aria-hidden="true"]')
-    expect(labelQS).toBeDefined()
-    expect(getComputedStyle(labelQS as Element).display).toEqual("none")
+    render(<TimeInput {...props} />)
+
+    const widgetLabel = screen.getByTestId("stWidgetLabel")
+    expect(widgetLabel).toHaveStyle("display: none")
+    expect(widgetLabel).not.toBeVisible()
   })
 
   it("sets widget value on mount", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
     render(<TimeInput {...props} />)
+
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
@@ -94,50 +101,49 @@ describe("TimeInput widget", () => {
 
   it("has correct className and style", () => {
     const props = getProps()
-    const { container } = render(<TimeInput {...props} />)
-    const timeInputQS = container.getElementsByClassName("stTimeInput")
-    expect(timeInputQS.length).toEqual(1)
-    expect(getComputedStyle(timeInputQS[0]).width).toEqual(
-      `${getProps().width}px`
-    )
+    render(<TimeInput {...props} />)
+
+    const timeInput = screen.getByTestId("stTimeInput")
+    expect(timeInput).toHaveClass("stTimeInput")
+    expect(timeInput).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("can be disabled", () => {
-    const props = getProps()
-    const { container } = render(<TimeInput {...props} />)
-    const labelQS = container.querySelector('label[aria-hidden="true"]')
-    expect(labelQS).toBeDefined()
-    expect(getComputedStyle(labelQS as Element).color).toBe("rgb(49, 51, 63)")
+    const props = getProps({}, true)
+    render(<TimeInput {...props} />)
+    const widgetLabel = screen.getByTestId("stWidgetLabel")
+    expect(widgetLabel).toHaveAttribute("disabled")
+
+    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+    expect(timeDisplay).toHaveAttribute("disabled")
   })
 
   it("has the correct default value", () => {
     const props = getProps()
-    const { container } = render(<TimeInput {...props} />)
-    const selectQS = container.querySelector('div[data-baseweb="select"]')
-    expect(selectQS).toBeDefined()
-    const valueQS = selectQS?.querySelector('div[value="12:45"]')
-    expect(valueQS).toBeDefined()
-    expect(valueQS?.textContent).toBe("12:45")
+    render(<TimeInput {...props} />)
+
+    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
+    expect(timeDisplay).toHaveTextContent("12:45")
   })
 
   it("has a 24 format", () => {
     const props = getProps()
-    const { container } = render(<TimeInput {...props} />)
-    const inputQS = container.querySelector(
-      "input[aria-label='Selected 12:45. Select a time, 24-hour format.']"
+    render(<TimeInput {...props} />)
+
+    // Finds the input node by aria-label
+    const inputNode = screen.getByLabelText(
+      "Selected 12:45. Select a time, 24-hour format."
     )
-    expect(inputQS).toBeDefined()
+    expect(inputNode).toBeInTheDocument()
   })
 
   it("sets the widget value on change", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
 
-    const wrapper = render(<TimeInput {...props} />)
+    render(<TimeInput {...props} />)
     // Div containing the selected time as a value prop and as text
-    const timeDisplay = wrapper.baseElement.querySelector(
-      ".stTimeInput-timeDisplay"
-    )
+    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
 
     // Change the widget value
     if (timeDisplay) {
@@ -166,11 +172,9 @@ describe("TimeInput widget", () => {
 
     jest.spyOn(props.widgetMgr, "setStringValue")
 
-    const wrapper = render(<TimeInput {...props} />)
+    render(<TimeInput {...props} />)
     // Div containing the selected time as a value prop and as text
-    const timeDisplay = wrapper.baseElement.querySelector(
-      ".stTimeInput-timeDisplay"
-    )
+    const timeDisplay = screen.getByTestId("stTimeInput-timeDisplay")
 
     // Change the widget value
     if (timeDisplay) {

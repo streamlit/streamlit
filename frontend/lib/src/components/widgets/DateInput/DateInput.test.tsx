@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+import { screen } from "@testing-library/react"
 import { mount, render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
@@ -61,11 +62,9 @@ describe("DateInput widget", () => {
     const props = getProps({
       format: "DD.MM.YYYY",
     })
-    const { getByPlaceholderText, getByDisplayValue } = render(
-      <DateInput {...props} />
-    )
-    expect(getByPlaceholderText("DD.MM.YYYY")).toBeDefined()
-    expect(getByDisplayValue("20.01.1970")).toBeDefined()
+    render(<DateInput {...props} />)
+    expect(screen.getByPlaceholderText("DD.MM.YYYY")).toBeDefined()
+    expect(screen.getByDisplayValue("20.01.1970")).toBeDefined()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {

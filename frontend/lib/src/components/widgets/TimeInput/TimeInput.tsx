@@ -180,7 +180,7 @@ class TimeInput extends PureComponent<Props, State> {
             SingleValue: {
               props: {
                 // For easier testing - indicates div that holds the selected time
-                className: "stTimeInput-timeDisplay",
+                "data-testid": "stTimeInput-timeDisplay",
               },
             },
 
@@ -216,7 +216,7 @@ class TimeInput extends PureComponent<Props, State> {
     )
 
     return (
-      <div className="stTimeInput" style={style}>
+      <div className="stTimeInput" data-testid="stTimeInput" style={style}>
         <WidgetLabel
           label={element.label}
           disabled={disabled}

@@ -36,6 +36,8 @@ module.exports = {
     "plugin:prettier/recommended",
     // Recommended Jest configuration to enforce good testing practices
     "plugin:jest/recommended",
+    // Uses the recommended rules from React Testing Library:
+    "plugin:testing-library/react",
   ],
   // Specifies the ESLint parser
   parser: "@typescript-eslint/parser",

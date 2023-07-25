@@ -15,6 +15,8 @@
  */
 
 import React from "react"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import FullScreenWrapper, { FullScreenWrapperProps } from "./FullScreenWrapper"
 import { customRenderLibContext } from "@streamlit/lib/src/test_util"
@@ -37,20 +39,16 @@ describe("FullScreenWrapper", () => {
       hideFullScreenButtons: true,
     } as Partial<LibContextProps>
 
-    const { queryByTestId } = customRenderLibContext(
-      <FullScreenWrapper {...props} />,
-      providerProps
-    )
-    expect(queryByTestId("StyledFullScreenButton")).toBeNull()
+    customRenderLibContext(<FullScreenWrapper {...props} />, providerProps)
+    // queryBy returns null vs. error
+    expect(screen.queryByTestId("StyledFullScreenButton")).toBeNull() // eslint-disable-line testing-library/prefer-presence-queries
   })
 
   it("can find StyledFullScreenButton with default LibContext", () => {
     const props = getProps()
 
-    const { queryByTestId } = customRenderLibContext(
-      <FullScreenWrapper {...props} />,
-      {}
-    )
-    expect(queryByTestId("StyledFullScreenButton")).not.toBeNull()
+    customRenderLibContext(<FullScreenWrapper {...props} />, {})
+    // queryBy returns null vs. error
+    expect(screen.queryByTestId("StyledFullScreenButton")).not.toBeNull() // eslint-disable-line testing-library/prefer-presence-queries
   })
 })
