@@ -342,13 +342,26 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+
+        id = compute_widget_id(
+            "button",
+            user_key=key,
+            label=label,
+            data=str(data),
+            file_name=file_name,
+            mime=mime,
+            key=key,
+            help=help,
+            use_container_width=use_container_width,
+        )
+
         if is_in_form(self.dg):
             raise StreamlitAPIException(
                 f"`st.download_button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
             )
 
         download_button_proto = DownloadButtonProto()
-
+        download_button_proto.id = id
         download_button_proto.use_container_width = use_container_width
         download_button_proto.label = label
         download_button_proto.default = False
