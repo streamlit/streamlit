@@ -19,7 +19,6 @@
 
 """Image marshalling."""
 
-import imghdr
 import io
 import mimetypes
 import re
@@ -27,6 +26,7 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 from urllib.parse import urlparse
 
+import filetype
 import numpy as np
 from PIL import GifImagePlugin, Image, ImageFile
 from typing_extensions import Final, Literal, TypeAlias
@@ -300,8 +300,11 @@ def _ensure_image_size_and_format(
         image = image.resize((width, new_height), resample=Image.BILINEAR)
         return _PIL_to_bytes(image, format=image_format, quality=90)
 
-    ext = imghdr.what(None, image_data)
-    if ext != image_format.lower():
+    pillow_detected_format = image.format
+    if (
+        pillow_detected_format != None
+        and pillow_detected_format != image_format.lower()
+    ):
         # We need to reformat the image.
         return _PIL_to_bytes(image, format=image_format, quality=90)
 
