@@ -36,7 +36,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import new_compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -215,7 +215,7 @@ class TextWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = new_compute_widget_id(
+        id = compute_widget_id(
             "text_input",
             user_key=key,
             label=label,
@@ -426,7 +426,7 @@ class TextWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = new_compute_widget_id(
+        id = compute_widget_id(
             "text_area",
             user_key=key,
             label=label,

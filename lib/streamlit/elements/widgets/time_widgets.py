@@ -39,7 +39,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import new_compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
@@ -356,7 +356,7 @@ class TimeWidgetsMixin:
                 "The type of value should be one of datetime, time or None"
             )
 
-        id = new_compute_widget_id(
+        id = compute_widget_id(
             "time_input",
             user_key=key,
             label=label,
@@ -597,7 +597,7 @@ class TimeWidgetsMixin:
 
         # TODO this is missing the error path, integrate with the dateinputvalues parsing
 
-        id = new_compute_widget_id(
+        id = compute_widget_id(
             "date_input",
             user_key=key,
             label=label,

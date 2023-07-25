@@ -29,7 +29,7 @@ from streamlit.proto.Element_pb2 import Element
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import NoValue, register_widget
-from streamlit.runtime.state.common import new_compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import to_bytes
 
 LOGGER = get_logger(__name__)
@@ -185,7 +185,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
             if key is None:
                 marshall_element_args()
-                id = new_compute_widget_id(
+                id = compute_widget_id(
                     "component_instance",
                     user_key=key,
                     name=self.name,
@@ -196,7 +196,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                     special_args=special_args,
                 )
             else:
-                id = new_compute_widget_id(
+                id = compute_widget_id(
                     "component_instance",
                     user_key=key,
                     name=self.name,

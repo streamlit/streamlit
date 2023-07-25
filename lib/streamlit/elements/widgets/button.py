@@ -33,7 +33,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import new_compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -399,7 +399,7 @@ class ButtonMixin:
             check_callback_rules(self.dg, on_click)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
-        id = new_compute_widget_id(
+        id = compute_widget_id(
             "button",
             user_key=key,
             label=label,

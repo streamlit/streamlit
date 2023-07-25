@@ -35,7 +35,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import new_compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.string_util import is_emoji
 from streamlit.type_util import Key, to_key
 
@@ -278,7 +278,7 @@ class ChatMixin:
         check_callback_rules(self.dg, on_submit)
         check_session_state_rules(default_value=default, key=key, writes_allowed=False)
 
-        id = new_compute_widget_id(
+        id = compute_widget_id(
             "chat_input",
             user_key=key,
             placeholder=placeholder,

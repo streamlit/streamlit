@@ -43,7 +43,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import new_compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -296,7 +296,7 @@ class MultiSelectMixin:
 
         indices = _check_and_convert_to_indices(opt, default)
 
-        id = new_compute_widget_id(
+        id = compute_widget_id(
             "multiselect",
             user_key=key,
             label=label,

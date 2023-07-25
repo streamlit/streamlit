@@ -65,7 +65,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import new_compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type, to_key
 from streamlit.util import calc_md5
 
@@ -791,7 +791,7 @@ class DataEditorMixin:
         # Throws an exception if any of the configured types are incompatible.
         _check_type_compatibilities(data_df, column_config_mapping, dataframe_schema)
 
-        id = new_compute_widget_id(
+        id = compute_widget_id(
             "data_editor",
             user_key=key,
             # TODO is this in a format where the string bytes accurately represent it?

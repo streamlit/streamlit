@@ -48,7 +48,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
-from streamlit.runtime.state.common import new_compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
@@ -377,7 +377,7 @@ class SliderMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
-        id = new_compute_widget_id(
+        id = compute_widget_id(
             "slider",
             user_key=key,
             label=label,

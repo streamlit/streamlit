@@ -181,7 +181,7 @@ SAFE_VALUES = Union[
 ]
 
 
-def new_compute_widget_id(
+def compute_widget_id(
     element_type: str,
     user_key: str | None = None,
     **kwargs: SAFE_VALUES | Sequence[SAFE_VALUES],

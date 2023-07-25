@@ -32,7 +32,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import new_compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -214,7 +214,7 @@ class SelectboxMixin:
 
         opt = ensure_indexable(options)
 
-        id = new_compute_widget_id(
+        id = compute_widget_id(
             "selectbox",
             user_key=key,
             label=label,

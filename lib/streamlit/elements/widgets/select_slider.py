@@ -45,7 +45,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import new_compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -285,7 +285,7 @@ class SelectSliderMixin:
         # Convert element to index of the elements
         slider_value = as_index_list(value)
 
-        id = new_compute_widget_id(
+        id = compute_widget_id(
             "select_slider",
             user_key=key,
             label=label,
