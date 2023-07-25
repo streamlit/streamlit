@@ -146,6 +146,7 @@ function Tabs(props: TabProps): ReactElement {
                     paddingTop: theme.spacing.none,
                     paddingBottom: theme.spacing.none,
                     fontSize: theme.fontSizes.sm,
+                    background: "transparent",
                     color: widgetsDisabled
                       ? theme.colors.fadedText40
                       : theme.colors.bodyText,
