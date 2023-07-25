@@ -15,7 +15,7 @@
  */
 
 const path = require("path");
-const NO_OF_BUTTONS = 4
+const NO_OF_BUTTONS = 5
 
 describe("st.download_button", () => {
   beforeEach(() => {
@@ -63,4 +63,13 @@ describe("st.download_button", () => {
       .last()
       .click().matchThemedSnapshots("use-container-width-button");
   });
+
+  it("shows primary button correctly", () => {
+    cy.get(".stDownloadButton").should("have.length", NO_OF_BUTTONS);
+
+    cy.getIndexed(".stDownloadButton", 4).matchThemedSnapshots(
+      "primary-download-button"
+    );
+  });
+
 });

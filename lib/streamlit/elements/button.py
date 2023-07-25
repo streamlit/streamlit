@@ -241,6 +241,10 @@ class ButtonMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        type : "secondary" or "primary"
+            An optional string that specifies the button type. Can be "primary" for a
+            button with additional emphasis or "secondary" for a normal button. This
+            argument can only be supplied by keyword. Defaults to "secondary".
         disabled : bool
             An optional boolean, which disables the download button if set to
             True. The default is False. This argument can only be supplied by
@@ -309,7 +313,8 @@ class ButtonMixin:
         """
         ctx = get_script_run_ctx()
 
-        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
+        # Checks whether the entered button type is one of the allowed options - either
+        # "primary" or "secondary"
         if type not in ["primary", "secondary"]:
             raise StreamlitAPIException(
                 'The type argument to st.button must be "primary" or "secondary". \n'
