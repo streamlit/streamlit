@@ -791,6 +791,10 @@ class DataEditorMixin:
         # Throws an exception if any of the configured types are incompatible.
         _check_type_compatibilities(data_df, column_config_mapping, dataframe_schema)
 
+        # We want to do this as early as possible to avoid introducing nondeterminism,
+        # but it isn't clear how much processing is needed to have the data in a
+        # format that will hash consistently, so we do it late here to have it
+        # as close as possible to how it used to be.
         id = compute_widget_id(
             "data_editor",
             user_key=key,
