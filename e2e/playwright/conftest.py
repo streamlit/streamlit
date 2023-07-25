@@ -334,12 +334,12 @@ def assert_snapshot(
         if file_type == "jpg":
             file_extension = ".jpg"
             img_bytes = element.screenshot(
-                type="jpeg", quality=90, scale="css", animations="disabled"
+                type="jpeg", quality=90, animations="disabled"
             )
 
         else:
             file_extension = ".png"
-            img_bytes = element.screenshot(animations="disabled")
+            img_bytes = element.screenshot(type="png", animations="disabled")
 
         snapshot_file_name: str = snapshot_default_file_name
         if name:
