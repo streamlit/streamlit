@@ -249,13 +249,12 @@ describe("StreamlitMarkdown", () => {
 
   it("doesn't render links when isButton is true", () => {
     // Valid markdown further restricted with buttons to eliminate links
-    const source = "[text](www.example.com)"
+    const source = "[Link text](www.example.com)"
     render(
       <StreamlitMarkdown source={source} allowHTML={false} isLabel isButton />
     )
-    const markdown = screen.getByText("text")
-    const tagName = markdown.nodeName.toLowerCase()
-    expect(tagName).not.toBe("a")
+    const tag = screen.getByText("Link text")
+    expect(tag instanceof HTMLAnchorElement).toBe(false)
   })
 
   it("renders smaller text sizing when isToast is true", () => {
@@ -264,6 +263,21 @@ describe("StreamlitMarkdown", () => {
 
     const textTag = screen.getByText("Here is some toast text")
     expect(textTag).toHaveStyle("font-size: 14px")
+  })
+
+  it("renders regular text sizing when largerLabel is true", () => {
+    const source = "Here is some checkbox label text"
+    render(
+      <StreamlitMarkdown
+        source={source}
+        allowHTML={false}
+        isLabel
+        largerLabel
+      />
+    )
+
+    const textTag = screen.getByText("Here is some checkbox label text")
+    expect(textTag).toHaveStyle("font-size: inherit")
   })
 
   it("colours text properly", () => {
