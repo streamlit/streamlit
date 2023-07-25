@@ -163,10 +163,9 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
             # Normally, a widget's element_hash (which determines
             # its identity across multiple runs of an app) is computed
-            # by hashing the entirety of its protobuf. This means that,
-            # if any of the arguments to the widget are changed, Streamlit
-            # considers it a new widget instance and it loses its previous
-            # state.
+            # by hashing its arguments. This means that, if any of the arguments
+            # to the widget are changed, Streamlit considers it a new widget
+            # instance and it loses its previous state.
             #
             # However! If a *component* has a `key` argument, then the
             # component's hash identity is determined by entirely by
@@ -174,10 +173,6 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             # exists, the component will maintain its identity even when its
             # other arguments change, and the component's iframe won't be
             # remounted on the frontend.
-            #
-            # So: if `key` is None, we marshall the element's arguments
-            # *before* computing its widget_ui_value (which creates its hash).
-            # If `key` is not None, we marshall the arguments *after*.
 
             def marshall_element_args():
                 element.component_instance.json_args = serialized_json_args
