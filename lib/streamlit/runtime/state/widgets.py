@@ -151,13 +151,6 @@ def register_widget(
         For both paths a widget return value is provided, allowing the widgets
         to be used in a non-streamlit setting.
     """
-    if not element_proto.id:
-        widget_id = compute_widget_id_from_proto(element_type, element_proto, user_key)
-        element_proto.id = widget_id
-        LOGGER.warn(
-            f"Registering a widget with no id, falling back to generating from proto. {widget_id=}"
-        )
-
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
         element_proto.id,
