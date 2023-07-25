@@ -576,20 +576,6 @@ class TimeWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
-        if isinstance(min_value, datetime):
-            parsed_min_date = date.strftime(min_value.date(), "%Y/%m/%d")
-        elif isinstance(min_value, date):
-            parsed_min_date = date.strftime(min_value, "%Y/%m/%d")
-        else:
-            parsed_min_date = None
-
-        if isinstance(max_value, datetime):
-            parsed_max_date = date.strftime(max_value.date(), "%Y/%m/%d")
-        elif isinstance(max_value, date):
-            parsed_max_date = date.strftime(max_value, "%Y/%m/%d")
-        else:
-            parsed_max_date = None
-
         def parse_date_deterministic(v: SingleDateValue) -> str | None:
             if v is None:
                 parsed_value = None
@@ -599,8 +585,13 @@ class TimeWidgetsMixin:
                 parsed_value = date.strftime(v, "%Y/%m/%d")
             return parsed_value
 
+        parsed_min_date = parse_date_deterministic(min_value)
+        parsed_max_date = parse_date_deterministic(max_value)
+
         if isinstance(value, datetime) or isinstance(value, date) or value is None:
-            parsed_value = parse_date_deterministic(value)
+            parsed_value: str | None | List[str | None] = parse_date_deterministic(
+                value
+            )
         else:
             parsed_value = [parse_date_deterministic(v) for v in value]
 
