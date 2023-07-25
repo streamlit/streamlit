@@ -47,3 +47,9 @@ if runtime.exists():
     st.number_input("number input 9", key="number_input9", on_change=on_change)
     st.write('value 9: "', st.session_state.number_input9, '"')
     st.write("number input changed:", "number_input_changed" in st.session_state)
+
+[col1, col2, col3, col4, col5, col6] = st.columns(6)
+
+with col1:
+    i10 = st.number_input("number input 10", max_value=10)
+    st.write('value 10: "', i10, '"')

@@ -8,6 +8,7 @@
     "build": "yarn workspace @streamlit/lib build && yarn workspace @streamlit/app build",
     "buildFast": "yarn buildLib && yarn workspace @streamlit/app buildFast",
     "buildLib": "yarn workspace @streamlit/lib build",
+    "buildLibProd": "yarn workspace @streamlit/lib build:prod",
     "buildApp": "yarn workspace @streamlit/app build",
     "buildAppFast": "yarn workspace @streamlit/app buildFast",
     "typecheck": "yarn workspace @streamlit/lib typecheck && yarn workspace @streamlit/app typecheck",
