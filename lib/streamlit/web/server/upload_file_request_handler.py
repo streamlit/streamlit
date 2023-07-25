@@ -63,24 +63,27 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
 
     def options(self, **kwargs):
         """/OPTIONS handler for preflight CORS checks.
+
         When a browser is making a CORS request, it may sometimes first
         send an OPTIONS request, to check whether the server understands the
         CORS protocol. This is optional, and doesn't happen for every request
         or in every browser. If an OPTIONS request does get sent, and is not
         then handled by the server, the browser will fail the underlying
         request.
+
         The proper way to handle this is to send a 204 response ("no content")
         with the CORS headers attached. (These headers are automatically added
         to every outgoing response, including OPTIONS responses,
         via set_default_headers().)
+
         See https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
         """
         self.set_status(204)
         self.finish()
 
     def post(self, **kwargs):
-        """
-        Receive an uploaded file and add it to our UploadedFileManager.
+        """Receive an uploaded file and add it to our UploadedFileManager.
+
         Return the file's ID, so that the client can refer to it.
         """
 
@@ -127,7 +130,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self.set_status(204)
 
     def delete(self, **kwargs):
-        """DELETE FILE"""
+        """Delete file request handler."""
         session_id = self.path_kwargs["session_id"]
         file_id = self.path_kwargs["file_id"]
 

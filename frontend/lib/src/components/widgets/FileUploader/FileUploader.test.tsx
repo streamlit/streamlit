@@ -29,7 +29,6 @@ import {
   IFileURLs,
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { notUndefined } from "@streamlit/lib/src/util/utils"
 import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
 import {

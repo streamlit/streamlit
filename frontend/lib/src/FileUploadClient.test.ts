@@ -140,8 +140,8 @@ describe("FileUploadClient Upload", () => {
     expect(pendingReqs.get(reqId)?.promise).toBe(fileURLsPromise)
   })
 
-  it("onFileURLsResponse rejects promise on errorMsg", () => {
-    const fileURLsPromise = uploader.fetchFileURLs([])
+  it("onFileURLsResponse rejects promise on errorMsg", async () => {
+    uploader.fetchFileURLs([])
 
     // @ts-expect-error
     const pendingReqs = uploader.pendingFileURLsRequests
@@ -153,11 +153,11 @@ describe("FileUploadClient Upload", () => {
       errorMsg: "kaboom",
     })
 
-    expect(promise).rejects.toBe("kaboom")
+    await expect(promise).rejects.toBe("kaboom")
   })
 
-  it("onFileURLsResponse resolves promise on success", () => {
-    const fileURLsPromise = uploader.fetchFileURLs([])
+  it("onFileURLsResponse resolves promise on success", async () => {
+    uploader.fetchFileURLs([])
 
     // @ts-expect-error
     const pendingReqs = uploader.pendingFileURLsRequests
@@ -169,7 +169,7 @@ describe("FileUploadClient Upload", () => {
       fileUrls: [],
     })
 
-    expect(promise).resolves.toEqual([])
+    await expect(promise).resolves.toEqual([])
   })
 
   it("onFileURLsResponse does not error when given an invalid responseId", () => {

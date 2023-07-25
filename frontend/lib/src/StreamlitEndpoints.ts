@@ -57,9 +57,10 @@ export interface StreamlitEndpoints {
   /**
    * Upload a file to the FileUploader endpoint.
    *
-   * @param file The file to upload
+   * @param fileUploadUrl The URL to upload the file to.
+   * @param file The file to upload.
    * @param sessionId the current sessionID. The file will be associated with this ID.
-   * @param onUploadProgress optional function that will be called repeatedly with progress events during the upload
+   * @param onUploadProgress optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken optional axios CancelToken that can be used to cancel the in-progress upload.
    *
    * @return a Promise<number> that resolves with the file's unique ID, as assigned by the server.
