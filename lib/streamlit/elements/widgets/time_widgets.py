@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import re
 from dataclasses import dataclass
@@ -590,12 +591,12 @@ class TimeWidgetsMixin:
             parsed_max_date = None
 
         def parse_date_deterministic(v: SingleDateValue) -> str | None:
-            if isinstance(v, None):
+            if v is None:
                 parsed_value = None
             elif isinstance(v, datetime):
                 parsed_value = date.strftime(v.date(), "%Y/%m/%d")
             elif isinstance(v, date):
-                parsed_value = date.strftime(value, "%Y/%m/%d")
+                parsed_value = date.strftime(v, "%Y/%m/%d")
             return parsed_value
 
         if isinstance(value, datetime) or isinstance(value, date) or value is None:
