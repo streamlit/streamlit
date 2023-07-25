@@ -25,7 +25,7 @@ def test_data_editor_supports_various_configurations(
     expect(dataframe_elements).to_have_count(23)
 
     # The data editor might require a bit more time for rendering the canvas
-    app.wait_for_timeout(500)
+    app.wait_for_timeout(250)
 
     for i, element in enumerate(dataframe_elements.all()):
         assert_snapshot(element, name=f"data_editor-config-{i}")
