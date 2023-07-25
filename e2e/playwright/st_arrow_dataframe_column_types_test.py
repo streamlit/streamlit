@@ -25,8 +25,4 @@ def test_dataframe_column_types(
     expect(dataframe_elements).to_have_count(9)
 
     for i, element in enumerate(dataframe_elements.all()):
-        # Expect the screenshot "to be" the same as the previously stored screenshot.
-        assert_snapshot(
-            element.screenshot(),
-            name=f"dataframe-column-types-{i}",
-        )
+        assert_snapshot(element, name=f"dataframe-column-types-{i}")

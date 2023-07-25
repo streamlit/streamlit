@@ -31,12 +31,12 @@ from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryFile
 from types import ModuleType
-from typing import Any, Generator, List, Protocol
+from typing import Any, Generator, List, Literal, Protocol
 
 import pytest
 import requests
 from PIL import Image
-from playwright.sync_api import Page
+from playwright.sync_api import ElementHandle, Locator, Page
 from pytest import FixtureRequest
 
 
@@ -231,7 +231,7 @@ def themed_app(page: Page, app_port: int, app_theme: str) -> Page:
 class ImageCompareFunction(Protocol):
     def __call__(
         self,
-        img: bytes,
+        element: ElementHandle | Locator,
         *,
         image_threshold: float = 0.001,
         pixel_threshold: float = 0.05,
@@ -242,8 +242,8 @@ class ImageCompareFunction(Protocol):
 
         Parameters
         ----------
-        img : bytes
-            The screenshot to compare.
+        element : ElementHandle or Locator
+            The element to take a screenshot of.
         image_threshold : float, optional
             The allowed percentage of different pixels in the image.
         pixel_threshold : float, optional
@@ -300,19 +300,20 @@ def assert_snapshot(
     test_failure_messages: List[str] = []
 
     def compare(
-        img: bytes,
+        element: ElementHandle | Locator,
         *,
         image_threshold: float = 0.001,
         pixel_threshold: float = 0.05,
         name: str | None = None,
         fail_fast: bool = False,
+        file_type: Literal["png", "jpg"] = "png",
     ) -> None:
         """Compare a screenshot with screenshot from a past run.
 
         Parameters
         ----------
-        img : bytes
-            The screenshot to compare.
+        element : ElementHandle or Locator
+            The element to take a screenshot of.
         image_threshold : float, optional
             The allowed percentage of different pixels in the image.
         pixel_threshold : float, optional
@@ -329,8 +330,16 @@ def assert_snapshot(
         nonlocal module_snapshot_updates_dir
         nonlocal module_snapshot_failures_dir
         nonlocal snapshot_file_suffix
-        # It is expected that all screenshots are in PNG format
-        file_extension = ".png"
+
+        if file_type == "jpg":
+            file_extension = ".jpg"
+            img_bytes = element.screenshot(
+                type="jpeg", quality=90, scale="css", animations="disabled"
+            )
+
+        else:
+            file_extension = ".png"
+            img_bytes = element.screenshot(animations="disabled")
 
         snapshot_file_name: str = snapshot_default_file_name
         if name:
@@ -352,10 +361,10 @@ def assert_snapshot(
             shutil.rmtree(test_failures_dir)
 
         if not snapshot_file_path.exists():
-            snapshot_file_path.write_bytes(img)
+            snapshot_file_path.write_bytes(img_bytes)
             # Update this in updates folder:
             snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
-            snapshot_updates_file_path.write_bytes(img)
+            snapshot_updates_file_path.write_bytes(img_bytes)
             # For missing snapshots, we don't want to directly fail in order to generate
             # all missing snapshots in one run.
             test_failure_messages.append(f"Missing snapshot for {snapshot_file_name}")
@@ -364,7 +373,7 @@ def assert_snapshot(
         from pixelmatch.contrib.PIL import pixelmatch
 
         # Compare the new screenshot with the screenshot from past runs:
-        img_a = Image.open(BytesIO(img))
+        img_a = Image.open(BytesIO(img_bytes))
         img_b = Image.open(snapshot_file_path)
         img_diff = Image.new("RGBA", img_a.size)
         mismatch = pixelmatch(
@@ -382,7 +391,7 @@ def assert_snapshot(
 
         # Update this in updates folder:
         snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
-        snapshot_updates_file_path.write_bytes(img)
+        snapshot_updates_file_path.write_bytes(img_bytes)
 
         # Create new failures folder for this test:
         test_failures_dir.mkdir(parents=True, exist_ok=True)

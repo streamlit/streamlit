@@ -25,7 +25,4 @@ def test_data_editor_supports_various_configurations(
     expect(dataframe_elements).to_have_count(23)
 
     for i, element in enumerate(dataframe_elements.all()):
-        assert_snapshot(
-            element.screenshot(),
-            name=f"data_editor-config-{i}",
-        )
+        assert_snapshot(element, name=f"data_editor-config-{i}")

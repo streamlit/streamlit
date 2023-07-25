@@ -26,10 +26,7 @@ def test_checkbox_widget_display(
     expect(checkbox_elements).to_have_count(8)
 
     for i, element in enumerate(checkbox_elements.all()):
-        assert_snapshot(
-            element.screenshot(),
-            name=f"checkbox-{i}",
-        )
+        assert_snapshot(element, name=f"checkbox-{i}")
 
 
 def test_checkbox_initial_values(app: Page):

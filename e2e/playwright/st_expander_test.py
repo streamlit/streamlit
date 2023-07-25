@@ -39,9 +39,9 @@ def test_expander_displays_correctly(
     """Test that sidebar and main container expanders are displayed correctly."""
     # Focus the button, then ensure it's not cut off
     themed_app.locator(".stButton button").focus()
-    assert_snapshot(themed_app.locator(".main").screenshot(), name="expanders-in-main")
+    assert_snapshot(themed_app.locator(".main"), name="expanders-in-main")
     assert_snapshot(
-        themed_app.locator("[data-testid='stSidebar']").screenshot(),
+        themed_app.locator("[data-testid='stSidebar']"),
         name="expanders-in-sidebar",
     )
 

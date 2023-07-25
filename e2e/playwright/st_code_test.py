@@ -27,8 +27,8 @@ def test_code_display(app: Page):
 def test_syntax_highlighting(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the syntax highlighting is applied correctly to the code block."""
     block_container = themed_app.locator(".block-container")
-    assert_snapshot(block_container.screenshot(), name="syntax_highlighting")
+    assert_snapshot(block_container, name="syntax_highlighting")
 
     first_code_element = themed_app.locator(".element-container:first-child pre").first
     first_code_element.hover()
-    assert_snapshot(first_code_element.screenshot(), name="syntax_highlighting-hover")
+    assert_snapshot(first_code_element, name="syntax_highlighting-hover")
