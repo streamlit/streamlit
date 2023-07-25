@@ -201,9 +201,8 @@ def compute_widget_id(
     """
     h = hashlib.new("md5")
     h.update(element_type.encode("utf-8"))
-    # TODO make sure this is equivalent to the protobuf approach
-    # Values should be of the types that go into protobufs:
-    # float, int, bool, str, bytes, a list of those, or a map of those
+    # This will iterate in a consistent order when the provided arguments have
+    # consistent order; dicts are always in insertion order.
     for k, v in kwargs.items():
         h.update(str(k).encode("utf-8"))
         h.update(str(v).encode("utf-8"))
