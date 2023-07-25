@@ -44,6 +44,7 @@ import {
   StyledCommandLine,
   StyledDeployErrorContent,
   StyledAboutInfo,
+  StyledAboutLink,
 } from "./styled-components"
 
 export type PlainEventHandler = () => void
@@ -172,7 +173,9 @@ function aboutDialog(props: AboutProps): ReactElement {
               <br />
             </>
           )}
-          <a href={STREAMLIT_HOME_URL}>{STREAMLIT_HOME_URL}</a>
+          <StyledAboutLink href={STREAMLIT_HOME_URL}>
+            {STREAMLIT_HOME_URL}
+          </StyledAboutLink>
           <br />
           Copyright {new Date().getFullYear()} Snowflake Inc. All rights
           reserved.
