@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from conftest import ImageCompareFunction
 
@@ -22,10 +22,10 @@ def test_data_editor_supports_various_configurations(
 ):
     """Test that st.data_editor supports various configuration options."""
     # Create locators for all elements with stDataFrame class
-    st_dataframe_elements = app.locator(".stDataFrame").all()
-    assert len(st_dataframe_elements) == 23, "Unexpected number of data_editor elements"
+    dataframe_elements = app.locator(".stDataFrame")
+    expect(dataframe_elements).to_have_count(23)
 
-    for i, element in enumerate(st_dataframe_elements):
+    for i, element in enumerate(dataframe_elements.all()):
         # Expect the screenshot "to be" the same as the previously stored screenshot.
         assert_snapshot(
             element.screenshot(),

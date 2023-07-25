@@ -63,15 +63,17 @@ def del_from_kth_multiselect(page: Page, option_text: str, k: int):
 
 def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Should show widgets correctly when loaded."""
-    multiselect_elements = themed_app.locator(".stMultiSelect").all()
-    assert len(multiselect_elements) == 12
-    for idx, el in enumerate(multiselect_elements):
+    multiselect_elements = themed_app.locator(".stMultiSelect")
+    expect(multiselect_elements).to_have_count(12)
+    for idx, el in enumerate(multiselect_elements.all()):
         assert_snapshot(el.screenshot(), name="multiselect-" + str(idx))
 
 
 def test_multiselect_initial_value(app: Page):
     """Should show the correct initial values."""
-    text_elements = app.locator("[data-testid='stText']").all_inner_texts()
+    text_elements = app.locator("[data-testid='stText']")
+    expect(text_elements).to_have_count(12)
+    text_elements = text_elements.all_inner_texts()
     texts = [text.strip() for text in text_elements]
 
     expected = [

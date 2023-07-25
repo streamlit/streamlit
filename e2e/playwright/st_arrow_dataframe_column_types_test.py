@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from conftest import ImageCompareFunction
 
@@ -20,14 +20,11 @@ from conftest import ImageCompareFunction
 def test_dataframe_column_types(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that st.dataframe supports various column types."""
-    # Create locators for all elements with stDataFrame class
-    st_dataframe_elements = themed_app.locator(".stDataFrame").all()
+    """Test that st.dataframe render various column types correctly."""
+    dataframe_elements = themed_app.locator(".stDataFrame")
+    expect(dataframe_elements).to_have_count(9)
 
-    # Expect the number of stDataFrame elements "to be strictly equal" to 9.
-    assert len(st_dataframe_elements) == 9, "Unexpected number of dataframe elements"
-
-    for i, element in enumerate(st_dataframe_elements):
+    for i, element in enumerate(dataframe_elements.all()):
         # Expect the screenshot "to be" the same as the previously stored screenshot.
         assert_snapshot(
             element.screenshot(),

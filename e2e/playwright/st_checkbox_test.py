@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from conftest import ImageCompareFunction, wait_for_app_run
 
@@ -22,11 +22,10 @@ def test_checkbox_widget_display(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.checkbox renders correctly."""
-    checkbox_elements = themed_app.locator(".stCheckbox").all()
+    checkbox_elements = themed_app.locator(".stCheckbox")
+    expect(checkbox_elements).to_have_count(8)
 
-    assert len(checkbox_elements) == 8, "Unexpected number of checkbox elements"
-
-    for i, element in enumerate(checkbox_elements):
+    for i, element in enumerate(checkbox_elements.all()):
         assert_snapshot(
             element.screenshot(),
             name=f"checkbox-{i}",
@@ -35,9 +34,10 @@ def test_checkbox_widget_display(
 
 def test_checkbox_initial_values(app: Page):
     """Test that st.checkbox has the correct initial values."""
+    markdown_elements = app.locator(".stMarkdown")
+    expect(markdown_elements).to_have_count(9)
 
-    markdown_elements = app.locator(".stMarkdown").all_inner_texts()
-    texts = [text.strip() for text in markdown_elements]
+    texts = [text.strip() for text in markdown_elements.all_inner_texts()]
 
     expected = [
         "value 1: True",
@@ -56,15 +56,16 @@ def test_checkbox_initial_values(app: Page):
 
 def test_checkbox_values_on_click(app: Page):
     """Test that st.checkbox updates values correctly when user clicks."""
-    checkbox_elements = app.locator(".stCheckbox").all()
+    checkbox_elements = app.locator(".stCheckbox")
+    expect(checkbox_elements).to_have_count(8)
 
-    for checkbox_element in checkbox_elements:
+    for checkbox_element in checkbox_elements.all():
         checkbox_element.click(delay=50)
     # The app run needs to finish before we can check the values.
     wait_for_app_run(app)
 
-    markdown_elements = app.locator(".stMarkdown").all_inner_texts()
-    texts = [text.strip() for text in markdown_elements]
+    markdown_elements = app.locator(".stMarkdown")
+    texts = [text.strip() for text in markdown_elements.all_inner_texts()]
 
     expected = [
         "value 1: False",
