@@ -589,11 +589,9 @@ class TimeWidgetsMixin:
         parsed_max_date = parse_date_deterministic(max_value)
 
         if isinstance(value, datetime) or isinstance(value, date) or value is None:
-            parsed_value: str | None | List[str | None] = parse_date_deterministic(
-                value
-            )
+            parsed: str | None | List[str | None] = parse_date_deterministic(value)
         else:
-            parsed_value = [parse_date_deterministic(v) for v in value]
+            parsed = [parse_date_deterministic(v) for v in value]
 
         # TODO this is missing the error path, integrate with the dateinputvalues parsing
 
@@ -601,7 +599,7 @@ class TimeWidgetsMixin:
             "date_input",
             user_key=key,
             label=label,
-            value=parsed_value,
+            value=parsed,
             min_value=parsed_min_date,
             max_value=parsed_max_date,
             key=key,
