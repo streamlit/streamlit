@@ -19,6 +19,16 @@ from streamlit import runtime
 from tests.streamlit import pyspark_mocks
 
 options = ("female", "male")
+markdown_options = (
+    "**bold text**",
+    "*italics text*",
+    "~strikethrough text~",
+    "shortcode: :blush:",
+    # link should not work in radio options
+    "[link text](www.example.com)",
+    "`code text`",
+    ":red[red] :blue[blue] :green[green] :violet[violet] :orange[orange]",
+)
 i1 = st.radio("radio 1", options, 1)
 st.write("value 1:", i1)
 
@@ -43,14 +53,16 @@ st.write("value 7:", i7)
 i8 = st.radio("radio 8", options, label_visibility="collapsed")
 st.write("value 8:", i8)
 
+i9 = st.radio("radio 9", markdown_options)
+st.write("value 9:", i9)
 
 if runtime.exists():
 
     def on_change():
         st.session_state.radio_changed = True
 
-    st.radio("radio 9", options, 1, key="radio9", on_change=on_change)
-    st.write("value 9:", st.session_state.radio9)
+    st.radio("radio 10", options, 1, key="radio10", on_change=on_change)
+    st.write("value 10:", st.session_state.radio10)
     st.write("radio changed:", "radio_changed" in st.session_state)
 
 st.radio("PySpark radio", pyspark_mocks.DataFrame())  # type: ignore
