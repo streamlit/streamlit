@@ -578,12 +578,11 @@ class TimeWidgetsMixin:
 
         def parse_date_deterministic(v: SingleDateValue) -> str | None:
             if v is None:
-                parsed_value = None
+                return None
             elif isinstance(v, datetime):
-                parsed_value = date.strftime(v.date(), "%Y/%m/%d")
+                return date.strftime(v.date(), "%Y/%m/%d")
             elif isinstance(v, date):
-                parsed_value = date.strftime(v, "%Y/%m/%d")
-            return parsed_value
+                return date.strftime(v, "%Y/%m/%d")
 
         parsed_min_date = parse_date_deterministic(min_value)
         parsed_max_date = parse_date_deterministic(max_value)
