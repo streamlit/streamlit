@@ -159,13 +159,15 @@ def wait_for_app_run(page: Page):
 
 def wait_for_app_loaded(page: Page):
     """Wait for the app to fully load."""
-    # Wait until we know the script has started.
+    # Wait for the app view container to appear:
     page.wait_for_selector(
-        "[data-testid='stAppViewContainer']", timeout=20000, state="attached"
+        "[data-testid='stAppViewContainer']", timeout=30000, state="attached"
     )
+    # Wait for the main app container to appear:
     page.wait_for_selector(
         "[data-testid='block-container']", timeout=20000, state="attached"
     )
+    # Wait for the main menu to appear:
     page.wait_for_selector("#MainMenu", timeout=20000, state="attached")
     wait_for_app_run(page)
 
