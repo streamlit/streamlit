@@ -379,14 +379,21 @@ def assert_snapshot(
         img_a = Image.open(BytesIO(img_bytes))
         img_b = Image.open(snapshot_file_path)
         img_diff = Image.new("RGBA", img_a.size)
-        mismatch = pixelmatch(
-            img_a,
-            img_b,
-            img_diff,
-            threshold=pixel_threshold,
-            fail_fast=fail_fast,
-            alpha=0,
-        )
+        try:
+            mismatch = pixelmatch(
+                img_a,
+                img_b,
+                img_diff,
+                threshold=pixel_threshold,
+                fail_fast=fail_fast,
+                alpha=0,
+            )
+        except ValueError as ex:
+            # ValueError is thrown when the images have different sizes
+            # Update this in updates folder:
+            snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
+            snapshot_updates_file_path.write_bytes(img_bytes)
+            pytest.fail(f"Snapshot matching failed: {ex}")
         max_diff_pixels = int(image_threshold * img_a.size[0] * img_a.size[1])
 
         if mismatch < max_diff_pixels:
