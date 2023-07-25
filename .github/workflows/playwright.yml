@@ -70,9 +70,9 @@ jobs:
         with:
           name: playwright_snapshots
           path: e2e/playwright/snapshots
-      - name: Upload failed tests
+      - name: Upload failed test results
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: playwright_failed_tests
-          path: e2e/playwright/failed-tests
+          name: playwright_test_results
+          path: e2e/playwright/test-results

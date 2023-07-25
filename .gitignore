@@ -89,7 +89,6 @@ lib/Pipfile.lock
 # Playwright test
 e2e/playwright/playwright-report
 e2e/playwright/test-results
-e2e/playwright/failed-tests
 # Only keep the snapshots in the linux folder
 e2e/playwright/snapshots/*
 !e2e/playwright/snapshots/linux

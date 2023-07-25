@@ -31,15 +31,13 @@ from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryFile
 from types import ModuleType
-from typing import Generator, List, Protocol
+from typing import Any, Generator, List, Protocol
 
 import pytest
 import requests
 from PIL import Image
 from playwright.sync_api import Page
 from pytest import FixtureRequest
-
-FAILED_TESTS_FOLDER_NAME = "failed-tests"
 
 
 class AsyncSubprocess:
@@ -149,20 +147,26 @@ def wait_for_app_server_to_start(port: int, timeout: int = 5) -> bool:
     return True
 
 
+def wait_for_app_run(page: Page):
+    """Wait for the app to finish running."""
+    # Wait until the script is no longer running.
+    page.wait_for_selector(
+        "[data-testid='stStatusWidget']", timeout=20000, state="detached"
+    )
+    # Give the app a little more time to render everything
+    page.wait_for_timeout(500)
+
+
 def wait_for_app_loaded(page: Page):
     """Wait for the app to fully load."""
     # Wait until we know the script has started.
     page.wait_for_selector(
         "[data-testid='stAppViewContainer']", timeout=20000, state="attached"
     )
-    # Wait until the script is no longer running.
     page.wait_for_selector(
-        "[data-testid='stStatusWidget']", timeout=20000, state="detached"
+        "[data-testid='block-container']", timeout=20000, state="attached"
     )
-    # Give the app a little more time to render everything.
-    # This is mainly required by complex elements that have some delay in
-    # rendering such as dataframe or charts.
-    time.sleep(0.5)
+    wait_for_app_run(page)
 
 
 @pytest.fixture(scope="module")
@@ -253,41 +257,22 @@ class ImageCompareFunction(Protocol):
 
 
 @pytest.fixture(scope="session")
-def snapshot_updates_dir(request: FixtureRequest) -> Path:
-    """Fixture that returns the snapshot updates directory.
+def output_folder(pytestconfig: Any) -> Path:
+    """Fixture that returns the directory that is used for all test failures information.
 
-    This directory contains all the snapshots that got updated in the current run
-    based on folder structure used in the main snapshots folder.
+    This includes:
+    - snapshot-tests-failures: This directory contains all the snapshots that did not
+    match with the snapshots from past runs. The folder structure is based on the folder
+    structure used in the main snapshots folder.
+    - snapshot-updates: This directory contains all the snapshots that got updated in
+    the current run based on folder structure used in the main snapshots folder.
     """
-    root_path = Path(request.node.fspath).resolve()
-    return root_path / FAILED_TESTS_FOLDER_NAME / "snapshot-updates"
-
-
-@pytest.fixture(scope="session")
-def snapshot_failures_dir(request: FixtureRequest) -> Path:
-    """Fixture that returns the snapshot test failures directory.
-
-    This directory contains all the snapshots that did not match with the snapshots
-    from past runs. The folder structure is based on the folder structure used in the
-    main snapshots folder.
-    """
-    root_path = Path(request.node.fspath).resolve()
-    return root_path / FAILED_TESTS_FOLDER_NAME / "snapshot-tests-failures"
-
-
-@pytest.fixture(scope="session", autouse=True)
-def cleanup_snapshots(snapshot_updates_dir: Path, snapshot_failures_dir: Path):
-    """Fixture that cleans up some temp test directories before every session."""
-    if snapshot_updates_dir.exists():
-        shutil.rmtree(snapshot_updates_dir)
-
-    if snapshot_failures_dir.exists():
-        shutil.rmtree(snapshot_failures_dir)
+    return Path(pytestconfig.getoption("--output")).resolve()
 
 
 @pytest.fixture(scope="function")
 def assert_snapshot(
-    request: FixtureRequest, snapshot_updates_dir: Path, snapshot_failures_dir: Path
+    request: FixtureRequest, output_folder: Path
 ) -> Generator[ImageCompareFunction, None, None]:
     """Fixture that compares a screenshot with screenshot from a past run."""
     platform = str(sys.platform)
@@ -297,8 +282,12 @@ def assert_snapshot(
 
     snapshot_dir: Path = root_path / "snapshots" / platform / module_name
 
-    module_snapshot_failures_dir: Path = snapshot_failures_dir / platform / module_name
-    module_snapshot_updates_dir: Path = snapshot_updates_dir / platform / module_name
+    module_snapshot_failures_dir: Path = (
+        output_folder / "snapshot-tests-failures" / platform / module_name
+    )
+    module_snapshot_updates_dir: Path = (
+        output_folder / "snapshot-updates" / platform / module_name
+    )
 
     snapshot_file_suffix = ""
     # Extract the parameter ids if they exist
