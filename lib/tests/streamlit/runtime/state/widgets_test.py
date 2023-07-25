@@ -28,6 +28,7 @@ from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import coalesce_widget_states
 from streamlit.runtime.state.common import (
     GENERATED_WIDGET_ID_PREFIX,
+    compute_widget_id,
     compute_widget_id_from_proto,
 )
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
@@ -304,13 +305,8 @@ class WidgetManagerTests(unittest.TestCase):
 
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
-        button_proto = ButtonProto()
-        button_proto.label = "the label"
-        self.assertTrue(
-            compute_widget_id_from_proto("button", button_proto).startswith(
-                GENERATED_WIDGET_ID_PREFIX
-            )
-        )
+        id = compute_widget_id("button", label="the label")
+        assert id.startswith(GENERATED_WIDGET_ID_PREFIX)
 
 
 class WidgetIdDisabledTests(DeltaGeneratorTestCase):

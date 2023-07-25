@@ -31,7 +31,6 @@ from streamlit.runtime.state.common import (
     WidgetMetadata,
     WidgetProto,
     WidgetSerializer,
-    compute_widget_id_from_proto,
     user_key_from_widget_id,
 )
 from streamlit.type_util import ValueFieldName

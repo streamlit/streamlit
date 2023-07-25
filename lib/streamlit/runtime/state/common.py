@@ -155,26 +155,6 @@ class RegisterWidgetResult(Generic[T_co]):
         return cls(value=deserializer(None, ""), value_changed=False)
 
 
-def compute_widget_id_from_proto(
-    element_type: str, element_proto: WidgetProto, user_key: Optional[str] = None
-) -> str:
-    """Compute the widget id for the given widget. This id is stable: a given
-    set of inputs to this function will always produce the same widget id output.
-
-    The widget id includes the user_key so widgets with identical arguments can
-    use it to be distinct.
-
-    The widget id includes an easily identified prefix, and the user_key as a
-    suffix, to make it easy to identify it and know if a key maps to it.
-
-    Does not mutate the element_proto object.
-    """
-    h = hashlib.new("md5")
-    h.update(element_type.encode("utf-8"))
-    h.update(element_proto.SerializeToString())
-    return f"{GENERATED_WIDGET_ID_PREFIX}-{h.hexdigest()}-{user_key}"
-
-
 PROTO_SCALAR_VALUE = Union[float, int, bool, str, bytes]
 SAFE_VALUES = Union[
     date, time, datetime, timedelta, None, "NoValue", Message, PROTO_SCALAR_VALUE
