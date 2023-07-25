@@ -58,10 +58,11 @@ describe("st.download_button", () => {
   });
 
   it("renders useContainerWidth st.download_button correctly", () => {
-    cy.get(".stDownloadButton button")
-      .should("have.length.at.least", 1)
-      .last()
-      .click().matchThemedSnapshots("use-container-width-button");
+    cy.get(".stDownloadButton").should("have.length", NO_OF_BUTTONS);
+
+    cy.getIndexed(".stDownloadButton", 3).matchThemedSnapshots(
+      "use-container-width-button"
+    );
   });
 
   it("shows primary button correctly", () => {
