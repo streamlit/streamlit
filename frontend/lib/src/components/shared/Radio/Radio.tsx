@@ -25,6 +25,7 @@ import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 export interface Props {
   disabled: boolean
@@ -85,7 +86,7 @@ class Radio extends React.PureComponent<Props, State> {
     }
 
     return (
-      <div className="row-widget stRadio" style={style}>
+      <div className="row-widget stRadio" data-testid="stRadio" style={style}>
         <WidgetLabel
           label={label}
           disabled={disabled}
@@ -103,6 +104,7 @@ class Radio extends React.PureComponent<Props, State> {
           disabled={disabled}
           align={horizontal ? ALIGN.horizontal : ALIGN.vertical}
           aria-label={label}
+          data-testid="stRadioGroup"
         >
           {options.map((option: string, index: number) => (
             <UIRadio
@@ -158,7 +160,12 @@ class Radio extends React.PureComponent<Props, State> {
                 },
               }}
             >
-              {option}
+              <StreamlitMarkdown
+                source={option}
+                allowHTML={false}
+                isLabel
+                isButton
+              />
             </UIRadio>
           ))}
         </RadioGroup>

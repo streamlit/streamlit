@@ -100,7 +100,7 @@ class MapMixin:
         zoom: Optional[int] = None,
         use_container_width: bool = True,
     ) -> "DeltaGenerator":
-        """Display a map with a scatterplot overlayed onto it.
+        """Display a map with a scatterplot overlaid onto it.
 
         This is a wrapper around ``st.pydeck_chart`` to quickly create
         scatterplot charts on top of a map, with auto-centering and auto-zoom.
@@ -121,8 +121,8 @@ class MapMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray,
-            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame,
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray,\
+            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame,\
             snowflake.snowpark.table.Table, Iterable, dict, or None
             The data to be plotted.
 
@@ -147,12 +147,13 @@ class MapMixin:
             can only be supplied by keyword.
 
             Can be:
-            - None, to use the default color.
-            - A hex string like "#ffaa00" or "#ffaa0088".
-            - An RGB or RGBA tuple with the red, green, blue, and alpha
+
+            * None, to use the default color.
+            * A hex string like "#ffaa00" or "#ffaa0088".
+            * An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
-            - The name of the column to use for the color. Cells in this column
+            * The name of the column to use for the color. Cells in this column
               should contain colors represented as a hex string or color tuple,
               as described above.
 
@@ -162,10 +163,10 @@ class MapMixin:
 
             This can be:
 
-            - None, to use the default size.
-            - A number like 100, to specify a single size to use for all
+            * None, to use the default size.
+            * A number like 100, to specify a single size to use for all
               datapoints.
-            - The name of the column to use for the size. This allows each
+            * The name of the column to use for the size. This allows each
               datapoint to be represented by a circle of a different size.
 
         zoom : int
@@ -178,8 +179,8 @@ class MapMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
@@ -192,28 +193,36 @@ class MapMixin:
 
         .. output::
            https://doc-map.streamlit.app/
-           height: 650px
+           height: 600px
 
         You can also customize the size and color of the datapoints:
 
         >>> st.map(df, size=20, color='#0044ff')
 
-        And, finally, you can choose different columns to use for the latitude
+        And finally, you can choose different columns to use for the latitude
         and longitude components, as well as set size and color of each
         datapoint dynamically based on other columns:
 
-        ... df = pd.DataFrame({
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> df = pd.DataFrame({
         ...     "col1": np.random.randn(1000) / 50 + 37.76,
         ...     "col2": np.random.randn(1000) / 50 + -122.4,
         ...     "col3": np.random.randn(1000) * 100,
         ...     "col4": np.random.rand(1000, 4).tolist(),
-        ... }
-        ...
+        ... })
+        >>>
         >>> st.map(df,
         ...     latitude='col1',
         ...     longitude='col2',
         ...     size='col3',
         ...     color='col4')
+
+        .. output::
+           https://doc-map-color.streamlit.app/
+           height: 600px
 
         """
         # This feature was turned off while we investigate why different

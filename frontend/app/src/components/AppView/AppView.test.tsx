@@ -15,8 +15,8 @@
  */
 
 import React from "react"
-import { screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 import {
   AppContext,
   Props as AppContextProps,
@@ -99,6 +99,7 @@ describe("AppView element", () => {
 
   it("renders without crashing", () => {
     render(<AppView {...getProps()} />)
+    expect(screen.getByTestId("stAppViewContainer")).toBeInTheDocument()
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {
@@ -205,9 +206,11 @@ describe("AppView element", () => {
     const props = getProps({
       elements: new AppRoot(new BlockNode([main, sidebar, event])),
     })
-    const { getByTestId } = render(<AppView {...props} />)
+    render(<AppView {...props} />)
 
-    const style = window.getComputedStyle(getByTestId("block-container"))
+    const style = window.getComputedStyle(
+      screen.getByTestId("block-container")
+    )
     expect(style.maxWidth).not.toEqual("initial")
   })
 
@@ -220,9 +223,10 @@ describe("AppView element", () => {
 
       return realUseContext(input)
     })
-    const { getByTestId } = render(<AppView {...getProps()} />)
-    const style = window.getComputedStyle(getByTestId("block-container"))
-
+    render(<AppView {...getProps()} />)
+    const style = window.getComputedStyle(
+      screen.getByTestId("block-container")
+    )
     expect(style.maxWidth).toEqual("initial")
   })
 
@@ -243,10 +247,10 @@ describe("AppView element", () => {
       return realUseContext(input)
     })
 
-    const { getByRole, getByTestId } = render(<AppView {...getProps()} />)
+    render(<AppView {...getProps()} />)
 
-    expect(getByTestId("AppViewBlockSpacer")).toBeInTheDocument()
-    expect(getByRole("contentinfo")).toBeInTheDocument()
+    expect(screen.getByTestId("AppViewBlockSpacer")).toBeInTheDocument()
+    expect(screen.getByRole("contentinfo")).toBeInTheDocument()
   })
 
   it("does not render the Spacer and Footer when embedded", () => {
@@ -259,10 +263,10 @@ describe("AppView element", () => {
       return realUseContext(input)
     })
 
-    const { queryByRole, queryByTestId } = render(<AppView {...getProps()} />)
+    render(<AppView {...getProps()} />)
 
-    expect(queryByTestId("AppViewBlockSpacer")).not.toBeInTheDocument()
-    expect(queryByRole("contentinfo")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("AppViewBlockSpacer")).not.toBeInTheDocument()
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument()
   })
 
   describe("when window.location.hash changes", () => {

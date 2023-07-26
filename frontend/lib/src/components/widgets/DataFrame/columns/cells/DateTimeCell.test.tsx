@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 import React from "react"
+import "@testing-library/jest-dom"
 
-import { fireEvent, render } from "@testing-library/react"
+import { screen, fireEvent, render } from "@testing-library/react"
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
 import {
@@ -54,7 +55,6 @@ describe("formatValueForHTMLInput", () => {
 describe("editor", () => {
   function getMockDateCell(props: Partial<DateTimeCell> = {}): DateTimeCell {
     return {
-      ...props,
       kind: GridCellKind.Custom,
       allowOverlay: true,
       copyData: "4",
@@ -65,6 +65,7 @@ describe("editor", () => {
         displayDate: new Date("2023-02-06T04:47:44.584Z").toISOString(),
         format: "time",
       },
+      ...props,
     }
   }
 
@@ -75,40 +76,37 @@ describe("editor", () => {
       throw new Error("Editor is invalid")
     }
 
-    const result = render(
-      <Editor isHighlighted={false} value={getMockDateCell()} />
-    )
+    render(<Editor isHighlighted={false} value={getMockDateCell()} />)
     // Check if the element is actually there
-    const input = result.getByTestId(TEST_ID)
+    const input = screen.getByTestId(TEST_ID)
     expect(input).not.toBeUndefined()
 
-    // @ts-expect-error
-    expect(result.value === "04:47:44.584")
+    expect(input).toHaveAttribute("value", "04:47:44.584")
   })
 
   it.each([["date"], ["time"], ["datetime-local"]])(
     "renders with correct format",
     (format: string) => {
+      const dateTimeCell = getMockDateCell({
+        data: { format: format as DateKind },
+      } as Partial<DateTimeCell>)
       // @ts-expect-error
       const Editor = DateTimeCellRenderer.provideEditor?.(
-        getMockDateCell({ data: { format: format } } as DateTimeCell)
+        dateTimeCell
         // @ts-expect-error
       ).editor
       if (Editor === undefined) {
         throw new Error("Editor is invalid")
       }
 
-      const result = render(
-        <Editor isHighlighted={false} value={getMockDateCell()} />
-      )
-      const input = result.getByTestId(TEST_ID)
+      render(<Editor isHighlighted={false} value={dateTimeCell} />)
+      const input = screen.getByTestId(TEST_ID)
       expect(input).not.toBeUndefined()
-      // @ts-expect-error
-      expect(input.format === format)
+      expect(input).toHaveAttribute("type", format)
     }
   )
 
-  it("renders textarea when readonly is true", () => {
+  it("renders textarea when readonly is true", async () => {
     // @ts-expect-error
     const Editor = DateTimeCellRenderer.provideEditor?.(
       getMockDateCell({ readonly: true } as DateTimeCell)
@@ -118,19 +116,24 @@ describe("editor", () => {
       throw new Error("Editor is invalid")
     }
 
-    const result = render(
-      <Editor isHighlighted={false} value={getMockDateCell()} />
+    render(
+      <Editor
+        isHighlighted={false}
+        value={getMockDateCell({ readonly: true } as DateTimeCell)}
+      />
+    )
+
+    const textArea = await screen.findByDisplayValue(
+      "2023-02-06T04:47:44.584Z"
     )
     // text-area should be found
-    expect(
-      result.findByDisplayValue("2023-02-06T04:47:44.584Z")
-    ).not.toBeUndefined()
+    expect(textArea).toBeDefined()
   })
 
   it("contains max, min, step when passed in", () => {
     const min = "2018-01-01"
     const max = "2018-12-31"
-    const step = ".001"
+    const step = "0.001"
     const extraProps = {
       data: {
         min,
@@ -138,29 +141,25 @@ describe("editor", () => {
         step,
       },
     }
+    const dateTimeCell = getMockDateCell(extraProps as Partial<DateTimeCell>)
     // @ts-expect-error
     const Editor = DateTimeCellRenderer.provideEditor(
-      getMockDateCell(extraProps as Partial<DateTimeCell>)
+      dateTimeCell
       // @ts-expect-error
     ).editor
     if (Editor === undefined) {
       throw new Error("Editor is invalid")
     }
 
-    const result = render(
-      <Editor isHighlighted={false} value={getMockDateCell()} />
-    )
-    const input = result.getByTestId(TEST_ID)
+    render(<Editor isHighlighted={false} value={dateTimeCell} />)
+    const input = screen.getByTestId(TEST_ID)
     expect(input).not.toBeUndefined()
-    // @ts-expect-error
-    expect(input.min === min)
-    // @ts-expect-error
-    expect(input.max === max)
-    // @ts-expect-error
-    expect(input.step === step)
+    expect(input).toHaveAttribute("min", min)
+    expect(input).toHaveAttribute("max", max)
+    expect(input).toHaveAttribute("step", step)
   })
 
-  it('properly sets date when value is NOT ""', async () => {
+  it('properly sets date when value is NOT ""', () => {
     const valueAsNumber = 100
 
     // @ts-expect-error
@@ -170,15 +169,15 @@ describe("editor", () => {
     }
 
     const mockCellOnChange = jest.fn()
-    const result = render(
+    render(
       <Editor
         isHighlighted={false}
         value={getMockDateCell()}
         onChange={mockCellOnChange}
       />
     )
-    const input = await result.findByTestId(TEST_ID)
-    expect(result.findByTestId(TEST_ID)).not.toBeUndefined()
+    const input = screen.getByTestId(TEST_ID)
+    expect(input).toBeDefined()
     fireEvent.change(input, {
       target: {
         value: "2023-02-06T18:15:33.103Z",
@@ -186,7 +185,7 @@ describe("editor", () => {
       },
     })
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)
-    expect(mockCellOnChange).toBeCalledWith({
+    expect(mockCellOnChange).toHaveBeenCalledWith({
       kind: GridCellKind.Custom,
       allowOverlay: true,
       copyData: "4",
@@ -200,7 +199,7 @@ describe("editor", () => {
     })
   })
 
-  it('properly sets new date to undefined when value is ""', async () => {
+  it('properly sets new date to undefined when value is ""', () => {
     // @ts-expect-error
     const Editor = DateTimeCellRenderer.provideEditor(getMockDateCell()).editor
     if (Editor === undefined) {
@@ -208,18 +207,18 @@ describe("editor", () => {
     }
 
     const mockCellOnChange = jest.fn()
-    const result = render(
+    render(
       <Editor
         isHighlighted={false}
         value={getMockDateCell()}
         onChange={mockCellOnChange}
       />
     )
-    const input = await result.findByTestId(TEST_ID)
-    expect(result.findByTestId(TEST_ID)).not.toBeUndefined()
+    const input = screen.getByTestId(TEST_ID)
+    expect(input).toBeDefined()
     fireEvent.change(input, { target: { value: "" } })
     expect(mockCellOnChange).toHaveBeenCalledTimes(1)
-    expect(mockCellOnChange).toBeCalledWith({
+    expect(mockCellOnChange).toHaveBeenCalledWith({
       kind: GridCellKind.Custom,
       allowOverlay: true,
       copyData: "4",

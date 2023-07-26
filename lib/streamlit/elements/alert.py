@@ -14,7 +14,6 @@
 
 from typing import TYPE_CHECKING, Optional, cast
 
-from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, validate_emoji
