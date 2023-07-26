@@ -344,7 +344,7 @@ class ButtonMixin:
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         id = compute_widget_id(
-            "button",
+            "download_button",
             user_key=key,
             label=label,
             data=str(data),
