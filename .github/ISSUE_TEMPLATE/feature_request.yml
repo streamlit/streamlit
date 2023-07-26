@@ -25,7 +25,7 @@ body:
   - type: textarea
     attributes:
       label: Why?
-      description: Please outline the problem, motivation, or use case related to this feature request. 
+      description: Please outline the problem, motivation, or use case related to this feature request.
       placeholder: |
         I'm always frustrated when ...
     validations:
