@@ -24,6 +24,7 @@ decorator==5.1.1
 distlib==0.3.7
 docutils==0.20.1
 exceptiongroup==1.1.2
+execnet==2.0.2
 filelock==3.12.2
 fonttools==4.41.1
 frozenlist==1.4.0
@@ -66,8 +67,10 @@ pandas==2.0.3
 parameterized==0.9.0
 pathspec==0.11.1
 Pillow==9.5.0
+pixelmatch==0.3.0
 pkginfo==1.9.6
 platformdirs==3.9.1
+playwright==1.36.0
 plotly==5.15.0
 pluggy==1.2.0
 pre-commit==3.3.3
@@ -79,14 +82,19 @@ pycparser==2.21
 pydantic==1.10.12
 pydeck==0.8.0
 pydot==1.4.2
+pyee==9.0.4
 Pygments==2.15.1
 Pympler==1.0.1
 pyodbc==4.0.39
 pyparsing==3.0.9
 pyspark==3.4.1
 pytest==7.4.0
+pytest-base-url==2.0.0
 pytest-cov==4.1.0
+pytest-playwright==0.3.3
+pytest-xdist==3.3.1
 python-dateutil==2.8.2
+python-slugify==8.0.1
 pytz==2023.3
 pytz-deprecation-shim==0.1.0.post0
 PyYAML==6.0.1
@@ -110,6 +118,7 @@ SQLAlchemy==1.4.49
 sqlalchemy2-stubs==0.0.2a35
 tenacity==8.2.2
 testfixtures==7.1.0
+text-unidecode==1.3
 toml==0.10.2
 tomli==2.0.1
 toolz==0.12.0
