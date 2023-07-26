@@ -807,6 +807,7 @@ class DataEditorMixin:
             column_order=column_order,
             column_config=str(column_config),
             num_rows=num_rows,
+            disabled=(disabled if isinstance(disabled, bool) else list(disabled)),
             key=key,
             form_id=current_form_id(self.dg),
         )
