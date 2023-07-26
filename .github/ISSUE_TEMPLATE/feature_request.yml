@@ -25,7 +25,7 @@ body:
   - type: textarea
     attributes:
       label: Why?
-      description: Please outline the proposal's problem, motivation, or use case. 
+      description: Please outline the problem, motivation, or use case related to this feature request. 
       placeholder: |
         I'm always frustrated when ...
     validations:
@@ -37,7 +37,7 @@ body:
         Please describe the solution or implementation you'd like to see. This might include suggestions for `st` commands, new parameters, or UI mockups.
         Don't worry if you don't have a clear solution in mind; any input helps!
       placeholder: |
-        Introduce a new command called `st.foo` which has the following set of parameters...
+        Introduce a new command called `st.foo` with the following set of parameters...
     validations:
       required: false
   - type: textarea
