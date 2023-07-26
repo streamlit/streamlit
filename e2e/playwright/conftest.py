@@ -41,7 +41,7 @@ from pytest import FixtureRequest
 
 
 class AsyncSubprocess:
-    """A context manager. Wraps subprocess.Popen to capture output safely."""
+    """A context manager. Wraps subprocess. Popen to capture output safely."""
 
     def __init__(self, args, cwd=None, env=None):
         self.args = args
@@ -52,7 +52,6 @@ class AsyncSubprocess:
 
     def terminate(self):
         """Terminate the process and return its stdout/stderr in a string."""
-        # Terminate the process
         if self._proc is not None:
             self._proc.terminate()
             self._proc.wait()
@@ -108,7 +107,7 @@ def find_available_port(host: str = "localhost") -> int:
     with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         s.bind((host, 0))  # 0 means that the OS chooses a random port
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return int(s.getsockname()[1])
+        return int(s.getsockname()[1])  # [1] contains the randomly selected port number
 
 
 def is_app_server_running(port: int, host: str = "localhost") -> bool:
@@ -148,8 +147,7 @@ def wait_for_app_server_to_start(port: int, timeout: int = 5) -> bool:
 
 
 def wait_for_app_run(page: Page):
-    """Wait for the app to finish running."""
-    # Wait until the script is no longer running.
+    """Wait for the given page to finish running."""
     page.wait_for_selector(
         "[data-testid='stStatusWidget']", timeout=20000, state="detached"
     )
