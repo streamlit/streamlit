@@ -221,6 +221,7 @@ clean:
 	rm -rf frontend/public/reports
 	rm -rf frontend/lib/dist
 	rm -rf ~/.cache/pre-commit
+	rm -rf e2e/playwright/test-results
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
@@ -326,6 +327,14 @@ jscoverage:
 # Run E2E tests.
 e2etest:
 	./scripts/run_e2e_tests.py
+
+.PHONY: playwright
+# Run playwright E2E tests.
+playwright:
+	python -m playwright install --with-deps; \
+	cd e2e/playwright; \
+	rm -rf ./test-results; \
+	pytest --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto -v
 
 .PHONY: loc
 # Count the number of lines of code in the project.
