@@ -39,10 +39,7 @@ jest.mock("react-device-detect", () => {
   }
 })
 
-const INITIAL_SERVER_FILE_ID = 1
-
 const getProps = (elementProps: Partial<CameraInputProto> = {}): Props => {
-  let mockServerFileIdCounter = INITIAL_SERVER_FILE_ID
   return {
     element: CameraInputProto.create({
       id: "id",
