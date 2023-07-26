@@ -81,8 +81,6 @@ MAX_PORT_SEARCH_RETRIES = 100
 UNIX_SOCKET_PREFIX = "unix://"
 
 MEDIA_ENDPOINT: Final = "/media"
-# TODO(kajarenc): Maybe rename this const to something like `UPLOAD_FILE_ENDPOINT_PREFIX`
-# to emphasize that the full endpoint also includes session and file IDs.
 UPLOAD_FILE_ENDPOINT: Final = "/_stcore/upload_file"
 STREAM_ENDPOINT: Final = r"_stcore/stream"
 METRIC_ENDPOINT: Final = r"(?:st-metrics|_stcore/metrics)"
