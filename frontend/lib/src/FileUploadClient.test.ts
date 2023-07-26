@@ -174,9 +174,11 @@ describe("FileUploadClient Upload", () => {
 
   it("onFileURLsResponse does not error when given an invalid responseId", () => {
     // No need to do anything other than check that no error is thrown.
-    uploader.onFileURLsResponse({
-      responseId: "noCorrespondingId",
-      fileUrls: [],
-    })
+    expect(() => {
+      uploader.onFileURLsResponse({
+        responseId: "noCorrespondingId",
+        fileUrls: [],
+      })
+    }).not.toThrow()
   })
 })

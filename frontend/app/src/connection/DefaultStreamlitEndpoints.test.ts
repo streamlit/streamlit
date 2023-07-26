@@ -195,7 +195,7 @@ describe("DefaultStreamlitEndpoints", () => {
           mockOnUploadProgress,
           mockCancelToken
         )
-      ).resolves.toBeDefined()
+      ).resolves.toBeUndefined()
 
       const expectedData = new FormData()
       expectedData.append("sessionId", "mockSessionId")
@@ -227,7 +227,7 @@ describe("DefaultStreamlitEndpoints", () => {
           mockOnUploadProgress,
           mockCancelToken
         )
-      ).resolves.toBeDefined()
+      ).resolves.toBeUndefined()
 
       const expectedData = new FormData()
       expectedData.append("sessionId", "mockSessionId")

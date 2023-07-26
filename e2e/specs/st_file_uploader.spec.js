@@ -290,7 +290,8 @@ describe("st.file_uploader", () => {
           cy.get(uploadedFileName).should("have.text", fileName1);
         });
 
-        cy.wait(1000);
+        // Wait for the HTTP request to complete
+        cy.wait("@uploadFile");
 
         cy.getIndexed(
           "[data-testid='stFileUploadDropzone']",

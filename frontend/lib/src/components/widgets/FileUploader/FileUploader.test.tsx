@@ -15,6 +15,7 @@
  */
 
 import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 import { ReactWrapper, ShallowWrapper } from "enzyme"
 import React from "react"
 import { FileError } from "react-dropzone"
@@ -124,8 +125,8 @@ function getFiles(
 describe("FileUploader widget RTL tests", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const { getByTestId } = render(<FileUploader {...props} />)
-    const fileUploaderElement = getByTestId("stFileUploader")
+    render(<FileUploader {...props} />)
+    const fileUploaderElement = screen.getByTestId("stFileUploader")
     expect(fileUploaderElement).toBeInTheDocument()
   })
 
@@ -145,16 +146,16 @@ describe("FileUploader widget RTL tests", () => {
       { fromUi: false }
     )
 
-    const { getByText } = render(<FileUploader {...props} />)
-    const fileNameNode = getByText("filename.txt")
+    render(<FileUploader {...props} />)
+    const fileNameNode = screen.getByText("filename.txt")
     expect(fileNameNode).toBeInTheDocument()
   })
 
   it("shows a label", () => {
     const props = getProps({ label: "Test label" })
-    const { getByText } = render(<FileUploader {...props} />)
+    render(<FileUploader {...props} />)
 
-    const labelNode = getByText("Test label")
+    const labelNode = screen.getByText("Test label")
     expect(labelNode).toBeInTheDocument()
   })
 
@@ -165,9 +166,9 @@ describe("FileUploader widget RTL tests", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
-    const { getByText } = render(<FileUploader {...props} />)
+    render(<FileUploader {...props} />)
 
-    const labelNode = getByText("Test label")
+    const labelNode = screen.getByText("Test label")
     expect(labelNode).toBeInTheDocument()
     expect(labelNode).not.toBeVisible()
   })
@@ -179,9 +180,9 @@ describe("FileUploader widget RTL tests", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
-    const { getByText } = render(<FileUploader {...props} />)
+    render(<FileUploader {...props} />)
 
-    const labelNode = getByText("Test label")
+    const labelNode = screen.getByText("Test label")
     expect(labelNode).toBeInTheDocument()
     expect(labelNode).not.toBeVisible()
   })
