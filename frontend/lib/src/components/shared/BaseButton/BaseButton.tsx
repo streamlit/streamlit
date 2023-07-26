@@ -73,6 +73,7 @@ function BaseButton({
       disabled={disabled || false}
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
+      data-testid={`baseButton-${kind}`}
     >
       {children}
     </ComponentType>

@@ -15,16 +15,13 @@
  */
 import React from "react"
 import "@testing-library/jest-dom"
+import { screen, fireEvent } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 
-import { screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 import { enableAllPlugins } from "immer"
 
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
 
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-import BaseButton from "@streamlit/lib/src/components/shared/BaseButton"
-import { render, shallow } from "@streamlit/lib/src/test_util"
 import {
   createFormsData,
   FormsData,
@@ -51,19 +48,20 @@ describe("FormSubmitButton", () => {
 
   function getProps(
     props: Partial<Props> = {},
-    useContainerWidth = false
+    useContainerWidth = false,
+    helpText = "mockHelpText"
   ): Props {
     return {
       element: ButtonProto.create({
         id: "1",
         label: "Submit",
         formId: "mockFormId",
-        help: "mockHelpText",
+        help: helpText,
         useContainerWidth,
       }),
       disabled: false,
       hasInProgressUpload: false,
-      width: 0,
+      width: 250,
       widgetMgr,
       ...props,
     }
@@ -71,46 +69,39 @@ describe("FormSubmitButton", () => {
 
   it("renders without crashing", () => {
     render(<FormSubmitButton {...getProps()} />)
-    expect(screen.getByTestId("stFormSubmitButton")).toBeInTheDocument()
+    expect(screen.getByRole("button")).toBeInTheDocument()
   })
 
   it("has correct className and style", () => {
-    const wrapper = shallow(<FormSubmitButton {...getProps()} />)
+    const props = getProps()
+    render(<FormSubmitButton {...props} />)
 
-    const wrappedDiv = wrapper.find("div").first()
+    const formSubmitButton = screen.getByTestId("stFormSubmitButton")
 
-    const { className, style } = wrappedDiv.props()
-    // @ts-expect-error
-    const classNameParts = className.split(" ")
-
-    expect(classNameParts).toContain("stButton")
-
-    // @ts-expect-error
-    expect(style.width).toBe(getProps().width)
+    expect(formSubmitButton).toHaveClass("row-widget")
+    expect(formSubmitButton).toHaveClass("stButton")
+    expect(formSubmitButton).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label", () => {
-    const wrapper = shallow(<FormSubmitButton {...getProps()} />)
+    const props = getProps()
+    render(<FormSubmitButton {...props} />)
 
-    const wrappedBaseButton = wrapper.find(BaseButton)
+    const formSubmitButton = screen.getByRole("button", {
+      name: `${props.element.label}`,
+    })
 
-    expect(wrappedBaseButton.length).toBe(1)
-    const markdownInsideWrappedBaseButton =
-      wrappedBaseButton.find(StreamlitMarkdown)
-    expect(markdownInsideWrappedBaseButton.props().source).toBe(
-      getProps().element.label
-    )
+    expect(formSubmitButton).toBeInTheDocument()
   })
 
   it("calls submitForm when clicked", async () => {
     const props = getProps()
-    const user = userEvent.setup()
-
     jest.spyOn(props.widgetMgr, "submitForm")
-
     render(<FormSubmitButton {...props} />)
 
-    await user.click(screen.getByRole("button"))
+    const formSubmitButton = screen.getByRole("button")
+
+    fireEvent.click(formSubmitButton)
     expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
       props.element.formId,
       props.element
@@ -121,8 +112,8 @@ describe("FormSubmitButton", () => {
     const props = getProps({ hasInProgressUpload: true })
     render(<FormSubmitButton {...props} />)
 
-    const button = screen.getByRole("button") as HTMLButtonElement
-    expect(button.disabled).toBe(true)
+    const formSubmitButton = screen.getByRole("button")
+    expect(formSubmitButton).toBeDisabled()
   })
 
   it("Adds the proto to submitButtons on mount and removes the proto on unmount", () => {
@@ -139,11 +130,13 @@ describe("FormSubmitButton", () => {
     })
 
     const { unmount: unmountView1 } = render(<FormSubmitButton {...props} />)
+
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
     // @ts-expect-error
     expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(props.element)
 
     const { unmount: unmountView2 } = render(<FormSubmitButton {...props2} />)
+
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(2)
     // @ts-expect-error
     expect(formsData.submitButtons.get("mockFormId")[1]).toEqual(
@@ -151,6 +144,7 @@ describe("FormSubmitButton", () => {
     )
 
     unmountView1()
+
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
     // @ts-expect-error
     expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(
@@ -158,20 +152,28 @@ describe("FormSubmitButton", () => {
     )
 
     unmountView2()
+
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(0)
   })
 
   it("does not use container width by default", () => {
-    const wrapper = shallow(<FormSubmitButton {...getProps()} />)
+    render(<FormSubmitButton {...getProps()} />)
 
-    const wrappedBaseButton = wrapper.find(BaseButton)
-    expect(wrappedBaseButton.props().fluidWidth).toBe(false)
+    const formSubmitButton = screen.getByRole("button")
+    expect(formSubmitButton).toHaveStyle("width: auto")
   })
 
-  it("passes useContainerWidth property correctly", () => {
-    const wrapper = shallow(<FormSubmitButton {...getProps({}, true)} />)
+  it("passes useContainerWidth property with help correctly", () => {
+    render(<FormSubmitButton {...getProps({}, true)} />)
 
-    const wrappedBaseButton = wrapper.find(BaseButton)
-    expect(wrappedBaseButton.props().fluidWidth).toBe(true)
+    const formSubmitButton = screen.getByRole("button")
+    expect(formSubmitButton).toHaveStyle(`width: ${250}px`)
+  })
+
+  it("passes useContainerWidth property without help correctly", () => {
+    render(<FormSubmitButton {...getProps({}, true, "")} />)
+
+    const formSubmitButton = screen.getByRole("button")
+    expect(formSubmitButton).toHaveStyle("width: 100%")
   })
 })

@@ -51,7 +51,11 @@ st.write("value 3:", i4)
 i5 = st.button("button 4", type="primary", disabled=True)
 st.write("value 4:", i5)
 
-st.button("button 5", use_container_width=True)
+st.button("button 5 - containerWidth", use_container_width=True)
+
+st.button(
+    "button 6 - containerWidth + help", use_container_width=True, help="help text"
+)
 
 cols = st.columns(3)
 

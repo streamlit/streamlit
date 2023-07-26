@@ -16,17 +16,21 @@
 
 const path = require("path");
 
-describe("st.form with use_container_width=True button", () => {
+describe("st.form_submit_button", () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
 
     cy.prepForElementSnapshots();
   });
 
-
-  it("renders use_container_width=True st.submit_form_button correctly", () => {
+  it("renders correctly with use_container_width=True", () => {
     cy.get("[data-testid='stFormSubmitButton'] button")
       .should("have.length.at.least", 1)
       .first().matchThemedSnapshots("use-container-width-submit-form-button");
+  });
+
+  it("renders correctly with use_container_width=True and help text", () => {
+    cy.getIndexed("[data-testid='stFormSubmitButton'] button", 1)
+      .trigger('mouseover').matchThemedSnapshots("form-submit-button-container-and-help", { padding: [60, 0, 0, 0] });
   });
 });

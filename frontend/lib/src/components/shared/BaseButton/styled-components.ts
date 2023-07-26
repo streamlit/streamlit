@@ -45,7 +45,8 @@ export interface BaseButtonProps {
   size?: BaseButtonSize
   onClick?: (event: MouseEvent<HTMLButtonElement>) => any
   disabled?: boolean
-  fluidWidth?: boolean
+  // If true or number, the button should take up container's full width
+  fluidWidth?: boolean | number
   children: ReactNode
   autoFocus?: boolean
 }
@@ -75,27 +76,32 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
 }
 
 export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
-  ({ fluidWidth, size, theme }) => ({
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: theme.fontWeights.normal,
-    padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-    borderRadius: theme.radii.lg,
-    minHeight: "38.4px",
-    margin: 0,
-    lineHeight: theme.lineHeights.base,
-    color: "inherit",
-    width: fluidWidth ? "100%" : "auto",
-    userSelect: "none",
-    "&:focus": {
-      outline: "none",
-    },
-    "&:focus-visible": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
-    },
-    ...getSizeStyle(size, theme),
-  })
+  ({ fluidWidth, size, theme }) => {
+    const buttonWidth =
+      typeof fluidWidth == "number" ? `${fluidWidth}px` : "100%"
+
+    return {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontWeight: theme.fontWeights.normal,
+      padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+      borderRadius: theme.radii.lg,
+      minHeight: "38.4px",
+      margin: 0,
+      lineHeight: theme.lineHeights.base,
+      color: "inherit",
+      width: fluidWidth ? buttonWidth : "auto",
+      userSelect: "none",
+      "&:focus": {
+        outline: "none",
+      },
+      "&:focus-visible": {
+        boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+      },
+      ...getSizeStyle(size, theme),
+    }
+  }
 )
 
 export const StyledPrimaryButton = styled(

@@ -15,11 +15,10 @@
  */
 
 import React from "react"
-import { shallow } from "@streamlit/lib/src/test_util"
+import { screen, fireEvent } from "@testing-library/react"
+import "@testing-library/jest-dom"
+import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-
-import BaseButton from "@streamlit/lib/src/components/shared/BaseButton"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import { Button as ButtonProto } from "@streamlit/lib/src/proto"
 import Button, { Props } from "./Button"
@@ -28,62 +27,60 @@ jest.mock("@streamlit/lib/src/WidgetStateManager")
 
 const sendBackMsg = jest.fn()
 
-const getProps = (elementProps: Partial<ButtonProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<ButtonProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: ButtonProto.create({
     id: "1",
     label: "Label",
     ...elementProps,
   }),
-  width: 0,
+  width: 250,
   disabled: false,
   // @ts-expect-error
   widgetMgr: new WidgetStateManager(sendBackMsg),
+  ...widgetProps,
 })
 
 describe("Button widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<Button {...props} />)
+    render(<Button {...props} />)
 
-    expect(wrapper).toBeDefined()
+    const buttonWidget = screen.getByRole("button")
+    expect(buttonWidget).toBeInTheDocument()
   })
 
   it("should have correct className and style", () => {
-    const wrapper = shallow(<Button {...getProps()} />)
+    const props = getProps()
+    render(<Button {...props} />)
 
-    const wrappedDiv = wrapper.find("div").first()
+    const stButtonDiv = screen.getByTestId("stButton")
 
-    const { className, style } = wrappedDiv.props()
-    // @ts-expect-error
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("stButton")
-
-    // @ts-expect-error
-    expect(style.width).toBe(getProps().width)
+    expect(stButtonDiv).toHaveClass("row-widget")
+    expect(stButtonDiv).toHaveClass("stButton")
+    expect(stButtonDiv).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("should render a label within the button", () => {
-    const wrapper = shallow(<Button {...getProps()} />)
+    const props = getProps()
+    render(<Button {...props} />)
 
-    const wrappedBaseButton = wrapper.find(BaseButton)
-    const wrappedBaseButtonlabel = wrappedBaseButton.find(StreamlitMarkdown)
+    const buttonWidget = screen.getByRole("button", {
+      name: `${props.element.label}`,
+    })
 
-    expect(wrappedBaseButton.length).toBe(1)
-    expect(wrappedBaseButtonlabel.props().source).toBe(
-      getProps().element.label
-    )
-    expect(wrappedBaseButtonlabel.props().isButton).toBe(true)
+    expect(buttonWidget).toBeInTheDocument()
   })
 
   describe("BaseButton props should work", () => {
     it("onClick prop", () => {
       const props = getProps()
-      const wrapper = shallow(<Button {...props} />)
+      render(<Button {...props} />)
 
-      const wrappedBaseButton = wrapper.find(BaseButton)
-
-      wrappedBaseButton.simulate("click")
+      const buttonWidget = screen.getByRole("button")
+      fireEvent.click(buttonWidget)
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
         props.element,
@@ -91,29 +88,38 @@ describe("Button widget", () => {
       )
     })
 
-    it("disable prop", () => {
-      const props = getProps()
-      const wrapper = shallow(<Button {...props} />)
+    it("can be disabled", () => {
+      const props = getProps({}, { disabled: true })
+      render(<Button {...props} />)
 
-      const wrappedBaseButton = wrapper.find(BaseButton)
+      const buttonWidget = screen.getByRole("button")
 
-      expect(wrappedBaseButton.props().disabled).toBe(props.disabled)
+      expect(buttonWidget).toBeDisabled()
     })
   })
 
   it("does not use container width by default", () => {
-    const wrapper = shallow(<Button {...getProps()}>Hello</Button>)
+    render(<Button {...getProps()}>Hello</Button>)
 
-    const wrappedBaseButton = wrapper.find(BaseButton)
-    expect(wrappedBaseButton.props().fluidWidth).toBe(false)
+    const buttonWidget = screen.getByRole("button")
+    expect(buttonWidget).toHaveStyle("width: auto")
   })
 
-  it("passes useContainerWidth property correctly", () => {
-    const wrapper = shallow(
-      <Button {...getProps({ useContainerWidth: true })}>Hello</Button>
+  it("passes useContainerWidth property without help correctly", () => {
+    render(<Button {...getProps({ useContainerWidth: true })}>Hello</Button>)
+
+    const buttonWidget = screen.getByRole("button")
+    expect(buttonWidget).toHaveStyle("width: 100%")
+  })
+
+  it("passes useContainerWidth property with help correctly", () => {
+    render(
+      <Button {...getProps({ useContainerWidth: true, help: "mockHelpText" })}>
+        Hello
+      </Button>
     )
 
-    const wrappedBaseButton = wrapper.find(BaseButton)
-    expect(wrappedBaseButton.props().fluidWidth).toBe(true)
+    const buttonWidget = screen.getByRole("button")
+    expect(buttonWidget).toHaveStyle(`width: ${250}px`)
   })
 })
