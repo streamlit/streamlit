@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - "develop"
-      # - "feature/**"
   pull_request:
     types: [opened, synchronize, reopened]
   # Allows workflow to be called from other workflows
@@ -45,8 +44,6 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
-      - name: Ensure browsers are installed for playwright
-        run: python -m playwright install --with-deps
       - name: Run make protobuf
         run: make protobuf
       - name: Run make frontend
