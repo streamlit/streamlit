@@ -15,7 +15,12 @@
  */
 
 import React from "react"
-import { shallow } from "@streamlit/lib/src/test_util"
+import { screen, fireEvent } from "@testing-library/react"
+import "@testing-library/jest-dom"
+
+import { render } from "@streamlit/lib/src/test_util"
+
+import { lightTheme } from "@streamlit/lib/src/theme"
 
 import BaseButton, {
   BaseButtonSize,
@@ -41,31 +46,20 @@ describe("Button element", () => {
       BaseButtonKind[key as keyof typeof BaseButtonKind]
 
     it(`renders ${kind} buttons correctly`, () => {
-      const wrapper = shallow(
-        <BaseButton {...getProps({ kind })}>Hello</BaseButton>
-      )
+      render(<BaseButton {...getProps({ kind })}>Hello</BaseButton>)
 
-      expect(
-        wrapper
-          .find(
-            `Styled${kind.charAt(0).toUpperCase()}${kind.substring(1)}Button`
-          )
-          .exists()
-      ).toBeTruthy()
+      const buttonWidget = screen.getByTestId(`baseButton-${kind}`)
+
+      expect(buttonWidget).toBeInTheDocument()
     })
 
     it(`renders disabled ${kind} correctly`, () => {
-      const wrapper = shallow(
+      render(
         <BaseButton {...getProps({ kind, disabled: true })}>Hello</BaseButton>
       )
 
-      expect(
-        wrapper
-          .find(
-            `Styled${kind.charAt(0).toUpperCase()}${kind.substring(1)}Button`
-          )
-          .prop("disabled")
-      ).toBe(true)
+      const buttonWidget = screen.getByTestId(`baseButton-${kind}`)
+      expect(buttonWidget).toBeDisabled()
     })
   })
 
@@ -74,53 +68,57 @@ describe("Button element", () => {
       BaseButtonSize[key as keyof typeof BaseButtonSize]
 
     it(`renders ${size} buttons correctly`, () => {
-      const wrapper = shallow(
-        <BaseButton {...getProps({ size })}>Hello</BaseButton>
-      )
+      render(<BaseButton {...getProps({ size })}>Hello</BaseButton>)
 
-      expect(wrapper.find("StyledSecondaryButton").prop("size")).toBe(size)
+      const { spacing } = lightTheme.emotion
+      const expectedPadding = {
+        [BaseButtonSize.XSMALL]: `${spacing.twoXS} ${spacing.sm}`,
+        [BaseButtonSize.SMALL]: `${spacing.twoXS} ${spacing.md}`,
+        [BaseButtonSize.LARGE]: `${spacing.md} ${spacing.md}`,
+        [BaseButtonSize.MEDIUM]: `${spacing.xs} ${spacing.md}`,
+      }
+
+      const buttonWidget = screen.getByRole("button")
+      expect(buttonWidget).toHaveStyle(`padding: ${expectedPadding[size]}`)
     })
   })
 
-  it("renders fluid width buttons correctly", () => {
-    const wrapper = shallow(
-      <BaseButton {...getProps({ fluidWidth: true })}>Hello</BaseButton>
-    )
-
-    expect(wrapper.find("StyledSecondaryButton").prop("fluidWidth")).toBe(true)
-  })
-
   it("renders disabled buttons correctly", () => {
-    const wrapper = shallow(
-      <BaseButton {...getProps({ disabled: true })}>Hello</BaseButton>
-    )
+    render(<BaseButton {...getProps({ disabled: true })}>Hello</BaseButton>)
 
-    expect(wrapper.find("StyledSecondaryButton").prop("disabled")).toBe(true)
+    const buttonWidget = screen.getByRole("button")
+    expect(buttonWidget).toBeDisabled()
   })
 
   it("calls onClick when button is clicked", () => {
     const onClick = jest.fn()
-    const wrapper = shallow(
-      <BaseButton {...getProps({ onClick })}>Hello</BaseButton>
-    )
-    wrapper.find("StyledSecondaryButton").simulate("click")
+    render(<BaseButton {...getProps({ onClick })}>Hello</BaseButton>)
+    const buttonWidget = screen.getByRole("button")
+    fireEvent.click(buttonWidget)
 
     expect(onClick).toHaveBeenCalled()
   })
 
   it("does not use container width by default", () => {
-    const wrapper = shallow(<BaseButton {...getProps()}>Hello</BaseButton>)
+    render(<BaseButton {...getProps()}>Hello</BaseButton>)
 
-    expect(wrapper.find("StyledSecondaryButton").prop("fluidWidth")).toBe(
-      false
-    )
+    const buttonWidget = screen.getByRole("button")
+    expect(buttonWidget).toHaveStyle("width: auto")
   })
 
   it("renders use container width buttons correctly", () => {
-    const wrapper = shallow(
-      <BaseButton {...getProps({ fluidWidth: true })}>Hello</BaseButton>
-    )
+    render(<BaseButton {...getProps({ fluidWidth: true })}>Hello</BaseButton>)
 
-    expect(wrapper.find("StyledSecondaryButton").prop("fluidWidth")).toBe(true)
+    const buttonWidget = screen.getByRole("button")
+    expect(buttonWidget).toHaveStyle("width: 100%")
+  })
+
+  it("renders use container width buttons correctly when explicit width passed", () => {
+    // Fluid width is a number when the button has a help tooltip
+    // (need to pass explicit width down otherwise tooltip breaks use_container_width=True)
+    render(<BaseButton {...getProps({ fluidWidth: 250 })}>Hello</BaseButton>)
+
+    const buttonWidget = screen.getByRole("button")
+    expect(buttonWidget).toHaveStyle("width: 250px")
   })
 })
