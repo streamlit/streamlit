@@ -22,6 +22,7 @@ import { mount, shallow } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   CameraInput as CameraInputProto,
+  FileURLs as FileURLsProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
 import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
@@ -56,13 +57,23 @@ const getProps = (elementProps: Partial<CameraInputProto> = {}): Props => {
       sendRerunBackMsg: jest.fn(),
       formsDataChanged: jest.fn(),
     }),
-    mockServerFileIdCounter: 1,
     // @ts-expect-error
     uploadClient: {
       uploadFile: jest.fn().mockImplementation(() => {
-        // Mock UploadClient to return an incremented ID for each upload.
-        return Promise.resolve(mockServerFileIdCounter++)
+        return Promise.resolve()
       }),
+      fetchFileURLs: jest.fn().mockImplementation((acceptedFiles: File[]) => {
+        return Promise.resolve(
+          acceptedFiles.map(file => {
+            return new FileURLsProto({
+              fileId: file.name,
+              uploadUrl: file.name,
+              deleteUrl: file.name,
+            })
+          })
+        )
+      }),
+      deleteFile: jest.fn(),
     },
   }
 }
