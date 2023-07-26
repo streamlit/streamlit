@@ -24,27 +24,25 @@ body:
       required: true
   - type: textarea
     attributes:
-      label: Problem / Motivation
-      description: Please outline the motivation for the proposal. Is your feature request related to a problem?
+      label: Why?
+      description: Please outline the proposal's problem, motivation, or use case. 
       placeholder: |
         I'm always frustrated when ...
     validations:
       required: false
   - type: textarea
     attributes:
-      label: Solution
+      label: How?
       description: |
-        Please describe the solution you'd like to see. This might include suggestions for `st` commands, new parameters, or UI mockups.
-        Don't worry if you don't have a clear solution in mind, any input helps!
+        Please describe the solution or implementation you'd like to see. This might include suggestions for `st` commands, new parameters, or UI mockups.
+        Don't worry if you don't have a clear solution in mind; any input helps!
       placeholder: |
-        **MVP:** What's the smallest possible solution that would get 80% of the problem out of the way?
-
-        **Preferred solution:** If you don't like the MVP above, tell us why, and what you'd like done instead.
+        Introduce a new command called `st.foo` which has the following set of parameters...
     validations:
       required: false
   - type: textarea
     attributes:
-      label: Additional Information
+      label: Additional Context
       description: |
         Links? References? Anything that will give us more context about the feature request here!
         For example, did this feature request come from https://discuss.streamlit.io or another site? Link the original source here!
