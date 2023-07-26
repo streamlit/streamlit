@@ -15,7 +15,9 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
 
 import Snow, {
   SnowProps,
@@ -36,20 +38,24 @@ describe("Snow element", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<Snow {...props} />)
+    render(<Snow {...props} />)
 
-    expect(wrapper).toBeDefined()
-    expect(wrapper.find("StyledFlake").length).toBe(NUM_FLAKES)
+    const snowElement = screen.getByTestId("snow")
+    expect(snowElement).toBeInTheDocument()
 
-    wrapper.find("StyledFlake").forEach(node => {
-      expect(node.prop("src")).toBeTruthy()
+    const snowImages = screen.getAllByRole("img")
+    expect(snowImages.length).toBe(NUM_FLAKES)
+
+    snowImages.forEach(node => {
+      expect(node).toHaveAttribute("src")
     })
   })
 
   it("renders as hidden element", () => {
     const props = getProps()
-    const wrapper = mount(<Snow {...props} />)
+    render(<Snow {...props} />)
 
-    expect(wrapper.find("div").prop("className")).toContain("stHidden")
+    const snowElement = screen.getByTestId("snow")
+    expect(snowElement).toHaveClass("stHidden")
   })
 })
