@@ -48,7 +48,11 @@ function TooltipIcon({
 }: TooltipIconProps): ReactElement {
   const theme: EmotionTheme = useTheme()
   return (
-    <StyledTooltipIconWrapper className="stTooltipIcon" isLatex={isLatex}>
+    <StyledTooltipIconWrapper
+      className="stTooltipIcon"
+      data-testid="stTooltipIcon"
+      isLatex={isLatex}
+    >
       <Tooltip
         content={
           <StreamlitMarkdown

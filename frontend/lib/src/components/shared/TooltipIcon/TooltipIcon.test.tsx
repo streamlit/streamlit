@@ -15,14 +15,17 @@
  */
 
 import React from "react"
-import { mount } from "enzyme"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
+import { render } from "@streamlit/lib/src/test_util"
+
 import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import TooltipIcon from "./TooltipIcon"
 
 describe("TooltipIcon element", () => {
   it("renders a TooltipIcon", () => {
-    const wrapper = mount(
+    render(
       <ThemeProvider
         theme={mockTheme.emotion}
         baseuiTheme={mockTheme.basewebTheme}
@@ -30,6 +33,7 @@ describe("TooltipIcon element", () => {
         <TooltipIcon content="" />
       </ThemeProvider>
     )
-    expect(wrapper.find("Tooltip").exists()).toBeTruthy()
+    const tooltipIcon = screen.getByTestId("stTooltipIcon")
+    expect(tooltipIcon).toBeInTheDocument()
   })
 })

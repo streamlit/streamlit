@@ -15,7 +15,10 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
+import { render } from "@streamlit/lib/src/test_util"
+
 import { fromJS, Map as ImmutableMap } from "immutable"
 
 import { table, emptyTable } from "./mock"
@@ -28,19 +31,20 @@ const getProps = (elementProps: Record<string, unknown> = {}): TableProps => ({
 describe("Table Element", () => {
   it("renders without crashing", () => {
     const props = getProps(table)
-    const wrapper = mount(<Table {...props} />)
+    render(<Table {...props} />)
 
-    expect(wrapper.find("StyledTable").length).toBe(1)
-    expect(wrapper.find("StyledTableContainer").length).toBe(1)
-    expect(wrapper.find("StyledEmptyTableCell").exists()).toBeFalsy()
+    const tableElement = screen.getByRole("table")
+    expect(tableElement).toBeInTheDocument()
   })
 
   it("renders an empty row", () => {
     const props = getProps(emptyTable)
-    const wrapper = mount(<Table {...props} />)
+    render(<Table {...props} />)
 
-    expect(wrapper.find("StyledTable").length).toBe(1)
-    expect(wrapper.find("StyledTableContainer").length).toBe(1)
-    expect(wrapper.find("StyledEmptyTableCell").exists()).toBeTruthy()
+    const tableElement = screen.getByRole("table")
+    expect(tableElement).toBeInTheDocument()
+
+    const emptyCell = screen.getByRole("cell")
+    expect(emptyCell).toHaveTextContent("empty")
   })
 })

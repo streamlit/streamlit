@@ -15,14 +15,16 @@
  */
 
 import React, { FC } from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
 
 import Particles, { ParticleProps, Props } from "./Particles"
 
 const DummyParticle: FC<ParticleProps> = () => <span />
 
 const getProps = (): Props => ({
-  className: "stHidden",
+  className: "particles",
   numParticles: 10,
   numParticleTypes: 5,
   ParticleComponent: DummyParticle,
@@ -39,16 +41,21 @@ describe("Particles element", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<Particles {...props} />)
+    render(<Particles {...props} />)
 
-    expect(wrapper).toBeDefined()
-    expect(wrapper.find(DummyParticle).length).toBe(10)
+    const particleElement = screen.getByTestId("particles")
+    expect(particleElement).toBeInTheDocument()
+
+    // eslint-disable-next-line testing-library/no-node-access
+    const particleComponents = particleElement.children
+    expect(particleComponents.length).toBe(10)
   })
 
   it("renders as hidden element", () => {
     const props = getProps()
-    const wrapper = mount(<Particles {...props} />)
+    render(<Particles {...props} />)
 
-    expect(wrapper.find("div").prop("className")).toContain("stHidden")
+    const particleElement = screen.getByTestId("particles")
+    expect(particleElement).toHaveClass("stHidden")
   })
 })
