@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING, Dict, Mapping, Optional
 from typing_extensions import Final, TypeAlias
 
 from streamlit.errors import DuplicateWidgetID
-from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
@@ -38,7 +37,6 @@ from streamlit.type_util import ValueFieldName
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner import ScriptRunContext
 
-LOGGER = get_logger(__name__)
 
 ElementType: TypeAlias = str
 
