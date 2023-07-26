@@ -326,6 +326,8 @@ def assert_snapshot(
             of the test function will be used.
         fail_fast : bool, optional
             If True, the comparison will stop at the first pixel mismatch.
+        file_type: "png" or "jpg"
+            The file type of the screenshot. Defaults to "png".
         """
         nonlocal test_failure_messages
         nonlocal snapshot_default_file_name
