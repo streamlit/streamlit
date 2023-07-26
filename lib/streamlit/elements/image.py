@@ -300,7 +300,11 @@ def _ensure_image_size_and_format(
         image = image.resize((width, new_height), resample=Image.BILINEAR)
         return _PIL_to_bytes(image, format=image_format, quality=90)
 
-    ext = filetype.guess(image_data)
+    ext = filetype.guess(image_data).extension
+
+    # We are forgiving on the spelling of JPEG
+    if ext == "jpg":
+        ext = "jpeg"
     if ext != None and ext != image_format.lower():
         # We need to reformat the image.
         return _PIL_to_bytes(image, format=image_format, quality=90)
