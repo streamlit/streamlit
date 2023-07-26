@@ -84,6 +84,16 @@ lib/Pipfile.lock
 .idea
 
 ########################################################################
+# Playwright
+########################################################################
+# Playwright test
+e2e/playwright/playwright-report
+e2e/playwright/test-results
+# Only keep the snapshots in the linux folder
+e2e/playwright/snapshots/*
+!e2e/playwright/snapshots/linux
+
+########################################################################
 # Cypress
 ########################################################################
 frontend/cypress/downloads

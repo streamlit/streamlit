@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const NO_OF_BUTTONS = 13
+const NO_OF_BUTTONS = 14
 /**
  * Order of CONN_TYPES_BUTTONs matters as they are rendered in order in st_button.py
  */
@@ -70,9 +70,18 @@ describe("st.button", () => {
       .matchThemedSnapshots("use-container-width-button");
   });
 
+    it("renders useContainerWidth button with help correctly", () => {
+    cy.get(".stButton").should("have.length", NO_OF_BUTTONS);
+
+    cy.getIndexed(".stButton", 5)
+      .trigger('mouseover').matchThemedSnapshots("use-container-width-and-help-button", { padding: [60, 0, 0, 0] });
+  });
+
   it("has correct default values", () => {
-    cy.get(".stButton button").should("have.text",
-        "button 1" + "button 2" + "button 3" + "button 4" + "button 5" + CONN_TYPES_BUTTONS.join(""));
+    cy.get(".stButton > button").should("have.text",
+        "button 1" + "button 2" + "button 3" + "button 4" + "button 5 - containerWidth" + CONN_TYPES_BUTTONS.join(""));
+    // button w/ help tooltip isn't direct decendent of stButton div
+    cy.getIndexed(".stButton button", 5).should("have.text", "button 6 - containerWidth + help");
   });
 
   it("sets value correctly when user clicks", () => {
