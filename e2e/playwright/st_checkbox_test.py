@@ -59,7 +59,7 @@ def test_checkbox_values_on_click(app: Page):
     for checkbox_element in checkbox_elements.all():
         checkbox_element.click(delay=50)
     # The app run needs to finish before we can check the values.
-    wait_for_app_run(app)
+    wait_for_app_run(app, 500)
 
     markdown_elements = app.locator(".stMarkdown")
     texts = [text.strip() for text in markdown_elements.all_inner_texts()]

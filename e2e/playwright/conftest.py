@@ -146,14 +146,15 @@ def wait_for_app_server_to_start(port: int, timeout: int = 5) -> bool:
     return True
 
 
-def wait_for_app_run(page: Page):
+def wait_for_app_run(page: Page, wait_delay: int = 100):
     """Wait for the given page to finish running."""
     page.wait_for_selector(
         "[data-testid='stStatusWidget']", timeout=20000, state="detached"
     )
-    # Give the app a little more time to render everything
-    # TODO(lukasmasuch): Do we need this to reduce flakiness?
-    # page.wait_for_timeout(500)
+
+    if wait_delay > 0:
+        # Give the app a little more time to render everything
+        page.wait_for_timeout(wait_delay)
 
 
 def wait_for_app_loaded(page: Page):
