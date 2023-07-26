@@ -26,7 +26,6 @@ from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 from urllib.parse import urlparse
 
-import filetype
 import numpy as np
 from PIL import GifImagePlugin, Image, ImageFile
 from typing_extensions import Final, Literal, TypeAlias
