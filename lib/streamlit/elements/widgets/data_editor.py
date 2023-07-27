@@ -791,6 +791,8 @@ class DataEditorMixin:
         # Throws an exception if any of the configured types are incompatible.
         _check_type_compatibilities(data_df, column_config_mapping, dataframe_schema)
 
+        arrow_bytes = type_util.pyarrow_table_to_bytes(arrow_table)
+
         # We want to do this as early as possible to avoid introducing nondeterminism,
         # but it isn't clear how much processing is needed to have the data in a
         # format that will hash consistently, so we do it late here to have it
@@ -798,8 +800,7 @@ class DataEditorMixin:
         id = compute_widget_id(
             "data_editor",
             user_key=key,
-            # TODO is this in a format where the string bytes accurately represent it?
-            data=arrow_table,
+            data=arrow_bytes,
             width=width,
             height=height,
             use_container_width=use_container_width,
@@ -849,7 +850,7 @@ class DataEditorMixin:
             data.set_uuid(styler_uuid)
             marshall_styler(proto, data, styler_uuid)
 
-        proto.data = type_util.pyarrow_table_to_bytes(arrow_table)
+        proto.data = arrow_bytes
 
         marshall_column_config(proto, column_config_mapping)
 
