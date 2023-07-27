@@ -287,8 +287,8 @@ def _ensure_image_size_and_format(
     MAXIMUM_CONTENT_WIDTH. Ensure the image's format corresponds to the given
     ImageFormat. Return the (possibly resized and reformatted) image bytes.
     """
-    image = Image.open(io.BytesIO(image_data))
-    actual_width, actual_height = image.size
+    pillow_image = Image.open(io.BytesIO(image_data))
+    actual_width, actual_height = pillow_image.size
 
     if width < 0 and actual_width > MAXIMUM_CONTENT_WIDTH:
         width = MAXIMUM_CONTENT_WIDTH
@@ -296,15 +296,13 @@ def _ensure_image_size_and_format(
     if width > 0 and actual_width > width:
         # We need to resize the image.
         new_height = int(1.0 * actual_height * width / actual_width)
-        image = image.resize((width, new_height), resample=Image.BILINEAR)
-        return _PIL_to_bytes(image, format=image_format, quality=90)
+        pillow_image = pillow_image.resize((width, new_height), resample=Image.BILINEAR)
+        return _PIL_to_bytes(pillow_image, format=image_format, quality=90)
 
-    pillow_detected_format = image.format
-    print(f"pillow_detected_format: {pillow_detected_format}")
-    print(f"image_format: {image_format}")
+    pillow_detected_format = pillow_image.format
     if pillow_detected_format != image_format:
         # We need to reformat the image.
-        return _PIL_to_bytes(image, format=image_format, quality=90)
+        return _PIL_to_bytes(pillow_image, format=image_format, quality=90)
 
     # No resizing or reformatting necessary - return the original bytes.
     return image_data
