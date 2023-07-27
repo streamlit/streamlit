@@ -134,7 +134,8 @@ export class FileUploadClient {
    *
    * @param files: An array of files.
    *
-   * @return a Promise<FileURLsResponse.IFileURLs[]> resolving to the
+   * @return a Promise<FileURLsResponse.IFileURLs[]> resolving to a list of
+   * URLs for uploading and deleting the given files.
    */
   // TODO(vdonato): Look into how awkward a pattern like this will be for
   //                the notebooks team / where else the code to fetch file URLs
