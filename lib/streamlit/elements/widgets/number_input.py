@@ -36,6 +36,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 Number = Union[int, float]
@@ -217,6 +218,21 @@ class NumberInputMixin:
             default_value=None if isinstance(value, NoValue) else value, key=key
         )
         maybe_raise_label_warnings(label, label_visibility)
+
+        id = compute_widget_id(
+            "number_input",
+            user_key=key,
+            label=label,
+            min_value=min_value,
+            max_value=max_value,
+            value=value,
+            step=step,
+            format=format,
+            key=key,
+            help=help,
+            form_id=current_form_id(self.dg),
+        )
+
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]
 
@@ -328,6 +344,7 @@ class NumberInputMixin:
         data_type = NumberInputProto.INT if all_ints else NumberInputProto.FLOAT
 
         number_input_proto = NumberInputProto()
+        number_input_proto.id = id
         number_input_proto.data_type = data_type
         number_input_proto.label = label
         number_input_proto.default = value

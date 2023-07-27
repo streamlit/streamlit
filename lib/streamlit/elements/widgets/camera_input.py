@@ -33,6 +33,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
@@ -227,7 +228,17 @@ class CameraInputMixin:
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         maybe_raise_label_warnings(label, label_visibility)
 
+        id = compute_widget_id(
+            "camera_input",
+            user_key=key,
+            label=label,
+            key=key,
+            help=help,
+            form_id=current_form_id(self.dg),
+        )
+
         camera_input_proto = CameraInputProto()
+        camera_input_proto.id = id
         camera_input_proto.label = label
         camera_input_proto.form_id = current_form_id(self.dg)
 

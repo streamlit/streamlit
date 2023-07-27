@@ -33,6 +33,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -339,16 +340,28 @@ class ButtonMixin:
         use_container_width: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
-
         key = to_key(key)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+
+        id = compute_widget_id(
+            "download_button",
+            user_key=key,
+            label=label,
+            data=str(data),
+            file_name=file_name,
+            mime=mime,
+            key=key,
+            help=help,
+            use_container_width=use_container_width,
+        )
+
         if is_in_form(self.dg):
             raise StreamlitAPIException(
                 f"`st.download_button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
             )
 
         download_button_proto = DownloadButtonProto()
-
+        download_button_proto.id = id
         download_button_proto.use_container_width = use_container_width
         download_button_proto.label = label
         download_button_proto.default = False
@@ -399,6 +412,17 @@ class ButtonMixin:
             check_callback_rules(self.dg, on_click)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
+        id = compute_widget_id(
+            "button",
+            user_key=key,
+            label=label,
+            key=key,
+            help=help,
+            is_form_submitter=is_form_submitter,
+            type=type,
+            use_container_width=use_container_width,
+        )
+
         # It doesn't make sense to create a button inside a form (except
         # for the "Form Submitter" button that's automatically created in
         # every form). We throw an error to warn the user about this.
@@ -415,6 +439,7 @@ class ButtonMixin:
                 )
 
         button_proto = ButtonProto()
+        button_proto.id = id
         button_proto.label = label
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter

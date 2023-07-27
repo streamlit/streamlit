@@ -35,6 +35,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.string_util import is_emoji
 from streamlit.type_util import Key, to_key
 
@@ -277,6 +278,13 @@ class ChatMixin:
         check_callback_rules(self.dg, on_submit)
         check_session_state_rules(default_value=default, key=key, writes_allowed=False)
 
+        id = compute_widget_id(
+            "chat_input",
+            user_key=key,
+            placeholder=placeholder,
+            max_chars=max_chars,
+        )
+
         # We omit this check for scripts running outside streamlit, because
         # they will have no script_run_ctx.
         if runtime.exists():
@@ -293,6 +301,7 @@ class ChatMixin:
                 raise StreamlitAPIException(DISALLOWED_CONTAINERS_ERROR_TEXT)
 
         chat_input_proto = ChatInputProto()
+        chat_input_proto.id = id
         chat_input_proto.placeholder = str(placeholder)
 
         if max_chars is not None:

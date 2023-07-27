@@ -48,6 +48,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
@@ -376,18 +377,18 @@ class SliderMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
-        if value is None:
-            # Set value from session_state if exists.
-            session_state = get_session_state().filtered_state
-
-            # we look first to session_state value of the widget because
-            # depending on the value (single value or list/tuple) the slider should be
-            # initializing differently (either as range or single value slider)
-            if key is not None and key in session_state:
-                value = session_state[key]
-            else:
-                # Set value default.
-                value = min_value if min_value is not None else 0
+        id = compute_widget_id(
+            "slider",
+            user_key=key,
+            label=label,
+            min_value=min_value,
+            value=value,
+            step=step,
+            format=format,
+            key=key,
+            help=help,
+            form_id=current_form_id(self.dg),
+        )
 
         SUPPORTED_TYPES = {
             Integral: SliderProto.INT,
@@ -397,6 +398,27 @@ class SliderMixin:
             time: SliderProto.TIME,
         }
         TIMELIKE_TYPES = (SliderProto.DATETIME, SliderProto.TIME, SliderProto.DATE)
+
+        if value is None:
+            # We need to know if this is a single or range slider, but don't have
+            # a default value, so we check if session_state can tell us.
+            # We already calcluated the id, so there is no risk of this causing
+            # the id to change.
+
+            single_value = True
+
+            session_state = get_session_state().filtered_state
+
+            if key is not None and key in session_state:
+                state_value = session_state[key]
+                single_value = isinstance(state_value, tuple(SUPPORTED_TYPES.keys()))
+
+            if single_value:
+                value = min_value if min_value is not None else 0
+            else:
+                mn = min_value if min_value is not None else 0
+                mx = max_value if max_value is not None else 100
+                value = [mn, mx]
 
         # Ensure that the value is either a single value or a range of values.
         single_value = isinstance(value, tuple(SUPPORTED_TYPES.keys()))
@@ -609,6 +631,7 @@ class SliderMixin:
 
         slider_proto = SliderProto()
         slider_proto.type = SliderProto.Type.SLIDER
+        slider_proto.id = id
         slider_proto.label = label
         slider_proto.format = format
         slider_proto.default[:] = value

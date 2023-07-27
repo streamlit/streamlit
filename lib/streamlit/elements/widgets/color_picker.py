@@ -34,6 +34,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 
@@ -170,6 +171,16 @@ class ColorPickerMixin:
         check_session_state_rules(default_value=value, key=key)
         maybe_raise_label_warnings(label, label_visibility)
 
+        id = compute_widget_id(
+            "color_picker",
+            user_key=key,
+            label=label,
+            value=str(value),
+            key=key,
+            help=help,
+            form_id=current_form_id(self.dg),
+        )
+
         # set value default
         if value is None:
             value = "#000000"
@@ -197,6 +208,7 @@ class ColorPickerMixin:
             )
 
         color_picker_proto = ColorPickerProto()
+        color_picker_proto.id = id
         color_picker_proto.label = label
         color_picker_proto.default = str(value)
         color_picker_proto.form_id = current_form_id(self.dg)

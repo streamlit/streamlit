@@ -29,6 +29,7 @@ from streamlit.proto.Element_pb2 import Element
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import NoValue, register_widget
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import to_bytes
 
 LOGGER = get_logger(__name__)
@@ -162,10 +163,9 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
             # Normally, a widget's element_hash (which determines
             # its identity across multiple runs of an app) is computed
-            # by hashing the entirety of its protobuf. This means that,
-            # if any of the arguments to the widget are changed, Streamlit
-            # considers it a new widget instance and it loses its previous
-            # state.
+            # by hashing its arguments. This means that, if any of the arguments
+            # to the widget are changed, Streamlit considers it a new widget
+            # instance and it loses its previous state.
             #
             # However! If a *component* has a `key` argument, then the
             # component's hash identity is determined by entirely by
@@ -173,10 +173,6 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             # exists, the component will maintain its identity even when its
             # other arguments change, and the component's iframe won't be
             # remounted on the frontend.
-            #
-            # So: if `key` is None, we marshall the element's arguments
-            # *before* computing its widget_ui_value (which creates its hash).
-            # If `key` is not None, we marshall the arguments *after*.
 
             def marshall_element_args():
                 element.component_instance.json_args = serialized_json_args
@@ -184,6 +180,26 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
             if key is None:
                 marshall_element_args()
+                id = compute_widget_id(
+                    "component_instance",
+                    user_key=key,
+                    name=self.name,
+                    form_id=current_form_id(dg),
+                    url=self.url,
+                    key=key,
+                    json_args=serialized_json_args,
+                    special_args=special_args,
+                )
+            else:
+                id = compute_widget_id(
+                    "component_instance",
+                    user_key=key,
+                    name=self.name,
+                    form_id=current_form_id(dg),
+                    url=self.url,
+                    key=key,
+                )
+            element.component_instance.id = id
 
             def deserialize_component(ui_value, widget_id=""):
                 # ui_value is an object from json, an ArrowTable proto, or a bytearray

@@ -45,6 +45,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -284,7 +285,19 @@ class SelectSliderMixin:
         # Convert element to index of the elements
         slider_value = as_index_list(value)
 
+        id = compute_widget_id(
+            "select_slider",
+            user_key=key,
+            label=label,
+            options=[str(format_func(option)) for option in opt],
+            value=slider_value,
+            key=key,
+            help=help,
+            form_id=current_form_id(self.dg),
+        )
+
         slider_proto = SliderProto()
+        slider_proto.id = id
         slider_proto.type = SliderProto.Type.SELECT_SLIDER
         slider_proto.label = label
         slider_proto.format = "%s"
