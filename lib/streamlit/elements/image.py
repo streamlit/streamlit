@@ -300,10 +300,9 @@ def _ensure_image_size_and_format(
         return _PIL_to_bytes(image, format=image_format, quality=90)
 
     pillow_detected_format = image.format
-    if (
-        pillow_detected_format != None
-        and pillow_detected_format != image_format.lower()
-    ):
+    print(f"pillow_detected_format: {pillow_detected_format}")
+    print(f"image_format: {image_format}")
+    if pillow_detected_format != image_format:
         # We need to reformat the image.
         return _PIL_to_bytes(image, format=image_format, quality=90)
 
