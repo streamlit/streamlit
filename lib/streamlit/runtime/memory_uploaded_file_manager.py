@@ -29,9 +29,7 @@ LOGGER = get_logger(__name__)
 
 
 class MemoryUploadedFileManager(UploadedFileManager):
-    """Holds files uploaded by users of the running Streamlit app,
-    and emits an event signal when a file is added.
-
+    """Holds files uploaded by users of the running Streamlit app.
     This class can be used safely from multiple threads simultaneously.
     """
 

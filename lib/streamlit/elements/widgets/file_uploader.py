@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from textwrap import dedent
-from typing import Dict, List, Optional, Sequence, Union, cast, overload
+from typing import List, Optional, Sequence, Union, cast, overload
 
 from typing_extensions import Literal
 
@@ -89,7 +89,6 @@ def _get_upload_files(
 @dataclass
 class FileUploaderSerde:
     accept_multiple_files: bool
-    file_delete_urls: Dict[str, str] = field(default_factory=dict)
 
     def deserialize(
         self, ui_value: Optional[FileUploaderStateProto], widget_id: str
