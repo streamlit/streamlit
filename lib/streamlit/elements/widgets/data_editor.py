@@ -803,11 +803,9 @@ class DataEditorMixin:
             width=width,
             height=height,
             use_container_width=use_container_width,
-            hide_index=hide_index,
             column_order=column_order,
-            column_config=str(column_config),
+            column_config_mapping=str(column_config_mapping),
             num_rows=num_rows,
-            disabled=(disabled if isinstance(disabled, bool) else list(disabled)),
             key=key,
             form_id=current_form_id(self.dg),
         )
