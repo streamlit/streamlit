@@ -37,6 +37,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
@@ -388,6 +389,17 @@ class FileUploaderMixin:
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         maybe_raise_label_warnings(label, label_visibility)
 
+        id = compute_widget_id(
+            "file_uploader",
+            user_key=key,
+            label=label,
+            type=type,
+            accept_multiple_files=accept_multiple_files,
+            key=key,
+            help=help,
+            form_id=current_form_id(self.dg),
+        )
+
         if type:
             if isinstance(type, str):
                 type = [type]
@@ -408,6 +420,7 @@ class FileUploaderMixin:
                     type.append(x)
 
         file_uploader_proto = FileUploaderProto()
+        file_uploader_proto.id = id
         file_uploader_proto.label = label
         file_uploader_proto.type[:] = type if type is not None else []
         file_uploader_proto.max_upload_size_mb = config.get_option(
