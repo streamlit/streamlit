@@ -179,6 +179,7 @@ export function applyThemeDefaults(config: any, theme: EmotionTheme): any {
       ...themeFonts,
     },
     view: {
+      stroke: getGray30(theme),
       continuousHeight: 350,
       continuousWidth: 400,
     },
