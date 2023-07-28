@@ -36,7 +36,7 @@ interface Props {
   sessionInfo: SessionInfo
   endpoints: StreamlitEndpoints
   formsWithPendingRequestsChanged: (formIds: Set<string>) => void
-  requestFileURLs: (requestId: string, files: File[]) => void
+  requestFileURLs?: (requestId: string, files: File[]) => void
 }
 
 /**
@@ -67,7 +67,7 @@ export class FileUploadClient {
    * Upon receiving the requested file URLs, the app should call this class'
    * onFileURLsResponse method.
    */
-  private readonly requestFileURLs: (requestId: string, files: File[]) => void
+  private readonly requestFileURLs?: (requestId: string, files: File[]) => void
 
   /**
    * A map from request ID (a uuidv4) to the Resolver that should resolve once
@@ -121,10 +121,12 @@ export class FileUploadClient {
    * @param fileUrl: the URL of the file to delete.
    */
   public deleteFile(fileUrl: string): Promise<void> {
-    return this.endpoints.deleteFileAtURL(
-      fileUrl,
-      this.sessionInfo.current.sessionId
-    )
+    return this.endpoints.deleteFileAtURL
+      ? this.endpoints.deleteFileAtURL(
+          fileUrl,
+          this.sessionInfo.current.sessionId
+        )
+      : Promise.resolve()
   }
 
   /**
@@ -137,10 +139,11 @@ export class FileUploadClient {
    * @return a Promise<FileURLsResponse.IFileURLs[]> resolving to a list of
    * URLs for uploading and deleting the given files.
    */
-  // TODO(vdonato): Look into how awkward a pattern like this will be for
-  //                the notebooks team / where else the code to fetch file URLs
-  //                via websocket can live.
   public fetchFileURLs(files: File[]): Promise<IFileURLs[]> {
+    if (!this.requestFileURLs) {
+      return Promise.resolve([])
+    }
+
     const resolver = new Resolver<IFileURLs[]>()
 
     const requestId = uuidv4()

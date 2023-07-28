@@ -40,7 +40,7 @@ export interface StreamlitEndpoints {
    * returned unchanged. Otherwise, the return value will be a URL for fetching
    * the media file from the connected Streamlit instance.
    */
-  buildFileUploadURL(url: string): string
+  buildFileUploadURL?(url: string): string
 
   /**
    * Construct a URL for an app page in a multi-page app.
@@ -79,7 +79,7 @@ export interface StreamlitEndpoints {
    * @param fileUrl: The URL of the file to delete.
    * @param sessionId the current sessionID.
    */
-  deleteFileAtURL(fileUrl: string, sessionId: string): Promise<void>
+  deleteFileAtURL?(fileUrl: string, sessionId: string): Promise<void>
 
   /**
    * Fetch a cached ForwardMsg from the server.
