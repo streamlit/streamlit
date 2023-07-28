@@ -144,7 +144,7 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, Sequence[str]]],
+        type: Union[str, Sequence[str], None],
         accept_multiple_files: Literal[True],
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -163,7 +163,7 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, Sequence[str]]],
+        type: Union[str, Sequence[str], None],
         accept_multiple_files: Literal[False] = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -189,7 +189,7 @@ class FileUploaderMixin:
         label: str,
         *,
         accept_multiple_files: Literal[True],
-        type: Optional[Union[str, Sequence[str]]] = None,
+        type: Union[str, Sequence[str], None] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -208,7 +208,7 @@ class FileUploaderMixin:
         label: str,
         *,
         accept_multiple_files: Literal[False] = False,
-        type: Optional[Union[str, Sequence[str]]] = None,
+        type: Union[str, Sequence[str], None] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -223,7 +223,7 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, Sequence[str]]] = None,
+        type: Union[str, Sequence[str], None] = None,
         accept_multiple_files: bool = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -379,7 +379,7 @@ class FileUploaderMixin:
     def _file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, Sequence[str]]] = None,
+        type: Union[str, Sequence[str], None] = None,
         accept_multiple_files: bool = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -390,7 +390,7 @@ class FileUploaderMixin:
         label_visibility: LabelVisibility = "visible",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> Optional[Union[UploadedFile, List[UploadedFile]]]:
+    ) -> Union[UploadedFile, List[UploadedFile], None]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
