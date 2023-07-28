@@ -36,6 +36,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -214,7 +215,22 @@ class TextWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        id = compute_widget_id(
+            "text_input",
+            user_key=key,
+            label=label,
+            value=str(value),
+            max_chars=max_chars,
+            key=key,
+            type=type,
+            help=help,
+            autocomplete=autocomplete,
+            placeholder=str(placeholder),
+            form_id=current_form_id(self.dg),
+        )
+
         text_input_proto = TextInputProto()
+        text_input_proto.id = id
         text_input_proto.label = label
         text_input_proto.default = str(value)
         text_input_proto.form_id = current_form_id(self.dg)
@@ -410,7 +426,21 @@ class TextWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        id = compute_widget_id(
+            "text_area",
+            user_key=key,
+            label=label,
+            value=str(value),
+            height=height,
+            max_chars=max_chars,
+            key=key,
+            help=help,
+            placeholder=str(placeholder),
+            form_id=current_form_id(self.dg),
+        )
+
         text_area_proto = TextAreaProto()
+        text_area_proto.id = id
         text_area_proto.label = label
         text_area_proto.default = str(value)
         text_area_proto.form_id = current_form_id(self.dg)

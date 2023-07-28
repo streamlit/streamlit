@@ -65,6 +65,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import DataFormat, DataFrameGenericAlias, Key, is_type, to_key
 from streamlit.util import calc_md5
 
@@ -727,6 +728,9 @@ class DataEditorMixin:
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
+        if column_order is not None:
+            column_order = list(column_order)
+
         column_config_mapping: ColumnConfigMapping = {}
 
         data_format = type_util.determine_data_format(data)
@@ -787,7 +791,28 @@ class DataEditorMixin:
         # Throws an exception if any of the configured types are incompatible.
         _check_type_compatibilities(data_df, column_config_mapping, dataframe_schema)
 
+        arrow_bytes = type_util.pyarrow_table_to_bytes(arrow_table)
+
+        # We want to do this as early as possible to avoid introducing nondeterminism,
+        # but it isn't clear how much processing is needed to have the data in a
+        # format that will hash consistently, so we do it late here to have it
+        # as close as possible to how it used to be.
+        id = compute_widget_id(
+            "data_editor",
+            user_key=key,
+            data=arrow_bytes,
+            width=width,
+            height=height,
+            use_container_width=use_container_width,
+            column_order=column_order,
+            column_config_mapping=str(column_config_mapping),
+            num_rows=num_rows,
+            key=key,
+            form_id=current_form_id(self.dg),
+        )
+
         proto = ArrowProto()
+        proto.id = id
 
         proto.use_container_width = use_container_width
 
@@ -825,7 +850,7 @@ class DataEditorMixin:
             data.set_uuid(styler_uuid)
             marshall_styler(proto, data, styler_uuid)
 
-        proto.data = type_util.pyarrow_table_to_bytes(arrow_table)
+        proto.data = arrow_bytes
 
         marshall_column_config(proto, column_config_mapping)
 

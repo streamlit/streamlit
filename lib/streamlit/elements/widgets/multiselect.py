@@ -43,6 +43,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -294,9 +295,25 @@ class MultiSelectMixin:
         maybe_raise_label_warnings(label, label_visibility)
 
         indices = _check_and_convert_to_indices(opt, default)
-        multiselect_proto = MultiSelectProto()
-        multiselect_proto.label = label
+
+        id = compute_widget_id(
+            "multiselect",
+            user_key=key,
+            label=label,
+            options=[str(format_func(option)) for option in opt],
+            default=indices,
+            key=key,
+            help=help,
+            max_selections=max_selections,
+            placeholder=placeholder,
+            form_id=current_form_id(self.dg),
+        )
+
         default_value: List[int] = [] if indices is None else indices
+
+        multiselect_proto = MultiSelectProto()
+        multiselect_proto.id = id
+        multiselect_proto.label = label
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
         multiselect_proto.form_id = current_form_id(self.dg)
