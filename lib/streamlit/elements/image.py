@@ -372,7 +372,6 @@ def image_to_url(
 
     # PIL Images
     elif isinstance(image, (ImageFile.ImageFile, Image.Image)):
-        print("Getting a pil image")
         format = _validate_image_format_string(image, output_format)
         image_data = _PIL_to_bytes(image, format)
 
