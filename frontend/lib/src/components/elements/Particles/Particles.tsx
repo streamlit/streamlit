@@ -39,7 +39,10 @@ const Particles: FC<Props> = ({
 }: Props) => (
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
-  <div className={classNames(className, "stHidden")}>
+  <div
+    className={classNames(className, "stHidden")}
+    data-testid={`${className}`}
+  >
     {range(numParticles).map(i => {
       const randNum = Math.floor(Math.random() * numParticleTypes)
 
