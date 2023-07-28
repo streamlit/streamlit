@@ -82,10 +82,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self.finish()
 
     def post(self, **kwargs):
-        """Receive an uploaded file and add it to our UploadedFileManager.
-
-        Return the file's ID, so that the client can refer to it.
-        """
+        """Receive an uploaded file and add it to our UploadedFileManager."""
 
         args: Dict[str, List[bytes]] = {}
         files: Dict[str, List[Any]] = {}
