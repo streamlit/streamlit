@@ -40,7 +40,7 @@ interface Props {
 }
 
 /**
- * Handles operations related to the st.file_uploader widget.
+ * Handles operations related to the widgets that require file uploading.
  */
 export class FileUploadClient {
   private readonly sessionInfo: SessionInfo
