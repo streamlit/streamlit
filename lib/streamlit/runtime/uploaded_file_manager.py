@@ -42,6 +42,7 @@ class UploadFileUrlInfo(NamedTuple):
 class DeletedFile(NamedTuple):
     """Represents a deleted file in deserialized values for st.file_uploader and
     st.camera_input
+
     Return this from st.file_uploader and st.camera_input deserialize (so they can
     be used in session_state), when widget value contains file record that is missing
     from the storage.

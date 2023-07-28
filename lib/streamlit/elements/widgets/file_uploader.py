@@ -40,8 +40,11 @@ from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
-SomeUploadedFiles = Optional[
-    Union[UploadedFile, DeletedFile, List[Union[UploadedFile, DeletedFile]]]
+SomeUploadedFiles = Union[
+    UploadedFile,
+    DeletedFile,
+    List[Union[UploadedFile, DeletedFile]],
+    None,
 ]
 
 TYPE_PAIRS = [
@@ -230,7 +233,7 @@ class FileUploaderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[Union[UploadedFile, List[UploadedFile]]]:
+    ) -> Union[UploadedFile, List[UploadedFile], None]:
         r"""Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option. For more info
@@ -464,15 +467,11 @@ class FileUploaderMixin:
         filtered_value: Union[UploadedFile, List[UploadedFile], None]
 
         if isinstance(widget_state.value, DeletedFile):
-            filtered_value = None
+            return None
         elif isinstance(widget_state.value, list):
-            filtered_value = [
-                f for f in widget_state.value if not isinstance(f, DeletedFile)
-            ]
-        else:
-            filtered_value = widget_state.value
+            return [f for f in widget_state.value if not isinstance(f, DeletedFile)]
 
-        return filtered_value
+        return widget_state.value
 
     @property
     def dg(self) -> "streamlit.delta_generator.DeltaGenerator":

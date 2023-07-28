@@ -171,19 +171,6 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         self.assertEqual(b"123", file2.read())
 
     @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
-    def test_deleted_file_omitted(self, get_upload_files_patch):
-        """We should omit DeletedFile objects for final user value ."""
-
-        uploaded_files = [DeletedFile(file_id="A")]
-        get_upload_files_patch.return_value = uploaded_files
-
-        result_1: UploadedFile = st.file_uploader("a", accept_multiple_files=False)
-        result_2: UploadedFile = st.file_uploader("b", accept_multiple_files=True)
-
-        self.assertEqual(result_1, None)
-        self.assertEqual(result_2, [])
-
-    @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
     def test_deleted_files_filtered_out(self, get_upload_files_patch):
         """We should filter out DeletedFile objects for final user value."""
 

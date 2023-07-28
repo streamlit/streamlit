@@ -14,7 +14,7 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Optional, Union, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -22,6 +22,7 @@ from streamlit.elements.utils import (
     check_session_state_rules,
     get_label_visibility_proto_value,
 )
+from streamlit.elements.widgets.file_uploader import _get_upload_files
 from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
@@ -41,40 +42,6 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 SomeUploadedSnapshotFile = Union[UploadedFile, DeletedFile, None]
-
-
-def _get_upload_files(
-    widget_value: Optional[FileUploaderStateProto],
-) -> List[Union[UploadedFile, DeletedFile]]:
-    if widget_value is None:
-        return []
-
-    ctx = get_script_run_ctx()
-    if ctx is None:
-        return []
-
-    uploaded_file_info = widget_value.uploaded_file_info
-    if len(uploaded_file_info) == 0:
-        return []
-
-    file_recs_list = ctx.uploaded_file_mgr.get_files(
-        session_id=ctx.session_id,
-        file_ids=[f.file_id for f in uploaded_file_info],
-    )
-
-    file_recs = {f.file_id: f for f in file_recs_list}
-
-    collected_files: List[Union[UploadedFile, DeletedFile]] = []
-
-    for f in uploaded_file_info:
-        maybe_file_rec = file_recs.get(f.file_id)
-        if maybe_file_rec is not None:
-            uploaded_file = UploadedFile(maybe_file_rec, f.file_urls)
-            collected_files.append(uploaded_file)
-        else:
-            collected_files.append(DeletedFile(f.file_id))
-
-    return collected_files
 
 
 @dataclass
