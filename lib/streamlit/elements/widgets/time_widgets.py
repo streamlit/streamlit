@@ -384,6 +384,11 @@ class TimeWidgetsMixin:
                 f"`step` must be between 60 seconds and 23 hours but is currently set to {step} seconds."
             )
         time_input_proto.step = step
+        time_input_proto.disabled = disabled
+        time_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if help is not None:
             time_input_proto.help = dedent(help)
 
@@ -400,12 +405,6 @@ class TimeWidgetsMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        time_input_proto.disabled = disabled
-        time_input_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
         if widget_state.value_changed:
             time_input_proto.value = serde.serialize(widget_state.value)
             time_input_proto.set_value = True
@@ -622,19 +621,21 @@ class TimeWidgetsMixin:
         date_input_proto = DateInputProto()
         date_input_proto.id = id
         date_input_proto.is_range = parsed_values.is_range
-        if help is not None:
-            date_input_proto.help = dedent(help)
-
+        date_input_proto.disabled = disabled
+        date_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         date_input_proto.format = format
         date_input_proto.label = label
         date_input_proto.default[:] = [
             date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
         ]
-
         date_input_proto.min = date.strftime(parsed_values.min, "%Y/%m/%d")
         date_input_proto.max = date.strftime(parsed_values.max, "%Y/%m/%d")
-
         date_input_proto.form_id = current_form_id(self.dg)
+
+        if help is not None:
+            date_input_proto.help = dedent(help)
 
         serde = DateInputSerde(parsed_values)
 
@@ -650,12 +651,6 @@ class TimeWidgetsMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        date_input_proto.disabled = disabled
-        date_input_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
         if widget_state.value_changed:
             date_input_proto.value[:] = serde.serialize(widget_state.value)
             date_input_proto.set_value = True
