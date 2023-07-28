@@ -299,7 +299,6 @@ def _ensure_image_size_and_format(
         pil_image = pil_image.resize((width, new_height), resample=Image.BILINEAR)
         return _PIL_to_bytes(pil_image, format=image_format, quality=90)
 
-    # pil_image.format should be defined since we call Image.open()
     if pil_image.format != image_format:
         # We need to reformat the image.
         return _PIL_to_bytes(pil_image, format=image_format, quality=90)
@@ -373,6 +372,7 @@ def image_to_url(
 
     # PIL Images
     elif isinstance(image, (ImageFile.ImageFile, Image.Image)):
+        print("Getting a pil image")
         format = _validate_image_format_string(image, output_format)
         image_data = _PIL_to_bytes(image, format)
 
