@@ -17,8 +17,21 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Generic, Optional, Tuple, TypeVar, Union
+from datetime import date, datetime, time, timedelta
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
+from google.protobuf.message import Message
 from typing_extensions import Final, TypeAlias
 
 from streamlit import util
@@ -42,6 +55,10 @@ from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.type_util import ValueFieldName
+
+if TYPE_CHECKING:
+    from streamlit.runtime.state.widgets import NoValue
+
 
 # Protobuf types for all widgets.
 WidgetProto: TypeAlias = Union[
@@ -138,23 +155,37 @@ class RegisterWidgetResult(Generic[T_co]):
         return cls(value=deserializer(None, ""), value_changed=False)
 
 
+PROTO_SCALAR_VALUE = Union[float, int, bool, str, bytes]
+SAFE_VALUES = Union[
+    date, time, datetime, timedelta, None, "NoValue", Message, PROTO_SCALAR_VALUE
+]
+
+
 def compute_widget_id(
-    element_type: str, element_proto: WidgetProto, user_key: Optional[str] = None
+    element_type: str,
+    user_key: str | None = None,
+    **kwargs: SAFE_VALUES | Sequence[SAFE_VALUES],
 ) -> str:
     """Compute the widget id for the given widget. This id is stable: a given
     set of inputs to this function will always produce the same widget id output.
+
+    Only stable, deterministic values should be used to compute widget ids. Using
+    nondeterministic values as inputs can cause the resulting widget id to
+    change between runs.
 
     The widget id includes the user_key so widgets with identical arguments can
     use it to be distinct.
 
     The widget id includes an easily identified prefix, and the user_key as a
     suffix, to make it easy to identify it and know if a key maps to it.
-
-    Does not mutate the element_proto object.
     """
     h = hashlib.new("md5")
     h.update(element_type.encode("utf-8"))
-    h.update(element_proto.SerializeToString())
+    # This will iterate in a consistent order when the provided arguments have
+    # consistent order; dicts are always in insertion order.
+    for k, v in kwargs.items():
+        h.update(str(k).encode("utf-8"))
+        h.update(str(v).encode("utf-8"))
     return f"{GENERATED_WIDGET_ID_PREFIX}-{h.hexdigest()}-{user_key}"
 
 

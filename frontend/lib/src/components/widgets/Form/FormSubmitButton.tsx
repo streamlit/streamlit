@@ -46,6 +46,10 @@ export function FormSubmitButton(props: Props): ReactElement {
     return () => widgetMgr.removeSubmitButton(formId, element)
   }, [widgetMgr, formId, element])
 
+  // When useContainerWidth true & has help tooltip,
+  // we need to pass the container width down to the button
+  const fluidWidth = element.help ? width : true
+
   return (
     <div
       className="row-widget stButton"
@@ -56,7 +60,7 @@ export function FormSubmitButton(props: Props): ReactElement {
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
-          fluidWidth={element.useContainerWidth || false}
+          fluidWidth={element.useContainerWidth ? fluidWidth : false}
           disabled={disabled || hasInProgressUpload}
           onClick={() => {
             widgetMgr.submitForm(element.formId, element)

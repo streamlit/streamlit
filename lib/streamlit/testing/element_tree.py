@@ -22,9 +22,14 @@ from typing_extensions import Literal, TypeAlias
 
 from streamlit import util
 from streamlit.elements.heading import HeadingProtoTag
-from streamlit.elements.select_slider import SelectSliderSerde
-from streamlit.elements.slider import SliderScalar, SliderScalarT, SliderSerde, Step
-from streamlit.elements.time_widgets import (
+from streamlit.elements.widgets.select_slider import SelectSliderSerde
+from streamlit.elements.widgets.slider import (
+    SliderScalar,
+    SliderScalarT,
+    SliderSerde,
+    Step,
+)
+from streamlit.elements.widgets.time_widgets import (
     DateInputSerde,
     DateWidgetReturn,
     TimeInputSerde,

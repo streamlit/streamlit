@@ -54,9 +54,7 @@ describe("Dataframe Tooltip", () => {
     const tooltipContent = screen.getByText("Positioned tooltip.")
     expect(tooltipContent).toBeInTheDocument()
 
-    const invisibleDiv = document.querySelector(
-      ".stTooltipTarget"
-    ) as HTMLElement
+    const invisibleDiv = screen.getByTestId("stTooltipTarget")
 
     expect(invisibleDiv).toHaveStyle("position: fixed")
     expect(invisibleDiv).toHaveStyle("top: 200px")
