@@ -18,7 +18,7 @@ SHELL=/bin/bash
 
 INSTALL_DEV_REQS ?= true
 INSTALL_TEST_REQS ?= true
-USE_CONSTRAINT_FILE ?= true
+USE_CONSTRAINTS_FILE ?= true
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 GITHUB_REPOSITORY ?= streamlit/streamlit
 CONSTRAINTS_BRANCH ?= constraints-develop
@@ -103,7 +103,7 @@ python-init-test-min-deps:
 .PHONY: python-init
 python-init:
 	pip_args=("--editable" "lib[snowflake]");\
-	if [ "${USE_CONSTRAINT_FILE}" = "true" ] ; then\
+	if [ "${USE_CONSTRAINTS_FILE}" = "true" ] ; then\
 		pip_args+=(--constraint "${CONSTRAINTS_URL}"); \
 	fi;\
 	if [ "${INSTALL_DEV_REQS}" = "true" ] ; then\
@@ -221,6 +221,7 @@ clean:
 	rm -rf frontend/public/reports
 	rm -rf frontend/lib/dist
 	rm -rf ~/.cache/pre-commit
+	rm -rf e2e/playwright/test-results
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
@@ -327,6 +328,14 @@ jscoverage:
 e2etest:
 	./scripts/run_e2e_tests.py
 
+.PHONY: playwright
+# Run playwright E2E tests.
+playwright:
+	python -m playwright install --with-deps; \
+	cd e2e/playwright; \
+	rm -rf ./test-results; \
+	pytest --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto -v
+
 .PHONY: loc
 # Count the number of lines of code in the project.
 loc:
@@ -410,3 +419,21 @@ connect-test-env:
 .PHONY: pre-commit-install
 pre-commit-install:
 	pre-commit install
+
+.PHONY: ensure-relative-imports
+# ensure relative imports exist within the lib/dist folder when doing yarn buildLibProd
+ensure-relative-imports:
+	./scripts/ensure_relative_imports.sh
+
+.PHONY frontend-lib-prod:
+# build the production version for @streamlit/lib
+frontend-lib-prod:
+	cd frontend/ ; yarn run buildLibProd;
+
+.PHONY streamlit-lib-prod:
+# build the production version for @streamlit/lib
+# while also doing a make init so it's a single command
+streamlit-lib-prod:
+	make mini-init;
+	make frontend-lib-prod;
+

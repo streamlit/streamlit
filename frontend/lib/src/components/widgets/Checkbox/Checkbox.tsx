@@ -211,7 +211,7 @@ class Checkbox extends React.PureComponent<Props, State> {
               source={element.label}
               allowHTML={false}
               isLabel
-              isCheckbox
+              largerLabel
             />
             {element.help && (
               <StyledWidgetLabelHelpInline color={color}>

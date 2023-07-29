@@ -49,13 +49,19 @@ function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
       case BlockProto.ChatMessage.AvatarType.ICON:
         if (avatar === "user") {
           return (
-            <StyledAvatarIcon background={theme.colors.red60}>
+            <StyledAvatarIcon
+              data-testid="chatAvatarIcon-user"
+              background={theme.colors.red60}
+            >
               <Icon content={Face} size="lg" />
             </StyledAvatarIcon>
           )
         } else if (avatar === "assistant") {
           return (
-            <StyledAvatarIcon background={theme.colors.orange60}>
+            <StyledAvatarIcon
+              data-testid="chatAvatarIcon-assistant"
+              background={theme.colors.orange60}
+            >
               <Icon content={SmartToy} size="lg" />
             </StyledAvatarIcon>
           )
@@ -84,14 +90,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   return (
     <StyledChatMessageContainer
       className="stChatMessage"
+      data-testid="stChatMessage"
       background={name.toLowerCase() === "user"}
     >
-      <ChatMessageAvatar
-        name={name}
-        avatar={avatar}
-        avatarType={avatarType}
-        data-testid="stChatMessageAvatar"
-      />
+      <ChatMessageAvatar name={name} avatar={avatar} avatarType={avatarType} />
       <StyledMessageContent
         data-testid="stChatMessageContent"
         aria-label={`Chat message from ${name}`}

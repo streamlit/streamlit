@@ -30,7 +30,7 @@ import SidebarNav from "./SidebarNav"
 
 expect.extend(matchers)
 
-function renderSideBar(props: Partial<SidebarProps> = {}): ReactWrapper {
+function mountSidebar(props: Partial<SidebarProps> = {}): ReactWrapper {
   return mount(
     <Sidebar
       endpoints={mockEndpoints()}
@@ -48,13 +48,13 @@ function renderSideBar(props: Partial<SidebarProps> = {}): ReactWrapper {
 
 describe("Sidebar Component", () => {
   it("should render without crashing", () => {
-    const wrapper = renderSideBar({})
+    const wrapper = mountSidebar({})
 
     expect(wrapper.find("StyledSidebar").exists()).toBe(true)
   })
 
   it("should render expanded", () => {
-    const wrapper = renderSideBar({
+    const wrapper = mountSidebar({
       initialSidebarState: PageConfig.SidebarState.EXPANDED,
     })
 
@@ -62,7 +62,7 @@ describe("Sidebar Component", () => {
   })
 
   it("should render collapsed", () => {
-    const wrapper = renderSideBar({
+    const wrapper = mountSidebar({
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
 
@@ -70,7 +70,7 @@ describe("Sidebar Component", () => {
   })
 
   it("should collapse on toggle if expanded", () => {
-    const wrapper = renderSideBar({
+    const wrapper = mountSidebar({
       initialSidebarState: PageConfig.SidebarState.EXPANDED,
     })
 
@@ -79,7 +79,7 @@ describe("Sidebar Component", () => {
   })
 
   it("should expand on toggle if collapsed", () => {
-    const wrapper = renderSideBar({
+    const wrapper = mountSidebar({
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
 
@@ -91,7 +91,7 @@ describe("Sidebar Component", () => {
   })
 
   it("chevron does not render if sidebar expanded", () => {
-    const wrapper = renderSideBar({
+    const wrapper = mountSidebar({
       initialSidebarState: PageConfig.SidebarState.EXPANDED,
     })
 
@@ -99,7 +99,7 @@ describe("Sidebar Component", () => {
   })
 
   it("hides scrollbar when hideScrollbar is called", () => {
-    const wrapper = renderSideBar({})
+    const wrapper = mountSidebar({})
 
     expect(wrapper.find("StyledSidebarContent")).toHaveStyleRule(
       "overflow",
@@ -116,7 +116,7 @@ describe("Sidebar Component", () => {
   })
 
   it("has extra top and bottom padding if no SidebarNav is displayed", () => {
-    const wrapper = renderSideBar({
+    const wrapper = mountSidebar({
       appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
     })
 
@@ -127,7 +127,7 @@ describe("Sidebar Component", () => {
   })
 
   it("has less padding if the SidebarNav is displayed", () => {
-    const wrapper = renderSideBar({
+    const wrapper = mountSidebar({
       appPages: [
         { pageName: "streamlit_app", pageScriptHash: "page_hash" },
         { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
@@ -141,7 +141,7 @@ describe("Sidebar Component", () => {
   })
 
   it("uses the default chevron spacing if chevronDownshift is zero", () => {
-    const wrapper = renderSideBar({
+    const wrapper = mountSidebar({
       chevronDownshift: 0,
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
@@ -153,7 +153,7 @@ describe("Sidebar Component", () => {
   })
 
   it("uses the given chevron spacing if chevronDownshift is nonzero", () => {
-    const wrapper = renderSideBar({
+    const wrapper = mountSidebar({
       chevronDownshift: 50,
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
@@ -169,7 +169,7 @@ describe("Sidebar Component", () => {
       { pageName: "streamlit_app", pageScriptHash: "page_hash" },
       { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
-    const wrapper = renderSideBar({ appPages })
+    const wrapper = mountSidebar({ appPages })
 
     expect(wrapper.find(SidebarNav).exists()).toBe(true)
     expect(wrapper.find(SidebarNav).prop("appPages")).toEqual(appPages)
@@ -186,7 +186,7 @@ describe("Sidebar Component", () => {
       { pageName: "streamlit_app", pageScriptHash: "page_hash" },
       { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
-    const wrapper = renderSideBar({ appPages, hideSidebarNav: true })
+    const wrapper = mountSidebar({ appPages, hideSidebarNav: true })
 
     expect(wrapper.find(SidebarNav).exists()).toBe(false)
     expect(
