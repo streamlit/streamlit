@@ -147,16 +147,3 @@ def create_snowpark_session() -> "Session":
         yield session
     finally:
         session.close()
-
-
-def assert_frame_not_equal(*args, **kwargs):
-    import pandas as pd
-
-    try:
-        pd.testing.assert_frame_equal(*args, **kwargs)
-    except AssertionError:
-        # frames are not equal
-        pass
-    else:
-        # frames are equal
-        raise AssertionError

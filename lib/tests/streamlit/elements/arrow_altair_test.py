@@ -15,7 +15,7 @@
 import json
 from datetime import date
 from functools import reduce
-from typing import Callable
+from typing import Any, Callable
 
 import altair as alt
 import pandas as pd
@@ -29,7 +29,6 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import bytes_to_data_frame
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit import pyspark_mocks, snowpark_mocks
-from tests.testutil import assert_frame_not_equal
 
 
 def _deep_get(dictionary, *keys):
@@ -520,6 +519,27 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
 
         # Automatically-specified colors should have a legend
         self.assertNotEqual(chart_spec["encoding"]["color"]["legend"], None)
+
+        self.assert_output_df_is_correct_and_input_is_untouched(
+            orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
+        )
+
+    @parameterized.expand(
+        [[None], [[]], [tuple()]],
+    )
+    def test_arrow_chart_with_empty_color(self, color_arg: Any):
+        """Test color support for built-in charts with wide-format table."""
+        df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
+
+        EXPECTED_DATAFRAME = pd.DataFrame([[20, 30]], columns=["a", "b"])
+
+        st.line_chart(df, x="a", y="b", color=color_arg)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # Color should be set to the melted column name.
+        self.assertEqual(getattr(chart_spec["encoding"], "color", None), None)
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto

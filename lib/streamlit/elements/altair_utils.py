@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Useful classes for our native Altair-based charts.
 
 These classes are used in both Arrow-based and legacy-based charting code to pass some

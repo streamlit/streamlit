@@ -85,7 +85,10 @@ MELTED_Y_COLUMN_TITLE = "value"
 MELTED_COLOR_COLUMN_TITLE = "color"
 
 # Crazy internal (non-user-visible) names for the index and melted columns, in order to
-# avoid collision with existing column names.
+# avoid collision with existing column names. The suffix below was generated with an
+# online random number generator. Rationale: because it makes it even less likely to
+# lead to a conflict than something that's human-readable (like "--streamlit-fake-field"
+# or something).
 PROTECTION_SUFFIX = "--p5bJXXpQgvPz6yvQMFiy"
 SEPARATED_INDEX_COLUMN_NAME = SEPARATED_INDEX_COLUMN_TITLE + PROTECTION_SUFFIX
 MELTED_Y_COLUMN_NAME = MELTED_Y_COLUMN_TITLE + PROTECTION_SUFFIX
@@ -1111,7 +1114,8 @@ def _parse_x_column(df: pd.DataFrame, x_from_user: Optional[str]) -> Optional[st
     else:
         raise StreamlitAPIException(
             "x parameter should be a column name (str) or None to use the "
-            f" dataframe's index. Value given: {x_from_user}"
+            f" dataframe's index. Value given: {x_from_user} "
+            f"(type {type(x_from_user)})"
         )
 
 
@@ -1135,7 +1139,7 @@ def _parse_y_columns(
     else:
         raise StreamlitAPIException(
             "y parameter should be a column name (str) or list thereof. "
-            f"Value given: {y_from_user}"
+            f"Value given: {x_from_user} (type {type(x_from_user)})"
         )
 
     for col in y_column_list:
@@ -1309,7 +1313,7 @@ def _get_color_encoding(
 ) -> alt.Color:
     import altair as alt
 
-    has_color_value = color_value not in [None, tuple()]
+    has_color_value = color_value not in [None, [], tuple()]
 
     # If user passed a color value, that should win over colors coming from the
     # color column (be they manual or auto-assigned due to melting)
