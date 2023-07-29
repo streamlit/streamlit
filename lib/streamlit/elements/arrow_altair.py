@@ -1139,7 +1139,7 @@ def _parse_y_columns(
     else:
         raise StreamlitAPIException(
             "y parameter should be a column name (str) or list thereof. "
-            f"Value given: {x_from_user} (type {type(x_from_user)})"
+            f"Value given: {y_from_user} (type {type(y_from_user)})"
         )
 
     for col in y_column_list:
