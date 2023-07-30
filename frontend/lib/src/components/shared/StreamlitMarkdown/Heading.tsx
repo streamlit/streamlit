@@ -54,64 +54,82 @@ function makeMarkdownHeading(tag: string, markdown: string): string {
 
 function Heading(props: HeadingProtoProps): ReactElement {
   const { width, element } = props
-  const { tag, anchor, body, help, hideAnchor } = element
+  const { tag, anchor, body, help, hideAnchor, divider } = element
   const isSidebar = React.useContext(IsSidebarContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
   const [heading, ...rest] = body.split("\n")
 
+  const dividerStyles = {
+    backgroundColor: divider,
+    height: "3px",
+    marginTop: "1rem",
+    marginBottom: "0px",
+    border: "none",
+    borderRadius: "3px",
+  }
+
   return (
-    <div className="stMarkdown" style={{ width }}>
-      <StyledStreamlitMarkdown
-        isCaption={Boolean(false)}
-        isInSidebar={isSidebar}
-        style={{ width }}
-        data-testid="stMarkdownContainer"
-      >
-        <StyledHeaderContainer>
-          <HeadingWithAnchor tag={tag} anchor={anchor} hideAnchor={hideAnchor}>
-            {help ? (
-              <StyledLabelHelpWrapper>
-                <RenderedMarkdown
-                  source={makeMarkdownHeading(tag, heading)}
-                  allowHTML={false}
-                  // this is purely an inline string
-                  overrideComponents={{
-                    p: Fragment,
-                    h1: Fragment,
-                    h2: Fragment,
-                    h3: Fragment,
-                    h4: Fragment,
-                    h5: Fragment,
-                    h6: Fragment,
-                  }}
-                />
-                <InlineTooltipIcon content={help} />
-              </StyledLabelHelpWrapper>
-            ) : (
-              <RenderedMarkdown
-                source={makeMarkdownHeading(tag, heading)}
-                allowHTML={false}
-                // this is purely an inline string
-                overrideComponents={{
-                  p: Fragment,
-                  h1: Fragment,
-                  h2: Fragment,
-                  h3: Fragment,
-                  h4: Fragment,
-                  h5: Fragment,
-                  h6: Fragment,
-                }}
-              />
-            )}
-          </HeadingWithAnchor>
-        </StyledHeaderContainer>
-        {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
-        {rest.length > 0 && (
-          <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
-        )}
-      </StyledStreamlitMarkdown>
-    </div>
+    <>
+      <div className="stMarkdown" style={{ width }}>
+        <StyledStreamlitMarkdown
+          isCaption={Boolean(false)}
+          isInSidebar={isSidebar}
+          style={{ width }}
+          data-testid="stMarkdownContainer"
+        >
+          <StyledHeaderContainer>
+            <HeadingWithAnchor
+              tag={tag}
+              anchor={anchor}
+              hideAnchor={hideAnchor}
+            >
+              {help ? (
+                <StyledLabelHelpWrapper>
+                  <RenderedMarkdown
+                    source={makeMarkdownHeading(tag, heading)}
+                    allowHTML={false}
+                    // this is purely an inline string
+                    overrideComponents={{
+                      p: Fragment,
+                      h1: Fragment,
+                      h2: Fragment,
+                      h3: Fragment,
+                      h4: Fragment,
+                      h5: Fragment,
+                      h6: Fragment,
+                    }}
+                  />
+                  <InlineTooltipIcon content={help} />
+                </StyledLabelHelpWrapper>
+              ) : (
+                <>
+                  <RenderedMarkdown
+                    source={makeMarkdownHeading(tag, heading)}
+                    allowHTML={false}
+                    // this is purely an inline string
+                    overrideComponents={{
+                      p: Fragment,
+                      h1: Fragment,
+                      h2: Fragment,
+                      h3: Fragment,
+                      h4: Fragment,
+                      h5: Fragment,
+                      h6: Fragment,
+                    }}
+                  />
+                </>
+              )}
+            </HeadingWithAnchor>
+          </StyledHeaderContainer>
+          {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
+          {rest.length > 0 && (
+            <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
+          )}
+        </StyledStreamlitMarkdown>
+      </div>
+      {divider && <hr style={dividerStyles} />}
+    </>
   )
 }
 

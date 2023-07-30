@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import itertools
 from enum import Enum
 from typing import TYPE_CHECKING, Optional, Union, cast
 
@@ -34,9 +35,30 @@ class HeadingProtoTag(Enum):
 
 
 Anchor = Optional[Union[str, Literal[False]]]
+Divider = Optional[Union[bool, Literal["blue", "green", "orange", "red", "violet"]]]
 
 
 class HeadingMixin:
+    divider_colors = ["blue", "green", "orange", "red", "violet"]
+    divider_iterator = itertools.cycle(divider_colors)
+    divider_color_codes = {
+        "blue": "#1c83e1",  # "blue-70"
+        "green": "#21c354",  # "green-70"
+        "orange": "#ffbd45",  # "orange-70",
+        "red": "#ff4b4b",  # "red-70",
+        "violet": "#803df5",  # "violet-70",
+    }
+
+    def get_divider_color(self, divider):
+        if divider is False:
+            return False
+        elif divider in self.divider_colors:
+            divider_color = self.divider_color_codes[divider]
+        else:
+            color_name = next(self.divider_iterator)
+            divider_color = self.divider_color_codes[color_name]
+        return divider_color
+
     @gather_metrics("header")
     def header(
         self,
@@ -44,6 +66,7 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: Optional[str] = None,
+        divider: Divider = False,
     ) -> "DeltaGenerator":
         """Display text in header formatting.
 
@@ -75,6 +98,13 @@ class HeadingMixin:
         help : str
             An optional tooltip that gets displayed next to the header.
 
+        divider : bool or “blue”, “green”, “orange”, “red”, or “violet”
+            Shows a colored divider below the header. If True, will cycle through
+            colors for subsequent headers, i.e. the first header with divider=True
+            will have a blue line, the second one will have a green line, etc.
+            If string, can set one of the following colors: blue, green, orange,
+            red, violet.
+
         Examples
         --------
         >>> import streamlit as st
@@ -83,10 +113,16 @@ class HeadingMixin:
         >>> st.header('A header with _italics_ :blue[colors] and emojis :sunglasses:')
 
         """
+        divider = self.get_divider_color(divider)
+
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.HEADER_TAG, body=body, anchor=anchor, help=help
+                tag=HeadingProtoTag.HEADER_TAG,
+                body=body,
+                anchor=anchor,
+                help=help,
+                divider=divider,
             ),
         )
 
@@ -97,6 +133,7 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: Optional[str] = None,
+        divider: Divider = False,
     ) -> "DeltaGenerator":
         """Display text in subheader formatting.
 
@@ -128,6 +165,13 @@ class HeadingMixin:
         help : str
             An optional tooltip that gets displayed next to the subheader.
 
+        divider : bool or “blue”, “green”, “orange”, “red”, or “violet”
+            Shows a colored divider below the header. If True, will cycle through
+            colors for subsequent headers, i.e. the first header with divider=True
+            will have a blue line, the second one will have a green line, etc.
+            If string, can set one of the following colors: blue, green, orange,
+            red, violet.
+
         Examples
         --------
         >>> import streamlit as st
@@ -136,10 +180,16 @@ class HeadingMixin:
         >>> st.subheader('A subheader with _italics_ :blue[colors] and emojis :sunglasses:')
 
         """
+        divider = self.get_divider_color(divider)
+
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.SUBHEADER_TAG, body=body, anchor=anchor, help=help
+                tag=HeadingProtoTag.SUBHEADER_TAG,
+                body=body,
+                anchor=anchor,
+                help=help,
+                divider=divider,
             ),
         )
 
@@ -210,10 +260,13 @@ class HeadingMixin:
         body: SupportsStr,
         anchor: Anchor = None,
         help: Optional[str] = None,
+        divider: Divider = False,
     ) -> HeadingProto:
         proto = HeadingProto()
         proto.tag = tag.value
         proto.body = clean_text(body)
+        if divider:
+            proto.divider = divider
         if anchor is not None:
             if anchor is False:
                 proto.hide_anchor = True
