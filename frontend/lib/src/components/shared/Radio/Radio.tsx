@@ -35,6 +35,7 @@ export interface Props {
   value: number
   onChange: (selectedIndex: number) => any
   options: any[]
+  captions: any[]
   label?: string
   labelVisibility?: LabelVisibilityOptions
   help?: string
@@ -79,6 +80,14 @@ class Radio extends React.PureComponent<Props, State> {
     const { colors, radii } = theme
     const style = { width }
     const options = [...this.props.options]
+    const captions = [...this.props.captions]
+
+    const spacerNeeded = (caption: string) => {
+      // When captions are provided for only some options in horizontal
+      // layout we need to add a spacer for the options without captions
+      const spacer = caption == "" && horizontal && captions.length > 0
+      return spacer ? "&nbsp;" : caption
+    }
 
     if (options.length === 0) {
       options.push("No options to select.")
@@ -110,6 +119,7 @@ class Radio extends React.PureComponent<Props, State> {
             <UIRadio
               key={index}
               value={index.toString()}
+              // description={captions[index]}
               overrides={{
                 Root: {
                   style: ({
@@ -165,6 +175,11 @@ class Radio extends React.PureComponent<Props, State> {
                 allowHTML={false}
                 isLabel
                 isButton
+              />
+              <StreamlitMarkdown
+                source={spacerNeeded(captions[index])}
+                allowHTML={false}
+                isCaption
               />
             </UIRadio>
           ))}
