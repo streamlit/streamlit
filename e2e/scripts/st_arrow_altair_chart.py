@@ -48,12 +48,6 @@ data = pd.DataFrame(
 
 chart = alt.Chart(data).mark_bar().encode(x="a", y="b")
 
-st.write("Bar chart with default theme:")
-st._arrow_altair_chart(chart)
-
-st.write("Bar chart with streamlit theme:")
-st._arrow_altair_chart(chart, theme="streamlit")
-
 st.write("Bar chart with overwritten theme props:")
 st._arrow_altair_chart(chart.configure_mark(color="black"), theme="streamlit")
 
@@ -77,3 +71,20 @@ if not (major == "4" and minor < "2"):
 
     st.write("Pie Chart with more than 4 Legend items")
     st._arrow_altair_chart(chart, theme="streamlit")
+
+# taken from vega_datasets barley example
+barley = alt.UrlData(
+    "https://cdn.jsdelivr.net/npm/vega-datasets@v2.7.0/data/barley.json"
+)
+
+barley_chart = (
+    alt.Chart(barley)
+    .mark_bar()
+    .encode(x="year:O", y="sum(yield):Q", color="year:N", column="site:N")
+)
+
+st.write("Grouped Bar Chart with default theme:")
+st.altair_chart(barley_chart, theme=None)
+
+st.write("Grouped Bar Chart with streamlit theme:")
+st.altair_chart(barley_chart, theme="streamlit")
