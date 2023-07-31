@@ -22,7 +22,7 @@ jobs:
 
             Your vote helps us identify which enhancements matter most to our users.
       - name: Upvote issue
-        uses: aidan-mundy/react-to-issue@bc84ae193d0d4a2ca36a9a411ee52e5d065cc415
+        uses: aidan-mundy/react-to-issue@14d172c22f28fabdd86b3458b1701ba1a684bc19
         with:
           issue-number: ${{ github.event.issue.number }}
           reactions: "+1"
