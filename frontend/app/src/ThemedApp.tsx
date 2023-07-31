@@ -15,17 +15,13 @@
  */
 
 import React from "react"
-import { BaseProvider } from "baseui"
-import { Global, ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 
-import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 import {
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
   createAutoTheme,
   createPresetThemes,
   getDefaultTheme,
-  globalStyles,
   isPresetTheme,
   removeCachedTheme,
   setCachedTheme,
@@ -33,6 +29,7 @@ import {
   createTheme,
   CustomThemeConfig,
   ICustomThemeConfig,
+  RootStyleProvider,
 } from "@streamlit/lib"
 
 import AppWithScreencast from "./App"
@@ -42,7 +39,7 @@ const ThemedApp = (): JSX.Element => {
   const defaultTheme = getDefaultTheme()
 
   const [theme, setTheme] = React.useState<ThemeConfig>(defaultTheme)
-  const [fontFaces, setFontFaces] = React.useState<object[] | undefined>()
+  const [, setFontFaces] = React.useState<object[] | undefined>()
   const [availableThemes, setAvailableThemes] = React.useState<ThemeConfig[]>([
     ...createPresetThemes(),
     ...(isPresetTheme(defaultTheme) ? [] : [defaultTheme]),
@@ -101,28 +98,19 @@ const ThemedApp = (): JSX.Element => {
   }, [theme, availableThemes, updateAutoTheme])
 
   return (
-    <BaseProvider
-      theme={theme.basewebTheme}
-      zIndex={theme.emotion.zIndices.popupMenu}
-    >
-      <EmotionThemeProvider theme={theme.emotion}>
-        <Global styles={globalStyles(theme.emotion)} />
-        {theme.name === CUSTOM_THEME_NAME && fontFaces && (
-          <FontFaceDeclaration fontFaces={fontFaces} />
-        )}
-        <AppWithScreencast
-          theme={{
-            setTheme: updateTheme,
-            activeTheme: theme,
-            addThemes,
-            availableThemes,
-            setImportedTheme,
-          }}
-        />
-        {/* The data grid requires one root level portal element for rendering cell overlays */}
-        <StyledDataFrameOverlay id="portal" />
-      </EmotionThemeProvider>
-    </BaseProvider>
+    <RootStyleProvider theme={theme}>
+      <AppWithScreencast
+        theme={{
+          setTheme: updateTheme,
+          activeTheme: theme,
+          addThemes,
+          availableThemes,
+          setImportedTheme,
+        }}
+      />
+      {/* The data grid requires one root level portal element for rendering cell overlays */}
+      <StyledDataFrameOverlay id="portal" />
+    </RootStyleProvider>
   )
 }
 
