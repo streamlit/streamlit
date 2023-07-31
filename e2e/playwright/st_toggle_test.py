@@ -15,22 +15,20 @@
 
 from playwright.sync_api import Page, expect
 
-from conftest import ImageCompareFunction, wait_for_app_run
+from conftest import ImageCompareFunction
 
 
-def test_checkbox_widget_display(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that st.checkbox renders correctly."""
-    checkbox_elements = themed_app.locator(".stCheckbox")
-    expect(checkbox_elements).to_have_count(8)
+def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that st.toggle renders correctly."""
+    toggle_elements = themed_app.locator(".stCheckbox")
+    expect(toggle_elements).to_have_count(8)
 
-    for i, element in enumerate(checkbox_elements.all()):
-        assert_snapshot(element, name=f"checkbox-{i}")
+    for i, element in enumerate(toggle_elements.all()):
+        assert_snapshot(element, name=f"toggle-{i}")
 
 
-def test_checkbox_initial_values(app: Page):
-    """Test that st.checkbox has the correct initial values."""
+def test_toggle_initial_values(app: Page):
+    """Test that st.toggle has the correct initial values."""
     markdown_elements = app.locator(".stMarkdown")
     expect(markdown_elements).to_have_count(9)
 
@@ -39,7 +37,7 @@ def test_checkbox_initial_values(app: Page):
         "value 2: False",
         "value 3: False",
         "value 4: False",
-        "checkbox clicked: False",
+        "toggle clicked: False",
         "value 5: False",
         "value 6: True",
         "value 7: False",
@@ -50,13 +48,13 @@ def test_checkbox_initial_values(app: Page):
         expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
 
 
-def test_checkbox_values_on_click(app: Page):
-    """Test that st.checkbox updates values correctly when user clicks."""
-    checkbox_elements = app.locator(".stCheckbox")
-    expect(checkbox_elements).to_have_count(8)
+def test_toggle_values_on_click(app: Page):
+    """Test that st.toggle updates values correctly when user clicks."""
+    toggle_elements = app.locator(".stCheckbox")
+    expect(toggle_elements).to_have_count(8)
 
-    for checkbox_element in checkbox_elements.all():
-        checkbox_element.click(delay=50)
+    for toggle_element in toggle_elements.all():
+        toggle_element.click(delay=50)
 
     markdown_elements = app.locator(".stMarkdown")
     expected = [
@@ -64,7 +62,7 @@ def test_checkbox_values_on_click(app: Page):
         "value 2: True",
         "value 3: True",
         "value 4: True",
-        "checkbox clicked: True",
+        "toggle clicked: True",
         "value 5: False",
         "value 6: True",
         "value 7: True",
