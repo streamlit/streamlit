@@ -71,6 +71,7 @@ function DownloadButton(props: Props): ReactElement {
             allowHTML={false}
             isLabel
             isButton
+            largerLabel
           />
         </BaseButton>
       </BaseButtonTooltip>

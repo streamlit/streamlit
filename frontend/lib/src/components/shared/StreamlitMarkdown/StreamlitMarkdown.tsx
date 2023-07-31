@@ -92,7 +92,7 @@ export interface Props {
   largerLabel?: boolean
 
   /**
-   * Does not allow links & has larger font sizing
+   * Does not allow links
    */
   isButton?: boolean
 
@@ -233,7 +233,7 @@ export interface RenderedMarkdownProps {
   isLabel?: boolean
 
   /**
-   * Does not allow links & has larger font sizing
+   * Does not allow links
    */
   isButton?: boolean
 }
@@ -399,7 +399,6 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isInSidebar={isInSidebar}
         isLabel={isLabel}
         largerLabel={largerLabel}
-        isButton={isButton}
         isToast={isToast}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}

@@ -85,7 +85,7 @@ class Radio extends React.PureComponent<Props, State> {
     const spacerNeeded = (caption: string) => {
       // When captions are provided for only some options in horizontal
       // layout we need to add a spacer for the options without captions
-      const spacer = caption == "" && horizontal && captions.length > 0
+      const spacer = !caption && horizontal && captions.length > 0
       return spacer ? "&nbsp;" : caption
     }
 
@@ -119,7 +119,6 @@ class Radio extends React.PureComponent<Props, State> {
             <UIRadio
               key={index}
               value={index.toString()}
-              // description={captions[index]}
               overrides={{
                 Root: {
                   style: ({
@@ -166,6 +165,7 @@ class Radio extends React.PureComponent<Props, State> {
                     color: disabled ? colors.fadedText40 : colors.bodyText,
                     position: "relative",
                     top: "1px",
+                    display: horizontal ? "flex" : "block",
                   },
                 },
               }}
@@ -175,12 +175,27 @@ class Radio extends React.PureComponent<Props, State> {
                 allowHTML={false}
                 isLabel
                 isButton
+                largerLabel
               />
-              <StreamlitMarkdown
-                source={spacerNeeded(captions[index])}
-                allowHTML={false}
-                isCaption
-              />
+              {captions[index] && (
+                <StreamlitMarkdown
+                  source={captions[index]}
+                  allowHTML={false}
+                  isLabel
+                  isButton
+                  isCaption
+                  style={
+                    horizontal
+                      ? {
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          marginLeft: "6px",
+                        }
+                      : {}
+                  }
+                />
+              )}
             </UIRadio>
           ))}
         </RadioGroup>

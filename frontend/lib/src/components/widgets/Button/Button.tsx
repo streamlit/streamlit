@@ -59,6 +59,7 @@ function Button(props: Props): ReactElement {
             allowHTML={false}
             isLabel
             isButton
+            largerLabel
           />
         </BaseButton>
       </BaseButtonTooltip>
