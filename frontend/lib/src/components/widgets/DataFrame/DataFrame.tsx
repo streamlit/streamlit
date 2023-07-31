@@ -334,6 +334,22 @@ function DataFrame({
     }
   }, [element.formId, resetEditingState, widgetMgr])
 
+  // TODO(lukasmasuch): Remove this!
+  if (dataEditorRef.current) {
+    console.log("maxWidth", maxWidth)
+    console.log("maxHeight", maxHeight)
+    console.log("bounds first cell", dataEditorRef.current.getBounds(0, 0))
+    console.log(
+      "bounds last cell",
+      dataEditorRef.current.getBounds(glideColumns.length - 1, numRows - 1)
+    )
+    console.log(
+      "bounds last cell",
+      dataEditorRef.current.getBounds(glideColumns.length - 1, numRows - 1)
+    )
+    console.log("resizableSize", resizableSize)
+  }
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -387,6 +403,9 @@ function DataFrame({
       >
         <GlideDataEditor
           className="glideDataEditor"
+          onVisibleRegionChanged={visibleRegion => {
+            console.log("visibleRegion", visibleRegion)
+          }}
           ref={dataEditorRef}
           columns={glideColumns}
           rows={isEmptyTable ? 1 : numRows}
@@ -461,7 +480,7 @@ function DataFrame({
           fixedShadowY={true}
           experimental={{
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
-            scrollbarWidthOverride: 0,
+            scrollbarWidthOverride: 1,
             // Add negative padding to the right and bottom to allow the scrollbars in webkit to
             // overlay the table:
             paddingBottom: -6,
