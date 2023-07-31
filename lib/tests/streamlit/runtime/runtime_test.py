@@ -40,8 +40,8 @@ from streamlit.runtime.caching.storage.local_disk_cache_storage import (
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.runtime import AsyncObjects, RuntimeStoppedError
-from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.watcher import event_based_path_watcher
 from tests.streamlit.message_mocks import (
@@ -68,7 +68,10 @@ class MockSessionClient(SessionClient):
 class RuntimeConfigTests(unittest.TestCase):
     def test_runtime_config_defaults(self):
         config = RuntimeConfig(
-            "/my/script.py", None, MemoryMediaFileStorage("/mock/media")
+            "/my/script.py",
+            None,
+            MemoryMediaFileStorage("/mock/media"),
+            MemoryUploadedFileManager("/mock/upload"),
         )
 
         self.assertIsInstance(
@@ -553,50 +556,6 @@ class RuntimeTest(RuntimeTestCase):
             await finish_script(True)
             self.assertFalse(is_data_msg_cached())
 
-    async def test_orphaned_upload_file_deletion(self):
-        """An uploaded file with no associated AppSession should be
-        deleted.
-        """
-        await self.runtime.start()
-
-        client = MockSessionClient()
-        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
-
-        file = UploadedFileRec(0, "file.txt", "type", b"123")
-
-        # Upload a file for our connected session.
-        added_file = self.runtime._uploaded_file_mgr.add_file(
-            session_id=session_id,
-            widget_id="widget_id",
-            file=UploadedFileRec(0, "file.txt", "type", b"123"),
-        )
-
-        # The file should exist.
-        self.assertEqual(
-            self.runtime._uploaded_file_mgr.get_all_files(session_id, "widget_id"),
-            [added_file],
-        )
-
-        # Disconnect the session. The file should be deleted.
-        self.runtime.disconnect_session(session_id)
-        self.assertEqual(
-            self.runtime._uploaded_file_mgr.get_all_files(session_id, "widget_id"),
-            [],
-        )
-
-        # Upload a file for a session that doesn't exist.
-        self.runtime._uploaded_file_mgr.add_file(
-            session_id="no_such_session", widget_id="widget_id", file=file
-        )
-
-        # The file should be immediately deleted.
-        self.assertEqual(
-            self.runtime._uploaded_file_mgr.get_all_files(
-                "no_such_session", "widget_id"
-            ),
-            [],
-        )
-
     async def test_get_async_objs(self):
         """Runtime._get_async_objs() will raise an error if called before the
         Runtime is started, and will return the Runtime's AsyncObjects instance otherwise.
@@ -631,6 +590,7 @@ class ScriptCheckTest(RuntimeTestCase):
             script_path=self._path,
             command_line="mock command line",
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
+            uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
             session_manager_class=MagicMock,
             session_storage=MagicMock(),
             cache_storage_manager=MagicMock(),

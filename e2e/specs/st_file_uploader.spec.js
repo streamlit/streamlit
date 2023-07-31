@@ -17,10 +17,10 @@
 describe("st.file_uploader", () => {
   beforeEach(() => {
     Cypress.Cookies.defaults({
-      preserve: ["_xsrf"]
+      preserve: ["_xsrf"],
     });
     cy.server();
-    cy.route("POST", "**/upload_file").as("uploadFile");
+    cy.route("POST", "**/upload_file/**").as("uploadFile");
 
     cy.loadApp("http://localhost:3000/");
 
@@ -53,14 +53,13 @@ describe("st.file_uploader", () => {
     cy.getIndexed("[data-testid='stFileUploader']", 5).matchThemedSnapshots(
       "collapsed_label_file_uploader"
     );
-
   });
 
   it("shows error message for disallowed files", () => {
     const fileName = "example.json";
     const uploaderIndex = 0;
 
-    cy.fixture(fileName).then(fileContent => {
+    cy.fixture(fileName).then((fileContent) => {
       cy.get("[data-testid='stFileUploadDropzone']")
         .eq(uploaderIndex)
         .attachFile(
@@ -73,7 +72,7 @@ describe("st.file_uploader", () => {
             // the page may start re-rendering after the "drop" event completes,
             // which causes a cypress error due to the element being detached
             // from the DOM when "dragleave" is emitted.
-            events: ["dragenter", "drop"]
+            events: ["dragenter", "drop"],
           }
         );
 
@@ -100,11 +99,11 @@ describe("st.file_uploader", () => {
     // Why can’t I use async / await?
     // If you’re a modern JS programmer you might hear “asynchronous” and think: why can’t I just use async/await instead of learning some proprietary API?
     // https://docs.cypress.io/guides/core-concepts/introduction-to-cypress.html#Commands-Are-Asynchronous
-    cy.fixture(fileName1).then(file1 => {
-      cy.fixture(fileName2).then(file2 => {
+    cy.fixture(fileName1).then((file1) => {
+      cy.fixture(fileName2).then((file2) => {
         const files = [
           { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
-          { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
+          { fileContent: file2, fileName: fileName2, mimeType: "text/plain" },
         ];
 
         cy.getIndexed(
@@ -113,7 +112,7 @@ describe("st.file_uploader", () => {
         ).attachFile(files[0], {
           force: true,
           subjectType: "drag-n-drop",
-          events: ["dragenter", "drop"]
+          events: ["dragenter", "drop"],
         });
 
         // The script should have printed the contents of the first files
@@ -125,10 +124,10 @@ describe("st.file_uploader", () => {
           file1
         );
 
-        cy.getIndexed(
-          "[data-testid='stMarkdownContainer']",
-          1
-        ).should("contain.text", "True");
+        cy.getIndexed("[data-testid='stMarkdownContainer']", 1).should(
+          "contain.text",
+          "True"
+        );
 
         cy.getIndexed(
           "[data-testid='stFileUploader']",
@@ -142,7 +141,7 @@ describe("st.file_uploader", () => {
         ).attachFile(files[1], {
           force: true,
           subjectType: "drag-n-drop",
-          events: ["dragenter", "drop"]
+          events: ["dragenter", "drop"],
         });
 
         cy.get(".uploadedFileName")
@@ -152,10 +151,10 @@ describe("st.file_uploader", () => {
           .should("contain.text", file2)
           .should("not.contain.text", file1);
 
-        cy.getIndexed(
-          "[data-testid='stMarkdownContainer']",
-          1
-        ).should("contain.text", "True");
+        cy.getIndexed("[data-testid='stMarkdownContainer']", 1).should(
+          "contain.text",
+          "True"
+        );
 
         // On rerun, make sure file is still returned
         cy.get("body").type("r");
@@ -188,11 +187,11 @@ describe("st.file_uploader", () => {
     // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
     // Why can’t I use async / await?
     // https://docs.cypress.io/guides/core-concepts/introduction-to-cypress.html#Commands-Are-Asynchronous
-    cy.fixture(fileName1).then(file1 => {
-      cy.fixture(fileName2).then(file2 => {
+    cy.fixture(fileName1).then((file1) => {
+      cy.fixture(fileName2).then((file2) => {
         const files = [
           { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
-          { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
+          { fileContent: file2, fileName: fileName2, mimeType: "text/plain" },
         ];
 
         cy.getIndexed(
@@ -201,10 +200,10 @@ describe("st.file_uploader", () => {
         ).attachFile(files[0], {
           force: true,
           subjectType: "drag-n-drop",
-          events: ["dragenter", "drop"]
+          events: ["dragenter", "drop"],
         });
 
-        cy.get(".uploadedFileName").each(uploadedFileName => {
+        cy.get(".uploadedFileName").each((uploadedFileName) => {
           cy.get(uploadedFileName).should("have.text", fileName1);
         });
 
@@ -214,7 +213,7 @@ describe("st.file_uploader", () => {
         ).attachFile(files[1], {
           force: true,
           subjectType: "drag-n-drop",
-          events: ["dragenter", "drop"]
+          events: ["dragenter", "drop"],
         });
 
         // Wait for the HTTP request to complete
@@ -243,17 +242,15 @@ describe("st.file_uploader", () => {
 
         // Delete the second file. The second file is on top because it was
         // most recently uploaded. The first file should still exist.
-        cy.get("[data-testid='fileDeleteBtn'] button")
-          .first()
-          .click();
+        cy.get("[data-testid='fileDeleteBtn'] button").first().click();
         cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
           "contain.text",
           file1
         );
-        cy.getIndexed(
-          "[data-testid='stMarkdownContainer']",
-          5
-        ).should("contain.text", "True");
+        cy.getIndexed("[data-testid='stMarkdownContainer']", 5).should(
+          "contain.text",
+          "True"
+        );
       });
     });
   });
@@ -273,11 +270,11 @@ describe("st.file_uploader", () => {
     // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
     // Why can’t I use async / await?
     // https://docs.cypress.io/guides/core-concepts/introduction-to-cypress.html#Commands-Are-Asynchronous
-    cy.fixture(fileName1).then(file1 => {
-      cy.fixture(fileName2).then(file2 => {
+    cy.fixture(fileName1).then((file1) => {
+      cy.fixture(fileName2).then((file2) => {
         const files = [
           { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
-          { fileContent: file2, fileName: fileName2, mimeType: "text/plain" }
+          { fileContent: file2, fileName: fileName2, mimeType: "text/plain" },
         ];
 
         cy.getIndexed(
@@ -286,14 +283,15 @@ describe("st.file_uploader", () => {
         ).attachFile(files[0], {
           force: true,
           subjectType: "drag-n-drop",
-          events: ["dragenter", "drop"]
+          events: ["dragenter", "drop"],
         });
 
-        cy.get(".uploadedFileName").each(uploadedFileName => {
+        cy.get(".uploadedFileName").each((uploadedFileName) => {
           cy.get(uploadedFileName).should("have.text", fileName1);
         });
 
-        cy.wait(1000);
+        // Wait for the HTTP request to complete
+        cy.wait("@uploadFile");
 
         cy.getIndexed(
           "[data-testid='stFileUploadDropzone']",
@@ -301,7 +299,7 @@ describe("st.file_uploader", () => {
         ).attachFile(files[1], {
           force: true,
           subjectType: "drag-n-drop",
-          events: ["dragenter", "drop"]
+          events: ["dragenter", "drop"],
         });
 
         // Wait for the HTTP request to complete
@@ -325,17 +323,15 @@ describe("st.file_uploader", () => {
 
         // Delete the second file. The second file is on top because it was
         // most recently uploaded. The first file should still exist.
-        cy.get("[data-testid='fileDeleteBtn'] button")
-          .first()
-          .click();
+        cy.get("[data-testid='fileDeleteBtn'] button").first().click();
         cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
           "contain.text",
           file1
         );
-        cy.getIndexed(
-          "[data-testid='stMarkdownContainer']",
-          5
-        ).should("contain.text", "True");
+        cy.getIndexed("[data-testid='stMarkdownContainer']", 5).should(
+          "contain.text",
+          "True"
+        );
       });
     });
   });
@@ -344,9 +340,9 @@ describe("st.file_uploader", () => {
     const fileName1 = "file1.txt";
     const uploaderIndex = 3;
 
-    cy.fixture(fileName1).then(file1 => {
+    cy.fixture(fileName1).then((file1) => {
       const files = [
-        { fileContent: file1, fileName: fileName1, mimeType: "text/plain" }
+        { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
       ];
 
       cy.getIndexed(
@@ -355,7 +351,7 @@ describe("st.file_uploader", () => {
       ).attachFile(files[0], {
         force: true,
         subjectType: "drag-n-drop",
-        events: ["dragenter", "drop"]
+        events: ["dragenter", "drop"],
       });
 
       // Wait for the HTTP request to complete
@@ -382,9 +378,7 @@ describe("st.file_uploader", () => {
 
       // Press the delete button. Again, nothing should happen - we
       // should still see the file's contents.
-      cy.get("[data-testid='fileDeleteBtn'] button")
-        .first()
-        .click();
+      cy.get("[data-testid='fileDeleteBtn'] button").first().click();
 
       cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
         "contain.text",
@@ -406,9 +400,9 @@ describe("st.file_uploader", () => {
     const fileName1 = "file1.txt";
     const uploaderIndex = 6;
 
-    cy.fixture(fileName1).then(file1 => {
+    cy.fixture(fileName1).then((file1) => {
       const files = [
-        { fileContent: file1, fileName: fileName1, mimeType: "text/plain" }
+        { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
       ];
 
       // Script contains counter variable stored in session_state with
@@ -427,7 +421,7 @@ describe("st.file_uploader", () => {
       ).attachFile(files[0], {
         force: true,
         subjectType: "drag-n-drop",
-        events: ["dragenter", "drop"]
+        events: ["dragenter", "drop"],
       });
 
       // Make sure callback called
