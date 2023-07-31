@@ -38,9 +38,8 @@ Anchor = Optional[Union[str, Literal[False]]]
 Divider = Optional[Union[bool, Literal["blue", "green", "orange", "red", "violet"]]]
 
 
-class HeadingMixin:
+class Divider:
     divider_colors = ["blue", "green", "orange", "red", "violet"]
-    divider_iterator = itertools.cycle(divider_colors)
     divider_color_codes = {
         "blue": "#1c83e1",  # "blue-70"
         "green": "#21c354",  # "green-70"
@@ -48,15 +47,21 @@ class HeadingMixin:
         "red": "#ff4b4b",  # "red-70",
         "violet": "#803df5",  # "violet-70",
     }
+    divider_iterator = itertools.cycle(divider_colors)
 
+
+_Divider = Divider()
+
+
+class HeadingMixin:
     def get_divider_color(self, divider):
         if divider is False:
             return False
-        elif divider in self.divider_colors:
-            divider_color = self.divider_color_codes[divider]
+        elif divider in _Divider.divider_colors:
+            divider_color = _Divider.divider_color_codes[divider]
         else:
-            color_name = next(self.divider_iterator)
-            divider_color = self.divider_color_codes[color_name]
+            color_name = next(_Divider.divider_iterator)
+            divider_color = _Divider.divider_color_codes[color_name]
         return divider_color
 
     @gather_metrics("header")
