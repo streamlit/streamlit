@@ -16,6 +16,7 @@
 
 import React from "react"
 
+import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 import {
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
@@ -34,7 +35,6 @@ import {
 
 import AppWithScreencast from "./App"
 import { StyledDataFrameOverlay } from "@streamlit/app/src/styled-components"
-import FontFaceDeclaration from "./components/FontFaceDeclaration"
 
 const ThemedApp = (): JSX.Element => {
   const defaultTheme = getDefaultTheme()
