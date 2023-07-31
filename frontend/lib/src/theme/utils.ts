@@ -465,6 +465,12 @@ export function getMdOrange(theme: EmotionTheme): string {
     : theme.colors.orange60
 }
 
+export function getMdGray(theme: EmotionTheme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.gray80
+    : theme.colors.gray80
+}
+
 function getBlueArrayAsc(theme: EmotionTheme): string[] {
   const { colors } = theme
   return [

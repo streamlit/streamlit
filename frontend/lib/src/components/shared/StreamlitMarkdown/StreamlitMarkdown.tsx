@@ -47,6 +47,7 @@ import {
   getMdOrange,
   getMdRed,
   getMdViolet,
+  getMdGray,
 } from "@streamlit/lib/src/theme"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
@@ -292,6 +293,7 @@ export function RenderedMarkdown({
       green: getMdGreen(theme),
       violet: getMdViolet(theme),
       orange: getMdOrange(theme),
+      gray: getMdGray(theme),
     })
   )
   function remarkColoring() {
