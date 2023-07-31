@@ -3,6 +3,7 @@
 exports[`Widget Label renders WidgetLabel as expected 1`] = `
 <StyledWidgetLabel
   aria-hidden="true"
+  data-testid="stWidgetLabel"
 >
   <StreamlitMarkdown
     allowHTML={false}

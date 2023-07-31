@@ -32,6 +32,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -220,6 +221,18 @@ class RadioMixin:
         maybe_raise_label_warnings(label, label_visibility)
         opt = ensure_indexable(options)
 
+        id = compute_widget_id(
+            "radio",
+            user_key=key,
+            label=label,
+            options=[str(format_func(option)) for option in opt],
+            index=index,
+            key=key,
+            help=help,
+            horizontal=horizontal,
+            form_id=current_form_id(self.dg),
+        )
+
         if not isinstance(index, int):
             raise StreamlitAPIException(
                 "Radio Value has invalid type: %s" % type(index).__name__
@@ -231,6 +244,7 @@ class RadioMixin:
             )
 
         radio_proto = RadioProto()
+        radio_proto.id = id
         radio_proto.label = label
         radio_proto.default = index
         radio_proto.options[:] = [str(format_func(option)) for option in opt]

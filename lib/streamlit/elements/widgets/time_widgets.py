@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import re
 from dataclasses import dataclass
@@ -38,6 +39,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
@@ -353,9 +355,21 @@ class TimeWidgetsMixin:
             raise StreamlitAPIException(
                 "The type of value should be one of datetime, time or None"
             )
+
+        id = compute_widget_id(
+            "time_input",
+            user_key=key,
+            label=label,
+            value=(None if value is None else parsed_time),
+            key=key,
+            help=help,
+            step=step,
+            form_id=current_form_id(self.dg),
+        )
         del value
 
         time_input_proto = TimeInputProto()
+        time_input_proto.id = id
         time_input_proto.label = label
         time_input_proto.default = time.strftime(parsed_time, "%H:%M")
         time_input_proto.form_id = current_form_id(self.dg)
@@ -562,6 +576,35 @@ class TimeWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        def parse_date_deterministic(v: SingleDateValue) -> str | None:
+            if v is None:
+                return None
+            elif isinstance(v, datetime):
+                return date.strftime(v.date(), "%Y/%m/%d")
+            elif isinstance(v, date):
+                return date.strftime(v, "%Y/%m/%d")
+
+        parsed_min_date = parse_date_deterministic(min_value)
+        parsed_max_date = parse_date_deterministic(max_value)
+
+        if isinstance(value, datetime) or isinstance(value, date) or value is None:
+            parsed: str | None | List[str | None] = parse_date_deterministic(value)
+        else:
+            parsed = [parse_date_deterministic(v) for v in value]
+
+        # TODO this is missing the error path, integrate with the dateinputvalues parsing
+
+        id = compute_widget_id(
+            "date_input",
+            user_key=key,
+            label=label,
+            value=parsed,
+            min_value=parsed_min_date,
+            max_value=parsed_max_date,
+            key=key,
+            help=help,
+            form_id=current_form_id(self.dg),
+        )
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
             raise StreamlitAPIException(
                 f"The provided format (`{format}`) is not valid. DateInput format "
@@ -577,6 +620,7 @@ class TimeWidgetsMixin:
         del value, min_value, max_value
 
         date_input_proto = DateInputProto()
+        date_input_proto.id = id
         date_input_proto.is_range = parsed_values.is_range
         if help is not None:
             date_input_proto.help = dedent(help)

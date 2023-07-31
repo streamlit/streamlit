@@ -16,6 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/src/test_util"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
@@ -36,16 +37,16 @@ const getProps = (
 describe("ChatMessage", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const rtlResults = render(<ChatMessage {...props} />)
-    expect(rtlResults).toBeDefined()
+    render(<ChatMessage {...props} />)
+
+    const chatContent = screen.getByTestId("stChatMessageContent")
+    expect(chatContent).toBeInTheDocument()
   })
 
   it("renders message children content", () => {
     const props = getProps()
-    const { getByLabelText } = render(
-      <ChatMessage {...props}>Hello, world!</ChatMessage>
-    )
-    expect(getByLabelText("Chat message from user").textContent).toBe(
+    render(<ChatMessage {...props}>Hello, world!</ChatMessage>)
+    expect(screen.getByLabelText("Chat message from user").textContent).toBe(
       "Hello, world!"
     )
   })
@@ -55,8 +56,8 @@ describe("ChatMessage", () => {
       avatar: "😃",
       avatarType: BlockProto.ChatMessage.AvatarType.EMOJI,
     })
-    const rtlResults = render(<ChatMessage {...props} />)
-    expect(rtlResults.getByText("😃")).toBeTruthy()
+    render(<ChatMessage {...props} />)
+    expect(screen.getByText("😃")).toBeTruthy()
   })
 
   it("renders with an image avatar", () => {
@@ -64,10 +65,9 @@ describe("ChatMessage", () => {
       avatar: "http://example.com/avatar.jpg",
       avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
     })
-    const { container } = render(<ChatMessage {...props} />)
-    const images = container.getElementsByTagName("img")
-    expect(images.length).toEqual(1)
-    expect(images[0].src).toBe("http://example.com/avatar.jpg")
+    render(<ChatMessage {...props} />)
+    const chatAvatar = screen.getByAltText("user avatar")
+    expect(chatAvatar).toHaveAttribute("src", "http://example.com/avatar.jpg")
   })
 
   it("renders with a name label character as fallback", () => {
@@ -76,8 +76,8 @@ describe("ChatMessage", () => {
       avatarType: undefined,
       name: "test",
     })
-    const { getByText } = render(<ChatMessage {...props} />)
-    expect(getByText("T")).toBeTruthy()
+    render(<ChatMessage {...props} />)
+    expect(screen.getByText("T")).toBeTruthy()
   })
 
   it("renders with a 'user' icon avatar", () => {
@@ -86,10 +86,10 @@ describe("ChatMessage", () => {
       avatarType: BlockProto.ChatMessage.AvatarType.ICON,
       name: "foo",
     })
-    const { container } = render(<ChatMessage {...props} />)
+    render(<ChatMessage {...props} />)
 
-    const svgs = container.getElementsByTagName("svg")
-    expect(svgs.length).toEqual(1)
+    const userAvatarIcon = screen.getByTestId("chatAvatarIcon-user")
+    expect(userAvatarIcon).toBeInTheDocument()
   })
 
   it("renders with a 'assistant' icon avatar", () => {
@@ -98,28 +98,26 @@ describe("ChatMessage", () => {
       avatarType: BlockProto.ChatMessage.AvatarType.ICON,
       name: "foo",
     })
-    const { container } = render(<ChatMessage {...props} />)
+    render(<ChatMessage {...props} />)
 
-    const svgs = container.getElementsByTagName("svg")
-    expect(svgs.length).toEqual(1)
+    const assistantAvatarIcon = screen.getByTestId("chatAvatarIcon-assistant")
+    expect(assistantAvatarIcon).toBeInTheDocument()
   })
 
   it("renders with a grey background when name is 'user'", () => {
-    const props = getProps({
-      name: "user",
-    })
-    const { container } = render(<ChatMessage {...props} />)
-    const messageContainer = container.firstChild
-    expect(messageContainer).toHaveStyle(
+    const props = getProps()
+    render(<ChatMessage {...props} />)
+    const chatMessage = screen.getByTestId("stChatMessage")
+    expect(chatMessage).toHaveStyle(
       "background-color: rgba(240, 242, 246, 0.5)"
     )
   })
 
   it("sets an aria label on the chat message", () => {
     const props = getProps()
-    const { getByTestId } = render(<ChatMessage {...props} />)
+    render(<ChatMessage {...props} />)
 
-    const chatMessageContent = getByTestId("stChatMessageContent")
+    const chatMessageContent = screen.getByTestId("stChatMessageContent")
     expect(chatMessageContent.getAttribute("aria-label")).toEqual(
       "Chat message from user"
     )

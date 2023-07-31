@@ -15,14 +15,18 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { render } from "@streamlit/lib/src/test_util"
+import { screen, fireEvent } from "@testing-library/react"
+import "@testing-library/jest-dom"
 
-import { Radio as UIRadio, RadioGroup } from "baseui/radio"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { Radio as RadioProto } from "@streamlit/lib/src/proto"
 import Radio, { Props } from "./Radio"
 
-const getProps = (elementProps: Partial<RadioProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<RadioProto> = {},
+  otherProps: Partial<Props> = {}
+): Props => ({
   element: RadioProto.create({
     id: "1",
     label: "Label",
@@ -36,21 +40,24 @@ const getProps = (elementProps: Partial<RadioProto> = {}): Props => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  ...otherProps,
 })
 
 describe("Radio widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
+    render(<Radio {...props} />)
+    const radioGroup = screen.getByRole("radiogroup")
+    const radioOptions = screen.getAllByRole("radio")
 
-    expect(wrapper.find(RadioGroup).length).toBe(1)
-    expect(wrapper.find(UIRadio).length).toBe(3)
+    expect(radioGroup).toBeInTheDocument()
+    expect(radioOptions).toHaveLength(3)
   })
 
   it("sets widget value on mount", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setIntValue")
-    mount(<Radio {...props} />)
+    render(<Radio {...props} />)
 
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
       props.element,
@@ -61,78 +68,77 @@ describe("Radio widget", () => {
 
   it("has correct className and style", () => {
     const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
-    const wrappedDiv = wrapper.find("div").first()
+    render(<Radio {...props} />)
+    const radioElement = screen.getByTestId("stRadio")
 
-    const { className, style } = wrappedDiv.props()
-    // @ts-expect-error
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("row-widget")
-    expect(splittedClassName).toContain("stRadio")
-
-    // @ts-expect-error
-    expect(style.width).toBe(getProps().width)
+    expect(radioElement).toHaveClass("row-widget")
+    expect(radioElement).toHaveClass("stRadio")
+    expect(radioElement).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label", () => {
     const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+    render(<Radio {...props} />)
+    const widgetLabel = screen.queryByText(`${props.element.label}`)
+
+    expect(widgetLabel).toBeInTheDocument()
   })
 
   it("has a default value", () => {
     const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
-    expect(wrapper.find(RadioGroup).prop("value")).toBe(
-      props.element.default.toString()
-    )
+    render(<Radio {...props} />)
+    const radioOptions = screen.getAllByRole("radio")
+    expect(radioOptions).toHaveLength(3)
+
+    const checked = radioOptions[props.element.default]
+    expect(checked).toBeChecked()
   })
 
   it("can be disabled", () => {
-    const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
-    expect(wrapper.find(RadioGroup).prop("disabled")).toBe(props.disabled)
+    const props = getProps({}, { disabled: true })
+    render(<Radio {...props} />)
+    const radioOptions = screen.getAllByRole("radio")
+
+    radioOptions.forEach(option => {
+      expect(option).toBeDisabled()
+    })
   })
 
   it("has the correct options", () => {
     const props = getProps()
-    const wrapper = mount(<Radio {...props} />)
-    const options = wrapper.find(UIRadio)
+    render(<Radio {...props} />)
 
-    options.forEach((option, index) => {
-      expect(option.prop("value")).toBe(index.toString())
-      expect(option.prop("children")).toBe(props.element.options[index])
+    props.element.options.forEach(option => {
+      expect(screen.getByText(option)).toBeInTheDocument()
     })
   })
 
   it("shows a message when there are no options to be shown", () => {
     const props = getProps({ options: [] })
-    const wrapper = mount(<Radio {...props} />)
+    render(<Radio {...props} />)
 
-    expect(wrapper.find(UIRadio).length).toBe(1)
-    expect(wrapper.find(UIRadio).prop("children")).toBe(
-      "No options to select."
-    )
+    const radioOptions = screen.getAllByRole("radio")
+    const noOptionLabel = screen.getByText("No options to select.")
+
+    expect(radioOptions).toHaveLength(1)
+    expect(noOptionLabel).toBeInTheDocument()
   })
 
   it("sets the widget value when an option is selected", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setIntValue")
-    const wrapper = mount(<Radio {...props} />)
+    render(<Radio {...props} />)
+    const radioOptions = screen.getAllByRole("radio")
+    const secondOption = radioOptions[1]
 
-    // @ts-expect-error
-    wrapper.find(RadioGroup).prop("onChange")({
-      target: { value: "1" },
-    } as React.ChangeEvent<HTMLInputElement>)
-    wrapper.update()
+    fireEvent.click(secondOption)
 
-    expect(wrapper.find(RadioGroup).prop("value")).toBe("1")
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       1,
       { fromUi: true }
     )
+    expect(secondOption).toBeChecked()
   })
 
   it("resets its value when form is cleared", () => {
@@ -141,17 +147,15 @@ describe("Radio widget", () => {
     props.widgetMgr.setFormClearOnSubmit("form", true)
 
     jest.spyOn(props.widgetMgr, "setIntValue")
+    render(<Radio {...props} />)
 
-    const wrapper = mount(<Radio {...props} />)
+    const radioOptions = screen.getAllByRole("radio")
+    const secondOption = radioOptions[1]
 
     // Change the widget value
-    // @ts-expect-error
-    wrapper.find(RadioGroup).prop("onChange")({
-      target: { value: "1" },
-    } as React.ChangeEvent<HTMLInputElement>)
-    wrapper.update()
+    fireEvent.click(secondOption)
+    expect(secondOption).toBeChecked()
 
-    expect(wrapper.find(RadioGroup).prop("value")).toBe("1")
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       1,
@@ -160,12 +164,11 @@ describe("Radio widget", () => {
 
     // "Submit" the form
     props.widgetMgr.submitForm("form")
-    wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(wrapper.find(RadioGroup).prop("value")).toBe(
-      props.element.default.toString()
-    )
+    const defaultValue = radioOptions[props.element.default]
+    expect(defaultValue).toBeChecked()
+
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,

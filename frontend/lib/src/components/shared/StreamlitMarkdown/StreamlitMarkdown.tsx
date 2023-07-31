@@ -87,14 +87,14 @@ export interface Props {
   isLabel?: boolean
 
   /**
-   * Does not allow links
+   * Checkbox labels have larger font sizing
    */
-  isButton?: boolean
+  largerLabel?: boolean
 
   /**
-   * Checkbox has larger label font sizing
+   * Does not allow links & has larger font sizing
    */
-  isCheckbox?: boolean
+  isButton?: boolean
 
   /**
    * Toast has smaller font sizing
@@ -233,7 +233,7 @@ export interface RenderedMarkdownProps {
   isLabel?: boolean
 
   /**
-   * Does not allow links
+   * Does not allow links & has larger font sizing
    */
   isButton?: boolean
 }
@@ -387,8 +387,8 @@ class StreamlitMarkdown extends PureComponent<Props> {
       style,
       isCaption,
       isLabel,
+      largerLabel,
       isButton,
-      isCheckbox,
       isToast,
     } = this.props
     const isInSidebar = this.context
@@ -398,8 +398,8 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isCaption={Boolean(isCaption)}
         isInSidebar={isInSidebar}
         isLabel={isLabel}
+        largerLabel={largerLabel}
         isButton={isButton}
-        isCheckbox={isCheckbox}
         isToast={isToast}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}

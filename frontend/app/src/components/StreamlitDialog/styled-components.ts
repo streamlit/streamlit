@@ -16,6 +16,7 @@
 
 import styled from "@emotion/styled"
 import { ChevronLeft } from "react-feather"
+import { darken } from "color2k"
 import { Small } from "@streamlit/lib"
 
 export const StyledRerunHeader = styled.div(({ theme }) => ({
@@ -148,4 +149,12 @@ export const StyledDeployErrorContent = styled.div(() => ({
 export const StyledAboutInfo = styled.div(() => ({
   padding: "0 0 1rem 0",
   overflowY: "scroll",
+}))
+
+export const StyledAboutLink = styled.a(({ theme }) => ({
+  color: `${theme.colors.linkText} !important`,
+
+  "&:hover": {
+    color: `${darken(theme.colors.linkText, 0.15)} !important`,
+  },
 }))

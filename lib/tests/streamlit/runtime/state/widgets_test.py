@@ -21,14 +21,13 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import errors
-from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import coalesce_widget_states
-from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX
+from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX, compute_widget_id
 from streamlit.runtime.state.session_state import SessionState, WidgetMetadata
-from streamlit.runtime.state.widgets import compute_widget_id, user_key_from_widget_id
+from streamlit.runtime.state.widgets import user_key_from_widget_id
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -301,13 +300,8 @@ class WidgetManagerTests(unittest.TestCase):
 
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):
-        button_proto = ButtonProto()
-        button_proto.label = "the label"
-        self.assertTrue(
-            compute_widget_id("button", button_proto).startswith(
-                GENERATED_WIDGET_ID_PREFIX
-            )
-        )
+        id = compute_widget_id("button", label="the label")
+        assert id.startswith(GENERATED_WIDGET_ID_PREFIX)
 
 
 class WidgetIdDisabledTests(DeltaGeneratorTestCase):
