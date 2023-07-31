@@ -218,11 +218,16 @@ class Checkbox extends React.PureComponent<Props, State> {
                 return {
                   marginRight: 0,
                   marginLeft: "2px",
-                  // marginTop: spacing.sm,
                   paddingLeft: "2px",
                   paddingRight: "2px",
                   width: "32px",
+                  minWidth: "32px",
                   height: "16px",
+                  minHeight: "16px",
+                  borderBottomLeftRadius: theme.radii.lg,
+                  borderTopLeftRadius: theme.radii.lg,
+                  borderBottomRightRadius: theme.radii.lg,
+                  borderTopRightRadius: theme.radii.lg,
                   backgroundColor,
                 }
               },
@@ -275,6 +280,7 @@ class Checkbox extends React.PureComponent<Props, State> {
             visibility={labelVisibilityProtoValueToEnum(
               element.labelVisibility?.value
             )}
+            data-testid="stWidgetLabel"
           >
             <StreamlitMarkdown
               source={element.label}
