@@ -34,12 +34,13 @@ import {
 
 import AppWithScreencast from "./App"
 import { StyledDataFrameOverlay } from "@streamlit/app/src/styled-components"
+import FontFaceDeclaration from "./components/FontFaceDeclaration"
 
 const ThemedApp = (): JSX.Element => {
   const defaultTheme = getDefaultTheme()
 
   const [theme, setTheme] = React.useState<ThemeConfig>(defaultTheme)
-  const [, setFontFaces] = React.useState<object[] | undefined>()
+  const [fontFaces, setFontFaces] = React.useState<object[] | undefined>()
   const [availableThemes, setAvailableThemes] = React.useState<ThemeConfig[]>([
     ...createPresetThemes(),
     ...(isPresetTheme(defaultTheme) ? [] : [defaultTheme]),
@@ -99,6 +100,9 @@ const ThemedApp = (): JSX.Element => {
 
   return (
     <RootStyleProvider theme={theme}>
+      {theme.name === CUSTOM_THEME_NAME && fontFaces && (
+        <FontFaceDeclaration fontFaces={fontFaces} />
+      )}
       <AppWithScreencast
         theme={{
           setTheme: updateTheme,
