@@ -20,7 +20,6 @@ search_files() {
     local search_string="$2"
 
     echo "Searching for $search_string within the $folder folder..."
-
     # Use find to recursively search for .ts and .js files in the folder
     while IFS= read -r -d '' file; do
         # Check if the file has a .ts or .js extension
