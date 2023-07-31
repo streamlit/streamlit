@@ -16,9 +16,9 @@ import threading
 from typing import Any, Callable, Optional
 
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import ScriptRunContext, add_script_run_ctx
 from streamlit.runtime.state import SafeSessionState, SessionState
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
 def call_on_threads(
@@ -63,7 +63,7 @@ def call_on_threads(
                 _enqueue=ForwardMsgQueue().enqueue,
                 query_string="",
                 session_state=SafeSessionState(SessionState()),
-                uploaded_file_mgr=UploadedFileManager(),
+                uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
                 page_script_hash="",
                 user_info={"email": "test@test.com"},
             )

@@ -26,6 +26,7 @@ from hypothesis import strategies as hst
 import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -37,7 +38,7 @@ from streamlit.runtime.state.session_state import (
     WidgetMetadata,
     WStates,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.testing.script_interactions import InteractiveScriptTests
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import patch_config_options
@@ -387,12 +388,16 @@ class SessionStateSerdeTest(DeltaGeneratorTestCase):
         )
         check_roundtrip("date_interval", date_interval)
 
-    @patch("streamlit.elements.widgets.file_uploader._get_file_recs")
-    def test_file_uploader_serde(self, get_file_recs_patch):
-        file_recs = [
-            UploadedFileRec(1, "file1", "type", b"123"),
+    @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
+    def test_file_uploader_serde(self, get_upload_files_patch):
+        file_rec = UploadedFileRec("file1", "file1", "type", b"123")
+        uploaded_files = [
+            UploadedFile(
+                file_rec, FileURLsProto(file_id="1", delete_url="d1", upload_url="u1")
+            )
         ]
-        get_file_recs_patch.return_value = file_recs
+
+        get_upload_files_patch.return_value = uploaded_files
 
         uploaded_file = st.file_uploader("file_uploader", key="file_uploader")
         check_roundtrip("file_uploader", uploaded_file)

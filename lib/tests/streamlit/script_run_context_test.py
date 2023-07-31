@@ -16,9 +16,9 @@ import unittest
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import ScriptRunContext
 from streamlit.runtime.state import SafeSessionState, SessionState
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
 class ScriptRunContextTest(unittest.TestCase):
@@ -31,7 +31,7 @@ class ScriptRunContextTest(unittest.TestCase):
             _enqueue=fake_enqueue,
             query_string="",
             session_state=SafeSessionState(SessionState()),
-            uploaded_file_mgr=UploadedFileManager(),
+            uploaded_file_mgr=MemoryUploadedFileManager("mock/upload"),
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
@@ -53,7 +53,7 @@ class ScriptRunContextTest(unittest.TestCase):
             _enqueue=fake_enqueue,
             query_string="",
             session_state=SafeSessionState(SessionState()),
-            uploaded_file_mgr=UploadedFileManager(),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
@@ -79,7 +79,7 @@ class ScriptRunContextTest(unittest.TestCase):
             _enqueue=fake_enqueue,
             query_string="",
             session_state=SafeSessionState(SessionState()),
-            uploaded_file_mgr=UploadedFileManager(),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
@@ -104,7 +104,7 @@ class ScriptRunContextTest(unittest.TestCase):
             _enqueue=fake_enqueue,
             query_string="",
             session_state=SafeSessionState(SessionState()),
-            uploaded_file_mgr=UploadedFileManager(),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )

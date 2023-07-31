@@ -36,6 +36,7 @@ from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
 from streamlit.web.cache_storage_manager_config import (
     create_default_cache_storage_manager,
@@ -53,10 +54,7 @@ from streamlit.web.server.routes import (
 )
 from streamlit.web.server.server_util import make_url_path_regex
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
-from streamlit.web.server.upload_file_request_handler import (
-    UPLOAD_FILE_ROUTE,
-    UploadFileRequestHandler,
-)
+from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
 LOGGER = get_logger(__name__)
 
@@ -83,6 +81,7 @@ MAX_PORT_SEARCH_RETRIES = 100
 UNIX_SOCKET_PREFIX = "unix://"
 
 MEDIA_ENDPOINT: Final = "/media"
+UPLOAD_FILE_ENDPOINT: Final = "/_stcore/upload_file"
 STREAM_ENDPOINT: Final = r"_stcore/stream"
 METRIC_ENDPOINT: Final = r"(?:st-metrics|_stcore/metrics)"
 MESSAGE_ENDPOINT: Final = r"_stcore/message"
@@ -228,11 +227,14 @@ class Server:
         media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
         MediaFileHandler.initialize_storage(media_file_storage)
 
+        uploaded_file_mgr = MemoryUploadedFileManager(UPLOAD_FILE_ENDPOINT)
+
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
                 command_line=command_line,
                 media_file_storage=media_file_storage,
+                uploaded_file_manager=uploaded_file_mgr,
                 cache_storage_manager=create_default_cache_storage_manager(),
             ),
         )
@@ -299,7 +301,7 @@ class Server:
             (
                 make_url_path_regex(
                     base,
-                    UPLOAD_FILE_ROUTE,
+                    rf"{UPLOAD_FILE_ENDPOINT}/(?P<session_id>[^/]+)/(?P<file_id>[^/]+)",
                 ),
                 UploadFileRequestHandler,
                 dict(

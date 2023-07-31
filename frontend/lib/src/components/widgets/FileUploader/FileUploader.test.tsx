@@ -14,22 +14,30 @@
  * limitations under the License.
  */
 
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 import { ReactWrapper, ShallowWrapper } from "enzyme"
 import React from "react"
 import { FileError } from "react-dropzone"
-import { mount, shallow } from "@streamlit/lib/src/test_util"
+import { mount, shallow, render } from "@streamlit/lib/src/test_util"
 
 import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
+  FileURLs as FileURLsProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   UploadedFileInfo as UploadedFileInfoProto,
+  IFileURLs,
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { notUndefined } from "@streamlit/lib/src/util/utils"
 import FileDropzone from "./FileDropzone"
 import FileUploader, { Props } from "./FileUploader"
-import { ErrorStatus, UploadFileInfo, UploadingStatus } from "./UploadFileInfo"
+import {
+  ErrorStatus,
+  UploadFileInfo,
+  UploadedStatus,
+  UploadingStatus,
+} from "./UploadFileInfo"
 
 const createFile = (): File => {
   return new File(["Text in a file!"], "filename.txt", {
@@ -39,15 +47,14 @@ const createFile = (): File => {
 }
 
 const buildFileUploaderStateProto = (
-  maxFileId: number,
-  uploadedFileIds: number[]
+  fileUrlsArray: IFileURLs[]
 ): FileUploaderStateProto =>
   new FileUploaderStateProto({
-    maxFileId,
-    uploadedFileInfo: uploadedFileIds.map(
-      fileId =>
+    uploadedFileInfo: fileUrlsArray.map(
+      fileUrls =>
         new UploadedFileInfoProto({
-          id: fileId,
+          fileId: fileUrls.fileId,
+          fileUrls,
           name: "filename.txt",
           size: 15,
         })
@@ -69,10 +76,7 @@ const FILE_TOO_LARGE: FileError = {
   code: "file-too-large",
 }
 
-const INITIAL_SERVER_FILE_ID = 1
-
 const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
-  let mockServerFileIdCounter = INITIAL_SERVER_FILE_ID
   return {
     element: FileUploaderProto.create({
       id: "id",
@@ -86,13 +90,23 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
       sendRerunBackMsg: jest.fn(),
       formsDataChanged: jest.fn(),
     }),
-    mockServerFileIdCounter: 1,
     // @ts-expect-error
     uploadClient: {
       uploadFile: jest.fn().mockImplementation(() => {
-        // Mock UploadClient to return an incremented ID for each upload.
-        return Promise.resolve(mockServerFileIdCounter++)
+        return Promise.resolve()
       }),
+      fetchFileURLs: jest.fn().mockImplementation((acceptedFiles: File[]) => {
+        return Promise.resolve(
+          acceptedFiles.map(file => {
+            return new FileURLsProto({
+              fileId: file.name,
+              uploadUrl: file.name,
+              deleteUrl: file.name,
+            })
+          })
+        )
+      }),
+      deleteFile: jest.fn(),
     },
   }
 }
@@ -108,84 +122,79 @@ function getFiles(
     : result
 }
 
-function getServerFileId(file: UploadFileInfo): number | undefined {
-  if (file.status.type === "uploaded") {
-    return file.status.serverFileId
-  }
-  return undefined
-}
-
-function getServerFileIds(files: UploadFileInfo[]): number[] {
-  return files.map(getServerFileId).filter(notUndefined)
-}
-
-describe("FileUploader widget", () => {
+describe("FileUploader widget RTL tests", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<FileUploader {...props} />)
-    const instance = wrapper.instance() as FileUploader
-
-    expect(wrapper).toBeDefined()
-    expect(instance.status).toBe("ready")
+    render(<FileUploader {...props} />)
+    const fileUploaderElement = screen.getByTestId("stFileUploader")
+    expect(fileUploaderElement).toBeInTheDocument()
   })
 
-  it("sets initial value properly if non-empty", () => {
+  it("sets initial value properly non-empty", () => {
     const props = getProps()
     const { element, widgetMgr } = props
 
     widgetMgr.setFileUploaderStateValue(
       element,
-      buildFileUploaderStateProto(INITIAL_SERVER_FILE_ID, [
-        INITIAL_SERVER_FILE_ID,
+      buildFileUploaderStateProto([
+        new FileURLsProto({
+          fileId: "filename.txt",
+          uploadUrl: "filename.txt",
+          deleteUrl: "filename.txt",
+        }),
       ]),
       { fromUi: false }
     )
 
-    const wrapper = shallow(<FileUploader {...props} />)
-    expect(wrapper.state()).toEqual({
-      files: [
-        {
-          name: "filename.txt",
-          size: 15,
-          status: { type: "uploaded", serverFileId: 1 },
-          id: 1,
-        },
-      ],
-      newestServerFileId: 1,
-    })
+    render(<FileUploader {...props} />)
+    const fileNameNode = screen.getByText("filename.txt")
+    expect(fileNameNode).toBeInTheDocument()
   })
 
   it("shows a label", () => {
     const props = getProps({ label: "Test label" })
-    const wrapper = mount(<FileUploader {...props} />)
+    render(<FileUploader {...props} />)
 
-    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+    const labelNode = screen.getByText("Test label")
+    expect(labelNode).toBeInTheDocument()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
+      label: "Test label",
       labelVisibility: {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
-    const wrapper = mount(<FileUploader {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
-    )
+    render(<FileUploader {...props} />)
+
+    const labelNode = screen.getByText("Test label")
+    expect(labelNode).toBeInTheDocument()
+    expect(labelNode).not.toBeVisible()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
+      label: "Test label",
       labelVisibility: {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
-    const wrapper = mount(<FileUploader {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
-    )
-  })
+    render(<FileUploader {...props} />)
 
+    const labelNode = screen.getByText("Test label")
+    expect(labelNode).toBeInTheDocument()
+    expect(labelNode).not.toBeVisible()
+  })
+})
+
+// TODO(vdonato / kajarenc): Eventually convert all of these tests to use RTL.
+// Ideally, we'd like to migrate off enzyme while we're working on the big
+// `st.file_uploader` refactor, but migration of a lot of our existing tests
+// would be very involved. Thus, we'll punt on the especially difficult tests
+// for now and revisit rewriting them after the feature branch has landed on
+// `develop`.
+describe("FileUploader widget enzyme tests", () => {
   it("uploads a single selected file", async () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
@@ -193,6 +202,10 @@ describe("FileUploader widget", () => {
     const instance = wrapper.instance() as FileUploader
     const fileDropzone = wrapper.find(FileDropzone)
     fileDropzone.props().onDrop([createFile()], [])
+
+    // Wait one tick to simulate FileURLsProto being received from the server,
+    // after which we begin the file upload.
+    await process.nextTick
 
     // We should have 1 file in the uploading state
     expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
@@ -203,25 +216,28 @@ describe("FileUploader widget", () => {
     // WidgetStateManager should not have been called yet
     expect(props.widgetMgr.setFileUploaderStateValue).not.toHaveBeenCalled()
 
+    // Wait a tick to simulate the file upload completing.
     await process.nextTick
-
-    // The server will have assigned us a new ID. This will also be
-    // our "newestServerFileId".
-    const serverFileId = getServerFileId(getFiles(wrapper)[0]) as number
-    const newestServerFileId = serverFileId
 
     // After upload completes, our file should be "uploaded" and our status
     // should be "ready". The file should also have a new ID, returned by our
     // uploadFile endpoint.
-    expect(getFiles(wrapper).length).toBe(1)
-    expect(getFiles(wrapper)[0].status.type).toBe("uploaded")
-    expect(serverFileId).toBeDefined()
+    const files = getFiles(wrapper)
+    expect(files.length).toBe(1)
+    const fileStatus = files[0].status as UploadedStatus
+    expect(fileStatus.type).toBe("uploaded")
+    expect(fileStatus.fileId).toBe("filename.txt")
+    expect(fileStatus.fileUrls).toEqual({
+      deleteUrl: "filename.txt",
+      fileId: "filename.txt",
+      uploadUrl: "filename.txt",
+    })
     expect(instance.status).toBe("ready")
 
     // And WidgetStateManager should have been called with the file's ID
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
       props.element,
-      buildFileUploaderStateProto(newestServerFileId, [serverFileId]),
+      buildFileUploaderStateProto([fileStatus.fileUrls]),
       {
         fromUi: true,
       }
@@ -246,6 +262,7 @@ describe("FileUploader widget", () => {
       ]
     )
 
+    await process.nextTick
     expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
 
     // We should have 3 files. One will be uploading, the other two will
@@ -264,13 +281,12 @@ describe("FileUploader widget", () => {
     expect(getFiles(wrapper, "error").length).toBe(2)
     expect(instance.status).toBe("ready")
 
-    const fileId = getServerFileId(getFiles(wrapper)[0]) as number
-    const newestServerFileId = fileId
-
-    // WidgetStateManager should have been called with the file's ID
+    const uploadedFile = getFiles(wrapper, "uploaded")[0]
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
       props.element,
-      buildFileUploaderStateProto(newestServerFileId, [fileId]),
+      buildFileUploaderStateProto([
+        (uploadedFile.status as UploadedStatus).fileUrls,
+      ]),
       {
         fromUi: true,
       }
@@ -285,6 +301,8 @@ describe("FileUploader widget", () => {
 
     // Upload the first file
     fileDropzone.props().onDrop([createFile()], [])
+    await process.nextTick
+
     const origFile = getFiles(wrapper)[0]
     expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
     expect(getFiles(wrapper).length).toBe(1)
@@ -297,6 +315,8 @@ describe("FileUploader widget", () => {
 
     // Upload a replacement file
     fileDropzone.props().onDrop([createFile()], [])
+    await process.nextTick
+
     const replacementFile = getFiles(wrapper)[0]
     expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
     expect(getFiles(wrapper).length).toBe(1)
@@ -330,6 +350,8 @@ describe("FileUploader widget", () => {
       ]
     )
 
+    await process.nextTick
+
     expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
 
     // We should have two files uploading, and 3 showing an error.
@@ -349,11 +371,11 @@ describe("FileUploader widget", () => {
     // WidgetStateManager should have been called with the server IDs
     // of the uploaded files.
     const uploadedFiles = getFiles(wrapper, "uploaded")
-    const uploadedFileIds = getServerFileIds(uploadedFiles)
-    const newestServerId = Math.max(...uploadedFileIds)
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
       props.element,
-      buildFileUploaderStateProto(newestServerId, uploadedFileIds),
+      buildFileUploaderStateProto(
+        uploadedFiles.map(f => (f.status as UploadedStatus).fileUrls)
+      ),
       {
         fromUi: true,
       }
@@ -367,8 +389,10 @@ describe("FileUploader widget", () => {
     const instance = wrapper.instance() as FileUploader
 
     // Upload two files
-    instance.uploadFile(createFile())
-    instance.uploadFile(createFile())
+    // @ts-expect-error -- dummy value being used as first arg
+    instance.uploadFile("someUploadUrl1", createFile())
+    // @ts-expect-error -- dummy value being used as first arg
+    instance.uploadFile("someUploadUrl2", createFile())
 
     await process.nextTick
 
@@ -380,11 +404,11 @@ describe("FileUploader widget", () => {
     // WidgetStateManager should have been called with our two file IDs
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)
 
-    const initialFileIds = getServerFileIds(initialFiles)
-    const newestServerId = Math.max(...initialFileIds)
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
       props.element,
-      buildFileUploaderStateProto(newestServerId, initialFileIds),
+      buildFileUploaderStateProto(
+        initialFiles.map(f => (f.status as UploadedStatus).fileUrls)
+      ),
       {
         fromUi: true,
       }
@@ -405,10 +429,12 @@ describe("FileUploader widget", () => {
     // of the remaining file. This should be the second time WidgetStateManager
     // has been updated.
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(2)
-    const newWidgetValue = [initialFileIds[1]]
+    const newWidgetValue = [initialFiles[1]]
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
       props.element,
-      buildFileUploaderStateProto(newestServerId, newWidgetValue),
+      buildFileUploaderStateProto(
+        newWidgetValue.map(f => (f.status as UploadedStatus).fileUrls)
+      ),
       {
         fromUi: true,
       }
@@ -422,7 +448,8 @@ describe("FileUploader widget", () => {
     const instance = wrapper.instance() as FileUploader
 
     // Upload a file...
-    instance.uploadFile(createFile())
+    // @ts-expect-error -- dummy value being used as first arg
+    instance.uploadFile("someFileUrl", createFile())
     expect(getFiles(wrapper, "uploading").length).toBe(1)
     expect(instance.status).toBe("updating")
 
@@ -442,7 +469,7 @@ describe("FileUploader widget", () => {
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
       props.element,
-      buildFileUploaderStateProto(INITIAL_SERVER_FILE_ID, []),
+      buildFileUploaderStateProto([]),
       {
         fromUi: true,
       }
@@ -468,9 +495,6 @@ describe("FileUploader widget", () => {
 
     // File should be gone
     expect(getFiles(wrapper).length).toBe(0)
-
-    // WidgetStateManager should not have been called - no uploads happened.
-    expect(props.widgetMgr.setFileUploaderStateValue).not.toHaveBeenCalled()
   })
 
   it("handles upload error", async () => {
@@ -483,7 +507,8 @@ describe("FileUploader widget", () => {
       .fn()
       .mockRejectedValue(new Error("random upload error!"))
 
-    instance.uploadFile(createFile())
+    // @ts-expect-error -- dummy value being used as first arg
+    instance.uploadFile("someFileUploadUrl", createFile())
 
     expect(getFiles(wrapper)[0].status.type).toBe("uploading")
 
@@ -503,13 +528,14 @@ describe("FileUploader widget", () => {
     expect(instance.status).toBe("ready")
   })
 
-  it("changes status + adds file attributes when dropping a File", () => {
+  it("changes status + adds file attributes when dropping a File", async () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
     const fileDropzone = wrapper.find(FileDropzone)
     fileDropzone.props().onDrop([createFile()], [])
-    const files = getFiles(wrapper)
+    await process.nextTick
 
+    const files = getFiles(wrapper)
     expect(files[0].status.type).toBe("uploading")
     expect((files[0].status as UploadingStatus).cancelToken).toBeDefined()
     expect(files[0].id).toBeDefined()
@@ -555,8 +581,9 @@ describe("FileUploader widget", () => {
   it("resets on disconnect", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
+    const instance = wrapper.instance() as FileUploader
     // @ts-expect-error
-    const resetSpy = jest.spyOn(wrapper.instance(), "reset")
+    const resetSpy = jest.spyOn(instance, "reset")
     wrapper.setProps({ disabled: true })
     expect(resetSpy).toHaveBeenCalled()
   })
@@ -574,13 +601,18 @@ describe("FileUploader widget", () => {
     // Upload a single file
     const fileDropzone = wrapper.find(FileDropzone)
     fileDropzone.props().onDrop([createFile()], [])
+
+    // Wait two ticks so that fileUrls can be fetched and our file uploaded.
+    await process.nextTick
     await process.nextTick
 
-    const serverFileId = getServerFileId(getFiles(wrapper)[0]) as number
-    expect(wrapper.state("files")).toHaveLength(1)
+    let files = getFiles(wrapper)
+    expect(files).toHaveLength(1)
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
       props.element,
-      buildFileUploaderStateProto(serverFileId, [serverFileId]),
+      buildFileUploaderStateProto([
+        (files[0].status as UploadedStatus).fileUrls,
+      ]),
       {
         fromUi: true,
       }
@@ -591,10 +623,11 @@ describe("FileUploader widget", () => {
     wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(wrapper.state("files")).toHaveLength(0)
+    files = getFiles(wrapper)
+    expect(files).toHaveLength(0)
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
       props.element,
-      buildFileUploaderStateProto(serverFileId, []),
+      buildFileUploaderStateProto([]),
       {
         fromUi: true,
       }

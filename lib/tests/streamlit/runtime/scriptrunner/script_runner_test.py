@@ -36,6 +36,7 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
@@ -50,7 +51,6 @@ from streamlit.runtime.scriptrunner.script_requests import (
     ScriptRequestType,
 )
 from streamlit.runtime.state.session_state import SessionState
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
@@ -1069,7 +1069,7 @@ class TestScriptRunner(ScriptRunner):
             main_script_path=main_script_path,
             client_state=ClientState(),
             session_state=SessionState(),
-            uploaded_file_mgr=UploadedFileManager(),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             script_cache=ScriptCache(),
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},

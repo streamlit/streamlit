@@ -37,6 +37,7 @@ import tzlocal
 from parameterized import parameterized
 from PIL import Image
 
+from streamlit.proto.Common_pb2 import FileURLs
 from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.cache_type import CacheType
@@ -328,18 +329,34 @@ class HashTest(unittest.TestCase):
         [
             (BytesIO, b"123", b"456", b"123"),
             (StringIO, "123", "456", "123"),
-            (
-                UploadedFile,
-                UploadedFileRec(0, "name", "type", b"123"),
-                UploadedFileRec(0, "name", "type", b"456"),
-                UploadedFileRec(0, "name", "type", b"123"),
-            ),
         ]
     )
     def test_io(self, io_type, io_data1, io_data2, io_data3):
         io1 = io_type(io_data1)
         io2 = io_type(io_data2)
         io3 = io_type(io_data3)
+
+        self.assertEqual(get_hash(io1), get_hash(io3))
+        self.assertNotEqual(get_hash(io1), get_hash(io2))
+
+        # Changing the stream position should change the hash
+        io1.seek(1)
+        io3.seek(0)
+        self.assertNotEqual(get_hash(io1), get_hash(io3))
+
+    def test_uploaded_file_io(self):
+        rec1 = UploadedFileRec("file1", "name", "type", b"123")
+        rec2 = UploadedFileRec("file1", "name", "type", b"456")
+        rec3 = UploadedFileRec("file1", "name", "type", b"123")
+        io1 = UploadedFile(
+            rec1, FileURLs(file_id=rec1.file_id, upload_url="u1", delete_url="d1")
+        )
+        io2 = UploadedFile(
+            rec2, FileURLs(file_id=rec2.file_id, upload_url="u2", delete_url="d2")
+        )
+        io3 = UploadedFile(
+            rec3, FileURLs(file_id=rec3.file_id, upload_url="u3", delete_url="u3")
+        )
 
         self.assertEqual(get_hash(io1), get_hash(io3))
         self.assertNotEqual(get_hash(io1), get_hash(io2))

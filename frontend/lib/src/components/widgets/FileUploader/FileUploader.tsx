@@ -22,6 +22,8 @@ import { FileRejection } from "react-dropzone"
 import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
+  FileURLs as FileURLsProto,
+  IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -63,14 +65,6 @@ export interface State {
    * rejected files that will not be updated.
    */
   files: UploadFileInfo[]
-
-  /**
-   * The most recent file ID we've received from the server. This gets sent
-   * back to the server during widget update so that it clean up
-   * orphaned files. File IDs start at 1 and only ever increase, so a
-   * file with a higher ID is guaranteed to be newer than one with a lower ID.
-   */
-  newestServerFileId: number
 }
 
 class FileUploader extends React.PureComponent<Props, State> {
@@ -97,8 +91,8 @@ class FileUploader extends React.PureComponent<Props, State> {
       return emptyState
     }
 
-    const { maxFileId, uploadedFileInfo } = widgetValue
-    if (maxFileId == null || maxFileId === 0 || uploadedFileInfo == null) {
+    const { uploadedFileInfo } = widgetValue
+    if (uploadedFileInfo == null || uploadedFileInfo.length === 0) {
       return emptyState
     }
 
@@ -106,14 +100,16 @@ class FileUploader extends React.PureComponent<Props, State> {
       files: uploadedFileInfo.map(f => {
         const name = f.name as string
         const size = f.size as number
-        const serverFileId = f.id as number
+
+        const fileId = f.fileId as string
+        const fileUrls = f.fileUrls as FileURLsProto
 
         return new UploadFileInfo(name, size, this.nextLocalFileId(), {
           type: "uploaded",
-          serverFileId,
+          fileId,
+          fileUrls,
         })
       }),
-      newestServerFileId: Number(maxFileId),
     }
   }
 
@@ -193,36 +189,21 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  /**
-   * When the server receives the widget value, it deletes "orphaned" uploaded
-   * files. An orphaned file is any file, associated with this uploader,
-   * whose file ID is not in the file ID list, and whose
-   * ID is <= `newestServerFileId`. This logic ensures that a FileUploader
-   * within a form doesn't have any of its "unsubmitted" uploads prematurely
-   * deleted when the script is re-run.
-   */
   private createWidgetValue(): FileUploaderStateProto | undefined {
-    if (this.state.newestServerFileId === 0) {
-      // If newestServerFileId is 0, we've had no transaction with the server,
-      // and therefore no widget value.
-      return undefined
-    }
-
     const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
       .filter(f => f.status.type === "uploaded")
       .map(f => {
         const { name, size, status } = f
+        const { fileId, fileUrls } = status as UploadedStatus
         return new UploadedFileInfoProto({
-          id: (status as UploadedStatus).serverFileId,
+          fileId,
+          fileUrls,
           name,
           size,
         })
       })
 
-    return new FileUploaderStateProto({
-      maxFileId: this.state.newestServerFileId,
-      uploadedFileInfo,
-    })
+    return new FileUploaderStateProto({ uploadedFileInfo })
   }
 
   /**
@@ -266,18 +247,36 @@ class FileUploader extends React.PureComponent<Props, State> {
       }
     }
 
-    // If this is a single-file uploader that already has a file,
-    // remove that file so that it can be replaced with our new one.
-    if (
-      !multipleFiles &&
-      acceptedFiles.length > 0 &&
-      this.state.files.length > 0
-    ) {
-      this.removeFile(this.state.files[0].id)
-    }
+    this.props.uploadClient
+      .fetchFileURLs(acceptedFiles)
+      .then((fileURLsArray: IFileURLs[]) => {
+        // If this is a single-file uploader that already has an uploaded file,
+        // remove that file so that it can be replaced with our new one.
+        if (!multipleFiles && acceptedFiles.length > 0) {
+          const existingFile = this.state.files.find(
+            f => f.status.type !== "error"
+          )
+          if (existingFile) {
+            this.deleteFile(existingFile.id)
+          }
+        }
 
-    // Upload each accepted file.
-    acceptedFiles.forEach(this.uploadFile)
+        _.zip(fileURLsArray, acceptedFiles).forEach(
+          ([fileURLs, acceptedFile]) => {
+            this.uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
+          }
+        )
+      })
+      .catch((errorMessage: string) => {
+        this.addFiles(
+          acceptedFiles.map(f => {
+            return new UploadFileInfo(f.name, f.size, this.nextLocalFileId(), {
+              type: "error",
+              errorMessage,
+            })
+          })
+        )
+      })
 
     // Create an UploadFileInfo for each of our rejected files, and add them to
     // our state.
@@ -301,7 +300,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
-  public uploadFile = (file: File): void => {
+  public uploadFile = (fileURLs: IFileURLs, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     const cancelToken = axios.CancelToken.source()
     const uploadingFileInfo = new UploadFileInfo(
@@ -319,13 +318,12 @@ class FileUploader extends React.PureComponent<Props, State> {
     this.props.uploadClient
       .uploadFile(
         this.props.element,
+        fileURLs.uploadUrl as string,
         file,
         e => this.onUploadProgress(e, uploadingFileInfo.id),
         cancelToken.token
       )
-      .then(newFileId =>
-        this.onUploadComplete(uploadingFileInfo.id, newFileId)
-      )
+      .then(() => this.onUploadComplete(uploadingFileInfo.id, fileURLs))
       .catch(err => {
         // If this was a cancel error, we don't show the user an error -
         // the cancellation was in response to an action they took.
@@ -347,14 +345,8 @@ class FileUploader extends React.PureComponent<Props, State> {
    */
   private onUploadComplete = (
     localFileId: number,
-    serverFileId: number
+    fileUrls: IFileURLs
   ): void => {
-    // "state.newestServerFileId" must always hold the max fileID
-    // returned from the server.
-    this.setState(state => ({
-      newestServerFileId: Math.max(state.newestServerFileId, serverFileId),
-    }))
-
     const curFile = this.getFile(localFileId)
     if (curFile == null || curFile.status.type !== "uploading") {
       // The file may have been canceled right before the upload
@@ -364,7 +356,11 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     this.updateFile(
       curFile.id,
-      curFile.setStatus({ type: "uploaded", serverFileId })
+      curFile.setStatus({
+        type: "uploaded",
+        fileId: fileUrls.fileId as string,
+        fileUrls,
+      })
     )
   }
 
@@ -408,6 +404,10 @@ class FileUploader extends React.PureComponent<Props, State> {
       // However, it may have been received by the server so we'll still
       // send out a request to delete.
       file.status.cancelToken.cancel()
+    }
+
+    if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
     }
 
     this.removeFile(fileId)

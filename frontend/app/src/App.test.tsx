@@ -1229,6 +1229,54 @@ describe("App.handleDeltaMessage", () => {
   })
 })
 
+describe("App.requestFileURLs", () => {
+  let wrapper: ShallowWrapper
+  let instance: App
+
+  beforeEach(() => {
+    wrapper = shallow(<App {...getProps()} />)
+    instance = wrapper.instance() as App
+
+    // @ts-expect-error
+    instance.sendBackMsg = jest.fn()
+
+    // @ts-expect-error
+    instance.sessionInfo.setCurrent(mockSessionInfoProps())
+  })
+
+  it("properly constructs fileUrlsRequest BackMsg", () => {
+    instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+    instance.requestFileURLs(
+      "myRequestId",
+      // @ts-expect-error
+      [{ name: "file1.txt" }, { name: "file2.txt" }, { name: "file3.txt" }]
+    )
+
+    // @ts-expect-error
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      fileUrlsRequest: {
+        fileNames: ["file1.txt", "file2.txt", "file3.txt"],
+        requestId: "myRequestId",
+        sessionId: "mockSessionId",
+      },
+    })
+  })
+
+  it("does nothing if server is disconnected", () => {
+    instance.isServerConnected = jest.fn().mockReturnValue(false)
+
+    instance.requestFileURLs(
+      "myRequestId",
+      // @ts-expect-error
+      [{ name: "file1.txt" }, { name: "file2.txt" }, { name: "file3.txt" }]
+    )
+
+    // @ts-expect-error
+    expect(instance.sendBackMsg).not.toHaveBeenCalled()
+  })
+})
+
 describe("Test Main Menu shortcut functionality", () => {
   let prevWindowLocation: Location
   beforeEach(() => {

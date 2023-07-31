@@ -179,6 +179,8 @@ class WStates(MutableMapping[str, Any]):
 
     def remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
         """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
+        # TODO(vdonato / kajarenc): Remove files corresponding to an inactive file
+        # uploader.
         self.states = {k: v for k, v in self.states.items() if k in active_widget_ids}
 
     def get_serialized(self, k: str) -> WidgetStateProto | None:

@@ -80,6 +80,7 @@ function getProps(
       sessionInfo: sessionInfo,
       endpoints,
       formsWithPendingRequestsChanged: () => {},
+      requestFileURLs: jest.fn(),
     }),
     componentRegistry: new ComponentRegistry(endpoints),
     formsData: createFormsData(),

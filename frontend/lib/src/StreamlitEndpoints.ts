@@ -35,6 +35,14 @@ export interface StreamlitEndpoints {
   buildMediaURL(url: string): string
 
   /**
+   * Construct a URL for uploading a file.
+   * @param url a relative or absolute URL. If `url` is absolute, it will be
+   * returned unchanged. Otherwise, the return value will be a URL for fetching
+   * the media file from the connected Streamlit instance.
+   */
+  buildFileUploadURL?(url: string): string
+
+  /**
    * Construct a URL for an app page in a multi-page app.
    * @param pageLinkBaseURL the optional pageLinkBaseURL set by the host communication layer.
    * @param page the page's AppPage protobuf properties
@@ -49,21 +57,29 @@ export interface StreamlitEndpoints {
   /**
    * Upload a file to the FileUploader endpoint.
    *
-   * @param file The file to upload
-   * @param widgetId the widget ID of the FileUploader associated with the file.
+   * @param fileUploadUrl The URL to upload the file to.
+   * @param file The file to upload.
    * @param sessionId the current sessionID. The file will be associated with this ID.
-   * @param onUploadProgress optional function that will be called repeatedly with progress events during the upload
+   * @param onUploadProgress optional function that will be called repeatedly with progress events during the upload.
    * @param cancelToken optional axios CancelToken that can be used to cancel the in-progress upload.
    *
    * @return a Promise<number> that resolves with the file's unique ID, as assigned by the server.
    */
   uploadFileUploaderFile(
+    fileUploadUrl: string,
     file: File,
-    widgetId: string,
     sessionId: string,
     onUploadProgress?: (progressEvent: any) => void,
     cancelToken?: CancelToken
-  ): Promise<number>
+  ): Promise<void>
+
+  /**
+   * Request that the file at the given URL be deleted.
+   *
+   * @param fileUrl: The URL of the file to delete.
+   * @param sessionId the current sessionID.
+   */
+  deleteFileAtURL?(fileUrl: string, sessionId: string): Promise<void>
 
   /**
    * Fetch a cached ForwardMsg from the server.
