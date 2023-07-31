@@ -91,7 +91,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     <StyledChatMessageContainer
       className="stChatMessage"
       data-testid="stChatMessage"
-      background={name.toLowerCase() === "user"}
+      background={["name", "human"].includes(name.toLowerCase())}
     >
       <ChatMessageAvatar name={name} avatar={avatar} avatarType={avatarType} />
       <StyledMessageContent
