@@ -21,7 +21,9 @@ st.write("value 1:", i1)
 i2 = st.toggle("toggle 2", False)
 st.write("value 2:", i2)
 
-i3 = st.toggle("toggle 3")
+i3 = st.toggle(
+    "toggle 3: This is a really really really really long label that should wrap eventually if we keep addding more text to it "
+)
 st.write("value 3:", i3)
 
 if runtime.exists():
