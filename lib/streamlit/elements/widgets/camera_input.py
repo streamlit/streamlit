@@ -14,7 +14,7 @@
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, List, Optional, cast
+from typing import TYPE_CHECKING, Optional, Union, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -22,6 +22,7 @@ from streamlit.elements.utils import (
     check_session_state_rules,
     get_label_visibility_proto_value,
 )
+from streamlit.elements.widgets.file_uploader import _get_upload_files
 from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
@@ -34,37 +35,13 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-SomeUploadedSnapshotFile = Optional[UploadedFile]
-
-
-def _get_file_recs_for_camera_input_widget(
-    widget_id: str, widget_value: Optional[FileUploaderStateProto]
-) -> List[UploadedFileRec]:
-    if widget_value is None:
-        return []
-
-    ctx = get_script_run_ctx()
-    if ctx is None:
-        return []
-
-    uploaded_file_info = widget_value.uploaded_file_info
-    if len(uploaded_file_info) == 0:
-        return []
-
-    active_file_ids = [f.id for f in uploaded_file_info]
-
-    # Grab the files that correspond to our active file IDs.
-    return ctx.uploaded_file_mgr.get_files(
-        session_id=ctx.session_id,
-        widget_id=widget_id,
-        file_ids=active_file_ids,
-    )
+SomeUploadedSnapshotFile = Union[UploadedFile, DeletedFile, None]
 
 
 @dataclass
@@ -75,34 +52,25 @@ class CameraInputSerde:
     ) -> FileUploaderStateProto:
         state_proto = FileUploaderStateProto()
 
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return state_proto
-
-        # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
-        # the *next* uploaded file, so the current highest file id is the
-        # counter minus 1.
-        state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
-
-        if not snapshot:
+        if snapshot is None or isinstance(snapshot, DeletedFile):
             return state_proto
 
         file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
-        file_info.id = snapshot.id
+        file_info.file_id = snapshot.file_id
         file_info.name = snapshot.name
         file_info.size = snapshot.size
+        file_info.file_urls.CopyFrom(snapshot._file_urls)
 
         return state_proto
 
     def deserialize(
         self, ui_value: Optional[FileUploaderStateProto], widget_id: str
     ) -> SomeUploadedSnapshotFile:
-        file_recs = _get_file_recs_for_camera_input_widget(widget_id, ui_value)
-
-        if len(file_recs) == 0:
+        upload_files = _get_upload_files(ui_value)
+        if len(upload_files) == 0:
             return_value = None
         else:
-            return_value = UploadedFile(file_recs[0])
+            return_value = upload_files[0]
         return return_value
 
 
@@ -119,7 +87,7 @@ class CameraInputMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> SomeUploadedSnapshotFile:
+    ) -> Optional[UploadedFile]:
         r"""Display a widget that returns pictures from the user's webcam.
 
         Parameters
@@ -222,7 +190,7 @@ class CameraInputMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: Optional[ScriptRunContext] = None,
-    ) -> SomeUploadedSnapshotFile:
+    ) -> Optional[UploadedFile]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -266,23 +234,10 @@ class CameraInputMixin:
             label_visibility
         )
 
-        ctx = get_script_run_ctx()
-        camera_image_input_state = serde.serialize(camera_input_state.value)
-
-        uploaded_shapshot_info = camera_image_input_state.uploaded_file_info
-
-        if ctx is not None and len(uploaded_shapshot_info) != 0:
-            newest_file_id = camera_image_input_state.max_file_id
-            active_file_ids = [f.id for f in uploaded_shapshot_info]
-
-            ctx.uploaded_file_mgr.remove_orphaned_files(
-                session_id=ctx.session_id,
-                widget_id=camera_input_proto.id,
-                newest_file_id=newest_file_id,
-                active_file_ids=active_file_ids,
-            )
-
         self.dg._enqueue("camera_input", camera_input_proto)
+
+        if isinstance(camera_input_state.value, DeletedFile):
+            return None
         return camera_input_state.value
 
     @property

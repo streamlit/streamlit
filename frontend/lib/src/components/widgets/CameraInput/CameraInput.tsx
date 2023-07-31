@@ -22,6 +22,8 @@ import React from "react"
 import {
   CameraInput as CameraInputProto,
   FileUploaderState as FileUploaderStateProto,
+  FileURLs as FileURLsProto,
+  IFileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/lib/src/proto"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
@@ -77,14 +79,6 @@ export interface State {
    * Should contain exact one element if the user has taken a snapshot.
    */
   files: UploadFileInfo[]
-
-  /**
-   * The most recent file ID we've received from the server. This gets sent
-   * back to the server during widget update so that it clean up
-   * orphaned files. File IDs start at 1 and only ever increase, so a
-   * file with a higher ID is guaranteed to be newer than one with a lower ID.
-   */
-  newestServerFileId: number
 
   /**
    * Represents whether the component is in clear photo mode,
@@ -153,11 +147,16 @@ class CameraInput extends React.PureComponent<Props, State> {
     const delay = (t: number): Promise<ReturnType<typeof setTimeout>> =>
       new Promise(resolve => setTimeout(resolve, t))
 
-    const promise = urltoFile(
+    return urltoFile(
       imgSrc,
       `camera-input-${new Date().toISOString().replace(/:/g, "_")}.jpg`
     )
-      .then(file => this.uploadFile(file))
+      .then(file =>
+        this.props.uploadClient
+          .fetchFileURLs([file])
+          .then(fileURLsArray => ({ file: file, fileUrls: fileURLsArray[0] }))
+      )
+      .then(({ file, fileUrls }) => this.uploadFile(fileUrls, file))
       .then(() => delay(MIN_SHUTTER_EFFECT_TIME_MS))
       .then(() => {
         this.setState((prevState, _) => {
@@ -171,8 +170,6 @@ class CameraInput extends React.PureComponent<Props, State> {
       .catch(err => {
         logError(err)
       })
-
-    return promise
   }
 
   private removeCapture = (): void => {
@@ -191,7 +188,6 @@ class CameraInput extends React.PureComponent<Props, State> {
   get initialValue(): State {
     const emptyState = {
       files: [],
-      newestServerFileId: 0,
       imgSrc: null,
       shutter: false,
       minShutterEffectPassed: true,
@@ -206,8 +202,8 @@ class CameraInput extends React.PureComponent<Props, State> {
       return emptyState
     }
 
-    const { maxFileId, uploadedFileInfo } = widgetValue
-    if (maxFileId == null || maxFileId === 0 || uploadedFileInfo == null) {
+    const { uploadedFileInfo } = widgetValue
+    if (uploadedFileInfo == null || uploadedFileInfo.length === 0) {
       return emptyState
     }
 
@@ -215,14 +211,16 @@ class CameraInput extends React.PureComponent<Props, State> {
       files: uploadedFileInfo.map(f => {
         const name = f.name as string
         const size = f.size as number
-        const serverFileId = f.id as number
+
+        const fileId = f.fileId as string
+        const fileUrls = f.fileUrls as FileURLsProto
 
         return new UploadFileInfo(name, size, this.nextLocalFileId(), {
           type: "uploaded",
-          serverFileId,
+          fileId,
+          fileUrls,
         })
       }),
-      newestServerFileId: Number(maxFileId),
       imgSrc:
         uploadedFileInfo.length === 0 ? "" : this.RESTORED_FROM_WIDGET_STRING,
       shutter: false,
@@ -300,36 +298,20 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
   }
 
-  /**
-   * When the server receives the widget value, it deletes "orphaned" uploaded
-   * files. An orphaned file is any file, associated with this uploader,
-   * whose file ID is not in the file ID list, and whose
-   * ID is <= `newestServerFileId`. This logic ensures that a FileUploader
-   * within a form doesn't have any of its "unsubmitted" uploads prematurely
-   * deleted when the script is re-run.
-   */
   private createWidgetValue(): FileUploaderStateProto | undefined {
-    if (this.state.newestServerFileId === 0) {
-      // If newestServerFileId is 0, we've had no transaction with the server,
-      // and therefore no widget value.
-      return undefined
-    }
-
     const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
       .filter(f => f.status.type === "uploaded")
       .map(f => {
         const { name, size, status } = f
         return new UploadedFileInfoProto({
-          id: (status as UploadedStatus).serverFileId,
+          fileId: (status as UploadedStatus).fileId,
+          fileUrls: (status as UploadedStatus).fileUrls,
           name,
           size,
         })
       })
 
-    return new FileUploaderStateProto({
-      maxFileId: this.state.newestServerFileId,
-      uploadedFileInfo,
-    })
+    return new FileUploaderStateProto({ uploadedFileInfo })
   }
 
   /**
@@ -457,6 +439,9 @@ class CameraInput extends React.PureComponent<Props, State> {
       file.status.cancelToken.cancel()
     }
 
+    if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      this.props.uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
+    }
     this.removeFile(fileId)
   }
 
@@ -496,12 +481,9 @@ class CameraInput extends React.PureComponent<Props, State> {
    */
   private onUploadComplete = (
     localFileId: number,
-    serverFileId: number
+    fileUrls: IFileURLs
   ): void => {
-    // "state.newestServerFileId" must always hold the max fileID
-    // returned from the server.
-    this.setState(state => ({
-      newestServerFileId: Math.max(state.newestServerFileId, serverFileId),
+    this.setState(() => ({
       shutter: false,
     }))
 
@@ -514,7 +496,11 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     this.updateFile(
       curFile.id,
-      curFile.setStatus({ type: "uploaded", serverFileId })
+      curFile.setStatus({
+        type: "uploaded",
+        fileId: fileUrls.fileId as string,
+        fileUrls,
+      })
     )
   }
 
@@ -551,7 +537,7 @@ class CameraInput extends React.PureComponent<Props, State> {
     this.setState({ files: [], imgSrc: null })
   }
 
-  public uploadFile = (file: File): void => {
+  public uploadFile = (fileURLs: IFileURLs, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     const cancelToken = axios.CancelToken.source()
     const uploadingFileInfo = new UploadFileInfo(
@@ -569,13 +555,12 @@ class CameraInput extends React.PureComponent<Props, State> {
     this.props.uploadClient
       .uploadFile(
         this.props.element,
+        fileURLs.uploadUrl as string,
         file,
         e => this.onUploadProgress(e, uploadingFileInfo.id),
         cancelToken.token
       )
-      .then(newFileId =>
-        this.onUploadComplete(uploadingFileInfo.id, newFileId)
-      )
+      .then(() => this.onUploadComplete(uploadingFileInfo.id, fileURLs))
       .catch(err => {
         // If this was a cancel error, we don't show the user an error -
         // the cancellation was in response to an action they took.

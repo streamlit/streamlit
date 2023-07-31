@@ -18,19 +18,26 @@
  * A promise wrapper that makes resolve/reject functions public.
  */
 export default class Resolver<T> {
-  public resolve: (value: T | PromiseLike<T>) => void
+  public readonly resolve: (value: T | PromiseLike<T>) => void
 
-  public reject: (reason?: any) => void | Promise<any>
+  public readonly reject: (reason?: any) => void | Promise<any>
 
-  public promise: Promise<T>
+  public readonly promise: Promise<T>
 
   constructor() {
-    // Initialize to something so TS is happy.
+    // Initialize to something so that TS is happy, then use @ts-expect-error
+    // so that we can assign the actually desired values to resolve and reject.
+    //
+    // This is necessary because TS isn't able to deduce that resolve and
+    // reject will always be set in the callback passed to the Promise
+    // constructor below.
     this.resolve = () => {}
     this.reject = () => {}
 
     this.promise = new Promise<T>((resFn, rejFn) => {
+      // @ts-expect-error
       this.resolve = resFn
+      // @ts-expect-error
       this.reject = rejFn
     })
   }
