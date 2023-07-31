@@ -16,7 +16,7 @@
 
 import React from "react"
 import { ReactWrapper, ShallowWrapper } from "enzyme"
-import { waitFor } from "@testing-library/dom"
+import { waitFor } from "@testing-library/react"
 import cloneDeep from "lodash/cloneDeep"
 import {
   LocalStore,
@@ -239,7 +239,7 @@ describe("App", () => {
     // @ts-expect-error
     wrapper.instance().keyHandlers.STOP_RECORDING()
 
-    expect(props.screenCast.stopRecording).toBeCalled()
+    expect(props.screenCast.stopRecording).toHaveBeenCalled()
   })
 
   it("hides the top bar if hideTopBar === true", () => {
@@ -931,15 +931,14 @@ describe("App.onHistoryChange", () => {
     pushStateSpy.mockRestore()
   })
 
-  it("does rerun when we are navigating to a different page and the last window history url contains an anchor", () => {
+  it("does rerun when we are navigating to a different page and the last window history url contains an anchor", async () => {
     const pushStateSpy = jest.spyOn(window.history, "pushState")
-
-    jest.spyOn(instance, "onPageChange")
+    const pageChangeSpy = jest.spyOn(instance, "onPageChange")
 
     // navigate to current page with anchor
     window.history.pushState({}, "", "#foo_bar")
     instance.onHistoryChange()
-    expect(instance.onPageChange).not.toHaveBeenCalled()
+    expect(pageChangeSpy).not.toHaveBeenCalled()
 
     // navigate to new page
     instance.handleNewSession(
@@ -947,8 +946,9 @@ describe("App.onHistoryChange", () => {
     )
     window.history.back()
 
-    waitFor(() => {
-      expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
+    // Check for rerun
+    await waitFor(() => {
+      expect(pageChangeSpy).toHaveBeenLastCalledWith("top_hash")
     })
 
     pushStateSpy.mockRestore()
@@ -1254,7 +1254,7 @@ describe("Test Main Menu shortcut functionality", () => {
     wrapper.instance().openClearCacheDialog = jest.fn()
     wrapper.instance().keyHandlers.CLEAR_CACHE()
 
-    expect(wrapper.instance().openClearCacheDialog).not.toBeCalled()
+    expect(wrapper.instance().openClearCacheDialog).not.toHaveBeenCalled()
   })
 
   it("Tests dev menu shortcuts can be accessed as a developer", () => {
@@ -1267,7 +1267,7 @@ describe("Test Main Menu shortcut functionality", () => {
 
     wrapper.instance().keyHandlers.CLEAR_CACHE()
 
-    expect(wrapper.instance().openClearCacheDialog).toBeCalled()
+    expect(wrapper.instance().openClearCacheDialog).toHaveBeenCalled()
   })
 })
 

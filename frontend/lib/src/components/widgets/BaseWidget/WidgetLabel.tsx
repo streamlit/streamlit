@@ -48,6 +48,7 @@ export function WidgetLabel({
     // we use aria-hidden to disable ARIA for StyleWidgetLabel, because each
     // widget should have its own aria-label and/or implement accessibility.
     <StyledWidgetLabel
+      data-testid="stWidgetLabel"
       aria-hidden="true"
       disabled={disabled}
       labelVisibility={labelVisibility}

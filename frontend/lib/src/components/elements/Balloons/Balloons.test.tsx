@@ -15,7 +15,9 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
 
 import Balloons, { Props, NUM_BALLOONS } from "./Balloons"
 
@@ -33,20 +35,24 @@ describe("Balloons element", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<Balloons {...props} />)
+    render(<Balloons {...props} />)
 
-    expect(wrapper).toBeDefined()
-    expect(wrapper.find("StyledBalloon").length).toBe(NUM_BALLOONS)
+    const balloonElement = screen.getByTestId("balloons")
+    expect(balloonElement).toBeInTheDocument()
 
-    wrapper.find("StyledBalloon").forEach(node => {
-      expect(node.prop("src")).toBeTruthy()
+    const balloonImages = screen.getAllByRole("img")
+    expect(balloonImages.length).toBe(NUM_BALLOONS)
+
+    balloonImages.forEach(node => {
+      expect(node).toHaveAttribute("src")
     })
   })
 
   it("renders as hidden element", () => {
     const props = getProps()
-    const wrapper = mount(<Balloons {...props} />)
+    render(<Balloons {...props} />)
 
-    expect(wrapper.find("div").prop("className")).toContain("stHidden")
+    const balloonElement = screen.getByTestId("balloons")
+    expect(balloonElement).toHaveClass("stHidden")
   })
 })

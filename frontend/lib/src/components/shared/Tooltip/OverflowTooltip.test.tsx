@@ -48,7 +48,7 @@ describe("Tooltip component", () => {
 
     expect(wrapper.props().content).toBe("")
 
-    expect(useRefSpy).toBeCalledWith(null)
+    expect(useRefSpy).toHaveBeenCalledWith(null)
     expect(wrapper).toMatchSnapshot()
   })
 
@@ -75,7 +75,7 @@ describe("Tooltip component", () => {
 
     expect(wrapper.props().content).toBe("the content")
 
-    expect(useRefSpy).toBeCalledWith(null)
+    expect(useRefSpy).toHaveBeenCalledWith(null)
     expect(wrapper).toMatchSnapshot()
   })
 })

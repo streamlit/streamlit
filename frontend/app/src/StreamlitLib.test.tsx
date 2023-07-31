@@ -206,9 +206,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
     )
   }
 
-  private sendRerunBackMsg = (widgetStates: WidgetStates): void => {
-    console.log(`rerun requested (widgetStates=${widgetStates.toJSON()})`)
-  }
+  private sendRerunBackMsg = (): void => {}
 }
 
 describe("StreamlitLibExample", () => {

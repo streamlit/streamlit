@@ -16,7 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { fireEvent } from "@testing-library/react"
+import { screen, fireEvent } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import { ChatInput as ChatInputProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -47,203 +47,198 @@ describe("ChatInput widget", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const rtlResults = render(<ChatInput {...props} />)
-    expect(rtlResults).toBeDefined()
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    expect(chatInput).toBeInTheDocument()
   })
 
   it("shows a placeholder", () => {
     const props = getProps()
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    expect(textareas[0].placeholder).toEqual(props.element.placeholder)
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    expect(chatInput).toHaveAttribute("placeholder", props.element.placeholder)
   })
 
   it("sets the aria label to the placeholder", () => {
     const props = getProps()
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    expect(textareas[0].getAttribute("aria-label")).toEqual(
-      props.element.placeholder
-    )
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    expect(chatInput).toHaveAttribute("aria-label", props.element.placeholder)
   })
 
   it("sets the value intially to the element default", () => {
     const props = getProps()
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    expect(textareas[0].value).toEqual(props.element.default)
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    expect(chatInput).toHaveTextContent(props.element.default)
   })
 
   it("sets the value when values are typed in", () => {
     const props = getProps()
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    fireEvent.change(textareas[0], { target: { value: "Sample text" } })
-    expect(textareas[0].value).toEqual("Sample text")
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    fireEvent.change(chatInput, { target: { value: "Sample text" } })
+    expect(chatInput).toHaveTextContent("Sample text")
   })
 
   it("does not increase text value when maxChars is set", () => {
     const props = getProps({ maxChars: 10 })
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    fireEvent.change(textareas[0], { target: { value: "1234567890" } })
-    expect(textareas[0].value).toEqual("1234567890")
-    fireEvent.change(textareas[0], { target: { value: "12345678901" } })
-    expect(textareas[0].value).toEqual("1234567890")
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    fireEvent.change(chatInput, { target: { value: "1234567890" } })
+    expect(chatInput).toHaveTextContent("1234567890")
+    fireEvent.change(chatInput, { target: { value: "12345678901" } })
+    expect(chatInput).toHaveTextContent("1234567890")
   })
 
   it("sends and resets the value on enter", () => {
     const props = getProps()
     const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    fireEvent.change(textareas[0], { target: { value: "1234567890" } })
-    expect(textareas[0].value).toEqual("1234567890")
-    fireEvent.keyDown(textareas[0], { key: "Enter" })
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    fireEvent.change(chatInput, { target: { value: "1234567890" } })
+    expect(chatInput).toHaveTextContent("1234567890")
+    fireEvent.keyDown(chatInput, { key: "Enter" })
     expect(spy).toHaveBeenCalledWith(props.element, "1234567890", {
       fromUi: true,
     })
-    expect(textareas[0].value).toEqual("")
+    expect(chatInput).toHaveTextContent("")
   })
 
   it("will not send an empty value on enter if empty", () => {
     const props = getProps()
     const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    fireEvent.keyDown(textareas[0], { key: "Enter" })
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    fireEvent.keyDown(chatInput, { key: "Enter" })
     expect(spy).not.toHaveBeenCalledWith(props.element, "", {
       fromUi: true,
     })
-    expect(textareas[0].value).toEqual("")
+    expect(chatInput).toHaveTextContent("")
   })
 
   it("will not show instructions when the text has changed", () => {
     const props = getProps()
-    const { container, getAllByTestId } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    const instructions = getAllByTestId("InputInstructions")
-    expect(instructions.length).toEqual(1)
-    expect(instructions[0].textContent).toEqual("")
-    fireEvent.change(textareas[0], { target: { value: "1234567890" } })
-    expect(instructions[0].textContent).toEqual("")
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    const instructions = screen.getByTestId("InputInstructions")
+    expect(instructions).toHaveTextContent("")
+
+    fireEvent.change(chatInput, { target: { value: "1234567890" } })
+    expect(instructions).toHaveTextContent("")
   })
 
   it("does not send/clear on shift + enter", () => {
     const props = getProps()
     const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    fireEvent.change(textareas[0], { target: { value: "1234567890" } })
-    expect(textareas[0].value).toEqual("1234567890")
-    fireEvent.keyDown(textareas[0], { key: "Enter", shiftKey: true })
+    render(<ChatInput {...props} />)
+    const chatInput = screen.getByTestId("stChatInput")
+
+    fireEvent.change(chatInput, { target: { value: "1234567890" } })
+    expect(chatInput).toHaveTextContent("1234567890")
+    fireEvent.keyDown(chatInput, { key: "Enter", shiftKey: true })
     // We cannot test the value to be changed cause that is essentially a
     // change event.
-    expect(textareas[0].value).not.toEqual("")
+    expect(chatInput).not.toHaveTextContent("")
     expect(spy).not.toHaveBeenCalled()
   })
 
   it("does not send/clear on ctrl + enter", () => {
     const props = getProps()
     const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    fireEvent.change(textareas[0], { target: { value: "1234567890" } })
-    expect(textareas[0].value).toEqual("1234567890")
-    fireEvent.keyDown(textareas[0], { key: "Enter", ctrlKey: true })
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    fireEvent.change(chatInput, { target: { value: "1234567890" } })
+    expect(chatInput).toHaveTextContent("1234567890")
+    fireEvent.keyDown(chatInput, { key: "Enter", ctrlKey: true })
     // We cannot test the value to be changed cause that is essentially a
     // change event.
-    expect(textareas[0].value).not.toEqual("")
+    expect(chatInput).not.toHaveTextContent("")
     expect(spy).not.toHaveBeenCalled()
   })
 
   it("does not send/clear on meta + enter", () => {
     const props = getProps()
     const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    fireEvent.change(textareas[0], { target: { value: "1234567890" } })
-    expect(textareas[0].value).toEqual("1234567890")
-    fireEvent.keyDown(textareas[0], { key: "Enter", metaKey: true })
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    fireEvent.change(chatInput, { target: { value: "1234567890" } })
+    expect(chatInput).toHaveTextContent("1234567890")
+    fireEvent.keyDown(chatInput, { key: "Enter", metaKey: true })
     // We cannot test the value to be changed cause that is essentially a
     // change event.
-    expect(textareas[0].value).not.toEqual("")
+    expect(chatInput).not.toHaveTextContent("")
     expect(spy).not.toHaveBeenCalled()
   })
 
   it("does sets the value if specified from protobuf to set it", () => {
     const props = getProps({ value: "12345", setValue: true })
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    expect(textareas[0].value).toEqual("12345")
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    expect(chatInput).toHaveTextContent("12345")
   })
 
   it("does not set the value if protobuf does not specify to set it", () => {
     const props = getProps({ value: "12345", setValue: false })
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    expect(textareas[0].value).toEqual("")
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInput")
+    expect(chatInput).toHaveTextContent("")
   })
 
   it("disables the textarea and button", () => {
     const props = getProps({ disabled: true })
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    expect(textareas[0]).toBeDisabled()
+    render(<ChatInput {...props} />)
 
-    const button = container.getElementsByTagName("button")
-    expect(button.length).toEqual(1)
-    expect(button[0]).toBeDisabled()
+    const chatInput = screen.getByTestId("stChatInput")
+    expect(chatInput).toBeDisabled()
+
+    const button = screen.getByRole("button")
+    expect(button).toBeDisabled()
   })
 
   it("not disable the textarea by default", () => {
     const props = getProps()
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    expect(textareas[0]).not.toBeDisabled()
+    render(<ChatInput {...props} />)
 
-    const button = container.getElementsByTagName("button")
-    expect(button.length).toEqual(1)
-    expect(button[0]).toBeDisabled()
+    const chatInput = screen.getByTestId("stChatInput")
+    expect(chatInput).not.toBeDisabled()
+
+    const button = screen.getByRole("button")
+    expect(button).toBeDisabled()
   })
 
   it("disables the send button by default since there's no text", () => {
     const props = getProps()
-    const { container } = render(<ChatInput {...props} />)
+    render(<ChatInput {...props} />)
 
-    const button = container.getElementsByTagName("button")
-    expect(button.length).toEqual(1)
-    expect(button[0]).toBeDisabled()
+    const button = screen.getByRole("button")
+    expect(button).toBeDisabled()
   })
 
   it("enables the send button when text is set, disables it when removed", () => {
     const props = getProps()
-    const { container } = render(<ChatInput {...props} />)
-    const textareas = container.getElementsByTagName("textarea")
-    expect(textareas.length).toEqual(1)
-    fireEvent.change(textareas[0], { target: { value: "Sample text" } })
+    render(<ChatInput {...props} />)
 
-    const button = container.getElementsByTagName("button")
-    expect(button.length).toEqual(1)
-    expect(button[0]).not.toBeDisabled()
+    const chatInput = screen.getByTestId("stChatInput")
+    fireEvent.change(chatInput, { target: { value: "Sample text" } })
 
-    fireEvent.change(textareas[0], { target: { value: "" } })
-    expect(button.length).toEqual(1)
-    expect(button[0]).toBeDisabled()
+    const button = screen.getByRole("button")
+    expect(button).not.toBeDisabled()
+
+    fireEvent.change(chatInput, { target: { value: "" } })
+    expect(button).toBeDisabled()
   })
 })
