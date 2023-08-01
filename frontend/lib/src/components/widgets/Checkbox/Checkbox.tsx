@@ -161,11 +161,7 @@ class Checkbox extends React.PureComponent<Props, State> {
               ? STYLE_TYPE.toggle
               : STYLE_TYPE.default
           }
-          labelPlacement={
-            element.type === CheckboxProto.StyleType.TOGGLE
-              ? LABEL_PLACEMENT.right
-              : undefined
-          }
+          labelPlacement={LABEL_PLACEMENT.right}
           overrides={{
             Root: {
               style: ({ $isFocusVisible }: { $isFocusVisible: boolean }) => ({
