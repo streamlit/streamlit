@@ -65,6 +65,16 @@ describe("Checkbox widget", () => {
     )
   })
 
+  it("has correct className and style", () => {
+    const props = getProps()
+    render(<Checkbox {...props} />)
+    const checkboxElement = screen.getByTestId("stCheckbox")
+
+    expect(checkboxElement).toHaveClass("row-widget")
+    expect(checkboxElement).toHaveClass("stCheckbox")
+    expect(checkboxElement).toHaveStyle(`width: ${props.width}px`)
+  })
+
   it("renders a label", () => {
     const props = getProps()
     render(<Checkbox {...props} />)

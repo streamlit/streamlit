@@ -150,7 +150,11 @@ class Checkbox extends React.PureComponent<Props, State> {
 
     // TODO Check the Widget usage
     return (
-      <div className="row-widget stCheckbox" style={style}>
+      <div
+        className="row-widget stCheckbox"
+        data-testid="stCheckbox"
+        style={style}
+      >
         <UICheckbox
           checked={this.state.value}
           disabled={disabled}
