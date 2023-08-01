@@ -54,8 +54,12 @@ export function mockEndpoints(
   return {
     buildComponentURL: jest.fn(),
     buildMediaURL: jest.fn(),
+    buildFileUploadURL: jest.fn(),
     buildAppPageURL: jest.fn(),
     uploadFileUploaderFile: jest
+      .fn()
+      .mockRejectedValue(new Error("unimplemented mock endpoint")),
+    deleteFileAtURL: jest
       .fn()
       .mockRejectedValue(new Error("unimplemented mock endpoint")),
     fetchCachedForwardMsg: jest

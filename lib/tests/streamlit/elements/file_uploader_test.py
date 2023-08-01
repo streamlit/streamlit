@@ -21,9 +21,13 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import config
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import (
+    DeletedFile,
+    UploadedFile,
+    UploadedFileRec,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -80,16 +84,23 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.file_uploader
         self.assertEqual(c.type, [".png", ".jpg", ".jpeg"])
 
-    @patch("streamlit.elements.widgets.file_uploader._get_file_recs")
-    def test_multiple_files(self, get_file_recs_patch):
+    @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
+    def test_multiple_files(self, get_upload_files_patch):
         """Test the accept_multiple_files flag"""
         # Patch UploadFileManager to return two files
-        file_recs = [
-            UploadedFileRec(1, "file1", "type", b"123"),
-            UploadedFileRec(2, "file2", "type", b"456"),
+        rec1 = UploadedFileRec("file1", "file1", "type", b"123")
+        rec2 = UploadedFileRec("file2", "file2", "type", b"456")
+
+        uploaded_files = [
+            UploadedFile(
+                rec1, FileURLsProto(file_id="file1", delete_url="d1", upload_url="u1")
+            ),
+            UploadedFile(
+                rec2, FileURLsProto(file_id="file2", delete_url="d1", upload_url="u1")
+            ),
         ]
 
-        get_file_recs_patch.return_value = file_recs
+        get_upload_files_patch.return_value = uploaded_files
 
         for accept_multiple in [True, False]:
             return_val = st.file_uploader(
@@ -101,25 +112,21 @@ class FileUploaderTest(DeltaGeneratorTestCase):
             # If "accept_multiple_files" is True, then we should get a list of
             # values back. Otherwise, we should just get a single value.
 
-            # Because file_uploader returns unique UploadedFile instances
-            # each time it's called, we convert the return value back
-            # from UploadedFile -> UploadedFileRec (which implements
-            # equals()) to test equality.
-
             if accept_multiple:
-                results = [
-                    UploadedFileRec(file.id, file.name, file.type, file.getvalue())
-                    for file in return_val
-                ]
-                self.assertEqual(file_recs, results)
+                self.assertEqual(return_val, uploaded_files)
+
+                for actual, expected in zip(return_val, uploaded_files):
+                    self.assertEqual(actual.name, expected.name)
+                    self.assertEqual(actual.type, expected.type)
+                    self.assertEqual(actual.size, expected.size)
+                    self.assertEqual(actual.getvalue(), expected.getvalue())
             else:
-                results = UploadedFileRec(
-                    return_val.id,
-                    return_val.name,
-                    return_val.type,
-                    return_val.getvalue(),
-                )
-                self.assertEqual(file_recs[0], results)
+                first_uploaded_file = uploaded_files[0]
+                self.assertEqual(return_val, first_uploaded_file)
+                self.assertEqual(return_val.name, first_uploaded_file.name)
+                self.assertEqual(return_val.type, first_uploaded_file.type)
+                self.assertEqual(return_val.size, first_uploaded_file.size)
+                self.assertEqual(return_val.getvalue(), first_uploaded_file.getvalue())
 
     def test_max_upload_size_mb(self):
         """Test that the max upload size is the configuration value."""
@@ -130,18 +137,25 @@ class FileUploaderTest(DeltaGeneratorTestCase):
             c.max_upload_size_mb, config.get_option("server.maxUploadSize")
         )
 
-    @patch("streamlit.elements.widgets.file_uploader._get_file_recs")
-    def test_unique_uploaded_file_instance(self, get_file_recs_patch):
+    @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
+    def test_unique_uploaded_file_instance(self, get_upload_files_patch):
         """We should get a unique UploadedFile instance each time we access
         the file_uploader widget."""
 
         # Patch UploadFileManager to return two files
-        file_recs = [
-            UploadedFileRec(1, "file1", "type", b"123"),
-            UploadedFileRec(2, "file2", "type", b"456"),
+        rec1 = UploadedFileRec("file1", "file1", "type", b"123")
+        rec2 = UploadedFileRec("file2", "file2", "type", b"456")
+
+        uploaded_files = [
+            UploadedFile(
+                rec1, FileURLsProto(file_id="file1", delete_url="d1", upload_url="u1")
+            ),
+            UploadedFile(
+                rec2, FileURLsProto(file_id="file2", delete_url="d1", upload_url="u1")
+            ),
         ]
 
-        get_file_recs_patch.return_value = file_recs
+        get_upload_files_patch.return_value = uploaded_files
 
         # These file_uploaders have different labels so that we don't cause
         # a DuplicateKey error - but because we're patching the get_files
@@ -156,40 +170,32 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         self.assertEqual(b"3", file1.read())
         self.assertEqual(b"123", file2.read())
 
-    @patch(
-        "streamlit.runtime.uploaded_file_manager.UploadedFileManager.remove_orphaned_files"
-    )
-    @patch("streamlit.elements.widgets.file_uploader._get_file_recs")
-    def test_remove_orphaned_files(
-        self, get_file_recs_patch, remove_orphaned_files_patch
-    ):
-        """When file_uploader is accessed, it should call
-        UploadedFileManager.remove_orphaned_files.
-        """
-        ctx = get_script_run_ctx()
-        ctx.uploaded_file_mgr._file_id_counter = 101
+    @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
+    def test_deleted_files_filtered_out(self, get_upload_files_patch):
+        """We should filter out DeletedFile objects for final user value."""
 
-        file_recs = [
-            UploadedFileRec(1, "file1", "type", b"123"),
-            UploadedFileRec(2, "file2", "type", b"456"),
+        rec1 = UploadedFileRec("file1", "file1", "type", b"1234")
+        rec2 = UploadedFileRec("file2", "file2", "type", b"5678")
+
+        uploaded_files = [
+            DeletedFile(file_id="a"),
+            UploadedFile(
+                rec1, FileURLsProto(file_id="file1", delete_url="d1", upload_url="u1")
+            ),
+            DeletedFile(file_id="b"),
+            UploadedFile(
+                rec2, FileURLsProto(file_id="file2", delete_url="d1", upload_url="u1")
+            ),
+            DeletedFile(file_id="c"),
         ]
-        get_file_recs_patch.return_value = file_recs
 
-        st.file_uploader("foo", accept_multiple_files=True)
+        get_upload_files_patch.return_value = uploaded_files
 
-        args, kwargs = remove_orphaned_files_patch.call_args
-        self.assertEqual(len(args), 0)
-        self.assertEqual(kwargs["session_id"], "test session id")
-        self.assertEqual(kwargs["newest_file_id"], 100)
-        self.assertEqual(kwargs["active_file_ids"], [1, 2])
+        result_1: UploadedFile = st.file_uploader("a", accept_multiple_files=False)
+        result_2: UploadedFile = st.file_uploader("b", accept_multiple_files=True)
 
-        # Patch _get_file_recs to return [] instead. remove_orphaned_files
-        # should not be called when file_uploader is accessed.
-        get_file_recs_patch.return_value = []
-        remove_orphaned_files_patch.reset_mock()
-
-        st.file_uploader("foo")
-        remove_orphaned_files_patch.assert_not_called()
+        self.assertEqual(result_1, None)
+        self.assertEqual(result_2, [uploaded_files[1], uploaded_files[3]])
 
     @parameterized.expand(
         [
