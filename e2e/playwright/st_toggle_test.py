@@ -33,15 +33,15 @@ def test_toggle_initial_values(app: Page):
     expect(markdown_elements).to_have_count(9)
 
     expected = [
-        "value 1: True",
-        "value 2: False",
-        "value 3: False",
-        "value 4: False",
-        "toggle clicked: False",
-        "value 5: False",
-        "value 6: True",
-        "value 7: False",
-        "value 8: False",
+        "toggle 1 - value: True",
+        "toggle 2 - value: False",
+        "toggle 3 - value: False",
+        "toggle 4 - value: False",
+        "toggle 4 - clicked: False",
+        "toggle 5 - value: False",
+        "toggle 6 - value: True",
+        "toggle 7 - value: False",
+        "toggle 8 - value: False",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
@@ -58,15 +58,15 @@ def test_toggle_values_on_click(app: Page):
 
     markdown_elements = app.locator(".stMarkdown")
     expected = [
-        "value 1: False",
-        "value 2: True",
-        "value 3: True",
-        "value 4: True",
-        "toggle clicked: True",
-        "value 5: False",
-        "value 6: True",
-        "value 7: True",
-        "value 8: True",
+        "toggle 1 - value: False",
+        "toggle 2 - value: True",
+        "toggle 3 - value: True",
+        "toggle 4 - value: True",
+        "toggle 4 - clicked: True",
+        "toggle 5 - value: False",
+        "toggle 6 - value: True",
+        "toggle 7 - value: True",
+        "toggle 8 - value: True",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):

@@ -35,15 +35,15 @@ def test_checkbox_initial_values(app: Page):
     expect(markdown_elements).to_have_count(9)
 
     expected = [
-        "value 1: True",
-        "value 2: False",
-        "value 3: False",
-        "value 4: False",
-        "checkbox clicked: False",
-        "value 5: False",
-        "value 6: True",
-        "value 7: False",
-        "value 8: False",
+        "checkbox 1 - value: True",
+        "checkbox 2 - value: False",
+        "checkbox 3 - value: False",
+        "checkbox 4 - value: False",
+        "checkbox 4 - clicked: False",
+        "checkbox 5 - value: False",
+        "checkbox 6 - value: True",
+        "checkbox 7 - value: False",
+        "checkbox 8 - value: False",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
@@ -60,15 +60,15 @@ def test_checkbox_values_on_click(app: Page):
 
     markdown_elements = app.locator(".stMarkdown")
     expected = [
-        "value 1: False",
-        "value 2: True",
-        "value 3: True",
-        "value 4: True",
-        "checkbox clicked: True",
-        "value 5: False",
-        "value 6: True",
-        "value 7: True",
-        "value 8: True",
+        "checkbox 1 - value 1: False",
+        "checkbox 2 - value 2: True",
+        "checkbox 3 - value 3: True",
+        "checkbox 4 - value 4: True",
+        "checkbox 4 - clicked: True",
+        "checkbox 5 - value 5: False",
+        "checkbox 6 - value 6: True",
+        "checkbox 7 - value 7: True",
+        "checkbox 8 - value 8: True",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):

@@ -16,15 +16,15 @@ import streamlit as st
 from streamlit import runtime
 
 i1 = st.toggle("toggle 1", True)
-st.write("value 1:", i1)
+st.write("toggle 1 - value:", i1)
 
 i2 = st.toggle("toggle 2", False)
-st.write("value 2:", i2)
+st.write("toggle 2 - value:", i2)
 
 i3 = st.toggle(
     "toggle 3: This is a really really really really long label that should wrap eventually if we keep addding more text to it "
 )
-st.write("value 3:", i3)
+st.write("toggle 3 - value:", i3)
 
 if runtime.exists():
 
@@ -32,17 +32,17 @@ if runtime.exists():
         st.session_state.toggle_clicked = True
 
     st.toggle("toggle 4", key="toggle4", on_change=on_change)
-    st.write("value 4:", st.session_state.toggle4)
-    st.write("toggle clicked:", "toggle_clicked" in st.session_state)
+    st.write("toggle 4 - value:", st.session_state.toggle4)
+    st.write("toggle 4 - clicked:", "toggle_clicked" in st.session_state)
 
 i5 = st.toggle("toggle 5", disabled=True)
-st.write("value 5:", i5)
+st.write("toggle 5 - value:", i5)
 
 i6 = st.toggle("toggle 6", value=True, disabled=True)
-st.write("value 6:", i6)
+st.write("toggle 6 - value:", i6)
 
 i7 = st.toggle("toggle 7", label_visibility="hidden")
-st.write("value 7:", i7)
+st.write("toggle 7 - value:", i7)
 
 i8 = st.toggle("toggle 8", label_visibility="collapsed")
-st.write("value 8:", i8)
+st.write("toggle 8 - value:", i8)
