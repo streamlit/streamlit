@@ -15,8 +15,6 @@
  */
 
 import React from "react"
-import { BaseProvider } from "baseui"
-import { Global, ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 
 import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 import {
@@ -25,7 +23,6 @@ import {
   createAutoTheme,
   createPresetThemes,
   getDefaultTheme,
-  globalStyles,
   isPresetTheme,
   removeCachedTheme,
   setCachedTheme,
@@ -33,6 +30,7 @@ import {
   createTheme,
   CustomThemeConfig,
   ICustomThemeConfig,
+  RootStyleProvider,
 } from "@streamlit/lib"
 
 import AppWithScreencast from "./App"
@@ -101,28 +99,22 @@ const ThemedApp = (): JSX.Element => {
   }, [theme, availableThemes, updateAutoTheme])
 
   return (
-    <BaseProvider
-      theme={theme.basewebTheme}
-      zIndex={theme.emotion.zIndices.popupMenu}
-    >
-      <EmotionThemeProvider theme={theme.emotion}>
-        <Global styles={globalStyles(theme.emotion)} />
-        {theme.name === CUSTOM_THEME_NAME && fontFaces && (
-          <FontFaceDeclaration fontFaces={fontFaces} />
-        )}
-        <AppWithScreencast
-          theme={{
-            setTheme: updateTheme,
-            activeTheme: theme,
-            addThemes,
-            availableThemes,
-            setImportedTheme,
-          }}
-        />
-        {/* The data grid requires one root level portal element for rendering cell overlays */}
-        <StyledDataFrameOverlay id="portal" />
-      </EmotionThemeProvider>
-    </BaseProvider>
+    <RootStyleProvider theme={theme}>
+      {theme.name === CUSTOM_THEME_NAME && fontFaces && (
+        <FontFaceDeclaration fontFaces={fontFaces} />
+      )}
+      <AppWithScreencast
+        theme={{
+          setTheme: updateTheme,
+          activeTheme: theme,
+          addThemes,
+          availableThemes,
+          setImportedTheme,
+        }}
+      />
+      {/* The data grid requires one root level portal element for rendering cell overlays */}
+      <StyledDataFrameOverlay id="portal" />
+    </RootStyleProvider>
   )
 }
 
