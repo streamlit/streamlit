@@ -349,6 +349,11 @@ class NumberInputMixin:
         number_input_proto.label = label
         number_input_proto.default = value
         number_input_proto.form_id = current_form_id(self.dg)
+        number_input_proto.disabled = disabled
+        number_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if help is not None:
             number_input_proto.help = dedent(help)
 
@@ -377,13 +382,6 @@ class NumberInputMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-        )
-
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        number_input_proto.disabled = disabled
-        number_input_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
         )
 
         if widget_state.value_changed:

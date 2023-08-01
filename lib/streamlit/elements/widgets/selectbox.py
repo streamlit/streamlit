@@ -243,6 +243,11 @@ class SelectboxMixin:
         selectbox_proto.options[:] = [str(format_func(option)) for option in opt]
         selectbox_proto.form_id = current_form_id(self.dg)
         selectbox_proto.placeholder = placeholder
+        selectbox_proto.disabled = disabled
+        selectbox_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if help is not None:
             selectbox_proto.help = dedent(help)
 
@@ -260,12 +265,6 @@ class SelectboxMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        selectbox_proto.disabled = disabled
-        selectbox_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
         if widget_state.value_changed:
             selectbox_proto.value = serde.serialize(widget_state.value)
             selectbox_proto.set_value = True

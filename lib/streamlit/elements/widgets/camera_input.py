@@ -209,6 +209,10 @@ class CameraInputMixin:
         camera_input_proto.id = id
         camera_input_proto.label = label
         camera_input_proto.form_id = current_form_id(self.dg)
+        camera_input_proto.disabled = disabled
+        camera_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
 
         if help is not None:
             camera_input_proto.help = dedent(help)
@@ -225,13 +229,6 @@ class CameraInputMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-        )
-
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        camera_input_proto.disabled = disabled
-        camera_input_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
         )
 
         self.dg._enqueue("camera_input", camera_input_proto)

@@ -368,6 +368,7 @@ class ButtonMixin:
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
+        download_button_proto.disabled = disabled
 
         if help is not None:
             download_button_proto.help = dedent(help)
@@ -385,10 +386,6 @@ class ButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        download_button_proto.disabled = disabled
 
         self.dg._enqueue("download_button", download_button_proto)
         return button_state.value
@@ -446,6 +443,8 @@ class ButtonMixin:
         button_proto.form_id = current_form_id(self.dg)
         button_proto.type = type
         button_proto.use_container_width = use_container_width
+        button_proto.disabled = disabled
+
         if help is not None:
             button_proto.help = dedent(help)
 
@@ -462,10 +461,6 @@ class ButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        button_proto.disabled = disabled
 
         self.dg._enqueue("button", button_proto)
 

@@ -234,6 +234,10 @@ class TextWidgetsMixin:
         text_input_proto.label = label
         text_input_proto.default = str(value)
         text_input_proto.form_id = current_form_id(self.dg)
+        text_input_proto.disabled = disabled
+        text_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
 
         if help is not None:
             text_input_proto.help = dedent(help)
@@ -274,12 +278,6 @@ class TextWidgetsMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        text_input_proto.disabled = disabled
-        text_input_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
         if widget_state.value_changed:
             text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
@@ -444,6 +442,10 @@ class TextWidgetsMixin:
         text_area_proto.label = label
         text_area_proto.default = str(value)
         text_area_proto.form_id = current_form_id(self.dg)
+        text_area_proto.disabled = disabled
+        text_area_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
 
         if help is not None:
             text_area_proto.help = dedent(help)
@@ -470,12 +472,6 @@ class TextWidgetsMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        text_area_proto.disabled = disabled
-        text_area_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
         if widget_state.value_changed:
             text_area_proto.value = widget_state.value
             text_area_proto.set_value = True

@@ -185,6 +185,11 @@ class CheckboxMixin:
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
         checkbox_proto.form_id = current_form_id(self.dg)
+        checkbox_proto.disabled = disabled
+        checkbox_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if help is not None:
             checkbox_proto.help = dedent(help)
 
@@ -200,13 +205,6 @@ class CheckboxMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-        )
-
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        checkbox_proto.disabled = disabled
-        checkbox_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
         )
 
         if checkbox_state.value_changed:
