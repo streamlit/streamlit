@@ -96,10 +96,25 @@ describe("st.radio", () => {
         "value 7: female" +
         "value 8: female" +
         "value 9: bold text" +
-        "value 10: yes" +
+        "value 10: A" +
         "value 11: yes" +
         "value 12: male" +
         "radio changed: False"
+    );
+  });
+
+  it("has correct caption values", () => {
+    cy.get("[data-testid='stCaptionContainer']").should(
+      "have.text",
+      "bold text" +
+        "italics text" +
+        "strikethrough text" +
+        "shortcode: 😊" +
+        "link text" +
+        "code text" +
+        "red blue green violet orange" +
+        "Opt in" +
+        "Opt out"
     );
   });
 
@@ -143,7 +158,7 @@ describe("st.radio", () => {
         "value 7: male" +
         "value 8: male" +
         "value 9: red blue green violet orange" +
-        "value 10: no" +
+        "value 10: G" +
         "value 11: no" +
         "value 12: male" +
         "radio changed: False"
@@ -170,7 +185,7 @@ describe("st.radio", () => {
         "value 7: female" +
         "value 8: female" +
         "value 9: bold text" +
-        "value 10: yes" +
+        "value 10: A" +
         "value 11: yes" +
         "value 12: female" +
         "radio changed: True"

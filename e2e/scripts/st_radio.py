@@ -57,7 +57,9 @@ i9 = st.radio("radio 9", markdown_options)
 st.write("value 9:", i9)
 
 i10 = st.radio(
-    "radio 10 - captions", ["yes", "maybe", "no"], captions=["Opt in", "", "Opt out"]
+    "radio 10 - captions",
+    ["A", "B", "C", "D", "E", "F", "G"],
+    captions=markdown_options,
 )
 st.write("value 10:", i10)
 
