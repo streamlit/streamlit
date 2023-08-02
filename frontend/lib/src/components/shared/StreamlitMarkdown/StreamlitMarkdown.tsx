@@ -179,7 +179,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
   return React.createElement(
     tag,
     { ...tagProps, ref, id: elementId },
-    <StyledLinkIconContainer>
+    <StyledLinkIconContainer data-testid="StyledLinkIconContainer">
       {elementId && !hideAnchor && (
         <StyledLinkIcon href={`#${elementId}`}>
           <LinkIcon size="18" />
