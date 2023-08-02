@@ -37,6 +37,11 @@ function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, width, endpoints } = props
   const style = { width }
 
+  const kind =
+    element.type === "primary"
+      ? BaseButtonKind.PRIMARY
+      : BaseButtonKind.SECONDARY
+
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
@@ -60,7 +65,7 @@ function DownloadButton(props: Props): ReactElement {
     >
       <BaseButtonTooltip help={element.help}>
         <BaseButton
-          kind={BaseButtonKind.SECONDARY}
+          kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
           onClick={handleDownloadClick}
