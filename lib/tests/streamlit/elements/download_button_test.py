@@ -30,6 +30,7 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.download_button
         self.assertEqual(c.label, "the label")
+        self.assertEqual(c.type, "secondary")
         self.assertEqual(c.disabled, False)
 
     def test_just_disabled(self):
@@ -45,6 +46,13 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.download_button
         self.assertTrue("/media/" in c.url)
+
+    def test_type(self):
+        """Test that it can be called with type param."""
+        st.download_button("the label", data="Streamlit", type="primary")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        self.assertEqual(c.type, "primary")
 
     def test_use_container_width_can_be_set_to_true(self):
         """Test use_container_width can be set to true."""
