@@ -69,7 +69,7 @@ def _process_avatar_input(
 
     if avatar is None:
         return AvatarType.ICON, ""
-    elif isinstance(avatar, str) and avatar in set(item.value for item in PresetNames):
+    elif isinstance(avatar, str) and avatar in {item.value for item in PresetNames}:
         # On the frontend, we only support "assistant" and "user" for the avatar.
         return (
             AvatarType.ICON,
