@@ -73,6 +73,38 @@ class ChatTest(DeltaGeneratorTestCase):
             BlockProto.ChatMessage.AvatarType.ICON,
         )
 
+    def test_ai_message(self):
+        """Test that the ai preset is mapped to assistant avatar."""
+        message = st.chat_message("ai")
+
+        with message:
+            pass
+
+        message_block = self.get_delta_from_queue()
+
+        self.assertEqual(message_block.add_block.chat_message.name, "ai")
+        self.assertEqual(message_block.add_block.chat_message.avatar, "assistant")
+        self.assertEqual(
+            message_block.add_block.chat_message.avatar_type,
+            BlockProto.ChatMessage.AvatarType.ICON,
+        )
+
+    def test_human_message(self):
+        """Test that the human preset is mapped to user avatar."""
+        message = st.chat_message("human")
+
+        with message:
+            pass
+
+        message_block = self.get_delta_from_queue()
+
+        self.assertEqual(message_block.add_block.chat_message.name, "human")
+        self.assertEqual(message_block.add_block.chat_message.avatar, "user")
+        self.assertEqual(
+            message_block.add_block.chat_message.avatar_type,
+            BlockProto.ChatMessage.AvatarType.ICON,
+        )
+
     def test_emoji_avatar(self):
         """Test that it is possible to set an emoji as avatar."""
 

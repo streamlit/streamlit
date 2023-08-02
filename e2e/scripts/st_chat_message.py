@@ -66,4 +66,4 @@ with st.chat_message("Bot"):
     with st.expander("See more", expanded=True):
         st.write("Lorem ipsum dolor sit amet")
 
-st.chat_message("user")
+st.chat_message("human")
