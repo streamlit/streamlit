@@ -41,7 +41,7 @@ import remarkGfm from "remark-gfm"
 import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
-import { getTextColors } from "@streamlit/lib/src/theme"
+import { getMarkdownTextColors } from "@streamlit/lib/src/theme"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
@@ -280,7 +280,7 @@ export function RenderedMarkdown({
   }
   const theme = useTheme()
   const { red, orange, yellow, green, blue, violet, purple, gray } =
-    getTextColors(theme)
+    getMarkdownTextColors(theme)
   const colorMapping = new Map(
     Object.entries({
       red: `color: ${red}`,

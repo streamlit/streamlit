@@ -417,15 +417,16 @@ export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
   return getLuminance(theme.colors.bgColor) > 0.5
 }
 
-export function getTextColors(theme: EmotionTheme): any {
-  const red = getMdRed(theme)
-  const orange = getMdOrange(theme)
-  const yellow = getMdYellow(theme)
-  const green = getMdGreen(theme)
-  const blue = getMdBlue(theme)
-  const violet = getMdViolet(theme)
-  const purple = getMdPurple(theme)
-  const gray = getMdGray(theme)
+export function getMarkdownTextColors(theme: EmotionTheme): any {
+  const lightTheme = hasLightBackgroundColor(theme)
+  const red = lightTheme ? theme.colors.red80 : theme.colors.red70
+  const orange = lightTheme ? theme.colors.orange100 : theme.colors.orange60
+  const yellow = lightTheme ? theme.colors.yellow100 : theme.colors.yellow30
+  const green = lightTheme ? theme.colors.green90 : theme.colors.green60
+  const blue = lightTheme ? theme.colors.blue80 : theme.colors.blue50
+  const violet = lightTheme ? theme.colors.purple80 : theme.colors.purple50
+  const purple = lightTheme ? theme.colors.purple100 : theme.colors.purple90
+  const gray = lightTheme ? theme.colors.gray80 : theme.colors.gray70
   return {
     red: red,
     orange: orange,
@@ -454,54 +455,6 @@ export function getGray90(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.gray90
     : theme.colors.gray10
-}
-
-export function getMdRed(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.red80
-    : theme.colors.red70
-}
-
-export function getMdBlue(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.blue80
-    : theme.colors.blue50
-}
-
-export function getMdGreen(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.green90
-    : theme.colors.green60
-}
-
-export function getMdViolet(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.purple80
-    : theme.colors.purple50
-}
-
-export function getMdOrange(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.orange100
-    : theme.colors.orange60
-}
-
-export function getMdGray(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.gray80
-    : theme.colors.gray70
-}
-
-export function getMdYellow(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.yellow100
-    : theme.colors.yellow30
-}
-
-export function getMdPurple(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.purple100
-    : theme.colors.purple90
 }
 
 function getBlueArrayAsc(theme: EmotionTheme): string[] {
