@@ -46,6 +46,16 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       orient: "top",
       offset: 26,
     },
+    header: {
+      titleFontWeight: theme.fontWeights.normal,
+      titleFontSize: theme.fontSizes.mdPx,
+      titleColor: getGray70(theme),
+      titleFontStyle: "normal",
+      labelFontSize: theme.fontSizes.twoSmPx,
+      labelFontWeight: theme.fontWeights.normal,
+      labelColor: getGray70(theme),
+      labelFontStyle: "normal",
+    },
     axis: {
       labelFontSize: theme.fontSizes.twoSmPx,
       labelFontWeight: theme.fontWeights.normal,
@@ -165,8 +175,11 @@ export function applyThemeDefaults(config: any, theme: EmotionTheme): any {
     },
     header: {
       labelColor: colors.bodyText,
+      titleColor: colors.bodyText,
+      ...themeFonts,
     },
     view: {
+      stroke: getGray30(theme),
       continuousHeight: 350,
       continuousWidth: 400,
     },
