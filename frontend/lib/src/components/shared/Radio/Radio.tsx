@@ -187,6 +187,7 @@ class Radio extends React.PureComponent<Props, State> {
                   style={
                     horizontal
                       ? {
+                          // Align the caption with the horizontal radio button
                           display: "flex",
                           justifyContent: "center",
                           alignItems: "center",
