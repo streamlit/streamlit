@@ -314,8 +314,6 @@ class ButtonMixin:
         """
         ctx = get_script_run_ctx()
 
-        # Checks whether the entered button type is one of the allowed options - either
-        # "primary" or "secondary"
         if type not in ["primary", "secondary"]:
             raise StreamlitAPIException(
                 'The type argument to st.button must be "primary" or "secondary". \n'
