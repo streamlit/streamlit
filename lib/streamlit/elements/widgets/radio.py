@@ -249,7 +249,7 @@ class RadioMixin:
                 "Radio index must be between 0 and length of options"
             )
 
-        def handle_captions(caption: str) -> str:
+        def handle_captions(caption: Optional[str]) -> str:
             if caption is None:
                 return ""
             elif isinstance(caption, str):
