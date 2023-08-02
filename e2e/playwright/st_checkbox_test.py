@@ -15,7 +15,7 @@
 
 from playwright.sync_api import Page, expect
 
-from conftest import ImageCompareFunction, wait_for_app_run
+from conftest import ImageCompareFunction
 
 
 def test_checkbox_widget_display(
@@ -34,21 +34,20 @@ def test_checkbox_initial_values(app: Page):
     markdown_elements = app.locator(".stMarkdown")
     expect(markdown_elements).to_have_count(9)
 
-    texts = [text.strip() for text in markdown_elements.all_inner_texts()]
-
     expected = [
-        "value 1: True",
-        "value 2: False",
-        "value 3: False",
-        "value 4: False",
-        "checkbox clicked: False",
-        "value 5: False",
-        "value 6: True",
-        "value 7: False",
-        "value 8: False",
+        "checkbox 1 - value: True",
+        "checkbox 2 - value: False",
+        "checkbox 3 - value: False",
+        "checkbox 4 - value: False",
+        "checkbox 4 - clicked: False",
+        "checkbox 5 - value: False",
+        "checkbox 6 - value: True",
+        "checkbox 7 - value: False",
+        "checkbox 8 - value: False",
     ]
 
-    assert texts == expected, "Initial values do not match expected values."
+    for markdown_element, expected_text in zip(markdown_elements.all(), expected):
+        expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
 
 
 def test_checkbox_values_on_click(app: Page):
@@ -58,21 +57,19 @@ def test_checkbox_values_on_click(app: Page):
 
     for checkbox_element in checkbox_elements.all():
         checkbox_element.click(delay=50)
-    # The app run needs to finish before we can check the values.
-    wait_for_app_run(app, 500)
 
     markdown_elements = app.locator(".stMarkdown")
-    texts = [text.strip() for text in markdown_elements.all_inner_texts()]
-
     expected = [
-        "value 1: False",
-        "value 2: True",
-        "value 3: True",
-        "value 4: True",
-        "checkbox clicked: True",
-        "value 5: False",
-        "value 6: True",
-        "value 7: True",
-        "value 8: True",
+        "checkbox 1 - value: False",
+        "checkbox 2 - value: True",
+        "checkbox 3 - value: True",
+        "checkbox 4 - value: True",
+        "checkbox 4 - clicked: True",
+        "checkbox 5 - value: False",
+        "checkbox 6 - value: True",
+        "checkbox 7 - value: True",
+        "checkbox 8 - value: True",
     ]
-    assert texts == expected, "Post-click values do not match expected values."
+
+    for markdown_element, expected_text in zip(markdown_elements.all(), expected):
+        expect(markdown_element).to_have_text(expected_text, use_inner_text=True)

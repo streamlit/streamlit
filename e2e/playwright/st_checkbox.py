@@ -15,32 +15,34 @@
 import streamlit as st
 from streamlit import runtime
 
-i1 = st.checkbox("checkbox 1", True)
-st.write("value 1:", i1)
+i1 = st.checkbox("checkbox 1 (True)", True)
+st.write("checkbox 1 - value:", i1)
 
-i2 = st.checkbox("checkbox 2", False)
-st.write("value 2:", i2)
+i2 = st.checkbox("checkbox 2 (False)", False)
+st.write("checkbox 2 - value:", i2)
 
-i3 = st.checkbox("checkbox 3")
-st.write("value 3:", i3)
+i3 = st.checkbox(
+    "checkbox 3: This is a really really really really long label that should wrap eventually if we keep addding more text to it"
+)
+st.write("checkbox 3 - value:", i3)
 
 if runtime.exists():
 
     def on_change():
         st.session_state.checkbox_clicked = True
 
-    st.checkbox("checkbox 4", key="checkbox4", on_change=on_change)
-    st.write("value 4:", st.session_state.checkbox4)
-    st.write("checkbox clicked:", "checkbox_clicked" in st.session_state)
+    st.checkbox("checkbox 4 (with callback)", key="checkbox4", on_change=on_change)
+    st.write("checkbox 4 - value:", st.session_state.checkbox4)
+    st.write("checkbox 4 - clicked:", "checkbox_clicked" in st.session_state)
 
-i5 = st.checkbox("checkbox 5", disabled=True)
-st.write("value 5:", i5)
+i5 = st.checkbox("checkbox 5 (False, disabled)", disabled=True)
+st.write("checkbox 5 - value:", i5)
 
-i6 = st.checkbox("checkbox 6", value=True, disabled=True)
-st.write("value 6:", i6)
+i6 = st.checkbox("checkbox 6 (True, disabled)", value=True, disabled=True)
+st.write("checkbox 6 - value:", i6)
 
-i7 = st.checkbox("checkbox 7", label_visibility="hidden")
-st.write("value 7:", i7)
+i7 = st.checkbox("checkbox 7 (label hidden)", label_visibility="hidden")
+st.write("checkbox 7 - value:", i7)
 
-i8 = st.checkbox("checkbox 8", label_visibility="collapsed")
-st.write("value 8:", i8)
+i8 = st.checkbox("checkbox 8 (label collapsed)", label_visibility="collapsed")
+st.write("checkbox 8 - value:", i8)
