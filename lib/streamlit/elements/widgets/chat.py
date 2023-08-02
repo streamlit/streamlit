@@ -35,6 +35,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.string_util import is_emoji
 from streamlit.type_util import Key, to_key
 
@@ -45,6 +46,8 @@ if TYPE_CHECKING:
 class PresetNames(str, Enum):
     USER = "user"
     ASSISTANT = "assistant"
+    AI = "ai"  # Equivalent to assistant
+    HUMAN = "human"  # Equivalent to user
 
 
 def _process_avatar_input(
@@ -66,11 +69,14 @@ def _process_avatar_input(
 
     if avatar is None:
         return AvatarType.ICON, ""
-    elif isinstance(avatar, str) and avatar in [
-        PresetNames.USER,
-        PresetNames.ASSISTANT,
-    ]:
-        return AvatarType.ICON, avatar
+    elif isinstance(avatar, str) and avatar in {item.value for item in PresetNames}:
+        # On the frontend, we only support "assistant" and "user" for the avatar.
+        return (
+            AvatarType.ICON,
+            "assistant"
+            if avatar in [PresetNames.AI, PresetNames.ASSISTANT]
+            else "user",
+        )
     elif isinstance(avatar, str) and is_emoji(avatar):
         return AvatarType.EMOJI, avatar
     else:
@@ -112,7 +118,7 @@ class ChatMixin:
     @gather_metrics("chat_message")
     def chat_message(
         self,
-        name: Literal["user", "assistant"] | str,
+        name: Literal["user", "assistant", "ai", "human"] | str,
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
     ) -> "DeltaGenerator":
@@ -124,9 +130,9 @@ class ChatMixin:
 
         Parameters
         ----------
-        name : "user", "assistant", or str
-            The name of the message author. Can be “user” or “assistant” to
-            enable preset styling and avatars.
+        name : "user", "assistant", "ai", "human", or str
+            The name of the message author. Can be “user”, “assistant”, “ai”, or “human”
+            to enable preset styling and avatars.
 
             Currently, the name is not shown in the UI but is only set as an
             accessibility label. For accessibility reasons, you should not use
@@ -141,8 +147,8 @@ class ChatMixin:
                 image file; URL to fetch the image from; array of shape (w,h) or (w,h,1)
                 for a monochrome image, (w,h,3) for a color image, or (w,h,4) for an RGBA image.
 
-            If None (default), uses default icons if ``name`` is "user" or
-            "assistant", or the first letter of the ``name`` value.
+            If None (default), uses default icons if ``name`` is "user",
+            "assistant", "ai", "human" or the first letter of the ``name`` value.
 
         Returns
         -------
@@ -184,12 +190,7 @@ class ChatMixin:
             )
 
         if avatar is None and (
-            name.lower()
-            in [
-                PresetNames.USER,
-                PresetNames.ASSISTANT,
-            ]
-            or is_emoji(name)
+            name.lower() in {item.value for item in PresetNames} or is_emoji(name)
         ):
             # For selected labels, we are mapping the label to an avatar
             avatar = name.lower()
@@ -277,6 +278,13 @@ class ChatMixin:
         check_callback_rules(self.dg, on_submit)
         check_session_state_rules(default_value=default, key=key, writes_allowed=False)
 
+        id = compute_widget_id(
+            "chat_input",
+            user_key=key,
+            placeholder=placeholder,
+            max_chars=max_chars,
+        )
+
         # We omit this check for scripts running outside streamlit, because
         # they will have no script_run_ctx.
         if runtime.exists():
@@ -293,6 +301,7 @@ class ChatMixin:
                 raise StreamlitAPIException(DISALLOWED_CONTAINERS_ERROR_TEXT)
 
         chat_input_proto = ChatInputProto()
+        chat_input_proto.id = id
         chat_input_proto.placeholder = str(placeholder)
 
         if max_chars is not None:

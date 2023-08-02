@@ -28,14 +28,14 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.web.server.server import MEDIA_ENDPOINT
+from streamlit.web.server.server import MEDIA_ENDPOINT, UPLOAD_FILE_ENDPOINT
 
 
 class DeltaGeneratorTestCase(unittest.TestCase):
@@ -51,7 +51,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             _enqueue=self.forward_msg_queue.enqueue,
             query_string="",
             session_state=SafeSessionState(SessionState()),
-            uploaded_file_mgr=UploadedFileManager(),
+            uploaded_file_mgr=MemoryUploadedFileManager(UPLOAD_FILE_ENDPOINT),
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
@@ -64,6 +64,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         mock_runtime.media_file_mgr = MediaFileManager(self.media_file_storage)
+        mock_runtime.uploaded_file_mgr = self.script_run_ctx.uploaded_file_mgr
         Runtime._instance = mock_runtime
 
     def tearDown(self):

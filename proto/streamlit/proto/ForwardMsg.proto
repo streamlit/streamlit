@@ -16,6 +16,7 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/Common.proto";
 import "streamlit/proto/Delta.proto";
 import "streamlit/proto/GitInfo.proto";
 import "streamlit/proto/NewSession.proto";
@@ -65,6 +66,7 @@ message ForwardMsg {
     // Other messages.
     PageNotFound page_not_found = 15;
     PagesChanged pages_changed = 16;
+    FileURLsResponse file_urls_response = 19;
 
     // A reference to a ForwardMsg that has already been delivered.
     // The client should substitute the message with the given hash
@@ -79,7 +81,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 19
+  // Next: 20
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

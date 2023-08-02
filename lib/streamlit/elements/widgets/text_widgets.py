@@ -36,6 +36,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -214,10 +215,29 @@ class TextWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        id = compute_widget_id(
+            "text_input",
+            user_key=key,
+            label=label,
+            value=str(value),
+            max_chars=max_chars,
+            key=key,
+            type=type,
+            help=help,
+            autocomplete=autocomplete,
+            placeholder=str(placeholder),
+            form_id=current_form_id(self.dg),
+        )
+
         text_input_proto = TextInputProto()
+        text_input_proto.id = id
         text_input_proto.label = label
         text_input_proto.default = str(value)
         text_input_proto.form_id = current_form_id(self.dg)
+        text_input_proto.disabled = disabled
+        text_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
 
         if help is not None:
             text_input_proto.help = dedent(help)
@@ -258,12 +278,6 @@ class TextWidgetsMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        text_input_proto.disabled = disabled
-        text_input_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
         if widget_state.value_changed:
             text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
@@ -410,10 +424,28 @@ class TextWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        id = compute_widget_id(
+            "text_area",
+            user_key=key,
+            label=label,
+            value=str(value),
+            height=height,
+            max_chars=max_chars,
+            key=key,
+            help=help,
+            placeholder=str(placeholder),
+            form_id=current_form_id(self.dg),
+        )
+
         text_area_proto = TextAreaProto()
+        text_area_proto.id = id
         text_area_proto.label = label
         text_area_proto.default = str(value)
         text_area_proto.form_id = current_form_id(self.dg)
+        text_area_proto.disabled = disabled
+        text_area_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
 
         if help is not None:
             text_area_proto.help = dedent(help)
@@ -440,12 +472,6 @@ class TextWidgetsMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        text_area_proto.disabled = disabled
-        text_area_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
         if widget_state.value_changed:
             text_area_proto.value = widget_state.value
             text_area_proto.set_value = True

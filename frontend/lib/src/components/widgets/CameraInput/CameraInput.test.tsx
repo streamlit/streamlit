@@ -22,6 +22,7 @@ import { mount, shallow } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   CameraInput as CameraInputProto,
+  FileURLs as FileURLsProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
 import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
@@ -38,10 +39,7 @@ jest.mock("react-device-detect", () => {
   }
 })
 
-const INITIAL_SERVER_FILE_ID = 1
-
 const getProps = (elementProps: Partial<CameraInputProto> = {}): Props => {
-  let mockServerFileIdCounter = INITIAL_SERVER_FILE_ID
   return {
     element: CameraInputProto.create({
       id: "id",
@@ -56,13 +54,23 @@ const getProps = (elementProps: Partial<CameraInputProto> = {}): Props => {
       sendRerunBackMsg: jest.fn(),
       formsDataChanged: jest.fn(),
     }),
-    mockServerFileIdCounter: 1,
     // @ts-expect-error
     uploadClient: {
       uploadFile: jest.fn().mockImplementation(() => {
-        // Mock UploadClient to return an incremented ID for each upload.
-        return Promise.resolve(mockServerFileIdCounter++)
+        return Promise.resolve()
       }),
+      fetchFileURLs: jest.fn().mockImplementation((acceptedFiles: File[]) => {
+        return Promise.resolve(
+          acceptedFiles.map(file => {
+            return new FileURLsProto({
+              fileId: file.name,
+              uploadUrl: file.name,
+              deleteUrl: file.name,
+            })
+          })
+        )
+      }),
+      deleteFile: jest.fn(),
     },
   }
 }
@@ -87,7 +95,6 @@ describe("CameraInput widget", () => {
     const wrapper = shallow(<CameraInput {...props} />)
     expect(wrapper.state()).toEqual({
       files: [],
-      newestServerFileId: 0,
       clearPhotoInProgress: false,
       facingMode: FacingMode.USER,
       imgSrc: null,
@@ -198,7 +205,6 @@ describe("CameraInput widget", () => {
     await wrapper.instance().removeCapture()
     expect(wrapper.state()).toEqual({
       files: [],
-      newestServerFileId: 1,
       clearPhotoInProgress: true,
       facingMode: FacingMode.USER,
       imgSrc: null,
