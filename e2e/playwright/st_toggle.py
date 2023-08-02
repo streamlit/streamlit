@@ -15,10 +15,10 @@
 import streamlit as st
 from streamlit import runtime
 
-i1 = st.toggle("toggle 1", True)
+i1 = st.toggle("toggle 1 (True)", True)
 st.write("toggle 1 - value:", i1)
 
-i2 = st.toggle("toggle 2", False)
+i2 = st.toggle("toggle 2 (False)", False)
 st.write("toggle 2 - value:", i2)
 
 i3 = st.toggle(
@@ -31,18 +31,18 @@ if runtime.exists():
     def on_change():
         st.session_state.toggle_clicked = True
 
-    st.toggle("toggle 4", key="toggle4", on_change=on_change)
+    st.toggle("toggle 4 (with callback)", key="toggle4", on_change=on_change)
     st.write("toggle 4 - value:", st.session_state.toggle4)
     st.write("toggle 4 - clicked:", "toggle_clicked" in st.session_state)
 
-i5 = st.toggle("toggle 5", disabled=True)
+i5 = st.toggle("toggle 5 (False, disabled)", disabled=True)
 st.write("toggle 5 - value:", i5)
 
-i6 = st.toggle("toggle 6", value=True, disabled=True)
+i6 = st.toggle("toggle 6 (True, disabled)", value=True, disabled=True)
 st.write("toggle 6 - value:", i6)
 
-i7 = st.toggle("toggle 7", label_visibility="hidden")
+i7 = st.toggle("toggle 7 (label hidden)", label_visibility="hidden")
 st.write("toggle 7 - value:", i7)
 
-i8 = st.toggle("toggle 8", label_visibility="collapsed")
+i8 = st.toggle("toggle 8 (label collapsed)", label_visibility="collapsed")
 st.write("toggle 8 - value:", i8)

@@ -60,15 +60,15 @@ def test_checkbox_values_on_click(app: Page):
 
     markdown_elements = app.locator(".stMarkdown")
     expected = [
-        "checkbox 1 - value 1: False",
-        "checkbox 2 - value 2: True",
-        "checkbox 3 - value 3: True",
-        "checkbox 4 - value 4: True",
+        "checkbox 1 - value: False",
+        "checkbox 2 - value: True",
+        "checkbox 3 - value: True",
+        "checkbox 4 - value: True",
         "checkbox 4 - clicked: True",
-        "checkbox 5 - value 5: False",
-        "checkbox 6 - value 6: True",
-        "checkbox 7 - value 7: True",
-        "checkbox 8 - value 8: True",
+        "checkbox 5 - value: False",
+        "checkbox 6 - value: True",
+        "checkbox 7 - value: True",
+        "checkbox 8 - value: True",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
