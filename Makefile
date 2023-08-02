@@ -196,8 +196,14 @@ conda-distribution:
 	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
 
 .PHONY: conda-package
-# Build lib and frontend, and then run 'conda-distribution'
-conda-package: build-deps frontend conda-distribution
+# Build lib and (maybe) frontend assets, and then run 'conda-distribution'
+conda-package: build-deps
+	if [ "${SNOWPARK_CONDA_BUILD}" = "1" ] ; then\
+		echo "Creating Snowpark conda build, so skipping building frontend assets."; \
+	else \
+		make frontend; \
+	fi
+	make conda-distribution;
 
 .PHONY: clean
 # Remove all generated files.
