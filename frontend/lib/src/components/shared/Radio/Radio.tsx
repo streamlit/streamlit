@@ -82,13 +82,6 @@ class Radio extends React.PureComponent<Props, State> {
     const options = [...this.props.options]
     const captions = [...this.props.captions]
 
-    const spacerNeeded = (caption: string) => {
-      // When captions are provided for only some options in horizontal
-      // layout we need to add a spacer for the options without captions
-      const spacer = !caption && horizontal && captions.length > 0
-      return spacer ? "&nbsp;" : caption
-    }
-
     if (options.length === 0) {
       options.push("No options to select.")
       disabled = true

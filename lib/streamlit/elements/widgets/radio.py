@@ -152,7 +152,7 @@ class RadioMixin:
             An optional boolean, which orients the radio group horizontally.
             The default is false (vertical buttons). This argument can only
             be supplied by keyword.
-        captions : str
+        captions : iterable of str or None
             A list of captions to show below each radio button. If None (default),
             no captions are shown.
         label_visibility : "visible", "hidden", or "collapsed"
