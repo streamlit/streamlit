@@ -166,6 +166,7 @@ table = _main.table
 text = _main.text
 text_area = _main.text_area
 text_input = _main.text_input
+toggle = _main.toggle
 time_input = _main.time_input
 title = _main.title
 vega_lite_chart = _main.vega_lite_chart
