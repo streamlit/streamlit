@@ -417,6 +417,27 @@ export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
   return getLuminance(theme.colors.bgColor) > 0.5
 }
 
+export function getTextColors(theme: EmotionTheme): any {
+  const red = getMdRed(theme)
+  const orange = getMdOrange(theme)
+  const yellow = getMdYellow(theme)
+  const green = getMdGreen(theme)
+  const blue = getMdBlue(theme)
+  const violet = getMdViolet(theme)
+  const purple = getMdPurple(theme)
+  const gray = getMdGray(theme)
+  return {
+    red: red,
+    orange: orange,
+    yellow: yellow,
+    green: green,
+    blue: blue,
+    violet: violet,
+    purple: purple,
+    gray: gray,
+  }
+}
+
 export function getGray70(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.gray70
@@ -468,7 +489,19 @@ export function getMdOrange(theme: EmotionTheme): string {
 export function getMdGray(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.gray80
-    : theme.colors.gray80
+    : theme.colors.gray70
+}
+
+export function getMdYellow(theme: EmotionTheme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.yellow100
+    : theme.colors.yellow30
+}
+
+export function getMdPurple(theme: EmotionTheme): string {
+  return hasLightBackgroundColor(theme)
+    ? theme.colors.purple100
+    : theme.colors.purple90
 }
 
 function getBlueArrayAsc(theme: EmotionTheme): string[] {
