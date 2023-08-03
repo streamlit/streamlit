@@ -18,14 +18,16 @@ import React from "react"
 import "@testing-library/jest-dom"
 import { screen, fireEvent } from "@testing-library/react"
 import { act } from "react-dom/test-utils"
+
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TimeInput as TimeInputProto,
 } from "@streamlit/lib/src/proto"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+
 import TimeInput, { Props } from "./TimeInput"
-import { mockTheme } from "src/lib/mocks/mockTheme"
 
 const getProps = (
   elementProps: Partial<TimeInputProto> = {},
