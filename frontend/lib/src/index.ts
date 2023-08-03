@@ -112,7 +112,6 @@ export {
   isPaddingDisplayed,
   isScrollingHidden,
   isToolbarDisplayed,
-  isTesting,
   notUndefined,
   setCookie,
   extractPageNameFromPathName,
