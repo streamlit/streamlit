@@ -322,6 +322,7 @@ class ConfigTest(unittest.TestCase):
                 "global",
                 "logger",
                 "mapbox",
+                "metadata",
                 "runner",
                 "server",
                 "ui",
@@ -369,6 +370,14 @@ class ConfigTest(unittest.TestCase):
                 "runner.postScriptGC",
                 "runner.fastReruns",
                 "mapbox.token",
+                "metadata.name",
+                "metadata.shortName",
+                "metadata.description",
+                "metadata.startUrl",
+                "metadata.display",
+                "metadata.icon",
+                "metadata.themeColor",
+                "metadata.backgroundColor",
                 "server.baseUrlPath",
                 "server.enableCORS",
                 "server.cookieSecret",
@@ -500,6 +509,62 @@ class ConfigTest(unittest.TestCase):
             "font": "serif",
         }
         self.assertEqual(config.get_options_for_section("theme"), expected)
+
+    def test_custom_metadata_configs(self):
+        config._set_option("metadata.name", "My application", "test")
+        config._set_option("metadata.shortName", "My app", "test")
+        config._set_option(
+            "metadata.description", "This is just my new cool applicatino!", "test"
+        )
+        config._set_option("metadata.startUrl", "/app", "test")
+        config._set_option("metadata.display", "fullscreen", "test")
+
+        expected = {
+            "name": "My application",
+            "shortName": "My app",
+            "description": "This is just my new cool applicatino!",
+            "startUrl": "/app",
+            "display": "fullscreen",
+            "icon": None,
+            "themeColor": "#ffffff",
+            "backgroundColor": "#262730",
+        }
+        self.assertEqual(config.get_options_for_section("metadata"), expected)
+
+    def test_default_metadata_theme_and_background_colors(self):
+        expected = {
+            "name": "Streamlit",
+            "shortName": "Streamlit",
+            "description": "Streamlit is an open-source app framework for Machine Learning and Data Science teams. Create beautiful web apps in minutes.",
+            "startUrl": ".",
+            "display": "standalone",
+            "icon": None,
+            "themeColor": "#ffffff",
+            "backgroundColor": "#262730",
+        }
+        self.assertEqual(config.get_options_for_section("metadata"), expected)
+
+    @parameterized.expand(
+        [
+            ("theme.primaryColor", "theme.backgroundColor"),
+            ("metadata.themeColor", "metadata.backgroundColor"),
+        ]
+    )
+    def test_custom_metadata_colors(self, primary_color, background_color):
+        config._set_option(primary_color, "#000000", "test")
+        config._set_option(background_color, "#000000", "test")
+
+        expected = {
+            "name": "Streamlit",
+            "shortName": "Streamlit",
+            "description": "Streamlit is an open-source app framework for Machine Learning and Data Science teams. Create beautiful web apps in minutes.",
+            "startUrl": ".",
+            "display": "standalone",
+            "icon": None,
+            "themeColor": "#000000",
+            "backgroundColor": "#000000",
+        }
+        self.assertEqual(config.get_options_for_section("metadata"), expected)
 
     def test_browser_server_port(self):
         # developmentMode must be False for server.port to be modified
