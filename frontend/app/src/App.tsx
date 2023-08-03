@@ -51,13 +51,11 @@ import {
   isPaddingDisplayed,
   isScrollingHidden,
   isToolbarDisplayed,
-  isTesting,
   notUndefined,
   setCookie,
   extractPageNameFromPathName,
   BaseUriParts,
   RERUN_PROMPT_MODAL_DIALOG,
-  SHOW_DEPLOY_BUTTON,
   SessionInfo,
   FileUploadClient,
   logError,
@@ -1512,19 +1510,17 @@ export class App extends PureComponent<Props, State> {
 
   showDeployButton = (): boolean => {
     return (
-      isTesting() ||
-      (SHOW_DEPLOY_BUTTON &&
-        showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode) &&
-        !this.isInCloudEnvironment() &&
-        this.sessionInfo.isSet &&
-        !this.sessionInfo.isHello)
+      showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode) &&
+      !this.isInCloudEnvironment() &&
+      this.sessionInfo.isSet &&
+      !this.sessionInfo.isHello
     )
   }
 
   deployButtonClicked = (): void => {
-    if (!isTesting()) {
-      this.metricsMgr.enqueue("deployButtonInApp", { clicked: true })
-    }
+    this.metricsMgr.enqueue("menuClick", {
+      label: "deployButtonInApp",
+    })
     this.sendLoadGitInfoBackMsg()
     this.openDeployDialog()
   }

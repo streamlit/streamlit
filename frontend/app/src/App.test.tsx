@@ -61,7 +61,6 @@ jest.mock("@streamlit/app/src/connection/ConnectionManager")
 jest.mock("@streamlit/lib/src/baseconsts", () => {
   return {
     ...jest.requireActual("@streamlit/lib/src/baseconsts"),
-    SHOW_DEPLOY_BUTTON: true,
   }
 })
 
