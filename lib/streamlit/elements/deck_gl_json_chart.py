@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import json
 from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, cast
 
@@ -156,11 +157,23 @@ def marshall(
 ) -> None:
     if pydeck_obj is None:
         spec = json.dumps(EMPTY_MAP)
+        element_id = ""
     else:
         spec = pydeck_obj.to_json()
+        # Convert the pydeck object to a JSON string
+        json_string = json.dumps(pydeck_obj.to_json())
+
+        # Encode the JSON string to bytes
+        json_bytes = json_string.encode("utf-8")
+
+        # Compute the MD5 hash
+        element_id = hashlib.md5(json_bytes).hexdigest()
 
     pydeck_proto.json = spec
     pydeck_proto.use_container_width = use_container_width
+
+    pydeck_proto.element_id = element_id
+    print(f"Element id: {element_id}")
 
     tooltip = _get_pydeck_tooltip(pydeck_obj)
     if tooltip:

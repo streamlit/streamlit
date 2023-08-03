@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
@@ -87,6 +88,8 @@ interface State {
   viewState: Record<string, unknown>
   initialized: boolean
   initialViewState: Record<string, unknown>
+  elementId: string | undefined
+  pydeckJson: any
 }
 
 export const DEFAULT_DECK_GL_HEIGHT = 500
@@ -100,6 +103,8 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     },
     initialized: false,
     initialViewState: {},
+    elementId: undefined,
+    pydeckJson: undefined,
   }
 
   componentDidMount = (): void => {
@@ -115,8 +120,12 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     props: Readonly<PropsWithHeight>,
     state: Partial<State>
   ): Partial<State> | null {
-    const deck = DeckGlJsonChart.getDeckObject(props)
+    const deck = DeckGlJsonChart.getDeckObject(props, state)
 
+    let newState = {}
+    if (state.pydeckJson === undefined || !isEqual(deck, state.pydeckJson)) {
+      newState = { pydeckJson: state.pydeckJson, elementId: state.elementId }
+    }
     // If the ViewState on the server has changed, apply the diff to the current state
     if (!isEqual(deck.initialViewState, state.initialViewState)) {
       const diff = Object.keys(deck.initialViewState).reduce(
@@ -135,44 +144,56 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
         {}
       )
 
-      return {
+      newState = {
+        ...newState,
         viewState: { ...state.viewState, ...diff },
         initialViewState: deck.initialViewState,
       }
     }
 
-    return null
+    if (Object.keys(newState).length === 0) {
+      return null
+    }
+
+    return newState
   }
 
-  static getDeckObject = (props: PropsWithHeight): DeckObject => {
+  static getDeckObject = (
+    props: PropsWithHeight,
+    state: Partial<State>
+  ): DeckObject => {
     const { element, width, height, theme } = props
-    const json = JSON.parse(element.json)
-
+    const { elementId } = state
+    if (element.elementId !== elementId) {
+      const newJson = JSON.parse(element.json)
+      console.log(newJson)
+      state.pydeckJson = newJson
+      state.elementId = element.elementId
+    }
     // If unset, use either the Mapbox light or dark style based on Streamlit's theme
     // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
-    if (!notNullOrUndefined(json.mapStyle)) {
+    if (!notNullOrUndefined(state.pydeckJson.mapStyle)) {
       const mapTheme = hasLightBackgroundColor(theme) ? "light" : "dark"
-      json.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v9`
+      state.pydeckJson.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v9`
     }
 
     // The graph dimensions could be set from props ( like withFullscreen ) or
     // from the generated element object
     if (height) {
-      json.initialViewState.height = height
-      json.initialViewState.width = width
+      state.pydeckJson.initialViewState.height = height
+      state.pydeckJson.initialViewState.width = width
     } else {
-      if (!json.initialViewState.height) {
-        json.initialViewState.height = DEFAULT_DECK_GL_HEIGHT
+      if (!state.pydeckJson.initialViewState.height) {
+        state.pydeckJson.initialViewState.height = DEFAULT_DECK_GL_HEIGHT
       }
 
       if (element.useContainerWidth) {
-        json.initialViewState.width = width
+        state.pydeckJson.initialViewState.width = width
       }
     }
 
-    delete json.views // We are not using views. This avoids a console warning.
-
-    return jsonConverter.convert(json)
+    delete state.pydeckJson.views // We are not using views. This avoids a console warning.
+    return jsonConverter.convert(state.pydeckJson)
   }
 
   createTooltip = (info: PickingInfo): Record<string, unknown> | boolean => {
@@ -213,9 +234,10 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 
   render(): ReactNode {
-    const deck = DeckGlJsonChart.getDeckObject(this.props)
+    const deck = DeckGlJsonChart.getDeckObject(this.props, this.state)
     const { viewState } = this.state
-
+    console.log("Deck coming in from render:")
+    console.log(deck)
     return (
       <StyledDeckGlChart
         className="stDeckGlJsonChart"
