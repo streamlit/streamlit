@@ -951,6 +951,75 @@ _create_option(
 )
 
 
+# Config Section: Metadata #
+
+_create_section(
+    "metadata",
+    "Additional information about a Streamlit app to the browser or operating system.",
+)
+
+_create_option(
+    "metadata.name",
+    description="A string that represents the name of the Streamlit app.",
+    default_val="Streamlit",
+    type_=str,
+)
+
+_create_option(
+    "metadata.shortName",
+    description="A string that represents a short name or abbreviation for the Streamlit app (used in places where space is limited).",
+    default_val="Streamlit",
+    type_=str,
+)
+
+_create_option(
+    "metadata.description",
+    description="A string that describes the web app and its functionality.",
+    default_val="Streamlit is an open-source app framework for Machine Learning and Data Science teams. Create beautiful web apps in minutes.",
+    type_=str,
+)
+
+_create_option(
+    "metadata.startUrl",
+    description="A string that represents the URL that should be loaded when the web app is launched.",
+    default_val=".",
+    type_=str,
+)
+
+_create_option(
+    "metadata.display",
+    description="A string that represents the display mode for the web app. The possible values are `fullscreen`, `standalone`, `minimal-ui`, and `browser`.",
+    default_val="standalone",
+    type_=str,
+)
+
+_create_option(
+    "metadata.icon",
+    description="A filepath to the icon file relatively to the static content folder: `./static/`. To set custom icon, make sure to enable static file serving with `enableStaticServing` config option.",
+    type_=str,
+)
+
+
+@_create_option("metadata.themeColor", type_=str)
+def _metadata_theme_color() -> str:
+    """A string that represents the color of the Streamlit app's theme. The value should be a valid CSS color.
+    Returns config value from `theme.primaryColor` key, or `#ffffff` if config value of None.
+    """
+
+    return get_option("theme.primaryColor") or "#ffffff"
+
+
+@_create_option("metadata.backgroundColor", type_=str)
+def _metadata_background_color() -> str:
+    """A string that represents the background color of the Streamlit app. The value should be a valid CSS color.
+    Returns config value from `theme.backgroundColor` key, or `#262730` if config value of None.
+    """
+
+    return get_option("theme.backgroundColor") or "#262730"
+
+
+
+
 def get_where_defined(key: str) -> str:
     """Indicate where (e.g. in which file) this option was defined.
 
