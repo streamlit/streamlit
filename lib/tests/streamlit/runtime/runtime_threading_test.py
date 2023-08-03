@@ -15,10 +15,10 @@
 import asyncio
 import threading
 from queue import Queue
+from unittest import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock
 
 from streamlit.runtime import Runtime, RuntimeConfig
-from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 
 class RuntimeThreadingTest(IsolatedAsyncioTestCase):
@@ -48,6 +48,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
                     "mock/script/path.py",
                     "",
                     media_file_storage=MagicMock(),
+                    uploaded_file_manager=MagicMock(),
                     session_manager_class=MagicMock,
                     session_storage=MagicMock(),
                     cache_storage_manager=MagicMock(),

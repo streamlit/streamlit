@@ -88,7 +88,7 @@ class ScriptRunContext:
         """Enqueue a ForwardMsg for this context's session."""
         if msg.HasField("page_config_changed") and not self._set_page_config_allowed:
             raise StreamlitAPIException(
-                "`set_page_config()` can only be called once per app, "
+                "`set_page_config()` can only be called once per app page, "
                 + "and must be called as the first Streamlit command in your script.\n\n"
                 + "For more information refer to the [docs]"
                 + "(https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config)."

@@ -41,3 +41,18 @@ st.download_button(
     file_name="hello.txt",
     use_container_width=True,
 )
+
+st.download_button(
+    "Download button with help text and use_container_width=True",
+    data="Hello world!",
+    file_name="hello.txt",
+    use_container_width=True,
+    help="Example help text",
+)
+
+st.download_button(
+    "Primary download button",
+    data="Hello world!",
+    file_name="hello.txt",
+    type="primary",
+)

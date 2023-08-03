@@ -21,7 +21,7 @@ describe("st.dataframe supports various configuration options", () => {
   });
 
   it("shows correct tables based on configuration", () => {
-    cy.get(".stDataFrame").should("have.length", 3);
+    cy.get(".stDataFrame").should("have.length", 21);
 
     cy.get(".stDataFrame").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("dataframe-config-" + idx);

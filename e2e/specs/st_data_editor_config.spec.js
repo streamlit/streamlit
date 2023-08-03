@@ -21,7 +21,7 @@ describe("st.data_editor supports various configuration options", () => {
   });
 
   it("shows correct tables based on configuration", () => {
-    cy.get(".stDataFrame").should("have.length", 5);
+    cy.get(".stDataFrame").should("have.length", 23);
 
     cy.get(".stDataFrame").each((el, idx) => {
       return cy.wrap(el).matchImageSnapshot("data_editor-config-" + idx);

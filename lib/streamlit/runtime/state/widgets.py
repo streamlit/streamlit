@@ -30,13 +30,13 @@ from streamlit.runtime.state.common import (
     WidgetMetadata,
     WidgetProto,
     WidgetSerializer,
-    compute_widget_id,
     user_key_from_widget_id,
 )
 from streamlit.type_util import ValueFieldName
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner import ScriptRunContext
+
 
 ElementType: TypeAlias = str
 
@@ -53,6 +53,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
         "button": "trigger_value",
         "download_button": "trigger_value",
         "checkbox": "bool_value",
+        "chat_input": "string_trigger_value",
         "camera_input": "file_uploader_state_value",
         "color_picker": "string_value",
         "date_input": "string_array_value",
@@ -147,12 +148,9 @@ def register_widget(
         For both paths a widget return value is provided, allowing the widgets
         to be used in a non-streamlit setting.
     """
-    widget_id = compute_widget_id(element_type, element_proto, user_key)
-    element_proto.id = widget_id
-
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
-        widget_id,
+        element_proto.id,
         deserializer,
         serializer,
         value_type=ELEMENT_TYPE_TO_VALUE_TYPE[element_type],
@@ -232,18 +230,22 @@ def coalesce_widget_states(
         wstate.id: wstate for wstate in new_states.widgets
     }
 
+    trigger_value_types = [("trigger_value", False), ("string_trigger_value", None)]
     for old_state in old_states.widgets:
-        if old_state.WhichOneof("value") == "trigger_value" and old_state.trigger_value:
-
-            # Ensure the corresponding new_state is also a trigger;
-            # otherwise, a widget that was previously a button but no longer is
-            # could get a bad value.
-            new_trigger_val = states_by_id.get(old_state.id)
+        for trigger_value_type, unset_value in trigger_value_types:
             if (
-                new_trigger_val
-                and new_trigger_val.WhichOneof("value") == "trigger_value"
+                old_state.WhichOneof("value") == trigger_value_type
+                and old_state.trigger_value != unset_value
             ):
-                states_by_id[old_state.id] = old_state
+                # Ensure the corresponding new_state is also a trigger;
+                # otherwise, a widget that was previously a button but no longer is
+                # could get a bad value.
+                new_trigger_val = states_by_id.get(old_state.id)
+                if (
+                    new_trigger_val
+                    and new_trigger_val.WhichOneof("value") == trigger_value_type
+                ):
+                    states_by_id[old_state.id] = old_state
 
     coalesced = WidgetStates()
     coalesced.widgets.extend(states_by_id.values())

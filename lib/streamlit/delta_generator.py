@@ -44,18 +44,12 @@ from streamlit.elements.arrow_altair import ArrowAltairMixin
 from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
-from streamlit.elements.button import ButtonMixin
-from streamlit.elements.camera_input import CameraInputMixin
-from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.code import CodeMixin
-from streamlit.elements.color_picker import ColorPickerMixin
-from streamlit.elements.data_editor import DataEditorMixin
 from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.exception import ExceptionMixin
-from streamlit.elements.file_uploader import FileUploaderMixin
 from streamlit.elements.form import FormData, FormMixin, current_form_id
 from streamlit.elements.graphviz_chart import GraphvizMixin
 from streamlit.elements.heading import HeadingMixin
@@ -70,19 +64,27 @@ from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
 from streamlit.elements.metric import MetricMixin
-from streamlit.elements.multiselect import MultiSelectMixin
-from streamlit.elements.number_input import NumberInputMixin
 from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
-from streamlit.elements.radio import RadioMixin
-from streamlit.elements.select_slider import SelectSliderMixin
-from streamlit.elements.selectbox import SelectboxMixin
-from streamlit.elements.slider import SliderMixin
 from streamlit.elements.snow import SnowMixin
 from streamlit.elements.text import TextMixin
-from streamlit.elements.text_widgets import TextWidgetsMixin
-from streamlit.elements.time_widgets import TimeWidgetsMixin
+from streamlit.elements.toast import ToastMixin
+from streamlit.elements.widgets.button import ButtonMixin
+from streamlit.elements.widgets.camera_input import CameraInputMixin
+from streamlit.elements.widgets.chat import ChatMixin
+from streamlit.elements.widgets.checkbox import CheckboxMixin
+from streamlit.elements.widgets.color_picker import ColorPickerMixin
+from streamlit.elements.widgets.data_editor import DataEditorMixin
+from streamlit.elements.widgets.file_uploader import FileUploaderMixin
+from streamlit.elements.widgets.multiselect import MultiSelectMixin
+from streamlit.elements.widgets.number_input import NumberInputMixin
+from streamlit.elements.widgets.radio import RadioMixin
+from streamlit.elements.widgets.select_slider import SelectSliderMixin
+from streamlit.elements.widgets.selectbox import SelectboxMixin
+from streamlit.elements.widgets.slider import SliderMixin
+from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
+from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.logger import get_logger
@@ -156,6 +158,7 @@ class DeltaGenerator(
     BokehMixin,
     ButtonMixin,
     CameraInputMixin,
+    ChatMixin,
     CheckboxMixin,
     CodeMixin,
     ColorPickerMixin,
@@ -188,6 +191,7 @@ class DeltaGenerator(
     TextMixin,
     TextWidgetsMixin,
     TimeWidgetsMixin,
+    ToastMixin,
     WriteMixin,
     ArrowMixin,
     ArrowAltairMixin,
@@ -278,7 +282,7 @@ class DeltaGenerator(
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
-            for (name, func) in mixin.__dict__.items():
+            for name, func in mixin.__dict__.items():
                 if callable(func):
                     func.__module__ = self.__module__
 
@@ -599,6 +603,10 @@ class DeltaGenerator(
                 raise StreamlitAPIException(
                     "Columns can only be placed inside other columns up to one level of nesting."
                 )
+        if block_type == "chat_message" and block_type in frozenset(parent_block_types):
+            raise StreamlitAPIException(
+                "Chat messages cannot nested inside other chat messages."
+            )
         if block_type == "expandable" and block_type in frozenset(parent_block_types):
             raise StreamlitAPIException(
                 "Expanders may not be nested inside other expanders."

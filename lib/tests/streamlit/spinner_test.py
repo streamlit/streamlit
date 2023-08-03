@@ -26,3 +26,26 @@ class SpinnerTest(DeltaGeneratorTestCase):
             time.sleep(0.2)
             el = self.get_delta_from_queue().new_element
             self.assertEqual(el.spinner.text, "some text")
+        # Check if it gets reset to st.empty()
+        last_delta = self.get_delta_from_queue()
+        self.assertTrue(last_delta.HasField("new_element"))
+        self.assertEqual(last_delta.new_element.WhichOneof("type"), "empty")
+
+    def test_spinner_within_chat_message(self):
+        """Test st.spinner in st.chat_message resets to empty container block."""
+        import streamlit as st
+
+        with st.chat_message("user"):
+            with spinner("some text"):
+                # Without the timeout, the spinner is sometimes not available
+                time.sleep(0.2)
+                el = self.get_delta_from_queue().new_element
+                self.assertEqual(el.spinner.text, "some text")
+        # Check that the element gets reset to an empty container block:
+        last_delta = self.get_delta_from_queue()
+        self.assertTrue(last_delta.HasField("add_block"))
+        # The block should have `allow_empty` set to false,
+        # which means that it will be ignored on the frontend in case
+        # it the container is empty. This is the desired behavior
+        # for spinner
+        self.assertFalse(last_delta.add_block.allow_empty)

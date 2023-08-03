@@ -27,34 +27,16 @@ import urllib
 from io import BytesIO, StringIO
 from unittest.mock import MagicMock, Mock, patch
 
-import altair.vegalite.v3
+import altair.vegalite
 import cffi
 import numpy as np
 import pandas as pd
 import pytest
 import sqlalchemy as db
-from packaging.version import Version
 from parameterized import parameterized
 
-try:
-    import keras
-    import tensorflow as tf
-    import torch
-    import torchvision
-
-    HAS_TENSORFLOW = True
-except ImportError:
-    HAS_TENSORFLOW = False
-
-try:
-    import keras
-
-    HAS_SUPPORTED_KERAS = Version(keras.__version__) < Version("2.5.0")
-except ImportError:
-    HAS_SUPPORTED_KERAS = False
-
-
 import streamlit as st
+from streamlit.proto.Common_pb2 import FileURLs
 from streamlit.runtime.legacy_caching.hashing import (
     _FFI_TYPE_NAMES,
     _NP_SIZE_LARGE,
@@ -68,6 +50,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRe
 from streamlit.type_util import get_fqn_type, is_type
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
+
 
 # Get code hasher and mock the main script directory.
 def get_hash(f, context=None, hash_funcs=None):
@@ -340,18 +323,34 @@ class HashTest(unittest.TestCase):
         [
             (BytesIO, b"123", b"456", b"123"),
             (StringIO, "123", "456", "123"),
-            (
-                UploadedFile,
-                UploadedFileRec("id", "name", "type", b"123"),
-                UploadedFileRec("id", "name", "type", b"456"),
-                UploadedFileRec("id", "name", "type", b"123"),
-            ),
         ]
     )
     def test_io(self, io_type, io_data1, io_data2, io_data3):
         io1 = io_type(io_data1)
         io2 = io_type(io_data2)
         io3 = io_type(io_data3)
+
+        self.assertEqual(get_hash(io1), get_hash(io3))
+        self.assertNotEqual(get_hash(io1), get_hash(io2))
+
+        # Changing the stream position should change the hash
+        io1.seek(1)
+        io3.seek(0)
+        self.assertNotEqual(get_hash(io1), get_hash(io3))
+
+    def test_uploaded_file_io(self):
+        rec1 = UploadedFileRec("file1", "name", "type", b"123")
+        rec2 = UploadedFileRec("file1", "name", "type", b"456")
+        rec3 = UploadedFileRec("file1", "name", "type", b"123")
+        io1 = UploadedFile(
+            rec1, FileURLs(file_id=rec1.file_id, upload_url="u1", delete_url="d1")
+        )
+        io2 = UploadedFile(
+            rec2, FileURLs(file_id=rec2.file_id, upload_url="u2", delete_url="d2")
+        )
+        io3 = UploadedFile(
+            rec3, FileURLs(file_id=rec3.file_id, upload_url="u3", delete_url="u3")
+        )
 
         self.assertEqual(get_hash(io1), get_hash(io3))
         self.assertNotEqual(get_hash(io1), get_hash(io2))
@@ -397,60 +396,6 @@ class HashTest(unittest.TestCase):
             f.seek(0)
             self.assertEqual(h1, get_hash(f))
 
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    @unittest.skipIf(
-        not HAS_SUPPORTED_KERAS,
-        "The supported version of Keras is not installed. "
-        "Streamlit requires Keras<2.5.0",
-    )
-    def test_keras_model(self):
-        a = keras.applications.vgg16.VGG16(include_top=False, weights=None)
-        b = keras.applications.vgg16.VGG16(include_top=False, weights=None)
-
-        # This test still passes if we remove the default hash func for Keras
-        # models. Ideally we'd seed the weights before creating the models
-        # but not clear how to do so.
-        self.assertEqual(get_hash(a), get_hash(a))
-        self.assertNotEqual(get_hash(a), get_hash(b))
-
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    @unittest.skipIf(
-        not HAS_SUPPORTED_KERAS,
-        "The supported version of Keras is not installed. "
-        "Streamlit requires Keras<2.5.0",
-    )
-    def test_tf_keras_model(self):
-        a = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
-        b = tf.keras.applications.vgg16.VGG16(include_top=False, weights=None)
-
-        self.assertEqual(get_hash(a), get_hash(a))
-        self.assertNotEqual(get_hash(a), get_hash(b))
-
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    def test_tf_saved_model(self):
-        tempdir = tempfile.TemporaryDirectory()
-
-        model = tf.keras.models.Sequential(
-            [
-                tf.keras.layers.Dense(512, activation="relu", input_shape=(784,)),
-            ]
-        )
-        model.save(tempdir.name)
-
-        a = tf.saved_model.load(tempdir.name)
-        b = tf.saved_model.load(tempdir.name)
-
-        self.assertEqual(get_hash(a), get_hash(a))
-        self.assertNotEqual(get_hash(a), get_hash(b))
-
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    def test_pytorch_model(self):
-        a = torchvision.models.resnet.resnet18()
-        b = torchvision.models.resnet.resnet18()
-
-        self.assertEqual(get_hash(a), get_hash(a))
-        self.assertNotEqual(get_hash(a), get_hash(b))
-
     def test_socket(self):
         a = socket.socket()
         b = socket.socket()
@@ -463,42 +408,6 @@ class HashTest(unittest.TestCase):
         # (This also tests that MagicMock can hash at all, without blowing the
         # stack due to an infinite recursion.)
         self.assertNotEqual(get_hash(MagicMock()), get_hash(MagicMock()))
-
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    def test_tensorflow_session(self):
-        tf_config = tf.compat.v1.ConfigProto()
-        tf_session = tf.compat.v1.Session(config=tf_config)
-        self.assertEqual(get_hash(tf_session), get_hash(tf_session))
-
-        tf_session2 = tf.compat.v1.Session(config=tf_config)
-        self.assertNotEqual(get_hash(tf_session), get_hash(tf_session2))
-
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    def test_torch_c_tensorbase(self):
-        a = torch.ones([1, 1]).__reduce__()[1][2]
-        b = torch.ones([1, 1], requires_grad=True).__reduce__()[1][2]
-        c = torch.ones([1, 2]).__reduce__()[1][2]
-
-        assert is_type(a, "torch._C._TensorBase")
-        self.assertEqual(get_hash(a), get_hash(b))
-        self.assertNotEqual(get_hash(a), get_hash(c))
-
-        b.mean().backward()
-        # Calling backward on a tensorbase doesn't seem to affect the gradient
-        self.assertEqual(get_hash(a), get_hash(b))
-
-    @unittest.skipIf(not HAS_TENSORFLOW, "Tensorflow not installed")
-    def test_torch_tensor(self):
-        a = torch.ones([1, 1])
-        b = torch.ones([1, 1], requires_grad=True)
-        c = torch.ones([1, 2])
-
-        self.assertEqual(get_hash(a), get_hash(b))
-        self.assertNotEqual(get_hash(a), get_hash(c))
-
-        b.mean().backward()
-
-        self.assertNotEqual(get_hash(a), get_hash(b))
 
     def test_non_hashable(self):
         """Test user provided hash functions."""
@@ -888,10 +797,10 @@ class CodeHashTest(unittest.TestCase):
         # will need to be updated!
 
         def call_altair_concat():
-            return altair.vegalite.v4.api.concat()
+            return altair.concat()
 
         def call_altair_layer():
-            return altair.vegalite.v4.api.layer()
+            return altair.layer()
 
         self.assertNotEqual(get_hash(call_altair_concat), get_hash(call_altair_layer))
 
@@ -1145,7 +1054,6 @@ class CodeHashTest(unittest.TestCase):
 
 
 class MainScriptDirectoryDetectionTest(unittest.TestCase):
-
     relative_path = "app.py"
     abs_path = "/path/to/app.py"
 

@@ -11,10 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 
-from streamlit.deprecation_util import deprecate_func_name
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -53,7 +51,7 @@ class LayoutsMixin:
         >>> st.write("This is outside the container")
 
         .. output ::
-            https://doc-container1.streamlitapp.com/
+            https://doc-container1.streamlit.app/
             height: 520px
 
         Inserting elements out of order:
@@ -68,7 +66,7 @@ class LayoutsMixin:
         >>> container.write("This is inside too")
 
         .. output ::
-            https://doc-container2.streamlitapp.com/
+            https://doc-container2.streamlit.app/
             height: 480px
         """
         return self.dg._block()
@@ -94,23 +92,20 @@ class LayoutsMixin:
 
         Parameters
         ----------
-        spec : int or list of numbers
-            If an int
-                Specifies the number of columns to insert, and all columns
-                have equal width.
+        spec : int or iterable of numbers
+            Controls the number and width of columns to insert. Can be one of:
 
-            If a list of numbers
-                Creates a column for each number, and each
-                column's width is proportional to the number provided. Numbers can
-                be ints or floats, but they must be positive.
+            * An integer that specifies the number of columns. All columns have equal
+              width in this case.
+            * An iterable of numbers (int or float) that specify the relative width of
+              each column. E.g. ``[0.7, 0.3]`` creates two columns where the first
+              one takes up 70% of the available with and the second one takes up 30%.
+              Or ``[1, 2, 3]`` creates three columns where the second one is two times
+              the width of the first one, and the third one is three times that width.
 
-                For example, `st.columns([3, 1, 2])` creates 3 columns where
-                the first column is 3 times the width of the second, and the last
-                column is 2 times that width.
         gap : "small", "medium", or "large"
-            An optional string, which indicates the size of the gap between each column.
-            The default is a small gap between columns. This argument can only be supplied by
-            keyword.
+            The size of the gap between the columns. Defaults to "small". This
+            argument can only be supplied by keyword.
 
         Returns
         -------
@@ -138,7 +133,7 @@ class LayoutsMixin:
         ...    st.image("https://static.streamlit.io/examples/owl.jpg")
 
         .. output ::
-            https://doc-columns1.streamlitapp.com/
+            https://doc-columns1.streamlit.app/
             height: 620px
 
         Or you can just call methods directly in the returned objects:
@@ -156,7 +151,7 @@ class LayoutsMixin:
         >>> col2.write(data)
 
         .. output ::
-            https://doc-columns2.streamlitapp.com/
+            https://doc-columns2.streamlit.app/
             height: 550px
 
         """
@@ -273,7 +268,7 @@ class LayoutsMixin:
         ...    st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
 
         .. output ::
-            https://doc-tabs1.streamlitapp.com/
+            https://doc-tabs1.streamlit.app/
             height: 620px
 
         Or you can just call methods directly in the returned objects:
@@ -292,7 +287,7 @@ class LayoutsMixin:
 
 
         .. output ::
-            https://doc-tabs2.streamlitapp.com/
+            https://doc-tabs2.streamlit.app/
             height: 700px
 
         """
@@ -377,7 +372,7 @@ class LayoutsMixin:
         ...     st.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
-            https://doc-expander.streamlitapp.com/
+            https://doc-expander.streamlit.app/
             height: 750px
 
         Or you can just call methods directly in the returned objects:
@@ -395,7 +390,7 @@ class LayoutsMixin:
         >>> expander.image("https://static.streamlit.io/examples/dice.jpg")
 
         .. output ::
-            https://doc-expander.streamlitapp.com/
+            https://doc-expander.streamlit.app/
             height: 750px
 
         """

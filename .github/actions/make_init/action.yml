@@ -6,6 +6,8 @@ inputs:
     description: "Use Cached Virtual Env"
     default: "true"
 
+# There is an altered copy of these steps inlined in the python_min_deps
+# workflow. If you make changes to this action, apply them there too if appropriate.
 runs:
   using: composite
   steps:
@@ -70,7 +72,6 @@ runs:
         md5sum $(which python) > $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/dev-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
-        md5sum lib/test-requirements-with-tensorflow.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
         md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
         date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
       shell: bash --login -eo pipefail {0}

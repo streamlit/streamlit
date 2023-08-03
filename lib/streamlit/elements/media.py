@@ -17,7 +17,6 @@ import re
 from typing import TYPE_CHECKING, Optional, Tuple, Union, cast
 
 from typing_extensions import Final, TypeAlias
-from validators import url
 
 import streamlit as st
 from streamlit import runtime, type_util
@@ -53,8 +52,7 @@ class MediaMixin:
 
         Parameters
         ----------
-        data : str, bytes, BytesIO, numpy.ndarray, or file opened with
-                io.open().
+        data : str, bytes, BytesIO, numpy.ndarray, or file
             Raw audio data, filename, or a URL pointing to the file to load.
             Raw data formats must include all necessary file headers to match the file
             format specified via ``format``.
@@ -92,7 +90,7 @@ class MediaMixin:
         >>> st.audio(note_la, sample_rate=sample_rate)
 
         .. output::
-           https://doc-audio.streamlitapp.com/
+           https://doc-audio.streamlit.app/
            height: 865px
 
         """
@@ -125,8 +123,7 @@ class MediaMixin:
 
         Parameters
         ----------
-        data : str, bytes, BytesIO, numpy.ndarray, or file opened with
-                io.open().
+        data : str, bytes, BytesIO, numpy.ndarray, or file
             Raw video data, filename, or URL pointing to a video to load.
             Includes support for YouTube URLs.
             Numpy arrays and raw data formats must include all necessary file
@@ -147,7 +144,7 @@ class MediaMixin:
         >>> st.video(video_bytes)
 
         .. output::
-           https://doc-video.streamlitapp.com/
+           https://doc-video.streamlit.app/
            height: 700px
 
         .. note::
@@ -283,6 +280,7 @@ def marshall_video(
     start_time : int
         The time from which this element should start playing. (default: 0)
     """
+    from validators import url
 
     proto.start_time = start_time
 
@@ -323,7 +321,7 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
     # to st.audio data)
     import numpy as np
 
-    data = np.array(data, dtype=float)
+    data: "npt.NDArray[Any]" = np.array(data, dtype=float)
 
     if len(data.shape) == 1:
         nchan = 1
@@ -407,6 +405,7 @@ def marshall_audio(
     sample_rate: int or None
         Optional param to provide sample_rate in case of numpy array
     """
+    from validators import url
 
     proto.start_time = start_time
 

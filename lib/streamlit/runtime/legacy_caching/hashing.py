@@ -551,7 +551,7 @@ class _CodeHasher:
             if cargs:
                 cargs[1] = dict(
                     collections.OrderedDict(
-                        sorted(cargs[1].items(), key=lambda t: t[0])  # type: ignore
+                        sorted(cargs[1].items(), key=lambda t: t[0])
                     )
                 )
 
@@ -867,8 +867,8 @@ pass that to `hash_funcs` instead:
 %(hash_stack)s
 ```
 
-If you think this is actually a Streamlit bug, please [file a bug report here.]
-(https://github.com/streamlit/streamlit/issues/new/choose)
+If you think this is actually a Streamlit bug, please
+[file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose).
             """
             % args
         ).strip("\n")

@@ -14,7 +14,7 @@
 
 import asyncio
 from typing import Callable, Dict, List, Optional
-from unittest import mock
+from unittest import IsolatedAsyncioTestCase, mock
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
@@ -23,6 +23,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
@@ -32,7 +33,6 @@ from streamlit.runtime.session_manager import (
     SessionStorage,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from tests.isolated_asyncio_test_case import IsolatedAsyncioTestCase
 
 
 class MockSessionManager(SessionManager):
@@ -105,6 +105,7 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
             script_path="mock/script/path.py",
             command_line="",
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
+            uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
             session_manager_class=MockSessionManager,
             session_storage=mock.MagicMock(),
             cache_storage_manager=MemoryCacheStorageManager(),

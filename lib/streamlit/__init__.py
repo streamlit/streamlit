@@ -75,6 +75,7 @@ from streamlit.commands.query_params import (
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
 
+import streamlit.column_config as _column_config
 from streamlit.echo import echo as echo
 from streamlit.runtime.legacy_caching import cache as _cache
 from streamlit.elements.spinner import spinner as spinner
@@ -103,6 +104,7 @@ _config.on_config_parsed(_update_logger, True)
 
 _main = _DeltaGenerator(root_container=_RootContainer.MAIN)
 sidebar = _DeltaGenerator(root_container=_RootContainer.SIDEBAR, parent=_main)
+event = _DeltaGenerator(root_container=_RootContainer.EVENT, parent=_main)
 
 secrets = _secrets_singleton
 
@@ -117,12 +119,15 @@ bokeh_chart = _main.bokeh_chart
 button = _main.button
 caption = _main.caption
 camera_input = _main.camera_input
+chat_message = _main.chat_message
+chat_input = _main.chat_input
 checkbox = _main.checkbox
 code = _main.code
 columns = _main.columns
 tabs = _main.tabs
 container = _main.container
 dataframe = _main.dataframe
+data_editor = _main.data_editor
 date_input = _main.date_input
 divider = _main.divider
 download_button = _main.download_button
@@ -161,6 +166,7 @@ table = _main.table
 text = _main.text
 text_area = _main.text_area
 text_input = _main.text_input
+toggle = _main.toggle
 time_input = _main.time_input
 title = _main.title
 vega_lite_chart = _main.vega_lite_chart
@@ -168,6 +174,9 @@ video = _main.video
 warning = _main.warning
 write = _main.write
 color_picker = _main.color_picker
+
+# Events - Note: these methods cannot be called directly on sidebar (ex: st.sidebar.toast)
+toast = event.toast
 
 # Legacy
 _legacy_dataframe = _main._legacy_dataframe
@@ -199,6 +208,9 @@ session_state = _SessionStateProxy()
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
+
+# Namespaces
+column_config = _column_config
 
 # Experimental APIs
 experimental_user = _UserInfoProxy()
