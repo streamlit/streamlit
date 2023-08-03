@@ -31,6 +31,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
@@ -144,6 +145,106 @@ class CheckboxMixin:
             kwargs=kwargs,
             disabled=disabled,
             label_visibility=label_visibility,
+            type=CheckboxProto.StyleType.DEFAULT,
+            ctx=ctx,
+        )
+
+    @gather_metrics("toggle")
+    def toggle(
+        self,
+        label: str,
+        value: bool = False,
+        key: Optional[Key] = None,
+        help: Optional[str] = None,
+        on_change: Optional[WidgetCallback] = None,
+        args: Optional[WidgetArgs] = None,
+        kwargs: Optional[WidgetKwargs] = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> bool:
+        r"""Display a toggle widget.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this toggle is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+        value : bool
+            Preselect the toggle when it first renders. This will be
+            cast to bool internally.
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
+        help : str
+            An optional tooltip that gets displayed next to the toggle.
+        on_change : callable
+            An optional callback invoked when this toggle's value changes.
+        args : tuple
+            An optional tuple of args to pass to the callback.
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback.
+        disabled : bool
+            An optional boolean, which disables the toggle if set to True.
+            The default is False. This argument can only be supplied by keyword.
+        label_visibility : "visible", "hidden", or "collapsed"
+            The visibility of the label. If "hidden", the label doesn't show but there
+            is still empty space for it (equivalent to label="").
+            If "collapsed", both the label and the space are removed. Default is
+            "visible". This argument can only be supplied by keyword.
+
+        Returns
+        -------
+        bool
+            Whether or not the toggle is checked.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> on = st.toggle('Activate feature')
+        >>>
+        >>> if on:
+        ...     st.write('Feature activated!")
+
+        .. output::
+           https://doc-toggle.streamlit.app/
+           height: 220px
+
+        """
+        ctx = get_script_run_ctx()
+        return self._checkbox(
+            label=label,
+            value=value,
+            key=key,
+            help=help,
+            on_change=on_change,
+            args=args,
+            kwargs=kwargs,
+            disabled=disabled,
+            label_visibility=label_visibility,
+            type=CheckboxProto.StyleType.TOGGLE,
             ctx=ctx,
         )
 
@@ -159,6 +260,7 @@ class CheckboxMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
+        type: CheckboxProto.StyleType.ValueType = CheckboxProto.StyleType.DEFAULT,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
         key = to_key(key)
@@ -169,10 +271,27 @@ class CheckboxMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        id = compute_widget_id(
+            "checkbox",
+            user_key=key,
+            label=label,
+            value=bool(value),
+            key=key,
+            help=help,
+            form_id=current_form_id(self.dg),
+        )
+
         checkbox_proto = CheckboxProto()
+        checkbox_proto.id = id
         checkbox_proto.label = label
         checkbox_proto.default = bool(value)
+        checkbox_proto.type = type
         checkbox_proto.form_id = current_form_id(self.dg)
+        checkbox_proto.disabled = disabled
+        checkbox_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if help is not None:
             checkbox_proto.help = dedent(help)
 
@@ -188,13 +307,6 @@ class CheckboxMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-        )
-
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        checkbox_proto.disabled = disabled
-        checkbox_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
         )
 
         if checkbox_state.value_changed:

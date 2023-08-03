@@ -30,13 +30,13 @@ from streamlit.runtime.state.common import (
     WidgetMetadata,
     WidgetProto,
     WidgetSerializer,
-    compute_widget_id,
     user_key_from_widget_id,
 )
 from streamlit.type_util import ValueFieldName
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner import ScriptRunContext
+
 
 ElementType: TypeAlias = str
 
@@ -148,12 +148,9 @@ def register_widget(
         For both paths a widget return value is provided, allowing the widgets
         to be used in a non-streamlit setting.
     """
-    widget_id = compute_widget_id(element_type, element_proto, user_key)
-    element_proto.id = widget_id
-
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
-        widget_id,
+        element_proto.id,
         deserializer,
         serializer,
         value_type=ELEMENT_TYPE_TO_VALUE_TYPE[element_type],

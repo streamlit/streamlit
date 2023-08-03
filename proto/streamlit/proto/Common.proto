@@ -46,17 +46,48 @@ message StringTriggerValue {
   optional string data = 1;
 }
 
+// TODO(vdonato / kajarenc): Finalize the next two proto types. We currently
+// have enough information here to support pure OS use cases, but we'll need to
+// coordinate with the SiS team to verify that we're passing enough file
+// metadata back for them.
+message FileURLsRequest {
+  string request_id = 1;
+  repeated string file_names = 2;
+  string session_id = 3;
+}
+
+message FileURLs {
+  string file_id = 1;
+  string upload_url = 2;
+  string delete_url = 3;
+}
+
+message FileURLsResponse {
+  string response_id = 1;
+  repeated FileURLs file_urls = 2;
+  string error_msg = 3;
+}
+
 // Information on a file uploaded via the file_uploader widget.
 message UploadedFileInfo {
+  // DEPRECATED.
   sint64 id = 1;
 
   string name = 2;
 
   // The size of this file in bytes.
   uint32 size = 3;
+
+  // ID that can be used to retrieve a file.
+  string file_id = 4;
+
+  // Metadata containing information about file_urls.
+  FileURLs file_urls = 5;
 }
 
 message FileUploaderState {
+  // DEPRECATED
   sint64 max_file_id = 1;
+
   repeated UploadedFileInfo uploaded_file_info = 2;
 }

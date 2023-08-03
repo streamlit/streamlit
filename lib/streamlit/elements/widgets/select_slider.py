@@ -45,6 +45,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -284,7 +285,19 @@ class SelectSliderMixin:
         # Convert element to index of the elements
         slider_value = as_index_list(value)
 
+        id = compute_widget_id(
+            "select_slider",
+            user_key=key,
+            label=label,
+            options=[str(format_func(option)) for option in opt],
+            value=slider_value,
+            key=key,
+            help=help,
+            form_id=current_form_id(self.dg),
+        )
+
         slider_proto = SliderProto()
+        slider_proto.id = id
         slider_proto.type = SliderProto.Type.SELECT_SLIDER
         slider_proto.label = label
         slider_proto.format = "%s"
@@ -295,6 +308,10 @@ class SelectSliderMixin:
         slider_proto.data_type = SliderProto.INT
         slider_proto.options[:] = [str(format_func(option)) for option in opt]
         slider_proto.form_id = current_form_id(self.dg)
+        slider_proto.disabled = disabled
+        slider_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
         if help is not None:
             slider_proto.help = dedent(help)
 
@@ -312,12 +329,6 @@ class SelectSliderMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        slider_proto.disabled = disabled
-        slider_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
         if widget_state.value_changed:
             slider_proto.value[:] = serde.serialize(widget_state.value)
             slider_proto.set_value = True

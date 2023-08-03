@@ -22,22 +22,28 @@ const MOCK_FILE = new File(["file1"], "file1.txt")
 
 describe("FileUploadClient Upload", () => {
   let formsWithPendingRequestsChanged: jest.Mock
+  let requestFileURLs: jest.Mock
   let uploadFileUploaderFile: jest.Mock
   let uploader: FileUploadClient
 
   beforeEach(() => {
     formsWithPendingRequestsChanged = jest.fn()
     uploadFileUploaderFile = jest.fn()
+    requestFileURLs = jest.fn()
+
     uploader = new FileUploadClient({
       sessionInfo: mockSessionInfo(),
       endpoints: {
         buildComponentURL: jest.fn(),
         buildMediaURL: jest.fn(),
+        buildFileUploadURL: jest.fn(),
         buildAppPageURL: jest.fn(),
         uploadFileUploaderFile: uploadFileUploaderFile,
+        deleteFileAtURL: jest.fn(),
         fetchCachedForwardMsg: jest.fn(),
       },
       formsWithPendingRequestsChanged,
+      requestFileURLs,
     })
   })
 
@@ -45,7 +51,11 @@ describe("FileUploadClient Upload", () => {
     uploadFileUploaderFile.mockResolvedValue(MOCK_FILE_ID)
 
     await expect(
-      uploader.uploadFile({ id: "widgetId", formId: "" }, MOCK_FILE)
+      uploader.uploadFile(
+        { id: "widgetId", formId: "" },
+        "/_stcore/upload_file/file_1",
+        MOCK_FILE
+      )
     ).resolves.toBe(MOCK_FILE_ID)
 
     expect(formsWithPendingRequestsChanged).not.toHaveBeenCalled()
@@ -57,6 +67,7 @@ describe("FileUploadClient Upload", () => {
     // Upload a file with an attached form ID.
     const uploadFilePromise = uploader.uploadFile(
       { id: "widgetId", formId: "mockFormId" },
+      "/_stcore/upload_file/file_1",
       MOCK_FILE
     )
 
@@ -80,7 +91,11 @@ describe("FileUploadClient Upload", () => {
     uploadFileUploaderFile.mockRejectedValue(new Error("oh no!"))
 
     await expect(
-      uploader.uploadFile({ id: "widgetId", formId: "" }, MOCK_FILE)
+      uploader.uploadFile(
+        { id: "widgetId", formId: "" },
+        "/_stcore/upload_file/file_1",
+        MOCK_FILE
+      )
     ).rejects.toEqual(new Error("oh no!"))
 
     expect(formsWithPendingRequestsChanged).not.toHaveBeenCalled()
@@ -92,6 +107,7 @@ describe("FileUploadClient Upload", () => {
     // Upload a file with an attached form ID.
     const uploadFilePromise = uploader.uploadFile(
       { id: "widgetId", formId: "mockFormId" },
+      "/_stcore/upload_file/file_1",
       MOCK_FILE
     )
 
@@ -109,5 +125,60 @@ describe("FileUploadClient Upload", () => {
     // an empty set
     expect(formsWithPendingRequestsChanged).toHaveBeenCalledTimes(2)
     expect(formsWithPendingRequestsChanged).toHaveBeenLastCalledWith(new Set())
+  })
+
+  it("fetchFileURLs calls requestFileURLs and returns a promise", () => {
+    const fileURLsPromise = uploader.fetchFileURLs([])
+    expect(requestFileURLs).toHaveBeenCalledTimes(1)
+
+    // @ts-expect-error
+    const pendingReqs = uploader.pendingFileURLsRequests
+    expect(pendingReqs.size).toBe(1)
+
+    const reqId = pendingReqs.keys().next().value
+
+    expect(pendingReqs.get(reqId)?.promise).toBe(fileURLsPromise)
+  })
+
+  it("onFileURLsResponse rejects promise on errorMsg", async () => {
+    uploader.fetchFileURLs([])
+
+    // @ts-expect-error
+    const pendingReqs = uploader.pendingFileURLsRequests
+    const reqId = pendingReqs.keys().next().value
+    const promise = pendingReqs.get(reqId)?.promise
+
+    uploader.onFileURLsResponse({
+      responseId: reqId,
+      errorMsg: "kaboom",
+    })
+
+    await expect(promise).rejects.toBe("kaboom")
+  })
+
+  it("onFileURLsResponse resolves promise on success", async () => {
+    uploader.fetchFileURLs([])
+
+    // @ts-expect-error
+    const pendingReqs = uploader.pendingFileURLsRequests
+    const reqId = pendingReqs.keys().next().value
+    const promise = pendingReqs.get(reqId)?.promise
+
+    uploader.onFileURLsResponse({
+      responseId: reqId,
+      fileUrls: [],
+    })
+
+    await expect(promise).resolves.toEqual([])
+  })
+
+  it("onFileURLsResponse does not error when given an invalid responseId", () => {
+    // No need to do anything other than check that no error is thrown.
+    expect(() => {
+      uploader.onFileURLsResponse({
+        responseId: "noCorrespondingId",
+        fileUrls: [],
+      })
+    }).not.toThrow()
   })
 })

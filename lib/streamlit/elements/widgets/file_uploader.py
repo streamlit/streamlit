@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from dataclasses import dataclass
 from textwrap import dedent
 from typing import List, Optional, Sequence, Union, cast, overload
@@ -37,11 +36,16 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
-SomeUploadedFiles = Optional[Union[UploadedFile, List[UploadedFile]]]
-
+SomeUploadedFiles = Union[
+    UploadedFile,
+    DeletedFile,
+    List[Union[UploadedFile, DeletedFile]],
+    None,
+]
 
 TYPE_PAIRS = [
     (".jpg", ".jpeg"),
@@ -52,9 +56,9 @@ TYPE_PAIRS = [
 ]
 
 
-def _get_file_recs(
-    widget_id: str, widget_value: Optional[FileUploaderStateProto]
-) -> List[UploadedFileRec]:
+def _get_upload_files(
+    widget_value: Optional[FileUploaderStateProto],
+) -> List[Union[UploadedFile, DeletedFile]]:
     if widget_value is None:
         return []
 
@@ -66,14 +70,24 @@ def _get_file_recs(
     if len(uploaded_file_info) == 0:
         return []
 
-    active_file_ids = [f.id for f in uploaded_file_info]
-
-    # Grab the files that correspond to our active file IDs.
-    return ctx.uploaded_file_mgr.get_files(
+    file_recs_list = ctx.uploaded_file_mgr.get_files(
         session_id=ctx.session_id,
-        widget_id=widget_id,
-        file_ids=active_file_ids,
+        file_ids=[f.file_id for f in uploaded_file_info],
     )
+
+    file_recs = {f.file_id: f for f in file_recs_list}
+
+    collected_files: List[Union[UploadedFile, DeletedFile]] = []
+
+    for f in uploaded_file_info:
+        maybe_file_rec = file_recs.get(f.file_id)
+        if maybe_file_rec is not None:
+            uploaded_file = UploadedFile(maybe_file_rec, f.file_urls)
+            collected_files.append(uploaded_file)
+        else:
+            collected_files.append(DeletedFile(f.file_id))
+
+    return collected_files
 
 
 @dataclass
@@ -83,27 +97,18 @@ class FileUploaderSerde:
     def deserialize(
         self, ui_value: Optional[FileUploaderStateProto], widget_id: str
     ) -> SomeUploadedFiles:
-        file_recs = _get_file_recs(widget_id, ui_value)
-        if len(file_recs) == 0:
-            return_value: Optional[Union[List[UploadedFile], UploadedFile]] = (
-                [] if self.accept_multiple_files else None
-            )
+        upload_files = _get_upload_files(ui_value)
+
+        if len(upload_files) == 0:
+            return_value: SomeUploadedFiles = [] if self.accept_multiple_files else None
         else:
-            files = [UploadedFile(rec) for rec in file_recs]
-            return_value = files if self.accept_multiple_files else files[0]
+            return_value = (
+                upload_files if self.accept_multiple_files else upload_files[0]
+            )
         return return_value
 
     def serialize(self, files: SomeUploadedFiles) -> FileUploaderStateProto:
         state_proto = FileUploaderStateProto()
-
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return state_proto
-
-        # ctx.uploaded_file_mgr._file_id_counter stores the id to use for
-        # the *next* uploaded file, so the current highest file id is the
-        # counter minus 1.
-        state_proto.max_file_id = ctx.uploaded_file_mgr._file_id_counter - 1
 
         if not files:
             return state_proto
@@ -111,10 +116,13 @@ class FileUploaderSerde:
             files = [files]
 
         for f in files:
+            if isinstance(f, DeletedFile):
+                continue
             file_info: UploadedFileInfoProto = state_proto.uploaded_file_info.add()
-            file_info.id = f.id
+            file_info.file_id = f.file_id
             file_info.name = f.name
             file_info.size = f.size
+            file_info.file_urls.CopyFrom(f._file_urls)
 
         return state_proto
 
@@ -136,7 +144,7 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, Sequence[str]]],
+        type: Union[str, Sequence[str], None],
         accept_multiple_files: Literal[True],
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -155,7 +163,7 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, Sequence[str]]],
+        type: Union[str, Sequence[str], None],
         accept_multiple_files: Literal[False] = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -181,7 +189,7 @@ class FileUploaderMixin:
         label: str,
         *,
         accept_multiple_files: Literal[True],
-        type: Optional[Union[str, Sequence[str]]] = None,
+        type: Union[str, Sequence[str], None] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -200,7 +208,7 @@ class FileUploaderMixin:
         label: str,
         *,
         accept_multiple_files: Literal[False] = False,
-        type: Optional[Union[str, Sequence[str]]] = None,
+        type: Union[str, Sequence[str], None] = None,
         key: Optional[Key] = None,
         help: Optional[str] = None,
         on_change: Optional[WidgetCallback] = None,
@@ -215,7 +223,7 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, Sequence[str]]] = None,
+        type: Union[str, Sequence[str], None] = None,
         accept_multiple_files: bool = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -225,7 +233,7 @@ class FileUploaderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> SomeUploadedFiles:
+    ) -> Union[UploadedFile, List[UploadedFile], None]:
         r"""Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option. For more info
@@ -371,7 +379,7 @@ class FileUploaderMixin:
     def _file_uploader(
         self,
         label: str,
-        type: Optional[Union[str, Sequence[str]]] = None,
+        type: Union[str, Sequence[str], None] = None,
         accept_multiple_files: bool = False,
         key: Optional[Key] = None,
         help: Optional[str] = None,
@@ -382,11 +390,22 @@ class FileUploaderMixin:
         label_visibility: LabelVisibility = "visible",
         disabled: bool = False,
         ctx: Optional[ScriptRunContext] = None,
-    ) -> SomeUploadedFiles:
+    ) -> Union[UploadedFile, List[UploadedFile], None]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         maybe_raise_label_warnings(label, label_visibility)
+
+        id = compute_widget_id(
+            "file_uploader",
+            user_key=key,
+            label=label,
+            type=type,
+            accept_multiple_files=accept_multiple_files,
+            key=key,
+            help=help,
+            form_id=current_form_id(self.dg),
+        )
 
         if type:
             if isinstance(type, str):
@@ -408,6 +427,7 @@ class FileUploaderMixin:
                     type.append(x)
 
         file_uploader_proto = FileUploaderProto()
+        file_uploader_proto.id = id
         file_uploader_proto.label = label
         file_uploader_proto.type[:] = type if type is not None else []
         file_uploader_proto.max_upload_size_mb = config.get_option(
@@ -415,6 +435,11 @@ class FileUploaderMixin:
         )
         file_uploader_proto.multiple_files = accept_multiple_files
         file_uploader_proto.form_id = current_form_id(self.dg)
+        file_uploader_proto.disabled = disabled
+        file_uploader_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if help is not None:
             file_uploader_proto.help = dedent(help)
 
@@ -435,27 +460,15 @@ class FileUploaderMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        file_uploader_proto.disabled = disabled
-        file_uploader_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
-
-        file_uploader_state = serde.serialize(widget_state.value)
-        uploaded_file_info = file_uploader_state.uploaded_file_info
-        if ctx is not None and len(uploaded_file_info) != 0:
-            newest_file_id = file_uploader_state.max_file_id
-            active_file_ids = [f.id for f in uploaded_file_info]
-
-            ctx.uploaded_file_mgr.remove_orphaned_files(
-                session_id=ctx.session_id,
-                widget_id=file_uploader_proto.id,
-                newest_file_id=newest_file_id,
-                active_file_ids=active_file_ids,
-            )
-
         self.dg._enqueue("file_uploader", file_uploader_proto)
+
+        filtered_value: Union[UploadedFile, List[UploadedFile], None]
+
+        if isinstance(widget_state.value, DeletedFile):
+            return None
+        elif isinstance(widget_state.value, list):
+            return [f for f in widget_state.value if not isinstance(f, DeletedFile)]
+
         return widget_state.value
 
     @property

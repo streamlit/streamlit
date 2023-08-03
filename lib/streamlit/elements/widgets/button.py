@@ -33,11 +33,11 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
 
 FORM_DOCS_INFO: Final = """
 
@@ -179,6 +179,7 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
@@ -241,6 +242,10 @@ class ButtonMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        type : "secondary" or "primary"
+            An optional string that specifies the button type. Can be "primary" for a
+            button with additional emphasis or "secondary" for a normal button. This
+            argument can only be supplied by keyword. Defaults to "secondary".
         disabled : bool
             An optional boolean, which disables the download button if set to
             True. The default is False. This argument can only be supplied by
@@ -308,6 +313,13 @@ class ButtonMixin:
 
         """
         ctx = get_script_run_ctx()
+
+        if type not in ["primary", "secondary"]:
+            raise StreamlitAPIException(
+                'The type argument to st.button must be "primary" or "secondary". \n'
+                f'The argument passed was "{type}".'
+            )
+
         return self._download_button(
             label=label,
             data=data,
@@ -319,6 +331,7 @@ class ButtonMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            type=type,
             use_container_width=use_container_width,
             ctx=ctx,
         )
@@ -335,26 +348,41 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
         ctx: Optional[ScriptRunContext] = None,
     ) -> bool:
-
         key = to_key(key)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+
+        id = compute_widget_id(
+            "download_button",
+            user_key=key,
+            label=label,
+            data=str(data),
+            file_name=file_name,
+            mime=mime,
+            key=key,
+            help=help,
+            use_container_width=use_container_width,
+        )
+
         if is_in_form(self.dg):
             raise StreamlitAPIException(
                 f"`st.download_button()` can't be used in an `st.form()`.{FORM_DOCS_INFO}"
             )
 
         download_button_proto = DownloadButtonProto()
-
+        download_button_proto.id = id
         download_button_proto.use_container_width = use_container_width
         download_button_proto.label = label
         download_button_proto.default = False
+        download_button_proto.type = type
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
+        download_button_proto.disabled = disabled
 
         if help is not None:
             download_button_proto.help = dedent(help)
@@ -372,10 +400,6 @@ class ButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        download_button_proto.disabled = disabled
 
         self.dg._enqueue("download_button", download_button_proto)
         return button_state.value
@@ -399,6 +423,17 @@ class ButtonMixin:
             check_callback_rules(self.dg, on_click)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
+        id = compute_widget_id(
+            "button",
+            user_key=key,
+            label=label,
+            key=key,
+            help=help,
+            is_form_submitter=is_form_submitter,
+            type=type,
+            use_container_width=use_container_width,
+        )
+
         # It doesn't make sense to create a button inside a form (except
         # for the "Form Submitter" button that's automatically created in
         # every form). We throw an error to warn the user about this.
@@ -415,12 +450,15 @@ class ButtonMixin:
                 )
 
         button_proto = ButtonProto()
+        button_proto.id = id
         button_proto.label = label
         button_proto.default = False
         button_proto.is_form_submitter = is_form_submitter
         button_proto.form_id = current_form_id(self.dg)
         button_proto.type = type
         button_proto.use_container_width = use_container_width
+        button_proto.disabled = disabled
+
         if help is not None:
             button_proto.help = dedent(help)
 
@@ -437,10 +475,6 @@ class ButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        button_proto.disabled = disabled
 
         self.dg._enqueue("button", button_proto)
 
