@@ -18,6 +18,7 @@ import React from "react"
 import "@testing-library/jest-dom"
 
 import { screen, fireEvent } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
@@ -173,14 +174,26 @@ describe("TextInput widget", () => {
     )
   })
 
-  // TODO: Fix this test
-  // it("sets widget value when enter is pressed", () => {
-  //   const props = getProps()
-  //   jest.spyOn(props.widgetMgr, "setStringValue")
-  //   render(<TextInput {...props} />)
+  it("sets widget value when enter is pressed", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+    const textInput = screen.getByTestId("textInputElement")
 
-  //   expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
-  // })
+    // userEvent necessary to trigger onKeyPress
+    // fireEvent only dispatches DOM events vs. simulating full interactions
+    await user.click(textInput)
+    await user.keyboard("testing{Enter}")
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      props.element,
+      "testing",
+      {
+        fromUi: true,
+      }
+    )
+  })
 
   it("doesn't set widget value when not dirty", () => {
     const props = getProps()

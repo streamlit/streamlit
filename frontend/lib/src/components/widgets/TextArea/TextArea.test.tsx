@@ -168,17 +168,6 @@ describe("TextArea widget", () => {
     )
   })
 
-  // TODO: How to test this
-  // it("sets widget height if it is passed from props", () => {
-  //   const props = getProps({
-  //     height: 500,
-  //   })
-  //   render(<TextArea {...props} />)
-  //   const textArea = screen.getByRole("textbox")
-  //   const height = textArea.getBoundingClientRect().height
-  //   expect()
-  // })
-
   it("limits the length if max_chars is passed", () => {
     const props = getProps({
       height: 500,
