@@ -90,6 +90,7 @@ interface State {
   initialViewState: Record<string, unknown>
   elementId: string | undefined
   pydeckJson: any
+  enteredFullScreen: boolean
 }
 
 export const DEFAULT_DECK_GL_HEIGHT = 500
@@ -105,6 +106,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     initialViewState: {},
     elementId: undefined,
     pydeckJson: undefined,
+    enteredFullScreen: false,
   }
 
   componentDidMount = (): void => {
@@ -122,10 +124,6 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   ): Partial<State> | null {
     const deck = DeckGlJsonChart.getDeckObject(props, state)
 
-    let newState = {}
-    if (state.pydeckJson === undefined || !isEqual(deck, state.pydeckJson)) {
-      newState = { pydeckJson: state.pydeckJson, elementId: state.elementId }
-    }
     // If the ViewState on the server has changed, apply the diff to the current state
     if (!isEqual(deck.initialViewState, state.initialViewState)) {
       const diff = Object.keys(deck.initialViewState).reduce(
@@ -144,18 +142,13 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
         {}
       )
 
-      newState = {
-        ...newState,
+      return {
         viewState: { ...state.viewState, ...diff },
         initialViewState: deck.initialViewState,
       }
     }
 
-    if (Object.keys(newState).length === 0) {
-      return null
-    }
-
-    return newState
+    return null
   }
 
   static getDeckObject = (
@@ -164,35 +157,41 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   ): DeckObject => {
     const { element, width, height, theme } = props
     const { elementId } = state
-    if (element.elementId !== elementId) {
-      const newJson = JSON.parse(element.json)
-      console.log(newJson)
-      state.pydeckJson = newJson
+
+    const isFullscreen = Boolean(height)
+
+    // Only parse JSON when not transitioning to/from fullscreen or if the element id changes
+    if (
+      element.elementId !== elementId ||
+      state.enteredFullScreen !== isFullscreen
+    ) {
+      state.pydeckJson = JSON.parse(element.json)
       state.elementId = element.elementId
     }
+
     // If unset, use either the Mapbox light or dark style based on Streamlit's theme
-    // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
-    if (!notNullOrUndefined(state.pydeckJson.mapStyle)) {
-      const mapTheme = hasLightBackgroundColor(theme) ? "light" : "dark"
-      state.pydeckJson.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v9`
+    if (!state.pydeckJson?.mapStyle) {
+      state.pydeckJson.mapStyle = `mapbox://styles/mapbox/${
+        hasLightBackgroundColor(theme) ? "light" : "dark"
+      }-v9`
     }
 
-    // The graph dimensions could be set from props ( like withFullscreen ) or
-    // from the generated element object
-    if (height) {
-      state.pydeckJson.initialViewState.height = height
-      state.pydeckJson.initialViewState.width = width
+    // Set width and height based on the fullscreen state
+    if (isFullscreen) {
+      Object.assign(state.pydeckJson?.initialViewState, { width, height })
     } else {
-      if (!state.pydeckJson.initialViewState.height) {
+      if (!state.pydeckJson?.initialViewState?.height) {
         state.pydeckJson.initialViewState.height = DEFAULT_DECK_GL_HEIGHT
       }
-
       if (element.useContainerWidth) {
         state.pydeckJson.initialViewState.width = width
       }
     }
 
-    delete state.pydeckJson.views // We are not using views. This avoids a console warning.
+    state.enteredFullScreen = isFullscreen
+
+    delete state.pydeckJson?.views // We are not using views. This avoids a console warning.
+
     return jsonConverter.convert(state.pydeckJson)
   }
 
@@ -236,8 +235,6 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   render(): ReactNode {
     const deck = DeckGlJsonChart.getDeckObject(this.props, this.state)
     const { viewState } = this.state
-    console.log("Deck coming in from render:")
-    console.log(deck)
     return (
       <StyledDeckGlChart
         className="stDeckGlJsonChart"
