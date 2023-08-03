@@ -63,7 +63,9 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
   const onClickDeployApp = useCallback((): void => {
     const { showDeployError, isDeployErrorModalOpen, gitInfo, metricsMgr } =
       props
-    metricsMgr.enqueue("deployButtonInDialog", { clicked: true })
+    metricsMgr.enqueue("menuClick", {
+      label: "deployButtonInDialog",
+    })
 
     if (!gitInfo) {
       const dialog = NoRepositoryDetected()
@@ -140,8 +142,8 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
               </BaseButton>
               <BaseButton
                 onClick={() => {
-                  metricsMgr.enqueue("readMoreCommunityCloudInDeployDialog", {
-                    clicked: true,
+                  metricsMgr.enqueue("menuClick", {
+                    label: "readMoreCommunityCloudInDeployDialog",
                   })
                   window.open(STREAMLIT_COMMUNITY_CLOUD_DOCS_URL, "_blank")
                 }}
@@ -167,8 +169,8 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
             <StyledActionsWrapper>
               <BaseButton
                 onClick={() => {
-                  metricsMgr.enqueue("readMoreDeployTutorialInDeployDialog", {
-                    clicked: true,
+                  metricsMgr.enqueue("menuClick", {
+                    label: "readMoreDeployTutorialInDeployDialog",
                   })
                   window.open(STREAMLIT_DEPLOY_TUTORIAL_URL, "_blank")
                 }}
