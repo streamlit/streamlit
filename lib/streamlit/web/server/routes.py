@@ -329,7 +329,7 @@ class MetadataWebManifestHandler(_SpecialRequestHandler):
                     f"Invalid icon size: {icon_width}x{icon_height}. Valid sizes are: [{valid_sizes}]."
                 )
 
-                self.write("Custom icon has invalid size.")
+                self.write("The custom icon has invalid size.")
                 self.set_status(500)
 
                 raise tornado.web.Finish()
