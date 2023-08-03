@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
+from urllib.parse import urljoin
 
 import tornado.web
+from PIL import Image, UnidentifiedImageError
 
 from streamlit import config, file_util
 from streamlit.logger import get_logger
@@ -206,6 +209,155 @@ class AllowedMessageOriginsHandler(_SpecialRequestHandler):
                 "useExternalAuthToken": False,
             }
         )
+        self.set_status(200)
+
+
+class MetadataWebManifestHandler(_SpecialRequestHandler):
+    VALID_ICON_TYPES = {
+        "PNG": "image/png",
+        "GIF": "image/gif",
+        "JPG": "image/jpeg",
+        "JPEG": "image/jpeg",
+        "WEBP": "image/webp",
+        "SVG": "image/svg+xml",
+    }
+
+    VALID_ICON_SIZES = [
+        70,  # 70x70 pixels for Windows 8.1 and Windows 10 tiles with small icons
+        120,  # 120x120 pixels for Windows 8.1 and Windows 10 tiles
+        152,  # 152x152 pixels for Windows 8.1 and Windows 10 tiles
+        180,  # 180x180 pixels for Apple touch icons on iOS devices
+        192,  # 192x192 pixels for Android devices
+        310,  # 310x310 pixels for Windows 8.1 and Windows 10 tiles with large icons
+        512,  # 512x512 pixels for Android devices with high-resolution displays
+    ]
+
+    def initialize(self, path: str, base: str):
+        self.main_script_path = path
+        self.base_url = base
+
+    async def get(self) -> None:
+        icon_mime_type = "image/png"
+        icon_metadata = {
+            "src": "/logo512.png",
+            "sizes": "512x512",
+            "type": icon_mime_type,
+        }
+        icon_relative_filepath = config.get_option("metadata.icon")
+
+        if icon_relative_filepath is not None:
+            if not config.get_option("server.enableStaticServing"):
+                _LOGGER.error(
+                    "Static file serving is not enabled. To serve a custom Streamlit application icon, make sure you set the `enableStaticServing` config option. "
+                    + "Please refer to the online documentation for more information: https://docs.streamlit.io/library/advanced-features/static-file-serving."
+                )
+
+                self.write("Static file serving is not enabled.")
+                self.set_status(500)
+
+                raise tornado.web.Finish()
+
+            static_folder = file_util.get_app_static_dir(self.main_script_path)
+            icon_filepath = os.path.normpath(
+                os.path.join(static_folder, icon_relative_filepath)
+            )
+
+            if not os.path.isfile(icon_filepath):
+                _LOGGER.error(
+                    f"The custom icon file not found at path: `{icon_filepath}`. Make sure you put icon file relatively to the static content folder: `./static/`."
+                )
+
+                self.write("The custom icon file not found.")
+                self.set_status(500)
+
+                raise tornado.web.Finish()
+
+            try:
+                with Image.open(
+                    icon_filepath, "r", list(self.VALID_ICON_TYPES.keys())
+                ) as icon:
+                    if icon.format is None:
+                        _LOGGER.error(
+                            "The custom icon file format is undefined. Choose another icon file."
+                        )
+
+                        self.write("The custom icon file format is undefined.")
+                        self.set_status(500)
+
+                        raise tornado.web.Finish()
+
+                    icon_mime_type = self.VALID_ICON_TYPES.get(icon.format)
+                    icon_size = icon.size
+            except UnidentifiedImageError:
+                _LOGGER.error(
+                    "The custom icon file is corrupted or has an unidentified extension. Choose another icon file."
+                )
+
+                self.write(
+                    "The custom icon file is corrupted or has an unidentified extension."
+                )
+                self.set_status(500)
+
+                raise tornado.web.Finish()
+            except KeyError as ke:
+                invalid_extension = "`*." + str(ke).strip("'").lower() + "`"
+                valid_extensions = ", ".join(
+                    [
+                        "`*." + str(_type).strip("'").lower() + "`"
+                        for _type in self.VALID_ICON_TYPES.keys()
+                    ]
+                )
+                _LOGGER.error(
+                    f"Invalid icon extension: {invalid_extension}. Valid extensions are: [{valid_extensions}]."
+                )
+
+                self.write("The custom icon has invalid extension.")
+                self.set_status(500)
+
+                raise tornado.web.Finish()
+
+            icon_width, icon_height = icon_size
+
+            if (
+                icon_width not in self.VALID_ICON_SIZES
+                or icon_height not in self.VALID_ICON_SIZES
+            ):
+                valid_sizes = ", ".join(
+                    [f"`{size}x{size}`" for size in self.VALID_ICON_SIZES]
+                )
+                _LOGGER.error(
+                    f"Invalid icon size: {icon_width}x{icon_height}. Valid sizes are: [{valid_sizes}]."
+                )
+
+                self.write("Custom icon has invalid size.")
+                self.set_status(500)
+
+                raise tornado.web.Finish()
+
+            static_file_url = urljoin(self.base_url, "/app/static/")
+            icon_metadata = {
+                "src": urljoin(static_file_url, icon_relative_filepath),
+                "sizes": f"{icon_width}x{icon_height}",
+                "type": icon_mime_type,
+            }
+
+        manifest = {
+            "$schema": "https://json.schemastore.org/web-manifest-combined.json",
+            "name": config.get_option("metadata.name"),
+            "short_name": config.get_option("metadata.shortName"),
+            "description": config.get_option("metadata.description"),
+            "start_url": config.get_option("metadata.startUrl"),
+            "display": config.get_option("metadata.display"),
+            "theme_color": config.get_option("metadata.themeColor"),
+            "background_color": config.get_option("metadata.backgroundColor"),
+            "serviceworker": {"src": "./sw.js", "scope": "/"},
+            "icons": [icon_metadata],
+        }
+
+        self.set_header("Content-Type", "application/manifest+json")
+        self.set_header("Cache-Control", "max-age=0, must-revalidate")
+
+        self.write(json.dumps(manifest))
         self.set_status(200)
 
 

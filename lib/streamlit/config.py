@@ -1018,8 +1018,6 @@ def _metadata_background_color() -> str:
     return get_option("theme.backgroundColor") or "#262730"
 
 
-
-
 def get_where_defined(key: str) -> str:
     """Indicate where (e.g. in which file) this option was defined.
 
