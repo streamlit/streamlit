@@ -212,9 +212,6 @@ class TextInput extends React.PureComponent<Props, State> {
           autoComplete={element.autocomplete}
           overrides={{
             Input: {
-              props: {
-                "data-testid": "textInputElement",
-              },
               style: {
                 // Issue: https://github.com/streamlit/streamlit/issues/2495
                 // The input won't shrink in Firefox,
@@ -233,6 +230,9 @@ class TextInput extends React.PureComponent<Props, State> {
               },
             },
             Root: {
+              props: {
+                "data-testid": "textInputRootElement",
+              },
               style: {
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 borderLeftWidth: "1px",

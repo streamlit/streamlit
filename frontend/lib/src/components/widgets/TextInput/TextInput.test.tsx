@@ -17,7 +17,7 @@
 import React from "react"
 import "@testing-library/jest-dom"
 
-import { screen, fireEvent } from "@testing-library/react"
+import { screen, fireEvent, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -96,18 +96,26 @@ describe("TextInput widget", () => {
     expect(textInput).toHaveAttribute("placeholder", props.element.placeholder)
   })
 
-  it("handles TextInputProto.Type properly", () => {
+  it("handles default text input type properly", () => {
     const defaultProps = getProps({ type: TextInputProto.Type.DEFAULT })
-    const { unmount } = render(<TextInput {...defaultProps} />)
+    render(<TextInput {...defaultProps} />)
     const textInput = screen.getByRole("textbox")
     expect(textInput).toHaveAttribute("type", "text")
-    // unmount the initial component
-    unmount()
+    // Check that no show/hide button renders
+    const textInputContainer = screen.getByTestId("textInputRootElement")
+    const showButton = within(textInputContainer).queryByRole("button")
+    expect(showButton).not.toBeInTheDocument()
+  })
 
+  it("handles password text input type properly", () => {
     const passwordProps = getProps({ type: TextInputProto.Type.PASSWORD })
     render(<TextInput {...passwordProps} />)
-    const passwordTextInput = screen.getByTestId("textInputElement")
+    const passwordTextInput = screen.getByPlaceholderText("Placeholder")
     expect(passwordTextInput).toHaveAttribute("type", "password")
+    // Check for the show/hide button
+    const textInputContainer = screen.getByTestId("textInputRootElement")
+    const showButton = within(textInputContainer).getByRole("button")
+    expect(showButton).toBeInTheDocument()
   })
 
   it("handles TextInputProto.autocomplete", () => {
@@ -161,7 +169,7 @@ describe("TextInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     render(<TextInput {...props} />)
 
-    const textInput = screen.getByTestId("textInputElement")
+    const textInput = screen.getByRole("textbox")
     fireEvent.change(textInput, { target: { value: "testing" } })
     fireEvent.blur(textInput)
 
@@ -179,7 +187,7 @@ describe("TextInput widget", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
     render(<TextInput {...props} />)
-    const textInput = screen.getByTestId("textInputElement")
+    const textInput = screen.getByRole("textbox")
 
     // userEvent necessary to trigger onKeyPress
     // fireEvent only dispatches DOM events vs. simulating full interactions
@@ -200,7 +208,7 @@ describe("TextInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     render(<TextInput {...props} />)
 
-    const textInput = screen.getByTestId("textInputElement")
+    const textInput = screen.getByRole("textbox")
     fireEvent.keyPress(textInput, { key: "Enter" })
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
@@ -213,8 +221,7 @@ describe("TextInput widget", () => {
     const props = getProps({ maxChars: 10 })
     render(<TextInput {...props} />)
 
-    const textInput = screen.getByTestId("textInputElement")
-
+    const textInput = screen.getByRole("textbox")
     fireEvent.change(textInput, { target: { value: "0123456789" } })
     expect(textInput).toHaveValue("0123456789")
 
@@ -227,7 +234,7 @@ describe("TextInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     render(<TextInput {...props} />)
 
-    const textInput = screen.getByTestId("textInputElement")
+    const textInput = screen.getByRole("textbox")
     fireEvent.change(textInput, { target: { value: "TEST" } })
     expect(textInput).toHaveValue("TEST")
 
@@ -249,8 +256,7 @@ describe("TextInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
 
     render(<TextInput {...props} />)
-
-    const textInput = screen.getByTestId("textInputElement")
+    const textInput = screen.getByRole("textbox")
     // Change the widget value
     fireEvent.change(textInput, { target: { value: "TEST" } })
 
