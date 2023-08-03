@@ -160,13 +160,8 @@ def marshall(
         element_id = ""
     else:
         spec = pydeck_obj.to_json()
-        # Convert the pydeck object to a JSON string
         json_string = json.dumps(pydeck_obj.to_json())
-
-        # Encode the JSON string to bytes
         json_bytes = json_string.encode("utf-8")
-
-        # Compute the MD5 hash
         element_id = hashlib.md5(json_bytes).hexdigest()
 
     pydeck_proto.json = spec
