@@ -16,6 +16,8 @@
 
 import React from "react"
 import { Input as UIInput } from "baseui/input"
+import { withTheme } from "@emotion/react"
+
 import { TextInput as TextInputProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
@@ -33,9 +35,9 @@ import {
   isInForm,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+
 import { StyledTextInput } from "./styled-components"
-import { withTheme } from "@emotion/react"
-import { EmotionTheme } from "src/lib/theme"
 
 export interface Props {
   disabled: boolean
