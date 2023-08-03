@@ -173,7 +173,6 @@ def marshall(
     pydeck_proto.use_container_width = use_container_width
 
     pydeck_proto.element_id = element_id
-    print(f"Element id: {element_id}")
 
     tooltip = _get_pydeck_tooltip(pydeck_obj)
     if tooltip:

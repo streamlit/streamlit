@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
@@ -39,8 +38,6 @@ import { registerLoaders } from "@loaders.gl/core"
 
 import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
 import withMapboxToken from "@streamlit/lib/src/hocs/withMapboxToken"
-
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import {
@@ -170,6 +167,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     }
 
     // If unset, use either the Mapbox light or dark style based on Streamlit's theme
+    // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
     if (!state.pydeckJson?.mapStyle) {
       state.pydeckJson.mapStyle = `mapbox://styles/mapbox/${
         hasLightBackgroundColor(theme) ? "light" : "dark"
