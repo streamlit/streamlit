@@ -19,6 +19,11 @@ syntax = "proto3";
 import "streamlit/proto/LabelVisibilityMessage.proto";
 
 message Checkbox {
+  enum StyleType {
+    DEFAULT = 0;
+    TOGGLE = 1;
+  }
+
   string id = 1;
   string label = 2;
   bool default = 3;
@@ -28,4 +33,5 @@ message Checkbox {
   bool set_value = 7;
   bool disabled = 8;
   LabelVisibilityMessage label_visibility = 9;
+  StyleType type = 10;
 }
