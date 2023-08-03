@@ -23,11 +23,18 @@
       content="width=device-width, initial-scale=1, shrink-to-fit=no"
     />
     <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.png" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
 
     <title>Streamlit</title>
 
-    <!-- initialize window.prerenderReady to false and then set to true in React app when app is ready for indexing -->
-    <script> window.prerenderReady = false; </script>
+    <script>
+      window.prerenderReady = false; // initialize window.prerenderReady to false and then set to true in React app when app is ready for indexing
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('%PUBLIC_URL%/sw.js'); // Registering a service worker is mandatory for enabling PWA features
+      }
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
