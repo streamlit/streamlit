@@ -179,7 +179,11 @@ class TextInput extends React.PureComponent<Props, State> {
     )
 
     return (
-      <StyledTextInput className="row-widget stTextInput" width={width}>
+      <StyledTextInput
+        className="row-widget stTextInput"
+        data-testid="stTextInput"
+        width={width}
+      >
         <WidgetLabel
           label={element.label}
           disabled={disabled}
@@ -208,6 +212,9 @@ class TextInput extends React.PureComponent<Props, State> {
           autoComplete={element.autocomplete}
           overrides={{
             Input: {
+              props: {
+                "data-testid": "textInputElement",
+              },
               style: {
                 // Issue: https://github.com/streamlit/streamlit/issues/2495
                 // The input won't shrink in Firefox,

@@ -134,6 +134,7 @@ class ColorPicker extends React.PureComponent<Props, State> {
         disabled={disabled}
         width={width}
         value={value}
+        showValue={true}
       />
     )
   }

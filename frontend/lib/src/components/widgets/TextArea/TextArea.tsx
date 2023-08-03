@@ -188,7 +188,7 @@ class TextArea extends React.PureComponent<Props, State> {
     )
 
     return (
-      <div className="stTextArea" style={style}>
+      <div className="stTextArea" data-testid="stTextArea" style={style}>
         <WidgetLabel
           label={element.label}
           disabled={disabled}
@@ -207,7 +207,6 @@ class TextArea extends React.PureComponent<Props, State> {
         </WidgetLabel>
         <StyledTextAreaContainer>
           <UITextArea
-            data-testid="stTextArea"
             value={value}
             placeholder={placeholder}
             onBlur={this.onBlur}
