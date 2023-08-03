@@ -140,30 +140,4 @@ describe("ColorPicker widget", () => {
       expect(tooltipIcon).toBeInTheDocument()
     })
   })
-
-  // TODO: Update or Remove?
-  // describe("ColorPicker error handler", () => {
-  //   it("swallows SecurityErrors", () => {
-  //     // Checking as result of https://github.com/casesandberg/react-color/issues/806/
-  //     const props = getProps({})
-  //     const wrapper = shallow(<BaseColorPicker {...props} />)
-  //     wrapper
-  //       .find(StyledColorPicker)
-  //       .simulateError({ name: "SecurityError", message: "", stack: [] })
-
-  //     // We swallow SecurityErrors, so after an error is thrown we
-  //     // should not get unmounted
-  //     expect(wrapper.find(UIPopover).length).toBe(1)
-  //   })
-
-  //   it("re-throws non-SecurityErrors", () => {
-  //     const mockError = new Error("")
-
-  //     expect(() => {
-  //       const props = getProps({})
-  //       const wrapper = shallow(<BaseColorPicker {...props} />)
-  //       wrapper.find(StyledColorPicker).simulateError(mockError)
-  //     }).toThrow(mockError)
-  //   })
-  // })
 })
