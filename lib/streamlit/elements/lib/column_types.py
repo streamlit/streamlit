@@ -36,6 +36,7 @@ ColumnType: TypeAlias = Literal[
     "date",
     "time",
     "link",
+    "markdown",
     "line_chart",
     "bar_chart",
     "image",
@@ -70,6 +71,10 @@ class LinkColumnConfig(TypedDict):
     type: Literal["link"]
     max_chars: NotRequired[int | None]
     validate: NotRequired[str | None]
+
+
+class MarkdownColumnConfig(TypedDict):
+    type: Literal["markdown"]
 
 
 class BarChartColumnConfig(TypedDict):
@@ -172,6 +177,7 @@ class ColumnConfig(TypedDict, total=False):
         CheckboxColumnConfig,
         SelectboxColumnConfig,
         LinkColumnConfig,
+        MarkdownColumnConfig,
         ListColumnConfig,
         DatetimeColumnConfig,
         DateColumnConfig,
@@ -558,6 +564,31 @@ def LinkColumn(
         default=default,
         type_config=LinkColumnConfig(
             type="link", max_chars=max_chars, validate=validate
+        ),
+    )
+
+
+@gather_metrics("column_config.MarkdownColumn")
+def MarkdownColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: str | None = None,
+) -> ColumnConfig:
+    """TODO docstring"""
+
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        default=default,
+        type_config=MarkdownColumnConfig(
+            type="markdown",
         ),
     )
 
