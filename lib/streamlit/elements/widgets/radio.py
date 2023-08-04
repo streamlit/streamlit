@@ -256,8 +256,7 @@ class RadioMixin:
                 return caption
             else:
                 raise StreamlitAPIException(
-                    "Radio captions must be strings. Passed type: %s"
-                    % type(caption).__name__
+                    f"Radio captions must be strings. Passed type: {type(caption).__name__}"
                 )
 
         radio_proto = RadioProto()
