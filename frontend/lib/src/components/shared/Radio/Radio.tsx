@@ -167,16 +167,16 @@ class Radio extends React.PureComponent<Props, State> {
                 source={option}
                 allowHTML={false}
                 isLabel
-                isButton
                 largerLabel
+                disableLinks
               />
               {captions[index] && (
                 <StreamlitMarkdown
                   source={captions[index]}
                   allowHTML={false}
-                  isLabel
-                  isButton
                   isCaption
+                  isLabel
+                  disableLinks
                   style={
                     horizontal
                       ? {
