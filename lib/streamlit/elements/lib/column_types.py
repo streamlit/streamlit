@@ -578,7 +578,63 @@ def MarkdownColumn(
     required: bool | None = None,
     default: str | None = None,
 ) -> ColumnConfig:
-    """TODO docstring"""
+    """Configure a markdown column in ``st.dataframe`` or ``st.data_editor``.
+
+    The cell values need to be formatted markdown.
+    This command needs to be used in the column_config parameter of ``st.dataframe``
+    or ``st.data_editor``. When used with ``st.data_editor``, editing will be enabled
+    with a text input widget.
+
+    Parameters
+    ----------
+
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
+
+    width: "small", "medium", "large", or None
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
+
+    help: str or None
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+
+    default: str or None
+        Specifies the default value in this column when a new row is added by the user.
+
+    Examples
+    --------
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "apps": [
+    >>>             "Links: [roadmap](https://roadmap.streamlit.app) [extras](https://extras.streamlit.app)",
+    >>>             "## Other *markdown* works as well",
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "apps": st.column_config.LinkColumn(
+    >>>             "Description",
+    >>>         )
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
+
+    """
 
     return ColumnConfig(
         label=label,
