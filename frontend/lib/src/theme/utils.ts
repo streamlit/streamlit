@@ -417,6 +417,28 @@ export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
   return getLuminance(theme.colors.bgColor) > 0.5
 }
 
+export function getMarkdownTextColors(theme: EmotionTheme): any {
+  const lightTheme = hasLightBackgroundColor(theme)
+  const red = lightTheme ? theme.colors.red80 : theme.colors.red70
+  const orange = lightTheme ? theme.colors.orange100 : theme.colors.orange60
+  const yellow = lightTheme ? theme.colors.yellow100 : theme.colors.yellow40
+  const green = lightTheme ? theme.colors.green90 : theme.colors.green60
+  const blue = lightTheme ? theme.colors.blue80 : theme.colors.blue50
+  const violet = lightTheme ? theme.colors.purple80 : theme.colors.purple50
+  const purple = lightTheme ? theme.colors.purple100 : theme.colors.purple80
+  const gray = lightTheme ? theme.colors.gray80 : theme.colors.gray70
+  return {
+    red: red,
+    orange: orange,
+    yellow: yellow,
+    green: green,
+    blue: blue,
+    violet: violet,
+    purple: purple,
+    gray: gray,
+  }
+}
+
 export function getGray70(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.gray70
@@ -433,36 +455,6 @@ export function getGray90(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.gray90
     : theme.colors.gray10
-}
-
-export function getMdRed(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.red80
-    : theme.colors.red70
-}
-
-export function getMdBlue(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.blue80
-    : theme.colors.blue50
-}
-
-export function getMdGreen(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.green90
-    : theme.colors.green60
-}
-
-export function getMdViolet(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.purple80
-    : theme.colors.purple50
-}
-
-export function getMdOrange(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.orange100
-    : theme.colors.orange60
 }
 
 function getBlueArrayAsc(theme: EmotionTheme): string[] {

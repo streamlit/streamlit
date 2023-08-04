@@ -41,13 +41,7 @@ import remarkGfm from "remark-gfm"
 import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
-import {
-  getMdBlue,
-  getMdGreen,
-  getMdOrange,
-  getMdRed,
-  getMdViolet,
-} from "@streamlit/lib/src/theme"
+import { getMarkdownTextColors } from "@streamlit/lib/src/theme"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
@@ -185,7 +179,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
   return React.createElement(
     tag,
     { ...tagProps, ref, id: elementId },
-    <StyledLinkIconContainer>
+    <StyledLinkIconContainer data-testid="StyledLinkIconContainer">
       {elementId && !hideAnchor && (
         <StyledLinkIcon href={`#${elementId}`}>
           <LinkIcon size="18" />
@@ -285,13 +279,19 @@ export function RenderedMarkdown({
     ...(overrideComponents || {}),
   }
   const theme = useTheme()
+  const { red, orange, yellow, green, blue, violet, purple, gray } =
+    getMarkdownTextColors(theme)
   const colorMapping = new Map(
     Object.entries({
-      red: getMdRed(theme),
-      blue: getMdBlue(theme),
-      green: getMdGreen(theme),
-      violet: getMdViolet(theme),
-      orange: getMdOrange(theme),
+      red: `color: ${red}`,
+      blue: `color: ${blue}`,
+      green: `color: ${green}`,
+      violet: `color: ${violet}`,
+      orange: `color: ${orange}`,
+      gray: `color: ${gray}`,
+      // Gradient from red, orange, yellow, green, blue, violet, purple
+      rainbow: `color: transparent; background-clip: text; -webkit-background-clip: text; background-image: linear-gradient(to right,
+        ${red}, ${orange}, ${yellow}, ${green}, ${blue}, ${violet}, ${purple});`,
     })
   )
   function remarkColoring() {
@@ -303,7 +303,7 @@ export function RenderedMarkdown({
             const data = node.data || (node.data = {})
             data.hName = "span"
             data.hProperties = {
-              style: `color: ${colorMapping.get(nodeName)}`,
+              style: colorMapping.get(nodeName),
             }
           }
         }
