@@ -55,7 +55,7 @@ def calc_md5_with_blocking_retries(
     else:
         content = _get_file_content_with_blocking_retries(path)
 
-    md5 = hashlib.md5()
+    md5 = hashlib.md5(usedforsecurity=False)
     md5.update(content)
 
     # Use hexdigest() instead of digest(), so it's easier to debug.

@@ -51,7 +51,7 @@ def populate_hash_if_needed(msg: ForwardMsg) -> str:
         msg.ClearField("metadata")
 
         # MD5 is good enough for what we need, which is uniqueness.
-        hasher = hashlib.md5()
+        hasher = hashlib.md5(usedforsecurity=False)
         hasher.update(msg.SerializeToString())
         msg.hash = hasher.hexdigest()
 
