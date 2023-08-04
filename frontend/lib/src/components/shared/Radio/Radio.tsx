@@ -176,7 +176,6 @@ class Radio extends React.PureComponent<Props, State> {
                   allowHTML={false}
                   isCaption
                   isLabel
-                  disableLinks
                   style={
                     horizontal
                       ? {
