@@ -42,7 +42,7 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
 
   return {
     ...props,
-    kind: "html",
+    kind: "markdown",
     sortMode: "default",
     getCell(data?: any): GridCell {
       return {
