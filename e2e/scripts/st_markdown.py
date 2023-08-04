@@ -83,5 +83,7 @@ st.markdown(
 - :red[red]
 - :violet[violet]
 - :orange[orange]
+- :gray[gray]
+- :rainbow[rainbow]
 """
 )

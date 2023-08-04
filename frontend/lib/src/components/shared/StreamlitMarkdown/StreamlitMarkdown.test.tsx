@@ -19,19 +19,16 @@ import "@testing-library/jest-dom"
 import ReactMarkdown from "react-markdown"
 import { screen, cleanup } from "@testing-library/react"
 
-import { mount, render } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import { colors } from "@streamlit/lib/src/theme/primitives/colors"
 
 import StreamlitMarkdown, {
   LinkWithTargetBlank,
   createAnchorFromText,
-  HeadingWithAnchor,
   CustomCodeTag,
   CustomCodeTagProps,
 } from "./StreamlitMarkdown"
-
-import { StyledLinkIconContainer } from "./styled-components"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -58,103 +55,102 @@ describe("createAnchorFromText", () => {
 describe("linkReference", () => {
   it("renders a link with _blank target", () => {
     const body = "Some random URL like [Streamlit](https://streamlit.io/)"
-    const wrapper = mount(getMarkdownElement(body))
-    expect(wrapper.find("a").prop("href")).toEqual("https://streamlit.io/")
-    expect(wrapper.find("a").prop("target")).toEqual("_blank")
+    render(getMarkdownElement(body))
+    expect(screen.getByText("Streamlit")).toHaveAttribute(
+      "href",
+      "https://streamlit.io/"
+    )
+    expect(screen.getByText("Streamlit")).toHaveAttribute("target", "_blank")
   })
 
   it("renders a link without title", () => {
     const body =
       "Everybody loves [The Internet Archive](https://archive.org/)."
-    const wrapper = mount(getMarkdownElement(body))
-
-    expect(wrapper.find("a").prop("href")).toEqual("https://archive.org/")
-    expect(wrapper.find("a").prop("title")).toBeUndefined()
+    render(getMarkdownElement(body))
+    const link = screen.getByText("The Internet Archive")
+    expect(link).toHaveAttribute("href", "https://archive.org/")
+    expect(link).not.toHaveAttribute("title")
   })
 
   it("renders a link containing a title", () => {
     const body =
       "My favorite search engine is " +
       '[Duck Duck Go](https://duckduckgo.com/ "The best search engine for privacy").'
-    const wrapper = mount(getMarkdownElement(body))
-
-    expect(wrapper.find("a").prop("href")).toEqual("https://duckduckgo.com/")
-    expect(wrapper.find("a").prop("title")).toBe(
-      "The best search engine for privacy"
-    )
+    render(getMarkdownElement(body))
+    const link = screen.getByText("Duck Duck Go")
+    expect(link).toHaveAttribute("href", "https://duckduckgo.com/")
+    expect(link).toHaveAttribute("title", "The best search engine for privacy")
   })
 
   it("renders a link containing parentheses", () => {
     const body =
       "Here's a link containing parentheses [Yikes](http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx)"
-    const wrapper = mount(getMarkdownElement(body))
-
-    expect(wrapper.find("a").prop("href")).toEqual(
+    render(getMarkdownElement(body))
+    const link = screen.getByText("Yikes")
+    expect(link instanceof HTMLAnchorElement).toBe(true)
+    expect(link).toHaveAttribute(
+      "href",
       "http://msdn.microsoft.com/en-us/library/aa752574(VS.85).aspx"
     )
   })
 
   it("does not render a link if only [text] and no (href)", () => {
     const body = "Don't convert to a link if only [text] and missing (href)"
-    const wrapper = mount(getMarkdownElement(body))
-
-    expect(wrapper.text()).toEqual(
+    render(getMarkdownElement(body))
+    const element = screen.getByText("text", { exact: false })
+    expect(element).toHaveTextContent(
       "Don't convert to a link if only [text] and missing (href)"
     )
-    expect(wrapper.find("a").exists()).toBe(false)
+    expect(element instanceof HTMLAnchorElement).toBe(false)
   })
 })
 
 describe("StreamlitMarkdown", () => {
   it("renders header anchors when isSidebar is false", () => {
     const source = "# header"
-    const wrapper = mount(
+    render(
       <IsSidebarContext.Provider value={false}>
         <StreamlitMarkdown source={source} allowHTML={false} />
       </IsSidebarContext.Provider>
     )
-    expect(wrapper.find(StyledLinkIconContainer).exists()).toBeTruthy()
+    expect(screen.getByTestId("StyledLinkIconContainer")).toBeInTheDocument()
   })
 
   it("passes props properly", () => {
     const source =
       "<a class='nav_item' href='//0.0.0.0:8501/?p=some_page' target='_self'>Some Page</a>"
-    const wrapper = mount(
-      <StreamlitMarkdown source={source} allowHTML={true} />
-    )
-
-    expect(wrapper.find("a").prop("href")).toEqual(
+    render(<StreamlitMarkdown source={source} allowHTML={true} />)
+    expect(screen.getByText("Some Page")).toHaveAttribute(
+      "href",
       "//0.0.0.0:8501/?p=some_page"
     )
-    expect(wrapper.find("a").prop("target")).toEqual("_self")
+    expect(screen.getByText("Some Page")).toHaveAttribute("target", "_self")
   })
 
   it("doesn't render header anchors when isSidebar is true", () => {
     const source = "# header"
-    const wrapper = mount(
+    render(
       <IsSidebarContext.Provider value={true}>
         <StreamlitMarkdown source={source} allowHTML={false} />
       </IsSidebarContext.Provider>
     )
-    expect(wrapper.find(StyledLinkIconContainer).exists()).toBeFalsy()
+    expect(
+      screen.queryByTestId("StyledLinkIconContainer")
+    ).not.toBeInTheDocument()
   })
 
   it("propagates header attributes to custom header", () => {
     const source = '<h1 data-test="lol">alsdkjhflaf</h1>'
-    const wrapper = mount(<StreamlitMarkdown source={source} allowHTML />)
-    expect(
-      wrapper.find(HeadingWithAnchor).find("h1").prop("data-test")
-    ).toEqual("lol")
+    render(<StreamlitMarkdown source={source} allowHTML />)
+    const h1 = screen.getByRole("heading")
+    expect(h1).toHaveAttribute("data-test", "lol")
   })
 
   it("displays captions correctly", () => {
     const source = "hello this is a caption"
-    const wrapper = mount(
-      <StreamlitMarkdown allowHTML={false} source={source} isCaption />
-    )
-    expect(wrapper.find("StyledStreamlitMarkdown").text()).toEqual(
-      "hello this is a caption"
-    )
+    render(<StreamlitMarkdown allowHTML={false} source={source} isCaption />)
+    const caption = screen.getByTestId("stCaptionContainer")
+    expect(caption).toHaveTextContent("hello this is a caption")
   })
 
   // Valid Markdown - italics, bold, strikethrough, code, links, emojis, shortcodes
@@ -287,6 +283,8 @@ describe("StreamlitMarkdown", () => {
       ["green", colors.green90],
       ["violet", colors.purple80],
       ["orange", colors.orange100],
+      ["gray", colors.gray80],
+      ["rainbow", "transparent"],
     ])
 
     colorMapping.forEach(function (style, color) {
