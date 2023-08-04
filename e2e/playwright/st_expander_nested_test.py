@@ -16,7 +16,7 @@ from playwright.sync_api import Page, expect
 
 
 def test_nested_expanders(app: Page):
-    """Test that st.nested_expanders may not be nested inside other expanders."""
+    """Test that st.expander may not be nested inside other expanders."""
     exception_message = app.locator(".stException .message")
 
     expect(exception_message).to_have_text(
