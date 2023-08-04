@@ -365,6 +365,7 @@ class ButtonMixin:
             mime=mime,
             key=key,
             help=help,
+            type=type,
             use_container_width=use_container_width,
         )
 

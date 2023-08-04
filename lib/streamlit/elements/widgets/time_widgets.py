@@ -602,6 +602,7 @@ class TimeWidgetsMixin:
             max_value=parsed_max_date,
             key=key,
             help=help,
+            format=format,
             form_id=current_form_id(self.dg),
         )
         if not bool(ALLOWED_DATE_FORMATS.match(format)):

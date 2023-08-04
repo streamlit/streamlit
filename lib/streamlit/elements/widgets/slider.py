@@ -382,6 +382,7 @@ class SliderMixin:
             user_key=key,
             label=label,
             min_value=min_value,
+            max_value=max_value,
             value=value,
             step=step,
             format=format,

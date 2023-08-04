@@ -281,6 +281,7 @@ class ChatMixin:
         id = compute_widget_id(
             "chat_input",
             user_key=key,
+            key=key,
             placeholder=placeholder,
             max_chars=max_chars,
         )
