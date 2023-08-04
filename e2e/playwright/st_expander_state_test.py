@@ -16,7 +16,7 @@ from playwright.sync_api import Page, expect
 
 
 def test_expandable_state(app: Page):
-    # test whether expander state is not retained for a distinct expander
+    """Test whether expander state is not retained for a distinct expander."""
     app.locator(".stButton button").nth(0).click()
     app.locator("[data-testid='stExpander']").click()
 
