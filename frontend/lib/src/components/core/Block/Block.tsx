@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+import { useTheme } from "@emotion/react"
 import { AutoSizer } from "react-virtualized"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
@@ -30,6 +31,7 @@ import {
   BaseBlockProps,
   isComponentStale,
   shouldComponentBeEnabled,
+  assignDividerColor,
 } from "./utils"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 
@@ -182,6 +184,9 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
 // Currently, only VerticalBlocks will ever contain leaf elements. But this is only enforced on the
 // Python side.
 const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
+  // Handle cycling of dividers with unassigned colors:
+  assignDividerColor(props.node, useTheme())
+
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.

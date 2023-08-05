@@ -417,6 +417,19 @@ export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
   return getLuminance(theme.colors.bgColor) > 0.5
 }
 
+export function getHeaderColors(theme: EmotionTheme): any {
+  const { blue, green, orange, red, violet, gray } =
+    getMarkdownTextColors(theme)
+  return {
+    blue: blue,
+    green: green,
+    orange: orange,
+    red: red,
+    violet: violet,
+    gray: gray,
+  }
+}
+
 export function getMarkdownTextColors(theme: EmotionTheme): any {
   const lightTheme = hasLightBackgroundColor(theme)
   const red = lightTheme ? theme.colors.red80 : theme.colors.red70

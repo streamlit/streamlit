@@ -15,7 +15,7 @@
  */
 
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
-import { AppNode } from "@streamlit/lib/src/AppNode"
+import { BlockNode, AppNode } from "@streamlit/lib/src/AppNode"
 import {
   FormsData,
   WidgetStateManager,
@@ -24,6 +24,7 @@ import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { ComponentRegistry } from "@streamlit/lib/src/components/widgets/CustomComponent"
 import { SessionInfo } from "@streamlit/lib/src/SessionInfo"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { EmotionTheme, getHeaderColors } from "@streamlit/lib/src/theme"
 
 export function shouldComponentBeEnabled(
   elementType: string,
@@ -57,6 +58,29 @@ export function isComponentStale(
   return !enable || isElementStale(node, scriptRunState, scriptRunId)
 }
 
+export function assignDividerColor(
+  node: BlockNode,
+  theme: EmotionTheme
+): void {
+  const colorMap = getHeaderColors(theme)
+  const colorKeys = Object.keys(colorMap)
+  let dividerIndex = 0
+
+  Array.from(node.getElements()).forEach(element => {
+    const divider = element.heading?.divider
+    if (element.type === "heading" && divider) {
+      if (divider === "auto") {
+        const colorKey = colorKeys[dividerIndex]
+        // @ts-expect-error - heading.divider is not undefined at this point
+        element.heading.divider = colorMap[colorKey]
+        dividerIndex += 1
+      } else if (colorKeys.includes(divider)) {
+        // @ts-expect-error
+        element.heading.divider = colorMap[divider]
+      }
+    }
+  })
+}
 export interface BaseBlockProps {
   /**
    * The app's StreamlitEndpoints instance. Exposes non-websocket endpoint logic

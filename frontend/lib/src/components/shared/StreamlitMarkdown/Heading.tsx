@@ -21,6 +21,7 @@ import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContex
 import {
   StyledHeaderContainer,
   StyledStreamlitMarkdown,
+  StyledDivider,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
@@ -59,15 +60,6 @@ function Heading(props: HeadingProtoProps): ReactElement {
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
   const [heading, ...rest] = body.split("\n")
-
-  const dividerStyles = {
-    backgroundColor: divider,
-    height: "3px",
-    marginTop: "1rem",
-    marginBottom: "0px",
-    border: "none",
-    borderRadius: "3px",
-  }
 
   return (
     <>
@@ -128,7 +120,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
           )}
         </StyledStreamlitMarkdown>
       </div>
-      {divider && <hr style={dividerStyles} />}
+      {divider && <StyledDivider color={divider} />}
     </>
   )
 }

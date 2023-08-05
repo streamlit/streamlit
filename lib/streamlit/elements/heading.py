@@ -35,35 +35,10 @@ class HeadingProtoTag(Enum):
 
 
 Anchor = Optional[Union[str, Literal[False]]]
-Divider = Optional[Union[bool, Literal["blue", "green", "orange", "red", "violet"]]]
-
-
-class Divider:
-    divider_colors = ["blue", "green", "orange", "red", "violet"]
-    divider_color_codes = {
-        "blue": "#1c83e1",  # "blue-70"
-        "green": "#21c354",  # "green-70"
-        "orange": "#ffbd45",  # "orange-70",
-        "red": "#ff4b4b",  # "red-70",
-        "violet": "#803df5",  # "violet-70",
-    }
-    divider_iterator = itertools.cycle(divider_colors)
-
-
-_Divider = Divider()
+Divider = Optional[Union[bool, str]]
 
 
 class HeadingMixin:
-    def get_divider_color(self, divider):
-        if divider is False:
-            return False
-        elif divider in _Divider.divider_colors:
-            divider_color = _Divider.divider_color_codes[divider]
-        else:
-            color_name = next(_Divider.divider_iterator)
-            divider_color = _Divider.divider_color_codes[color_name]
-        return divider_color
-
     @gather_metrics("header")
     def header(
         self,
@@ -118,8 +93,6 @@ class HeadingMixin:
         >>> st.header('A header with _italics_ :blue[colors] and emojis :sunglasses:')
 
         """
-        divider = self.get_divider_color(divider)
-
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
@@ -185,8 +158,6 @@ class HeadingMixin:
         >>> st.subheader('A subheader with _italics_ :blue[colors] and emojis :sunglasses:')
 
         """
-        divider = self.get_divider_color(divider)
-
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
@@ -260,6 +231,18 @@ class HeadingMixin:
         return cast("DeltaGenerator", self)
 
     @staticmethod
+    def handle_divider_color(divider):
+        if divider is True:
+            return "auto"
+        valid_colors = ["blue", "green", "orange", "red", "violet", "gray"]
+        if divider in valid_colors:
+            return divider
+        else:
+            raise StreamlitAPIException(
+                f"Divider parameter has invalid value: `{divider}`. Please choose from: {', '.join(valid_colors)}."
+            )
+
+    @staticmethod
     def _create_heading_proto(
         tag: HeadingProtoTag,
         body: SupportsStr,
@@ -271,7 +254,7 @@ class HeadingMixin:
         proto.tag = tag.value
         proto.body = clean_text(body)
         if divider:
-            proto.divider = divider
+            proto.divider = HeadingMixin.handle_divider_color(divider)
         if anchor is not None:
             if anchor is False:
                 proto.hide_anchor = True
