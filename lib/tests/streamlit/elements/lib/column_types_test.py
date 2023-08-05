@@ -25,6 +25,7 @@ from streamlit.elements.lib.column_types import (
     LineChartColumn,
     LinkColumn,
     ListColumn,
+    MarkdownColumn,
     NumberColumn,
     ProgressColumn,
     SelectboxColumn,
@@ -457,6 +458,40 @@ class ColumnTypesTest(unittest.TestCase):
                     "type": "link",
                     "max_chars": 100,
                     "validate": "^[a-zA-Z]+$",
+                },
+            },
+            "Should have all the properties defined.",
+        )
+
+    def test_markdown_column(self):
+        """Test MarkdownColumn creation."""
+
+        self.assertEqual(
+            remove_none_values(MarkdownColumn()),
+            {"type_config": {"type": "markdown"}},
+            "Should only have the type defined and nothing else.",
+        )
+
+        self.assertEqual(
+            remove_none_values(
+                MarkdownColumn(
+                    "Col1",
+                    width="small",
+                    help="Help text",
+                    disabled=False,
+                    required=True,
+                    default="[link](https://streamlit.io/)",
+                )
+            ),
+            {
+                "label": "Col1",
+                "width": "small",
+                "help": "Help text",
+                "disabled": False,
+                "required": True,
+                "default": "[link](https://streamlit.io/)",
+                "type_config": {
+                    "type": "markdown",
                 },
             },
             "Should have all the properties defined.",
