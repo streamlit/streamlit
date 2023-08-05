@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useState, useEffect } from "react"
 import { AutoSizer } from "react-virtualized"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
@@ -119,13 +119,26 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   }
 
   if (node.deltaBlock.column) {
+    // The child components need to be delayed to allow for proper layout calculations
+    // We use isRendered to control the rendering of the child component
+    const [isRendered, setIsRendered] = useState(false)
+
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        setIsRendered(true)
+      }, 0)
+
+      return () => clearTimeout(timer)
+    }, [])
+
+    // Render StyledColumn only if isRendered is true
     return (
       <StyledColumn
         weight={node.deltaBlock.column.weight ?? 0}
         gap={node.deltaBlock.column.gap ?? ""}
         data-testid="column"
       >
-        {child}
+        {isRendered && child}
       </StyledColumn>
     )
   }

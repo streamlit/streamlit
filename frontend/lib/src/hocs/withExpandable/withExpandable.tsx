@@ -102,6 +102,7 @@ function withExpandable<P>(
             ContentAnimationContainer: {
               style: ({ $expanded }: SharedStylePropsArg) => ({
                 overflow: $expanded ? "visible" : "hidden",
+                transition: "height 0.2s ease-out",
               }),
             },
             PanelContainer: {
