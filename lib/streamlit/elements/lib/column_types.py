@@ -627,7 +627,7 @@ def MarkdownColumn(
     >>> st.data_editor(
     >>>     data_df,
     >>>     column_config={
-    >>>         "apps": st.column_config.LinkColumn(
+    >>>         "apps": st.column_config.MarkdownColumn(
     >>>             "Description",
     >>>         )
     >>>     },
