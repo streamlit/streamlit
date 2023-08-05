@@ -48,8 +48,8 @@ jsonschema==4.18.6
 jsonschema-specifications==2023.7.1
 keyring==24.2.0
 kiwisolver==1.4.4
-langchain==0.0.251
-langsmith==0.0.18
+langchain==0.0.252
+langsmith==0.0.19
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
 marshmallow==3.20.1
@@ -108,7 +108,7 @@ pytz==2023.3
 pytz-deprecation-shim==0.1.0.post0
 PyYAML==6.0.1
 readme-renderer==40.0
-referencing==0.30.0
+referencing==0.30.1
 requests==2.31.0
 requests-mock==1.11.0
 requests-toolbelt==1.0.0
