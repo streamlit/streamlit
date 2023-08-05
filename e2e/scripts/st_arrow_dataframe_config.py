@@ -211,6 +211,33 @@ st.dataframe(
     },
 )
 
+st.header("Markdown column:")
+
+st.dataframe(
+    pd.DataFrame(
+        {
+            "col_0": [
+                "[streamlit](https://streamlit.io/)",
+                "## [*docs*](https://docs.streamlit.io/)",
+                "+ https://streamlit.io/gallery",
+                None,
+            ],
+            "col_1": ["*emphasis*", "**bold**", None, None],
+        }
+    ),
+    column_config={
+        "col_0": st.column_config.MarkdownColumn(
+            "Markdown column",
+            width="medium",
+            help="This is a markdown column",
+            required=True,  # Should be ignored
+            disabled=False,  # Should be ignored
+            default="[streamlit](https://streamlit.io/)",  # Should be ignored
+        ),
+        "col_1": st.column_config.MarkdownColumn(),
+    },
+)
+
 st.header("Datetime column:")
 
 st.dataframe(
