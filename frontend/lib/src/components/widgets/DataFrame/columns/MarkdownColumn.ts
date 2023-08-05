@@ -49,7 +49,7 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
       } as MarkdownCell
     },
     getCellValue(cell: MarkdownCell): string | null {
-      return cell.data
+      return cell.data === undefined ? null : cell.data
     },
   }
 }
