@@ -14,31 +14,28 @@
  * limitations under the License.
  */
 
-import { GridCell, MarkdownCell, GridCellKind } from "@glideapps/glide-data-grid"
+import {
+  GridCell,
+  MarkdownCell,
+  GridCellKind,
+} from "@glideapps/glide-data-grid"
 
 import {
   notNullOrUndefined,
   isNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 
-import {
-  BaseColumn,
-  BaseColumnProps,
-  ColumnCreator,
-} from "./utils"
+import { BaseColumn, BaseColumnProps, ColumnCreator } from "./utils"
 
-export interface HTMLColumnParams {
-}
+export interface HTMLColumnParams {}
 
 function MarkdownColumn(props: BaseColumnProps): BaseColumn {
-
   const cellTemplate = {
     kind: GridCellKind.Markdown,
     data: "",
     copyData: "true",
     allowOverlay: true,
   } as MarkdownCell
-
 
   return {
     ...props,
@@ -52,7 +49,7 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
       } as MarkdownCell
     },
     getCellValue(cell: MarkdownCell): string | null {
-      return cell.data;
+      return cell.data
     },
   }
 }
