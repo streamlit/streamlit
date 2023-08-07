@@ -33,7 +33,7 @@ const mockInitialViewState = {
   zoom: 6,
 }
 
-const mockElementId = "testId"
+const mockId = "testId"
 jest.mock("@streamlit/lib/src/theme", () => ({
   hasLightBackgroundColor: jest.fn(() => false),
 }))
@@ -69,7 +69,7 @@ const getProps = (
 
   return {
     element: DeckGlJsonChartProto.create({
-      elementId: mockElementId,
+      id: mockId,
       json: JSON.stringify(json),
       ...elementProps,
     }),
@@ -156,7 +156,7 @@ describe("DeckGlJsonChart element", () => {
   describe("getDeckObject", () => {
     const mockJsonParse = JSON.parse
 
-    const elementId = "newTestId"
+    const id = "newTestId"
     const newJson = '{"initialViewState": {"height": "100", "width": "100"}}'
     const isFullScreen = false
     const isLightTheme = false
@@ -169,7 +169,7 @@ describe("DeckGlJsonChart element", () => {
         viewState: {},
         initialized,
         initialViewState: mockInitialViewState,
-        elementId,
+        id,
         isLightTheme,
       }
 
@@ -182,7 +182,7 @@ describe("DeckGlJsonChart element", () => {
       viewState: {},
       initialized,
       initialViewState: mockInitialViewState,
-      elementId: mockElementId,
+      id: mockId,
       isLightTheme,
     }
 
