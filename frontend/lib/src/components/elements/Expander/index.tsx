@@ -14,4 +14,5 @@
  * limitations under the License.
  */
 
-export { default } from "./withExpandable"
+export { default } from "./Expander"
+export type { ExpanderProps } from "./Expander"
