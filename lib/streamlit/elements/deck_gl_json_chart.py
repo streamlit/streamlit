@@ -157,17 +157,17 @@ def marshall(
 ) -> None:
     if pydeck_obj is None:
         spec = json.dumps(EMPTY_MAP)
-        element_id = ""
+        id = ""
     else:
         spec = pydeck_obj.to_json()
         json_string = json.dumps(pydeck_obj.to_json())
         json_bytes = json_string.encode("utf-8")
-        element_id = hashlib.md5(json_bytes).hexdigest()
+        id = hashlib.md5(json_bytes).hexdigest()
 
     pydeck_proto.json = spec
     pydeck_proto.use_container_width = use_container_width
 
-    pydeck_proto.element_id = element_id
+    pydeck_proto.id = id
 
     tooltip = _get_pydeck_tooltip(pydeck_obj)
     if tooltip:

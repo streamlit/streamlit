@@ -85,7 +85,7 @@ export interface State {
   viewState: Record<string, unknown>
   initialized: boolean
   initialViewState: Record<string, unknown>
-  elementId: string | undefined
+  id: string | undefined
   pydeckJson: any
   isFullScreen: boolean
   isLightTheme: boolean
@@ -102,7 +102,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     },
     initialized: false,
     initialViewState: {},
-    elementId: undefined,
+    id: undefined,
     pydeckJson: undefined,
     isFullScreen: false,
     isLightTheme: hasLightBackgroundColor(this.props.theme),
@@ -155,18 +155,18 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     state: Partial<State>
   ): DeckObject => {
     const { element, width, height, theme } = props
-    const { elementId } = state
+    const { id } = state
 
     const isFullScreen = Boolean(height)
 
     // Only parse JSON when not transitioning to/from fullscreen, the element id changes, or theme changes
     if (
-      element.elementId !== elementId ||
+      element.id !== id ||
       state.isFullScreen !== isFullScreen ||
       state.isLightTheme !== hasLightBackgroundColor(theme)
     ) {
       state.pydeckJson = JSON.parse(element.json)
-      state.elementId = element.elementId
+      state.id = element.id
     }
 
     // If unset, use either the Mapbox light or dark style based on Streamlit's theme

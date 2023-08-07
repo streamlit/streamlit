@@ -26,5 +26,5 @@ message DeckGlJsonChart {
   bool use_container_width = 4;
 
   // the hash of the json so the the frontend doesn't always have to parse the pydeck json object
-  string element_id = 5;
+  string id = 5;
 }
