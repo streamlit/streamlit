@@ -156,13 +156,12 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     state: Partial<State>
   ): DeckObject => {
     const { element, width, height, theme, isFullScreen } = props
-    const { id } = state
 
     const currFullScreen = isFullScreen ?? false
 
     // Only parse JSON when not transitioning to/from fullscreen, the element id changes, or theme changes
     if (
-      element.id !== id ||
+      element.id !== state.id ||
       state.isFullScreen !== currFullScreen ||
       state.isLightTheme !== hasLightBackgroundColor(theme)
     ) {

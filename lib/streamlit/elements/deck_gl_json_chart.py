@@ -160,7 +160,7 @@ def marshall(
         id = ""
     else:
         spec = pydeck_obj.to_json()
-        json_string = json.dumps(pydeck_obj.to_json())
+        json_string = json.dumps(spec)
         json_bytes = json_string.encode("utf-8")
         id = hashlib.md5(json_bytes).hexdigest()
 
