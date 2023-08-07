@@ -112,6 +112,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     return (
       <ChatMessage
         element={node.deltaBlock.chatMessage as BlockProto.ChatMessage}
+        endpoints={props.endpoints}
       >
         {child}
       </ChatMessage>

@@ -18,10 +18,13 @@ import React from "react"
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 
+import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
 import { render } from "@streamlit/lib/src/test_util"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 
 import ChatMessage, { ChatMessageProps } from "./ChatMessage"
+
+const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
 
 const getProps = (
   elementProps: Partial<BlockProto.ChatMessage> = {}
@@ -32,6 +35,7 @@ const getProps = (
     avatar: "user",
     ...elementProps,
   }),
+  endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
 })
 
 describe("ChatMessage", () => {
