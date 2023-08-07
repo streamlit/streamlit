@@ -24,8 +24,6 @@ import { Block as BlockProto } from "@streamlit/lib/src/proto"
 
 import ChatMessage, { ChatMessageProps } from "./ChatMessage"
 
-const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
-
 const getProps = (
   elementProps: Partial<BlockProto.ChatMessage> = {}
 ): ChatMessageProps => ({
@@ -35,7 +33,9 @@ const getProps = (
     avatar: "user",
     ...elementProps,
   }),
-  endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
+  endpoints: mockEndpoints({
+    buildMediaURL: jest.fn().mockImplementation(url => url),
+  }),
 })
 
 describe("ChatMessage", () => {
