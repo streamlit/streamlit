@@ -21,6 +21,8 @@ def test_renders_chat_messages_correctly_1(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test if the chat messages render correctly"""
+    # Wait a bit more to allow all images to load:
+    themed_app.wait_for_timeout(500)
     chat_message_elements = themed_app.locator(".stChatMessage")
     expect(chat_message_elements).to_have_count(9)
     for i, element in enumerate(chat_message_elements.all()):
