@@ -70,14 +70,15 @@ registerLoaders([CSVLoader, GLTFLoader])
 
 const jsonConverter = new JSONConverter({ configuration })
 
-interface Props {
+export interface DeckGLProps {
   width: number
   theme: EmotionTheme
   mapboxToken: string
   element: DeckGlJsonChartProto
+  isFullScreen?: boolean
 }
 
-export interface PropsWithHeight extends Props {
+export interface PropsWithHeight extends DeckGLProps {
   height?: number
 }
 
@@ -154,15 +155,15 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     props: PropsWithHeight,
     state: Partial<State>
   ): DeckObject => {
-    const { element, width, height, theme } = props
+    const { element, width, height, theme, isFullScreen } = props
     const { id } = state
 
-    const isFullScreen = Boolean(height)
+    const currFullScreen = isFullScreen ?? false
 
     // Only parse JSON when not transitioning to/from fullscreen, the element id changes, or theme changes
     if (
       element.id !== id ||
-      state.isFullScreen !== isFullScreen ||
+      state.isFullScreen !== currFullScreen ||
       state.isLightTheme !== hasLightBackgroundColor(theme)
     ) {
       state.pydeckJson = JSON.parse(element.json)
