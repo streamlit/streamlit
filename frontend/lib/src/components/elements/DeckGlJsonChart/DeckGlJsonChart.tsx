@@ -81,7 +81,7 @@ export interface PropsWithHeight extends Props {
   height?: number
 }
 
-interface State {
+export interface State {
   viewState: Record<string, unknown>
   initialized: boolean
   initialViewState: Record<string, unknown>

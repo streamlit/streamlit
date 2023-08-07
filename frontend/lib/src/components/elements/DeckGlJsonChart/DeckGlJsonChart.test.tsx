@@ -21,22 +21,30 @@ import { shallow } from "@streamlit/lib/src/test_util"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import { NavigationControl } from "react-map-gl"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import { DeckGlJsonChart, PropsWithHeight } from "./DeckGlJsonChart"
+import { DeckGlJsonChart, PropsWithHeight, State } from "./DeckGlJsonChart"
+import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
+
+const mockInitialViewState = {
+  bearing: -27.36,
+  latitude: 52.2323,
+  longitude: -1.415,
+  maxZoom: 15,
+  minZoom: 5,
+  pitch: 40.5,
+  zoom: 6,
+}
+
+const mockElementId = "testId"
+jest.mock("@streamlit/lib/src/theme", () => ({
+  hasLightBackgroundColor: jest.fn(() => false),
+}))
 
 const getProps = (
   elementProps: Partial<DeckGlJsonChartProto> = {},
   initialViewStateProps: Record<string, unknown> = {}
 ): PropsWithHeight => {
   const json = {
-    initialViewState: {
-      bearing: -27.36,
-      latitude: 52.2323,
-      longitude: -1.415,
-      maxZoom: 15,
-      minZoom: 5,
-      pitch: 40.5,
-      zoom: 6,
-    },
+    initialViewState: mockInitialViewState,
     layers: [
       {
         "@@type": "HexagonLayer",
@@ -62,6 +70,7 @@ const getProps = (
 
   return {
     element: DeckGlJsonChartProto.create({
+      elementId: mockElementId,
       json: JSON.stringify(json),
       ...elementProps,
     }),
@@ -94,8 +103,10 @@ describe("DeckGlJsonChart element", () => {
       viewState: { pitch: 5, zoom: 5 },
     })
 
-    // @ts-expect-error
-    wrapper.setProps(getProps({}, { pitch: 40.5, zoom: 10 }))
+    wrapper.setProps(
+      // @ts-expect-error
+      getProps({ elementId: "newTestId" }, { pitch: 40.5, zoom: 10 })
+    )
 
     expect(wrapper.state("viewState")).toStrictEqual({
       pitch: 5,
@@ -146,6 +157,34 @@ describe("DeckGlJsonChart element", () => {
   describe("getDeckObject", () => {
     const mockJsonParse = JSON.parse
 
+    const elementId = "newTestId"
+    const newJson = '{"initialViewState": {"height": "100", "width": "100"}}'
+    const isFullScreen = false
+
+    const getNewState = (overrides?: Partial<State>): State => {
+      const defaultState: State = {
+        pydeckJson: JSON.parse(newJson), // Make sure newJson is defined elsewhere
+        isFullScreen: false,
+        viewState: {},
+        initialized: false,
+        initialViewState: mockInitialViewState,
+        elementId,
+        isLightTheme: false,
+      }
+
+      return { ...defaultState, ...overrides }
+    }
+
+    const originalState: State = {
+      pydeckJson: JSON.parse(newJson),
+      isFullScreen,
+      viewState: {},
+      initialized: false,
+      initialViewState: mockInitialViewState,
+      elementId: mockElementId,
+      isLightTheme: false,
+    }
+
     beforeEach(() => {
       JSON.parse = jest.fn(mockJsonParse)
     })
@@ -154,22 +193,41 @@ describe("DeckGlJsonChart element", () => {
       JSON.parse = mockJsonParse
     })
 
-    it("should not call JSON.parse when the element id and fullscreen state do not change", () => {
-      const elementId = "test-id"
-      const json = '{"key":"value"}'
-      const enteredFullScreen = false
-
-      const state = {
-        pydeckJson: JSON.parse(json),
-        elementId,
-        enteredFullScreen,
-      }
-
-      DeckGlJsonChart.getDeckObject(getProps(), state)
+    it("should not call JSON.parse when the element id is the same", () => {
+      DeckGlJsonChart.getDeckObject(getProps(), originalState)
 
       expect(JSON.parse).not.toHaveBeenCalled()
+
+      // state has different elementId from getProps
+      DeckGlJsonChart.getDeckObject(getProps(), getNewState())
+
+      expect(JSON.parse).toHaveBeenCalled()
     })
 
-    // Add more test cases to test when JSON.parse should be called
+    it("should not call JSON.parse when FullScreen state changes", () => {
+      DeckGlJsonChart.getDeckObject(getProps(), originalState)
+
+      expect(JSON.parse).not.toHaveBeenCalled()
+
+      DeckGlJsonChart.getDeckObject(
+        getProps(),
+        getNewState({ isFullScreen: true })
+      )
+
+      expect(JSON.parse).toHaveBeenCalled()
+    })
+
+    it("should not call JSON.parse when theme state changes", () => {
+      DeckGlJsonChart.getDeckObject(getProps(), originalState)
+
+      expect(JSON.parse).not.toHaveBeenCalled()
+
+      DeckGlJsonChart.getDeckObject(
+        getProps(),
+        getNewState({ isLightTheme: true })
+      )
+
+      expect(JSON.parse).toHaveBeenCalled()
+    })
   })
 })
