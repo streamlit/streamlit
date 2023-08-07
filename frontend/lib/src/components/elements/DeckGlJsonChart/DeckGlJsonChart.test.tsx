@@ -160,16 +160,18 @@ describe("DeckGlJsonChart element", () => {
     const elementId = "newTestId"
     const newJson = '{"initialViewState": {"height": "100", "width": "100"}}'
     const isFullScreen = false
+    const isLightTheme = false
+    const initialized = false
 
     const getNewState = (overrides?: Partial<State>): State => {
       const defaultState: State = {
         pydeckJson: JSON.parse(newJson), // Make sure newJson is defined elsewhere
-        isFullScreen: false,
+        isFullScreen,
         viewState: {},
-        initialized: false,
+        initialized,
         initialViewState: mockInitialViewState,
         elementId,
-        isLightTheme: false,
+        isLightTheme,
       }
 
       return { ...defaultState, ...overrides }
@@ -179,10 +181,10 @@ describe("DeckGlJsonChart element", () => {
       pydeckJson: JSON.parse(newJson),
       isFullScreen,
       viewState: {},
-      initialized: false,
+      initialized,
       initialViewState: mockInitialViewState,
       elementId: mockElementId,
-      isLightTheme: false,
+      isLightTheme,
     }
 
     beforeEach(() => {
