@@ -75,3 +75,6 @@ st.chat_message("user", avatar=image1).write("Red local image")
 
 image2 = Image.new("RGB", (10, 10), "blue")
 st.chat_message("assistant", avatar=image2).write("Blue local image")
+st.chat_message("assistant", avatar=image2).write(
+    "Another message with the same blue avatar."
+)
