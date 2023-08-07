@@ -142,4 +142,34 @@ describe("DeckGlJsonChart element", () => {
 
     expect(createdTooltip).toBe(false)
   })
+
+  describe("getDeckObject", () => {
+    const mockJsonParse = JSON.parse
+
+    beforeEach(() => {
+      JSON.parse = jest.fn(mockJsonParse)
+    })
+
+    afterEach(() => {
+      JSON.parse = mockJsonParse
+    })
+
+    it("should not call JSON.parse when the element id and fullscreen state do not change", () => {
+      const elementId = "test-id"
+      const json = '{"key":"value"}'
+      const enteredFullScreen = false
+
+      const state = {
+        pydeckJson: JSON.parse(json),
+        elementId,
+        enteredFullScreen,
+      }
+
+      DeckGlJsonChart.getDeckObject(getProps(), state)
+
+      expect(JSON.parse).not.toHaveBeenCalled()
+    })
+
+    // Add more test cases to test when JSON.parse should be called
+  })
 })

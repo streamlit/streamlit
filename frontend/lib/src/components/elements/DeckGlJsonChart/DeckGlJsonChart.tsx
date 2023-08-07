@@ -87,7 +87,8 @@ interface State {
   initialViewState: Record<string, unknown>
   elementId: string | undefined
   pydeckJson: any
-  enteredFullScreen: boolean
+  isFullScreen: boolean
+  isLightTheme: boolean
 }
 
 export const DEFAULT_DECK_GL_HEIGHT = 500
@@ -103,7 +104,8 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     initialViewState: {},
     elementId: undefined,
     pydeckJson: undefined,
-    enteredFullScreen: false,
+    isFullScreen: false,
+    isLightTheme: hasLightBackgroundColor(this.props.theme),
   }
 
   componentDidMount = (): void => {
@@ -155,12 +157,13 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     const { element, width, height, theme } = props
     const { elementId } = state
 
-    const isFullscreen = Boolean(height)
+    const isFullScreen = Boolean(height)
 
-    // Only parse JSON when not transitioning to/from fullscreen or if the element id changes
+    // Only parse JSON when not transitioning to/from fullscreen, the element id changes, or theme changes
     if (
       element.elementId !== elementId ||
-      state.enteredFullScreen !== isFullscreen
+      state.isFullScreen !== isFullScreen ||
+      state.isLightTheme !== hasLightBackgroundColor(theme)
     ) {
       state.pydeckJson = JSON.parse(element.json)
       state.elementId = element.elementId
@@ -175,7 +178,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     }
 
     // Set width and height based on the fullscreen state
-    if (isFullscreen) {
+    if (isFullScreen) {
       Object.assign(state.pydeckJson?.initialViewState, { width, height })
     } else {
       if (!state.pydeckJson?.initialViewState?.height) {
@@ -186,7 +189,8 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
       }
     }
 
-    state.enteredFullScreen = isFullscreen
+    state.isFullScreen = isFullScreen
+    state.isLightTheme = hasLightBackgroundColor(theme)
 
     delete state.pydeckJson?.views // We are not using views. This avoids a console warning.
 
