@@ -22,7 +22,6 @@ import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/prot
 import { NavigationControl } from "react-map-gl"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import { DeckGlJsonChart, PropsWithHeight, State } from "./DeckGlJsonChart"
-import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 
 const mockInitialViewState = {
   bearing: -27.36,
@@ -165,7 +164,7 @@ describe("DeckGlJsonChart element", () => {
 
     const getNewState = (overrides?: Partial<State>): State => {
       const defaultState: State = {
-        pydeckJson: JSON.parse(newJson), // Make sure newJson is defined elsewhere
+        pydeckJson: JSON.parse(newJson),
         isFullScreen,
         viewState: {},
         initialized,
