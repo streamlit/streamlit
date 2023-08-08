@@ -159,7 +159,7 @@ describe("DeckGlJsonChart element", () => {
     const id = "newTestId"
     const newJson = '{"initialViewState": {"height": "100", "width": "100"}}'
     const isFullScreen = false
-    const isLightTheme = false
+    // const isLightTheme = false
     const initialized = false
 
     const getNewState = (overrides?: Partial<State>): State => {
@@ -170,7 +170,7 @@ describe("DeckGlJsonChart element", () => {
         initialized,
         initialViewState: mockInitialViewState,
         id,
-        isLightTheme,
+        // isLightTheme,
       }
 
       return { ...defaultState, ...overrides }
@@ -183,7 +183,7 @@ describe("DeckGlJsonChart element", () => {
       initialized,
       initialViewState: mockInitialViewState,
       id: mockId,
-      isLightTheme,
+      // isLightTheme,
     }
 
     beforeEach(() => {
@@ -218,17 +218,17 @@ describe("DeckGlJsonChart element", () => {
       expect(JSON.parse).toHaveBeenCalled()
     })
 
-    it("should not call JSON.parse when theme state changes", () => {
-      DeckGlJsonChart.getDeckObject(getProps(), originalState)
+    // it("should not call JSON.parse when theme state changes", () => {
+    //   DeckGlJsonChart.getDeckObject(getProps(), originalState)
 
-      expect(JSON.parse).not.toHaveBeenCalled()
+    //   expect(JSON.parse).not.toHaveBeenCalled()
 
-      DeckGlJsonChart.getDeckObject(
-        getProps(),
-        getNewState({ isLightTheme: true })
-      )
+    //   DeckGlJsonChart.getDeckObject(
+    //     getProps(),
+    //     getNewState({ isLightTheme: true })
+    //   )
 
-      expect(JSON.parse).toHaveBeenCalled()
-    })
+    //   expect(JSON.parse).toHaveBeenCalled()
+    // })
   })
 })

@@ -89,7 +89,7 @@ export interface State {
   id: string | undefined
   pydeckJson: any
   isFullScreen: boolean
-  isLightTheme: boolean
+  // isLightTheme: boolean
 }
 
 export const DEFAULT_DECK_GL_HEIGHT = 500
@@ -162,8 +162,8 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     // Only parse JSON when not transitioning to/from fullscreen, the element id changes, or theme changes
     if (
       element.id !== state.id ||
-      state.isFullScreen !== currFullScreen ||
-      state.isLightTheme !== hasLightBackgroundColor(theme)
+      state.isFullScreen !== currFullScreen
+      // state.isLightTheme !== hasLightBackgroundColor(theme)
     ) {
       state.pydeckJson = JSON.parse(element.json)
       state.id = element.id
@@ -190,7 +190,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     }
 
     state.isFullScreen = isFullScreen
-    state.isLightTheme = hasLightBackgroundColor(theme)
+    // state.isLightTheme = hasLightBackgroundColor(theme)
 
     delete state.pydeckJson?.views // We are not using views. This avoids a console warning.
 
