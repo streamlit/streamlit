@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { DeckGL } from "deck.gl"
-import { render, shallow } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
-import { screen, fireEvent } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import { DeckGlJsonChart, PropsWithHeight, State } from "./DeckGlJsonChart"
