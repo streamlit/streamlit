@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import itertools
 from enum import Enum
 from typing import TYPE_CHECKING, Optional, Union, cast
 
@@ -231,7 +230,7 @@ class HeadingMixin:
         return cast("DeltaGenerator", self)
 
     @staticmethod
-    def handle_divider_color(divider):
+    def _handle_divider_color(divider):
         if divider is True:
             return "auto"
         valid_colors = ["blue", "green", "orange", "red", "violet", "gray"]
@@ -254,7 +253,7 @@ class HeadingMixin:
         proto.tag = tag.value
         proto.body = clean_text(body)
         if divider:
-            proto.divider = HeadingMixin.handle_divider_color(divider)
+            proto.divider = HeadingMixin._handle_divider_color(divider)
         if anchor is not None:
             if anchor is False:
                 proto.hide_anchor = True
