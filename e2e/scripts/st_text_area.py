@@ -42,11 +42,14 @@ st.write('value 8: "', i8, '"')
 i9 = st.text_area("text area 9", "default text", label_visibility="collapsed")
 st.write('value 9: "', i9, '"')
 
+i10 = st.text_area("text area 10 - 250px height", height=250)
+st.write('value 10: "', i10, '"')
+
 if runtime.exists():
 
     def on_change():
         st.session_state.text_area_changed = True
 
-    st.text_area("text area 10", key="text_area10", on_change=on_change)
-    st.write('value 10: "', st.session_state.text_area10, '"')
+    st.text_area("text area 11", key="text_area11", on_change=on_change)
+    st.write('value 11: "', st.session_state.text_area11, '"')
     st.write("text area changed:", "text_area_changed" in st.session_state)

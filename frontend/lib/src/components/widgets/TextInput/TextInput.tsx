@@ -179,7 +179,11 @@ class TextInput extends React.PureComponent<Props, State> {
     )
 
     return (
-      <StyledTextInput className="row-widget stTextInput" width={width}>
+      <StyledTextInput
+        className="row-widget stTextInput"
+        data-testid="stTextInput"
+        width={width}
+      >
         <WidgetLabel
           label={element.label}
           disabled={disabled}
@@ -226,6 +230,9 @@ class TextInput extends React.PureComponent<Props, State> {
               },
             },
             Root: {
+              props: {
+                "data-testid": "textInputRootElement",
+              },
               style: {
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                 borderLeftWidth: "1px",

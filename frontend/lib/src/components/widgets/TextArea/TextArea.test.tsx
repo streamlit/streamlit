@@ -15,7 +15,9 @@
  */
 
 import React from "react"
-import { mount, shallow } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen, fireEvent } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextArea as TextAreaProto,
@@ -23,10 +25,12 @@ import {
 
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
-import { Textarea as UITextArea } from "baseui/textarea"
 import TextArea, { Props } from "./TextArea"
 
-const getProps = (elementProps: Partial<TextAreaProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<TextAreaProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: TextAreaProto.create({
     id: "1",
     label: "Label",
@@ -40,20 +44,22 @@ const getProps = (elementProps: Partial<TextAreaProto> = {}): Props => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  ...widgetProps,
 })
 
 describe("TextArea widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<TextArea {...props} />)
+    render(<TextArea {...props} />)
 
-    expect(wrapper.find(UITextArea).length).toBe(1)
+    const textArea = screen.getByRole("textbox")
+    expect(textArea).toBeInTheDocument()
   })
 
   it("sets widget value on mount", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
-    shallow(<TextArea {...props} />)
+    render(<TextArea {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
@@ -64,36 +70,30 @@ describe("TextArea widget", () => {
 
   it("has correct className and style", () => {
     const props = getProps()
-    const wrapper = shallow(<TextArea {...props} />)
+    render(<TextArea {...props} />)
+    const textArea = screen.getByTestId("stTextAreaContainer")
 
-    const wrappedDiv = wrapper.find("div").first()
-
-    const { className, style } = wrappedDiv.props()
-    // @ts-expect-error
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("stTextArea")
-
-    // @ts-expect-error
-    expect(style.width).toBe(getProps().width)
+    expect(textArea).toHaveClass("stTextArea")
+    expect(textArea).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label", () => {
     const props = getProps()
-    const wrapper = mount(<TextArea {...props} />)
+    render(<TextArea {...props} />)
 
-    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+    const widgetLabel = screen.queryByText(`${props.element.label}`)
+    expect(widgetLabel).toBeInTheDocument()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
-    const wrapper = mount(<TextArea {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
+    render(<TextArea {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+      "visibility: hidden"
     )
   })
 
@@ -103,47 +103,42 @@ describe("TextArea widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
-    const wrapper = mount(<TextArea {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
-    )
+    render(<TextArea {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
   it("has a default value", () => {
     const props = getProps()
-    const wrapper = shallow(<TextArea {...props} />)
+    render(<TextArea {...props} />)
 
-    expect(wrapper.find(UITextArea).prop("value")).toBe(props.element.default)
+    const textArea = screen.getByRole("textbox")
+    expect(textArea).toHaveValue(props.element.default)
   })
 
   it("renders a placeholder", () => {
     const props = getProps()
-    const wrapper = mount(<TextArea {...props} />)
+    render(<TextArea {...props} />)
 
-    expect(wrapper.find(UITextArea).prop("placeholder")).toBe(
-      props.element.placeholder
-    )
+    const textArea = screen.getByRole("textbox")
+    expect(textArea).toHaveAttribute("placeholder", props.element.placeholder)
   })
 
   it("can be disabled", () => {
-    const props = getProps()
-    const wrapper = shallow(<TextArea {...props} />)
+    const props = getProps({}, { disabled: true })
+    render(<TextArea {...props} />)
 
-    expect(wrapper.find(UITextArea).prop("disabled")).toBe(props.disabled)
+    const textArea = screen.getByRole("textbox")
+    expect(textArea).toBeDisabled()
   })
 
   it("sets widget value on blur", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
-    const wrapper = shallow(<TextArea {...props} />)
+    render(<TextArea {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UITextArea).prop("onChange")({
-      target: { value: "testing" },
-    } as React.ChangeEvent<HTMLTextAreaElement>)
-
-    // @ts-expect-error
-    wrapper.find(UITextArea).prop("onBlur")()
+    const textArea = screen.getByRole("textbox")
+    fireEvent.change(textArea, { target: { value: "testing" } })
+    fireEvent.blur(textArea)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
@@ -157,19 +152,12 @@ describe("TextArea widget", () => {
   it("sets widget value when ctrl+enter is pressed", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
-    const wrapper = shallow(<TextArea {...props} />)
+    render(<TextArea {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UITextArea).prop("onChange")({
-      target: { value: "testing" },
-    } as React.ChangeEvent<HTMLTextAreaElement>)
+    const textArea = screen.getByRole("textbox")
 
-    // @ts-expect-error
-    wrapper.find(UITextArea).prop("onKeyDown")({
-      preventDefault: jest.fn(),
-      ctrlKey: true,
-      key: "Enter",
-    })
+    fireEvent.change(textArea, { target: { value: "testing" } })
+    fireEvent.keyDown(textArea, { ctrlKey: true, key: "Enter" })
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
@@ -180,53 +168,29 @@ describe("TextArea widget", () => {
     )
   })
 
-  it("sets widget height if it is passed from props", () => {
-    const props = getProps({
-      height: 500,
-    })
-    const wrapper = shallow(<TextArea {...props} />)
-    const overrides = wrapper.find(UITextArea).prop("overrides")
-
-    // @ts-expect-error
-    const { height, resize } = overrides.Input.style
-
-    expect(height).toBe("500px")
-    expect(resize).toBe("vertical")
-  })
-
   it("limits the length if max_chars is passed", () => {
     const props = getProps({
       height: 500,
       maxChars: 10,
     })
-    const wrapper = shallow(<TextArea {...props} />)
+    render(<TextArea {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UITextArea).prop("onChange")({
-      target: { value: "0123456789" },
-    } as EventTarget)
+    const textArea = screen.getByRole("textbox")
 
-    expect(wrapper.find(UITextArea).prop("value")).toBe("0123456789")
+    fireEvent.change(textArea, { target: { value: "0123456789" } })
+    expect(textArea).toHaveValue("0123456789")
 
-    // @ts-expect-error
-    wrapper.find(UITextArea).prop("onChange")({
-      target: { value: "0123456789a" },
-    } as EventTarget)
-
-    expect(wrapper.find(UITextArea).prop("value")).toBe("0123456789")
+    fireEvent.change(textArea, { target: { value: "0123456789a" } })
+    expect(textArea).toHaveValue("0123456789")
   })
 
   it("does not update widget value on text changes when outside of a form", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
-    const wrapper = shallow(<TextArea {...props} />)
+    render(<TextArea {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UITextArea).prop("onChange")({
-      target: { value: "TEST" },
-    } as React.ChangeEvent<HTMLTextAreaElement>)
-
-    expect(wrapper.state("dirty")).toBe(true)
+    const textArea = screen.getByRole("textbox")
+    fireEvent.change(textArea, { target: { value: "TEST" } })
 
     // Check that the last call was in componentDidMount.
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
@@ -245,22 +209,18 @@ describe("TextArea widget", () => {
 
     jest.spyOn(props.widgetMgr, "setStringValue")
 
-    const wrapper = shallow(<TextArea {...props} />)
+    render(<TextArea {...props} />)
 
     // Change the widget value
-    // @ts-expect-error
-    wrapper.find(UITextArea).prop("onChange")({
-      target: { value: "TEST" },
-    } as React.ChangeEvent<HTMLTextAreaElement>)
-
-    expect(wrapper.state("value")).toBe("TEST")
+    const textArea = screen.getByRole("textbox")
+    fireEvent.change(textArea, { target: { value: "TEST" } })
+    expect(textArea).toHaveValue("TEST")
 
     // "Submit" the form
     props.widgetMgr.submitForm("form")
-    wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(wrapper.state("value")).toBe(props.element.default)
+    expect(textArea).toHaveValue(props.element.default)
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,
@@ -279,19 +239,10 @@ describe("TextArea widget", () => {
     it("sets widget value when ⌘+enter is pressed", () => {
       const props = getProps()
       jest.spyOn(props.widgetMgr, "setStringValue")
-      const wrapper = shallow(<TextArea {...props} />)
-
-      // @ts-expect-error
-      wrapper.find(UITextArea).prop("onChange")({
-        target: { value: "testing" },
-      } as React.ChangeEvent<HTMLTextAreaElement>)
-
-      // @ts-expect-error
-      wrapper.find(UITextArea).prop("onKeyDown")({
-        preventDefault: jest.fn(),
-        metaKey: true,
-        key: "Enter",
-      })
+      render(<TextArea {...props} />)
+      const textArea = screen.getByRole("textbox")
+      fireEvent.change(textArea, { target: { value: "testing" } })
+      fireEvent.keyDown(textArea, { metaKey: true, key: "Enter" })
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
         props.element,

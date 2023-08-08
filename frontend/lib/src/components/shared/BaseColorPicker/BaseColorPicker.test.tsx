@@ -15,10 +15,9 @@
  */
 
 import React from "react"
-import { StyledColorPicker } from "@streamlit/lib/src/components/shared/BaseColorPicker/styled-components"
-import { mount, shallow } from "@streamlit/lib/src/test_util"
-import { StatefulPopover as UIPopover } from "baseui/popover"
-import { ChromePicker } from "react-color"
+import "@testing-library/jest-dom"
+import { screen, fireEvent } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 import BaseColorPicker, { BaseColorPickerProps } from "./BaseColorPicker"
@@ -35,30 +34,28 @@ const getProps = (
 })
 
 describe("ColorPicker widget", () => {
-  const props = getProps()
-  const wrapper = shallow(<BaseColorPicker {...props} />)
-  const colorPickerWrapper = wrapper
-    .find(UIPopover)
-    .renderProp("content")({ close: () => {} })
-    .find(ChromePicker)
   it("renders without crashing", () => {
-    expect(wrapper.find(UIPopover).length).toBe(1)
-    expect(colorPickerWrapper.find(ChromePicker).length).toBe(1)
+    const props = getProps()
+    render(<BaseColorPicker {...props} />)
+    const colorPicker = screen.getByTestId("stColorPicker")
+    expect(colorPicker).toBeInTheDocument()
   })
 
   it("should render a label in the title", () => {
-    const wrapper = mount(<BaseColorPicker {...props} />)
-    const wrappedDiv = wrapper.find("StyledColorPicker")
-    expect(wrappedDiv.find("StyledWidgetLabel").text()).toBe(props.label)
+    const props = getProps()
+    render(<BaseColorPicker {...props} />)
+    const widgetLabel = screen.queryByText(`${props.label}`)
+    expect(widgetLabel).toBeInTheDocument()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
       labelVisibility: LabelVisibilityOptions.Hidden,
     })
-    const wrapper = mount(<BaseColorPicker {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityOptions.Hidden
+    render(<BaseColorPicker {...props} />)
+
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+      "visibility: hidden"
     )
   })
 
@@ -66,116 +63,81 @@ describe("ColorPicker widget", () => {
     const props = getProps({
       labelVisibility: LabelVisibilityOptions.Collapsed,
     })
-    const wrapper = mount(<BaseColorPicker {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityOptions.Collapsed
-    )
+    render(<BaseColorPicker {...props} />)
+
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
   it("should have correct style", () => {
-    const wrappedDiv = wrapper.find("StyledColorPicker")
-    const { style } = wrappedDiv.props()
+    const props = getProps()
+    render(<BaseColorPicker {...props} />)
+    const colorPicker = screen.getByTestId("stColorPicker")
 
-    // @ts-expect-error
-    expect(style.width).toBe(getProps().width)
+    expect(colorPicker).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("should render a default color in the preview and the color picker", () => {
-    wrapper.find(UIPopover).simulate("click")
-    const chromePickerWrapper = wrapper
-      .find(UIPopover)
-      .renderProp("content")({ close: () => {} })
-      .find(ChromePicker)
+    const props = getProps()
+    render(<BaseColorPicker {...props} />)
 
-    expect(wrapper.find("StyledColorBlock").prop("style")).toEqual({
-      backgroundColor: "#000000",
-      opacity: "",
-    })
+    const colorBlock = screen.getByTestId("stColorBlock")
+    fireEvent.click(colorBlock)
 
-    expect(chromePickerWrapper.prop("color")).toEqual("#000000")
+    expect(colorBlock).toHaveStyle("background-color: #000000")
+
+    const colorInput = screen.getByRole("textbox")
+    expect(colorInput).toHaveValue("#000000")
   })
 
   it("supports hex shorthand", () => {
-    wrapper.find(UIPopover).simulate("click")
+    const props = getProps()
+    render(<BaseColorPicker {...props} />)
 
-    // @ts-expect-error do not need change event added
-    colorPickerWrapper.prop("onChange")({
-      hex: "#333",
-    })
+    const colorBlock = screen.getByTestId("stColorBlock")
+    fireEvent.click(colorBlock)
 
-    expect(
-      wrapper
-        .find(UIPopover)
-        .renderProp("content")({ close: () => {} })
-        .find(ChromePicker)
-        .prop("color")
-    ).toEqual("#333")
+    const colorInput = screen.getByRole("textbox")
+    fireEvent.change(colorInput, { target: { value: "#333" } })
+
+    expect(colorInput).toHaveValue("#333333")
+    expect(colorBlock).toHaveStyle("background-color: #333333")
   })
 
   it("should update the widget value when it's changed", () => {
-    const newColor = "#E91E63"
-    wrapper.find(UIPopover).simulate("click")
+    const props = getProps()
+    render(<BaseColorPicker {...props} />)
 
-    // @ts-expect-error do not need change event added
-    colorPickerWrapper.prop("onChange")({
-      hex: newColor,
+    const newColor = "#E91E63"
+    const colorBlock = screen.getByTestId("stColorBlock")
+    fireEvent.click(colorBlock)
+
+    const colorInput = screen.getByRole("textbox")
+    fireEvent.change(colorInput, { target: { value: newColor } })
+
+    expect(colorInput).toHaveValue(newColor)
+    expect(colorBlock).toHaveStyle(`background-color: ${newColor}`)
+  })
+
+  describe("ColorPicker widget with optional params", () => {
+    it("renders with showValue", () => {
+      const props = getProps({ showValue: true })
+      render(<BaseColorPicker {...props} />)
+      const colorLabel = screen.getByText("#000000")
+      expect(colorLabel).toBeInTheDocument()
     })
 
-    expect(
-      wrapper
-        .find(UIPopover)
-        .renderProp("content")({ close: () => {} })
-        .find(ChromePicker)
-        .prop("color")
-    ).toEqual(newColor)
-  })
+    it("renders without showValue", () => {
+      const props = getProps()
+      render(<BaseColorPicker {...props} />)
+      const colorLabel = screen.queryByText("#000000")
+      expect(colorLabel).not.toBeInTheDocument()
+    })
 
-  it("should disable alpha property for now", () => {
-    wrapper.find(UIPopover).simulate("click")
-    expect(colorPickerWrapper.prop("disableAlpha")).toStrictEqual(true)
-  })
-})
-
-describe("ColorPicker widget with optional params", () => {
-  it("renders with showValue", () => {
-    const props = getProps({ showValue: true })
-    const wrapper = shallow(<BaseColorPicker {...props} />)
-    expect(wrapper.find("StyledColorValue").exists()).toBe(true)
-  })
-
-  it("renders without showValue", () => {
-    const props = getProps()
-    const wrapper = shallow(<BaseColorPicker {...props} />)
-    expect(wrapper.find("StyledColorValue").exists()).toBe(false)
-  })
-
-  it("should render TooltipIcon if help text provided", () => {
-    const props = getProps({ help: "help text" })
-    const wrapper = shallow(<BaseColorPicker {...props} />)
-    expect(wrapper.find("TooltipIcon").prop("content")).toBe("help text")
-  })
-})
-
-describe("ColorPicker error handler", () => {
-  it("swallows SecurityErrors", () => {
-    const props = getProps({})
-    const wrapper = shallow(<BaseColorPicker {...props} />)
-    wrapper
-      .find(StyledColorPicker)
-      .simulateError({ name: "SecurityError", message: "", stack: [] })
-
-    // We swallow SecurityErrors, so after an error is thrown we
-    // should not get unmounted
-    expect(wrapper.find(UIPopover).length).toBe(1)
-  })
-
-  it("re-throws non-SecurityErrors", () => {
-    const mockError = new Error("")
-
-    expect(() => {
-      const props = getProps({})
-      const wrapper = shallow(<BaseColorPicker {...props} />)
-      wrapper.find(StyledColorPicker).simulateError(mockError)
-    }).toThrow(mockError)
+    it("should render TooltipIcon if help text provided", () => {
+      const props = getProps({ help: "help text" })
+      render(<BaseColorPicker {...props} />)
+      const tooltipIcon = screen.getByTestId("stTooltipIcon")
+      expect(tooltipIcon).toBeInTheDocument()
+    })
   })
 })
