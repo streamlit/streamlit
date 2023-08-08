@@ -14,8 +14,9 @@
 
 """Tests widget-related functionality"""
 
+import inspect
 import unittest
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import ANY, MagicMock, call, patch
 
 from parameterized import parameterized
 
@@ -304,50 +305,150 @@ class WidgetHelperTests(unittest.TestCase):
         assert id.startswith(GENERATED_WIDGET_ID_PREFIX)
 
 
-class WidgetIdDisabledTests(DeltaGeneratorTestCase):
+class ComputeWidgetIdTests(DeltaGeneratorTestCase):
+    """Enforce that new arguments added to the signature of a widget function are taken
+    into account when computing widget IDs unless explicitly excluded.
+    """
+
+    def signature_to_expected_kwargs(self, sig):
+        # These widget kwargs aren't used for widget ID calculation, meaning that they
+        # can be changed without resetting the widget.
+        excluded_kwargs = {
+            # Internal stuff
+            "ctx",
+            # Formatting/display stuff
+            "disabled",
+            "format_func",
+            "label_visibility",
+            # on_change callbacks and similar/related parameters.
+            "args",
+            "kwargs",
+            "on_change",
+            "on_click",
+            "on_submit",
+        }
+
+        kwargs = {
+            kwarg: ANY
+            for kwarg in sig.parameters.keys()
+            if kwarg not in excluded_kwargs
+        }
+
+        # Add some kwargs that are passed to compute_widget_id but don't appear in widget
+        # signatures.
+        for kwarg in ["form_id", "user_key"]:
+            kwargs[kwarg] = ANY
+
+        return kwargs
+
     @parameterized.expand(
         [
-            (st.button,),
-            (st.camera_input,),
-            (st.checkbox,),
-            (st.color_picker,),
-            (st.file_uploader,),
-            (st.number_input,),
-            (st.slider,),
-            (st.text_area,),
-            (st.text_input,),
-            (st.date_input,),
-            (st.time_input,),
+            (st.camera_input, "camera_input"),
+            (st.checkbox, "checkbox"),
+            (st.color_picker, "color_picker"),
+            (st.date_input, "time_widgets"),
+            (st.file_uploader, "file_uploader"),
+            (st.number_input, "number_input"),
+            (st.slider, "slider"),
+            (st.text_area, "text_widgets"),
+            (st.text_input, "text_widgets"),
+            (st.time_input, "time_widgets"),
         ]
     )
-    def test_disabled_parameter_id(self, widget_func):
-        widget_func("my_widget")
+    def test_widget_id_computation(self, widget_func, module_name):
+        with patch(
+            f"streamlit.elements.widgets.{module_name}.compute_widget_id",
+            wraps=compute_widget_id,
+        ) as patched_compute_widget_id:
+            widget_func("my_widget")
 
-        # The `disabled` argument shouldn't affect a widget's ID, so we
-        # expect a DuplicateWidgetID error.
+        sig = inspect.signature(widget_func)
+        expected_sig = self.signature_to_expected_kwargs(sig)
+
+        patched_compute_widget_id.assert_called_with(ANY, **expected_sig)
+
+        # Double check that we get a DuplicateWidgetID error since the `disabled`
+        # argument shouldn't affect a widget's ID.
         with self.assertRaises(errors.DuplicateWidgetID):
             widget_func("my_widget", disabled=True)
 
-    def test_disabled_parameter_id_download_button(self):
-        st.download_button("my_widget", data="")
+    @parameterized.expand(
+        [
+            (st.button, "button"),
+            (st.chat_input, "chat"),
+            (st.download_button, "button"),
+        ]
+    )
+    def test_widget_id_computation_no_form_widgets(self, widget_func, module_name):
+        with patch(
+            f"streamlit.elements.widgets.{module_name}.compute_widget_id",
+            wraps=compute_widget_id,
+        ) as patched_compute_widget_id:
+            if widget_func == st.download_button:
+                widget_func("my_widget", data="")
+            else:
+                widget_func("my_widget")
 
-        with self.assertRaises(errors.DuplicateWidgetID):
-            st.download_button("my_widget", data="", disabled=True)
+        sig = inspect.signature(widget_func)
+        expected_sig = self.signature_to_expected_kwargs(sig)
+
+        # button and chat widgets don't include a form_id param in their calls to
+        # compute_widget_id because having either in forms (aside from the form's
+        # submit button) is illegal.
+        del expected_sig["form_id"]
+        if widget_func == st.button:
+            expected_sig["is_form_submitter"] = ANY
+
+        patched_compute_widget_id.assert_called_with(ANY, **expected_sig)
 
     @parameterized.expand(
         [
-            (st.multiselect,),
-            (st.radio,),
-            (st.select_slider,),
-            (st.selectbox,),
+            (st.multiselect, "multiselect"),
+            (st.radio, "radio"),
+            (st.select_slider, "select_slider"),
+            (st.selectbox, "selectbox"),
         ]
     )
-    def test_disabled_parameter_id_options_widgets(self, widget_func):
+    def test_widget_id_computation_options_widgets(self, widget_func, module_name):
         options = ["a", "b", "c"]
-        widget_func("my_widget", options)
 
+        with patch(
+            f"streamlit.elements.widgets.{module_name}.compute_widget_id",
+            wraps=compute_widget_id,
+        ) as patched_compute_widget_id:
+            widget_func("my_widget", options)
+
+        sig = inspect.signature(widget_func)
+        patched_compute_widget_id.assert_called_with(
+            ANY, **self.signature_to_expected_kwargs(sig)
+        )
+
+        # Double check that we get a DuplicateWidgetID error since the `disabled`
+        # argument shouldn't affect a widget's ID.
         with self.assertRaises(errors.DuplicateWidgetID):
             widget_func("my_widget", options, disabled=True)
+
+    def test_widget_id_computation_data_editor(self):
+        with patch(
+            f"streamlit.elements.widgets.data_editor.compute_widget_id",
+            wraps=compute_widget_id,
+        ) as patched_compute_widget_id:
+            st.data_editor(data=[])
+
+        sig = inspect.signature(st.data_editor)
+        expected_sig = self.signature_to_expected_kwargs(sig)
+
+        # Make some changes to expected_sig unique to st.data_editor.
+        expected_sig["column_config_mapping"] = ANY
+        del expected_sig["hide_index"]
+        del expected_sig["column_config"]
+
+        patched_compute_widget_id.assert_called_with(ANY, **expected_sig)
+
+        # Double check that we get a DuplicateWidgetID error since the `disabled`
+        # argument shouldn't affect a widget's ID.
+        with self.assertRaises(errors.DuplicateWidgetID):
+            st.data_editor(data=[], disabled=True)
 
 
 @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))

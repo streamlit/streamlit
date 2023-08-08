@@ -18,7 +18,6 @@
 export {
   IS_DEV_ENV,
   RERUN_PROMPT_MODAL_DIALOG,
-  SHOW_DEPLOY_BUTTON,
   WEBSOCKET_PORT_DEV,
 } from "./baseconsts"
 export { default as VerticalBlock } from "./components/core/Block"
@@ -113,7 +112,6 @@ export {
   isPaddingDisplayed,
   isScrollingHidden,
   isToolbarDisplayed,
-  isTesting,
   notUndefined,
   setCookie,
   extractPageNameFromPathName,

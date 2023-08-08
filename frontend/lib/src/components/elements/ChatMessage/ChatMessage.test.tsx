@@ -18,6 +18,7 @@ import React from "react"
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 
+import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
 import { render } from "@streamlit/lib/src/test_util"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 
@@ -31,6 +32,9 @@ const getProps = (
     avatarType: BlockProto.ChatMessage.AvatarType.ICON,
     avatar: "user",
     ...elementProps,
+  }),
+  endpoints: mockEndpoints({
+    buildMediaURL: jest.fn().mockImplementation(url => url),
   }),
 })
 
