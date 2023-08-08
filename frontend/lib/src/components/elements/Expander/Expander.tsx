@@ -25,10 +25,13 @@ import { useTheme } from "@emotion/react"
 import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 
-import Icon from "@streamlit/lib/src/components/shared/Icon"
+import Icon, { CombinedIcon } from "@streamlit/lib/src/components/shared/Icon"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
-import { StyledExpandableContainer } from "./styled-components"
+import {
+  StyledExpandableContainer,
+  StyledIconContainer,
+} from "./styled-components"
 
 export interface ExpanderProps {
   element: BlockProto.Expandable
@@ -173,7 +176,10 @@ const Expander: React.FC<ExpanderProps> = ({
       >
         <Panel
           title={
-            <StreamlitMarkdown source={label} allowHTML={false} isLabel />
+            <StyledIconContainer>
+              {element.icon && <CombinedIcon icon={element.icon} size="lg" />}
+              <StreamlitMarkdown source={label} allowHTML={false} isLabel />
+            </StyledIconContainer>
           }
           key="panel"
         >

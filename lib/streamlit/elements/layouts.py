@@ -11,11 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, List, Literal, Optional, Sequence, Union, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.string_util import is_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -313,7 +317,13 @@ class LayoutsMixin:
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
     @gather_metrics("expander")
-    def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
+    def expander(
+        self,
+        label: str,
+        expanded: bool = False,
+        *,  # keyword-only args:
+        icon: Literal["check", "error", "spinner"] | str | None = None,
+    ) -> "DeltaGenerator":
         r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
@@ -354,6 +364,15 @@ class LayoutsMixin:
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
+        icon : "check", "error", "spinner", or str or None
+            An optional icon for the expander. This can be:
+
+            * A single letter emoji, such as "👈", "🤖", etc. Shortcodes
+              are not allowed.
+
+            * One of the following preset icon names: "check", "error" or "spinner".
+
+            Defaults to None, which means no icon is displayed.
 
         Examples
         --------
@@ -400,6 +419,14 @@ class LayoutsMixin:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label
+        if icon:
+            if icon not in ["check", "error", "spinner"] and not is_emoji(icon):
+                raise StreamlitAPIException(
+                    f'The value "{icon}" is not one of the supported icon names '
+                    '("spinner", "check", "error") and not a valid emoji.'
+                )
+
+            expandable_proto.icon = str(icon)
 
         block_proto = BlockProto()
         block_proto.allow_empty = True

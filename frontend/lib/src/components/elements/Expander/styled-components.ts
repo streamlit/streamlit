@@ -16,6 +16,12 @@
 
 import styled from "@emotion/styled"
 
+export const StyledIconContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: theme.spacing.sm,
+  alignItems: "center",
+}))
+
 export const StyledExpandableContainer = styled.div(({ theme }) => ({
   ".streamlit-expanderHeader:hover svg": {
     fill: theme.colors.primary,
