@@ -16,7 +16,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 
-EXPANDER_HEADER_IDENTIFIER = ".streamlit-expanderHeader"
+EXPANDER_HEADER_IDENTIFIER = '[data-testid="stExpander"] summary'
 
 
 def test_displays_expander_and_regular_containers_properly(app: Page):

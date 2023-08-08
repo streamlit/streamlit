@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const expanderHeaderIdentifier = ".streamlit-expanderHeader";
+const expanderHeaderIdentifier = "summary";
 
 describe("st.expander", () => {
   before(() => {
