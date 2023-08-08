@@ -233,7 +233,7 @@ class HeadingMixin:
     def _handle_divider_color(divider):
         if divider is True:
             return "auto"
-        valid_colors = ["blue", "green", "orange", "red", "violet", "gray"]
+        valid_colors = ["blue", "green", "orange", "red", "violet", "gray", "rainbow"]
         if divider in valid_colors:
             return divider
         else:

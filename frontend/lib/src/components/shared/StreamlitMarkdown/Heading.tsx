@@ -120,7 +120,9 @@ function Heading(props: HeadingProtoProps): ReactElement {
           )}
         </StyledStreamlitMarkdown>
       </div>
-      {divider && <StyledDivider color={divider} />}
+      {divider && (
+        <StyledDivider rainbow={divider.includes("linear")} color={divider} />
+      )}
     </>
   )
 }

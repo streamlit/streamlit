@@ -418,7 +418,7 @@ export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
 }
 
 export function getHeaderColors(theme: EmotionTheme): any {
-  const { blue, green, orange, red, violet, gray } =
+  const { blue, green, orange, red, violet, gray, purple, yellow } =
     getMarkdownTextColors(theme)
   return {
     blue: blue,
@@ -427,6 +427,7 @@ export function getHeaderColors(theme: EmotionTheme): any {
     red: red,
     violet: violet,
     gray: gray,
+    rainbow: `linear-gradient(to right, ${red}, ${orange}, ${yellow}, ${green}, ${blue}, ${violet}, ${purple})`,
   }
 }
 

@@ -16,6 +16,7 @@
 
 import { Theme } from "@emotion/react"
 import styled from "@emotion/styled"
+import { rainbow } from "react-syntax-highlighter/dist/esm/styles/hljs"
 
 export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
@@ -187,15 +188,20 @@ export const StyledHeaderContent = styled.span(() => ({
 }))
 
 export interface StyledDividerProps {
+  rainbow: boolean
   color: string
 }
 
-export const StyledDivider = styled.hr<StyledDividerProps>(({ color }) => ({
-  backgroundColor: color,
-  // Height needs to be !important due to globalStyles.tsx hr height override - line #170
-  height: "3px !important",
-  marginTop: "1rem",
-  marginBottom: "0px",
-  border: "none",
-  borderRadius: "3px",
-}))
+export const StyledDivider = styled.hr<StyledDividerProps>(
+  ({ rainbow, color }) => {
+    return {
+      // Height needs to be !important due to globalStyles.tsx hr height override - line #170
+      height: "3px !important",
+      marginTop: "1rem",
+      marginBottom: "0px",
+      border: "none",
+      borderRadius: "3px",
+      ...(rainbow ? { background: color } : { backgroundColor: color }),
+    }
+  }
+)
