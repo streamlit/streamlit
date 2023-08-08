@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import React from "react"
 import { render } from "@streamlit/lib/src/test_util"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
