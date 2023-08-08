@@ -141,7 +141,10 @@ function Modal(props: ModalProps): ReactElement {
     },
     Dialog: {
       style: {
-        borderRadius: radii.xl,
+        borderBottomRadius: radii.xl,
+        borderTopRadius: radii.xl,
+        borderLeftRadius: radii.xl,
+        borderRightRadius: radii.xl,
       },
     },
     Close: {
