@@ -16,7 +16,6 @@
 
 import { Theme } from "@emotion/react"
 import styled from "@emotion/styled"
-import { rainbow } from "react-syntax-highlighter/dist/esm/styles/hljs"
 
 export interface StyledStreamlitMarkdownProps {
   isCaption: boolean

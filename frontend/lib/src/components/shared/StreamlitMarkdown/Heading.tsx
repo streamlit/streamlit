@@ -121,7 +121,11 @@ function Heading(props: HeadingProtoProps): ReactElement {
         </StyledStreamlitMarkdown>
       </div>
       {divider && (
-        <StyledDivider rainbow={divider.includes("linear")} color={divider} />
+        <StyledDivider
+          data-testid="stHeadingDivider"
+          rainbow={divider.includes("linear")}
+          color={divider}
+        />
       )}
     </>
   )

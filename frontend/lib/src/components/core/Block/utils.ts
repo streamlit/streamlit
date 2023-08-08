@@ -24,7 +24,7 @@ import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { ComponentRegistry } from "@streamlit/lib/src/components/widgets/CustomComponent"
 import { SessionInfo } from "@streamlit/lib/src/SessionInfo"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
-import { EmotionTheme, getHeaderColors } from "@streamlit/lib/src/theme"
+import { EmotionTheme, getDividerColors } from "@streamlit/lib/src/theme"
 
 export function shouldComponentBeEnabled(
   elementType: string,
@@ -62,23 +62,29 @@ export function assignDividerColor(
   node: BlockNode,
   theme: EmotionTheme
 ): void {
-  const colorMap = getHeaderColors(theme)
-  const colorKeys = Object.keys(colorMap)
+  // All available divider colors
+  const allColorMap = getDividerColors(theme)
+  const allColorKeys = Object.keys(allColorMap)
+
+  // Limited colors for auto assignment
+  const { blue, green, orange, red, violet } = allColorMap
+  const autoColorMap = { blue, green, orange, red, violet }
+  const autoColorKeys = Object.keys(autoColorMap)
   let dividerIndex = 0
 
   Array.from(node.getElements()).forEach(element => {
     const divider = element.heading?.divider
     if (element.type === "heading" && divider) {
       if (divider === "auto") {
-        const colorKey = colorKeys[dividerIndex]
+        const colorKey = autoColorKeys[dividerIndex]
         // @ts-expect-error - heading.divider is not undefined at this point
-        element.heading.divider = colorMap[colorKey]
-        dividerIndex === colorKeys.length - 1
+        element.heading.divider = autoColorMap[colorKey]
+        dividerIndex === autoColorKeys.length - 1
           ? (dividerIndex = 0)
           : (dividerIndex += 1)
-      } else if (colorKeys.includes(divider)) {
+      } else if (allColorKeys.includes(divider)) {
         // @ts-expect-error
-        element.heading.divider = colorMap[divider]
+        element.heading.divider = allColorMap[divider]
       }
     }
   })

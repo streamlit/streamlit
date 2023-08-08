@@ -123,4 +123,21 @@ describe("Heading", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument()
     expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
   })
+
+  it("renders no divider by default", () => {
+    const props = getHeadingProps()
+    render(<Heading {...props} />)
+
+    expect(screen.queryByTestId("stHeadingDivider")).not.toBeInTheDocument()
+  })
+
+  it("renders a divider with given color", () => {
+    // correct divider color mapping handled in Block.tsx
+    const props = getHeadingProps({ divider: "#0068c9" })
+    render(<Heading {...props} />)
+
+    const divider = screen.getByTestId("stHeadingDivider")
+    expect(divider).toBeInTheDocument()
+    expect(divider).toHaveStyle("background-color: #0068c9")
+  })
 })
