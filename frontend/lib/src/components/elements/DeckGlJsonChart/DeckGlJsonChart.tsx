@@ -242,6 +242,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
         className="stDeckGlJsonChart"
         width={deck.initialViewState.width}
         height={deck.initialViewState.height}
+        data-testid="stDeckGlJsonChart"
       >
         <DeckGL
           viewState={viewState}

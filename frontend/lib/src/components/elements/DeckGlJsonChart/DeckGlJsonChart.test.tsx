@@ -16,10 +16,11 @@
 
 import React from "react"
 import { DeckGL } from "deck.gl"
-import { shallow } from "@streamlit/lib/src/test_util"
+import { render, shallow } from "@streamlit/lib/src/test_util"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
-import { NavigationControl } from "react-map-gl"
+import { screen, fireEvent } from "@testing-library/react"
+import "@testing-library/jest-dom"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import { DeckGlJsonChart, PropsWithHeight, State } from "./DeckGlJsonChart"
 
@@ -30,6 +31,7 @@ const mockInitialViewState = {
   maxZoom: 15,
   minZoom: 5,
   pitch: 40.5,
+  height: 500,
   zoom: 6,
 }
 
@@ -77,158 +79,143 @@ const getProps = (
     mapboxToken: "mapboxToken",
     height: undefined,
     theme: mockTheme.emotion,
+    isFullScreen: false,
   }
 }
 
 describe("DeckGlJsonChart element", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<DeckGlJsonChart {...props} />)
 
-    expect(wrapper.find(DeckGL).length).toBe(1)
-    expect(wrapper.find(NavigationControl).length).toBe(1)
+    render(<DeckGlJsonChart {...props} />)
+
+    const deckGlJsonChart = screen.getByTestId("stDeckGlJsonChart")
+    expect(deckGlJsonChart).toBeInTheDocument()
   })
 
-  it("merges client and server changes", () => {
+  it("should merge client and server changes in viewState", () => {
     const props = getProps()
-    const wrapper = shallow(<DeckGlJsonChart {...props} />)
-    const deckGL = wrapper.find(DeckGL)
+    const initialViewStateServer = mockInitialViewState
 
-    expect(deckGL.length).toBe(1)
-    expect(deckGL.prop("onViewStateChange")).toBeDefined()
+    const initialViewStateClient = { ...mockInitialViewState, zoom: 8 }
 
-    // @ts-expect-error
-    deckGL.prop("onViewStateChange")({
-      viewState: { pitch: 5, zoom: 5 },
-    })
+    const state = {
+      viewState: initialViewStateClient,
+      initialViewState: initialViewStateClient,
+    }
 
-    wrapper.setProps(
-      // @ts-expect-error
-      getProps({ elementId: "newTestId" }, { pitch: 40.5, zoom: 10 })
-    )
+    const result = DeckGlJsonChart.getDerivedStateFromProps(props, state)
 
-    expect(wrapper.state("viewState")).toStrictEqual({
-      pitch: 5,
-      zoom: 10,
+    expect(result).toEqual({
+      // should match original mockInitialViewState
+      viewState: { ...initialViewStateClient, zoom: 6 },
+      initialViewState: initialViewStateServer,
     })
   })
 
-  it("should render tooltip", () => {
-    const props = getProps({
-      tooltip: `{"html": "<b>Elevation Value:</b> {elevationValue}", "style": {"color": "white"}}`,
-    })
-    const wrapper = shallow(<DeckGlJsonChart {...props} />)
-    const deckGL = wrapper.find(DeckGL)
+  describe("createTooltip", () => {
+    let deckGlInstance: any
 
-    expect(deckGL.length).toBe(1)
-    expect(deckGL.prop("getTooltip")).toBeDefined()
-
-    // @ts-expect-error
-    const createdTooltip = deckGL.prop("getTooltip")({
-      object: {
-        elevationValue: 10,
-      },
+    beforeEach(() => {
+      deckGlInstance = new DeckGlJsonChart({ ...getProps() })
     })
 
-    expect(createdTooltip.html).toBe("<b>Elevation Value:</b> 10")
-  })
-
-  it("should render an empty tooltip", () => {
-    const props = getProps({
-      tooltip: "",
-    })
-    const wrapper = shallow(<DeckGlJsonChart {...props} />)
-    const deckGL = wrapper.find(DeckGL)
-
-    expect(deckGL.length).toBe(1)
-    expect(deckGL.prop("getTooltip")).toBeDefined()
-
-    // @ts-expect-error
-    const createdTooltip = deckGL.prop("getTooltip")({
-      object: {
-        elevationValue: 10,
-      },
+    it("should return false if info is undefined", () => {
+      const result = deckGlInstance.createTooltip(undefined)
+      expect(result).toBe(false)
     })
 
-    expect(createdTooltip).toBe(false)
+    it("should return false if info.object is undefined", () => {
+      const result = deckGlInstance.createTooltip({})
+      expect(result).toBe(false)
+    })
+
+    it("should return false if element.tooltip is undefined", () => {
+      const result = deckGlInstance.createTooltip({ object: {} })
+      expect(result).toBe(false)
+    })
+
+    it("should interpolate the html with the correct object", () => {
+      deckGlInstance.props.element.tooltip = JSON.stringify({
+        html: "<b>Elevation Value:</b> {elevationValue}",
+      })
+      const result = deckGlInstance.createTooltip({
+        object: { elevationValue: 10 },
+      })
+
+      expect(result.html).toBe("<b>Elevation Value:</b> 10")
+    })
+
+    it("should interpolate the html with the an empty string", () => {
+      deckGlInstance.props = getProps({
+        tooltip: "",
+      })
+      const result = deckGlInstance.createTooltip({
+        object: { elevationValue: 10 },
+      })
+
+      expect(result.html).toBe(undefined)
+    })
   })
 
   describe("getDeckObject", () => {
-    const mockJsonParse = JSON.parse
-
-    const id = "newTestId"
-    const newJson = '{"initialViewState": {"height": "100", "width": "100"}}'
-    const isFullScreen = false
-    const isLightTheme = false
-    const initialized = false
-
-    const getNewState = (overrides?: Partial<State>): State => {
-      const defaultState: State = {
-        pydeckJson: JSON.parse(newJson),
-        isFullScreen,
-        viewState: {},
-        initialized,
-        initialViewState: mockInitialViewState,
-        id,
-        isLightTheme,
-      }
-
-      return { ...defaultState, ...overrides }
+    const newId = "newTestId"
+    const newJson = {
+      initialViewState: mockInitialViewState,
+      mapStyle: "mapbox://styles/mapbox/light-v9",
     }
 
     const originalState: State = {
-      pydeckJson: JSON.parse(newJson),
-      isFullScreen,
+      pydeckJson: newJson,
+      isFullScreen: false,
       viewState: {},
-      initialized,
+      initialized: false,
       initialViewState: mockInitialViewState,
       id: mockId,
-      isLightTheme,
+      isLightTheme: false,
     }
 
-    beforeEach(() => {
-      JSON.parse = jest.fn(mockJsonParse)
-    })
+    const mockJsonParse = jest.fn().mockReturnValue(newJson)
 
-    afterEach(() => {
+    beforeEach(() => {
       JSON.parse = mockJsonParse
     })
 
-    it("should not call JSON.parse when the element id is the same", () => {
-      DeckGlJsonChart.getDeckObject(getProps(), originalState)
-
-      expect(JSON.parse).not.toHaveBeenCalled()
-
-      // state has different elementId from getProps
-      DeckGlJsonChart.getDeckObject(getProps(), getNewState())
-
-      expect(JSON.parse).toHaveBeenCalled()
+    afterEach(() => {
+      mockJsonParse.mockClear()
     })
 
-    it("should not call JSON.parse when FullScreen state changes", () => {
-      DeckGlJsonChart.getDeckObject(getProps(), originalState)
+    const testJsonParsing = (
+      description: string,
+      stateOverride: Partial<State>
+    ): void => {
+      // the description will be passed in
+      // eslint-disable-next-line jest/valid-title
+      it(description, () => {
+        DeckGlJsonChart.getDeckObject(getProps(), originalState)
 
-      expect(JSON.parse).not.toHaveBeenCalled()
+        expect(JSON.parse).not.toHaveBeenCalled()
 
-      DeckGlJsonChart.getDeckObject(
-        getProps(),
-        getNewState({ isFullScreen: true })
-      )
+        DeckGlJsonChart.getDeckObject(getProps(), {
+          ...originalState,
+          ...stateOverride,
+        })
 
-      expect(JSON.parse).toHaveBeenCalled()
+        expect(JSON.parse).toHaveBeenCalledTimes(1)
+      })
+    }
+
+    testJsonParsing(
+      "should call JSON.parse when the element id is different",
+      { id: newId }
+    )
+    testJsonParsing("should call JSON.parse when FullScreen state changes", {
+      id: mockId,
+      isFullScreen: true,
     })
-
-    it("should not call JSON.parse when theme state changes", () => {
-      DeckGlJsonChart.getDeckObject(getProps(), originalState)
-
-      expect(JSON.parse).not.toHaveBeenCalled()
-
-      DeckGlJsonChart.getDeckObject(
-        getProps(),
-        getNewState({ isLightTheme: true })
-      )
-
-      expect(JSON.parse).toHaveBeenCalled()
+    testJsonParsing("should call JSON.parse when theme state changes", {
+      id: mockId,
+      isLightTheme: true,
     })
   })
 })
