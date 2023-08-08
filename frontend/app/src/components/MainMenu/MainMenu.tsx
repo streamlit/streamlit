@@ -270,7 +270,11 @@ const SubMenu = (props: SubMenuProps): ReactElement => {
           },
           style: {
             backgroundColor: "inherit",
-            borderRadius: 0,
+
+            borderBottomRadius: 0,
+            borderTopRadius: 0,
+            borderLeftRadius: 0,
+            borderRightRadius: 0,
 
             ":focus": {
               outline: "none",

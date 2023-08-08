@@ -15,17 +15,23 @@
  */
 
 import React from "react"
-import { shallow, mount } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+
+import { screen, fireEvent, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
-import { Input as UIInput } from "baseui/input"
 import {
   TextInput as TextInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
 import TextInput, { Props } from "./TextInput"
 
-const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<TextInputProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: TextInputProto.create({
     label: "Label",
     default: "",
@@ -39,19 +45,24 @@ const getProps = (elementProps: Partial<TextInputProto> = {}): Props => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  ...widgetProps,
 })
 
 describe("TextInput widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<TextInput {...props} />)
-    expect(wrapper).toBeDefined()
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    expect(textInput).toBeInTheDocument()
   })
 
   it("shows a label", () => {
     const props = getProps()
-    const wrapper = mount(<TextInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+    render(<TextInput {...props} />)
+
+    const widgetLabel = screen.queryByText(`${props.element.label}`)
+    expect(widgetLabel).toBeInTheDocument()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -60,9 +71,10 @@ describe("TextInput widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
-    const wrapper = mount(<TextInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+
+    render(<TextInput {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+      "visibility: hidden"
     )
   })
 
@@ -72,49 +84,62 @@ describe("TextInput widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
-    const wrapper = mount(<TextInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
-    )
+    render(<TextInput {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
   it("shows a placeholder", () => {
     const props = getProps()
-    const wrapper = mount(<TextInput {...props} />)
+    render(<TextInput {...props} />)
 
-    expect(wrapper.find(UIInput).prop("placeholder")).toBe(
-      props.element.placeholder
-    )
+    const textInput = screen.getByRole("textbox")
+    expect(textInput).toHaveAttribute("placeholder", props.element.placeholder)
   })
 
-  it("handles TextInputProto.Type properly", () => {
+  it("handles default text input type properly", () => {
     const defaultProps = getProps({ type: TextInputProto.Type.DEFAULT })
-    let textInput = shallow(<TextInput {...defaultProps} />)
-    let uiInput = textInput.find(UIInput)
-    expect(uiInput.props().type).toBe("text")
+    render(<TextInput {...defaultProps} />)
+    const textInput = screen.getByRole("textbox")
+    expect(textInput).toHaveAttribute("type", "text")
+    // Check that no show/hide button renders
+    const textInputContainer = screen.getByTestId("textInputRootElement")
+    const showButton = within(textInputContainer).queryByRole("button")
+    expect(showButton).not.toBeInTheDocument()
+  })
 
+  it("handles password text input type properly", () => {
     const passwordProps = getProps({ type: TextInputProto.Type.PASSWORD })
-    textInput = shallow(<TextInput {...passwordProps} />)
-    uiInput = textInput.find(UIInput)
-    expect(uiInput.props().type).toBe("password")
+    render(<TextInput {...passwordProps} />)
+    const passwordTextInput = screen.getByPlaceholderText("Placeholder")
+    expect(passwordTextInput).toHaveAttribute("type", "password")
+    // Check for the show/hide button
+    const textInputContainer = screen.getByTestId("textInputRootElement")
+    const showButton = within(textInputContainer).getByRole("button")
+    expect(showButton).toBeInTheDocument()
   })
 
   it("handles TextInputProto.autocomplete", () => {
     let props = getProps()
-    let textInput = shallow(<TextInput {...props} />)
-    let uiInput = textInput.find(UIInput)
-    expect(uiInput.props().autoComplete).toBe("")
+    const { unmount } = render(<TextInput {...props} />)
+    const textInput = screen.getByRole("textbox")
+    expect(textInput).toHaveAttribute("autoComplete", "")
+    // unmount the initial component
+    unmount()
 
     props = getProps({ autocomplete: "one-time-password" })
-    textInput = shallow(<TextInput {...props} />)
-    uiInput = textInput.find(UIInput)
-    expect(uiInput.props().autoComplete).toBe("one-time-password")
+    render(<TextInput {...props} />)
+    const autocompleteTextInput = screen.getByRole("textbox")
+    expect(autocompleteTextInput).toHaveAttribute(
+      "autoComplete",
+      "one-time-password"
+    )
   })
 
   it("sets widget value on mount", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
-    shallow(<TextInput {...props} />)
+    render(<TextInput {...props} />)
+
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
@@ -124,36 +149,29 @@ describe("TextInput widget", () => {
 
   it("has correct className and style", () => {
     const props = getProps()
-    const wrapper = shallow(<TextInput {...props} />)
-    const wrappedDiv = wrapper.find("StyledTextInput").first()
+    render(<TextInput {...props} />)
+    const textInput = screen.getByTestId("stTextInput")
 
-    const { className, width } = wrappedDiv.props()
-    // @ts-expect-error
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("stTextInput")
-
-    expect(width).toBe(getProps().width)
+    expect(textInput).toHaveClass("row-widget")
+    expect(textInput).toHaveClass("stTextInput")
+    expect(textInput).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("can be disabled", () => {
-    const props = getProps()
-    const wrapper = shallow(<TextInput {...props} />)
-    expect(wrapper.find(UIInput).prop("disabled")).toBe(props.disabled)
+    const props = getProps({}, { disabled: true })
+    render(<TextInput {...props} />)
+    const textInput = screen.getByRole("textbox")
+    expect(textInput).toBeDisabled()
   })
 
   it("sets widget value on blur", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
-    const wrapper = shallow(<TextInput {...props} />)
+    render(<TextInput {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UIInput).prop("onChange")({
-      target: { value: "testing" },
-    } as React.ChangeEvent<HTMLInputElement>)
-
-    // @ts-expect-error
-    wrapper.find(UIInput).prop("onBlur")()
+    const textInput = screen.getByRole("textbox")
+    fireEvent.change(textInput, { target: { value: "testing" } })
+    fireEvent.blur(textInput)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
@@ -164,23 +182,19 @@ describe("TextInput widget", () => {
     )
   })
 
-  it("sets widget value when enter is pressed", () => {
+  it("sets widget value when enter is pressed", async () => {
+    const user = userEvent.setup()
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
-    const wrapper = shallow(<TextInput {...props} />)
+    render(<TextInput {...props} />)
+    const textInput = screen.getByRole("textbox")
 
-    // @ts-expect-error
-    wrapper.find(UIInput).prop("onChange")({
-      target: { value: "testing" },
-    } as React.ChangeEvent<HTMLInputElement>)
+    // userEvent necessary to trigger onKeyPress
+    // fireEvent only dispatches DOM events vs. simulating full interactions
+    await user.click(textInput)
+    await user.keyboard("testing{Enter}")
 
-    // @ts-expect-error
-    wrapper.find(UIInput).prop("onKeyPress")({
-      preventDefault: jest.fn(),
-      key: "Enter",
-    })
-
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       "testing",
       {
@@ -192,51 +206,37 @@ describe("TextInput widget", () => {
   it("doesn't set widget value when not dirty", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
-    const wrapper = shallow(<TextInput {...props} />)
+    render(<TextInput {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UIInput).prop("onKeyPress")({
-      preventDefault: jest.fn(),
-      key: "Enter",
-    })
+    const textInput = screen.getByRole("textbox")
+    fireEvent.keyPress(textInput, { key: "Enter" })
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
 
-    // @ts-expect-error
-    wrapper.find(UIInput).prop("onBlur")()
+    fireEvent.blur(textInput)
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
   })
 
   it("limits input length if max_chars is passed", () => {
     const props = getProps({ maxChars: 10 })
-    const wrapper = shallow(<TextInput {...props} />)
+    render(<TextInput {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UIInput).prop("onChange")({
-      target: { value: "0123456789" },
-    } as EventTarget)
+    const textInput = screen.getByRole("textbox")
+    fireEvent.change(textInput, { target: { value: "0123456789" } })
+    expect(textInput).toHaveValue("0123456789")
 
-    expect(wrapper.find(UIInput).prop("value")).toBe("0123456789")
-
-    // @ts-expect-error
-    wrapper.find(UIInput).prop("onChange")({
-      target: { value: "0123456789a" },
-    } as EventTarget)
-
-    expect(wrapper.find(UIInput).prop("value")).toBe("0123456789")
+    fireEvent.change(textInput, { target: { value: "0123456789a" } })
+    expect(textInput).toHaveValue("0123456789")
   })
 
   it("does not update widget value on text changes when outside of a form", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
-    const wrapper = shallow(<TextInput {...props} />)
+    render(<TextInput {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UIInput).prop("onChange")({
-      target: { value: "TEST" },
-    } as React.ChangeEvent<HTMLInputElement>)
-
-    expect(wrapper.state("dirty")).toBe(true)
+    const textInput = screen.getByRole("textbox")
+    fireEvent.change(textInput, { target: { value: "TEST" } })
+    expect(textInput).toHaveValue("TEST")
 
     // Check that the last call was in componentDidMount.
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
@@ -255,20 +255,16 @@ describe("TextInput widget", () => {
 
     jest.spyOn(props.widgetMgr, "setStringValue")
 
-    const wrapper = shallow(<TextInput {...props} />)
-
+    render(<TextInput {...props} />)
+    const textInput = screen.getByRole("textbox")
     // Change the widget value
-    // @ts-expect-error
-    wrapper.find(UIInput).prop("onChange")({
-      target: { value: "TEST" },
-    } as React.ChangeEvent<HTMLInputElement>)
+    fireEvent.change(textInput, { target: { value: "TEST" } })
 
     // "Submit" the form
     props.widgetMgr.submitForm("form")
-    wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(wrapper.state("value")).toBe(props.element.default)
+    expect(textInput).toHaveValue(props.element.default)
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,
