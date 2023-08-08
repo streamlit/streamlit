@@ -51,7 +51,7 @@ class PresetNames(str, Enum):
 
 
 def _process_avatar_input(
-    avatar: str | AtomicImage | None = None,
+    avatar: str | AtomicImage | None, delta_path: str
 ) -> Tuple[BlockProto.ChatMessage.AvatarType.ValueType, str]:
     """Detects the avatar type and prepares the avatar data for the frontend.
 
@@ -59,6 +59,9 @@ def _process_avatar_input(
     ----------
     avatar :
         The avatar that was provided by the user.
+    delta_path : str
+        The delta path is used as media ID when a local image is served via the media
+        file manager.
 
     Returns
     -------
@@ -89,7 +92,7 @@ def _process_avatar_input(
                 clamp=False,
                 channels="RGB",
                 output_format="auto",
-                image_id="",
+                image_id=delta_path,
             )
         except Exception as ex:
             raise StreamlitAPIException(
@@ -194,7 +197,9 @@ class ChatMixin:
         ):
             # For selected labels, we are mapping the label to an avatar
             avatar = name.lower()
-        avatar_type, converted_avatar = _process_avatar_input(avatar)
+        avatar_type, converted_avatar = _process_avatar_input(
+            avatar, self.dg._get_delta_path_str()
+        )
 
         message_container_proto = BlockProto.ChatMessage()
         message_container_proto.name = name
