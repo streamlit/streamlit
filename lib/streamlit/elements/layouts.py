@@ -416,10 +416,49 @@ class LayoutsMixin:
         label: str,
         state: Literal["running", "done", "error"] = "running",
     ) -> "MutableStatus":
-        # We need to import this here to avoid a circular import.
+        """Insert a status indicator.
+
+        Parameters
+        ----------
+        label : str
+            A string to use as the header for the expander. The label can optionally
+            contain Markdown and supports the following elements: Bold, Italics,
+            Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+        state : "running", "done", or "error"
+            The initial state of the status indicator. Defaults to "running".
+
+        Returns
+        -------
+
+        MutableStatus
+            A mutable status indicator object.
+        """
+        # We need to import MutableStatus here to avoid a circular import
         from streamlit.elements.lib.mutable_status import MutableStatus
 
-        return MutableStatus._create(self.dg, label, state)  # type: ignore
+        # The return type of _create is a function based context manager to be
+        # able to capture exceptions and update the status indicator.
+        # However, for simplicity, we just want it to appear as the MutableStatus
+        # object here instead of the context manager.
+        return cast(MutableStatus, MutableStatus._create(self.dg, label, state))
 
     @property
     def dg(self) -> "DeltaGenerator":
