@@ -52,7 +52,7 @@ def populate_hash_if_needed(msg: ForwardMsg) -> str:
         msg.ClearField("metadata")
 
         # MD5 is good enough for what we need, which is uniqueness.
-        if sys.version_info >= (3, 9, 0):
+        if sys.version_info >= (3, 9):
             hasher = hashlib.md5(usedforsecurity=False)
         else:
             hasher = hashlib.md5()

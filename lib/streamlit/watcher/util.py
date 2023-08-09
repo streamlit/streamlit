@@ -56,7 +56,7 @@ def calc_md5_with_blocking_retries(
     else:
         content = _get_file_content_with_blocking_retries(path)
 
-    if sys.version_info >= (3, 9, 0):
+    if sys.version_info >= (3, 9):
         md5 = hashlib.md5(usedforsecurity=False)
     else:
         md5 = hashlib.md5()
