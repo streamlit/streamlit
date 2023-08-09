@@ -20,6 +20,7 @@ functions that use streamlit.config can go here to avoid a dependency cycle.
 
 import hashlib
 import os
+import sys
 import time
 from pathlib import Path
 from typing import Optional
@@ -55,7 +56,10 @@ def calc_md5_with_blocking_retries(
     else:
         content = _get_file_content_with_blocking_retries(path)
 
-    md5 = hashlib.md5()
+    if sys.version_info >= (3, 9):
+        md5 = hashlib.md5(usedforsecurity=False)
+    else:
+        md5 = hashlib.md5()
     md5.update(content)
 
     # Use hexdigest() instead of digest(), so it's easier to debug.

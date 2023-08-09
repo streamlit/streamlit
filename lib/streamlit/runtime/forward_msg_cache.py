@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import hashlib
+import sys
 from typing import TYPE_CHECKING, Dict, List, MutableMapping, Optional
 from weakref import WeakKeyDictionary
 
@@ -51,7 +52,10 @@ def populate_hash_if_needed(msg: ForwardMsg) -> str:
         msg.ClearField("metadata")
 
         # MD5 is good enough for what we need, which is uniqueness.
-        hasher = hashlib.md5()
+        if sys.version_info >= (3, 9):
+            hasher = hashlib.md5(usedforsecurity=False)
+        else:
+            hasher = hashlib.md5()
         hasher.update(msg.SerializeToString())
         msg.hash = hasher.hexdigest()
 
