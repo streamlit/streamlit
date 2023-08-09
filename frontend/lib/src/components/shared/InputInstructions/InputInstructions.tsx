@@ -70,17 +70,17 @@ const InputInstructions = ({
     )
   }
 
-  const shouldInstructionsHide = (parent: HTMLDivElement) => {
+  const shouldInstructionsHide = (parent: HTMLDivElement): void => {
     // Only show the input instructions if the parent's width is bigger than the minimum input width
     setIsVisible(parent.offsetWidth > sizes.shouldInputHide)
   }
 
   useEffect(() => {
-    if (messages.length > 0 && instructionsRef.current) {
+    if (instructionsRef.current) {
       const { parentElement } = instructionsRef.current
       return shouldInstructionsHide(parentElement)
     }
-  }, [messages, instructionsRef])
+  }, [instructionsRef])
 
   return (
     <StyledWidgetInstructions
