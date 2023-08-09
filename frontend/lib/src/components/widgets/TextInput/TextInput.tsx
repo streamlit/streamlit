@@ -102,13 +102,13 @@ class TextInput extends React.PureComponent<Props, State> {
   }
 
   /** Commit state.value to the WidgetStateManager. */
-  private commitWidgetValue = (source: Source): void => {
+  private commitWidgetValue = (source: Source, dirty = false): void => {
     this.props.widgetMgr.setStringValue(
       this.props.element,
       this.state.value,
       source
     )
-    this.setState({ dirty: false })
+    this.setState({ dirty })
   }
 
   /**
@@ -149,8 +149,13 @@ class TextInput extends React.PureComponent<Props, State> {
       return
     }
 
+    // If TextArea *is* part of a form, we immediately update its widgetValue
+    // on text changes. The widgetValue won't be passed to the Python
+    // script until the form is submitted, so this won't cause the script
+    // to re-run.
     this.setState({ dirty: true, value }, () =>
-      this.commitWidgetValue({ fromUi: true })
+      // make sure dirty is true so that enter to submit text shows
+      this.commitWidgetValue({ fromUi: false }, true)
     )
   }
 
