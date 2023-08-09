@@ -28,14 +28,15 @@ States: TypeAlias = Literal["running", "complete", "error"]
 
 
 class MutableStatus(DeltaGenerator):
+    # @contextmanager
     @staticmethod
-    @contextmanager
     def _create(
         parent: DeltaGenerator,
         label: str,
         expanded: bool = False,
         state: States = "running",
-    ) -> Generator[MutableStatus, None, MutableStatus]:
+    ) -> MutableStatus:
+        # -> Generator[MutableStatus, None, MutableStatus]:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label or ""
@@ -51,7 +52,10 @@ class MutableStatus(DeltaGenerator):
         block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
 
-        delta_path: List[int] = parent._cursor.delta_path if parent._cursor else []
+        # TODO(lukasmasuch): Check if this is the correct delta path even when it's nested.
+        delta_path: List[int] = (
+            parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
+        )
 
         status_container = cast(
             MutableStatus,
@@ -62,12 +66,13 @@ class MutableStatus(DeltaGenerator):
         status_container._last_proto = block_proto
         status_container._last_state = state
 
-        with status_container:
-            try:
-                yield status_container
-            except Exception as ex:
-                status_container.update(state="error")
-                raise ex
+        # TODO: We cannot use this since it won't support the usage without context manager:
+        # with status_container:
+        #     try:
+        #         yield status_container
+        #     except Exception as ex:
+        #         status_container.update(state="error")
+        #         raise ex
         return status_container
 
     def __init__(
@@ -97,7 +102,6 @@ class MutableStatus(DeltaGenerator):
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._delta_path
         msg.delta.add_block.CopyFrom(self._last_proto)
-        msg.delta.add_block.expandable.ClearField("expanded")
 
         if expanded is not None:
             msg.delta.add_block.expandable.expanded = expanded
@@ -113,7 +117,13 @@ class MutableStatus(DeltaGenerator):
             elif state == "error":
                 msg.delta.add_block.expandable.icon = "error"
             self._last_state = state
-        self._last_proto = msg.delta.add_block
+
+        self._last_proto = ForwardMsg().delta.add_block
+        self._last_proto.CopyFrom(msg.delta.add_block)
+
+        if expanded is None:
+            msg.delta.add_block.expandable.ClearField("expanded")
+
         _enqueue_message(msg)
 
     def __enter__(self) -> MutableStatus:  # type: ignore[override]
@@ -127,6 +137,6 @@ class MutableStatus(DeltaGenerator):
 
     def __exit__(self, type: Any, value: Any, traceback: Any) -> Literal[False]:
         # If last state is error, we don't want to auto-update to complete
-        if self._last_state != "error":
+        if self._last_state != "error" and self._last_state != "complete":
             self.update(state="complete")
         return super().__exit__(type, value, traceback)

@@ -49,12 +49,11 @@ const Expander: React.FC<ExpanderProps> = ({
   children,
 }): ReactElement => {
   const { label, expanded: initialExpanded } = element
-
   const [expanded, setExpanded] = useState<boolean>(initialExpanded || false)
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
-    if (notNullOrUndefined(initialExpanded)) {
-      setExpanded(initialExpanded)
+    if (notNullOrUndefined(element.expanded)) {
+      setExpanded(element.expanded)
     }
     // Having `label` in the dependency array here is necessary because
     // sometimes two distinct expanders look so similar that even the react
@@ -64,7 +63,7 @@ const Expander: React.FC<ExpanderProps> = ({
     //
     // By adding `label` as a dependency, we ensure that we reset the
     // expander's `expanded` state in this edge case.
-  }, [label, initialExpanded])
+  }, [element])
 
   const toggle = (): void => setExpanded(!expanded)
   const { colors, radii, spacing, fontSizes } = useTheme()
