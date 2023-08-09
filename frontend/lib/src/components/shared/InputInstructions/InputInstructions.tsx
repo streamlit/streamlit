@@ -87,8 +87,9 @@ const InputInstructions = ({
       data-testid="InputInstructions"
       className={className}
       ref={instructionsRef}
+      isVisible={isVisible}
     >
-      {isVisible === true && messages}
+      {messages}
     </StyledWidgetInstructions>
   )
 }
