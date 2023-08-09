@@ -414,7 +414,9 @@ class LayoutsMixin:
     def status(
         self,
         label: str,
-        state: Literal["running", "done", "error"] = "running",
+        expanded: bool = False,
+        *,
+        state: Literal["running", "complete", "error"] = "running",
     ) -> "MutableStatus":
         """Insert a status indicator.
 
@@ -442,7 +444,10 @@ class LayoutsMixin:
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
-        state : "running", "done", or "error"
+        expanded : bool
+            If True, initializes the status in "expanded" state. Defaults to
+            False (collapsed).
+        state : "running", "complete", or "error"
             The initial state of the status indicator. Defaults to "running".
 
         Returns
@@ -458,7 +463,10 @@ class LayoutsMixin:
         # able to capture exceptions and update the status indicator.
         # However, for simplicity, we just want it to appear as the MutableStatus
         # object here instead of the context manager.
-        return cast(MutableStatus, MutableStatus._create(self.dg, label, state))
+        return cast(
+            MutableStatus,
+            MutableStatus._create(self.dg, label=label, expanded=expanded, state=state),
+        )
 
     @property
     def dg(self) -> "DeltaGenerator":

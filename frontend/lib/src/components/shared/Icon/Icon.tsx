@@ -17,8 +17,7 @@
 import React, { ReactElement, ReactNode } from "react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Check, ErrorOutline } from "@emotion-icons/material-outlined"
-import { isPresetTheme } from "@streamlit/lib/src/theme"
-import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
+import { IconSize, ThemeColor, isPresetTheme } from "@streamlit/lib/src/theme"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 import {

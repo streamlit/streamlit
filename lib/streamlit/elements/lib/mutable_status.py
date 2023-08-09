@@ -24,7 +24,7 @@ from streamlit.delta_generator import DeltaGenerator, _enqueue_message
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
-States: TypeAlias = Literal["running", "done", "error"]
+States: TypeAlias = Literal["running", "complete", "error"]
 
 
 class MutableStatus(DeltaGenerator):
@@ -33,15 +33,16 @@ class MutableStatus(DeltaGenerator):
     def _create(
         parent: DeltaGenerator,
         label: str,
+        expanded: bool = False,
         state: States = "running",
     ) -> Generator[MutableStatus, None, MutableStatus]:
         expandable_proto = BlockProto.Expandable()
-        expandable_proto.expanded = False
+        expandable_proto.expanded = expanded
         expandable_proto.label = label or ""
 
         if state == "running":
             expandable_proto.icon = "spinner"
-        elif state == "done":
+        elif state == "complete":
             expandable_proto.icon = "check"
         elif state == "error":
             expandable_proto.icon = "error"
@@ -88,6 +89,7 @@ class MutableStatus(DeltaGenerator):
         *,
         label: str | None = None,
         state: States | None = None,
+        expanded: bool | None = None,
     ) -> None:
         assert self._last_proto is not None, "Status not correctly initialized!"
         assert self._delta_path is not None, "Status not correctly initialized!"
@@ -97,12 +99,16 @@ class MutableStatus(DeltaGenerator):
         msg.delta.add_block.CopyFrom(self._last_proto)
         msg.delta.add_block.expandable.ClearField("expanded")
 
+        if expanded is not None:
+            msg.delta.add_block.expandable.expanded = expanded
+
         if label is not None:
             msg.delta.add_block.expandable.label = label
+
         if state is not None:
             if state == "running":
                 msg.delta.add_block.expandable.icon = "spinner"
-            elif state == "done":
+            elif state == "complete":
                 msg.delta.add_block.expandable.icon = "check"
             elif state == "error":
                 msg.delta.add_block.expandable.icon = "error"
@@ -119,7 +125,7 @@ class MutableStatus(DeltaGenerator):
         return self
 
     def __exit__(self, type: Any, value: Any, traceback: Any) -> Literal[False]:
-        # If last state is error, we don't want to auto-update to done
+        # If last state is error, we don't want to auto-update to complete
         if self._last_state != "error":
-            self.update(state="done")
+            self.update(state="complete")
         return super().__exit__(type, value, traceback)
