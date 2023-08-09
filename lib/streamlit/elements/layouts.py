@@ -317,11 +317,7 @@ class LayoutsMixin:
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
     @gather_metrics("expander")
-    def expander(
-        self,
-        label: str,
-        expanded: bool = False,
-    ) -> "DeltaGenerator":
+    def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
         r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
@@ -412,6 +408,7 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
+
         return self.dg._block(block_proto=block_proto)
 
     def status(
