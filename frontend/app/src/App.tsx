@@ -385,6 +385,7 @@ export class App extends PureComponent<Props, State> {
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
       setAllowedOriginsResp: this.hostCommunicationMgr.setAllowedOriginsResp,
       setHostConfigResp: (response: IHostConfigResponse) => {
+        // TODO(lukasmasuch): Also configure the allowed origins based on the host config response.
         this.setHostConfig(response)
       },
     })
