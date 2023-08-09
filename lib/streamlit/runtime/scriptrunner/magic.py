@@ -157,7 +157,7 @@ def _get_st_write_from_expr(node, i, parent_type):
     if (
         i == 0
         and _is_docstring_node(node.value)
-        and parent_type in (ast.FunctionDef, ast.Module)
+        and parent_type in (ast.FunctionDef, ast.AsyncFunctionDef, ast.Module)
     ):
         return None
 
