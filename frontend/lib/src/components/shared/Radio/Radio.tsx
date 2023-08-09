@@ -119,7 +119,7 @@ class Radio extends React.PureComponent<Props, State> {
                   }: {
                     $isFocusVisible: boolean
                   }) => ({
-                    marginBottom: 0,
+                    marginBottom: "0.5rem",
                     marginTop: 0,
                     marginRight: "1rem",
                     // Make left and right padding look the same visually.
@@ -158,7 +158,6 @@ class Radio extends React.PureComponent<Props, State> {
                     color: disabled ? colors.fadedText40 : colors.bodyText,
                     position: "relative",
                     top: "1px",
-                    display: horizontal ? "flex" : "block",
                   },
                 },
               }}
@@ -176,17 +175,6 @@ class Radio extends React.PureComponent<Props, State> {
                   allowHTML={false}
                   isCaption
                   isLabel
-                  style={
-                    horizontal
-                      ? {
-                          // Align the caption with the horizontal radio button
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          marginLeft: "6px",
-                        }
-                      : {}
-                  }
                 />
               )}
             </UIRadio>
