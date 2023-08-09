@@ -79,9 +79,8 @@ export function assignDividerColor(
         const colorKey = autoColorKeys[dividerIndex]
         // @ts-expect-error - heading.divider is not undefined at this point
         element.heading.divider = autoColorMap[colorKey]
-        dividerIndex === autoColorKeys.length - 1
-          ? (dividerIndex = 0)
-          : (dividerIndex += 1)
+        dividerIndex += 1
+        if (dividerIndex === autoColorKeys.length - 1) dividerIndex = 0
       } else if (allColorKeys.includes(divider)) {
         // @ts-expect-error
         element.heading.divider = allColorMap[divider]
