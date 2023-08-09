@@ -48,6 +48,7 @@ export const StyledSpinner = styled(Spinner, {
       borderTopColor: usingCustomTheme
         ? theme.colors.primary
         : theme.colors.blue70,
+      borderWidth: "0.15em",
       flexGrow: 0,
       flexShrink: 0,
     }

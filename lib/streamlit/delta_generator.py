@@ -579,6 +579,7 @@ class DeltaGenerator(
     def _block(
         self,
         block_proto: Block_pb2.Block = Block_pb2.Block(),
+        dg_type: type | None = None,
     ) -> DeltaGenerator:
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
@@ -626,11 +627,20 @@ class DeltaGenerator(
             root_container=dg._root_container,
             parent_path=dg._cursor.parent_path + (dg._cursor.index,),
         )
-        block_dg = DeltaGenerator(
-            root_container=dg._root_container,
-            cursor=block_cursor,
-            parent=dg,
-            block_type=block_type,
+
+        # `dg_type` param added for status_panel prototype. It allows us to
+        # instantiate DeltaGenerator subclasses from the function.
+        if dg_type is None:
+            dg_type = DeltaGenerator
+
+        block_dg = cast(
+            DeltaGenerator,
+            dg_type(
+                root_container=dg._root_container,
+                cursor=block_cursor,
+                parent=dg,
+                block_type=block_type,
+            ),
         )
         # Blocks inherit their parent form ids.
         # NOTE: Container form ids aren't set in proto.

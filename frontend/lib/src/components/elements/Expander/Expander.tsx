@@ -27,6 +27,7 @@ import { Block as BlockProto } from "@streamlit/lib/src/proto"
 
 import Icon, { CombinedIcon } from "@streamlit/lib/src/components/shared/Icon"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import {
   StyledExpandableContainer,
@@ -49,9 +50,12 @@ const Expander: React.FC<ExpanderProps> = ({
 }): ReactElement => {
   const { label, expanded: initialExpanded } = element
 
-  const [expanded, setExpanded] = useState<boolean>(initialExpanded)
+  const [expanded, setExpanded] = useState<boolean>(initialExpanded || false)
   useEffect(() => {
-    setExpanded(initialExpanded)
+    // Only apply the expanded state if it was actually set in the proto.
+    if (notNullOrUndefined(initialExpanded)) {
+      setExpanded(initialExpanded)
+    }
     // Having `label` in the dependency array here is necessary because
     // sometimes two distinct expanders look so similar that even the react
     // diffing algorithm decides that they're the same element with updated

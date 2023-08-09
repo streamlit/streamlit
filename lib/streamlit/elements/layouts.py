@@ -19,10 +19,10 @@ from typing import TYPE_CHECKING, List, Literal, Optional, Sequence, Union, cast
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import is_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.mutable_status import MutableStatus
 
 SpecType = Union[int, Sequence[Union[int, float]]]
 
@@ -321,8 +321,6 @@ class LayoutsMixin:
         self,
         label: str,
         expanded: bool = False,
-        *,  # keyword-only args:
-        icon: Literal["check", "error", "spinner"] | str | None = None,
     ) -> "DeltaGenerator":
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -364,15 +362,6 @@ class LayoutsMixin:
         expanded : bool
             If True, initializes the expander in "expanded" state. Defaults to
             False (collapsed).
-        icon : "check", "error", "spinner", or str or None
-            An optional icon for the expander. This can be:
-
-            * A single letter emoji, such as "👈", "🤖", etc. Shortcodes
-              are not allowed.
-
-            * One of the following preset icon names: "check", "error" or "spinner".
-
-            Defaults to None, which means no icon is displayed.
 
         Examples
         --------
@@ -419,20 +408,21 @@ class LayoutsMixin:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label
-        if icon:
-            if icon not in ["check", "error", "spinner"] and not is_emoji(icon):
-                raise StreamlitAPIException(
-                    f'The value "{icon}" is not one of the supported icon names '
-                    '("spinner", "check", "error") and not a valid emoji.'
-                )
-
-            expandable_proto.icon = str(icon)
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
-
         return self.dg._block(block_proto=block_proto)
+
+    def status(
+        self,
+        label: str,
+        state: Literal["running", "done", "error"] = "running",
+    ) -> "MutableStatus":
+        # We need to import this here to avoid a circular import.
+        from streamlit.elements.lib.mutable_status import MutableStatus
+
+        return MutableStatus._create(self.dg, label, state)  # type: ignore
 
     @property
     def dg(self) -> "DeltaGenerator":
