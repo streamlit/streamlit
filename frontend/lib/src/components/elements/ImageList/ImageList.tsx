@@ -59,7 +59,7 @@ export function ImageList({
 }: ImageListProps): ReactElement {
   const { hostConfig } = React.useContext(LibContext)
 
-  const checkSvgUsage = React.useCallback(() => {
+  const isSvgAllowed = React.useCallback(() => {
     if (hostConfig.disableSvgImages) {
       throw new Error(
         "Usage of SVG images is disabled by the security policy of the host."
@@ -109,7 +109,7 @@ export function ImageList({
         const image = iimage as ImageProto
         return (
           <StyledImageContainer key={idx} data-testid="stImage">
-            {image.markup && checkSvgUsage() ? (
+            {image.markup && isSvgAllowed() ? (
               // SVGs are received unsanitized
               ReactHtmlParser(xssSanitizeSvg(image.markup))
             ) : (
