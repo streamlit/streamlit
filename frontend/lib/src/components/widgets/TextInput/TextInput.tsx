@@ -144,7 +144,14 @@ class TextInput extends React.PureComponent<Props, State> {
     // If the TextInput is *not* part of a form, we mark it dirty but don't
     // update its value in the WidgetMgr. This means that individual keypresses
     // won't trigger a script re-run.
-    this.setState({ dirty: true, value })
+    if (!isInForm(this.props.element)) {
+      this.setState({ dirty: true, value })
+      return
+    }
+
+    this.setState({ dirty: true, value }, () =>
+      this.commitWidgetValue({ fromUi: true })
+    )
   }
 
   private onKeyPress = (
