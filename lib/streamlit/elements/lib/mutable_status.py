@@ -28,8 +28,8 @@ States: TypeAlias = Literal["running", "complete", "error"]
 
 
 class MutableStatus(DeltaGenerator):
-    @contextmanager
     @staticmethod
+    @contextmanager
     def _create(
         parent: DeltaGenerator,
         label: str,
@@ -121,7 +121,8 @@ class MutableStatus(DeltaGenerator):
         # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
         # should always return `self`?
         super().__enter__()
-        self.update(state="running")
+        if self._last_state != "running":
+            self.update(state="running")
         return self
 
     def __exit__(self, type: Any, value: Any, traceback: Any) -> Literal[False]:
