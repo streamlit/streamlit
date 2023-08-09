@@ -21,4 +21,5 @@ export const sizes = {
   sidebar: "21rem",
   contentMaxWidth: "46rem",
   footerHeight: "2.5rem",
+  shouldInputHide: 90,
 }

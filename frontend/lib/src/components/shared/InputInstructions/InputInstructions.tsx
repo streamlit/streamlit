@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useRef, useEffect, useState } from "react"
 import { isFromMac } from "@streamlit/lib/src/util/utils"
 import { StyledWidgetInstructions } from "@streamlit/lib/src/components/widgets/BaseWidget"
+import { sizes } from "@streamlit/lib/src/theme/primitives/sizes"
 import { StyledMessage } from "./styled-components"
 
 export interface Props {
@@ -36,6 +37,9 @@ const InputInstructions = ({
   type = "single",
   inForm,
 }: Props): ReactElement => {
+  const [isVisible, setIsVisible] = useState(true)
+  const instructionsRef = useRef(null)
+
   const messages: ReactElement[] = []
   const addMessage = (text: string, shouldBlink = false): void => {
     messages.push(
@@ -66,12 +70,20 @@ const InputInstructions = ({
     )
   }
 
+  useEffect(() => {
+    if (messages.length > 0 && instructionsRef.current) {
+      const { clientWidth } = instructionsRef.current
+      setIsVisible(clientWidth > sizes.shouldInputHide)
+    }
+  }, [messages, instructionsRef])
+
   return (
     <StyledWidgetInstructions
       data-testid="InputInstructions"
       className={className}
+      ref={instructionsRef}
     >
-      {messages}
+      {isVisible === true && messages}
     </StyledWidgetInstructions>
   )
 }
