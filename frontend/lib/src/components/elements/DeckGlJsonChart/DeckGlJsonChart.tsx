@@ -39,8 +39,6 @@ import { registerLoaders } from "@loaders.gl/core"
 import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
 import withMapboxToken from "@streamlit/lib/src/hocs/withMapboxToken"
 
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
-
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import {
   StyledDeckGlChart,
@@ -72,21 +70,26 @@ registerLoaders([CSVLoader, GLTFLoader])
 
 const jsonConverter = new JSONConverter({ configuration })
 
-interface Props {
+export interface DeckGLProps {
   width: number
   theme: EmotionTheme
   mapboxToken: string
   element: DeckGlJsonChartProto
+  isFullScreen?: boolean
 }
 
-export interface PropsWithHeight extends Props {
+export interface PropsWithHeight extends DeckGLProps {
   height?: number
 }
 
-interface State {
+export interface State {
   viewState: Record<string, unknown>
   initialized: boolean
   initialViewState: Record<string, unknown>
+  id: string | undefined
+  pydeckJson: any
+  isFullScreen: boolean
+  isLightTheme: boolean
 }
 
 export const DEFAULT_DECK_GL_HEIGHT = 500
@@ -100,6 +103,10 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     },
     initialized: false,
     initialViewState: {},
+    id: undefined,
+    pydeckJson: undefined,
+    isFullScreen: false,
+    isLightTheme: hasLightBackgroundColor(this.props.theme),
   }
 
   componentDidMount = (): void => {
@@ -115,7 +122,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     props: Readonly<PropsWithHeight>,
     state: Partial<State>
   ): Partial<State> | null {
-    const deck = DeckGlJsonChart.getDeckObject(props)
+    const deck = DeckGlJsonChart.getDeckObject(props, state)
 
     // If the ViewState on the server has changed, apply the diff to the current state
     if (!isEqual(deck.initialViewState, state.initialViewState)) {
@@ -144,35 +151,50 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
     return null
   }
 
-  static getDeckObject = (props: PropsWithHeight): DeckObject => {
-    const { element, width, height, theme } = props
-    const json = JSON.parse(element.json)
+  static getDeckObject = (
+    props: PropsWithHeight,
+    state: Partial<State>
+  ): DeckObject => {
+    const { element, width, height, theme, isFullScreen } = props
+
+    const currFullScreen = isFullScreen ?? false
+
+    // Only parse JSON when not transitioning to/from fullscreen, the element id changes, or theme changes
+    if (
+      element.id !== state.id ||
+      state.isFullScreen !== currFullScreen ||
+      state.isLightTheme !== hasLightBackgroundColor(theme)
+    ) {
+      state.pydeckJson = JSON.parse(element.json)
+      state.id = element.id
+    }
 
     // If unset, use either the Mapbox light or dark style based on Streamlit's theme
     // For Mapbox styles, see https://docs.mapbox.com/api/maps/styles/#mapbox-styles
-    if (!notNullOrUndefined(json.mapStyle)) {
-      const mapTheme = hasLightBackgroundColor(theme) ? "light" : "dark"
-      json.mapStyle = `mapbox://styles/mapbox/${mapTheme}-v9`
+    if (!state.pydeckJson?.mapStyle) {
+      state.pydeckJson.mapStyle = `mapbox://styles/mapbox/${
+        hasLightBackgroundColor(theme) ? "light" : "dark"
+      }-v9`
     }
 
-    // The graph dimensions could be set from props ( like withFullscreen ) or
-    // from the generated element object
-    if (height) {
-      json.initialViewState.height = height
-      json.initialViewState.width = width
+    // Set width and height based on the fullscreen state
+    if (isFullScreen) {
+      Object.assign(state.pydeckJson?.initialViewState, { width, height })
     } else {
-      if (!json.initialViewState.height) {
-        json.initialViewState.height = DEFAULT_DECK_GL_HEIGHT
+      if (!state.pydeckJson?.initialViewState?.height) {
+        state.pydeckJson.initialViewState.height = DEFAULT_DECK_GL_HEIGHT
       }
-
       if (element.useContainerWidth) {
-        json.initialViewState.width = width
+        state.pydeckJson.initialViewState.width = width
       }
     }
 
-    delete json.views // We are not using views. This avoids a console warning.
+    state.isFullScreen = isFullScreen
+    state.isLightTheme = hasLightBackgroundColor(theme)
 
-    return jsonConverter.convert(json)
+    delete state.pydeckJson?.views // We are not using views. This avoids a console warning.
+
+    return jsonConverter.convert(state.pydeckJson)
   }
 
   createTooltip = (info: PickingInfo): Record<string, unknown> | boolean => {
@@ -213,14 +235,14 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 
   render(): ReactNode {
-    const deck = DeckGlJsonChart.getDeckObject(this.props)
+    const deck = DeckGlJsonChart.getDeckObject(this.props, this.state)
     const { viewState } = this.state
-
     return (
       <StyledDeckGlChart
         className="stDeckGlJsonChart"
         width={deck.initialViewState.width}
         height={deck.initialViewState.height}
+        data-testid="stDeckGlJsonChart"
       >
         <DeckGL
           viewState={viewState}

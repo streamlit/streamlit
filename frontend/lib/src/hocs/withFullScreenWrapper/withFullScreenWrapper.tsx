@@ -19,7 +19,7 @@ import hoistNonReactStatics from "hoist-non-react-statics"
 
 import FullScreenWrapper from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 
-interface Props {
+export interface Props {
   width: number
   height?: number
 }
