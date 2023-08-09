@@ -230,6 +230,17 @@ const RawElementNodeRenderer = (
     throw new Error("ElementNode not found.")
   }
 
+  const { hostConfig } = React.useContext(LibContext)
+  if (
+    node.element.type &&
+    hostConfig.disableElements &&
+    hostConfig.disableElements.includes(node.element.type)
+  ) {
+    throw new Error(
+      `The element of type ${node.element.type} is disabled by the security policy of the host.`
+    )
+  }
+
   const widgetProps = {
     widgetMgr: props.widgetMgr,
     disabled: props.widgetsDisabled,

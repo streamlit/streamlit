@@ -39,6 +39,7 @@ export type {
   IGuestToHostMessage,
   IMenuItem,
   IAllowedMessageOriginsResponse,
+  IHostConfigResponse,
   IToolbarItem,
 } from "./hostComm/types"
 export {

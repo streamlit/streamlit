@@ -59,6 +59,7 @@ import {
   SessionInfo,
   FileUploadClient,
   logError,
+  logWarning,
   logMessage,
   AppRoot,
   ComponentRegistry,
@@ -104,6 +105,7 @@ import {
   createFormsData,
   FormsData,
   WidgetStateManager,
+  IHostConfigResponse,
 } from "@streamlit/lib"
 import { concat, noop, without } from "lodash"
 
@@ -120,6 +122,7 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
+import { HostConfig } from "lib/src/components/core/LibContext"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -165,6 +168,7 @@ interface State {
   pageLinkBaseUrl: string
   queryParams: string
   deployedAppMetadata: DeployedAppMetadata
+  hostConfig: HostConfig
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -274,6 +278,7 @@ export class App extends PureComponent<Props, State> {
       pageLinkBaseUrl: "",
       queryParams: "",
       deployedAppMetadata: {},
+      hostConfig: {},
     }
 
     this.connectionManager = null
@@ -379,6 +384,9 @@ export class App extends PureComponent<Props, State> {
       claimHostAuthToken: this.hostCommunicationMgr.claimAuthToken,
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
       setAllowedOriginsResp: this.hostCommunicationMgr.setAllowedOriginsResp,
+      setHostConfigResp: (response: IHostConfigResponse) => {
+        this.setHostConfig(response)
+      },
     })
 
     if (isScrollingHidden()) {
@@ -590,20 +598,32 @@ export class App extends PureComponent<Props, State> {
       pageConfig
 
     if (title) {
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_PAGE_TITLE",
-        title,
-      })
+      if (!this.state.hostConfig.disableSetPageMetadata) {
+        logWarning(
+          "Setting the page title is disabled by security policy of the host."
+        )
+      } else {
+        this.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_PAGE_TITLE",
+          title,
+        })
 
-      document.title = title
+        document.title = title
+      }
     }
 
     if (favicon) {
-      handleFavicon(
-        favicon,
-        this.hostCommunicationMgr.sendMessageToHost,
-        this.endpoints
-      )
+      if (!this.state.hostConfig.disableSetPageMetadata) {
+        logWarning(
+          "Setting the page favicon is disabled by security policy of the host."
+        )
+      } else {
+        handleFavicon(
+          favicon,
+          this.hostCommunicationMgr.sendMessageToHost,
+          this.endpoints
+        )
+      }
     }
 
     // Only change layout/sidebar when the page config has changed.
@@ -627,6 +647,13 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
+    if (this.state.hostConfig.disableSetQueryParams) {
+      logWarning(
+        "Setting query parameters is disabled by security policy of the host."
+      )
+      return
+    }
+
     const { queryString } = pageInfo
     const targetUrl =
       document.location.pathname + (queryString ? `?${queryString}` : "")
@@ -861,13 +888,19 @@ export class App extends PureComponent<Props, State> {
       this.sessionInfo.current.installationId + mainScriptPath
     )
 
-    // Set the title and favicon to their default values
-    document.title = `${newPageName} · Streamlit`
-    handleFavicon(
-      `${process.env.PUBLIC_URL}/favicon.png`,
-      this.hostCommunicationMgr.sendMessageToHost,
-      this.endpoints
-    )
+    if (!this.state.hostConfig.disableSetPageMetadata) {
+      logWarning(
+        "Setting the page metadata (title & favicon) is disabled by security policy of the host."
+      )
+    } else {
+      // Set the title and favicon to their default values
+      document.title = `${newPageName} · Streamlit`
+      handleFavicon(
+        `${process.env.PUBLIC_URL}/favicon.png`,
+        this.hostCommunicationMgr.sendMessageToHost,
+        this.endpoints
+      )
+    }
 
     this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
     this.metricsMgr.setAppHash(newSessionHash)
@@ -1468,6 +1501,10 @@ export class App extends PureComponent<Props, State> {
     this.setState({ isFullScreen })
   }
 
+  setHostConfig = (hostConfig: HostConfig): void => {
+    this.setState({ hostConfig })
+  }
+
   addScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
@@ -1560,6 +1597,7 @@ export class App extends PureComponent<Props, State> {
       sidebarChevronDownshift,
       hostMenuItems,
       hostToolbarItems,
+      hostConfig,
     } = this.state
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
@@ -1614,6 +1652,8 @@ export class App extends PureComponent<Props, State> {
             availableThemes: this.props.theme.availableThemes,
             addThemes: this.props.theme.addThemes,
             hideFullScreenButtons: false,
+            hostConfig,
+            setHostConfig: this.setHostConfig,
           }}
         >
           <HotKeys

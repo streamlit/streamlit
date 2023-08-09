@@ -19,6 +19,7 @@ import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "@streamlit/lib/src/util/IFrameUtil"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import React, { CSSProperties, ReactElement } from "react"
 
 export interface IFrameProps {
@@ -30,6 +31,13 @@ export default function IFrame({
   element,
   width: propWidth,
 }: IFrameProps): ReactElement {
+  const { hostConfig } = React.useContext(LibContext)
+  if (hostConfig.disableIframes) {
+    throw new Error(
+      "Usage of iframes is disabled by the security policy of the host."
+    )
+  }
+
   const width = element.hasWidth ? element.width : propWidth
 
   // Handle scrollbar visibility. Chrome and other WebKit browsers still

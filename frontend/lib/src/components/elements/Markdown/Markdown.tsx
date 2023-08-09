@@ -17,6 +17,7 @@
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import React, { ReactElement } from "react"
 import { Markdown as MarkdownProto } from "@streamlit/lib/src/proto"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
   InlineTooltipIcon,
   StyledLabelHelpWrapper,
@@ -35,7 +36,15 @@ export default function Markdown({
   width,
   element,
 }: MarkdownProps): ReactElement {
+  const { hostConfig } = React.useContext(LibContext)
+  if (hostConfig.disableUnsafeHtmlExecution && element.allowHtml) {
+    throw new Error(
+      "Running unsafe HTML is disabled by the security policy of the host."
+    )
+  }
+
   const styleProp = { width }
+
   return (
     <div className="stMarkdown" style={styleProp}>
       {element.help ? (

@@ -18,6 +18,19 @@ import React from "react"
 
 import { baseTheme, ThemeConfig } from "@streamlit/lib/src/theme"
 
+export type HostConfig = {
+  disableSetQueryParams?: boolean
+  disableSetPageMetadata?: boolean
+  disableUnsafeHtmlExecution?: boolean
+  disableIframes?: boolean
+  disableSvgImages?: boolean
+  disableElements?: string[]
+  // TODO: Support additional host config options:
+  // mapboxToken?: string
+  // disableTheming?: boolean
+  // disableFullScreenMode?: false
+}
+
 export interface LibContextProps {
   /** True if the app is in full-screen mode. */
   isFullScreen: boolean
@@ -58,6 +71,15 @@ export interface LibContextProps {
    * will default to false for regular streamlit
    */
   hideFullScreenButtons: boolean
+
+  /** The configuration from the apps host. */
+  hostConfig: HostConfig
+
+  /**
+   * Set the configuration from the app's host.
+   * @see App.setAndSendTheme
+   */
+  setHostConfig: (hostConfig: HostConfig) => void
 }
 
 export const LibContext = React.createContext<LibContextProps>({
@@ -70,4 +92,6 @@ export const LibContext = React.createContext<LibContextProps>({
   availableThemes: [],
   addThemes: () => {},
   hideFullScreenButtons: false,
+  hostConfig: {},
+  setHostConfig: () => {},
 })

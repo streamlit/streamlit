@@ -25,6 +25,7 @@ import {
 import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
 import { xssSanitizeSvg } from "@streamlit/lib/src/util/UriUtil"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 import {
   StyledCaption,
@@ -56,6 +57,17 @@ export function ImageList({
   height,
   endpoints,
 }: ImageListProps): ReactElement {
+  const { hostConfig } = React.useContext(LibContext)
+
+  const checkSvgUsage = React.useCallback(() => {
+    if (hostConfig.disableSvgImages) {
+      throw new Error(
+        "Usage of SVG images is disabled by the security policy of the host."
+      )
+    }
+    return true
+  }, [hostConfig])
+
   // The width field in the proto sets the image width, but has special
   // cases for -1, -2, and -3.
   let containerWidth: number | undefined
@@ -97,7 +109,7 @@ export function ImageList({
         const image = iimage as ImageProto
         return (
           <StyledImageContainer key={idx} data-testid="stImage">
-            {image.markup ? (
+            {image.markup && checkSvgUsage() ? (
               // SVGs are received unsanitized
               ReactHtmlParser(xssSanitizeSvg(image.markup))
             ) : (

@@ -17,6 +17,7 @@ import { ReactNode } from "react"
 
 import {
   IAllowedMessageOriginsResponse,
+  IHostConfigResponse,
   BaseUriParts,
   getPossibleBaseUris,
   logError,
@@ -79,6 +80,12 @@ interface Props {
    * cross-origin messages from (if in a relevant deployment scenario).
    */
   setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void
+
+  /**
+   * Function to set the host config for this app (if in a relevant deployment
+   * scenario).
+   */
+  setHostConfigResp: (resp: IHostConfigResponse) => void
 }
 
 /**
@@ -193,6 +200,7 @@ export class ConnectionManager {
       claimHostAuthToken: this.props.claimHostAuthToken,
       resetHostAuthToken: this.props.resetHostAuthToken,
       setAllowedOriginsResp: this.props.setAllowedOriginsResp,
+      setHostConfigResp: this.props.setHostConfigResp,
     })
   }
 }

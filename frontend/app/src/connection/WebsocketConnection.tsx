@@ -19,6 +19,7 @@ import axios from "axios"
 
 import {
   IAllowedMessageOriginsResponse,
+  IHostConfigResponse,
   ForwardMsgCache,
   logError,
   logMessage,
@@ -51,6 +52,11 @@ const SERVER_PING_PATH = "_stcore/health"
  * The path to fetch the whitelist for accepting cross-origin messages.
  */
 const ALLOWED_ORIGINS_PATH = "_stcore/allowed-message-origins"
+
+/**
+ * The path to fetch the host configuration.
+ */
+const HOST_CONFIG_PATH = "_stcore/host-config"
 
 /**
  * The path of the server's websocket endpoint.
@@ -138,6 +144,12 @@ export interface Args {
    * cross-origin messages from (if in a relevant deployment scenario).
    */
   setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void
+
+  /**
+   * Function to set the host config for this app (if in a relevant deployment
+   * scenario).
+   */
+  setHostConfigResp: (resp: IHostConfigResponse) => void
 }
 
 interface MessageQueue {
@@ -374,6 +386,7 @@ export class WebsocketConnection {
       PING_MAXIMUM_RETRY_PERIOD_MS,
       this.args.onRetry,
       this.args.setAllowedOriginsResp,
+      this.args.setHostConfigResp,
       userCommandLine
     )
 
@@ -612,6 +625,7 @@ export function doInitPings(
   maximumTimeoutMs: number,
   retryCallback: OnRetry,
   setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void,
+  setHostConfigResp: (resp: IHostConfigResponse) => void,
   userCommandLine?: string
 ): Promise<number> {
   const resolver = new Resolver<number>()
@@ -685,6 +699,7 @@ export function doInitPings(
     const uriParts = uriPartsList[uriNumber]
     const healthzUri = buildHttpUri(uriParts, SERVER_PING_PATH)
     const allowedOriginsUri = buildHttpUri(uriParts, ALLOWED_ORIGINS_PATH)
+    const hostConfigUri = buildHttpUri(uriParts, HOST_CONFIG_PATH)
 
     logMessage(LOG, `Attempting to connect to ${healthzUri}.`)
 
@@ -702,9 +717,11 @@ export function doInitPings(
     Promise.all([
       axios.get(healthzUri, { timeout: PING_TIMEOUT_MS }),
       axios.get(allowedOriginsUri, { timeout: PING_TIMEOUT_MS }),
+      axios.get(hostConfigUri, { timeout: PING_TIMEOUT_MS }),
     ])
-      .then(([_, originsResp]) => {
-        setAllowedOriginsResp(originsResp.data)
+      .then(([_, originRequest, hostConfigRequest]) => {
+        setAllowedOriginsResp(originRequest.data)
+        setHostConfigResp(hostConfigRequest.data)
         resolver.resolve(uriNumber)
       })
       .catch(error => {
