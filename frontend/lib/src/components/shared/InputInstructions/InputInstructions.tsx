@@ -37,7 +37,7 @@ const InputInstructions = ({
   type = "single",
   inForm,
 }: Props): ReactElement => {
-  const [isVisible, setIsVisible] = useState(true)
+  const [isVisible, setIsVisible] = useState<boolean>(true)
   const instructionsRef = useRef(null)
 
   const messages: ReactElement[] = []
@@ -70,10 +70,15 @@ const InputInstructions = ({
     )
   }
 
+  const shouldInstructionsHide = (parent: HTMLDivElement) => {
+    // Only show the input instructions if the parent's width is bigger than the minimum input width
+    setIsVisible(parent.offsetWidth > sizes.shouldInputHide)
+  }
+
   useEffect(() => {
     if (messages.length > 0 && instructionsRef.current) {
-      const { clientWidth } = instructionsRef.current
-      setIsVisible(clientWidth > sizes.shouldInputHide)
+      const { parentElement } = instructionsRef.current
+      return shouldInstructionsHide(parentElement)
     }
   }, [messages, instructionsRef])
 
