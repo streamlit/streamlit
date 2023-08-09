@@ -209,6 +209,40 @@ class AllowedMessageOriginsHandler(_SpecialRequestHandler):
         self.set_status(200)
 
 
+class HostConfigHandler(_SpecialRequestHandler):
+    def initialize(self):
+        self.allowed_message_origins = [*ALLOWED_MESSAGE_ORIGINS]
+        if config.get_option("global.developmentMode"):
+            # Allow messages from localhost in dev mode for testing of host <-> guest communication
+            self.allowed_message_origins.append("http://localhost")
+
+    async def get(self) -> None:
+        # TODO(lukasmasuch): This is a very restrictive config just for temporary testing purpose:
+        self.write(
+            {
+                "allowedOrigins": self.allowed_message_origins,
+                "useExternalAuthToken": False,
+                "disableSetQueryParams": True,
+                "disableSetPageMetadata": True,
+                "disableUnsafeHtmlExecution": True,
+                "disableSvgImages": True,
+                "disableIframes": True,
+                "disableElements": [
+                    "bokehChart",
+                    "cameraInput",
+                    "componentInstance",
+                    "downloadButton",
+                    "fileUploader",
+                    "iframe",
+                    "imgs",
+                    "audio",
+                    "video",
+                ],
+            }
+        )
+        self.set_status(200)
+
+
 class MessageCacheHandler(tornado.web.RequestHandler):
     """Returns ForwardMsgs from our MessageCache"""
 
