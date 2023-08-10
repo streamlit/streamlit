@@ -130,7 +130,7 @@ def _fix_tornado_crash() -> None:
     FIXME: if/when tornado supports the defaults in asyncio,
     remove and bump tornado requirement for py38
     """
-    if env_util.IS_WINDOWS and sys.version_info >= (3, 8):
+    if env_util.IS_WINDOWS:
         try:
             from asyncio import (  # type: ignore[attr-defined]
                 WindowsProactorEventLoopPolicy,

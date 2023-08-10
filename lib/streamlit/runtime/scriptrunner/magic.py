@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import ast
-import sys
 
 from typing_extensions import Final
 
@@ -196,7 +195,4 @@ def _get_st_write_from_expr(node, i, parent_type):
 
 
 def _is_docstring_node(node):
-    if sys.version_info >= (3, 8, 0):
-        return type(node) is ast.Constant and type(node.value) is str
-    else:
-        return type(node) is ast.Str
+    return type(node) is ast.Constant and type(node.value) is str

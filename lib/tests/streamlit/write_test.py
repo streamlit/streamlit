@@ -30,7 +30,6 @@ from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import SessionStateProxy
-from tests.testutil import should_skip_pyspark_tests
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -198,9 +197,6 @@ class StreamlitWriteTest(unittest.TestCase):
             )
             p.assert_called_once()
 
-    @pytest.mark.skipif(
-        should_skip_pyspark_tests(), reason="pyspark is incompatible with Python3.11"
-    )
     def test_pyspark_dataframe_write(self):
         """Test st.write with pyspark.sql.DataFrame."""
         # Import package inside the test so the test suite still runs even if you don't
