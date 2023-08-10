@@ -229,7 +229,6 @@ describe("TextInput widget", () => {
     expect(textInput).toHaveValue("0123456789")
   })
 
-  // make sure we update the widget value inside of a form otherwise this bug can occur: https://github.com/streamlit/streamlit/issues/7101
   it("does update widget value on text changes when inside of a form", async () => {
     const props = getProps({ formId: "formId" })
     const setStringValueSpy = jest.spyOn(props.widgetMgr, "setStringValue")
