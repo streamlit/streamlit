@@ -42,6 +42,9 @@ import {
   COMMUNITY_URL,
   COMPONENT_DEVELOPER_URL,
 } from "@streamlit/lib/src/urls"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { HostConfigViolation } from "@streamlit/lib/src/hostComm/types"
+
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
@@ -84,6 +87,10 @@ interface DataframeArg {
 
 export class ComponentInstance extends React.PureComponent<Props, State> {
   private readonly iframeRef = createRef<HTMLIFrameElement>()
+
+  public context!: React.ContextType<typeof LibContext>
+
+  public static contextType = LibContext
 
   // True when we've received the COMPONENT_READY message
   private componentReady = false
@@ -345,7 +352,12 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   }
 
   public render(): ReactNode {
-    // TODO (lukasmasuch): Disable based on hostConfig.disableIframes context
+    const { hostConfig } = this.context
+    if (hostConfig.disableIframes) {
+      throw new HostConfigViolation(
+        "Usage of custom components is disabled by the security policy of the host."
+      )
+    }
 
     // If we have an error, display it and bail.
     if (this.state.componentError != null) {
