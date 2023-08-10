@@ -28,11 +28,9 @@ import plotly.io as pio
 # those colors because we want to change colors based on the background color.
 
 # Start at #0000001 because developers may be likely to use #000000
-CATEGORIES = ["#00000{}".format(i + 1) for i in range(9)]
-SEQUENTIAL = ["#00001{}".format(i) for i in range(9) + "000020"]
+CATEGORIES = ["#00000{}".format(i + 1) for i in range(9)] + ["000010"]
+SEQUENTIAL = ["#00001{}".format(i) for i in range(1, 10)] + ["000020"]
 DIVERGING = ["#00002{}".format(i) for i in range(1, 10)] + ["#000030", "000031"]
-
-# Others
 INCREASING, DECREASING, TOTAL = "#000032", "#000033", "#000034"
 GRAY_30, GRAY_70, GRAY_90, BG_COLOR, FADED_TEXT_05, BG_MIX = (
     "#000035",
@@ -49,7 +47,7 @@ GRAY_30, GRAY_70, GRAY_90, BG_COLOR, FADED_TEXT_05, BG_MIX = (
 # The pair's second index is the starting color and the next pair's second index is the end color.
 # For more information, please refer to https://plotly.com/python/colorscales/
 
-streamlit_colorscale = [[i / 8, SEQUENTIAL[i]] for i in range(9)]
+streamlit_colorscale = [[i / 9, SEQUENTIAL[i]] for i in range(10)]
 
 pio.templates["streamlit"] = go.layout.Template(
     data=go.layout.template.Data(
