@@ -48,7 +48,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self._is_active_session = is_active_session
 
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Methods", "POST, OPTIONS, DELETE")
+        self.set_header("Access-Control-Allow-Methods", "PUT, OPTIONS, DELETE")
         self.set_header("Access-Control-Allow-Headers", "Content-Type")
         if config.get_option("server.enableXsrfProtection"):
             self.set_header(
@@ -81,7 +81,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
         self.set_status(204)
         self.finish()
 
-    def post(self, **kwargs):
+    def put(self, **kwargs):
         """Receive an uploaded file and add it to our UploadedFileManager."""
 
         args: Dict[str, List[bytes]] = {}
