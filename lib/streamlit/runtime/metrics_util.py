@@ -331,6 +331,9 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
             and len(ctx.tracked_commands)
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
+        from streamlit.runtime.scriptrunner.script_runner import RerunException
+
+        deferred_exception: Optional[RerunException] = None
         command_telemetry: Optional[Command] = None
 
         if ctx and tracking_activated:
@@ -354,6 +357,8 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
                 _LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
         try:
             result = non_optional_func(*args, **kwargs)
+        except RerunException as ex:
+            deferred_exception = ex
         finally:
             # Activate tracking again if command executes without any exceptions
             if ctx:
@@ -362,6 +367,9 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
         if tracking_activated and command_telemetry:
             # Set the execution time to the measured value
             command_telemetry.time = to_microseconds(timer() - exec_start)
+
+        if deferred_exception:
+            raise deferred_exception
         return result
 
     with contextlib.suppress(AttributeError):
