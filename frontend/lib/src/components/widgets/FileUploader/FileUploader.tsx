@@ -142,7 +142,7 @@ class FileUploader extends React.PureComponent<Props, State> {
     return "ready"
   }
 
-  public componentDidUpdate = (prevProps: Props): void => {
+  public componentDidUpdate = (): void => {
     // If our status is not "ready", then we have uploads in progress.
     // We won't submit a new widgetValue until all uploads have resolved.
     if (this.status !== "ready") {
