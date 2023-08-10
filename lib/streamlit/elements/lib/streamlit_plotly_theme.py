@@ -28,50 +28,20 @@ import plotly.io as pio
 # those colors because we want to change colors based on the background color.
 
 # Start at #0000001 because developers may be likely to use #000000
-CATEGORY_0 = "#000001"
-CATEGORY_1 = "#000002"
-CATEGORY_2 = "#000003"
-CATEGORY_3 = "#000004"
-CATEGORY_4 = "#000005"
-CATEGORY_5 = "#000006"
-CATEGORY_6 = "#000007"
-CATEGORY_7 = "#000008"
-CATEGORY_8 = "#000009"
-CATEGORY_9 = "#000010"
+CATEGORIES = ["#00000{}".format(i + 1) for i in range(9)]
+SEQUENTIAL = ["#00001{}".format(i) for i in range(9)]
+DIVERGING = ["#00002{}".format(i) for i in range(9)] + ["#000029", "#000030"]
 
-SEQUENTIAL_0 = "#000011"
-SEQUENTIAL_1 = "#000012"
-SEQUENTIAL_2 = "#000013"
-SEQUENTIAL_3 = "#000014"
-SEQUENTIAL_4 = "#000015"
-SEQUENTIAL_5 = "#000016"
-SEQUENTIAL_6 = "#000017"
-SEQUENTIAL_7 = "#000018"
-SEQUENTIAL_8 = "#000019"
-SEQUENTIAL_9 = "#000020"
-
-DIVERGING_0 = "#000021"
-DIVERGING_1 = "#000022"
-DIVERGING_2 = "#000023"
-DIVERGING_3 = "#000024"
-DIVERGING_4 = "#000025"
-DIVERGING_5 = "#000026"
-DIVERGING_6 = "#000027"
-DIVERGING_7 = "#000028"
-DIVERGING_8 = "#000029"
-DIVERGING_9 = "#000030"
-DIVERGING_10 = "#000031"
-
-INCREASING = "#000032"
-DECREASING = "#000033"
-TOTAL = "#000034"
-
-GRAY_30 = "#000035"
-GRAY_70 = "#000036"
-GRAY_90 = "#000037"
-BG_COLOR = "#000038"
-FADED_TEXT_05 = "#000039"
-BG_MIX = "#000040"
+# Others
+INCREASING, DECREASING, TOTAL = "#000032", "#000033", "#000034"
+GRAY_30, GRAY_70, GRAY_90, BG_COLOR, FADED_TEXT_05, BG_MIX = (
+    "#000035",
+    "#000036",
+    "#000037",
+    "#000038",
+    "#000039",
+    "#000040",
+)
 
 
 # Plotly represents continuous colorscale through an array of pairs.
@@ -79,18 +49,7 @@ BG_MIX = "#000040"
 # The pair's second index is the starting color and the next pair's second index is the end color.
 # For more information, please refer to https://plotly.com/python/colorscales/
 
-streamlit_colorscale = [
-    [0.0, SEQUENTIAL_0],
-    [0.1111111111111111, SEQUENTIAL_1],
-    [0.2222222222222222, SEQUENTIAL_2],
-    [0.3333333333333333, SEQUENTIAL_3],
-    [0.4444444444444444, SEQUENTIAL_4],
-    [0.5555555555555556, SEQUENTIAL_5],
-    [0.6666666666666666, SEQUENTIAL_6],
-    [0.7777777777777778, SEQUENTIAL_7],
-    [0.8888888888888888, SEQUENTIAL_8],
-    [1.0, SEQUENTIAL_9],
-]
+streamlit_colorscale = [[i / 8, SEQUENTIAL[i]] for i in range(9)]
 
 pio.templates["streamlit"] = go.layout.Template(
     data=go.layout.template.Data(
@@ -155,34 +114,11 @@ pio.templates["streamlit"] = go.layout.Template(
         ],
     ),
     layout=go.Layout(
-        colorway=[
-            CATEGORY_0,
-            CATEGORY_1,
-            CATEGORY_2,
-            CATEGORY_3,
-            CATEGORY_4,
-            CATEGORY_5,
-            CATEGORY_6,
-            CATEGORY_7,
-            CATEGORY_8,
-            CATEGORY_9,
-        ],
+        colorway=CATEGORIES,
         colorscale=go.layout.Colorscale(
             sequential=streamlit_colorscale,
             sequentialminus=streamlit_colorscale,
-            diverging=[
-                [0.0, DIVERGING_0],
-                [0.1, DIVERGING_1],
-                [0.2, DIVERGING_2],
-                [0.3, DIVERGING_3],
-                [0.4, DIVERGING_4],
-                [0.5, DIVERGING_5],
-                [0.6, DIVERGING_6],
-                [0.7, DIVERGING_7],
-                [0.8, DIVERGING_8],
-                [0.9, DIVERGING_9],
-                [1.0, DIVERGING_10],
-            ],
+            diverging=[[i / 10, DIVERGING[i]] for i in range(11)],
         ),
         coloraxis=go.layout.Coloraxis(colorscale=streamlit_colorscale),
     ),
