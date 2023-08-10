@@ -155,7 +155,7 @@ class TextInput extends React.PureComponent<Props, State> {
     // to re-run.
     this.setState({ dirty: true, value }, () =>
       // make sure dirty is true so that enter to submit text shows
-      this.commitWidgetValue({ fromUi: false }, true)
+      this.commitWidgetValue({ fromUi: true }, true)
     )
   }
 

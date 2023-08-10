@@ -217,6 +217,24 @@ describe("TextInput widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
   })
 
+  it("updates widget value on text changes when inside of a form", () => {
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    fireEvent.change(textInput, { target: { value: "TEST" } })
+
+    // Check that the last call used the TEST value.
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "TEST",
+      {
+        fromUi: true,
+      }
+    )
+  })
+
   it("limits input length if max_chars is passed", () => {
     const props = getProps({ maxChars: 10 })
     render(<TextInput {...props} />)
@@ -229,7 +247,27 @@ describe("TextInput widget", () => {
     expect(textInput).toHaveValue("0123456789")
   })
 
-  it("does not update widget value on text changes when outside of a form", () => {
+  // make sure we update the widget value inside of a form otherwise this bug can occur: https://github.com/streamlit/streamlit/issues/7101
+  it("does update widget value on text changes when inside of a form", async () => {
+    const props = getProps({ formId: "formId" })
+    const setStringValueSpy = jest.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    fireEvent.change(textInput, { target: { value: "TEST" } })
+    expect(textInput).toHaveValue("TEST")
+
+    expect(
+      await screen.findByText("Press Enter to submit form")
+    ).toBeInTheDocument()
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element, "TEST", {
+      fromUi: true,
+    })
+  })
+
+  it("does not update widget value on text changes when outside of a form", async () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
     render(<TextInput {...props} />)
@@ -237,6 +275,8 @@ describe("TextInput widget", () => {
     const textInput = screen.getByRole("textbox")
     fireEvent.change(textInput, { target: { value: "TEST" } })
     expect(textInput).toHaveValue("TEST")
+
+    expect(await screen.findByText("Press Enter to apply")).toBeInTheDocument()
 
     // Check that the last call was in componentDidMount.
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
