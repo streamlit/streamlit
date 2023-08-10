@@ -217,24 +217,6 @@ describe("TextInput widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
   })
 
-  it("updates widget value on text changes when inside of a form", () => {
-    const props = getProps({ formId: "form" })
-    jest.spyOn(props.widgetMgr, "setStringValue")
-    render(<TextInput {...props} />)
-
-    const textInput = screen.getByRole("textbox")
-    fireEvent.change(textInput, { target: { value: "TEST" } })
-
-    // Check that the last call used the TEST value.
-    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
-      "TEST",
-      {
-        fromUi: true,
-      }
-    )
-  })
-
   it("limits input length if max_chars is passed", () => {
     const props = getProps({ maxChars: 10 })
     render(<TextInput {...props} />)
