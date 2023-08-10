@@ -29,8 +29,8 @@ import plotly.io as pio
 
 # Start at #0000001 because developers may be likely to use #000000
 CATEGORIES = ["#00000{}".format(i + 1) for i in range(9)]
-SEQUENTIAL = ["#00001{}".format(i) for i in range(9)]
-DIVERGING = ["#00002{}".format(i) for i in range(9)] + ["#000029", "#000030"]
+SEQUENTIAL = ["#00001{}".format(i) for i in range(9) + "000020"]
+DIVERGING = ["#00002{}".format(i) for i in range(1, 10)] + ["#000030", "000031"]
 
 # Others
 INCREASING, DECREASING, TOTAL = "#000032", "#000033", "#000034"
