@@ -26,6 +26,7 @@ import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper
 import { xssSanitizeSvg } from "@streamlit/lib/src/util/UriUtil"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { HostConfigViolation } from "@streamlit/lib/src/hostComm/types"
 
 import {
   StyledCaption,
@@ -61,7 +62,7 @@ export function ImageList({
 
   const isSvgAllowed = React.useCallback(() => {
     if (hostConfig.disableSvgImages) {
-      throw new Error(
+      throw new HostConfigViolation(
         "Usage of SVG images is disabled by the security policy of the host."
       )
     }

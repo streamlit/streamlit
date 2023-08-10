@@ -41,6 +41,7 @@ export type {
   IAllowedMessageOriginsResponse,
   IHostConfigResponse,
   IToolbarItem,
+  HostConfigViolation,
 } from "./hostComm/types"
 export {
   default as Modal,

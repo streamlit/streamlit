@@ -80,6 +80,7 @@ import Maybe from "@streamlit/lib/src/components/core/Maybe"
 import { FormSubmitContent } from "@streamlit/lib/src/components/widgets/Form"
 import Heading from "@streamlit/lib/src/components/shared/StreamlitMarkdown/Heading"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { HostConfigViolation } from "@streamlit/lib/src/hostComm/types"
 
 import {
   BaseBlockProps,
@@ -236,7 +237,7 @@ const RawElementNodeRenderer = (
     hostConfig.disableElements &&
     hostConfig.disableElements.includes(node.element.type)
   ) {
-    throw new Error(
+    throw new HostConfigViolation(
       `The element of type ${node.element.type} is disabled by the security policy of the host.`
     )
   }

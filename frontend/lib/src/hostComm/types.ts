@@ -170,3 +170,5 @@ export type IHostConfigResponse = HostConfig & {
   allowedOrigins?: string[]
   useExternalAuthToken?: boolean
 }
+
+export class HostConfigViolation extends Error {}
