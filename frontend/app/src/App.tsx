@@ -599,7 +599,7 @@ export class App extends PureComponent<Props, State> {
       pageConfig
 
     if (title) {
-      if (!this.state.hostConfig.disableSetPageMetadata) {
+      if (this.state.hostConfig.disableSetPageMetadata) {
         logWarning(
           "Setting the page title is disabled by security policy of the host."
         )
@@ -616,7 +616,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (favicon) {
-      if (!this.state.hostConfig.disableSetPageMetadata) {
+      if (this.state.hostConfig.disableSetPageMetadata) {
         logWarning(
           "Setting the page favicon is disabled by security policy of the host."
         )
@@ -893,7 +893,7 @@ export class App extends PureComponent<Props, State> {
       this.sessionInfo.current.installationId + mainScriptPath
     )
 
-    if (!this.state.hostConfig.disableSetPageMetadata) {
+    if (this.state.hostConfig.disableSetPageMetadata) {
       logWarning(
         "Setting the page metadata (title & favicon) is disabled by security policy of the host."
       )
