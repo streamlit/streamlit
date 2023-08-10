@@ -155,6 +155,7 @@ class TextInput extends React.PureComponent<Props, State> {
     // to re-run.
     this.setState({ dirty: true, value }, () =>
       // make sure dirty is true so that enter to submit text shows
+      // make sure we commit the widget value or this bug can occur: https://github.com/streamlit/streamlit/issues/7101
       this.commitWidgetValue({ fromUi: true }, true)
     )
   }
