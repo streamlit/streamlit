@@ -106,6 +106,7 @@ import {
   FormsData,
   WidgetStateManager,
   IHostConfigResponse,
+  HostConfig,
 } from "@streamlit/lib"
 import { concat, noop, without } from "lodash"
 
@@ -122,7 +123,6 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
-import { HostConfig } from "lib/src/components/core/LibContext"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -604,6 +604,8 @@ export class App extends PureComponent<Props, State> {
           "Setting the page title is disabled by security policy of the host."
         )
       } else {
+        // TODO(lukasmasuch): Should this also prevent the host message or only
+        //                    setting of the document title?
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_PAGE_TITLE",
           title,
@@ -619,6 +621,8 @@ export class App extends PureComponent<Props, State> {
           "Setting the page favicon is disabled by security policy of the host."
         )
       } else {
+        // TODO(lukasmasuch): Should this also prevent the host message or only
+        //                    setting of the document favicon?
         handleFavicon(
           favicon,
           this.hostCommunicationMgr.sendMessageToHost,
@@ -929,6 +933,12 @@ export class App extends PureComponent<Props, State> {
   handleOneTimeInitialization = (newSessionProto: NewSession): void => {
     const initialize = newSessionProto.initialize as Initialize
     const config = newSessionProto.config as Config
+    if (this.state.hostConfig.mapboxToken && !config.mapboxToken) {
+      // Use mapbox token from host config.
+      config.mapboxToken = this.state.hostConfig.mapboxToken
+      // TODO(lukasmasuch): Should we move this into the mapbox component?
+      // Otherwise it might not be usable by streamlit-lib users.
+    }
 
     this.sessionInfo.setCurrent(
       SessionInfo.propsFromNewSessionMessage(newSessionProto)

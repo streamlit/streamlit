@@ -217,27 +217,17 @@ class HostConfigHandler(_SpecialRequestHandler):
             self.allowed_message_origins.append("http://localhost")
 
     async def get(self) -> None:
-        # TODO(lukasmasuch): This is a very restrictive config just for temporary testing purpose:
         self.write(
             {
                 "allowedOrigins": self.allowed_message_origins,
                 "useExternalAuthToken": False,
-                "disableSetQueryParams": True,
-                "disableSetPageMetadata": True,
-                "disableUnsafeHtmlExecution": True,
-                "disableSvgImages": True,
-                "disableIframes": True,
-                "disableElements": [
-                    "bokehChart",
-                    "cameraInput",
-                    "componentInstance",
-                    "downloadButton",
-                    "fileUploader",
-                    "iframe",
-                    "imgs",
-                    "audio",
-                    "video",
-                ],
+                "mapboxToken": "",
+                "disableSetQueryParams": False,
+                "disableSetPageMetadata": False,
+                "disableUnsafeHtmlExecution": False,
+                "disableSvgImages": False,
+                "disableIframes": False,
+                "disableElements": [],
             }
         )
         self.set_status(200)

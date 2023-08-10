@@ -19,16 +19,15 @@ import React from "react"
 import { baseTheme, ThemeConfig } from "@streamlit/lib/src/theme"
 
 export type HostConfig = {
+  mapboxToken?: string
   disableSetQueryParams?: boolean
   disableSetPageMetadata?: boolean
   disableUnsafeHtmlExecution?: boolean
   disableIframes?: boolean
   disableSvgImages?: boolean
   disableElements?: string[]
-  // TODO: Support additional host config options:
-  // mapboxToken?: string
-  // disableTheming?: boolean
-  // disableFullScreenMode?: false
+  // TODO(lukasmasuch): To my understanding, disabling the theming is not anymore needed? disableTheming?: boolean
+  // TODO(lukasmasuch): move the hideFullScreenButtons setting to this config?: disableFullScreenMode?: false
 }
 
 export interface LibContextProps {

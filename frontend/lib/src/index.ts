@@ -122,7 +122,7 @@ export {
 } from "./util/utils"
 export { useIsOverflowing } from "./util/Hooks"
 export { LibContext } from "./components/core/LibContext"
-export type { LibContextProps } from "./components/core/LibContext"
+export type { LibContextProps, HostConfig } from "./components/core/LibContext"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as HostCommunicationManager } from "./hostComm"
 export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"

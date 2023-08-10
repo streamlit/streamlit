@@ -17,6 +17,8 @@
 import React, { ReactElement, useEffect, useCallback } from "react"
 import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
 import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { HostConfigViolation } from "@streamlit/lib/src/hostComm/types"
 
 // We import Bokeh from a vendored source file, because it doesn't play well with Babel (https://github.com/bokeh/bokeh/issues/10658)
 // Importing these files will cause global Bokeh to be mutated
@@ -45,6 +47,14 @@ export function BokehChart({
   element,
   height,
 }: BokehChartProps): ReactElement {
+  const { hostConfig } = React.useContext(LibContext)
+  if (hostConfig.disableUnsafeHtmlExecution) {
+    throw new HostConfigViolation(
+      "Bokeh chart allows rendering of unsafe HTML and JS. " +
+        "Unsafe script execution is disallowed by the security policy of the host. "
+    )
+  }
+
   const chartId = `bokeh-chart-${element.elementId}`
 
   const memoizedGetChartData = useCallback(() => {
