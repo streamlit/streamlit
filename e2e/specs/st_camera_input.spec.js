@@ -16,8 +16,11 @@
 
 describe("st.camera_input", () => {
   before(() => {
+    // Increasing timeout since uploading and rendering images can be slow.
+    Cypress.config("defaultCommandTimeout", 30000);
+
     Cypress.Cookies.defaults({
-      preserve: ["_xsrf"]
+      preserve: ["_xsrf"],
     });
     cy.loadApp("http://localhost:3000/");
   });
