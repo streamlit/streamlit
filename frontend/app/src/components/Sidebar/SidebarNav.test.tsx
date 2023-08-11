@@ -43,7 +43,7 @@ expect.extend(matchers)
 
 jest.mock("@streamlit/lib/src/util/Hooks", () => ({
   __esModule: true,
-  ...jest.requireActual("@streamlit/lib/dist/util/Hooks"),
+  ...jest.requireActual("@streamlit/lib/src/util/Hooks"),
   useIsOverflowing: jest.fn(),
 }))
 

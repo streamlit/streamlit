@@ -578,14 +578,14 @@ describe("FileUploader widget enzyme tests", () => {
     expect(instance.status).toBe("ready")
   })
 
-  it("resets on disconnect", () => {
+  it("does not reset on disconnect", () => {
     const props = getProps()
     const wrapper = shallow(<FileUploader {...props} />)
     const instance = wrapper.instance() as FileUploader
     // @ts-expect-error
     const resetSpy = jest.spyOn(instance, "reset")
     wrapper.setProps({ disabled: true })
-    expect(resetSpy).toHaveBeenCalled()
+    expect(resetSpy).not.toHaveBeenCalled()
   })
 
   it("resets its value when form is cleared", async () => {
