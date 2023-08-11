@@ -175,11 +175,20 @@ async def myfunc(a):
 """
         self._testCode(CODE_ASYNC_FOR, 1)
 
-    def test_docstring_is_ignored(self):
+    def test_docstring_is_ignored_func(self):
         """Test that docstrings don't print in the app"""
         CODE = """
 def myfunc(a):
     '''This is the docstring'''
     return 42
+"""
+        self._testCode(CODE, 0)
+
+    def test_docstring_is_ignored_async_func(self):
+        """Test that async function docstrings don't print in the app"""
+        CODE = """
+async def myfunc(a):
+    '''This is the docstring for async func'''
+    return 43
 """
         self._testCode(CODE, 0)
