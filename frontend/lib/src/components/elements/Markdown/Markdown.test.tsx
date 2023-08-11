@@ -60,7 +60,8 @@ describe("Markdown element", () => {
       .spyOn(console, "error")
       .mockImplementation(() => jest.fn())
     expect(() =>
-      customRenderLibContext(<Markdown {...getProps()} />, {
+      // @ts-expect-error
+      customRenderLibContext(<Markdown {...getProps({ allowHtml: true })} />, {
         hostConfig: {
           disableUnsafeHtmlExecution: true,
         },
