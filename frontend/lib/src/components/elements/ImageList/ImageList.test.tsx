@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { shallow } from "@streamlit/lib/src/test_util"
+import { customRenderLibContext, shallow } from "@streamlit/lib/src/test_util"
 
 import { ImageList as ImageListProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
@@ -109,5 +109,33 @@ describe("ImageList Element", () => {
           expect(imgWrapper.prop("style")).toStrictEqual(fullScreenAppearance)
         })
     })
+  })
+
+  it("should throw an error if hostConfig.disableSvgImages is true", () => {
+    // turn off console.error logs
+    const consoleErrorFn = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => jest.fn())
+    expect(() =>
+      customRenderLibContext(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                markup: "<svg></svg>", // This indicates it's an SVG and should trigger the isSvgAllowed function
+              },
+            ],
+          })}
+        />,
+        {
+          hostConfig: {
+            disableSvgImages: true,
+          },
+        }
+      )
+    ).toThrow(
+      "Usage of SVG images is disabled by the security policy of the host."
+    )
+    consoleErrorFn.mockRestore()
   })
 })

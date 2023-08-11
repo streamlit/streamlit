@@ -26,7 +26,7 @@ import {
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "@streamlit/lib/src/util/IFrameUtil"
 import { logWarning } from "@streamlit/lib/src/util/log"
-import { mount } from "@streamlit/lib/src/test_util"
+import { customRenderLibContext, mount } from "@streamlit/lib/src/test_util"
 import { buildHttpUri } from "@streamlit/lib/src/util/UriUtil"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import React from "react"
@@ -580,6 +580,39 @@ describe("ComponentInstance", () => {
         )
 
         expect(mc.frameHeight).toEqual("0")
+      })
+    })
+
+    describe("Properly checks LibContext", () => {
+      it("throws an error if disableIframes is true", () => {
+        const consoleErrorFn = jest
+          .spyOn(console, "error")
+          .mockImplementation(() => jest.fn())
+        expect(() =>
+          customRenderLibContext(
+            <ComponentInstance
+              element={createElementProp({}, [])}
+              registry={new ComponentRegistry(mockEndpoints())}
+              width={100}
+              disabled={false}
+              theme={mockTheme.emotion}
+              widgetMgr={
+                new WidgetStateManager({
+                  sendRerunBackMsg: jest.fn(),
+                  formsDataChanged: jest.fn(),
+                })
+              }
+            />,
+            {
+              hostConfig: {
+                disableIframes: true,
+              },
+            }
+          )
+        ).toThrow(
+          "Usage of custom components is disabled by the security policy of the host."
+        )
+        consoleErrorFn.mockRestore()
       })
     })
   })

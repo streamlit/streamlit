@@ -16,7 +16,7 @@
 
 import React from "react"
 import { ShallowWrapper } from "enzyme"
-import { shallow } from "@streamlit/lib/src/test_util"
+import { customRenderLibContext, shallow } from "@streamlit/lib/src/test_util"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
@@ -139,5 +139,23 @@ describe("st.iframe", () => {
         overflow: "hidden",
       })
     })
+  })
+
+  it("should throw an error if hostConfig.disableIframes is true", () => {
+    // turn off console.error logs
+    const consoleErrorFn = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => jest.fn())
+    expect(() =>
+      customRenderLibContext(<IFrame {...getProps()} />, {
+        hostConfig: {
+          disableIframes: true,
+        },
+      })
+    )
+      .toThrow
+      // "Usage of iframes is disabled by the security policy of the host."
+      ()
+    consoleErrorFn.mockRestore()
   })
 })

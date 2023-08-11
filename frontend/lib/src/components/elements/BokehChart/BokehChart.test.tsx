@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import { customRenderLibContext, mount } from "@streamlit/lib/src/test_util"
 import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 
 import Figure from "./mock"
@@ -147,5 +147,23 @@ describe("BokehChart element", () => {
       height: 500,
     })
     expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledTimes(2)
+  })
+
+  it("should throw an error if hostConfig.disableUnsafeHtmlExecution is true", () => {
+    // turn off console.error logs
+    const consoleErrorFn = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => jest.fn())
+    expect(() =>
+      customRenderLibContext(<BokehChart {...getProps()} />, {
+        hostConfig: {
+          disableUnsafeHtmlExecution: true,
+        },
+      })
+    ).toThrow(
+      "Bokeh chart allows rendering of unsafe HTML and JS. " +
+        "Unsafe script execution is disallowed by the security policy of the host. "
+    )
+    consoleErrorFn.mockRestore()
   })
 })

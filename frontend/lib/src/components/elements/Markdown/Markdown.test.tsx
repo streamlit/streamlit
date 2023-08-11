@@ -15,7 +15,11 @@
  */
 
 import React from "react"
-import { shallow, mount } from "@streamlit/lib/src/test_util"
+import {
+  shallow,
+  mount,
+  customRenderLibContext,
+} from "@streamlit/lib/src/test_util"
 import { Markdown as MarkdownProto } from "@streamlit/lib/src/proto"
 import Markdown, { MarkdownProps } from "./Markdown"
 import {
@@ -49,6 +53,23 @@ describe("Markdown element", () => {
   a) unit tests with different Markdown formatted text
   b) allow_html property
   */
+
+  it("should throw an error if hostConfig.disableUnsafeHtmlExecution is true", () => {
+    // turn off console.error logs
+    const consoleErrorFn = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => jest.fn())
+    expect(() =>
+      customRenderLibContext(<Markdown {...getProps()} />, {
+        hostConfig: {
+          disableUnsafeHtmlExecution: true,
+        },
+      })
+    ).toThrow(
+      "Running unsafe HTML is disabled by the security policy of the host."
+    )
+    consoleErrorFn.mockRestore()
+  })
 })
 
 describe("Markdown element with help", () => {
