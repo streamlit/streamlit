@@ -72,7 +72,6 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "pymssql",
     "cassandra",
     "azure",
-    "google",
     "redis",
     "sqlite3",
     "neo4j",
