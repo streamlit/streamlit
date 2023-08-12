@@ -106,8 +106,8 @@ class TextInput extends React.PureComponent<Props, State> {
    *
    * @param source - Whether or not from the UI
    * @param updateState - Optional flag to determine if the state should be updated
-   *                           to reflect that the value is no longer 'dirty' or modified.
-   *                           By default, this is true, meaning the state WILL be updated.
+   *                      to reflect that the value is no longer 'dirty' or modified.
+   *                      By default, this is true, meaning the state WILL be updated.
    */
   private commitWidgetValue = (source: Source, updateState = true): void => {
     this.props.widgetMgr.setStringValue(
