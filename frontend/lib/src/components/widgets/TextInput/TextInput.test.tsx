@@ -229,7 +229,26 @@ describe("TextInput widget", () => {
     expect(textInput).toHaveValue("0123456789")
   })
 
-  it("does not update widget value on text changes when outside of a form", () => {
+  it("does update widget value on text changes when inside of a form", async () => {
+    const props = getProps({ formId: "formId" })
+    const setStringValueSpy = jest.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    fireEvent.change(textInput, { target: { value: "TEST" } })
+    expect(textInput).toHaveValue("TEST")
+
+    expect(
+      await screen.findByText("Press Enter to submit form")
+    ).toBeInTheDocument()
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element, "TEST", {
+      fromUi: true,
+    })
+  })
+
+  it("does not update widget value on text changes when outside of a form", async () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
     render(<TextInput {...props} />)
@@ -237,6 +256,8 @@ describe("TextInput widget", () => {
     const textInput = screen.getByRole("textbox")
     fireEvent.change(textInput, { target: { value: "TEST" } })
     expect(textInput).toHaveValue("TEST")
+
+    expect(await screen.findByText("Press Enter to apply")).toBeInTheDocument()
 
     // Check that the last call was in componentDidMount.
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
