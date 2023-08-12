@@ -68,7 +68,7 @@ class LegacyAltairTest(DeltaGeneratorTestCase):
             {"index": [date(2019, 8, 9), date(2019, 8, 10)], "numbers": [1, 10]}
         ).set_index("index")
 
-        chart = altair.generate_chart("line", df)
+        chart, _ = altair.generate_chart("line", df)
         st._legacy_altair_chart(chart)
         c = self.get_delta_from_queue().new_element.vega_lite_chart
         spec_dict = json.loads(c.spec)

@@ -178,6 +178,83 @@ class TypeUtilTest(unittest.TestCase):
         df = convert_anything_to_df(data)
         pd.testing.assert_frame_equal(df, pd.DataFrame.from_dict(data, orient="index"))
 
+    def test_convert_anything_to_df_passes_styler_through(self):
+        """Test that `convert_anything_to_df` correctly passes Stylers through."""
+        original_df = pd.DataFrame(
+            {
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
+        )
+
+        original_styler = original_df.style.highlight_max(axis=0)
+
+        out = convert_anything_to_df(original_styler, allow_styler=True)
+        self.assertEqual(original_styler, out)
+        self.assertEqual(id(original_df), id(out.data))
+
+    def test_convert_anything_to_df_clones_stylers(self):
+        """Test that `convert_anything_to_df` correctly clones Stylers."""
+        original_df = pd.DataFrame(
+            {
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
+        )
+
+        original_styler = original_df.style.highlight_max(axis=0)
+
+        out = convert_anything_to_df(
+            original_styler, allow_styler=True, ensure_copy=True
+        )
+        self.assertNotEqual(original_styler, out)
+        self.assertNotEqual(id(original_df), id(out.data))
+        pd.testing.assert_frame_equal(original_df, out.data)
+
+    def test_convert_anything_to_df_converts_stylers(self):
+        """Test that `convert_anything_to_df` correctly converts Stylers to DF, without cloning the
+        data.
+        """
+        original_df = pd.DataFrame(
+            {
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
+        )
+
+        original_styler = original_df.style.highlight_max(axis=0)
+
+        out = convert_anything_to_df(original_styler, allow_styler=False)
+        self.assertNotEqual(id(original_styler), id(out))
+        self.assertEqual(id(original_df), id(out))
+        pd.testing.assert_frame_equal(original_df, out)
+
+    def test_convert_anything_to_df_converts_stylers_and_clones_data(self):
+        """Test that `convert_anything_to_df` correctly converts Stylers to DF, cloning the data."""
+        original_df = pd.DataFrame(
+            {
+                "integer": [1, 2, 3],
+                "float": [1.0, 2.1, 3.2],
+                "string": ["foo", "bar", None],
+            },
+            index=[1.0, "foo", 3],
+        )
+
+        original_styler = original_df.style.highlight_max(axis=0)
+
+        out = convert_anything_to_df(
+            original_styler, allow_styler=False, ensure_copy=True
+        )
+        self.assertNotEqual(id(original_styler), id(out))
+        self.assertNotEqual(id(original_df), id(out))
+        pd.testing.assert_frame_equal(original_df, out)
+
     def test_convert_anything_to_df_calls_to_pandas_when_available(self):
         class DataFrameIsh:
             def to_pandas(self):

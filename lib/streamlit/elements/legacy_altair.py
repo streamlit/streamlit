@@ -18,13 +18,14 @@ a nice JSON schema for expressing graphs and charts.
 """
 
 from datetime import date
-from typing import TYPE_CHECKING, Hashable, cast
+from typing import TYPE_CHECKING, Hashable, Optional, cast
 
 import pandas as pd
 import pyarrow as pa
 
 import streamlit.elements.legacy_vega_lite as vega_lite
 from streamlit import errors, type_util
+from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.utils import last_index_for_melted_dataframes
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -90,12 +91,11 @@ class LegacyAltairMixin:
         """
         vega_lite_chart_proto = VegaLiteChartProto()
 
-        chart = generate_chart("line", data, width, height)
+        chart, add_rows_metadata = generate_chart("line", data, width, height)
         marshall(vega_lite_chart_proto, chart, use_container_width)
-        last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue(
-            "line_chart", vega_lite_chart_proto, last_index=last_index
+            "line_chart", vega_lite_chart_proto, add_rows_metadata=add_rows_metadata
         )
 
     @gather_metrics("_legacy_area_chart")
@@ -150,12 +150,11 @@ class LegacyAltairMixin:
         """
         vega_lite_chart_proto = VegaLiteChartProto()
 
-        chart = generate_chart("area", data, width, height)
+        chart, add_rows_metadata = generate_chart("area", data, width, height)
         marshall(vega_lite_chart_proto, chart, use_container_width)
-        last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue(
-            "area_chart", vega_lite_chart_proto, last_index=last_index
+            "area_chart", vega_lite_chart_proto, add_rows_metadata=add_rows_metadata
         )
 
     @gather_metrics("_legacy_bar_chart")
@@ -210,12 +209,11 @@ class LegacyAltairMixin:
         """
         vega_lite_chart_proto = VegaLiteChartProto()
 
-        chart = generate_chart("bar", data, width, height)
+        chart, add_rows_metadata = generate_chart("bar", data, width, height)
         marshall(vega_lite_chart_proto, chart, use_container_width)
-        last_index = last_index_for_melted_dataframes(data)
 
         return self.dg._enqueue(
-            "bar_chart", vega_lite_chart_proto, last_index=last_index
+            "bar_chart", vega_lite_chart_proto, add_rows_metadata=add_rows_metadata
         )
 
     @gather_metrics("_legacy_altair_chart")
@@ -273,7 +271,7 @@ class LegacyAltairMixin:
         return cast("DeltaGenerator", self)
 
 
-def _is_date_column(df: pd.DataFrame, name: Hashable) -> bool:
+def _is_date_column(df: pd.DataFrame, name: Optional[Hashable]) -> bool:
     """True if the column with the given name stores datetime.date values.
 
     This function just checks the first value in the given column, so
@@ -305,14 +303,7 @@ def generate_chart(chart_type, data, width: int = 0, height: int = 0):
         data = {"": []}
 
     if isinstance(data, pa.Table):
-        raise errors.StreamlitAPIException(
-            """
-pyarrow tables are not supported  by Streamlit's legacy DataFrame serialization (i.e. with `config.dataFrameSerialization = "legacy"`).
-
-To be able to use pyarrow tables, please enable pyarrow by changing the config setting,
-`config.dataFrameSerialization = "arrow"`
-"""
-        )
+        raise ArrowNotSupportedError()
 
     if not isinstance(data, pd.DataFrame):
         data = type_util.convert_anything_to_df(data)
@@ -320,6 +311,16 @@ To be able to use pyarrow tables, please enable pyarrow by changing the config s
     index_name = data.index.name
     if index_name is None:
         index_name = "index"
+
+    add_rows_metadata = AddRowsMetadata(
+        last_index=last_index_for_melted_dataframes(data),
+        # Not used:
+        columns=dict(
+            x_column=index_name,
+            y_column_list=[],
+            color_column=None,
+        ),
+    )
 
     data = pd.melt(data.reset_index(), id_vars=[index_name])
 
@@ -355,7 +356,7 @@ To be able to use pyarrow tables, please enable pyarrow by changing the config s
         )
         .interactive()
     )
-    return chart
+    return chart, add_rows_metadata
 
 
 def marshall(
@@ -395,3 +396,15 @@ def marshall(
             use_container_width=use_container_width,
             **kwargs,
         )
+
+
+class ArrowNotSupportedError(errors.StreamlitAPIException):
+    def __init__(self, *args):
+        message = """
+pyarrow tables are not supported by Streamlit's legacy DataFrame serialization (i.e.
+with `config.dataFrameSerialization = "legacy"`).
+
+To be able to use pyarrow tables, please enable pyarrow by changing the config setting,
+`config.dataFrameSerialization = "arrow"`.
+"""
+        super().__init__(message, *args)
