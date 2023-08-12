@@ -882,7 +882,7 @@ def prep_data(
     """Prepares the data for charting. This is also used in add_rows.
 
     Returns the prepared dataframe and the new names of the x column (taking the index reset into
-    consideration) and y, color, and size columns (converting to str if needed).
+    consideration) and y, color, and size columns.
     """
 
     # If y is provided, but x is not, we'll use the index as x.
