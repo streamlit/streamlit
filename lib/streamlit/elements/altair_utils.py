@@ -12,23 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-import pandas as pd
+"""Useful classes for our native Altair-based charts.
 
-import streamlit as st
-from tests.streamlit import pyspark_mocks
+These classes are used in both Arrow-based and legacy-based charting code to pass some
+important info to add_rows.
+"""
 
-np.random.seed(0)
+from dataclasses import dataclass
+from typing import Hashable, List, Optional, TypedDict
 
-data = np.random.randn(20, 3)
-df = pd.DataFrame(data, columns=["a", "b", "c"])
 
-st._arrow_line_chart(df)
-st._arrow_line_chart(df, x="a")
-st._arrow_line_chart(df, y="a")
-st._arrow_line_chart(df, y=["a", "b"])
-st._arrow_line_chart(df, x="a", y="b")
-st._arrow_line_chart(df, x="b", y="a")
-st._arrow_line_chart(df, x="a", y=["b", "c"])
+class PrepDataColumns(TypedDict):
+    """Columns used for the prep_data step in Altair Arrow charts."""
 
-st._arrow_line_chart(pyspark_mocks.DataFrame(is_numpy_arr=True))
+    x_column: Optional[str]
+    y_column_list: List[str]
+    color_column: Optional[str]
+
+
+@dataclass
+class AddRowsMetadata:
+    """Metadata needed by add_rows on native charts."""
+
+    last_index: Optional[Hashable]
+    columns: PrepDataColumns

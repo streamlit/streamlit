@@ -24,6 +24,7 @@ from typing import (
     Hashable,
     Iterable,
     NoReturn,
+    Optional,
     Type,
     TypeVar,
     cast,
@@ -36,11 +37,12 @@ from typing_extensions import Final, Literal
 from streamlit import config, cursor, env_util, logger, runtime, type_util, util
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
+from streamlit.elements.altair_utils import AddRowsMetadata
 
 # DataFrame elements come in two flavors: "Legacy" and "Arrow".
 # We select between them with the DataFrameElementSelectorMixin.
 from streamlit.elements.arrow import ArrowMixin
-from streamlit.elements.arrow_altair import ArrowAltairMixin
+from streamlit.elements.arrow_altair import ArrowAltairMixin, prep_data
 from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
@@ -57,7 +59,7 @@ from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
-from streamlit.elements.legacy_altair import LegacyAltairMixin
+from streamlit.elements.legacy_altair import ArrowNotSupportedError, LegacyAltairMixin
 from streamlit.elements.legacy_data_frame import LegacyDataFrameMixin
 from streamlit.elements.legacy_vega_lite import LegacyVegaLiteMixin
 from streamlit.elements.map import MapMixin
@@ -113,6 +115,7 @@ ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = (
     "arrow_line_chart",
     "arrow_area_chart",
     "arrow_bar_chart",
+    "arrow_scatter_chart",
 )
 
 Value = TypeVar("Value")
@@ -417,7 +420,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: None,
-        last_index: Hashable | None = None,
+        add_rows_metadata: Optional[AddRowsMetadata] = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator:
@@ -429,7 +432,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Type[NoValue],
-        last_index: Hashable | None = None,
+        add_rows_metadata: Optional[AddRowsMetadata] = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> None:
@@ -441,7 +444,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Value,
-        last_index: Hashable | None = None,
+        add_rows_metadata: Optional[AddRowsMetadata] = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> Value:
@@ -453,7 +456,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: None = None,
-        last_index: Hashable | None = None,
+        add_rows_metadata: Optional[AddRowsMetadata] = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator:
@@ -465,7 +468,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Type[NoValue] | Value | None = None,
-        last_index: Hashable | None = None,
+        add_rows_metadata: Optional[AddRowsMetadata] = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator | Value | None:
@@ -476,7 +479,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Type[NoValue] | Value | None = None,
-        last_index: Hashable | None = None,
+        add_rows_metadata: Optional[AddRowsMetadata] = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator | Value | None:
@@ -549,7 +552,7 @@ class DeltaGenerator(
             # position.
             new_cursor = (
                 dg._cursor.get_locked_cursor(
-                    delta_type=delta_type, last_index=last_index
+                    delta_type=delta_type, add_rows_metadata=add_rows_metadata
                 )
                 if dg._cursor is not None
                 else None
@@ -637,7 +640,7 @@ class DeltaGenerator(
         block_dg._form_data = FormData(current_form_id(dg))
 
         # Must be called to increment this cursor's index.
-        dg._cursor.get_locked_cursor(last_index=None)
+        dg._cursor.get_locked_cursor(add_rows_metadata=None)
         _enqueue_message(msg)
 
         caching.save_block_message(
@@ -732,12 +735,16 @@ class DeltaGenerator(
                 "Command requires exactly one dataset"
             )
 
+        # The legacy add_rows does not support Arrow tables.
+        if type_util.is_type(data, "pyarrow.lib.Table"):
+            raise ArrowNotSupportedError()
+
         # When doing _legacy_add_rows on an element that does not already have data
         # (for example, st._legacy_line_chart() without any args), call the original
         # st._legacy_foo() element with new data instead of doing a _legacy_add_rows().
         if (
             self._cursor.props["delta_type"] in DELTA_TYPES_THAT_MELT_DATAFRAMES
-            and self._cursor.props["last_index"] is None
+            and self._cursor.props["add_rows_metadata"].last_index is None
         ):
             # IMPORTANT: This assumes delta types and st method names always
             # match!
@@ -747,8 +754,11 @@ class DeltaGenerator(
             st_method(data, **kwargs)
             return None
 
-        data, self._cursor.props["last_index"] = _maybe_melt_data_for_add_rows(
-            data, self._cursor.props["delta_type"], self._cursor.props["last_index"]
+        new_data, self._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
+            data,
+            self._cursor.props["delta_type"],
+            self._cursor.props["add_rows_metadata"],
+            is_legacy=True,
         )
 
         msg = ForwardMsg_pb2.ForwardMsg()
@@ -756,7 +766,7 @@ class DeltaGenerator(
 
         import streamlit.elements.legacy_data_frame as data_frame
 
-        data_frame.marshall_data_frame(data, msg.delta.add_rows.data)
+        data_frame.marshall_data_frame(new_data, msg.delta.add_rows.data)
 
         if name:
             msg.delta.add_rows.name = name
@@ -853,7 +863,7 @@ class DeltaGenerator(
         # st._arrow_foo() element with new data instead of doing a _arrow_add_rows().
         if (
             self._cursor.props["delta_type"] in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
-            and self._cursor.props["last_index"] is None
+            and self._cursor.props["add_rows_metadata"].last_index is None
         ):
             # IMPORTANT: This assumes delta types and st method names always
             # match!
@@ -863,8 +873,11 @@ class DeltaGenerator(
             st_method(data, **kwargs)
             return None
 
-        data, self._cursor.props["last_index"] = _maybe_melt_data_for_add_rows(
-            data, self._cursor.props["delta_type"], self._cursor.props["last_index"]
+        new_data, self._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
+            data,
+            self._cursor.props["delta_type"],
+            self._cursor.props["add_rows_metadata"],
+            is_legacy=False,
         )
 
         msg = ForwardMsg_pb2.ForwardMsg()
@@ -873,7 +886,7 @@ class DeltaGenerator(
         import streamlit.elements.arrow as arrow_proto
 
         default_uuid = str(hash(self._get_delta_path_str()))
-        arrow_proto.marshall(msg.delta.arrow_add_rows.data, data, default_uuid)
+        arrow_proto.marshall(msg.delta.arrow_add_rows.data, new_data, default_uuid)
 
         if name:
             msg.delta.arrow_add_rows.name = name
@@ -884,17 +897,27 @@ class DeltaGenerator(
         return self
 
 
-DFT = TypeVar("DFT", bound=type_util.DataFrameCompatible)
-
-
-def _maybe_melt_data_for_add_rows(
-    data: DFT,
+def _prep_data_for_add_rows(
+    data: Data,
     delta_type: str,
-    last_index: Any,
-) -> tuple[DFT | DataFrame, int | Any]:
-    import pandas as pd
+    add_rows_metadata: AddRowsMetadata,
+    is_legacy: bool,
+) -> tuple[Data, AddRowsMetadata]:
 
-    def _melt_data(df: DataFrame, last_index: Any) -> tuple[DataFrame, int | Any]:
+    out_data: Data
+
+    # For some delta types we have to reshape the data structure
+    # otherwise the input data and the actual data used
+    # by vega_lite will be different, and it will throw an error.
+    if (
+        delta_type in DELTA_TYPES_THAT_MELT_DATAFRAMES
+        or delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
+    ):
+        import pandas as pd
+
+        df = cast(pd.DataFrame, type_util.convert_anything_to_df(data))
+
+        # Make range indices start at last_index.
         if isinstance(df.index, pd.RangeIndex):
             old_step = _get_pandas_index_attr(df, "step")
 
@@ -908,35 +931,26 @@ def _maybe_melt_data_for_add_rows(
                     "'RangeIndex' object has no attribute 'step'"
                 )
 
-            start = last_index + old_step
-            stop = last_index + old_step + old_stop
+            start = add_rows_metadata.last_index + old_step
+            stop = add_rows_metadata.last_index + old_step + old_stop
 
             df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-            last_index = stop - 1
+            add_rows_metadata.last_index = stop - 1
 
-        index_name = df.index.name
-        if index_name is None:
-            index_name = "index"
+        if is_legacy:
+            index_name = df.index.name
+            if index_name is None:
+                index_name = "index"
 
-        df = pd.melt(df.reset_index(), id_vars=[index_name])
-        return df, last_index
-
-    # For some delta types we have to reshape the data structure
-    # otherwise the input data and the actual data used
-    # by vega_lite will be different, and it will throw an error.
-    if (
-        delta_type in DELTA_TYPES_THAT_MELT_DATAFRAMES
-        or delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
-    ):
-        if not isinstance(data, pd.DataFrame):
-            return _melt_data(
-                df=type_util.convert_anything_to_df(data),
-                last_index=last_index,
-            )
+            out_data = pd.melt(df.reset_index(), id_vars=[index_name])
         else:
-            return _melt_data(df=data, last_index=last_index)
+            out_data, *_ = prep_data(df, **add_rows_metadata.columns)
 
-    return data, last_index
+    else:
+        # When calling add_rows on st.table or st.dataframe we want styles to pass through.
+        out_data = type_util.convert_anything_to_df(data, allow_styler=True)
+
+    return out_data, add_rows_metadata
 
 
 def _get_pandas_index_attr(
