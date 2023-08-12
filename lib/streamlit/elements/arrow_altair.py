@@ -1514,8 +1514,9 @@ def marshall(
         """Altair data transformer that returns a fake named dataset with the
         object id.
         """
-        datasets[id(data)] = data
-        return {"name": str(id(data))}
+        name = str(id(data))
+        datasets[name] = data
+        return {"name": name}
 
     alt.data_transformers.register("id", id_transform)
 
