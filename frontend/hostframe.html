@@ -120,6 +120,20 @@ Usage:
     })
   }
 
+function setChildIframe() {
+    const userInput = prompt("Please provide the URL for the iframe:");
+    if (userInput) {
+      const guestIframe = document.getElementById('guest');
+      if (guestIframe) {
+        guestIframe.src = userInput;
+      } else {
+        console.error("Iframe element with ID 'guest' not found.");
+      }
+    } else {
+      console.warn("No URL provided. Iframe remains unchanged.");
+    }
+  }
+  
   function sendThemeMessage() {
     sendMessage({
       type: "SET_CUSTOM_THEME_CONFIG",
@@ -221,6 +235,7 @@ body {
   <button onclick="setHostToolbarItem()">Add Toolbar Item</button>
   <button onclick="setHideSidebarNav()">Hide Sidebar Nav</button>
   <button onclick="setSidebarDownshift()">Sidebar Chevron Downshift</button>
+  <button onclick="setChildIframe()">Set Child Frame URL</button>
 </div>
 
 <iframe id="guest" src="http://localhost:3000" />
