@@ -105,7 +105,7 @@ class TextInput extends React.PureComponent<Props, State> {
    * Commits the current state value to the WidgetStateManager.
    *
    * @param source - Whether or not from the UI
-   * @param updateDirtyState - Optional flag to determine if the state should be updated
+   * @param updateState - Optional flag to determine if the state should be updated
    *                           to reflect that the value is no longer 'dirty' or modified.
    *                           By default, this is true, meaning the state WILL be updated.
    */
@@ -166,7 +166,6 @@ class TextInput extends React.PureComponent<Props, State> {
     else {
       // make sure dirty is true so that enter to apply text shows
       this.setState({ dirty: true, value })
-      return
     }
   }
 
