@@ -222,7 +222,7 @@ function hideIfStale(isStale: boolean, component: ReactElement): ReactElement {
 }
 
 // Render ElementNodes (i.e. leaf nodes).
-const RawElementNodeRenderer = (
+export const RawElementNodeRenderer = (
   props: RawElementNodeRendererProps
 ): ReactElement => {
   const { node } = props

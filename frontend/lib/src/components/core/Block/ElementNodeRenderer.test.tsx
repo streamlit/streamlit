@@ -17,12 +17,13 @@
 import React from "react"
 import "@testing-library/jest-dom"
 import { screen, waitFor } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
+import { customRenderLibContext, render } from "@streamlit/lib/src/test_util"
 
 import {
   Balloons as BalloonsProto,
   ForwardMsgMetadata,
   Snow as SnowProto,
+  BokehChart as BokehChartProto,
 } from "@streamlit/lib/src/proto"
 import { ElementNode } from "@streamlit/lib/src/AppNode"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
@@ -35,7 +36,9 @@ import { ComponentRegistry } from "@streamlit/lib/src/components/widgets/CustomC
 import { mockEndpoints, mockSessionInfo } from "@streamlit/lib/src/mocks/mocks"
 import ElementNodeRenderer, {
   ElementNodeRendererProps,
+  RawElementNodeRenderer,
 } from "./ElementNodeRenderer"
+import Figure from "@streamlit/lib/src/components/elements/BokehChart/mock"
 
 function createBalloonNode(scriptRunId: string): ElementNode {
   const node = new ElementNode(
@@ -121,6 +124,45 @@ describe("ElementNodeRenderer Block Component", () => {
       const elementRendererChildren = elementNodeRenderer.children
       expect(elementRendererChildren).toHaveLength(1)
       expect(elementRendererChildren[0]).toHaveClass("balloons")
+    })
+
+    it("should throw an error if the element type exists in disableElements", () => {
+      const type = "bokehChart"
+      const scriptRunId = "NEW_SCRIPT_ID"
+      const node = new ElementNode(
+        BokehChartProto.create({
+          figure: JSON.stringify(Figure),
+          useContainerWidth: false,
+          elementId: "1",
+        }),
+        ForwardMsgMetadata.create({}),
+        scriptRunId
+      )
+      node.element.type = type
+      const props = getProps({
+        node,
+        scriptRunId,
+      })
+
+      // turn off console.error logs
+      const consoleErrorFn = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => jest.fn())
+
+      expect(() =>
+        customRenderLibContext(
+          <RawElementNodeRenderer isStale={false} {...props} />,
+          {
+            hostConfig: {
+              disableElements: [type],
+            },
+          }
+        )
+      ).toThrow(
+        "The element of type bokehChart is disabled by the security policy of the host."
+      )
+
+      consoleErrorFn.mockRestore()
     })
   })
 
