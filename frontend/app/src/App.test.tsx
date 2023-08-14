@@ -16,7 +16,7 @@
 
 import React from "react"
 import { ReactWrapper, ShallowWrapper } from "enzyme"
-import { waitFor } from "@testing-library/dom"
+import { waitFor } from "@testing-library/react"
 import cloneDeep from "lodash/cloneDeep"
 import {
   LocalStore,
@@ -62,7 +62,6 @@ jest.mock("@streamlit/app/src/connection/ConnectionManager")
 jest.mock("@streamlit/lib/src/baseconsts", () => {
   return {
     ...jest.requireActual("@streamlit/lib/src/baseconsts"),
-    SHOW_DEPLOY_BUTTON: true,
   }
 })
 
@@ -958,13 +957,12 @@ describe("App.onHistoryChange", () => {
 
   it("does rerun when we are navigating to a different page and the last window history url contains an anchor", async () => {
     const pushStateSpy = jest.spyOn(window.history, "pushState")
-
     const pageChangeSpy = jest.spyOn(instance, "onPageChange")
 
     // navigate to current page with anchor
     window.history.pushState({}, "", "#foo_bar")
+    instance.onHistoryChange()
     expect(pageChangeSpy).not.toHaveBeenCalled()
-    expect(instance.onPageChange).not.toHaveBeenCalled()
 
     // navigate to new page
     instance.handleNewSession(
