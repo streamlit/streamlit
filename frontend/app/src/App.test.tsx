@@ -1130,6 +1130,7 @@ describe("App.handlePageInfoChanged", () => {
     it("should log a warning if hostConfig.disableSetQueryParams is true", async () => {
       const log = await import("@streamlit/lib/src/util/log")
       const logWarningSpy = jest.spyOn(log, "logWarning")
+      const queryString = "testingDisableSetQueryParams"
 
       render(
         <App
@@ -1145,7 +1146,7 @@ describe("App.handlePageInfoChanged", () => {
       appInstance.setHostConfig({ disableSetQueryParams: true })
       appInstance.handlePageInfoChanged(
         new PageInfo({
-          queryString: "testingDisableSetQueryParams",
+          queryString: queryString,
         })
       )
       expect(logWarningSpy).toHaveBeenLastCalledWith(
@@ -1153,7 +1154,7 @@ describe("App.handlePageInfoChanged", () => {
       )
       expect(mockSendMessageToHost).not.toHaveBeenCalledWith({
         type: "SET_QUERY_PARAM",
-        queryParams: "testingDisableSetQueryParams}",
+        queryParams: queryString,
       })
     })
   })
