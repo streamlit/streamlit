@@ -14,6 +14,7 @@
 
 from typing import NoReturn
 
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
@@ -43,6 +44,7 @@ def stop() -> NoReturn:
     raise StopException()
 
 
+@gather_metrics("experimental_rerun")
 def rerun() -> NoReturn:
     """Rerun the script immediately.
 
