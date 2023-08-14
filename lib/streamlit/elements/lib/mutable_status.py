@@ -14,7 +14,9 @@
 
 from __future__ import annotations
 
-from typing import Any, List, cast
+import time
+from types import TracebackType
+from typing import Any, List, Optional, Type, cast
 
 from typing_extensions import Literal, TypeAlias
 
@@ -85,7 +87,7 @@ class MutableStatus(DeltaGenerator):
     ):
         super().__init__(root_container, cursor, parent, block_type)
 
-        # Initialized in `create()`:
+        # Initialized in `_create()`:
         self._last_proto: BlockProto | None = None
         self._last_state: States | None = None
         self._delta_path: List[int] | None = None
@@ -137,10 +139,26 @@ class MutableStatus(DeltaGenerator):
             self.update(state="running")
         return self
 
-    def __exit__(self, type: Any, value: Any, traceback: Any) -> Literal[False]:
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> Literal[False]:
         # If last state is error, we don't want to auto-update to complete
-        if self._last_state != "error" and self._last_state != "complete":
-            self.update(
-                state="complete", expanded=False if self._auto_collapse else None
-            )
-        return super().__exit__(type, value, traceback)
+        if self._last_state not in ["error", "complete"]:
+            # We need to sleep here for a very short time to prevent issues when
+            # the status is updated too quickly. If an .update() is directly followed
+            # by the exit of the context manager, sometimes only the last update
+            # (to complete) is applied. Adding a short timeout here allows the frontend
+            # to render the update before.
+            time.sleep(0.1)
+            if exc_type is not None:
+                # If an exception was raised in the context,
+                # we want to update the status to error.
+                self.update(state="error")
+            else:
+                self.update(
+                    state="complete", expanded=False if self._auto_collapse else None
+                )
+        return super().__exit__(exc_type, exc_val, exc_tb)

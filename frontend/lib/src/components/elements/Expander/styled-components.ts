@@ -27,7 +27,7 @@ export const StyledExpandableContainer = styled.div(({ theme }) => ({
     fill: theme.colors.primary,
   },
   ".streamlit-expander.empty": {
-    "div[aria-expanded='true'] + .streamlit-expanderContent": {
+    "div[aria-expanded='true'] + div > .streamlit-expanderContent": {
       color: theme.colors.darkGray,
       fontStyle: "italic",
       fontSize: theme.fontSizes.sm,

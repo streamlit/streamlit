@@ -459,13 +459,8 @@ class LayoutsMixin:
         # We need to import MutableStatus here to avoid a circular import
         from streamlit.elements.lib.mutable_status import MutableStatus
 
-        # The return type of _create is a function based context manager to be
-        # able to capture exceptions and update the status indicator.
-        # However, for simplicity, we just want it to appear as the MutableStatus
-        # object here instead of the context manager.
-        return cast(
-            MutableStatus,
-            MutableStatus._create(self.dg, label=label, expanded=expanded, state=state),
+        return MutableStatus._create(
+            self.dg, label=label, expanded=expanded, state=state
         )
 
     @property
