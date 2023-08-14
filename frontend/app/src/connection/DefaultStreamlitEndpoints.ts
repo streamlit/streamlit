@@ -120,7 +120,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
     return this.csrfRequest<number>(this.buildFileUploadURL(fileUploadUrl), {
       cancelToken,
-      method: "POST",
+      method: "PUT",
       data: form,
       responseType: "text",
       onUploadProgress,

@@ -20,7 +20,7 @@ describe("st.file_uploader", () => {
       preserve: ["_xsrf"],
     });
     cy.server();
-    cy.route("POST", "**/upload_file/**").as("uploadFile");
+    cy.route("PUT", "**/upload_file/**").as("uploadFile");
 
     cy.loadApp("http://localhost:3000/");
 
