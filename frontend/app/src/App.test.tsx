@@ -795,7 +795,9 @@ describe("App.handleNewSession", () => {
 
       appInstance.setHostConfig({ disableSetPageMetadata: true })
       appInstance.handleNewSession(new NewSession(NEW_SESSION_JSON))
-      expect(logWarningSpy).toHaveBeenCalled()
+      expect(logWarningSpy).toHaveBeenLastCalledWith(
+        "Setting the page metadata (title & favicon) is disabled by security policy of the host."
+      )
       expect(mockHandleFavicon).not.toHaveBeenCalled()
     })
   })
@@ -1029,7 +1031,9 @@ describe("App.handlePageConfigChanged", () => {
       appInstance.handlePageConfigChanged(
         new PageConfig({ favicon: "favIcon" })
       )
-      expect(logWarningSpy).toHaveBeenCalled()
+      expect(logWarningSpy).toHaveBeenLastCalledWith(
+        "Setting the page favicon is disabled by security policy of the host."
+      )
     })
   })
 
