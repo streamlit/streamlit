@@ -776,6 +776,30 @@ describe("App.handleNewSession", () => {
       // @ts-expect-error
       window.history.pushState.mockClear()
     })
+
+    it("logs a warning when hostConfig.disableSetPageMetadata is true", async () => {
+      const ref = React.createRef()
+      let appInstance: any
+      const log = await import("@streamlit/lib/src/util/log")
+      const logWarningSpy = jest.spyOn(log, "logWarning")
+
+      render(
+        <App
+          ref={node => {
+            appInstance = node
+          }}
+          {...getProps()}
+        />
+      )
+
+      const mockHandleFavicon = jest.fn()
+      appInstance.handleFavicon = mockHandleFavicon
+
+      appInstance.setHostConfig({ disableSetPageMetadata: true })
+      appInstance.handleNewSession(new NewSession(NEW_SESSION_JSON))
+      expect(logWarningSpy).toHaveBeenCalled()
+      expect(mockHandleFavicon).not.toHaveBeenCalled()
+    })
   })
 
   describe("DeployButton", () => {
@@ -957,7 +981,6 @@ describe("App.onHistoryChange", () => {
 })
 
 describe("App.handlePageConfigChanged", () => {
-  let appInstance: any
   let documentTitle: string
 
   beforeEach(() => {
@@ -968,23 +991,49 @@ describe("App.handlePageConfigChanged", () => {
     document.title = documentTitle
   })
 
-  it("should log a warning if hostConfig.disableSetPageMetadata is true", async () => {
-    const log = await import("@streamlit/lib/src/util/log")
-    const logWarningSpy = jest.spyOn(log, "logWarning")
+  describe("test disableSetPageMetadata", () => {
     const ref = React.createRef()
-    render(
-      <App
-        ref={node => {
-          appInstance = node
-        }}
-        {...getProps()}
-      />
-    )
-    appInstance.setHostConfig({ disableSetPageMetadata: true })
-    appInstance.handlePageConfigChanged(
-      new PageConfig({ title: "Jabberwocky" })
-    )
-    expect(logWarningSpy).toHaveBeenCalled()
+    let appInstance: any
+
+    it("should log a warning if hostConfig.disableSetPageMetadata is true and title exists", async () => {
+      const log = await import("@streamlit/lib/src/util/log")
+      const logWarningSpy = jest.spyOn(log, "logWarning")
+
+      render(
+        <App
+          ref={node => {
+            appInstance = node
+          }}
+          {...getProps()}
+        />
+      )
+
+      appInstance.setHostConfig({ disableSetPageMetadata: true })
+      appInstance.handlePageConfigChanged(
+        new PageConfig({ title: "Jabberwocky" })
+      )
+      expect(logWarningSpy).toHaveBeenCalled()
+    })
+
+    it("should log a warning if hostConfig.disableSetPageMetadata is true and favicon exists", async () => {
+      const log = await import("@streamlit/lib/src/util/log")
+      const logWarningSpy = jest.spyOn(log, "logWarning")
+
+      render(
+        <App
+          ref={node => {
+            appInstance = node
+          }}
+          {...getProps()}
+        />
+      )
+
+      appInstance.setHostConfig({ disableSetPageMetadata: true })
+      appInstance.handlePageConfigChanged(
+        new PageConfig({ favicon: "favIcon" })
+      )
+      expect(logWarningSpy).toHaveBeenCalled()
+    })
   })
 
   it("sets document title when 'PageConfig.title' is set", () => {
@@ -994,8 +1043,6 @@ describe("App.handlePageConfigChanged", () => {
 
     expect(document.title).toBe("Jabberwocky")
   })
-
-  it("handles disableSetPageMeta properly", () => {})
 })
 
 // Using this to test the functionality provided through streamlit.experimental_set_query_params.
@@ -1075,6 +1122,41 @@ describe("App.handlePageInfoChanged", () => {
 
     const expectedUrl = `/?${pageInfo.queryString}`
     expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
+  })
+
+  describe("checks for host config properties and logs warnings for them", () => {
+    const ref = React.createRef()
+    let appInstance: any
+
+    it("should log a warning if hostConfig.disableSetQueryParams is true", async () => {
+      const log = await import("@streamlit/lib/src/util/log")
+      const logWarningSpy = jest.spyOn(log, "logWarning")
+
+      render(
+        <App
+          ref={node => {
+            appInstance = node
+          }}
+          {...getProps()}
+        />
+      )
+      const mockSendMessageToHost = jest.fn()
+      appInstance.sendMessageToHost = mockSendMessageToHost
+
+      appInstance.setHostConfig({ disableSetQueryParams: true })
+      appInstance.handlePageInfoChanged(
+        new PageInfo({
+          queryString: "testingDisableSetQueryParams",
+        })
+      )
+      expect(logWarningSpy).toHaveBeenLastCalledWith(
+        "Setting query parameters is disabled by security policy of the host."
+      )
+      expect(mockSendMessageToHost).not.toHaveBeenCalledWith({
+        type: "SET_QUERY_PARAM",
+        queryParams: "testingDisableSetQueryParams}",
+      })
+    })
   })
 })
 
