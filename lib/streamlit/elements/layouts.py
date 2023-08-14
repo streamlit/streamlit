@@ -414,7 +414,7 @@ class LayoutsMixin:
     def status(
         self,
         label: str,
-        expanded: bool = False,
+        expanded: bool | Literal["auto"] = False,
         *,
         state: Literal["running", "complete", "error"] = "running",
     ) -> "MutableStatus":
