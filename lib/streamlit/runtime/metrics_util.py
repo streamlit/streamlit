@@ -358,7 +358,11 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
         try:
             result = non_optional_func(*args, **kwargs)
         except RerunException as ex:
-            deferred_exception = ex
+            # Duplicated from below, because static analysis tools get confused
+            # by deferring the rethrow.
+            if tracking_activated and command_telemetry:
+                command_telemetry.time = to_microseconds(timer() - exec_start)
+            raise ex
         finally:
             # Activate tracking again if command executes without any exceptions
             if ctx:
@@ -368,8 +372,6 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
             # Set the execution time to the measured value
             command_telemetry.time = to_microseconds(timer() - exec_start)
 
-        if deferred_exception:
-            raise deferred_exception
         return result
 
     with contextlib.suppress(AttributeError):
