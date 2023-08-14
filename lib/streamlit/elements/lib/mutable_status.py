@@ -14,8 +14,7 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
-from typing import Any, Generator, List, cast
+from typing import Any, List, cast
 
 from typing_extensions import Literal, TypeAlias
 
@@ -33,12 +32,12 @@ class MutableStatus(DeltaGenerator):
     def _create(
         parent: DeltaGenerator,
         label: str,
-        expanded: bool = False,
+        expanded: bool | Literal["auto"] = False,
         state: States = "running",
     ) -> MutableStatus:
         # -> Generator[MutableStatus, None, MutableStatus]:
         expandable_proto = BlockProto.Expandable()
-        expandable_proto.expanded = expanded
+        expandable_proto.expanded = True if expanded == "auto" else expanded
         expandable_proto.label = label or ""
 
         if state == "running":
@@ -65,6 +64,8 @@ class MutableStatus(DeltaGenerator):
         status_container._delta_path = delta_path
         status_container._last_proto = block_proto
         status_container._last_state = state
+        if expanded == "auto":
+            status_container._auto_collapse = True
 
         # TODO: We cannot use this since it won't support the usage without context manager:
         # with status_container:
@@ -88,6 +89,7 @@ class MutableStatus(DeltaGenerator):
         self._last_proto: BlockProto | None = None
         self._last_state: States | None = None
         self._delta_path: List[int] | None = None
+        self._auto_collapse: bool = False
 
     def update(
         self,
@@ -138,5 +140,7 @@ class MutableStatus(DeltaGenerator):
     def __exit__(self, type: Any, value: Any, traceback: Any) -> Literal[False]:
         # If last state is error, we don't want to auto-update to complete
         if self._last_state != "error" and self._last_state != "complete":
-            self.update(state="complete")
+            self.update(
+                state="complete", expanded=False if self._auto_collapse else None
+            )
         return super().__exit__(type, value, traceback)
