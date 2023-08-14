@@ -369,6 +369,7 @@ class ConfigTest(unittest.TestCase):
                 "runner.postScriptGC",
                 "runner.fastReruns",
                 "mapbox.token",
+                "server.allowedMessageOrigins",
                 "server.baseUrlPath",
                 "server.enableCORS",
                 "server.cookieSecret",

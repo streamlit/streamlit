@@ -162,13 +162,7 @@ class HealthHandler(_SpecialRequestHandler):
             self.write(msg)
 
 
-# NOTE: We eventually want to get rid of this hard-coded list entirely as we don't want
-# to have links to Community Cloud live in the open source library in a way that affects
-# functionality (links advertising Community Cloud are probably okay 🙂). In the long
-# run, this list will most likely be replaced by a config option allowing us to more
-# granularly control what domains a Streamlit app should accept cross-origin iframe
-# messages from.
-ALLOWED_MESSAGE_ORIGINS = [
+DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
     "https://devel.streamlit.test",
     "https://*.streamlit.apptest",
     "https://*.streamlitapp.test",
@@ -190,7 +184,11 @@ ALLOWED_MESSAGE_ORIGINS = [
 
 class AllowedMessageOriginsHandler(_SpecialRequestHandler):
     def initialize(self):
-        self.allowed_message_origins = [*ALLOWED_MESSAGE_ORIGINS]
+        user_defined_origins = config.get_option("server.allowedMessageOrigins")
+        if len(user_defined_origins) == 0:
+            self.allowed_message_origins = DEFAULT_ALLOWED_MESSAGE_ORIGINS
+        else:
+            self.allowed_message_origins = user_defined_origins
         if config.get_option("global.developmentMode"):
             # Allow messages from localhost in dev mode for testing of host <-> guest communication
             self.allowed_message_origins.append("http://localhost")

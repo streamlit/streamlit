@@ -587,6 +587,15 @@ _create_option(
 )
 
 _create_option(
+    "server.allowedMessageOrigins",
+    description="""This list is an allow-list of origins from which a deployed Streamlit app can receive cross-origin messages from.
+
+    Example: ['https://*.streamlit.app, "https://*.demo.streamlit.app",]
+    """,
+    default_val=[],
+)
+
+_create_option(
     "server.fileWatcherType",
     description="""
         Change the type of file watcher used by Streamlit, or turn it off
