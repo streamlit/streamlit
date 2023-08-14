@@ -52,8 +52,9 @@ const Expander: React.FC<ExpanderProps> = ({
   const [expanded, setExpanded] = useState<boolean>(initialExpanded || false)
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
-    if (notNullOrUndefined(element.expanded)) {
-      setExpanded(element.expanded)
+    if (notNullOrUndefined(initialExpanded)) {
+      console.log("Setting expanded state to", initialExpanded)
+      setExpanded(initialExpanded)
     }
     // Having `label` in the dependency array here is necessary because
     // sometimes two distinct expanders look so similar that even the react
@@ -63,7 +64,7 @@ const Expander: React.FC<ExpanderProps> = ({
     //
     // By adding `label` as a dependency, we ensure that we reset the
     // expander's `expanded` state in this edge case.
-  }, [element])
+  }, [label, initialExpanded])
 
   const toggle = (): void => setExpanded(!expanded)
   const { colors, radii, spacing, fontSizes } = useTheme()
@@ -142,7 +143,6 @@ const Expander: React.FC<ExpanderProps> = ({
             }),
             props: {
               className: "streamlit-expanderHeader",
-              isStale,
             },
           },
           ToggleIcon: {
@@ -160,7 +160,6 @@ const Expander: React.FC<ExpanderProps> = ({
           Root: {
             props: {
               className: classNames("streamlit-expander", { empty }),
-              isStale,
             },
             style: {
               borderStyle: "solid",
