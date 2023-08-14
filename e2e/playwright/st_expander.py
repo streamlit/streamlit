@@ -24,3 +24,5 @@ collapsed.write("I am already collapsed")
 
 sidebar = st.sidebar.expander("Expand me!")
 sidebar.write("I am in the sidebar")
+
+st.expander("Empty expander")
