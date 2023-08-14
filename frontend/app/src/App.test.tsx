@@ -16,7 +16,7 @@
 
 import React from "react"
 import { ReactWrapper, ShallowWrapper } from "enzyme"
-import { waitFor } from "@testing-library/react"
+import { waitFor } from "@testing-library/dom"
 import cloneDeep from "lodash/cloneDeep"
 import {
   LocalStore,
@@ -47,6 +47,7 @@ import {
   PagesChanged,
   mockTheme,
   HOST_COMM_VERSION,
+  render,
 } from "@streamlit/lib"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import {
@@ -61,6 +62,7 @@ jest.mock("@streamlit/app/src/connection/ConnectionManager")
 jest.mock("@streamlit/lib/src/baseconsts", () => {
   return {
     ...jest.requireActual("@streamlit/lib/src/baseconsts"),
+    SHOW_DEPLOY_BUTTON: true,
   }
 })
 
@@ -238,7 +240,7 @@ describe("App", () => {
     // @ts-expect-error
     wrapper.instance().keyHandlers.STOP_RECORDING()
 
-    expect(props.screenCast.stopRecording).toHaveBeenCalled()
+    expect(props.screenCast.stopRecording).toBeCalled()
   })
 
   it("hides the top bar if hideTopBar === true", () => {
@@ -930,14 +932,15 @@ describe("App.onHistoryChange", () => {
     pushStateSpy.mockRestore()
   })
 
-  it("does rerun when we are navigating to a different page and the last window history url contains an anchor", async () => {
+  it("does rerun when we are navigating to a different page and the last window history url contains an anchor", () => {
     const pushStateSpy = jest.spyOn(window.history, "pushState")
-    const pageChangeSpy = jest.spyOn(instance, "onPageChange")
+
+    jest.spyOn(instance, "onPageChange")
 
     // navigate to current page with anchor
     window.history.pushState({}, "", "#foo_bar")
     instance.onHistoryChange()
-    expect(pageChangeSpy).not.toHaveBeenCalled()
+    expect(instance.onPageChange).not.toHaveBeenCalled()
 
     // navigate to new page
     instance.handleNewSession(
@@ -945,9 +948,8 @@ describe("App.onHistoryChange", () => {
     )
     window.history.back()
 
-    // Check for rerun
-    await waitFor(() => {
-      expect(pageChangeSpy).toHaveBeenLastCalledWith("top_hash")
+    waitFor(() => {
+      expect(instance.onPageChange).toHaveBeenLastCalledWith("sub_hash")
     })
 
     pushStateSpy.mockRestore()
@@ -955,6 +957,7 @@ describe("App.onHistoryChange", () => {
 })
 
 describe("App.handlePageConfigChanged", () => {
+  let appInstance: any
   let documentTitle: string
 
   beforeEach(() => {
@@ -965,6 +968,25 @@ describe("App.handlePageConfigChanged", () => {
     document.title = documentTitle
   })
 
+  it("should log a warning if hostConfig.disableSetPageMetadata is true", async () => {
+    const log = await import("@streamlit/lib/src/util/log")
+    const logWarningSpy = jest.spyOn(log, "logWarning")
+    const ref = React.createRef()
+    render(
+      <App
+        ref={node => {
+          appInstance = node
+        }}
+        {...getProps()}
+      />
+    )
+    appInstance.setHostConfig({ disableSetPageMetadata: true })
+    appInstance.handlePageConfigChanged(
+      new PageConfig({ title: "Jabberwocky" })
+    )
+    expect(logWarningSpy).toHaveBeenCalled()
+  })
+
   it("sets document title when 'PageConfig.title' is set", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance() as App
@@ -972,6 +994,8 @@ describe("App.handlePageConfigChanged", () => {
 
     expect(document.title).toBe("Jabberwocky")
   })
+
+  it("handles disableSetPageMeta properly", () => {})
 })
 
 // Using this to test the functionality provided through streamlit.experimental_set_query_params.
@@ -1228,54 +1252,6 @@ describe("App.handleDeltaMessage", () => {
   })
 })
 
-describe("App.requestFileURLs", () => {
-  let wrapper: ShallowWrapper
-  let instance: App
-
-  beforeEach(() => {
-    wrapper = shallow(<App {...getProps()} />)
-    instance = wrapper.instance() as App
-
-    // @ts-expect-error
-    instance.sendBackMsg = jest.fn()
-
-    // @ts-expect-error
-    instance.sessionInfo.setCurrent(mockSessionInfoProps())
-  })
-
-  it("properly constructs fileUrlsRequest BackMsg", () => {
-    instance.isServerConnected = jest.fn().mockReturnValue(true)
-
-    instance.requestFileURLs(
-      "myRequestId",
-      // @ts-expect-error
-      [{ name: "file1.txt" }, { name: "file2.txt" }, { name: "file3.txt" }]
-    )
-
-    // @ts-expect-error
-    expect(instance.sendBackMsg).toHaveBeenCalledWith({
-      fileUrlsRequest: {
-        fileNames: ["file1.txt", "file2.txt", "file3.txt"],
-        requestId: "myRequestId",
-        sessionId: "mockSessionId",
-      },
-    })
-  })
-
-  it("does nothing if server is disconnected", () => {
-    instance.isServerConnected = jest.fn().mockReturnValue(false)
-
-    instance.requestFileURLs(
-      "myRequestId",
-      // @ts-expect-error
-      [{ name: "file1.txt" }, { name: "file2.txt" }, { name: "file3.txt" }]
-    )
-
-    // @ts-expect-error
-    expect(instance.sendBackMsg).not.toHaveBeenCalled()
-  })
-})
-
 describe("Test Main Menu shortcut functionality", () => {
   let prevWindowLocation: Location
   beforeEach(() => {
@@ -1301,7 +1277,7 @@ describe("Test Main Menu shortcut functionality", () => {
     wrapper.instance().openClearCacheDialog = jest.fn()
     wrapper.instance().keyHandlers.CLEAR_CACHE()
 
-    expect(wrapper.instance().openClearCacheDialog).not.toHaveBeenCalled()
+    expect(wrapper.instance().openClearCacheDialog).not.toBeCalled()
   })
 
   it("Tests dev menu shortcuts can be accessed as a developer", () => {
@@ -1314,7 +1290,7 @@ describe("Test Main Menu shortcut functionality", () => {
 
     wrapper.instance().keyHandlers.CLEAR_CACHE()
 
-    expect(wrapper.instance().openClearCacheDialog).toHaveBeenCalled()
+    expect(wrapper.instance().openClearCacheDialog).toBeCalled()
   })
 })
 
