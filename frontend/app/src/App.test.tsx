@@ -777,7 +777,6 @@ describe("App.handleNewSession", () => {
     })
 
     it("logs a warning when hostConfig.disableSetPageMetadata is true", async () => {
-      const ref = React.createRef()
       let appInstance: any
       const log = await import("@streamlit/lib/src/util/log")
       const logWarningSpy = jest.spyOn(log, "logWarning")
@@ -991,7 +990,6 @@ describe("App.handlePageConfigChanged", () => {
   })
 
   describe("test disableSetPageMetadata", () => {
-    const ref = React.createRef()
     let appInstance: any
 
     it("should log a warning if hostConfig.disableSetPageMetadata is true and title exists", async () => {
@@ -1124,7 +1122,6 @@ describe("App.handlePageInfoChanged", () => {
   })
 
   describe("checks for host config properties and logs warnings for them", () => {
-    const ref = React.createRef()
     let appInstance: any
 
     it("should log a warning if hostConfig.disableSetQueryParams is true", async () => {
