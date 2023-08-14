@@ -44,7 +44,7 @@ def stop() -> NoReturn:
     raise StopException()
 
 
-@gather_metrics("rerun")
+@gather_metrics("experimental_rerun")
 def rerun() -> NoReturn:
     """Rerun the script immediately.
 

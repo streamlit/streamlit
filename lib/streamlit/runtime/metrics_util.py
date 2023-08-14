@@ -319,8 +319,9 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
     @wraps(non_optional_func)
     def wrapped_func(*args, **kwargs):
         exec_start = timer()
-        # get_script_run_ctx gets imported here to prevent circular dependencies
+        # Local imports to prevent circular dependencies
         from streamlit.runtime.scriptrunner import get_script_run_ctx
+        from streamlit.runtime.scriptrunner.script_runner import RerunException
 
         ctx = get_script_run_ctx(suppress_warning=True)
 
@@ -331,7 +332,6 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
             and len(ctx.tracked_commands)
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
-        from streamlit.runtime.scriptrunner.script_runner import RerunException
 
         deferred_exception: Optional[RerunException] = None
         command_telemetry: Optional[Command] = None
