@@ -59,7 +59,6 @@ import {
   SessionInfo,
   FileUploadClient,
   logError,
-  logWarning,
   logMessage,
   AppRoot,
   ComponentRegistry,
@@ -600,7 +599,7 @@ export class App extends PureComponent<Props, State> {
 
     if (title) {
       if (this.state.hostConfig.disableSetPageMetadata) {
-        logWarning(
+        logError(
           "Setting the page title is disabled by security policy of the host."
         )
       } else {
@@ -617,7 +616,7 @@ export class App extends PureComponent<Props, State> {
 
     if (favicon) {
       if (this.state.hostConfig.disableSetPageMetadata) {
-        logWarning(
+        logError(
           "Setting the page favicon is disabled by security policy of the host."
         )
       } else {
@@ -653,7 +652,7 @@ export class App extends PureComponent<Props, State> {
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
     if (this.state.hostConfig.disableSetQueryParams) {
-      logWarning(
+      logError(
         "Setting query parameters is disabled by security policy of the host."
       )
       return
@@ -894,7 +893,7 @@ export class App extends PureComponent<Props, State> {
     )
 
     if (this.state.hostConfig.disableSetPageMetadata) {
-      logWarning(
+      logError(
         "Setting the page metadata (title & favicon) is disabled by security policy of the host."
       )
     } else {
