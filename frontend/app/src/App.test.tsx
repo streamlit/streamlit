@@ -437,7 +437,7 @@ describe("App.handleNewSession", () => {
   it("should not process theme and log a warning if disableUserTheme is true", async () => {
     let appInstance: any
     const log = await import("@streamlit/lib/src/util/log")
-    const logWarningSpy = jest.spyOn(log, "logWarning")
+    const logErrorSpy = jest.spyOn(log, "logError")
 
     render(
       <App
@@ -455,7 +455,7 @@ describe("App.handleNewSession", () => {
     appInstance.processTheme = mockProcessTheme
     expect(mockProcessTheme).not.toHaveBeenCalled()
 
-    expect(logWarningSpy).toHaveBeenLastCalledWith(
+    expect(logErrorSpy).toHaveBeenLastCalledWith(
       "Setting the theme through config.toml is disabled by security policy of the host."
     )
   })

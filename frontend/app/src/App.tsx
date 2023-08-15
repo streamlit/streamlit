@@ -863,7 +863,7 @@ export class App extends PureComponent<Props, State> {
     if (!this.state.hostConfig.disableUserTheme) {
       this.processThemeInput(themeInput)
     } else {
-      logWarning(
+      logError(
         "Setting the theme through config.toml is disabled by security policy of the host."
       )
     }
