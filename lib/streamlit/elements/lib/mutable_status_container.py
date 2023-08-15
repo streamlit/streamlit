@@ -94,6 +94,20 @@ class StatusContainer(DeltaGenerator):
         expanded: bool | None = None,
         state: States | None = None,
     ) -> None:
+        """Update the status container.
+
+        Parameters
+        ----------
+
+        label : str
+            The new label of the status container.
+
+        expanded : bool
+            The new expanded state of the status container.
+
+        state : "running", "complete", or "error"
+            The new state of the status container.
+        """
         assert self._current_proto is not None, "Status not correctly initialized!"
         assert self._delta_path is not None, "Status not correctly initialized!"
 
