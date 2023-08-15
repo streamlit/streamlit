@@ -142,7 +142,11 @@ const Expander: React.FC<ExpanderProps> = ({
   const { colors, radii, spacing, fontSizes } = useTheme()
 
   return (
-    <StyledExpandableContainer data-testid="stExpander">
+    <StyledExpandableContainer
+      data-testid="stExpander"
+      empty={empty}
+      disabled={widgetsDisabled}
+    >
       <Accordion
         onChange={toggle}
         expanded={expanded && !empty ? ["panel"] : []}

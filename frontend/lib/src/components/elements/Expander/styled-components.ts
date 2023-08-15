@@ -22,8 +22,25 @@ export const StyledIconContainer = styled.div(({ theme }) => ({
   alignItems: "center",
 }))
 
-export const StyledExpandableContainer = styled.div(({ theme }) => ({
-  ".streamlit-expanderHeader:hover svg": {
-    fill: theme.colors.primary,
-  },
-}))
+export interface StyledExpandableContainerProps {
+  empty: boolean
+  disabled: boolean
+}
+
+export const StyledExpandableContainer =
+  styled.div<StyledExpandableContainerProps>(({ theme, empty, disabled }) => {
+    if (empty) {
+      // Don't apply hover styling if empty:
+      return {
+        ".streamlit-expanderHeader:hover": {
+          color: disabled ? theme.colors.disabled : theme.colors.bodyText,
+        },
+      }
+    }
+
+    return {
+      ".streamlit-expanderHeader:hover svg": {
+        fill: theme.colors.primary,
+      },
+    }
+  })
