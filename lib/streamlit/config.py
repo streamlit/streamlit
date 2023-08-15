@@ -589,6 +589,7 @@ _create_option(
 _create_option(
     "server.allowedMessageOrigins",
     description="""This list is an allow-list of origins from which a deployed Streamlit app can receive cross-origin messages from.
+    If not specified, a default list of origins will be used, which are designed for Community Cloud deployments.
 
     Example: ['https://*.streamlit.app, "https://*.demo.streamlit.app",]
     """,
