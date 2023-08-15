@@ -22,7 +22,7 @@ cycler==0.11.0
 dataclasses-json==0.5.14
 distlib==0.3.7
 docutils==0.20.1
-exceptiongroup==1.1.2
+exceptiongroup==1.1.3
 execnet==2.0.2
 filelock==3.12.2
 fonttools==4.42.0
@@ -44,7 +44,7 @@ jsonschema==4.19.0
 jsonschema-specifications==2023.7.1
 keyring==24.2.0
 kiwisolver==1.4.4
-langchain==0.0.263
+langchain==0.0.264
 langsmith==0.0.22
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
@@ -70,7 +70,7 @@ Pillow==9.5.0
 pixelmatch==0.3.0
 pkginfo==1.9.6
 platformdirs==3.10.0
-playwright==1.36.0
+playwright==1.37.0
 plotly==5.16.0
 pluggy==1.2.0
 pre-commit==3.3.3
@@ -116,7 +116,7 @@ smmap==5.0.0
 sortedcontainers==2.4.0
 SQLAlchemy==1.4.49
 sqlalchemy2-stubs==0.0.2a35
-tenacity==8.2.2
+tenacity==8.2.3
 testfixtures==7.1.0
 text-unidecode==1.3
 toml==0.10.2
