@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-export { default, EmojiIcon, CombinedIcon } from "./Icon"
-export { StyledIcon } from "./styled-components"
+export { default, EmojiIcon } from "./Icon"
+export { StyledIcon, StyledSpinnerIcon } from "./styled-components"

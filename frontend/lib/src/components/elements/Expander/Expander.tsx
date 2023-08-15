@@ -22,17 +22,85 @@ import {
   SharedStylePropsArg,
 } from "baseui/accordion"
 import { useTheme } from "@emotion/react"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
-import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import {
+  ExpandMore,
+  ExpandLess,
+  Check,
+  ErrorOutline,
+} from "@emotion-icons/material-outlined"
 
-import Icon, { CombinedIcon } from "@streamlit/lib/src/components/shared/Icon"
+import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import Icon, {
+  StyledSpinnerIcon,
+  StyledIcon,
+} from "@streamlit/lib/src/components/shared/Icon"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { IconSize, isPresetTheme } from "@streamlit/lib/src/theme"
 
 import {
   StyledExpandableContainer,
   StyledIconContainer,
 } from "./styled-components"
+
+export interface ExpanderIconProps {
+  icon: string
+}
+
+/**
+ * Renders an icon for the expander.
+ *
+ * If the icon is "spinner", it will render a spinner icon.
+ * If the icon is "check", it will render a check icon.
+ * If the icon is "error", it will render an error icon.
+ * Otherwise, it will render nothing.
+ *
+ * @param {string} icon - The icon to render.
+ * @returns {ReactElement}
+ */
+export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
+  const { icon } = props
+  const { activeTheme } = React.useContext(LibContext)
+
+  const iconProps = {
+    size: "lg" as IconSize,
+    margin: "",
+    padding: "",
+  }
+  if (icon === "spinner") {
+    const usingCustomTheme = !isPresetTheme(activeTheme)
+    return (
+      <StyledSpinnerIcon
+        usingCustomTheme={usingCustomTheme}
+        data-testid="stExpanderIconSpinner"
+        {...iconProps}
+      />
+    )
+  } else if (icon === "check") {
+    return (
+      <StyledIcon
+        as={Check}
+        color={"inherit"}
+        aria-hidden="true"
+        data-testid="stExpanderIconCheck"
+        {...iconProps}
+      />
+    )
+  } else if (icon === "error") {
+    return (
+      <StyledIcon
+        as={ErrorOutline}
+        color={"inherit"}
+        aria-hidden="true"
+        data-testid="stExpanderIconError"
+        {...iconProps}
+      />
+    )
+  }
+
+  return <></>
+}
 
 export interface ExpanderProps {
   element: BlockProto.Expandable
@@ -156,6 +224,7 @@ const Expander: React.FC<ExpanderProps> = ({
             // eslint-disable-next-line react/display-name
             component: () => {
               if (empty) {
+                // Don't show then expand/collapse icon if there's no content.
                 return <></>
               }
               if (expanded) {
@@ -166,7 +235,7 @@ const Expander: React.FC<ExpanderProps> = ({
           },
           Root: {
             props: {
-              className: classNames("streamlit-expander", { empty }),
+              className: classNames("streamlit-expander"),
             },
             style: {
               borderStyle: "solid",
@@ -186,7 +255,7 @@ const Expander: React.FC<ExpanderProps> = ({
         <Panel
           title={
             <StyledIconContainer>
-              {element.icon && <CombinedIcon icon={element.icon} size="lg" />}
+              {element.icon && <ExpanderIcon icon={element.icon} />}
               <StreamlitMarkdown source={label} allowHTML={false} isLabel />
             </StyledIconContainer>
           }

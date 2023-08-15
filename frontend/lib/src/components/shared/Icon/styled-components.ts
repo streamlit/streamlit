@@ -25,17 +25,17 @@ import {
   computeSpacingStyle,
 } from "@streamlit/lib/src/theme"
 
-interface StyledSpinnerProps {
+interface StyledSpinnerIconProps {
   usingCustomTheme: boolean
   size: IconSize
   margin: string
   padding: string
 }
 
-export const StyledSpinner = styled(Spinner, {
+export const StyledSpinnerIcon = styled(Spinner, {
   shouldForwardProp: (prop: string) =>
     isPropValid(prop) && !["size"].includes(prop),
-})<StyledSpinnerProps>(
+})<StyledSpinnerIconProps>(
   ({ usingCustomTheme, size, margin, padding, theme }) => {
     return {
       width: theme.iconSizes[size],

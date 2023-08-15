@@ -16,15 +16,9 @@
 
 import React, { ReactElement, ReactNode } from "react"
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
-import { Check, ErrorOutline } from "@emotion-icons/material-outlined"
-import { IconSize, ThemeColor, isPresetTheme } from "@streamlit/lib/src/theme"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 
-import {
-  StyledIcon,
-  StyledEmojiIcon,
-  StyledSpinner,
-} from "./styled-components"
+import { StyledIcon, StyledEmojiIcon } from "./styled-components"
 
 interface GetDefaultPropsArgs {
   size?: IconSize
@@ -91,34 +85,5 @@ export const EmojiIcon = ({
     {children}
   </StyledEmojiIcon>
 )
-
-export interface CombinedIconProps {
-  icon: string
-  size?: IconSize
-  color?: ThemeColor
-  margin?: string
-  padding?: string
-}
-
-export const CombinedIcon = (props: CombinedIconProps): ReactElement => {
-  const { icon } = props
-  const { activeTheme } = React.useContext(LibContext)
-
-  if (icon === "spinner") {
-    const usingCustomTheme = !isPresetTheme(activeTheme)
-    return (
-      <StyledSpinner
-        usingCustomTheme={usingCustomTheme}
-        {...getDefaultProps({ ...props })}
-      />
-    )
-  } else if (icon === "check") {
-    return <Icon content={Check} {...getDefaultProps({ ...props })} />
-  } else if (icon === "error") {
-    return <Icon content={ErrorOutline} {...getDefaultProps({ ...props })} />
-  }
-  // Interpret the icon as an emoji as a fallback:
-  return <EmojiIcon {...getDefaultProps({ ...props })}>{icon}</EmojiIcon>
-}
 
 export default Icon
