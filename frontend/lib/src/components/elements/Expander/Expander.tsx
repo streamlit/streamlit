@@ -66,14 +66,18 @@ const Expander: React.FC<ExpanderProps> = ({
     // expander's `expanded` state in this edge case.
   }, [label, initialExpanded])
 
-  const toggle = (): void => setExpanded(!expanded)
+  const toggle = (): void => {
+    if (!empty) {
+      setExpanded(!expanded)
+    }
+  }
   const { colors, radii, spacing, fontSizes } = useTheme()
 
   return (
     <StyledExpandableContainer data-testid="stExpander">
       <Accordion
         onChange={toggle}
-        expanded={expanded ? ["panel"] : []}
+        expanded={expanded && !empty ? ["panel"] : []}
         disabled={widgetsDisabled}
         overrides={{
           Content: {
@@ -151,6 +155,9 @@ const Expander: React.FC<ExpanderProps> = ({
             }),
             // eslint-disable-next-line react/display-name
             component: () => {
+              if (empty) {
+                return <></>
+              }
               if (expanded) {
                 return <Icon content={ExpandLess} size="lg" />
               }
