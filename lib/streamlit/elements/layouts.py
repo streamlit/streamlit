@@ -421,15 +421,19 @@ class LayoutsMixin:
     ) -> "StatusContainer":
         """Insert a status container to display output from long-running tasks.
 
-        Inserts a container into your app that can be used to hold multiple elements
-        and can be expanded or collapsed by the user. The status container is useful
-        to display output from long-running tasks. It will show an icon that indicates
-        the status of the task, and a label that can be updated to show the current
-        status of the task.
+        Inserts a container into your app that is typically used to show the status and
+        details of a process or task. The container can hold multiple elements and can
+        be expanded or collapsed by the user similar to st.expander.
+        When collapsed, all that is visible is the status icon and label.
 
-        To add elements to the returned container, you can use "with" notation
-        (preferred) or just call methods directly on the returned object. See
-        examples below.
+        The label, state, and expanded state can all be updated by calling "update()"
+        on the returned object. To add elements to the returned container, you can
+        use "with" notation (preferred) or just call methods directly on the returned
+        object.
+
+        By default, st.status() initializes in the "running" state. When called using
+        "with" notation, it automatically updates to the "complete" state at the end
+        of the "with" block. See examples below for more details.
 
         Parameters
         ----------
@@ -462,8 +466,8 @@ class LayoutsMixin:
             False (collapsed).
 
         state : "running", "complete", or "error"
-            The initial state of the status container which mainly impacts the icon.
-            It can be:
+            The initial state of the status container which determines which icon is
+            shown:
 
             * ``running`` (default): A spinner icon is shown.
 

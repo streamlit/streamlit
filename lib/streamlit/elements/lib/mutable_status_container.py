@@ -96,6 +96,9 @@ class StatusContainer(DeltaGenerator):
     ) -> None:
         """Update the status container.
 
+        Only specified arguments are updated. Container contents and unspecified
+        arguments remain unchanged.
+
         Parameters
         ----------
         label : str or None
