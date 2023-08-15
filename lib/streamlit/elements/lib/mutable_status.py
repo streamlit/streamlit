@@ -67,8 +67,8 @@ class MutableStatus(DeltaGenerator):
         time.sleep(0.05)
 
         status_container._delta_path = delta_path
-        status_container._last_proto = block_proto
-        status_container._last_state = state
+        status_container._current_proto = block_proto
+        status_container._current_state = state
 
         return status_container
 
@@ -82,8 +82,8 @@ class MutableStatus(DeltaGenerator):
         super().__init__(root_container, cursor, parent, block_type)
 
         # Initialized in `_create()`:
-        self._last_proto: BlockProto | None = None
-        self._last_state: States | None = None
+        self._current_proto: BlockProto | None = None
+        self._current_state: States | None = None
         self._delta_path: List[int] | None = None
 
     def update(
@@ -93,15 +93,17 @@ class MutableStatus(DeltaGenerator):
         expanded: bool | None = None,
         state: States | None = None,
     ) -> None:
-        assert self._last_proto is not None, "Status not correctly initialized!"
+        assert self._current_proto is not None, "Status not correctly initialized!"
         assert self._delta_path is not None, "Status not correctly initialized!"
 
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._delta_path
-        msg.delta.add_block.CopyFrom(self._last_proto)
+        msg.delta.add_block.CopyFrom(self._current_proto)
 
         if expanded is not None:
             msg.delta.add_block.expandable.expanded = expanded
+        else:
+            msg.delta.add_block.expandable.ClearField("expanded")
 
         if label is not None:
             msg.delta.add_block.expandable.label = label
@@ -113,14 +115,9 @@ class MutableStatus(DeltaGenerator):
                 msg.delta.add_block.expandable.icon = "check"
             elif state == "error":
                 msg.delta.add_block.expandable.icon = "error"
-            self._last_state = state
+            self._current_state = state
 
-        self._last_proto = ForwardMsg().delta.add_block
-        self._last_proto.CopyFrom(msg.delta.add_block)
-
-        if expanded is None:
-            msg.delta.add_block.expandable.ClearField("expanded")
-
+        self._current_proto = msg.delta.add_block
         _enqueue_message(msg)
 
     def __enter__(self) -> MutableStatus:  # type: ignore[override]
@@ -136,8 +133,8 @@ class MutableStatus(DeltaGenerator):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> Literal[False]:
-        # If last state is error, we don't want to auto-update to complete
-        if self._last_state not in ["error", "complete"]:
+        # Only update if the current state is running
+        if self._current_state == "running":
             # We need to sleep here for a very short time to prevent issues when
             # the status is updated too quickly. If an .update() is directly followed
             # by the exit of the context manager, sometimes only the last update
