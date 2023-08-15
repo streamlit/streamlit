@@ -369,7 +369,7 @@ class DataFrameSelectorMixin:
         ...     chart_data,
         ...     x='col1',
         ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],  # Optional
+        ...     color=['#f00', '#00f'],  # Optional
         ... )
 
         """
@@ -531,7 +531,7 @@ class DataFrameSelectorMixin:
         ...     chart_data,
         ...     x='col1',
         ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],  # Optional
+        ...     color=['#f00', '#00f'],  # Optional
         ... )
 
         """
@@ -861,7 +861,7 @@ class DataFrameSelectorMixin:
         ...     x='col1',
         ...     y=['col2', 'col3'],
         ...     size='col4',
-        ...     color=['red', 'black'],
+        ...     color=['#f00', '#00f'],  # Optional
         ... )
 
         """
