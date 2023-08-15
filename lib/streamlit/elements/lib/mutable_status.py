@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import time
 from types import TracebackType
-from typing import Any, List, Optional, Type, cast
+from typing import List, Optional, Type, cast
 
 from typing_extensions import Literal, TypeAlias
 
@@ -29,17 +29,15 @@ States: TypeAlias = Literal["running", "complete", "error"]
 
 
 class MutableStatus(DeltaGenerator):
-    # @contextmanager
     @staticmethod
     def _create(
         parent: DeltaGenerator,
         label: str,
-        expanded: bool | Literal["auto"] = False,
+        expanded: bool = False,
         state: States = "running",
     ) -> MutableStatus:
-        # -> Generator[MutableStatus, None, MutableStatus]:
         expandable_proto = BlockProto.Expandable()
-        expandable_proto.expanded = True if expanded == "auto" else expanded
+        expandable_proto.expanded = expanded
         expandable_proto.label = label or ""
 
         if state == "running":
@@ -62,20 +60,16 @@ class MutableStatus(DeltaGenerator):
             MutableStatus,
             parent._block(block_proto=block_proto, dg_type=MutableStatus),
         )
+        # We need to sleep here for a very short time to prevent issues when
+        # the status is updated too quickly. If an .update() directly follows the
+        # the initialization, sometimes only the latest update is applied.
+        # Adding a short timeout here allows the frontend to render the update before.
+        time.sleep(0.05)
 
         status_container._delta_path = delta_path
         status_container._last_proto = block_proto
         status_container._last_state = state
-        if expanded == "auto":
-            status_container._auto_collapse = True
 
-        # TODO: We cannot use this since it won't support the usage without context manager:
-        # with status_container:
-        #     try:
-        #         yield status_container
-        #     except Exception as ex:
-        #         status_container.update(state="error")
-        #         raise ex
         return status_container
 
     def __init__(
@@ -91,14 +85,13 @@ class MutableStatus(DeltaGenerator):
         self._last_proto: BlockProto | None = None
         self._last_state: States | None = None
         self._delta_path: List[int] | None = None
-        self._auto_collapse: bool = False
 
     def update(
         self,
         *,
         label: str | None = None,
-        state: States | None = None,
         expanded: bool | None = None,
+        state: States | None = None,
     ) -> None:
         assert self._last_proto is not None, "Status not correctly initialized!"
         assert self._delta_path is not None, "Status not correctly initialized!"
@@ -135,8 +128,6 @@ class MutableStatus(DeltaGenerator):
         # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
         # should always return `self`?
         super().__enter__()
-        if self._last_state != "running":
-            self.update(state="running")
         return self
 
     def __exit__(
@@ -152,13 +143,11 @@ class MutableStatus(DeltaGenerator):
             # by the exit of the context manager, sometimes only the last update
             # (to complete) is applied. Adding a short timeout here allows the frontend
             # to render the update before.
-            time.sleep(0.1)
+            time.sleep(0.05)
             if exc_type is not None:
                 # If an exception was raised in the context,
                 # we want to update the status to error.
                 self.update(state="error")
             else:
-                self.update(
-                    state="complete", expanded=False if self._auto_collapse else None
-                )
+                self.update(state="complete")
         return super().__exit__(exc_type, exc_val, exc_tb)
