@@ -20,7 +20,6 @@ running_status.write("Doing some work...")
 with st.status("Completed status", expanded=True, state="complete"):
     st.write("Hello world")
 
-
 with st.status("Error status", expanded=True, state="error"):
     st.error("Oh no, something went wrong!")
 
