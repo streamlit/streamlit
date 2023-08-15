@@ -59,15 +59,17 @@ class StatusContainer(DeltaGenerator):
             StatusContainer,
             parent._block(block_proto=block_proto, dg_type=StatusContainer),
         )
+
+        # Apply initial configuration
+        status_container._delta_path = delta_path
+        status_container._current_proto = block_proto
+        status_container._current_state = state
+
         # We need to sleep here for a very short time to prevent issues when
         # the status is updated too quickly. If an .update() directly follows the
         # the initialization, sometimes only the latest update is applied.
         # Adding a short timeout here allows the frontend to render the update before.
         time.sleep(0.05)
-
-        status_container._delta_path = delta_path
-        status_container._current_proto = block_proto
-        status_container._current_state = state
 
         return status_container
 
