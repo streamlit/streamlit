@@ -28,14 +28,14 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 States: TypeAlias = Literal["running", "complete", "error"]
 
 
-class MutableStatus(DeltaGenerator):
+class StatusContainer(DeltaGenerator):
     @staticmethod
     def _create(
         parent: DeltaGenerator,
         label: str,
         expanded: bool = False,
         state: States = "running",
-    ) -> MutableStatus:
+    ) -> StatusContainer:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label or ""
@@ -57,8 +57,8 @@ class MutableStatus(DeltaGenerator):
         )
 
         status_container = cast(
-            MutableStatus,
-            parent._block(block_proto=block_proto, dg_type=MutableStatus),
+            StatusContainer,
+            parent._block(block_proto=block_proto, dg_type=StatusContainer),
         )
         # We need to sleep here for a very short time to prevent issues when
         # the status is updated too quickly. If an .update() directly follows the
@@ -120,7 +120,7 @@ class MutableStatus(DeltaGenerator):
         self._current_proto = msg.delta.add_block
         _enqueue_message(msg)
 
-    def __enter__(self) -> MutableStatus:  # type: ignore[override]
+    def __enter__(self) -> StatusContainer:  # type: ignore[override]
         # This is a little dubious: we're returning a different type than
         # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
         # should always return `self`?

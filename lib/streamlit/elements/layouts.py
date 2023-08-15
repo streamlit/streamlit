@@ -22,7 +22,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.lib.mutable_status import MutableStatus
+    from streamlit.elements.lib.mutable_status_container import StatusContainer
 
 SpecType = Union[int, Sequence[Union[int, float]]]
 
@@ -417,8 +417,8 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
-    ) -> "MutableStatus":
-        """Insert a status indicator.
+    ) -> "StatusContainer":
+        """Insert a status container.
 
         Parameters
         ----------
@@ -453,13 +453,13 @@ class LayoutsMixin:
         Returns
         -------
 
-        MutableStatus
-            A mutable status indicator object.
+        StatusContainer
+            A mutable status container.
         """
-        # We need to import MutableStatus here to avoid a circular import
-        from streamlit.elements.lib.mutable_status import MutableStatus
+        # We need to import StatusContainer here to avoid a circular import
+        from streamlit.elements.lib.mutable_status_container import StatusContainer
 
-        return MutableStatus._create(
+        return StatusContainer._create(
             self.dg, label=label, expanded=expanded, state=state
         )
 
