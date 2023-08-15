@@ -434,6 +434,26 @@ describe("App.handleNewSession", () => {
     expect(props.theme.setTheme).not.toHaveBeenCalled()
   })
 
+  it("should not process theme if disableUserTheme is true", async () => {
+    let appInstance: any
+
+    render(
+      <App
+        ref={node => {
+          appInstance = node
+        }}
+        {...getProps()}
+      />
+    )
+
+    appInstance.setHostConfig({ disableUserTheme: true })
+    appInstance.handleNewSession(new NewSession(NEW_SESSION_JSON))
+
+    const mockProcessTheme = jest.fn()
+    appInstance.processTheme = mockProcessTheme
+    expect(mockProcessTheme).not.toHaveBeenCalled()
+  })
+
   it("performs one-time initialization", () => {
     const wrapper = shallow(<App {...getProps()} />)
     const app = wrapper.instance()

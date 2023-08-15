@@ -860,8 +860,12 @@ export class App extends PureComponent<Props, State> {
         window.history.pushState({}, "", pageUrl)
       }
     }
-
-    this.processThemeInput(themeInput)
+    console.log(this.state.hostConfig)
+    if (!this.state.hostConfig.disableUserTheme) {
+      this.processThemeInput(themeInput)
+    } else {
+      console.log("do not process theme input!")
+    }
     this.setState(
       {
         allowRunOnSave: config.allowRunOnSave,
