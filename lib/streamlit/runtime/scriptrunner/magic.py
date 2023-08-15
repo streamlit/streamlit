@@ -16,6 +16,8 @@ import ast
 
 from typing_extensions import Final
 
+from streamlit import config
+
 # When a Streamlit app is magicified, we insert a `magic_funcs` import near the top of
 # its module's AST:
 # import streamlit.runtime.scriptrunner.magic_funcs as __streamlitmagic__
@@ -65,6 +67,12 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
         ):
             _modify_ast_subtree(node)
 
+        # Recursively parses methods in a class.
+        elif node_type is ast.ClassDef:
+            for inner_node in node.body:
+                if type(inner_node) is ast.FunctionDef:
+                    _modify_ast_subtree(inner_node)
+
         # Recursively parses the contents of try statements,
         # all their handlers (except and else) and the finally body
         elif node_type is ast.Try:
@@ -111,7 +119,7 @@ def _insert_import_statement(tree):
     # __future__ import".
     elif (
         len(tree.body) > 1
-        and (type(tree.body[0]) is ast.Expr and _is_docstring_node(tree.body[0].value))
+        and (type(tree.body[0]) is ast.Expr and _is_ignorable_node(tree.body[0].value))
         and type(tree.body[1]) in (ast.ImportFrom, ast.Import)
     ):
         tree.body.insert(2, st_import)
@@ -155,7 +163,7 @@ def _get_st_write_from_expr(node, i, parent_type):
     # Don't change Docstring nodes
     if (
         i == 0
-        and _is_docstring_node(node.value)
+        and _is_ignorable_node(node.value)
         and parent_type in (ast.FunctionDef, ast.AsyncFunctionDef, ast.Module)
     ):
         return None
@@ -194,5 +202,9 @@ def _get_st_write_from_expr(node, i, parent_type):
     return st_write
 
 
-def _is_docstring_node(node):
-    return type(node) is ast.Constant and type(node.value) is str
+def _is_ignorable_node(node):
+    """Skip docstrings if when runner.magicSkipsDocStrings is True (default)."""
+    if config.get_option("runner.magicSkipsDocStrings"):
+        return type(node) is ast.Constant and type(node.value) is str
+
+    return False

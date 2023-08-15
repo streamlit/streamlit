@@ -513,6 +513,17 @@ _create_option(
 )
 
 _create_option(
+    "runner.magicSkipsDocStrings",
+    description="""
+        Streamlit's "magic" parser typically skips strings that appear to be
+        docstrings. If you'd like to turn this behavior off, toggle this flag.
+        """,
+    visibility="hidden",
+    default_val=True,
+    type_=bool,
+)
+
+_create_option(
     "runner.installTracer",
     description="""
         Install a Python tracer to allow you to stop or pause your script at
