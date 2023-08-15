@@ -195,8 +195,8 @@ export const StyledDivider = styled.hr<StyledDividerProps>(
   ({ rainbow, color }) => {
     return {
       // Height needs to be !important due to globalStyles.tsx hr height override - line #170
-      height: "3px !important",
-      marginTop: "1rem",
+      height: "2px !important",
+      marginTop: "0.5rem",
       marginBottom: "0px",
       border: "none",
       borderRadius: "3px",

@@ -418,8 +418,14 @@ export function hasLightBackgroundColor(theme: EmotionTheme): boolean {
 }
 
 export function getDividerColors(theme: EmotionTheme): any {
-  const { blue, green, orange, red, violet, gray, purple, yellow } =
-    getMarkdownTextColors(theme)
+  const lightTheme = hasLightBackgroundColor(theme)
+  const blue = lightTheme ? theme.colors.blue60 : theme.colors.blue90
+  const green = lightTheme ? theme.colors.green60 : theme.colors.green90
+  const orange = lightTheme ? theme.colors.orange60 : theme.colors.orange90
+  const red = lightTheme ? theme.colors.red60 : theme.colors.red90
+  const violet = lightTheme ? theme.colors.purple60 : theme.colors.purple80
+  const gray = lightTheme ? theme.colors.gray40 : theme.colors.gray70
+
   return {
     blue: blue,
     green: green,
@@ -427,7 +433,8 @@ export function getDividerColors(theme: EmotionTheme): any {
     red: red,
     violet: violet,
     gray: gray,
-    rainbow: `linear-gradient(to right, ${red}, ${orange}, ${yellow}, ${green}, ${blue}, ${violet}, ${purple})`,
+    grey: gray,
+    rainbow: `linear-gradient(to right, ${red}, ${orange}, ${green}, ${blue}, ${violet})`,
   }
 }
 

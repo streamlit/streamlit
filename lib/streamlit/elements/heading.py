@@ -77,12 +77,12 @@ class HeadingMixin:
         help : str
             An optional tooltip that gets displayed next to the header.
 
-        divider : bool or “blue”, “green”, “orange”, “red”, or “violet”
+        divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
             Shows a colored divider below the header. If True, will cycle through
             colors for subsequent headers, i.e. the first header with divider=True
             will have a blue line, the second one will have a green line, etc.
             If string, can set one of the following colors: blue, green, orange,
-            red, violet.
+            red, violet, gray/grey, or rainbow.
 
         Examples
         --------
@@ -142,12 +142,12 @@ class HeadingMixin:
         help : str
             An optional tooltip that gets displayed next to the subheader.
 
-        divider : bool or “blue”, “green”, “orange”, “red”, or “violet”
+        divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
             Shows a colored divider below the header. If True, will cycle through
             colors for subsequent headers, i.e. the first header with divider=True
             will have a blue line, the second one will have a green line, etc.
             If string, can set one of the following colors: blue, green, orange,
-            red, violet.
+            red, violet, gray/grey, or rainbow.
 
         Examples
         --------
@@ -233,7 +233,16 @@ class HeadingMixin:
     def _handle_divider_color(divider):
         if divider is True:
             return "auto"
-        valid_colors = ["blue", "green", "orange", "red", "violet", "gray", "rainbow"]
+        valid_colors = [
+            "blue",
+            "green",
+            "orange",
+            "red",
+            "violet",
+            "gray",
+            "grey",
+            "rainbow",
+        ]
         if divider in valid_colors:
             return divider
         else:
