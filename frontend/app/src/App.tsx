@@ -860,11 +860,8 @@ export class App extends PureComponent<Props, State> {
         window.history.pushState({}, "", pageUrl)
       }
     }
-    console.log(this.state.hostConfig)
     if (!this.state.hostConfig.disableUserTheme) {
       this.processThemeInput(themeInput)
-    } else {
-      console.log("do not process theme input!")
     }
     this.setState(
       {
@@ -1619,6 +1616,7 @@ export class App extends PureComponent<Props, State> {
       this.state.toolbarMode
     )
 
+    const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
     const outerDivClass = classNames(
       "stApp",
       getEmbeddingIdClassName(this.embeddingId),
@@ -1663,9 +1661,14 @@ export class App extends PureComponent<Props, State> {
             addScriptFinishedHandler: this.addScriptFinishedHandler,
             removeScriptFinishedHandler: this.removeScriptFinishedHandler,
             activeTheme: this.props.theme.activeTheme,
-            setTheme: this.setAndSendTheme,
+            setTheme:
+              this.state.hostConfig.disableUserTheme && usingCustomTheme
+                ? noop
+                : this.setAndSendTheme,
             availableThemes: this.props.theme.availableThemes,
-            addThemes: this.props.theme.addThemes,
+            addThemes: this.state.hostConfig.disableUserTheme
+              ? noop
+              : this.props.theme.addThemes,
             hideFullScreenButtons: false,
             hostConfig,
             setHostConfig: this.setHostConfig,
