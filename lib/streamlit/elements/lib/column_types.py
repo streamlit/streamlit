@@ -719,6 +719,7 @@ def SelectboxColumn(
     >>>                 "📈 Data Visualization",
     >>>                 "🤖 LLM",
     >>>             ],
+    >>>             required=True,
     >>>         )
     >>>     },
     >>>     hide_index=True,
