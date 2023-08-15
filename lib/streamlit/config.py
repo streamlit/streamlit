@@ -513,17 +513,6 @@ _create_option(
 )
 
 _create_option(
-    "runner.magicSkipsDocStrings",
-    description="""
-        Streamlit's "magic" parser typically skips strings that appear to be
-        docstrings. If you'd like to turn this behavior off, toggle this flag.
-        """,
-    visibility="hidden",
-    default_val=True,
-    type_=bool,
-)
-
-_create_option(
     "runner.installTracer",
     description="""
         Install a Python tracer to allow you to stop or pause your script at
@@ -887,6 +876,33 @@ _create_option(
                 https://mapbox.com. It's free (for moderate usage levels)!""",
     default_val="",
     sensitive=True,
+)
+
+
+# Config Section: Magic #
+
+_create_section("magic", "Settings for how Streamlit pre-processes your script")
+
+_create_option(
+    "magic.skipDocStrings",
+    description="""
+        Streamlit's "magic" parser typically skips strings that appear to be
+        docstrings. If you'd like to turn this behavior off, set this to False.
+        """,
+    visibility="hidden",
+    default_val=True,
+    type_=bool,
+)
+
+_create_option(
+    "magic.alwaysDisplayLastExpr",
+    description="""
+        Make Streamlit's "magic" parser always display the last expression in the
+        root file. This matches the behavior of Jupyter notebooks, for example.
+        """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
 )
 
 

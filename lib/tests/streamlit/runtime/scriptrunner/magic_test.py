@@ -195,9 +195,7 @@ async def myfunc(a):
         self._testCode(CODE, 0)
 
     def test_skip_docstring_config_option(self):
-        """Test that runner.magicSkipsDocStrings skips/includes docstrings
-        when True/False.
-        """
+        """Test that magic.skipDocStrings skips/includes docstrings when True/False."""
 
         CODE = """
 '''This is a top-level docstring'''
@@ -220,8 +218,33 @@ class MyClass:
         'this is a string that should always be magicked'
 """
 
-        with patch_config_options({"runner.magicSkipsDocStrings": True}):
+        with patch_config_options({"magic.skipDocStrings": True}):
             self._testCode(CODE, 3)
 
-        with patch_config_options({"runner.magicSkipsDocStrings": False}):
+        with patch_config_options({"magic.skipDocStrings": False}):
             self._testCode(CODE, 6)
+
+    def test_always_print_last_expr_config_option(self):
+        """Test that magic.alwaysDisplayLastExpr causes the last function ast.Expr
+        node in a file to be wrapped in st.write()."""
+
+        CODE = """
+this_should_not_be_magicked()
+
+def my_func():
+    this_should_not_be_magicked()
+
+class MyClass:
+    this_should_not_be_magicked()
+
+    def __init__(self):
+        this_should_not_be_magicked()
+
+this_is_the_last_expr()
+"""
+
+        with patch_config_options({"magic.alwaysDisplayLastExpr": True}):
+            self._testCode(CODE, 1)
+
+        with patch_config_options({"magic.alwaysDisplayLastExpr": False}):
+            self._testCode(CODE, 0)

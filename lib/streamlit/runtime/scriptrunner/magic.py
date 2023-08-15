@@ -91,7 +91,14 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
 
         # Convert standalone expression nodes to st.write
         elif node_type is ast.Expr:
-            value = _get_st_write_from_expr(node, i, parent_type=type(tree))
+            is_last_expr = i == len(body) - 1
+
+            value = _get_st_write_from_expr(
+                node,
+                i,
+                parent_type=type(tree),
+                is_last_root_expr=is_root and is_last_expr,
+            )
             if value is not None:
                 node.value = value
 
@@ -155,10 +162,13 @@ def _build_st_write_call(nodes):
     )
 
 
-def _get_st_write_from_expr(node, i, parent_type):
+def _get_st_write_from_expr(node, i, parent_type, is_last_root_expr):
     # Don't change function calls
     if type(node.value) is ast.Call:
-        return None
+        if is_last_root_expr and config.get_option("magic.alwaysDisplayLastExpr"):
+            return _build_st_write_call(node.value)
+        else:
+            return None
 
     # Don't change Docstring nodes
     if (
@@ -203,8 +213,8 @@ def _get_st_write_from_expr(node, i, parent_type):
 
 
 def _is_ignorable_node(node):
-    """Skip docstrings if when runner.magicSkipsDocStrings is True (default)."""
-    if config.get_option("runner.magicSkipsDocStrings"):
+    """Skip docstrings if when magic.skipDocStrings is True (default)."""
+    if config.get_option("magic.skipDocStrings"):
         return type(node) is ast.Constant and type(node.value) is str
 
     return False
