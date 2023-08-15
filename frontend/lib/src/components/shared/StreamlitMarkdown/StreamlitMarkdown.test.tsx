@@ -284,6 +284,7 @@ describe("StreamlitMarkdown", () => {
       ["violet", colors.purple80],
       ["orange", colors.orange100],
       ["gray", colors.gray80],
+      ["grey", colors.gray80],
       ["rainbow", "transparent"],
     ])
 
