@@ -411,6 +411,7 @@ class LayoutsMixin:
 
         return self.dg._block(block_proto=block_proto)
 
+    @gather_metrics("status")
     def status(
         self,
         label: str,
