@@ -1620,7 +1620,6 @@ export class App extends PureComponent<Props, State> {
       this.state.toolbarMode
     )
 
-    const usingCustomTheme = !isPresetTheme(this.props.theme.activeTheme)
     const outerDivClass = classNames(
       "stApp",
       getEmbeddingIdClassName(this.embeddingId),
