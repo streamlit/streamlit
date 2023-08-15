@@ -406,7 +406,7 @@ class LayoutsMixin:
         expandable_proto.label = label
 
         block_proto = BlockProto()
-        block_proto.allow_empty = True
+        block_proto.allow_empty = False
         block_proto.expandable.CopyFrom(expandable_proto)
 
         return self.dg._block(block_proto=block_proto)
@@ -414,8 +414,8 @@ class LayoutsMixin:
     def status(
         self,
         label: str,
-        expanded: bool | Literal["auto"] = False,
         *,
+        expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
     ) -> "MutableStatus":
         """Insert a status indicator.
