@@ -98,15 +98,17 @@ class StatusContainer(DeltaGenerator):
 
         Parameters
         ----------
+        label : str or None
+            A new label of the status container. If None, the label is not
+            changed.
 
-        label : str
-            The new label of the status container.
+        expanded : bool or None
+            The new expanded state of the status container. If None,
+            the expanded state is not changed.
 
-        expanded : bool
-            The new expanded state of the status container.
-
-        state : "running", "complete", or "error"
-            The new state of the status container.
+        state : "running", "complete", "error", or None
+            The new state of the status container. This mainly changes the
+            icon. If None, the state is not changed.
         """
         assert self._current_proto is not None, "Status not correctly initialized!"
         assert self._delta_path is not None, "Status not correctly initialized!"

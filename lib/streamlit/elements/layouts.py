@@ -419,14 +419,25 @@ class LayoutsMixin:
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
     ) -> "StatusContainer":
-        """Insert a status container.
+        """Insert a status container to display output from long-running tasks.
+
+        Inserts a container into your app that can be used to hold multiple elements
+        and can be expanded or collapsed by the user. The status container is useful
+        to display output from long-running tasks. It will show an icon that indicates
+        the status of the task, and a label that can be updated to show the current
+        status of the task.
+
+        To add elements to the returned container, you can use "with" notation
+        (preferred) or just call methods directly on the returned object. See
+        examples below.
 
         Parameters
         ----------
+
         label : str
-            A string to use as the header for the expander. The label can optionally
-            contain Markdown and supports the following elements: Bold, Italics,
-            Strikethroughs, Inline Code, Emojis, and Links.
+            The initial label of the status container. The label can optionally
+            contain Markdown and supports the following elements: Bold,
+            Italics, Strikethroughs, Inline Code, Emojis, and Links.
 
             This also supports:
 
@@ -445,17 +456,66 @@ class LayoutsMixin:
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
         expanded : bool
-            If True, initializes the status in "expanded" state. Defaults to
+            If True, initializes the status container in "expanded" state. Defaults to
             False (collapsed).
+
         state : "running", "complete", or "error"
-            The initial state of the status container. Defaults to "running".
+            The initial state of the status container which mainly impacts the icon.
+            It can be:
+
+            * ``running`` (default): A spinner icon is shown.
+
+            * ``complete``: A checkmark icon is shown.
+
+            * ``error``: An error icon is shown.
 
         Returns
         -------
 
         StatusContainer
-            A mutable status container.
+            A mutable status container that can hold multiple elements. The label, state,
+            and expanded state can be updated after creation via ``.update()``.
+
+        Examples
+        --------
+
+        You can use `with` notation to insert any element into an status container:
+
+        >>> import time
+        >>> import streamlit as st
+        >>>
+        >>> with st.status("Downloading data..."):
+        ...     st.write("Searching for data...")
+        ...     time.sleep(2)
+        ...     st.write("Found URL.")
+        ...     time.sleep(1)
+        ...     st.write("Downloading data...")
+        ...     time.sleep(1)
+
+        .. output ::
+            https://doc-status.streamlit.app/
+            height: 400px
+
+        You can also use `.update()` on the container to change the label, state,
+        or expanded state:
+
+        >>> import time
+        >>> import streamlit as st
+        >>>
+        >>> with st.status("Downloading data...", expanded=True) as status:
+        ...     st.write("Searching for data...")
+        ...     time.sleep(2)
+        ...     st.write("Found URL.")
+        ...     time.sleep(1)
+        ...     st.write("Downloading data...")
+        ...     time.sleep(1)
+        ...     status.update(label="Download complete!", state="complete", expanded=False)
+
+        .. output ::
+            https://doc-status-update.streamlit.app/
+            height: 400px
         """
         # We need to import StatusContainer here to avoid a circular import
         from streamlit.elements.lib.mutable_status_container import StatusContainer

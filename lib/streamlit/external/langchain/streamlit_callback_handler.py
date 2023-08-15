@@ -174,7 +174,7 @@ class LLMThought:
         self._llm_token_stream += _convert_newlines(token)
         if self._llm_token_stream_placeholder is None:
             self._llm_token_stream_placeholder = self._container.empty()
-        self._llm_token_stream_placeholder.markdown(self._llm_token_stream + " ▎")
+        self._llm_token_stream_placeholder.markdown(self._llm_token_stream + "▕")
 
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         # `response` is the concatenation of all the tokens received by the LLM.
@@ -271,19 +271,29 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
 
         Parameters
         ----------
+
         parent_container
             The `st.container` that will contain all the Streamlit elements that the
             Handler creates.
+
         max_thought_containers
+
+            .. note::
+                This parameter is deprecated and is ignored in the latest version of
+                the callback handler.
+
             The max number of completed LLM thought containers to show at once. When
             this threshold is reached, a new thought will cause the oldest thoughts to
             be collapsed into a "History" expander. Defaults to 4.
+
         expand_new_thoughts
             Each LLM "thought" gets its own `st.expander`. This param controls whether
             that expander is expanded by default. Defaults to False.
+
         collapse_completed_thoughts
             If True, LLM thought expanders will be collapsed when completed.
             Defaults to False.
+
         thought_labeler
             An optional custom LLMThoughtLabeler instance. If unspecified, the handler
             will use the default thought labeling logic. Defaults to None.
