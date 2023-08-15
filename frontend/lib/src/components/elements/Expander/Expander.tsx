@@ -30,7 +30,7 @@ import {
 } from "@emotion-icons/material-outlined"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import Icon, {
+import {
   StyledSpinnerIcon,
   StyledIcon,
 } from "@streamlit/lib/src/components/shared/Icon"
@@ -227,10 +227,17 @@ const Expander: React.FC<ExpanderProps> = ({
                 // Don't show then expand/collapse icon if there's no content.
                 return <></>
               }
-              if (expanded) {
-                return <Icon content={ExpandLess} size="lg" />
-              }
-              return <Icon content={ExpandMore} size="lg" />
+              return (
+                <StyledIcon
+                  as={expanded ? ExpandLess : ExpandMore}
+                  color={"inherit"}
+                  aria-hidden="true"
+                  data-testid="stExpanderToggleIcon"
+                  size="lg"
+                  margin=""
+                  padding=""
+                />
+              )
             },
           },
           Root: {
