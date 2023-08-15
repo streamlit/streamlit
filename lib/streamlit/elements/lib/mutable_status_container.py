@@ -51,7 +51,6 @@ class StatusContainer(DeltaGenerator):
         block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
 
-        # TODO(lukasmasuch): Check if this is the correct delta path even when it's nested.
         delta_path: List[int] = (
             parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
         )

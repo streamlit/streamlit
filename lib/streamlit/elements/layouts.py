@@ -448,7 +448,7 @@ class LayoutsMixin:
             If True, initializes the status in "expanded" state. Defaults to
             False (collapsed).
         state : "running", "complete", or "error"
-            The initial state of the status indicator. Defaults to "running".
+            The initial state of the status container. Defaults to "running".
 
         Returns
         -------
