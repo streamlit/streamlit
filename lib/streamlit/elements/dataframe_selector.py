@@ -693,7 +693,7 @@ class DataFrameSelectorMixin:
         ...     chart_data,
         ...     x='col1',
         ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],  # Optional
+        ...     color=['#f00', '#00f'],  # Optional
         ... )
 
         """

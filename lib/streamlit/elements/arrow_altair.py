@@ -237,7 +237,7 @@ class ArrowAltairMixin:
         ...     chart_data,
         ...     x='col1',
         ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],
+        ...     color=['#f00', '#00f'],  # Optional
         ... )
 
         """
@@ -394,7 +394,7 @@ class ArrowAltairMixin:
         ...     chart_data,
         ...     x='col1',
         ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],
+        ...     color=['#f00', '#00f'],
         ... )
 
         """
@@ -553,7 +553,7 @@ class ArrowAltairMixin:
         ...     chart_data,
         ...     x='col1',
         ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],
+        ...     color=['#f00', '#00f'],
         ... )
 
         """
@@ -721,7 +721,7 @@ class ArrowAltairMixin:
         ...     x='col1',
         ...     y=['col2', 'col3'],
         ...     size='col4',
-        ...     color=['red', 'black'],
+        ...     color=['#f00', '#00f'],
         ... )
 
         """
