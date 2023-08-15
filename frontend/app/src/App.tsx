@@ -862,6 +862,10 @@ export class App extends PureComponent<Props, State> {
     }
     if (!this.state.hostConfig.disableUserTheme) {
       this.processThemeInput(themeInput)
+    } else {
+      logWarning(
+        "Setting the theme through config.toml is disabled by security policy of the host."
+      )
     }
     this.setState(
       {
@@ -1661,14 +1665,9 @@ export class App extends PureComponent<Props, State> {
             addScriptFinishedHandler: this.addScriptFinishedHandler,
             removeScriptFinishedHandler: this.removeScriptFinishedHandler,
             activeTheme: this.props.theme.activeTheme,
-            setTheme:
-              this.state.hostConfig.disableUserTheme && usingCustomTheme
-                ? noop
-                : this.setAndSendTheme,
+            setTheme: this.setAndSendTheme,
             availableThemes: this.props.theme.availableThemes,
-            addThemes: this.state.hostConfig.disableUserTheme
-              ? noop
-              : this.props.theme.addThemes,
+            addThemes: this.props.theme.addThemes,
             hideFullScreenButtons: false,
             hostConfig,
             setHostConfig: this.setHostConfig,
