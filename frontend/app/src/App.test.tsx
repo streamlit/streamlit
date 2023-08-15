@@ -779,7 +779,7 @@ describe("App.handleNewSession", () => {
     it("logs a warning when hostConfig.disableSetPageMetadata is true", async () => {
       let appInstance: any
       const log = await import("@streamlit/lib/src/util/log")
-      const logWarningSpy = jest.spyOn(log, "logWarning")
+      const logErrorSpy = jest.spyOn(log, "logError")
 
       render(
         <App
@@ -795,7 +795,7 @@ describe("App.handleNewSession", () => {
 
       appInstance.setHostConfig({ disableSetPageMetadata: true })
       appInstance.handleNewSession(new NewSession(NEW_SESSION_JSON))
-      expect(logWarningSpy).toHaveBeenLastCalledWith(
+      expect(logErrorSpy).toHaveBeenLastCalledWith(
         "Setting the page metadata (title & favicon) is disabled by security policy of the host."
       )
       expect(mockHandleFavicon).not.toHaveBeenCalled()
@@ -996,7 +996,7 @@ describe("App.handlePageConfigChanged", () => {
 
     it("should log a warning if hostConfig.disableSetPageMetadata is true and title exists", async () => {
       const log = await import("@streamlit/lib/src/util/log")
-      const logWarningSpy = jest.spyOn(log, "logWarning")
+      const logErrorSpy = jest.spyOn(log, "logError")
 
       render(
         <App
@@ -1011,12 +1011,12 @@ describe("App.handlePageConfigChanged", () => {
       appInstance.handlePageConfigChanged(
         new PageConfig({ title: "Jabberwocky" })
       )
-      expect(logWarningSpy).toHaveBeenCalled()
+      expect(logErrorSpy).toHaveBeenCalled()
     })
 
     it("should log a warning if hostConfig.disableSetPageMetadata is true and favicon exists", async () => {
       const log = await import("@streamlit/lib/src/util/log")
-      const logWarningSpy = jest.spyOn(log, "logWarning")
+      const logErrorSpy = jest.spyOn(log, "logError")
 
       render(
         <App
@@ -1031,7 +1031,7 @@ describe("App.handlePageConfigChanged", () => {
       appInstance.handlePageConfigChanged(
         new PageConfig({ favicon: "favIcon" })
       )
-      expect(logWarningSpy).toHaveBeenLastCalledWith(
+      expect(logErrorSpy).toHaveBeenLastCalledWith(
         "Setting the page favicon is disabled by security policy of the host."
       )
     })
@@ -1130,7 +1130,7 @@ describe("App.handlePageInfoChanged", () => {
 
     it("should log a warning if hostConfig.disableSetQueryParams is true", async () => {
       const log = await import("@streamlit/lib/src/util/log")
-      const logWarningSpy = jest.spyOn(log, "logWarning")
+      const logErrorSpy = jest.spyOn(log, "logError")
       const queryString = "testingDisableSetQueryParams"
 
       render(
@@ -1150,7 +1150,7 @@ describe("App.handlePageInfoChanged", () => {
           queryString: queryString,
         })
       )
-      expect(logWarningSpy).toHaveBeenLastCalledWith(
+      expect(logErrorSpy).toHaveBeenLastCalledWith(
         "Setting query parameters is disabled by security policy of the host."
       )
       expect(mockSendMessageToHost).not.toHaveBeenCalledWith({
