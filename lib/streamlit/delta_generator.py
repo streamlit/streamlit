@@ -631,7 +631,7 @@ class DeltaGenerator(
             parent_path=dg._cursor.parent_path + (dg._cursor.index,),
         )
 
-        # `dg_type` param added for status_panel prototype. It allows us to
+        # `dg_type` param added for st.status container. It allows us to
         # instantiate DeltaGenerator subclasses from the function.
         if dg_type is None:
             dg_type = DeltaGenerator
@@ -913,7 +913,6 @@ def _prep_data_for_add_rows(
     add_rows_metadata: AddRowsMetadata,
     is_legacy: bool,
 ) -> tuple[Data, AddRowsMetadata]:
-
     out_data: Data
 
     # For some delta types we have to reshape the data structure
