@@ -272,7 +272,7 @@ class CheckboxMixin:
         maybe_raise_label_warnings(label, label_visibility)
 
         id = compute_widget_id(
-            "checkbox",
+            "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
             user_key=key,
             label=label,
             value=bool(value),
