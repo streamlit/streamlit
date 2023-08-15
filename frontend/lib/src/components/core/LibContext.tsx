@@ -26,7 +26,7 @@ export type HostConfig = {
   disableIframes?: boolean
   disableSvgImages?: boolean
   disableElements?: string[]
-  // TODO(lukasmasuch): To my understanding, disabling the theming is not anymore needed? disableTheming?: boolean
+  disableUserTheme?: boolean
   // TODO(lukasmasuch): move the hideFullScreenButtons setting to this config?: disableFullScreenMode?: false
 }
 

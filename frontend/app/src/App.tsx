@@ -859,8 +859,13 @@ export class App extends PureComponent<Props, State> {
         window.history.pushState({}, "", pageUrl)
       }
     }
-
-    this.processThemeInput(themeInput)
+    if (!this.state.hostConfig.disableUserTheme) {
+      this.processThemeInput(themeInput)
+    } else {
+      logError(
+        "Setting the theme through config.toml is disabled by security policy of the host."
+      )
+    }
     this.setState(
       {
         allowRunOnSave: config.allowRunOnSave,

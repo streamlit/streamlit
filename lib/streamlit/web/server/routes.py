@@ -228,6 +228,7 @@ class HostConfigHandler(_SpecialRequestHandler):
                 "disableSvgImages": False,
                 "disableIframes": False,
                 "disableElements": [],
+                "disableUserTheme": False,
             }
         )
         self.set_status(200)
