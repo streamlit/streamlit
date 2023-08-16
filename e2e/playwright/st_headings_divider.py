@@ -18,23 +18,23 @@ import streamlit as st
 st.header("Blue Divider:", divider=True)
 st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 
-st.header("Green Divider:", divider=True)
-st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
-
-st.header("Orange Divider:", divider=True)
-st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
-
-st.header("Red Divider:", divider=True)
-st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
-
-st.header("Purple Divider:", divider=True)
-st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
-
-st.header("Blue Divider:", divider=True)
-st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
-
 
 # Headers with specified colors
+st.header("Blue Divider:", divider="blue")
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
+st.header("Green Divider:", divider="green")
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
+st.header("Orange Divider:", divider="orange")
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
+st.header("Red Divider:", divider="red")
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
+st.header("Violet Divider:", divider="violet")
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
 st.header("Gray Divider:", divider="gray")
 st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 
@@ -49,20 +49,23 @@ st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 st.subheader("Green Divider:", divider=True)
 st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 
-st.subheader("Orange Divider:", divider=True)
-st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
-
-st.subheader("Red Divider:", divider=True)
-st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
-
-st.subheader("Purple Divider:", divider=True)
-st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
-
-st.subheader("Blue Divider:", divider=True)
-st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
-
 
 # Subheaders with specified colors
+st.subheader("Blue Divider:", divider="blue")
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
+st.subheader("Green Divider:", divider="green")
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
+st.subheader("Orange Divider:", divider="orange")
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
+st.subheader("Red Divider:", divider="red")
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
+st.subheader("Violet Divider:", divider="violet")
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
 st.subheader("Gray Divider:", divider="gray")
 st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 
