@@ -86,7 +86,7 @@ export interface Props {
   metricsMgr: SegmentMetricsManager
 }
 
-export const getOpenInWindowCallback = (url: string) => (): void => {
+const getOpenInWindowCallback = (url: string) => (): void => {
   window.open(url, "_blank")
 }
 
