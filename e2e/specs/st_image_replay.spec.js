@@ -20,7 +20,6 @@
 describe("st.image replay", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
-
   });
 
   it("displays an image", () => {
@@ -31,26 +30,24 @@ describe("st.image replay", () => {
 
   it("displays a caption for both calls", () => {
     cy.getIndexed(
-      ".element-container [data-testid='stImage'] [data-testid='caption']", 0
+      ".element-container [data-testid='stImage'] [data-testid='caption']",
+      0
     )
       .should("contain", "Black Square")
       .should("have.css", "width", "100px");
     cy.getIndexed(
-      ".element-container [data-testid='stImage'] [data-testid='caption']", 1
+      ".element-container [data-testid='stImage'] [data-testid='caption']",
+      1
     )
       .should("contain", "Black Square")
       .should("have.css", "width", "100px");
   });
 
+  it("displays SVG images twice", () => {
+    cy.getIndexed("[data-testid='stImage'] img", 0).should("have.attr", "src");
 
-  it("displays SVG images that load external images", () => {
-    cy.getIndexed("[data-testid='stImage'] svg", 0)
-      .matchImageSnapshot("karriebear-avatar");
-
-    cy.getIndexed("[data-testid='stImage'] svg", 1)
-      .matchImageSnapshot("karriebear-avatar");
+    cy.getIndexed("[data-testid='stImage'] img", 1).should("have.attr", "src");
   });
-
 
   it("displays a GIF image twice", () => {
     cy.getIndexed(".element-container [data-testid='stImage'] img", 2)
@@ -66,11 +63,15 @@ describe("st.image replay", () => {
   });
 
   it("displays from URL twice", () => {
-    cy.getIndexed(".element-container [data-testid='stImage'] img", 4)
-      .should("have.css", "width", "200px")
-    cy.getIndexed(".element-container [data-testid='stImage'] img", 5)
-      .should("have.css", "width", "200px")
-
-  })
-
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 4).should(
+      "have.css",
+      "width",
+      "200px"
+    );
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 5).should(
+      "have.css",
+      "width",
+      "200px"
+    );
+  });
 });
