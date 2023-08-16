@@ -15,21 +15,15 @@
  */
 
 import React, { ReactElement, ReactNode, useCallback, useContext } from "react"
-import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
-import Modal from "./DeployModal"
-import Card from "./DeployCard"
-import ListElement from "./DeployListElement"
 import { StyledBody, StyledAction } from "baseui/card"
-import {
-  StyledSubheader,
-  StyledActionsWrapper,
-  StyledCardContainer,
-} from "./styled-components"
+
+import { BaseButton, BaseButtonKind, GitInfo, IGitInfo } from "@streamlit/lib"
+import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 import {
   DialogType,
   PlainEventHandler,
 } from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
-import { BaseButton, BaseButtonKind, GitInfo, IGitInfo } from "@streamlit/lib"
+import { AppContext } from "@streamlit/app/src/components/AppContext"
 import StreamlitLogo from "@streamlit/app/src/assets/svg/logo.svg"
 import Rocket from "@streamlit/app/src/assets/svg/rocket.svg"
 import {
@@ -43,7 +37,15 @@ import {
   ModuleIsNotAdded,
   NoRepositoryDetected,
 } from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs"
-import { AppContext } from "../../AppContext"
+
+import Modal from "./DeployModal"
+import Card from "./DeployCard"
+import ListElement from "./DeployListElement"
+import {
+  StyledSubheader,
+  StyledActionsWrapper,
+  StyledCardContainer,
+} from "./styled-components"
 
 const { GitStates } = GitInfo
 
