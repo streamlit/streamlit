@@ -22,6 +22,7 @@ from typing_extensions import Literal, TypeAlias
 
 from streamlit.cursor import Cursor
 from streamlit.delta_generator import DeltaGenerator, _enqueue_message
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
@@ -46,6 +47,10 @@ class StatusContainer(DeltaGenerator):
             expandable_proto.icon = "check"
         elif state == "error":
             expandable_proto.icon = "error"
+        else:
+            raise StreamlitAPIException(
+                f"Unknown state ({state}). Must be one of 'running', 'complete', or 'error'."
+            )
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
@@ -135,6 +140,10 @@ class StatusContainer(DeltaGenerator):
                 msg.delta.add_block.expandable.icon = "check"
             elif state == "error":
                 msg.delta.add_block.expandable.icon = "error"
+            else:
+                raise StreamlitAPIException(
+                    f"Unknown state ({state}). Must be one of 'running', 'complete', or 'error'."
+                )
             self._current_state = state
 
         self._current_proto = msg.delta.add_block

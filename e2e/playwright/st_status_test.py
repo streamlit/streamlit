@@ -26,7 +26,7 @@ def test_status_container_rendering(
     expect(status_containers).to_have_count(9)
 
     # Don't check screenshot for first element,
-    # since we cannot reliable screenshot test the spinner icon.
+    # since we cannot reliably screenshot test the spinner icon.
     for i, element in enumerate(status_containers.all()[1:]):
         assert_snapshot(element, name=f"status-{i}")
 

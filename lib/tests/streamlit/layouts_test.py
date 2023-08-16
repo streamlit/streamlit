@@ -152,6 +152,11 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         with self.assertRaises(TypeError):
             st.status()
 
+    def test_throws_error_on_wrong_state(self):
+        """Test that it throws an error on unknown state."""
+        with self.assertRaises(StreamlitAPIException()):
+            st.status("label", state="unknown")
+
     def test_just_label(self):
         """Test that it correctly applies label param."""
         st.status("label")

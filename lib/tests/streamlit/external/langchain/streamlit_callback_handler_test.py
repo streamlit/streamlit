@@ -116,5 +116,4 @@ class StreamlitCallbackHandlerTest(DeltaGeneratorTestCase):
             MessageToDict(delta) for delta in self.get_all_deltas_from_queue()
         ]
 
-        print(actual_deltas)
         self.assertEqual(expected_deltas, actual_deltas)

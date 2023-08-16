@@ -121,7 +121,6 @@ const Expander: React.FC<ExpanderProps> = ({
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
     if (notNullOrUndefined(initialExpanded)) {
-      console.log("Setting expanded state to", initialExpanded)
       setExpanded(initialExpanded)
     }
     // Having `label` in the dependency array here is necessary because
