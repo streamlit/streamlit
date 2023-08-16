@@ -44,18 +44,18 @@ describe("st.image replay", () => {
   });
 
   it("displays SVG images twice", () => {
-    cy.getIndexed("[data-testid='stImage'] img", 0).should("have.attr", "src");
+    cy.getIndexed("[data-testid='stImage'] img", 2).should("have.attr", "src");
 
-    cy.getIndexed("[data-testid='stImage'] img", 1).should("have.attr", "src");
+    cy.getIndexed("[data-testid='stImage'] img", 3).should("have.attr", "src");
   });
 
   it("displays a GIF image twice", () => {
-    cy.getIndexed(".element-container [data-testid='stImage'] img", 2)
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 4)
       .should("have.css", "height", "100px")
       .should("have.css", "width", "100px")
       .should("have.attr", "src")
       .should("match", /^.*\.gif$/);
-    cy.getIndexed(".element-container [data-testid='stImage'] img", 3)
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 5)
       .should("have.css", "height", "100px")
       .should("have.css", "width", "100px")
       .should("have.attr", "src")
@@ -63,12 +63,12 @@ describe("st.image replay", () => {
   });
 
   it("displays from URL twice", () => {
-    cy.getIndexed(".element-container [data-testid='stImage'] img", 4).should(
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 6).should(
       "have.css",
       "width",
       "200px"
     );
-    cy.getIndexed(".element-container [data-testid='stImage'] img", 5).should(
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 7).should(
       "have.css",
       "width",
       "200px"

@@ -54,7 +54,7 @@ img = np.repeat(0, 10000).reshape(100, 100)
 gif = create_gif(64, frames=32)
 
 
-@st.experimental_memo
+@st.cache_data
 def numpy_image():
     st.image(img, caption="Black Square with no output format specified", width=100)
 
@@ -63,7 +63,7 @@ numpy_image()
 numpy_image()
 
 
-@st.experimental_memo
+@st.cache_data
 def svg_image():
     st.image(
         """
@@ -78,7 +78,7 @@ svg_image()
 svg_image()
 
 
-@st.experimental_memo
+@st.cache_data
 def gif_image():
     st.image(gif, width=100)
 
@@ -87,7 +87,7 @@ gif_image()
 gif_image()
 
 
-@st.experimental_memo
+@st.cache_data
 def url_image():
     st.image("https://avatars.githubusercontent.com/anoctopus", width=200)
 
