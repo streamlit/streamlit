@@ -837,10 +837,6 @@ _create_option(
 
 # Config Section: UI #
 
-# NOTE: We currently hide the ui config section in the `streamlit config show`
-# output as all of its options are hidden. If a non-hidden option is eventually
-# added, the section should be unhidden by removing it from the `SKIP_SECTIONS`
-# set in config_util.show_config.
 _create_section("ui", "Configuration of UI elements displayed in the browser.")
 
 _create_option(

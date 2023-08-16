@@ -44,8 +44,6 @@ def show_config(
     config_options: Dict[str, ConfigOption],
 ) -> None:
     """Print the given config sections/options to the terminal."""
-    SKIP_SECTIONS = {"_test", "ui"}
-
     out = []
     out.append(
         _clean(
@@ -69,9 +67,6 @@ def show_config(
         out.append(click.style(text, fg="green"))
 
     for section, section_description in section_descriptions.items():
-        if section in SKIP_SECTIONS:
-            continue
-
         section_options = {
             k: v
             for k, v in config_options.items()
