@@ -369,7 +369,7 @@ class ConfigTest(unittest.TestCase):
                 "runner.fixMatplotlib",
                 "runner.postScriptGC",
                 "runner.fastReruns",
-                "magic.skipDocStrings",
+                "magic.displayRootDocString",
                 "magic.alwaysDisplayLastExpr",
                 "mapbox.token",
                 "server.baseUrlPath",

@@ -194,8 +194,8 @@ async def myfunc(a):
 """
         self._testCode(CODE, 0)
 
-    def test_skip_docstring_config_option(self):
-        """Test that magic.skipDocStrings skips/includes docstrings when True/False."""
+    def test_display_root_docstring_config_option(self):
+        """Test that magic.displayRootDocString skips/includes docstrings when True/False."""
 
         CODE = """
 '''This is a top-level docstring'''
@@ -218,11 +218,13 @@ class MyClass:
         'this is a string that should always be magicked'
 """
 
-        with patch_config_options({"magic.skipDocStrings": True}):
-            self._testCode(CODE, 3)
+        self._testCode(CODE, 3)
 
-        with patch_config_options({"magic.skipDocStrings": False}):
-            self._testCode(CODE, 6)
+        with patch_config_options({"magic.displayRootDocString": True}):
+            self._testCode(CODE, 4)
+
+        with patch_config_options({"magic.displayRootDocString": False}):
+            self._testCode(CODE, 3)
 
     def test_always_print_last_expr_config_option(self):
         """Test that magic.alwaysDisplayLastExpr causes the last function ast.Expr

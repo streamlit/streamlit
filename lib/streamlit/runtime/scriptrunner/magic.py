@@ -91,13 +91,12 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
 
         # Convert standalone expression nodes to st.write
         elif node_type is ast.Expr:
-            is_last_expr = i == len(body) - 1
-
             value = _get_st_write_from_expr(
                 node,
                 i,
                 parent_type=type(tree),
-                is_last_root_expr=is_root and is_last_expr,
+                is_root=is_root,
+                is_last_expr=(i == len(body) - 1),
             )
             if value is not None:
                 node.value = value
@@ -126,7 +125,7 @@ def _insert_import_statement(tree):
     # __future__ import".
     elif (
         len(tree.body) > 1
-        and (type(tree.body[0]) is ast.Expr and _is_ignorable_node(tree.body[0].value))
+        and (type(tree.body[0]) is ast.Expr and _is_docstring_node(tree.body[0].value))
         and type(tree.body[1]) in (ast.ImportFrom, ast.Import)
     ):
         tree.body.insert(2, st_import)
@@ -162,18 +161,25 @@ def _build_st_write_call(nodes):
     )
 
 
-def _get_st_write_from_expr(node, i, parent_type, is_last_root_expr):
+def _get_st_write_from_expr(node, i, parent_type, is_root, is_last_expr):
     # Don't change function calls
     if type(node.value) is ast.Call:
-        if is_last_root_expr and config.get_option("magic.alwaysDisplayLastExpr"):
+        # ...unless the function call happened at the end of the root node, AND
+        # magic.alwaysDisplayLastExpr is True. This allows us to support notebook-like
+        # behavior, where we display the last function in a cell.
+        if (
+            is_root
+            and is_last_expr
+            and config.get_option("magic.alwaysDisplayLastExpr")
+        ):
             return _build_st_write_call(node.value)
         else:
             return None
 
-    # Don't change Docstring nodes
+    # Don't change DocString nodes
     if (
         i == 0
-        and _is_ignorable_node(node.value)
+        and _is_ignorable_docstring(node.value, is_root)
         and parent_type in (ast.FunctionDef, ast.AsyncFunctionDef, ast.Module)
     ):
         return None
@@ -212,9 +218,15 @@ def _get_st_write_from_expr(node, i, parent_type, is_last_root_expr):
     return st_write
 
 
-def _is_ignorable_node(node):
-    """Skip docstrings if when magic.skipDocStrings is True (default)."""
-    if config.get_option("magic.skipDocStrings"):
-        return type(node) is ast.Constant and type(node.value) is str
+def _is_ignorable_docstring(node, is_root):
+    # When magic.displayRootDocString is True, display the root node's docstring in the app.
+    # This is useful for things like markdown cells in notebooks.
+    if config.get_option("magic.displayRootDocString"):
+        return not is_root
 
-    return False
+    # When magic.displayRootDocString is False (default), ignore all docstrings.
+    return _is_docstring_node(node)
+
+
+def _is_docstring_node(node):
+    return type(node) is ast.Constant and type(node.value) is str

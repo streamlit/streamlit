@@ -884,13 +884,15 @@ _create_option(
 _create_section("magic", "Settings for how Streamlit pre-processes your script")
 
 _create_option(
-    "magic.skipDocStrings",
+    "magic.displayRootDocString",
     description="""
         Streamlit's "magic" parser typically skips strings that appear to be
-        docstrings. If you'd like to turn this behavior off, set this to False.
+        docstrings. When this flag is set to True, Streamlit will instead display
+        the root-level docstring in the app, just like any other magic string.
+        This is useful for things like notebooks.
         """,
     visibility="hidden",
-    default_val=True,
+    default_val=False,
     type_=bool,
 )
 
