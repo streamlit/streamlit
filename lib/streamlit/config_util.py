@@ -72,20 +72,21 @@ def show_config(
         if section in SKIP_SECTIONS:
             continue
 
+        section_options = {
+            k: v
+            for k, v in config_options.items()
+            if v.section == section and v.visibility == "visible" and not v.is_expired()
+        }
+
+        # Only show config header if section is non-empty.
+        if len(section_options) == 0:
+            continue
+
         out.append("")
         append_section("[%s]" % section)
         out.append("")
 
-        for key, option in config_options.items():
-            if option.section != section:
-                continue
-
-            if option.visibility == "hidden":
-                continue
-
-            if option.is_expired():
-                continue
-
+        for key, option in section_options.items():
             key = option.key.split(".")[1]
             description_paragraphs = _clean_paragraphs(option.description)
 
