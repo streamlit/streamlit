@@ -16,6 +16,7 @@ jobs:
       - name: Add comment to issue
         run: gh issue comment ${{ github.event.issue.html_url }} --body "$ISSUE_BODY"
         env:
+          GH_TOKEN: ${{ github.token }}
           ISSUE_BODY: |
             **To help Streamlit prioritize this feature, react with a 👍 (thumbs up emoji) to the initial post.**
 
@@ -36,6 +37,7 @@ jobs:
       - name: Add comment to issue
         run: gh issue comment ${{ github.event.issue.html_url }} --body "$ISSUE_BODY"
         env:
+          GH_TOKEN: ${{ github.token }}
           ISSUE_BODY: |
             **If this issue affects you, please react with a 👍 (thumbs up emoji) to the initial post.**
 
