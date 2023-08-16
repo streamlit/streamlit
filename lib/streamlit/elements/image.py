@@ -19,9 +19,11 @@
 
 """Image marshalling."""
 
+import base64
 import io
 import mimetypes
 import re
+import urllib.parse
 from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 from urllib.parse import urlparse
@@ -359,8 +361,10 @@ def image_to_url(
                 image = image.replace(
                     "<svg", '<svg xmlns="http://www.w3.org/2000/svg" ', 1
                 )
+            # Convert to base64 to prevent issues with encoding:
+            image_b64_encoded = base64.b64encode(image.encode("utf-8")).decode("utf-8")
             # Return SVG as data URI:
-            return f"data:image/svg+xml,{image}"
+            return f"data:image/svg+xml;base64,{image_b64_encoded}"
 
         # If it's a url, return it directly.
         try:
