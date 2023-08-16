@@ -24,7 +24,7 @@ import tornado.websocket
 
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
-from streamlit.web.server.routes import ALLOWED_MESSAGE_ORIGINS
+from streamlit.web.server.routes import DEFAULT_ALLOWED_MESSAGE_ORIGINS
 from streamlit.web.server.server import (
     ALLOWED_MESSAGE_ORIGIN_ENDPOINT,
     HEALTH_ENDPOINT,
@@ -188,7 +188,10 @@ class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response_body = json.loads(response.body)
         self.assertEqual(200, response.code)
         self.assertEqual(
-            {"allowedOrigins": ALLOWED_MESSAGE_ORIGINS, "useExternalAuthToken": False},
+            {
+                "allowedOrigins": DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+                "useExternalAuthToken": False,
+            },
             response_body,
         )
         # Check that localhost NOT appended/allowed outside dev mode
@@ -197,6 +200,23 @@ class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
             local_host_appended,
             False,
         )
+
+    @patch_config_options(
+        {
+            "global.developmentMode": False,
+            "server.allowedMessageOrigins": ["https://*.google.com"],
+        }
+    )
+    def test_custom_message_origins(self):
+        response = self.fetch("/_stcore/allowed-message-origins")
+        self.assertEqual(200, response.code)
+        origins_list = json.loads(response.body)["allowedOrigins"]
+        for d in DEFAULT_ALLOWED_MESSAGE_ORIGINS:
+            default_in_allowed = d in origins_list
+            self.assertEqual(
+                default_in_allowed,
+                False,
+            )
 
     @patch_config_options({"global.developmentMode": True})
     def test_allowed_message_origins_dev_mode(self):
