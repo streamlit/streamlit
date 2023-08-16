@@ -289,6 +289,7 @@ export function RenderedMarkdown({
       violet: `color: ${violet}`,
       orange: `color: ${orange}`,
       gray: `color: ${gray}`,
+      grey: `color: ${gray}`,
       // Gradient from red, orange, yellow, green, blue, violet, purple
       rainbow: `color: transparent; background-clip: text; -webkit-background-clip: text; background-image: linear-gradient(to right,
         ${red}, ${orange}, ${yellow}, ${green}, ${blue}, ${violet}, ${purple});`,

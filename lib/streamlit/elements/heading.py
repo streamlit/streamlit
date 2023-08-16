@@ -65,7 +65,7 @@ class HeadingMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
@@ -118,7 +118,7 @@ class HeadingMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
@@ -174,7 +174,7 @@ class HeadingMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor

@@ -56,7 +56,7 @@ class MarkdownMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
@@ -160,7 +160,7 @@ class MarkdownMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in strings will be escaped and
