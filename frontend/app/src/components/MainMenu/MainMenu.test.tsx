@@ -29,21 +29,11 @@ import {
   IMenuItem,
   mockSessionInfo,
   Config,
-  GitInfo,
-  IGitInfo,
 } from "@streamlit/lib"
 
-import { IDeployErrorDialog } from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/types"
-import {
-  DetachedHead,
-  ModuleIsNotAdded,
-  NoRepositoryDetected,
-} from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import MainMenu, { Props } from "./MainMenu"
-
-const { GitStates } = GitInfo
 
 const getProps = (extend?: Partial<Props>): Props => ({
   aboutCallback: jest.fn(),
@@ -56,14 +46,8 @@ const getProps = (extend?: Partial<Props>): Props => ({
   screenCastState: "",
   sendMessageToHost: jest.fn(),
   settingsCallback: jest.fn(),
-  isDeployErrorModalOpen: false,
-  showDeployError: jest.fn(),
-  loadGitInfo: jest.fn(),
-  closeDialog: jest.fn(),
-  canDeploy: true,
   menuItems: {},
   developmentMode: true,
-  gitInfo: null,
   metricsMgr: new SegmentMetricsManager(mockSessionInfo()),
   toolbarMode: Config.ToolbarMode.AUTO,
   ...extend,
@@ -161,104 +145,10 @@ describe("MainMenu", () => {
       "About",
       "Developer options",
       "Clear cache",
-      "Deploy this app",
     ]
 
     expectedLabels.forEach((label, index) => {
       expect(menuOptions[index]).toHaveTextContent(label)
-    })
-  })
-
-  it("should render deploy app menu item", async () => {
-    const props = getProps({ gitInfo: {} })
-    render(<MainMenu {...props} />)
-    await openMenu(screen)
-
-    const menu = await screen.findByRole("option", {
-      name: "Deploy this app",
-    })
-    expect(menu).toBeDefined()
-  })
-
-  describe("Onclick deploy button", () => {
-    function testDeployErrorModal(
-      gitInfo: Partial<IGitInfo>,
-      dialogComponent: (module: string) => IDeployErrorDialog
-    ): void {
-      const props = getProps({
-        gitInfo,
-      })
-      const wrapper = mount(<MainMenu {...props} />)
-      const popoverContent = wrapper.find("StatefulPopover").prop("content")
-
-      // @ts-expect-error
-      const menuWrapper = mount(popoverContent(() => {}))
-      const items: any = menuWrapper.find("StatefulMenu").at(1).prop("items")
-
-      const deployOption = items.find(
-        ({ label }) => label === "Deploy this app"
-      )
-
-      deployOption.onClick()
-
-      // @ts-expect-error
-      const dialog = dialogComponent(props.gitInfo.module)
-      // @ts-expect-error
-      expect(props.showDeployError.mock.calls[0][0]).toStrictEqual(
-        dialog.title
-      )
-      // @ts-expect-error
-      expect(props.showDeployError.mock.calls[0][1]).toStrictEqual(dialog.body)
-    }
-
-    // eslint-disable-next-line jest/expect-expect -- underlying testDeployErrorModal function has expect statements
-    it("should display the correct modal if there is no repo or remote", () => {
-      testDeployErrorModal(
-        {
-          state: GitStates.DEFAULT,
-        },
-        NoRepositoryDetected
-      )
-    })
-
-    // eslint-disable-next-line jest/expect-expect
-    it("should display the correct modal if there is an empty repo", () => {
-      testDeployErrorModal(
-        {
-          repository: "",
-          branch: "",
-          module: "",
-          state: GitStates.DEFAULT,
-        },
-        NoRepositoryDetected
-      )
-    })
-
-    // eslint-disable-next-line jest/expect-expect
-    it("should display the correct modal if the repo is detached", () => {
-      testDeployErrorModal(
-        {
-          repository: "repo",
-          branch: "branch",
-          module: "module",
-          state: GitStates.HEAD_DETACHED,
-        },
-        DetachedHead
-      )
-    })
-
-    // eslint-disable-next-line jest/expect-expect
-    it("should display the correct modal if the script is not added to the repo", () => {
-      testDeployErrorModal(
-        {
-          repository: "repo",
-          branch: "branch",
-          module: "module.py",
-          state: GitStates.DEFAULT,
-          untrackedFiles: ["module.py"],
-        },
-        ModuleIsNotAdded
-      )
     })
   })
 
