@@ -331,7 +331,6 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         )
 
         img = image_list_proto.imgs[0]
-        print("FOOBAR", img.url)
         self.assertTrue(img.url.startswith(expected_prefix))
 
     def test_BytesIO_to_bytes(self):
