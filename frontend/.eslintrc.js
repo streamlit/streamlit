@@ -72,9 +72,10 @@ module.exports = {
     "react/no-unescaped-entities": "off",
     // Some of these are being caught erroneously
     "@typescript-eslint/camelcase": "off",
-    // Console statements are currently allowed,
-    // but we may want to reconsider this!
-    "@typescript-eslint/no-console": "off",
+    // Console statements are not allowed as this will automate
+    // having console statements within PRs. We can turn this back
+    // on if the team feels like we want it back off
+    "@typescript-eslint/no-console": "on",
     // Empty interfaces are ok
     "@typescript-eslint/no-empty-interface": "off",
     // Empty functions are ok
