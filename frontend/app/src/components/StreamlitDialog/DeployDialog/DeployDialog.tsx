@@ -49,9 +49,11 @@ import {
 
 const { GitStates } = GitInfo
 
-export const getDeployAppUrl = (gitInfo: IGitInfo | null): (() => void) => {
-  // If not in git repo, direct them to the Streamlit Cloud page.
-  let deployUrlStr = STREAMLIT_CLOUD_URL
+const openUrl = (url: string): void => {
+  window.open(url, "_blank")
+}
+
+const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
   if (gitInfo) {
     // If the app was run inside a GitHub repo, autofill for a one-click deploy.
     // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
@@ -60,12 +62,10 @@ export const getDeployAppUrl = (gitInfo: IGitInfo | null): (() => void) => {
     deployUrl.searchParams.set("repository", gitInfo.repository || "")
     deployUrl.searchParams.set("branch", gitInfo.branch || "")
     deployUrl.searchParams.set("mainModule", gitInfo.module || "")
-    deployUrlStr = deployUrl.toString()
+    return deployUrl.toString()
   }
-
-  return (): void => {
-    window.open(deployUrlStr, "_blank")
-  }
+  // If not in git repo, direct them to the Streamlit Cloud page.
+  return STREAMLIT_CLOUD_URL
 }
 
 export interface DeployDialogProps {
@@ -136,7 +136,7 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
       onClose()
     }
 
-    getDeployAppUrl(gitInfo)()
+    openUrl(getDeployAppUrl(gitInfo))
   }, [props, onClose, gitInfo])
 
   return (
@@ -168,7 +168,7 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
                   metricsMgr.enqueue("menuClick", {
                     label: "readMoreCommunityCloudInDeployDialog",
                   })
-                  window.open(STREAMLIT_COMMUNITY_CLOUD_DOCS_URL, "_blank")
+                  openUrl(STREAMLIT_COMMUNITY_CLOUD_DOCS_URL)
                 }}
                 kind={BaseButtonKind.MINIMAL}
               >
@@ -195,7 +195,7 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
                   metricsMgr.enqueue("menuClick", {
                     label: "readMoreDeployTutorialInDeployDialog",
                   })
-                  window.open(STREAMLIT_DEPLOY_TUTORIAL_URL, "_blank")
+                  openUrl(STREAMLIT_DEPLOY_TUTORIAL_URL)
                 }}
                 kind={BaseButtonKind.MINIMAL}
               >
