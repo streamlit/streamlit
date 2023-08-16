@@ -354,8 +354,11 @@ def image_to_url(
         # eventually followed by a "<svg...>" tag or directly starting with a "<svg>" tag
         if re.search(r"(^\s?(<\?xml[\s\S]*<svg\s)|^\s?<svg\s|^\s?<svg>\s)", image):
             if "xmlns" not in image:
-                # The xmlns attribute is required for SVGs to render in an img tag:
-                image.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ')
+                # The xmlns attribute is required for SVGs to render in an img tag.
+                # If it's not present, we add to the first SVG tag:
+                image = image.replace(
+                    "<svg", '<svg xmlns="http://www.w3.org/2000/svg" ', 1
+                )
             # Return SVG as data URI:
             return f"data:image/svg+xml,{image}"
 
