@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useCallback } from "react"
+import React, { ReactElement, ReactNode, useCallback, useContext } from "react"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 import Modal from "./DeployModal"
 import Card from "./DeployCard"
@@ -43,6 +43,7 @@ import {
   ModuleIsNotAdded,
   NoRepositoryDetected,
 } from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs"
+import { AppContext } from "../../AppContext"
 
 const { GitStates } = GitInfo
 
@@ -74,15 +75,15 @@ export interface DeployDialogProps {
     onContinue?: () => void
   ) => void
   isDeployErrorModalOpen: boolean
-  gitInfo: IGitInfo | null
   metricsMgr: SegmentMetricsManager
 }
 
 export function DeployDialog(props: DeployDialogProps): ReactElement {
+  // Get latest git info from AppContext:
+  const { gitInfo } = useContext(AppContext)
   const { onClose, metricsMgr } = props
   const onClickDeployApp = useCallback((): void => {
-    const { showDeployError, isDeployErrorModalOpen, gitInfo, metricsMgr } =
-      props
+    const { showDeployError, isDeployErrorModalOpen, metricsMgr } = props
     metricsMgr.enqueue("menuClick", {
       label: "deployButtonInDialog",
     })

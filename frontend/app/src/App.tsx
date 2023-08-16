@@ -1338,7 +1338,6 @@ export class App extends PureComponent<Props, State> {
       type: DialogType.DEPLOY_DIALOG,
       onClose: this.closeDialog,
       showDeployError: this.showDeployError,
-      gitInfo: this.state.gitInfo,
       isDeployErrorModalOpen:
         this.state.dialog?.type === DialogType.DEPLOY_ERROR,
       metricsMgr: this.metricsMgr,
@@ -1600,6 +1599,7 @@ export class App extends PureComponent<Props, State> {
           pageLinkBaseUrl,
           sidebarChevronDownshift,
           toastAdjustment: hostToolbarItems.length > 0,
+          gitInfo: this.state.gitInfo,
         }}
       >
         <LibContext.Provider
