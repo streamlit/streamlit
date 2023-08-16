@@ -73,13 +73,7 @@ export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export type { ThemeConfig, EmotionTheme } from "./theme"
 export { mount, shallow, mockWindowLocation, render } from "./test_util"
 export { logError, logMessage, logWarning, logAlways } from "./util/log"
-export {
-  getPossibleBaseUris,
-  buildHttpUri,
-  SVG_PREFIX,
-  xssSanitizeSvg,
-  buildWsUri,
-} from "./util/UriUtil"
+export { getPossibleBaseUris, buildHttpUri, buildWsUri } from "./util/UriUtil"
 export type { BaseUriParts } from "./util/UriUtil"
 export { ensureError } from "./util/ErrorHandling"
 export {
