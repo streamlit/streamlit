@@ -27,7 +27,7 @@ source:
   path: ..
 
 build:
-  number: 1
+  number: 2
   noarch: python
   script: python -m pip install . -vv
   entry_points:
