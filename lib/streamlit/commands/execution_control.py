@@ -14,6 +14,7 @@
 
 from typing import NoReturn
 
+import streamlit as st
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import (
     RerunData,
@@ -41,11 +42,16 @@ def stop() -> NoReturn:
     >>> st.success('Thank you for inputting a name.')
 
     """
+    ctx = get_script_run_ctx()
+
+    if ctx and ctx.script_requests:
+        ctx.script_requests.request_stop()
+        st.empty()
     raise StopException()
 
 
 @gather_metrics("experimental_rerun")
-def rerun() -> NoReturn:
+def rerun() -> None:
     """Rerun the script immediately.
 
     When `st.experimental_rerun()` is called, the script is halted - no
@@ -60,9 +66,17 @@ def rerun() -> NoReturn:
 
     query_string = ""
     page_script_hash = ""
-    if ctx is not None:
+    if ctx and ctx.script_requests:
         query_string = ctx.query_string
         page_script_hash = ctx.page_script_hash
+
+        ctx.script_requests.request_rerun(
+            RerunData(
+                query_string=query_string,
+                page_script_hash=page_script_hash,
+            )
+        )
+        st.empty()
 
     raise RerunException(
         RerunData(
