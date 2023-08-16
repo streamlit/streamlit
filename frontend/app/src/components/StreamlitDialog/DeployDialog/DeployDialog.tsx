@@ -137,7 +137,7 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
     }
 
     getDeployAppUrl(gitInfo)()
-  }, [props, onClose])
+  }, [props, onClose, gitInfo])
 
   return (
     <Modal onClose={onClose}>
