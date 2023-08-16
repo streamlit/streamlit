@@ -46,3 +46,4 @@ sqlalchemy[mypy]>=1.4.25, <2.0
 # Pydantic 1.* fails to initialize validators, we add it to requirements
 # to test the fix. Pydantic 2 should not have that issue.
 pydantic>=1.0, <2.0
+tornado>=6.3.3 # not directly required, pinned by Snyk to avoid a vulnerability
