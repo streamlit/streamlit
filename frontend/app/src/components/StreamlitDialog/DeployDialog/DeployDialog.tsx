@@ -35,15 +35,34 @@ import Rocket from "@streamlit/app/src/assets/svg/rocket.svg"
 import {
   STREAMLIT_COMMUNITY_CLOUD_DOCS_URL,
   STREAMLIT_DEPLOY_TUTORIAL_URL,
+  DEPLOY_URL,
+  STREAMLIT_CLOUD_URL,
 } from "@streamlit/app/src/urls"
 import {
   DetachedHead,
   ModuleIsNotAdded,
   NoRepositoryDetected,
 } from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs"
-import { getDeployAppUrl } from "@streamlit/app/src/components/MainMenu/MainMenu"
+import { getOpenInWindowCallback } from "@streamlit/app/src/components/MainMenu/MainMenu"
 
 const { GitStates } = GitInfo
+
+export const getDeployAppUrl = (gitInfo: IGitInfo | null): (() => void) => {
+  // If the app was run inside a GitHub repo, autofill for a one-click deploy.
+  // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
+  if (gitInfo) {
+    const deployUrl = new URL(DEPLOY_URL)
+
+    deployUrl.searchParams.set("repository", gitInfo.repository || "")
+    deployUrl.searchParams.set("branch", gitInfo.branch || "")
+    deployUrl.searchParams.set("mainModule", gitInfo.module || "")
+
+    return getOpenInWindowCallback(deployUrl.toString())
+  }
+
+  // Otherwise, just direct them to the Streamlit Cloud page.
+  return getOpenInWindowCallback(STREAMLIT_CLOUD_URL)
+}
 
 export interface DeployDialogProps {
   type: DialogType.DEPLOY_DIALOG
