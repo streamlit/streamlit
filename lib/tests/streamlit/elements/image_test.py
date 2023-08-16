@@ -209,6 +209,10 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             (IMAGES["gif_64_64"]["gif"], "/media/"),
             ("https://streamlit.io/test.png", "https://streamlit.io/test.png"),
             ("https://streamlit.io/test.svg", "https://streamlit.io/test.svg"),
+            (
+                "<svg fake></svg>",
+                'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"  fake></svg>',
+            ),
         ]
     )
     def test_image_to_url_prefix(self, img, expected_prefix):
@@ -289,20 +293,29 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("<svg fake></svg>", "data:image/svg+xml,<svg fake></svg>"),
-            ("<svg\nfake></svg>", "data:image/svg+xml,<svg\nfake></svg>"),
-            ("\n<svg fake></svg>", "data:image/svg+xml,\n<svg fake></svg>"),
+            (
+                "<svg fake></svg>",
+                'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"  fake></svg>',
+            ),
+            (
+                "<svg\nfake></svg>",
+                'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" \nfake></svg>',
+            ),
+            (
+                "\n<svg fake></svg>",
+                'data:image/svg+xml,\n<svg xmlns="http://www.w3.org/2000/svg"  fake></svg>',
+            ),
             (
                 '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!-- Created with Inkscape (http://www.inkscape.org/) -->\n\n<svg\n fake></svg>',
-                'data:image/svg+xml,<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!-- Created with Inkscape (http://www.inkscape.org/) -->\n\n<svg\n fake></svg>',
+                'data:image/svg+xml,<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!-- Created with Inkscape (http://www.inkscape.org/) -->\n\n<svg xmlns="http://www.w3.org/2000/svg" \n fake></svg>',
             ),
             (
                 '<?xml version="1.0" encoding="utf-8"?><!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg fake></svg>',
-                'data:image/svg+xml,<?xml version="1.0" encoding="utf-8"?><!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg fake></svg>',
+                'data:image/svg+xml,<?xml version="1.0" encoding="utf-8"?><!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg xmlns="http://www.w3.org/2000/svg"  fake></svg>',
             ),
             (
                 '\n<?xml version="1.0" encoding="utf-8"?>\n<!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n<svg fake></svg>',
-                'data:image/svg+xml,\n<?xml version="1.0" encoding="utf-8"?>\n<!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n<svg fake></svg>',
+                'data:image/svg+xml,\n<?xml version="1.0" encoding="utf-8"?>\n<!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n<svg xmlns="http://www.w3.org/2000/svg"  fake></svg>',
             ),
         ]
     )
@@ -317,7 +330,7 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             False,
         )
         img = image_list_proto.imgs[0]
-        self.assertTrue(img.markup.startswith(expected_prefix))
+        self.assertTrue(img.url.startswith(expected_prefix))
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image.BytesIO_to_bytes."""
