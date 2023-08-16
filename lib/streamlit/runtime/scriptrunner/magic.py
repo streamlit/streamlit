@@ -70,7 +70,7 @@ def _modify_ast_subtree(tree, body_attr="body", is_root=False):
         # Recursively parses methods in a class.
         elif node_type is ast.ClassDef:
             for inner_node in node.body:
-                if type(inner_node) is ast.FunctionDef:
+                if type(inner_node) in {ast.FunctionDef, ast.AsyncFunctionDef}:
                     _modify_ast_subtree(inner_node)
 
         # Recursively parses the contents of try statements,
@@ -117,7 +117,7 @@ def _insert_import_statement(tree):
 
     # If the 0th node is already an import statement, put the Streamlit
     # import below that, so we don't break "from __future__ import".
-    if tree.body and type(tree.body[0]) in (ast.ImportFrom, ast.Import):
+    if tree.body and type(tree.body[0]) in {ast.ImportFrom, ast.Import}:
         tree.body.insert(1, st_import)
 
     # If the 0th node is a docstring and the 1st is an import statement,
@@ -126,7 +126,7 @@ def _insert_import_statement(tree):
     elif (
         len(tree.body) > 1
         and (type(tree.body[0]) is ast.Expr and _is_docstring_node(tree.body[0].value))
-        and type(tree.body[1]) in (ast.ImportFrom, ast.Import)
+        and type(tree.body[1]) in {ast.ImportFrom, ast.Import}
     ):
         tree.body.insert(2, st_import)
 
@@ -163,10 +163,10 @@ def _build_st_write_call(nodes):
 
 def _get_st_write_from_expr(node, i, parent_type, is_root, is_last_expr):
     # Don't change function calls
+    # (Unless the function call happened at the end of the root node, AND
+    # magic.alwaysDisplayLastExpr is True. This allows us to support notebook-like
+    # behavior, where we display the last function in a cell)
     if type(node.value) is ast.Call:
-        # ...unless the function call happened at the end of the root node, AND
-        # magic.alwaysDisplayLastExpr is True. This allows us to support notebook-like
-        # behavior, where we display the last function in a cell.
         if (
             is_root
             and is_last_expr
@@ -177,10 +177,13 @@ def _get_st_write_from_expr(node, i, parent_type, is_root, is_last_expr):
             return None
 
     # Don't change DocString nodes
+    # (Unless magic.displayRootDocString, in which case we do wrap the root-level
+    # docstring with st.write. This allows us to support notebook-like behavior
+    # where you can have a cell with a markdown string)
     if (
         i == 0
         and _is_ignorable_docstring(node.value, is_root)
-        and parent_type in (ast.FunctionDef, ast.AsyncFunctionDef, ast.Module)
+        and parent_type in {ast.FunctionDef, ast.AsyncFunctionDef, ast.Module}
     ):
         return None
 
