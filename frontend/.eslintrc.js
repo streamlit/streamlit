@@ -75,7 +75,7 @@ module.exports = {
     // Console statements are not allowed as this will automate
     // having console statements within PRs. We can turn this back
     // on if the team feels like we want it back off
-    "@typescript-eslint/no-console": "on",
+    "@typescript-eslint/no-console": "2",
     // Empty interfaces are ok
     "@typescript-eslint/no-empty-interface": "off",
     // Empty functions are ok
