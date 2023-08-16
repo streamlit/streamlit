@@ -23,7 +23,6 @@ import base64
 import io
 import mimetypes
 import re
-import urllib.parse
 from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
 from urllib.parse import urlparse
