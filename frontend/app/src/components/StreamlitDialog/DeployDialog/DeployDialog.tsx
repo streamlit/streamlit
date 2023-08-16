@@ -43,25 +43,26 @@ import {
   ModuleIsNotAdded,
   NoRepositoryDetected,
 } from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs"
-import { getOpenInWindowCallback } from "@streamlit/app/src/components/MainMenu/MainMenu"
 
 const { GitStates } = GitInfo
 
 export const getDeployAppUrl = (gitInfo: IGitInfo | null): (() => void) => {
-  // If the app was run inside a GitHub repo, autofill for a one-click deploy.
-  // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
+  // If not in git repo, direct them to the Streamlit Cloud page.
+  let deployUrlStr = STREAMLIT_CLOUD_URL
   if (gitInfo) {
+    // If the app was run inside a GitHub repo, autofill for a one-click deploy.
+    // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
     const deployUrl = new URL(DEPLOY_URL)
 
     deployUrl.searchParams.set("repository", gitInfo.repository || "")
     deployUrl.searchParams.set("branch", gitInfo.branch || "")
     deployUrl.searchParams.set("mainModule", gitInfo.module || "")
-
-    return getOpenInWindowCallback(deployUrl.toString())
+    deployUrlStr = deployUrl.toString()
   }
 
-  // Otherwise, just direct them to the Streamlit Cloud page.
-  return getOpenInWindowCallback(STREAMLIT_CLOUD_URL)
+  return (): void => {
+    window.open(deployUrlStr, "_blank")
+  }
 }
 
 export interface DeployDialogProps {
