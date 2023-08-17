@@ -27,8 +27,15 @@ def test_status_container_rendering(
 
     # Don't check screenshot for first element,
     # since we cannot reliably screenshot test the spinner icon.
-    for i, element in enumerate(status_containers.all()[1:]):
-        assert_snapshot(element, name=f"status-{i}")
+
+    assert_snapshot(status_containers.nth(1), name="st_status-complete_state")
+    assert_snapshot(status_containers.nth(2), name="st_status-error_state")
+    assert_snapshot(status_containers.nth(3), name="st_status-collapsed")
+    assert_snapshot(status_containers.nth(4), name="st_status-changed_label")
+    assert_snapshot(status_containers.nth(5), name="st_status-without_cm")
+    assert_snapshot(status_containers.nth(6), name="st_status-collapsed_via_update")
+    assert_snapshot(status_containers.nth(7), name="st_status-empty_state")
+    assert_snapshot(status_containers.nth(8), name="st_status-uncaught_exception")
 
 
 def test_running_state(app: Page):
