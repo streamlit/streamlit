@@ -103,7 +103,7 @@ describe("st.image", () => {
 
   it("displays a GIF image and a caption together", () => {
     cy.getIndexed(
-      ".element-container [data-testid='stImage'] img",
+      ".element-container [data-testid='stImage']",
       14
     ).matchImageSnapshot("gif-with-caption");
   });
