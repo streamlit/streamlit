@@ -334,7 +334,7 @@ class DataFrameSelectorMixin:
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
-        ...
+        >>>
         >>> st.line_chart(chart_data)
 
         .. output::
@@ -345,31 +345,49 @@ class DataFrameSelectorMixin:
         the color dynamically based on a 3rd column (assuming your dataframe is in
         long format):
 
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame({
+        ...     'col1' : np.random.randn(20),
+        ...     'col2' : np.random.randn(20),
+        ...     'col3' : np.random.choice(['A','B','C'], 20)
+        ... })
+        >>>
         >>> st.line_chart(
         ...     chart_data,
-        ...     x='col1',
-        ...     y='col2',
-        ...     color='col3',
+        ...     x = 'col1',
+        ...     y = 'col2',
+        ...     color = 'col3'
         ... )
+
+        .. output::
+           https://doc-line-chart1.streamlit.app/
+           height: 400px
 
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple lines with different
         colors:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        ...     np.random.randn(20, 3),
+        ...     columns = ['col1', 'col2', 'col3'])
+        >>>
         >>> st.line_chart(
         ...     chart_data,
-        ...     x='col1',
-        ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],  # Optional
+        ...     x = 'col1',
+        ...     y = ['col2', 'col3'],
+        ...     color = ['#FF0000', '#0000FF']  # Optional
         ... )
+
+        .. output::
+           https://doc-line-chart2.streamlit.app/
+           height: 400px
 
         """
         if _use_arrow():
@@ -495,8 +513,8 @@ class DataFrameSelectorMixin:
         >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
+        ...     columns = ['a', 'b', 'c'])
+        >>>
         >>> st.area_chart(chart_data)
 
         .. output::
@@ -507,31 +525,49 @@ class DataFrameSelectorMixin:
         the color dynamically based on a 3rd column (assuming your dataframe is in
         long format):
 
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame({
+        ...     'col1' : np.random.randn(20),
+        ...     'col2' : np.random.randn(20),
+        ...     'col3' : np.random.choice(['A', 'B', 'C'], 20)
+        ... })
+        >>>
         >>> st.area_chart(
         ...     chart_data,
-        ...     x='col1',
-        ...     y='col2',
-        ...     color='col3',
+        ...     x = 'col1',
+        ...     y = 'col2',
+        ...     color = 'col3'
         ... )
+
+        .. output::
+           https://doc-area-chart1.streamlit.app/
+           height: 400px
 
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple series with different
         colors:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
+        ...     np.random.randn(20, 3),
         ...     columns=['col1', 'col2', 'col3'])
         ...
         >>> st.area_chart(
         ...     chart_data,
         ...     x='col1',
         ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],  # Optional
+        ...     color=['#FF0000','#0000FF']  # Optional
         ... )
+
+        .. output::
+           https://doc-area-chart2.streamlit.app/
+           height: 400px
 
         """
         if _use_arrow():
@@ -669,31 +705,49 @@ class DataFrameSelectorMixin:
         the color dynamically based on a 3rd column (assuming your dataframe is in
         long format):
 
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame({
+        ...     'col1' : np.random.randn(20),
+        ...     'col2' : np.random.randn(20),
+        ...     'col3' : np.random.choice(['A','B','C'],20)
+        ... })
+        >>>
         >>> st.bar_chart(
         ...     chart_data,
         ...     x='col1',
         ...     y='col2',
-        ...     color='col3',
+        ...     color='col3'
         ... )
+
+        .. output::
+           https://doc-bar-chart1.streamlit.app/
+           height: 400px
 
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple series with different
         colors:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
+        ...     np.random.randn(20, 3),
         ...     columns=['col1', 'col2', 'col3'])
         ...
         >>> st.bar_chart(
         ...     chart_data,
         ...     x='col1',
         ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],  # Optional
+        ...     color=['#FF0000','#0000FF']  # Optional
         ... )
+
+        .. output::
+           https://doc-bar-chart2.streamlit.app/
+           height: 400px
 
         """
 

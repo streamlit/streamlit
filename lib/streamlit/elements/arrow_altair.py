@@ -194,7 +194,7 @@ class ArrowAltairMixin:
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
-        ...
+        >>>
         >>> st._arrow_line_chart(chart_data)
 
         .. output::
@@ -205,30 +205,40 @@ class ArrowAltairMixin:
         the color dynamically based on a 3rd column (assuming your dataframe is in
         long format):
 
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame({
+        ...     'col1' : np.random.randn(20),
+        ...     'col2' : np.random.randn(20),
+        ...     'col3' : np.random.choice(['A','B','C'], 20)
+        ... })
+        >>>
         >>> st._arrow_line_chart(
         ...     chart_data,
-        ...     x='col1',
-        ...     y='col2',
-        ...     color='col3',
+        ...     x = 'col1',
+        ...     y = 'col2',
+        ...     color = 'col3'
         ... )
 
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple lines with different
         colors:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        ...     np.random.randn(20, 3),
+        ...     columns = ['col1', 'col2', 'col3'])
+        >>>
         >>> st._arrow_line_chart(
         ...     chart_data,
-        ...     x='col1',
-        ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],
+        ...     x = 'col1',
+        ...     y = ['col2', 'col3'],
+        ...     color = ['#FF0000', '#0000FF']  # Optional
         ... )
 
         """
@@ -349,8 +359,8 @@ class ArrowAltairMixin:
         >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
+        ...     columns = ['a', 'b', 'c'])
+        >>>
         >>> st._arrow_area_chart(chart_data)
 
         .. output::
@@ -361,30 +371,40 @@ class ArrowAltairMixin:
         the color dynamically based on a 3rd column (assuming your dataframe is in
         long format):
 
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame({
+        ...     'col1' : np.random.randn(20),
+        ...     'col2' : np.random.randn(20),
+        ...     'col3' : np.random.choice(['A', 'B', 'C'], 20)
+        ... })
+        >>>
         >>> st._arrow_area_chart(
         ...     chart_data,
-        ...     x='col1',
-        ...     y='col2',
-        ...     color='col3',
+        ...     x = 'col1',
+        ...     y = 'col2',
+        ...     color = 'col3'
         ... )
 
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple lines with different
         colors:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
+        ...     np.random.randn(20, 3),
         ...     columns=['col1', 'col2', 'col3'])
         ...
         >>> st._arrow_area_chart(
         ...     chart_data,
         ...     x='col1',
         ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],
+        ...     color=['#FF0000','#0000FF']
         ... )
 
         """
@@ -519,30 +539,39 @@ class ArrowAltairMixin:
         the color dynamically based on a 3rd column (assuming your dataframe is in
         long format):
 
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame({
+        ...     'col1' : np.random.randn(20),
+        ...     'col2' : np.random.randn(20),
+        ...     'col3' : np.random.choice(['A','B','C'],20)
+        ... })
+        >>>
         >>> st._arrow_bar_chart(
         ...     chart_data,
         ...     x='col1',
         ...     y='col2',
-        ...     color='col3',
+        ...     color='col3'
         ... )
-
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple lines with different
         colors:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
+        ...     np.random.randn(20, 3),
         ...     columns=['col1', 'col2', 'col3'])
         ...
         >>> st._arrow_bar_chart(
         ...     chart_data,
         ...     x='col1',
         ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],
+        ...     color=['#FF0000','#0000FF']
         ... )
 
         """
