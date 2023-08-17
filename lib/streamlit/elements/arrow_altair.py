@@ -137,7 +137,7 @@ class ArrowAltairMixin:
 
             * None, to use the default color.
             * A hex string like "#ffaa00" or "#ffaa0088".
-            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+            * An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
 
@@ -147,7 +147,7 @@ class ArrowAltairMixin:
             * None, to use the default colors.
             * The name of a column in the dataset. Data points will be grouped
               into lines of the same color based on the value of this column.
-              In addition, if the values in this column in one of the color
+              In addition, if the values in this column match one of the color
               formats above (hex string or color tuple), then that color will
               be used.
 
@@ -294,7 +294,7 @@ class ArrowAltairMixin:
 
             * None, to use the default color.
             * A hex string like "#ffaa00" or "#ffaa0088".
-            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+            * An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
 
@@ -304,7 +304,7 @@ class ArrowAltairMixin:
             * None, to use the default colors.
             * The name of a column in the dataset. Data points will be grouped
               into series of the same color based on the value of this column.
-              In addition, if the values in this column in one of the color
+              In addition, if the values in this column match one of the color
               formats above (hex string or color tuple), then that color will
               be used.
 
@@ -451,7 +451,7 @@ class ArrowAltairMixin:
 
             * None, to use the default color.
             * A hex string like "#ffaa00" or "#ffaa0088".
-            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+            * An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
 
@@ -461,7 +461,7 @@ class ArrowAltairMixin:
             * None, to use the default colors.
             * The name of a column in the dataset. Data points will be grouped
               into series of the same color based on the value of this column.
-              In addition, if the values in this column in one of the color
+              In addition, if the values in this column match one of the color
               formats above (hex string or color tuple), then that color will
               be used.
 
@@ -1314,7 +1314,7 @@ This does not look like a valid color argument: `{color_from_user}`.
 The color argument can be:
 
 * A hex string like "#ffaa00" or "#ffaa0088".
-* An RGB or RGBA tuple with the red, green, #04f, and alpha
+* An RGB or RGBA tuple with the red, green, blue, and alpha
   components specified as ints from 0 to 255 or floats from 0.0 to
   1.0.
 * The name of a column.
