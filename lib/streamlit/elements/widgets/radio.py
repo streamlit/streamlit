@@ -121,9 +121,10 @@ class RadioMixin:
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
         options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
-            Labels for the radio options. Labels can include markdown and will
-            be cast to str internally by default. For pandas.DataFrame, the
-            first column is selected.
+            Labels for the radio options. Labels can include markdown as
+            described in the ``label`` parameter and will be cast to str
+            internally by default. For pandas.DataFrame, the first column is
+            selected.
         index : int
             The index of the preselected option on first render.
         format_func : function
