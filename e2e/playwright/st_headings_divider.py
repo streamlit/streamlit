@@ -14,11 +14,6 @@
 
 import streamlit as st
 
-# Headers with divider=True
-st.header("Blue Divider:", divider=True)
-st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
-
-
 # Headers with specified colors
 st.header("Blue Divider:", divider="blue")
 st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
@@ -42,11 +37,6 @@ st.header("Rainbow Divider:", divider="rainbow")
 st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 
 st.header("Grey Divider:", divider="grey")
-st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
-
-
-# Subheaders with divider=True
-st.subheader("Green Divider:", divider=True)
 st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 
 
