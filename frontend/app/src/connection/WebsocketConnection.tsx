@@ -134,7 +134,7 @@ export interface Args {
   resetHostAuthToken: () => void
 
   /**
-   * Function to set the host config for this app (if in a relevant deployment
+   * Function to set the host config and allowed-message-origins for this app (if in a relevant deployment
    * scenario).
    */
   setHostConfigResp: (resp: IHostConfigResponse) => void
@@ -687,6 +687,7 @@ export function doInitPings(
     const hostConfigUri = buildHttpUri(uriParts, HOST_CONFIG_PATH)
 
     logMessage(LOG, `Attempting to connect to ${healthzUri}.`)
+    logMessage(LOG, `Attempting to connect to ${hostConfigUri}`)
 
     if (uriNumber === 0) {
       totalTries++
