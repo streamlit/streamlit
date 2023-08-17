@@ -704,8 +704,8 @@ export function doInitPings(
       axios.get(healthzUri, { timeout: PING_TIMEOUT_MS }),
       axios.get(hostConfigUri, { timeout: PING_TIMEOUT_MS }),
     ])
-      .then(([_, hostConfigRequest]) => {
-        setHostConfigResp(hostConfigRequest.data)
+      .then(([_, hostConfigResp]) => {
+        setHostConfigResp(hostConfigResp.data)
         resolver.resolve(uriNumber)
       })
       .catch(error => {
