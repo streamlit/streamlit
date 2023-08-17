@@ -20,7 +20,7 @@ from conftest import ImageCompareFunction
 
 def test_header_display(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.header renders correctly with dividers."""
-    header_elements = themed_app.locator(".stHeadingContainer")
+    header_elements = app.locator(".stHeadingContainer")
     expect(header_elements).to_have_count(16)
 
     for i, element in enumerate(header_elements.all()):
@@ -30,7 +30,7 @@ def test_header_display(app: Page, assert_snapshot: ImageCompareFunction):
 
 def test_subheader_display(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.subheader renders correctly with dividers."""
-    subheader_elements = themed_app.locator(".stHeadingContainer")
+    subheader_elements = app.locator(".stHeadingContainer")
     expect(subheader_elements).to_have_count(16)
 
     for i, element in enumerate(subheader_elements.all()):
