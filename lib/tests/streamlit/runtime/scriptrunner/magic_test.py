@@ -226,11 +226,11 @@ class MyClass:
         with patch_config_options({"magic.displayRootDocString": False}):
             self._testCode(CODE, 3)
 
-    def test_always_print_last_expr_config_option(self):
-        """Test that magic.alwaysDisplayLastExpr causes the last function ast.Expr
+    def test_display_last_expr_config_option(self):
+        """Test that magic.displayLastExprIfNoSemicolon causes the last function ast.Expr
         node in a file to be wrapped in st.write()."""
 
-        CODE = """
+        CODE_WITHOUT_SEMICOLON = """
 this_should_not_be_magicked()
 
 def my_func():
@@ -243,10 +243,39 @@ class MyClass:
         this_should_not_be_magicked()
 
 this_is_the_last_expr()
+
+# Some newlines for good measure
+
+
 """
 
-        with patch_config_options({"magic.alwaysDisplayLastExpr": True}):
-            self._testCode(CODE, 1)
+        with patch_config_options({"magic.displayLastExprIfNoSemicolon": True}):
+            self._testCode(CODE_WITHOUT_SEMICOLON, 1)
 
-        with patch_config_options({"magic.alwaysDisplayLastExpr": False}):
-            self._testCode(CODE, 0)
+        with patch_config_options({"magic.displayLastExprIfNoSemicolon": False}):
+            self._testCode(CODE_WITHOUT_SEMICOLON, 0)
+
+        CODE_WITH_SEMICOLON = """
+this_should_not_be_magicked()
+
+def my_func():
+    this_should_not_be_magicked()
+
+class MyClass:
+    this_should_not_be_magicked()
+
+    def __init__(self):
+        this_should_not_be_magicked()
+
+this_is_the_last_expr();
+
+# Some newlines for good measure
+
+
+"""
+
+        with patch_config_options({"magic.displayLastExprIfNoSemicolon": True}):
+            self._testCode(CODE_WITH_SEMICOLON, 0)
+
+        with patch_config_options({"magic.displayLastExprIfNoSemicolon": False}):
+            self._testCode(CODE_WITH_SEMICOLON, 0)

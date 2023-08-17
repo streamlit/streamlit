@@ -370,7 +370,7 @@ class ConfigTest(unittest.TestCase):
                 "runner.postScriptGC",
                 "runner.fastReruns",
                 "magic.displayRootDocString",
-                "magic.alwaysDisplayLastExpr",
+                "magic.displayLastExprIfNoSemicolon",
                 "mapbox.token",
                 "server.baseUrlPath",
                 "server.enableCORS",

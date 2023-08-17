@@ -893,10 +893,11 @@ _create_option(
 )
 
 _create_option(
-    "magic.alwaysDisplayLastExpr",
+    "magic.displayLastExprIfNoSemicolon",
     description="""
         Make Streamlit's "magic" parser always display the last expression in the
-        root file. This matches the behavior of Jupyter notebooks, for example.
+        root file if it has no semicolon at the end. This matches the behavior of
+        Jupyter notebooks, for example.
         """,
     visibility="hidden",
     default_val=False,
