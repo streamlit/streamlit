@@ -81,11 +81,12 @@ class Radio extends React.PureComponent<Props, State> {
     const style = { width }
     const options = [...this.props.options]
     const captions = [...this.props.captions]
+    const hasCaptions = captions.length > 0
 
     const spacerNeeded = (caption: string): string => {
       // When captions are provided for only some options in horizontal
       // layout we need to add a spacer for the options without captions
-      const spacer = caption == "" && horizontal && captions.length > 0
+      const spacer = caption == "" && horizontal && hasCaptions
       return spacer ? "&nbsp;" : caption
     }
 
@@ -117,7 +118,7 @@ class Radio extends React.PureComponent<Props, State> {
           overrides={{
             RadioGroupRoot: {
               style: {
-                gap: "0.5rem",
+                gap: hasCaptions ? "0.5rem" : "0",
               },
             },
           }}
@@ -135,7 +136,7 @@ class Radio extends React.PureComponent<Props, State> {
                   }) => ({
                     marginBottom: 0,
                     marginTop: 0,
-                    marginRight: "0.5rem",
+                    marginRight: hasCaptions ? "0.5rem" : "1rem",
                     // Make left and right padding look the same visually.
                     paddingLeft: 0,
                     alignItems: "start",
@@ -183,12 +184,14 @@ class Radio extends React.PureComponent<Props, State> {
                 largerLabel
                 disableLinks
               />
-              <StreamlitMarkdown
-                source={spacerNeeded(captions[index])}
-                allowHTML={false}
-                isCaption
-                isLabel
-              />
+              {hasCaptions && (
+                <StreamlitMarkdown
+                  source={spacerNeeded(captions[index])}
+                  allowHTML={false}
+                  isCaption
+                  isLabel
+                />
+              )}
             </UIRadio>
           ))}
         </RadioGroup>

@@ -135,7 +135,7 @@ describe("Radio widget", () => {
     const props = getProps({ captions: ["caption1", "", ""] })
     render(<Radio {...props} />)
 
-    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(1)
+    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(3)
     expect(screen.getByText("caption1")).toBeInTheDocument()
   })
 

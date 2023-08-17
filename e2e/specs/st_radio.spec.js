@@ -104,18 +104,20 @@ describe("st.radio", () => {
   });
 
   it("has correct caption values", () => {
-    cy.get("[data-testid='stCaptionContainer']").should(
-      "have.text",
-      "bold text" +
-        "italics text" +
-        "strikethrough text" +
-        "shortcode: 😊" +
-        "link text" +
-        "code text" +
-        "red blue green violet orange" +
-        "Opt in" +
-        "Opt out"
-    );
+    const captions = [ "bold text",
+      "italics text",
+      "strikethrough text",
+      "shortcode: 😊",
+      "link text",
+      "code text",
+      "red blue green violet orange",
+      "Opt in",
+      "\u00a0",
+      "Opt out",
+    ]
+    captions.forEach((expected, idx) => {
+      cy.getIndexed("[data-testid='stCaptionContainer']", idx).should('contain.text', expected)
+    })
   });
 
   it("formats display values", () => {
