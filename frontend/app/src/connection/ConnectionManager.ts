@@ -192,7 +192,6 @@ export class ConnectionManager {
       onRetry: this.showRetryError,
       claimHostAuthToken: this.props.claimHostAuthToken,
       resetHostAuthToken: this.props.resetHostAuthToken,
-      setAllowedOriginsResp: this.props.setAllowedOriginsResp,
       setHostConfigResp: this.props.setHostConfigResp,
     })
   }

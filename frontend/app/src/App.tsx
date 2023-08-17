@@ -382,7 +382,6 @@ export class App extends PureComponent<Props, State> {
       connectionStateChanged: this.handleConnectionStateChanged,
       claimHostAuthToken: this.hostCommunicationMgr.claimAuthToken,
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
-      setAllowedOriginsResp: this.hostCommunicationMgr.setAllowedOriginsResp,
       setHostConfigResp: (response: IHostConfigResponse) => {
         this.setHostConfig(response)
       },
