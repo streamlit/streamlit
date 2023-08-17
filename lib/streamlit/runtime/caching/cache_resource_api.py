@@ -23,7 +23,6 @@ from datetime import timedelta
 from typing import Any, Callable, TypeVar, cast, overload
 
 from cachetools import TTLCache
-from pympler import asizeof
 from typing_extensions import TypeAlias
 
 import streamlit as st
@@ -49,6 +48,7 @@ from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.vendor.pympler.asizeof import asizeof
 
 _LOGGER = get_logger(__name__)
 
