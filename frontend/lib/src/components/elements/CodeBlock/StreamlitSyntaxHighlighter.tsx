@@ -34,7 +34,7 @@ export default function StreamlitSyntaxHighlighter({
   children,
 }: StreamlitSyntaxHighlighterProps): ReactElement {
   return (
-    <StyledCodeBlock>
+    <StyledCodeBlock className="stCodeBlock" isMarkdown={false}>
       <StyledPre>
         <SyntaxHighlighter
           language={language}

@@ -32,3 +32,11 @@ def test_syntax_highlighting(themed_app: Page, assert_snapshot: ImageCompareFunc
     first_code_element = themed_app.locator(".element-container:first-child pre").first
     first_code_element.hover()
     assert_snapshot(first_code_element, name="syntax_highlighting-hover")
+
+
+def test_code_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that the syntax highlighting is applied correctly to the code block."""
+    expander_with_code = app.get_by_test_id("stExpander")
+
+    assert_snapshot(expander_with_code.nth(0), name="expander_with_code")
+    assert_snapshot(expander_with_code.nth(1), name="expander_with_markdown_code")
