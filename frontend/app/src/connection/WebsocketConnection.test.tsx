@@ -173,7 +173,6 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-
       MOCK_PING_DATA.setHostConfigResp,
       MOCK_PING_DATA.userCommandLine
     )
@@ -346,7 +345,6 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-
       MOCK_PING_DATA.setHostConfigResp,
       MOCK_PING_DATA.userCommandLine
     )
@@ -377,7 +375,6 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-
       MOCK_PING_DATA.setHostConfigResp,
       MOCK_PING_DATA.userCommandLine
     )
@@ -407,7 +404,6 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-
       MOCK_PING_DATA.setHostConfigResp,
       MOCK_PING_DATA.userCommandLine
     )
@@ -442,7 +438,6 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-
       MOCK_PING_DATA.setHostConfigResp,
       MOCK_PING_DATA.userCommandLine
     )
@@ -486,7 +481,6 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-
       MOCK_PING_DATA.setHostConfigResp,
       MOCK_PING_DATA.userCommandLine
     )
@@ -526,7 +520,6 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-
       MOCK_PING_DATA.setHostConfigResp,
       MOCK_PING_DATA.userCommandLine
     )
@@ -545,7 +538,6 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback2,
-
       MOCK_PING_DATA.setHostConfigResp,
       MOCK_PING_DATA.userCommandLine
     )
