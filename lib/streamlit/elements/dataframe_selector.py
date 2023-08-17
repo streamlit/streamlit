@@ -339,7 +339,7 @@ class DataFrameSelectorMixin:
 
         .. output::
            https://doc-line-chart.streamlit.app/
-           height: 400px
+           height: 440px
 
         You can also choose different columns to use for x and y, as well as set
         the color dynamically based on a 3rd column (assuming your dataframe is in
@@ -364,7 +364,7 @@ class DataFrameSelectorMixin:
 
         .. output::
            https://doc-line-chart1.streamlit.app/
-           height: 400px
+           height: 440px
 
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple lines with different
@@ -387,7 +387,7 @@ class DataFrameSelectorMixin:
 
         .. output::
            https://doc-line-chart2.streamlit.app/
-           height: 400px
+           height: 440px
 
         """
         if _use_arrow():
@@ -519,7 +519,7 @@ class DataFrameSelectorMixin:
 
         .. output::
            https://doc-area-chart.streamlit.app/
-           height: 400px
+           height: 440px
 
         You can also choose different columns to use for x and y, as well as set
         the color dynamically based on a 3rd column (assuming your dataframe is in
@@ -544,7 +544,7 @@ class DataFrameSelectorMixin:
 
         .. output::
            https://doc-area-chart1.streamlit.app/
-           height: 400px
+           height: 440px
 
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple series with different
@@ -567,7 +567,7 @@ class DataFrameSelectorMixin:
 
         .. output::
            https://doc-area-chart2.streamlit.app/
-           height: 400px
+           height: 440px
 
         """
         if _use_arrow():
@@ -699,7 +699,7 @@ class DataFrameSelectorMixin:
 
         .. output::
            https://doc-bar-chart.streamlit.app/
-           height: 400px
+           height: 440px
 
         You can also choose different columns to use for x and y, as well as set
         the color dynamically based on a 3rd column (assuming your dataframe is in
@@ -724,7 +724,7 @@ class DataFrameSelectorMixin:
 
         .. output::
            https://doc-bar-chart1.streamlit.app/
-           height: 400px
+           height: 440px
 
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple series with different
@@ -747,7 +747,7 @@ class DataFrameSelectorMixin:
 
         .. output::
            https://doc-bar-chart2.streamlit.app/
-           height: 400px
+           height: 440px
 
         """
 
