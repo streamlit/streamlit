@@ -39,6 +39,12 @@ st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 st.header("Grey Divider:", divider="grey")
 st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 
+# Headers with cycle colors
+st.header("Blue Divider:", divider=True)
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
+st.header("Green Divider:", divider=True)
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 
 # Subheaders with specified colors
 st.subheader("Blue Divider:", divider="blue")
@@ -63,4 +69,11 @@ st.subheader("Rainbow Divider:", divider="rainbow")
 st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
 
 st.subheader("Grey Divider:", divider="grey")
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
+# Subheaders with cycle colors
+st.subheader("Orange Divider:", divider=True)
+st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+
+st.subheader("Red Divider:", divider=True)
 st.write("Lorem ipsum dolor sit amet, consectetur adipiscing elit")

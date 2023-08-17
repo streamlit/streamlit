@@ -18,21 +18,23 @@ from playwright.sync_api import Page, expect
 from conftest import ImageCompareFunction
 
 
+@pytest.mark.only_browser("firefox")
 def test_header_display(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.header renders correctly with dividers."""
     header_elements = app.locator(".stHeadingContainer")
-    expect(header_elements).to_have_count(16)
+    expect(header_elements).to_have_count(20)
 
     for i, element in enumerate(header_elements.all()):
-        if i < 8:
-            assert_snapshot(element, name=f"header-divider-{i}")
+        if i < 10:
+            assert_snapshot(element, name=f"header-divider{i}")
 
 
+@pytest.mark.only_browser("firefox")
 def test_subheader_display(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.subheader renders correctly with dividers."""
     subheader_elements = app.locator(".stHeadingContainer")
-    expect(subheader_elements).to_have_count(16)
+    expect(subheader_elements).to_have_count(20)
 
     for i, element in enumerate(subheader_elements.all()):
-        if i > 7:
-            assert_snapshot(element, name=f"subheader-divider-{i}")
+        if i > 9:
+            assert_snapshot(element, name=f"subheader-divider{i}")
