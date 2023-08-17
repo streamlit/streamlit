@@ -110,7 +110,7 @@ export default class HostCommunicationManager {
 
   /**
    * Function to set the response body received from hitting the Streamlit
-   * server's /_stcore/allowed-message-origins endpoint. The response contains
+   * server's /_stcore/host-config endpoint. The response contains
    *   - allowedOrigins: A list of origins that we're allowed to receive
    *     cross-iframe messages from via the browser's window.postMessage API.
    *   - useExternalAuthToken: Whether to wait until we've received a
@@ -118,7 +118,7 @@ export default class HostCommunicationManager {
    *     WebsocketConnection class waits for this promise to resolve before
    *     attempting to establish a connection with the Streamlit server.
    */
-  public setAllowedOriginsResp = ({
+  public setHostConfigResp = ({
     allowedOrigins,
     useExternalAuthToken,
   }: IAllowedMessageOriginsResponse): void => {
