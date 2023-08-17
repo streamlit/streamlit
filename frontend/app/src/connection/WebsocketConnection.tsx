@@ -18,7 +18,6 @@ import styled from "@emotion/styled"
 import axios from "axios"
 
 import {
-  IAllowedMessageOriginsResponse,
   IHostConfigResponse,
   ForwardMsgCache,
   logError,

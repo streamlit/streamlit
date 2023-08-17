@@ -16,7 +16,6 @@
 import { ReactNode } from "react"
 
 import {
-  IAllowedMessageOriginsResponse,
   IHostConfigResponse,
   BaseUriParts,
   getPossibleBaseUris,
@@ -74,12 +73,6 @@ interface Props {
    * resolves.
    */
   resetHostAuthToken: () => void
-
-  /**
-   * Function to set the list of origins that this app should accept
-   * cross-origin messages from (if in a relevant deployment scenario).
-   */
-  setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void
 
   /**
    * Function to set the host config for this app (if in a relevant deployment

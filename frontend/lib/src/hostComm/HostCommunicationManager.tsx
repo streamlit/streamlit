@@ -17,13 +17,13 @@
 import { ICustomThemeConfig, WidgetStates } from "@streamlit/lib/src/proto"
 
 import {
-  IAllowedMessageOriginsResponse,
   IGuestToHostMessage,
   IHostToGuestMessage,
   VersionedMessage,
   IMenuItem,
   IToolbarItem,
   DeployedAppMetadata,
+  IHostConfigResponse,
 } from "./types"
 
 import { isValidOrigin } from "@streamlit/lib/src/util/UriUtil"
@@ -121,7 +121,7 @@ export default class HostCommunicationManager {
   public setHostConfigResp = ({
     allowedOrigins,
     useExternalAuthToken,
-  }: IAllowedMessageOriginsResponse): void => {
+  }: IHostConfigResponse): void => {
     if (!useExternalAuthToken) {
       this.deferredAuthToken.resolve(undefined)
     }

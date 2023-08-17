@@ -38,7 +38,6 @@ export type {
   DeployedAppMetadata,
   IGuestToHostMessage,
   IMenuItem,
-  IAllowedMessageOriginsResponse,
   IHostConfigResponse,
   IToolbarItem,
   HostConfigViolation,
