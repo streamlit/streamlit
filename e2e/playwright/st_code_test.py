@@ -35,7 +35,7 @@ def test_code_blocks_render_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the code blocks render as expected via screenshot matching."""
-    code_blocks = themed_app.locator(".stCodeBlock")
+    code_blocks = themed_app.get_by_test_id("stCodeBlock")
 
     assert_snapshot(code_blocks.nth(0), name="st_code-auto_lang")
     assert_snapshot(code_blocks.nth(1), name="st_code-empty")

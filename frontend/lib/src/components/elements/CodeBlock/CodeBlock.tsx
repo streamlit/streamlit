@@ -29,7 +29,11 @@ export default function CodeBlock({
   children,
 }: Record<any, any>): ReactElement {
   return (
-    <StyledCodeBlock className="stCodeBlock" isMarkdown={true}>
+    <StyledCodeBlock
+      className="stCodeBlock"
+      data-testid="stCodeBlock"
+      isMarkdown={true}
+    >
       {children}
     </StyledCodeBlock>
   )

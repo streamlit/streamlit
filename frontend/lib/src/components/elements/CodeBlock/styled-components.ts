@@ -125,8 +125,8 @@ export const StyledCopyButtonContainer = styled.div(({ theme }) => ({
 
 export interface StyledCodeBlockProps {
   /**
-   * The code-block behaves a bit different if it is
-   * used inside markdow.
+   * The code-block behaves a bit differently if it is
+   * used inside markdown.
    */
   isMarkdown: boolean
 }
