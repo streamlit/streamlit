@@ -1151,7 +1151,7 @@ export class App extends PureComponent<Props, State> {
 
   /**
    * Update pendingElementsBuffer with the given Delta and set up a timer to
-   * update state.elements. This buffers us to process Deltas quickly
+   * update state.elements. This buffer allows us to process Deltas quickly
    * without spamming React with too many of render() calls.
    */
   handleDeltaMsg = (
