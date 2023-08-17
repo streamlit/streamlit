@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import NoReturn
 
 import streamlit as st
 from streamlit.runtime.metrics_util import gather_metrics
@@ -24,12 +23,11 @@ from streamlit.runtime.scriptrunner import (
 )
 
 
-def stop() -> NoReturn:
+def stop() -> None:
     """Stops execution immediately.
 
     Streamlit will not run any statements after `st.stop()`.
     We recommend rendering a message to explain why the script has stopped.
-    When run outside of Streamlit, this will raise an Exception.
 
     Example
     -------
@@ -47,7 +45,6 @@ def stop() -> NoReturn:
     if ctx and ctx.script_requests:
         ctx.script_requests.request_stop()
         st.empty()
-    raise StopException()
 
 
 @gather_metrics("experimental_rerun")
