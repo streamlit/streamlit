@@ -121,8 +121,9 @@ class RadioMixin:
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
         options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
-            Labels for the radio options. This will be cast to str internally
-            by default. For pandas.DataFrame, the first column is selected.
+            Labels for the radio options. Labels can include markdown and will
+            be cast to str internally by default. For pandas.DataFrame, the
+            first column is selected.
         index : int
             The index of the preselected option on first render.
         format_func : function
@@ -169,9 +170,9 @@ class RadioMixin:
         >>>
         >>> genre = st.radio(
         ...     "What\'s your favorite movie genre",
-        ...     ('Comedy', 'Drama', 'Documentary'))
+        ...     (":rainbow[Comedy]", "***Drama***", "Documentary :movie_camera:"))
         >>>
-        >>> if genre == 'Comedy':
+        >>> if genre == ':rainbow[Comedy]':
         ...     st.write('You selected comedy.')
         ... else:
         ...     st.write("You didn\'t select comedy.")
