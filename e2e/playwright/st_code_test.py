@@ -25,13 +25,23 @@ def test_code_display(app: Page):
 
 
 def test_syntax_highlighting(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the syntax highlighting is applied correctly to the code block."""
-    block_container = themed_app.locator(".block-container")
-    assert_snapshot(block_container, name="syntax_highlighting")
-
+    """Test that the copy-to-clipboard action appears on hover."""
     first_code_element = themed_app.locator(".element-container:first-child pre").first
     first_code_element.hover()
     assert_snapshot(first_code_element, name="syntax_highlighting-hover")
+
+
+def test_code_blocks_render_correctly(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the code blocks render as expected via screenshot matching."""
+    code_blocks = themed_app.locator(".stCodeBlock")
+
+    assert_snapshot(code_blocks.nth(0), name="st_code-auto_lang")
+    assert_snapshot(code_blocks.nth(1), name="st_code-empty")
+    assert_snapshot(code_blocks.nth(2), name="st_code-python_lang")
+    assert_snapshot(code_blocks.nth(3), name="st_code-line_numbers")
+    assert_snapshot(code_blocks.nth(4), name="st_code-no_lang")
 
 
 def test_code_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
