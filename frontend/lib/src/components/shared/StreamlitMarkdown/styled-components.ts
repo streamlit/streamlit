@@ -176,3 +176,22 @@ export const StyledHeaderContent = styled.span(() => ({
   flex: "1",
   marginLeft: "calc(2.5rem + 0.5rem)",
 }))
+
+export interface StyledDividerProps {
+  rainbow: boolean
+  color: string
+}
+
+export const StyledDivider = styled.hr<StyledDividerProps>(
+  ({ rainbow, color }) => {
+    return {
+      // Height needs to be !important due to globalStyles.tsx hr height override - line #170
+      height: "2px !important",
+      marginTop: "0.5rem",
+      marginBottom: "0px",
+      border: "none",
+      borderRadius: "3px",
+      ...(rainbow ? { background: color } : { backgroundColor: color }),
+    }
+  }
+)

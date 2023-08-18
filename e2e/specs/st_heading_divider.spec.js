@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+describe("st.header & st.subheader dividers", () => {
+  before(() => {
+    cy.loadApp("http://localhost:3000/");
+  });
 
-message Heading {
-    // h1, h2, h3, div, etc
-    string tag = 1;
+  it("displays correctly when divider=True", () => {
+    cy.get(".element-container .stMarkdown h2").should("have.length", 3);
+    cy.get(".element-container .stMarkdown h3").should("have.length", 3);
+    cy.get(".stHeadingContainer").should("have.length", 6)
 
-    string anchor = 2;
-    string body = 3;
-
-    string help = 4;
-    bool hide_anchor = 5;
-    string divider = 6;
-}
+    const expectedColors = [ "blue", "green", "orange", "red", "violet", "blue"]
+    expectedColors.forEach( (color, idx) => {
+      cy.getIndexed(".stHeadingContainer", idx).matchThemedSnapshots(`divider-${color}${idx}`)
+    })
+  });
+});
