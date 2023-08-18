@@ -78,18 +78,23 @@ class HeadingMixin:
             An optional tooltip that gets displayed next to the header.
 
         divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
-            Shows a colored divider below the header. If True, will cycle through
-            colors for subsequent headers, i.e. the first header with divider=True
-            will have a blue line, the second one will have a green line, etc.
-            If string, can set one of the following colors: blue, green, orange,
-            red, violet, gray/grey, or rainbow.
+            Shows a colored divider below the header. If True, successive
+            headers will cycle through divider colors. That is, the first
+            header will have a blue line, the second header will have a
+            green line, and so on. If a string, the color can be set to one of
+            the following: blue, green, orange, red, violet, gray/grey, or
+            rainbow.
 
         Examples
         --------
         >>> import streamlit as st
         >>>
-        >>> st.header('This is a header')
-        >>> st.header('A header with _italics_ :blue[colors] and emojis :sunglasses:')
+        >>> st.header('This is a header with a divider', divider='rainbow')
+        >>> st.header('_Streamlit_ is :blue[cool] :sunglasses:')
+
+        .. output::
+           https://doc-header.streamlit.app/
+           height: 220px
 
         """
         return self.dg._enqueue(
@@ -143,18 +148,23 @@ class HeadingMixin:
             An optional tooltip that gets displayed next to the subheader.
 
         divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
-            Shows a colored divider below the header. If True, will cycle through
-            colors for subsequent headers, i.e. the first header with divider=True
-            will have a blue line, the second one will have a green line, etc.
-            If string, can set one of the following colors: blue, green, orange,
-            red, violet, gray/grey, or rainbow.
+            Shows a colored divider below the header. If True, successive
+            headers will cycle through divider colors. That is, the first
+            header will have a blue line, the second header will have a
+            green line, and so on. If a string, the color can be set to one of
+            the following: blue, green, orange, red, violet, gray/grey, or
+            rainbow.
 
         Examples
         --------
         >>> import streamlit as st
         >>>
-        >>> st.subheader('This is a subheader')
-        >>> st.subheader('A subheader with _italics_ :blue[colors] and emojis :sunglasses:')
+        >>> st.subheader('This is a subheader with a divider', divider='rainbow')
+        >>> st.subheader('_Streamlit_ is :blue[cool] :sunglasses:')
+
+        .. output::
+           https://doc-subheader.streamlit.app/
+           height: 220px
 
         """
         return self.dg._enqueue(
@@ -214,7 +224,11 @@ class HeadingMixin:
         >>> import streamlit as st
         >>>
         >>> st.title('This is a title')
-        >>> st.title('A title with _italics_ :blue[colors] and emojis :sunglasses:')
+        >>> st.title('_Streamlit_ is :blue[cool] :sunglasses:')
+
+        .. output::
+           https://doc-title.streamlit.app/
+           height: 220px
 
         """
         return self.dg._enqueue(
