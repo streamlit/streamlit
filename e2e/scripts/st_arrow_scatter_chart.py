@@ -35,7 +35,6 @@ df = pd.DataFrame(
 # Pulled into a separate df because this doesn't make sense for certain charts.
 df2 = df.copy()
 df2["e"] = ["bird" if x % 2 else "airplane" for x in range(N)]
-df2["f"] = ["#f00" if x % 2 else "#00f" for x in range(N)]
 
 """
 ### Snowpark dataframe with too many rows
