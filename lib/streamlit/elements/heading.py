@@ -78,11 +78,12 @@ class HeadingMixin:
             An optional tooltip that gets displayed next to the header.
 
         divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
-            Shows a colored divider below the header. If True, will cycle through
-            colors for subsequent headers, i.e. the first header with divider=True
-            will have a blue line, the second one will have a green line, etc.
-            If string, can set one of the following colors: blue, green, orange,
-            red, violet, gray/grey, or rainbow.
+            Shows a colored divider below the header. If True, successive
+            headers will cycle through divider colors. That is, the first
+            header will have a blue line, the second header will have a
+            green line, and so on. If a string, the color can be set to one of
+            the following: blue, green, orange, red, violet, gray/grey, or
+            rainbow.
 
         Examples
         --------
@@ -147,11 +148,12 @@ class HeadingMixin:
             An optional tooltip that gets displayed next to the subheader.
 
         divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
-            Shows a colored divider below the header. If True, will cycle through
-            colors for subsequent headers, i.e. the first header with divider=True
-            will have a blue line, the second one will have a green line, etc.
-            If string, can set one of the following colors: blue, green, orange,
-            red, violet, gray/grey, or rainbow.
+            Shows a colored divider below the header. If True, successive
+            headers will cycle through divider colors. That is, the first
+            header will have a blue line, the second header will have a
+            green line, and so on. If a string, the color can be set to one of
+            the following: blue, green, orange, red, violet, gray/grey, or
+            rainbow.
 
         Examples
         --------
