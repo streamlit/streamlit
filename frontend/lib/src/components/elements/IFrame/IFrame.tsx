@@ -20,7 +20,7 @@ import {
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "@streamlit/lib/src/util/IFrameUtil"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import { HostConfigViolation } from "@streamlit/lib/src/hostComm/types"
+import { PlatformSecurityViolation } from "@streamlit/lib/src/hostComm/types"
 
 import React, { CSSProperties, ReactElement } from "react"
 
@@ -35,8 +35,8 @@ export default function IFrame({
 }: IFrameProps): ReactElement {
   const { hostConfig } = React.useContext(LibContext)
   if (hostConfig.disableIframes) {
-    throw new HostConfigViolation(
-      "Usage of iframes is disabled by the security policy of the host."
+    throw new PlatformSecurityViolation(
+      "The usage of iframes was disabled in line with the platform security policy."
     )
   }
 

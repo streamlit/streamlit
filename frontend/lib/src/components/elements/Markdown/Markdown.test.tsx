@@ -67,7 +67,7 @@ describe("Markdown element", () => {
         },
       })
     ).toThrow(
-      "Running unsafe HTML is disabled by the security policy of the host."
+      'The usage of unsafe HTML in markdown (e.g. `st.markdown("...", unsafe_allow_html=True)`) was disabled in line with the platform security policy.'
     )
     consoleErrorFn.mockRestore()
   })

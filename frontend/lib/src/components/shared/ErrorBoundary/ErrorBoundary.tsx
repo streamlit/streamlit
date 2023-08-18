@@ -17,7 +17,7 @@
 import React from "react"
 import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 import { logError } from "@streamlit/lib/src/util/log"
-import { HostConfigViolation } from "@streamlit/lib/src/hostComm/types"
+import { PlatformSecurityViolation } from "@streamlit/lib/src/hostComm/types"
 export interface Props {
   width?: number
 }
@@ -79,12 +79,12 @@ class ErrorBoundary extends React.PureComponent<Props, State> {
         )
       }
 
-      if (error instanceof HostConfigViolation) {
+      if (error instanceof PlatformSecurityViolation) {
         // Do not show the stack for host config violations:
         return (
           <ErrorElement
             width={this.props.width}
-            name="Host config violation"
+            name="Unsupported feature error"
             message={error.message}
           />
         )

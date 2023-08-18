@@ -159,7 +159,7 @@ describe("ElementNodeRenderer Block Component", () => {
           }
         )
       ).toThrow(
-        "The element of type bokehChart is disabled by the security policy of the host."
+        "The component, bokeh_chart, was removed in line with the platform security policy."
       )
 
       consoleErrorFn.mockRestore()
