@@ -84,7 +84,7 @@ class ErrorBoundary extends React.PureComponent<Props, State> {
         return (
           <ErrorElement
             width={this.props.width}
-            name="Platform Security Violation"
+            name="Unsupported feature error"
             message={error.message}
           />
         )

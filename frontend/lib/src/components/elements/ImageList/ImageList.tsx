@@ -60,10 +60,12 @@ export function ImageList({
 }: ImageListProps): ReactElement {
   const { hostConfig } = React.useContext(LibContext)
 
+  // TODO(willhuang1997): This check can be removed after
+  // https://github.com/streamlit/streamlit/pull/7183 is merged
   const isSvgAllowed = React.useCallback(() => {
     if (hostConfig.disableSvgImages) {
       throw new PlatformSecurityViolation(
-        "Usage of SVG images was removed in line with the platform security policy."
+        "Usage of SVG images was disabled in line with the platform security policy."
       )
     }
     return true

@@ -89,6 +89,7 @@ import {
 } from "./utils"
 
 import { StyledElementContainer } from "./styled-components"
+import decamelize from "decamelize"
 
 // Lazy-load elements.
 const Audio = React.lazy(
@@ -238,7 +239,9 @@ export const RawElementNodeRenderer = (
     hostConfig.disableElements.includes(node.element.type)
   ) {
     throw new PlatformSecurityViolation(
-      `The component, st.${node.element.type}, was removed in line with the platform security policy.`
+      `The component, st.${decamelize(
+        node.element.type
+      )}, was removed in line with the platform security policy.`
     )
   }
 

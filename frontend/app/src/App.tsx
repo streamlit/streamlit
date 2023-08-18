@@ -600,7 +600,7 @@ export class App extends PureComponent<Props, State> {
     if (title) {
       if (this.state.hostConfig.disableSetPageMetadata) {
         logError(
-          "Setting the page title is disabled by security policy of the host."
+          "Setting the page title is disabled in line with the platform security policy."
         )
       } else {
         // TODO(lukasmasuch): Should this also prevent the host message or only
@@ -617,7 +617,7 @@ export class App extends PureComponent<Props, State> {
     if (favicon) {
       if (this.state.hostConfig.disableSetPageMetadata) {
         logError(
-          "Setting the page favicon is disabled by security policy of the host."
+          "Setting the page favicon is disabled in line with the platform security policy."
         )
       } else {
         // TODO(lukasmasuch): Should this also prevent the host message or only
@@ -653,7 +653,7 @@ export class App extends PureComponent<Props, State> {
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
     if (this.state.hostConfig.disableSetQueryParams) {
       logError(
-        "Setting query parameters is disabled by security policy of the host."
+        "Setting query parameters is disabled in line with the platform security policy."
       )
       return
     }
@@ -863,7 +863,7 @@ export class App extends PureComponent<Props, State> {
       this.processThemeInput(themeInput)
     } else {
       logError(
-        "Setting the theme through config.toml is disabled by security policy of the host."
+        "Setting the theme through config.toml is disabled in line with the platform security policy."
       )
     }
     this.setState(
@@ -899,7 +899,7 @@ export class App extends PureComponent<Props, State> {
 
     if (this.state.hostConfig.disableSetPageMetadata) {
       logError(
-        "Setting the page metadata (title & favicon) is disabled by security policy of the host."
+        "Setting the page metadata (title & favicon) is disabled in line with the platform security policy."
       )
     } else {
       // Set the title and favicon to their default values

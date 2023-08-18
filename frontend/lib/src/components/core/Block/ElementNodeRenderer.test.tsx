@@ -35,6 +35,7 @@ import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { ComponentRegistry } from "@streamlit/lib/src/components/widgets/CustomComponent"
 import { mockEndpoints, mockSessionInfo } from "@streamlit/lib/src/mocks/mocks"
 import ElementNodeRenderer, {
+  camelToSnakeCase,
   ElementNodeRendererProps,
   RawElementNodeRenderer,
 } from "./ElementNodeRenderer"
@@ -159,7 +160,7 @@ describe("ElementNodeRenderer Block Component", () => {
           }
         )
       ).toThrow(
-        "The component, st.bokehChart, was removed in line with the platform security policy."
+        "The component, bokeh_chart, was removed in line with the platform security policy."
       )
 
       consoleErrorFn.mockRestore()
