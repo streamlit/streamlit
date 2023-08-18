@@ -30,6 +30,10 @@ describe("st.camera_input", () => {
   });
 
   it("capture photo when 'Take photo' button clicked", () => {
+    // Be generous with some of the timeouts in this test as uploading and
+    // rendering images can be quite slow.
+    const timeout = 30000;
+
     cy.get("[data-testid='stCameraInput']")
       .contains("Learn how to allow access.")
       .should("not.exist");
@@ -44,7 +48,7 @@ describe("st.camera_input", () => {
 
     cy.get("img").should("have.length.at.least", 2);
 
-    cy.get("[data-testid='stImage']").should("have.length.at.least", 1);
+    cy.get("[data-testid='stImage']", { timeout }).should("have.length.at.least", 1);
   });
 
   it("Remove photo when 'Clear photo' button clicked", () => {
