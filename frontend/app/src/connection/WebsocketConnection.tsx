@@ -137,7 +137,7 @@ export interface Args {
    * Function to set the host config and allowed-message-origins for this app (if in a relevant deployment
    * scenario).
    */
-  setHostConfigResp: (resp: IHostConfigResponse) => void
+  setAllowedOrigins: (resp: IHostConfigResponse) => void
 }
 
 interface MessageQueue {
@@ -373,7 +373,7 @@ export class WebsocketConnection {
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
       this.args.onRetry,
-      this.args.setHostConfigResp,
+      this.args.setAllowedOrigins,
       userCommandLine
     )
 
@@ -611,7 +611,7 @@ export function doInitPings(
   minimumTimeoutMs: number,
   maximumTimeoutMs: number,
   retryCallback: OnRetry,
-  setHostConfigResp: (resp: IHostConfigResponse) => void,
+  setAllowedOrigins: (resp: IHostConfigResponse) => void,
   userCommandLine?: string
 ): Promise<number> {
   const resolver = new Resolver<number>()
@@ -705,7 +705,7 @@ export function doInitPings(
       axios.get(hostConfigUri, { timeout: PING_TIMEOUT_MS }),
     ])
       .then(([_, hostConfigResp]) => {
-        setHostConfigResp(hostConfigResp.data)
+        setAllowedOrigins(hostConfigResp.data)
         resolver.resolve(uriNumber)
       })
       .catch(error => {

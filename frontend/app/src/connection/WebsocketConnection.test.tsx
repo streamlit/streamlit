@@ -60,7 +60,7 @@ function createMockArgs(overrides?: Partial<Args>): Args {
     onRetry: jest.fn(),
     claimHostAuthToken: () => Promise.resolve(undefined),
     resetHostAuthToken: jest.fn(),
-    setHostConfigResp: jest.fn(),
+    setAllowedOrigins: jest.fn(),
     ...overrides,
   }
 }
@@ -74,7 +74,7 @@ describe("doInitPings", () => {
     timeoutMs: 10,
     maxTimeoutMs: 100,
     retryCallback: jest.fn(),
-    setHostConfigResp: jest.fn(),
+    setAllowedOrigins: jest.fn(),
     userCommandLine: "streamlit run not-a-real-script.py",
   }
 
@@ -85,7 +85,7 @@ describe("doInitPings", () => {
     originalAxiosGet = axios.get
     axios.get = jest.fn()
     MOCK_PING_DATA.retryCallback = jest.fn()
-    MOCK_PING_DATA.setHostConfigResp = jest.fn()
+    MOCK_PING_DATA.setAllowedOrigins = jest.fn()
     originalPromiseAll = Promise.all
   })
 
@@ -110,11 +110,11 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
     expect(uriIndex).toEqual(0)
-    expect(MOCK_PING_DATA.setHostConfigResp).toHaveBeenCalledWith(
+    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
       MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data
     )
   })
@@ -130,11 +130,11 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
 
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
     expect(uriIndex).toEqual(0)
-    expect(MOCK_PING_DATA.setHostConfigResp).toHaveBeenCalledWith(
+    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
       MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data
     )
   })
@@ -150,11 +150,11 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
     expect(uriIndex).toEqual(1)
-    expect(MOCK_PING_DATA.setHostConfigResp).toHaveBeenCalledWith(
+    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
       MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data
     )
   })
@@ -173,7 +173,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -198,7 +198,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -227,7 +227,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -254,7 +254,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -305,7 +305,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA_LOCALHOST.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA_LOCALHOST.retryCallback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA_LOCALHOST.userCommandLine
     )
 
@@ -345,7 +345,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -375,7 +375,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -404,7 +404,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -438,7 +438,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -481,7 +481,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -520,7 +520,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 
@@ -538,7 +538,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback2,
-      MOCK_PING_DATA.setHostConfigResp,
+      MOCK_PING_DATA.setAllowedOrigins,
       MOCK_PING_DATA.userCommandLine
     )
 

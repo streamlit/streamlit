@@ -118,7 +118,7 @@ export default class HostCommunicationManager {
    *     WebsocketConnection class waits for this promise to resolve before
    *     attempting to establish a connection with the Streamlit server.
    */
-  public setHostConfigResp = ({
+  public setAllowedOrigins = ({
     allowedOrigins,
     useExternalAuthToken,
   }: IHostConfigResponse): void => {
