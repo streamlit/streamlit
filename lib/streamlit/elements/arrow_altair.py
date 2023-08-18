@@ -224,9 +224,9 @@ class ArrowAltairMixin:
         >>>
         >>> st._arrow_line_chart(
         ...     chart_data,
-        ...     x = 'col1',
-        ...     y = 'col2',
-        ...     color = 'col3'
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3'
         ... )
 
         Finally, if your dataframe is in wide format, you can group multiple
@@ -243,9 +243,9 @@ class ArrowAltairMixin:
         >>>
         >>> st._arrow_line_chart(
         ...     chart_data,
-        ...     x = 'col1',
-        ...     y = ['col2', 'col3'],
-        ...     color = ['#FF0000', '#0000FF']  # Optional
+        ...     x='col1',
+        ...     y=['col2', 'col3'],
+        ...     color=['#FF0000', '#0000FF']  # Optional
         ... )
 
         """
@@ -389,9 +389,9 @@ class ArrowAltairMixin:
         >>>
         >>> st._arrow_area_chart(
         ...     chart_data,
-        ...     x = 'col1',
-        ...     y = 'col2',
-        ...     color = 'col3'
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3'
         ... )
 
         Finally, if your dataframe is in wide format, you can group multiple
@@ -744,7 +744,7 @@ class ArrowAltairMixin:
         ...     x='col1',
         ...     y=['col2', 'col3'],
         ...     size='col4',
-        ...     color=['#f00', '#00f'],  # Optional
+        ...     color=['#FF0000', '#0000FF'],  # Optional
         ... )
 
         """

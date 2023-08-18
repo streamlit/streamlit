@@ -356,9 +356,9 @@ class DataFrameSelectorMixin:
         >>>
         >>> st.line_chart(
         ...     chart_data,
-        ...     x = 'col1',
-        ...     y = 'col2',
-        ...     color = 'col3'
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3'
         ... )
 
         .. output::
@@ -379,9 +379,9 @@ class DataFrameSelectorMixin:
         >>>
         >>> st.line_chart(
         ...     chart_data,
-        ...     x = 'col1',
-        ...     y = ['col2', 'col3'],
-        ...     color = ['#FF0000', '#0000FF']  # Optional
+        ...     x='col1',
+        ...     y=['col2', 'col3'],
+        ...     color=['#FF0000', '#0000FF']  # Optional
         ... )
 
         .. output::
@@ -534,9 +534,9 @@ class DataFrameSelectorMixin:
         >>>
         >>> st.area_chart(
         ...     chart_data,
-        ...     x = 'col1',
-        ...     y = 'col2',
-        ...     color = 'col3'
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3'
         ... )
 
         .. output::
@@ -909,7 +909,7 @@ class DataFrameSelectorMixin:
         ...     x='col1',
         ...     y=['col2', 'col3'],
         ...     size='col4',
-        ...     color=['#f00', '#00f'],  # Optional
+        ...     color=['#FF0000', '#0000FF'],  # Optional
         ... )
 
         """
