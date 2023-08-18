@@ -456,7 +456,7 @@ describe("App.handleNewSession", () => {
     expect(mockProcessTheme).not.toHaveBeenCalled()
 
     expect(logErrorSpy).toHaveBeenLastCalledWith(
-      "Setting the theme through config.toml is disabled by security policy of the host."
+      "Setting the theme through config.toml is disabled in line with the platform security policy."
     )
   })
 
@@ -822,7 +822,7 @@ describe("App.handleNewSession", () => {
       appInstance.setHostConfig({ disableSetPageMetadata: true })
       appInstance.handleNewSession(new NewSession(NEW_SESSION_JSON))
       expect(logErrorSpy).toHaveBeenLastCalledWith(
-        "Setting the page metadata (title & favicon) is disabled by security policy of the host."
+        "Setting the page metadata (title & favicon) is disabled in line with the platform security policy."
       )
       expect(mockHandleFavicon).not.toHaveBeenCalled()
     })
@@ -1058,7 +1058,7 @@ describe("App.handlePageConfigChanged", () => {
         new PageConfig({ favicon: "favIcon" })
       )
       expect(logErrorSpy).toHaveBeenLastCalledWith(
-        "Setting the page favicon is disabled by security policy of the host."
+        "Setting the page favicon is disabled in line with the platform security policy."
       )
     })
   })
@@ -1177,7 +1177,7 @@ describe("App.handlePageInfoChanged", () => {
         })
       )
       expect(logErrorSpy).toHaveBeenLastCalledWith(
-        "Setting query parameters is disabled by security policy of the host."
+        "Setting query parameters is disabled in line with the platform security policy."
       )
       expect(mockSendMessageToHost).not.toHaveBeenCalledWith({
         type: "SET_QUERY_PARAM",

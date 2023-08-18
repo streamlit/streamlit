@@ -153,7 +153,7 @@ describe("st.iframe", () => {
         },
       })
     ).toThrow(
-      "The usage of iframes was removed in line with the platform security policy."
+      "The usage of iframes was disabled in line with the platform security policy."
     )
     consoleErrorFn.mockRestore()
   })

@@ -134,7 +134,7 @@ describe("ImageList Element", () => {
         }
       )
     ).toThrow(
-      "Usage of SVG images was removed in line with the platform security policy."
+      "Usage of SVG images was disabled in line with the platform security policy."
     )
     consoleErrorFn.mockRestore()
   })
