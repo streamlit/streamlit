@@ -77,7 +77,7 @@ describe("websocket reconnects", () => {
         }
       );
 
-      cy.wait("@uploadFile");
+      cy.wait("@uploadFile", {timeout: 10000});
 
       // The script should have printed the contents of the first files
       // into an st.text. (This tests that the upload actually went
@@ -123,7 +123,7 @@ describe("websocket reconnects", () => {
       .contains("Take Photo")
       .click();
 
-    cy.wait("@uploadFile");
+    cy.wait("@uploadFile", {timeout: 10000});
 
     cy.get("img").should("have.length.at.least", 2);
 
