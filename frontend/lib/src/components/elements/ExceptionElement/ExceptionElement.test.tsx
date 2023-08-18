@@ -15,10 +15,12 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
 
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { Exception as ExceptionProto } from "@streamlit/lib/src/proto"
+
 import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
 
 const getProps = (
@@ -35,37 +37,33 @@ const getProps = (
 })
 
 describe("ExceptionElement Element", () => {
-  const props = getProps()
-  const wrapper = mount(<ExceptionElement {...props} />)
-
   it("renders without crashing", () => {
-    expect(wrapper.html()).toMatchSnapshot()
+    render(<ExceptionElement {...getProps()} />)
+
+    const exceptionContainer = screen.getByTestId("stException")
+    expect(exceptionContainer).toBeInTheDocument()
   })
 
   it("should render the complete stack", () => {
-    expect(wrapper.find("StyledStackTraceTitle").text()).toBe("Traceback:")
-    const traceRows = wrapper.find("StyledStackTraceRow")
-    expect(traceRows.length).toBe(3)
+    render(<ExceptionElement {...getProps()} />)
 
-    traceRows.forEach((val, id) => {
-      expect(val.prop("children")).toBe(`step ${id + 1}`)
+    expect(screen.getByText("Traceback:")).toBeInTheDocument()
+
+    const traceRows = screen.getAllByTestId("stExceptionTraceRow")
+    traceRows.forEach((row, index) => {
+      expect(row).toHaveTextContent(`step ${index + 1}`)
     })
   })
 
   it("should render markdown when it has messageIsMarkdown", () => {
-    const props = getProps({
-      messageIsMarkdown: true,
-    })
-    const wrapper = mount(<ExceptionElement {...props} />)
+    render(<ExceptionElement {...getProps({ messageIsMarkdown: true })} />)
 
-    expect(wrapper.find(StreamlitMarkdown).length).toBe(1)
-    expect(wrapper.find(StreamlitMarkdown).props()).toMatchSnapshot()
+    expect(screen.getByTestId("stMarkdownContainer")).toBeInTheDocument()
   })
 
   it("should render if there's no message", () => {
-    const props = getProps({ message: "" })
-    const wrapper = mount(<ExceptionElement {...props} />)
+    render(<ExceptionElement {...getProps({ message: "" })} />)
 
-    expect(wrapper.find("div .message").text()).toBe("RuntimeError")
+    expect(screen.getByText("RuntimeError")).toBeInTheDocument()
   })
 })
