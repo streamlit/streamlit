@@ -153,7 +153,7 @@ describe("st.iframe", () => {
         },
       })
     ).toThrow(
-      "The component iframe was removed in line with the platform security policy"
+      "The component `components.iframe` was removed in line with the platform security policy"
     )
     consoleErrorFn.mockRestore()
   })

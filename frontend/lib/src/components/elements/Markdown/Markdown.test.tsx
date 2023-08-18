@@ -67,7 +67,7 @@ describe("Markdown element", () => {
         },
       })
     ).toThrow(
-      "The component st.markdown was removed in line with the platform security policy."
+      "Usage of markdown was removed in line with the platform security policy."
     )
     consoleErrorFn.mockRestore()
   })

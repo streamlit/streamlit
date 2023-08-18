@@ -50,7 +50,7 @@ export function BokehChart({
   const { hostConfig } = React.useContext(LibContext)
   if (hostConfig.disableUnsafeHtmlExecution) {
     throw new HostConfigViolation(
-      "The component st.bokehChart was removed in line with the platform security policy."
+      "The component `st.bokehChart` was removed in line with the platform security policy."
     )
   }
 
