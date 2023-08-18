@@ -78,6 +78,9 @@ SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
 if not os.getenv("SNOWPARK_CONDA_BUILD"):
     INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
 
+# stlite: See https://github.com/whitphx/stlite/issues/509#issuecomment-1657957887
+INSTALL_REQUIRES.extend(["fastparquet"])
+
 EXTRA_REQUIRES = {"snowflake": ["snowflake-snowpark-python; python_version=='3.8'"]}
 
 

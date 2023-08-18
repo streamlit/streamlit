@@ -36,6 +36,24 @@ import numbro from "numbro"
 import { IArrow, Styler as StylerProto } from "src/lib/proto"
 import { notNullOrUndefined } from "src/lib/util/utils"
 
+import type { readParquet as readParquetType } from "parquet-wasm"
+
+// stlite: Use parquet to bypass the Arrow implementation which is unavailable in the Wasm Python environment.
+// See https://github.com/whitphx/stlite/issues/509#issuecomment-1657957887
+// NOTE: Async import is necessary for the `parquet-wasm` package to work.
+// If it's imported statically, the following error will be thrown when `readParquet` is called:
+// `TypeError: Cannot read properties of undefined (reading '__wbindgen_add_to_stack_pointer')`
+// Ref: https://github.com/kylebarron/parquet-wasm/issues/27
+// HACK: Strictly speaking, there is no guarantee that the `readParquet` function
+// async-imported in the following code will be ready when it's called in the `Quiver` class's constructor,
+// but it seems to work fine in practice.
+//
+let readParquet: typeof readParquetType | undefined = undefined
+;(async function () {
+  const parquet = await import("parquet-wasm")
+  readParquet = parquet.readParquet
+})()
+
 /** Data types used by ArrowJS. */
 export type DataType =
   | null
@@ -384,7 +402,9 @@ export class Quiver {
   private readonly _styler?: Styler
 
   constructor(element: IArrow) {
-    const table = tableFromIPC(element.data)
+    const table = tableFromIPC(
+      element.data ? readParquet!(element.data) : element.data
+    )
     const schema = Quiver.parseSchema(table)
     const rawColumns = Quiver.getRawColumns(schema)
     const fields = Quiver.parseFields(table.schema)

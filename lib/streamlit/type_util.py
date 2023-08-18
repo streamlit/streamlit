@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import contextlib
+import io
 import re
 import types
 from enum import Enum, auto
@@ -744,8 +745,22 @@ def fix_arrow_incompatible_column_types(
     return df_copy if df_copy is not None else df
 
 
+# `pd.DataFrame.to_parquet()` always closes the file handle,
+# but we need to keep it open to get the written data.
+# So we use this custom class to prevent the closing.
+# https://github.com/dask/fastparquet/issues/868
+class UnclosableBytesIO(io.BytesIO):
+    def close(self):
+        pass
+
+    def really_close(self):
+        super().close()
+
+
 def data_frame_to_bytes(df: DataFrame) -> bytes:
-    """Serialize pandas.DataFrame to bytes using Apache Arrow.
+    """Serialize pandas.DataFrame to bytes using Apache ~~Arrow~~ Parquet.
+    This function is customized from the original one to use Parquet instead of Arrow
+    for stlite. See https://github.com/whitphx/stlite/issues/509
 
     Parameters
     ----------
@@ -753,17 +768,23 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
         A dataframe to convert.
 
     """
+    buf = UnclosableBytesIO()
+
     try:
-        table = pa.Table.from_pandas(df)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
+        df.to_parquet(buf)
+    except ValueError as ex:
         _LOGGER.info(
-            "Serialization of dataframe to Arrow table was unsuccessful due to: %s. "
+            "Serialization of dataframe to Parquet table was unsuccessful due to: %s. "
             "Applying automatic fixes for column types to make the dataframe Arrow-compatible.",
             ex,
         )
         df = fix_arrow_incompatible_column_types(df)
-        table = pa.Table.from_pandas(df)
-    return pyarrow_table_to_bytes(table)
+        df.to_parquet(buf)
+
+    data = buf.getvalue()
+    buf.really_close()
+
+    return data
 
 
 def bytes_to_data_frame(source: bytes) -> DataFrame:
