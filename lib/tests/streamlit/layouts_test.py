@@ -146,6 +146,85 @@ class ExpanderTest(DeltaGeneratorTestCase):
         self.assertEqual(expander_block.add_block.expandable.expanded, False)
 
 
+class StatusContainerTest(DeltaGeneratorTestCase):
+    def test_label_required(self):
+        """Test that label is required"""
+        with self.assertRaises(TypeError):
+            st.status()
+
+    def test_throws_error_on_wrong_state(self):
+        """Test that it throws an error on unknown state."""
+        with self.assertRaises(StreamlitAPIException):
+            st.status("label", state="unknown")
+
+    def test_just_label(self):
+        """Test that it correctly applies label param."""
+        st.status("label")
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "label")
+        self.assertEqual(status_block.add_block.expandable.expanded, False)
+        self.assertEqual(status_block.add_block.expandable.icon, "spinner")
+
+    def test_expanded_param(self):
+        """Test that it correctly applies expanded param."""
+        st.status("label", expanded=True)
+
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "label")
+        self.assertEqual(status_block.add_block.expandable.expanded, True)
+        self.assertEqual(status_block.add_block.expandable.icon, "spinner")
+
+    def test_state_param_complete(self):
+        """Test that it correctly applies state param with `complete`."""
+        st.status("label", state="complete")
+
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "label")
+        self.assertEqual(status_block.add_block.expandable.expanded, False)
+        self.assertEqual(status_block.add_block.expandable.icon, "check")
+
+    def test_state_param_error(self):
+        """Test that it correctly applies state param with `error`."""
+        st.status("label", state="error")
+
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "label")
+        self.assertEqual(status_block.add_block.expandable.expanded, False)
+        self.assertEqual(status_block.add_block.expandable.icon, "error")
+
+    def test_usage_with_context_manager(self):
+        """Test that it correctly switches to complete state when used as context manager."""
+        status = st.status("label")
+
+        with status:
+            pass
+
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "label")
+        self.assertEqual(status_block.add_block.expandable.expanded, False)
+        self.assertEqual(status_block.add_block.expandable.icon, "check")
+
+    def test_mutation_via_update(self):
+        """Test that update can be used to change the label, state and expand."""
+        status = st.status("label", expanded=False)
+        status.update(label="new label", state="error", expanded=True)
+
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "new label")
+        self.assertEqual(status_block.add_block.expandable.expanded, True)
+        self.assertEqual(status_block.add_block.expandable.icon, "error")
+
+    def test_mutation_via_update_in_cm(self):
+        """Test that update can be used in context manager to change the label, state and expand."""
+        with st.status("label", expanded=False) as status:
+            status.update(label="new label", state="error", expanded=True)
+
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "new label")
+        self.assertEqual(status_block.add_block.expandable.expanded, True)
+        self.assertEqual(status_block.add_block.expandable.icon, "error")
+
+
 class TabsTest(DeltaGeneratorTestCase):
     def test_tab_required(self):
         """Test that at least one tab is required."""

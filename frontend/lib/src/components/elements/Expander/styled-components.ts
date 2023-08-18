@@ -16,22 +16,31 @@
 
 import styled from "@emotion/styled"
 
-export const StyledExpandableContainer = styled.div(({ theme }) => ({
-  ".streamlit-expanderHeader:hover svg": {
-    fill: theme.colors.primary,
-  },
-  ".streamlit-expander.empty": {
-    "div[aria-expanded='true'] + .streamlit-expanderContent": {
-      color: theme.colors.darkGray,
-      fontStyle: "italic",
-      fontSize: theme.fontSizes.sm,
-      textAlign: "center",
-      paddingBottom: theme.spacing.lg,
-      paddingTop: theme.spacing.lg,
-
-      "&:before": {
-        content: '"empty"',
-      },
-    },
-  },
+export const StyledIconContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: theme.spacing.sm,
+  alignItems: "center",
 }))
+
+export interface StyledExpandableContainerProps {
+  empty: boolean
+  disabled: boolean
+}
+
+export const StyledExpandableContainer =
+  styled.div<StyledExpandableContainerProps>(({ theme, empty, disabled }) => {
+    if (empty) {
+      // Don't apply hover styling if empty:
+      return {
+        ".streamlit-expanderHeader:hover": {
+          color: disabled ? theme.colors.disabled : theme.colors.bodyText,
+        },
+      }
+    }
+
+    return {
+      ".streamlit-expanderHeader:hover svg": {
+        fill: theme.colors.primary,
+      },
+    }
+  })

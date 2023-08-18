@@ -31,15 +31,18 @@ the API *from LangChain itself*.
 
 from __future__ import annotations
 
+import time
 from enum import Enum
-from typing import Any, Dict, List, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Union
 
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.schema import AgentAction, AgentFinish, LLMResult
 
-from streamlit.delta_generator import DeltaGenerator
-from streamlit.external.langchain.mutable_expander import MutableExpander
 from streamlit.runtime.metrics_util import gather_metrics
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.mutable_status_container import StatusContainer
 
 
 def _convert_newlines(text: str) -> str:
@@ -48,11 +51,6 @@ def _convert_newlines(text: str) -> str:
     """
     return text.replace("\n", "  \n")
 
-
-CHECKMARK_EMOJI = "✅"
-THINKING_EMOJI = "🤔"
-HISTORY_EMOJI = "📚"
-EXCEPTION_EMOJI = "⚠️"
 
 # The maximum length of the "input_str" portion of a tool label.
 # Strings that are longer than this will be truncated with "..."
@@ -66,6 +64,8 @@ class LLMThoughtState(Enum):
     RUNNING_TOOL = "RUNNING_TOOL"
     # We have results from the tool.
     COMPLETE = "COMPLETE"
+    # The LLM completed with an error.
+    ERROR = "ERROR"
 
 
 class ToolRecord(NamedTuple):
@@ -84,7 +84,7 @@ class LLMThoughtLabeler:
         """Return the markdown label for a new LLMThought that doesn't have
         an associated tool yet.
         """
-        return f"{THINKING_EMOJI} **Thinking...**"
+        return "Thinking..."
 
     def get_tool_label(self, tool: ToolRecord, is_complete: bool) -> str:
         """Return the label for an LLMThought that has an associated
@@ -104,32 +104,23 @@ class LLMThoughtLabeler:
         The markdown label for the thought's container.
 
         """
-        input = tool.input_str
+        input_str = tool.input_str
         name = tool.name
-        emoji = CHECKMARK_EMOJI if is_complete else THINKING_EMOJI
         if name == "_Exception":
-            emoji = EXCEPTION_EMOJI
             name = "Parsing error"
-        input_str_len = min(MAX_TOOL_INPUT_STR_LENGTH, len(input))
-        input = input[0:input_str_len]
+        input_str_len = min(MAX_TOOL_INPUT_STR_LENGTH, len(input_str))
+        input_str = input_str[:input_str_len]
         if len(tool.input_str) > input_str_len:
-            input = input + "..."
-        input = input.replace("\n", " ")
-        label = f"{emoji} **{name}:** {input}"
-        return label
-
-    def get_history_label(self) -> str:
-        """Return a markdown label for the special 'history' container
-        that contains overflow thoughts.
-        """
-        return f"{HISTORY_EMOJI} **History**"
+            input_str = input_str + "..."
+        input_str = input_str.replace("\n", " ")
+        return f"**{name}:** {input_str}"
 
     def get_final_agent_thought_label(self) -> str:
         """Return the markdown label for the agent's final thought -
         the "Now I have the answer" thought, that doesn't involve
         a tool.
         """
-        return f"{CHECKMARK_EMOJI} **Complete!**"
+        return "**Complete!**"
 
 
 class LLMThought:
@@ -147,20 +138,19 @@ class LLMThought:
         expanded: bool,
         collapse_on_complete: bool,
     ):
-        self._container = MutableExpander(
-            parent_container=parent_container,
-            label=labeler.get_initial_label(),
-            expanded=expanded,
+        self._container = parent_container.status(
+            labeler.get_initial_label(), expanded=expanded
         )
+
         self._state = LLMThoughtState.THINKING
         self._llm_token_stream = ""
-        self._llm_token_writer_idx: Optional[int] = None
+        self._llm_token_stream_placeholder: Optional[DeltaGenerator] = None
         self._last_tool: Optional[ToolRecord] = None
         self._collapse_on_complete = collapse_on_complete
         self._labeler = labeler
 
     @property
-    def container(self) -> MutableExpander:
+    def container(self) -> "StatusContainer":
         """The container we're writing into."""
         return self._container
 
@@ -170,8 +160,11 @@ class LLMThought:
         return self._last_tool
 
     def _reset_llm_token_stream(self) -> None:
+        if self._llm_token_stream_placeholder is not None:
+            self._llm_token_stream_placeholder.markdown(self._llm_token_stream)
+
         self._llm_token_stream = ""
-        self._llm_token_writer_idx = None
+        self._llm_token_stream_placeholder = None
 
     def on_llm_start(self, serialized: Dict[str, Any], prompts: List[str]) -> None:
         self._reset_llm_token_stream()
@@ -179,9 +172,9 @@ class LLMThought:
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         # This is only called when the LLM is initialized with `streaming=True`
         self._llm_token_stream += _convert_newlines(token)
-        self._llm_token_writer_idx = self._container.markdown(
-            self._llm_token_stream, index=self._llm_token_writer_idx
-        )
+        if self._llm_token_stream_placeholder is None:
+            self._llm_token_stream_placeholder = self._container.empty()
+        self._llm_token_stream_placeholder.markdown(self._llm_token_stream + "▕")
 
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         # `response` is the concatenation of all the tokens received by the LLM.
@@ -194,6 +187,7 @@ class LLMThought:
     ) -> None:
         self._container.markdown("**LLM encountered an error...**")
         self._container.exception(error)
+        self._state = LLMThoughtState.ERROR
 
     def on_tool_start(
         self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
@@ -204,7 +198,8 @@ class LLMThought:
         tool_name = serialized["name"]
         self._last_tool = ToolRecord(name=tool_name, input_str=input_str)
         self._container.update(
-            new_label=self._labeler.get_tool_label(self._last_tool, is_complete=False)
+            label=self._labeler.get_tool_label(self._last_tool, is_complete=False),
+            state="running",
         )
 
     def on_tool_end(
@@ -215,13 +210,14 @@ class LLMThought:
         llm_prefix: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
-        self._container.markdown(f"**{output}**")
+        self._container.markdown(output)
 
     def on_tool_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
     ) -> None:
         self._container.markdown("**Tool encountered an error...**")
         self._container.exception(error)
+        self._container.update(state="error")
 
     def on_agent_action(
         self, action: AgentAction, color: Optional[str] = None, **kwargs: Any
@@ -241,15 +237,21 @@ class LLMThought:
             final_label = self._labeler.get_tool_label(
                 self._last_tool, is_complete=True
             )
-        self._state = LLMThoughtState.COMPLETE
-        if self._collapse_on_complete:
-            self._container.update(new_label=final_label, new_expanded=False)
-        else:
-            self._container.update(new_label=final_label)
 
-    def clear(self) -> None:
-        """Remove the thought from the screen. A cleared thought can't be reused."""
-        self._container.clear()
+        if self._last_tool and self._last_tool.name == "_Exception":
+            self._state = LLMThoughtState.ERROR
+        elif self._state != LLMThoughtState.ERROR:
+            self._state = LLMThoughtState.COMPLETE
+
+        if self._collapse_on_complete:
+            # Add a quick delay to show the user the final output before we collapse
+            time.sleep(0.25)
+
+        self._container.update(
+            label=final_label,
+            expanded=False if self._collapse_on_complete else None,
+            state="error" if self._state == LLMThoughtState.ERROR else "complete",
+        )
 
 
 class StreamlitCallbackHandler(BaseCallbackHandler):
@@ -259,8 +261,8 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         parent_container: DeltaGenerator,
         *,
         max_thought_containers: int = 4,
-        expand_new_thoughts: bool = True,
-        collapse_completed_thoughts: bool = True,
+        expand_new_thoughts: bool = False,
+        collapse_completed_thoughts: bool = False,
         thought_labeler: Optional[LLMThoughtLabeler] = None,
     ):
         """Construct a new StreamlitCallbackHandler. This CallbackHandler is geared
@@ -269,26 +271,35 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
 
         Parameters
         ----------
+
         parent_container
             The `st.container` that will contain all the Streamlit elements that the
             Handler creates.
+
         max_thought_containers
+
+            .. note::
+                This parameter is deprecated and is ignored in the latest version of
+                the callback handler.
+
             The max number of completed LLM thought containers to show at once. When
             this threshold is reached, a new thought will cause the oldest thoughts to
             be collapsed into a "History" expander. Defaults to 4.
+
         expand_new_thoughts
             Each LLM "thought" gets its own `st.expander`. This param controls whether
-            that expander is expanded by default. Defaults to True.
+            that expander is expanded by default. Defaults to False.
+
         collapse_completed_thoughts
             If True, LLM thought expanders will be collapsed when completed.
-            Defaults to True.
+            Defaults to False.
+
         thought_labeler
             An optional custom LLMThoughtLabeler instance. If unspecified, the handler
             will use the default thought labeling logic. Defaults to None.
         """
         self._parent_container = parent_container
         self._history_parent = parent_container.container()
-        self._history_container: Optional[MutableExpander] = None
         self._current_thought: Optional[LLMThought] = None
         self._completed_thoughts: List[LLMThought] = []
         self._max_thought_containers = max(max_thought_containers, 1)
@@ -310,19 +321,6 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
             return self._completed_thoughts[len(self._completed_thoughts) - 1]
         return None
 
-    @property
-    def _num_thought_containers(self) -> int:
-        """The number of 'thought containers' we're currently showing: the
-        number of completed thought containers, the history container (if it exists),
-        and the current thought container (if it exists).
-        """
-        count = len(self._completed_thoughts)
-        if self._history_container is not None:
-            count += 1
-        if self._current_thought is not None:
-            count += 1
-        return count
-
     def _complete_current_thought(self, final_label: Optional[str] = None) -> None:
         """Complete the current thought, optionally assigning it a new label.
         Add it to our _completed_thoughts list.
@@ -331,30 +329,6 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         thought.complete(final_label)
         self._completed_thoughts.append(thought)
         self._current_thought = None
-
-    def _prune_old_thought_containers(self) -> None:
-        """If we have too many thoughts onscreen, move older thoughts to the
-        'history container.'
-        """
-        while (
-            self._num_thought_containers > self._max_thought_containers
-            and len(self._completed_thoughts) > 0
-        ):
-            # Create our history container if it doesn't exist, and if
-            # max_thought_containers is > 1. (if max_thought_containers is 1, we don't
-            # have room to show history.)
-            if self._history_container is None and self._max_thought_containers > 1:
-                self._history_container = MutableExpander(
-                    self._history_parent,
-                    label=self._thought_labeler.get_history_label(),
-                    expanded=False,
-                )
-
-            oldest_thought = self._completed_thoughts.pop(0)
-            if self._history_container is not None:
-                self._history_container.markdown(oldest_thought.container.label)
-                self._history_container.append_copy(oldest_thought.container)
-            oldest_thought.clear()
 
     def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
@@ -374,23 +348,19 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         self._require_current_thought().on_llm_new_token(token, **kwargs)
-        self._prune_old_thought_containers()
 
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         self._require_current_thought().on_llm_end(response, **kwargs)
-        self._prune_old_thought_containers()
 
     def on_llm_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
     ) -> None:
         self._require_current_thought().on_llm_error(error, **kwargs)
-        self._prune_old_thought_containers()
 
     def on_tool_start(
         self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
     ) -> None:
         self._require_current_thought().on_tool_start(serialized, input_str, **kwargs)
-        self._prune_old_thought_containers()
 
     def on_tool_end(
         self,
@@ -409,13 +379,11 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
     ) -> None:
         self._require_current_thought().on_tool_error(error, **kwargs)
-        self._prune_old_thought_containers()
 
     def on_agent_action(
         self, action: AgentAction, color: Optional[str] = None, **kwargs: Any
     ) -> Any:
         self._require_current_thought().on_agent_action(action, color, **kwargs)
-        self._prune_old_thought_containers()
 
     def on_agent_finish(
         self, finish: AgentFinish, color: Optional[str] = None, **kwargs: Any

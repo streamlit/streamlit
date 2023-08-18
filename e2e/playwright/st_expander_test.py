@@ -70,3 +70,8 @@ def test_expander_collapses_and_expands(app: Page):
     expander_header.click()
     toggle = expander_header.locator("svg").first
     expect(toggle).to_be_visible()
+
+
+def test_empty_expander_not_rendered(app: Page):
+    """Test that an empty expander is not rendered."""
+    expect(app.get_by_text("Empty expander")).not_to_be_attached()

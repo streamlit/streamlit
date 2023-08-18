@@ -15,4 +15,4 @@
  */
 
 export { default, EmojiIcon } from "./Icon"
-export { StyledIcon } from "./styled-components"
+export { StyledIcon, StyledSpinnerIcon } from "./styled-components"

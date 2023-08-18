@@ -54,13 +54,7 @@ interface BlockPropsWithWidth extends BaseBlockProps {
 const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const { node } = props
 
-  // Allow columns and chat messages to create the specified space regardless of empty state
-  // TODO: Maybe we can simplify this to: node.isEmpty && !node.deltaBlock.allowEmpty?
-  if (
-    node.isEmpty &&
-    !node.deltaBlock.column &&
-    !node.deltaBlock.chatMessage
-  ) {
+  if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return <></>
   }
 

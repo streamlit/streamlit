@@ -143,6 +143,7 @@ class RunWarningTest(unittest.TestCase):
                 "snow",
                 "subheader",
                 "success",
+                "status",
                 "table",
                 "tabs",
                 "text",
