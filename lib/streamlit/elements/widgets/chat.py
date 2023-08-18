@@ -134,8 +134,8 @@ class ChatMixin:
         Parameters
         ----------
         name : "user", "assistant", "ai", "human", or str
-            The name of the message author. Can be “user”, “assistant”, “ai”, or “human”
-            to enable preset styling and avatars.
+            The name of the message author. Can be "human"/"user" or
+            "ai"/"assistant" to enable preset styling and avatars.
 
             Currently, the name is not shown in the UI but is only set as an
             accessibility label. For accessibility reasons, you should not use
