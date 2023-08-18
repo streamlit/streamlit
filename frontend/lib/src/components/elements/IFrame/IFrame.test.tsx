@@ -154,7 +154,7 @@ describe("st.iframe", () => {
       })
     )
       .toThrow
-      // "Usage of iframes is disabled by the security policy of the host."
+      // "Usage of iframes was removed in line with the platform security policy."
       ()
     consoleErrorFn.mockRestore()
   })

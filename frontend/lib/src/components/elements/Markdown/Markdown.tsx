@@ -22,7 +22,7 @@ import {
   InlineTooltipIcon,
   StyledLabelHelpWrapper,
 } from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { HostConfigViolation } from "@streamlit/lib/src/hostComm/types"
+import { PlatformSecurityViolation } from "@streamlit/lib/src/hostComm/types"
 
 export interface MarkdownProps {
   width: number
@@ -39,8 +39,8 @@ export default function Markdown({
 }: MarkdownProps): ReactElement {
   const { hostConfig } = React.useContext(LibContext)
   if (hostConfig.disableUnsafeHtmlExecution && element.allowHtml) {
-    throw new HostConfigViolation(
-      "Running unsafe HTML is disabled by the security policy of the host."
+    throw new PlatformSecurityViolation(
+      "Running unsafe HTML was removed in line with the platform security policy."
     )
   }
 

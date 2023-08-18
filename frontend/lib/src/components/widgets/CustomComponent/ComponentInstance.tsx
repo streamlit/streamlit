@@ -43,7 +43,7 @@ import {
   COMPONENT_DEVELOPER_URL,
 } from "@streamlit/lib/src/urls"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import { HostConfigViolation } from "@streamlit/lib/src/hostComm/types"
+import { PlatformSecurityViolation } from "@streamlit/lib/src/hostComm/types"
 
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
@@ -354,8 +354,8 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
   public render(): ReactNode {
     const { hostConfig } = this.context
     if (hostConfig.disableIframes) {
-      throw new HostConfigViolation(
-        "Usage of custom components is disabled by the security policy of the host."
+      throw new PlatformSecurityViolation(
+        "Usage of custom components was removed in line with the platform security policy."
       )
     }
 

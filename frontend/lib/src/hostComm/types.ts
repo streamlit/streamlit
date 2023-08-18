@@ -171,4 +171,4 @@ export type IHostConfigResponse = HostConfig & {
   useExternalAuthToken?: boolean
 }
 
-export class HostConfigViolation extends Error {}
+export class PlatformSecurityViolation extends Error {}
