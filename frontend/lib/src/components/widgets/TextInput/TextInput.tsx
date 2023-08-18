@@ -101,14 +101,23 @@ class TextInput extends React.PureComponent<Props, State> {
     })
   }
 
-  /** Commit state.value to the WidgetStateManager. */
-  private commitWidgetValue = (source: Source): void => {
+  /**
+   * Commits the current state value to the WidgetStateManager.
+   *
+   * @param source - Whether or not from the UI
+   * @param updateState - Optional flag to determine if the state should be updated
+   *                      to reflect that the value is no longer 'dirty' or modified.
+   *                      By default, this is true, meaning the state WILL be updated.
+   */
+  private commitWidgetValue = (source: Source, updateState = true): void => {
     this.props.widgetMgr.setStringValue(
       this.props.element,
       this.state.value,
       source
     )
-    this.setState({ dirty: false })
+    if (updateState) {
+      this.setState({ dirty: false })
+    }
   }
 
   /**
@@ -141,10 +150,23 @@ class TextInput extends React.PureComponent<Props, State> {
       return
     }
 
+    // we immediately update its widgetValue on text changes in forms
+    // see here for why: https://github.com/streamlit/streamlit/issues/7101
+    // The widgetValue won't be passed to the Python script until the form
+    // is submitted, so this won't cause the script to re-run.
+    if (isInForm(this.props.element)) {
+      // make sure dirty is true so that enter to submit form text shows
+      this.setState({ dirty: true, value }, () => {
+        this.commitWidgetValue({ fromUi: true }, false)
+      })
+    }
     // If the TextInput is *not* part of a form, we mark it dirty but don't
     // update its value in the WidgetMgr. This means that individual keypresses
     // won't trigger a script re-run.
-    this.setState({ dirty: true, value })
+    else {
+      // make sure dirty is true so that enter to apply text shows
+      this.setState({ dirty: true, value })
+    }
   }
 
   private onKeyPress = (

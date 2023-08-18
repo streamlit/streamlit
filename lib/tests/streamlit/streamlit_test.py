@@ -114,6 +114,7 @@ class StreamlitTest(unittest.TestCase):
                 "snow",
                 "subheader",
                 "success",
+                "status",
                 "table",
                 "text",
                 "text_area",

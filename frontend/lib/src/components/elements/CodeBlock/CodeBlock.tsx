@@ -28,5 +28,13 @@ export interface CodeBlockProps {
 export default function CodeBlock({
   children,
 }: Record<any, any>): ReactElement {
-  return <StyledCodeBlock className="stCodeBlock">{children}</StyledCodeBlock>
+  return (
+    <StyledCodeBlock
+      className="stCodeBlock"
+      data-testid="stCodeBlock"
+      isMarkdown={true}
+    >
+      {children}
+    </StyledCodeBlock>
+  )
 }

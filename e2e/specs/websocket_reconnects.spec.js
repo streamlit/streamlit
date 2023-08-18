@@ -123,7 +123,7 @@ describe("websocket reconnects", () => {
       .contains("Take Photo")
       .click();
 
-    cy.wait("@uploadFile");
+    cy.wait("@uploadFile", { timeout });
 
     cy.get("img").should("have.length.at.least", 2);
 
