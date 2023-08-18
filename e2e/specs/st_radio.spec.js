@@ -22,7 +22,7 @@ describe("st.radio", () => {
   });
 
   it("shows widget correctly", () => {
-    cy.get(".stRadio").should("have.length", 11);
+    cy.get(".stRadio").should("have.length", 13);
 
     cy.get(".stRadio").each((el, idx) => {
       return cy.wrap(el).matchThemedSnapshots("radio" + idx);
@@ -96,9 +96,28 @@ describe("st.radio", () => {
         "value 7: female" +
         "value 8: female" +
         "value 9: bold text" +
-        "value 10: male" +
+        "value 10: A" +
+        "value 11: yes" +
+        "value 12: male" +
         "radio changed: False"
     );
+  });
+
+  it("has correct caption values", () => {
+    const captions = [ "bold text",
+      "italics text",
+      "strikethrough text",
+      "shortcode: 😊",
+      "link text",
+      "code text",
+      "red blue green violet orange",
+      "Opt in",
+      "\u00a0",
+      "Opt out",
+    ]
+    captions.forEach((expected, idx) => {
+      cy.getIndexed("[data-testid='stCaptionContainer']", idx).should('contain.text', expected)
+    })
   });
 
   it("formats display values", () => {
@@ -141,13 +160,15 @@ describe("st.radio", () => {
         "value 7: male" +
         "value 8: male" +
         "value 9: red blue green violet orange" +
-        "value 10: male" +
+        "value 10: G" +
+        "value 11: no" +
+        "value 12: male" +
         "radio changed: False"
     );
   });
 
   it("calls callback if one is registered", () => {
-    cy.getIndexed(".stRadio", 9).then(el => {
+    cy.getIndexed(".stRadio", 11).then(el => {
       return cy
         .wrap(el)
         .find("input")
@@ -166,7 +187,9 @@ describe("st.radio", () => {
         "value 7: female" +
         "value 8: female" +
         "value 9: bold text" +
-        "value 10: female" +
+        "value 10: A" +
+        "value 11: yes" +
+        "value 12: female" +
         "radio changed: True"
     );
   });

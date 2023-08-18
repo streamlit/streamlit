@@ -88,6 +88,7 @@ class RadioMixin:
         *,  # keyword-only args:
         disabled: bool = False,
         horizontal: bool = False,
+        captions: Optional[Sequence[str]] = None,
         label_visibility: LabelVisibility = "visible",
     ) -> Optional[T]:
         r"""Display a radio button widget.
@@ -151,7 +152,9 @@ class RadioMixin:
             An optional boolean, which orients the radio group horizontally.
             The default is false (vertical buttons). This argument can only
             be supplied by keyword.
-
+        captions : iterable of str or None
+            A list of captions to show below each radio button. If None (default),
+            no captions are shown.
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
@@ -194,8 +197,9 @@ class RadioMixin:
             kwargs=kwargs,
             disabled=disabled,
             horizontal=horizontal,
-            ctx=ctx,
+            captions=captions,
             label_visibility=label_visibility,
+            ctx=ctx,
         )
 
     def _radio(
@@ -213,6 +217,7 @@ class RadioMixin:
         disabled: bool = False,
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
+        captions: Optional[Sequence[str]] = None,
         ctx: Optional[ScriptRunContext],
     ) -> Optional[T]:
         key = to_key(key)
@@ -230,6 +235,7 @@ class RadioMixin:
             key=key,
             help=help,
             horizontal=horizontal,
+            captions=captions,
             form_id=current_form_id(self.dg),
         )
 
@@ -243,6 +249,16 @@ class RadioMixin:
                 "Radio index must be between 0 and length of options"
             )
 
+        def handle_captions(caption: Optional[str]) -> str:
+            if caption is None:
+                return ""
+            elif isinstance(caption, str):
+                return caption
+            else:
+                raise StreamlitAPIException(
+                    f"Radio captions must be strings. Passed type: {type(caption).__name__}"
+                )
+
         radio_proto = RadioProto()
         radio_proto.id = id
         radio_proto.label = label
@@ -254,6 +270,9 @@ class RadioMixin:
         radio_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
+
+        if captions is not None:
+            radio_proto.captions[:] = map(handle_captions, captions)
 
         if help is not None:
             radio_proto.help = dedent(help)

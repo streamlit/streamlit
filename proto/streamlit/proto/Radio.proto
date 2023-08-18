@@ -30,4 +30,5 @@ message Radio {
   bool disabled = 9;
   bool horizontal = 10;
   LabelVisibilityMessage label_visibility = 11;
+  repeated string captions = 12;
 }

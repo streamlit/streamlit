@@ -30,6 +30,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   value: 0,
   onChange: () => {},
   options: ["a", "b", "c"],
+  captions: [],
   label: "Label",
   theme: mockTheme.emotion,
   ...props,
@@ -120,6 +121,34 @@ describe("Radio widget", () => {
 
     props.options.forEach(option => {
       expect(screen.getByText(option)).toBeInTheDocument()
+    })
+  })
+
+  it("doesn't render captions when there are none", () => {
+    const props = getProps()
+    render(<Radio {...props} />)
+
+    expect(screen.queryAllByTestId("stCaptionContainer")).toHaveLength(0)
+  })
+
+  it("renders non-blank captions", () => {
+    const props = getProps({ captions: ["caption1", "", "caption2"] })
+    render(<Radio {...props} />)
+
+    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(3)
+
+    expect(screen.getByText("caption1")).toBeInTheDocument()
+    expect(screen.getByText("caption2")).toBeInTheDocument()
+  })
+
+  it("has the correct captions", () => {
+    const props = getProps({ captions: ["caption1", "caption2", "caption3"] })
+    render(<Radio {...props} />)
+
+    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(3)
+
+    props.captions.forEach(caption => {
+      expect(screen.getByText(caption)).toBeInTheDocument()
     })
   })
 

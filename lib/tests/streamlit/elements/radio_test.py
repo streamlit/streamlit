@@ -41,6 +41,7 @@ class RadioTest(DeltaGeneratorTestCase):
         )
         self.assertEqual(c.default, 0)
         self.assertEqual(c.disabled, False)
+        self.assertEqual(c.captions, [])
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -212,3 +213,25 @@ class RadioTest(DeltaGeneratorTestCase):
             "Unsupported label_visibility option 'wrong_value'. Valid values are "
             "'visible', 'hidden' or 'collapsed'.",
         )
+
+    def test_no_captions(self):
+        """Test that it can be called with no captions."""
+        st.radio("the label", ("option1", "option2", "option3"), captions=None)
+
+        c = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.default, 0)
+        self.assertEqual(c.captions, [])
+
+    def test_some_captions(self):
+        """Test that it can be called with some captions."""
+        st.radio(
+            "the label",
+            ("option1", "option2", "option3", "option4"),
+            captions=("first caption", None, "", "last caption"),
+        )
+
+        c = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.default, 0)
+        self.assertEqual(c.captions, ["first caption", "", "", "last caption"])

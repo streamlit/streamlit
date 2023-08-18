@@ -56,13 +56,28 @@ st.write("value 8:", i8)
 i9 = st.radio("radio 9", markdown_options)
 st.write("value 9:", i9)
 
+i10 = st.radio(
+    "radio 10 - captions",
+    ["A", "B", "C", "D", "E", "F", "G"],
+    captions=markdown_options,
+)
+st.write("value 10:", i10)
+
+i11 = st.radio(
+    "radio 11 - horizontal, captions",
+    ["yes", "maybe", "no"],
+    captions=["Opt in", "", "Opt out"],
+    horizontal=True,
+)
+st.write("value 11:", i11)
+
 if runtime.exists():
 
     def on_change():
         st.session_state.radio_changed = True
 
-    st.radio("radio 10", options, 1, key="radio10", on_change=on_change)
-    st.write("value 10:", st.session_state.radio10)
+    st.radio("radio 12", options, 1, key="radio10", on_change=on_change)
+    st.write("value 12:", st.session_state.radio10)
     st.write("radio changed:", "radio_changed" in st.session_state)
 
 st.radio("PySpark radio", pyspark_mocks.DataFrame())  # type: ignore

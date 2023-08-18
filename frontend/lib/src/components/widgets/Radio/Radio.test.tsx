@@ -32,6 +32,7 @@ const getProps = (
     label: "Label",
     default: 0,
     options: ["a", "b", "c"],
+    captions: [],
     ...elementProps,
   }),
   width: 0,
@@ -111,6 +112,31 @@ describe("Radio widget", () => {
     props.element.options.forEach(option => {
       expect(screen.getByText(option)).toBeInTheDocument()
     })
+  })
+
+  it("renders no captions when none passed", () => {
+    const props = getProps()
+    render(<Radio {...props} />)
+
+    expect(screen.queryAllByTestId("stCaptionContainer")).toHaveLength(0)
+  })
+
+  it("has the correct captions", () => {
+    const props = getProps({ captions: ["caption1", "caption2", "caption3"] })
+    render(<Radio {...props} />)
+
+    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(3)
+    props.element.options.forEach(option => {
+      expect(screen.getByText(option)).toBeInTheDocument()
+    })
+  })
+
+  it("renders non-blank captions", () => {
+    const props = getProps({ captions: ["caption1", "", ""] })
+    render(<Radio {...props} />)
+
+    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(3)
+    expect(screen.getByText("caption1")).toBeInTheDocument()
   })
 
   it("shows a message when there are no options to be shown", () => {
