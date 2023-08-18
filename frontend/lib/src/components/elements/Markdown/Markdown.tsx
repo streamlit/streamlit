@@ -40,7 +40,7 @@ export default function Markdown({
   const { hostConfig } = React.useContext(LibContext)
   if (hostConfig.disableUnsafeHtmlExecution && element.allowHtml) {
     throw new HostConfigViolation(
-      "Running unsafe HTML is disabled by the security policy of the host."
+      "The component st.markdown was removed in line with the platform security policy."
     )
   }
 

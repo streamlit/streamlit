@@ -36,7 +36,7 @@ export default function IFrame({
   const { hostConfig } = React.useContext(LibContext)
   if (hostConfig.disableIframes) {
     throw new HostConfigViolation(
-      "Usage of iframes is disabled by the security policy of the host."
+      "The component iframe was removed in line with the platform security policy"
     )
   }
 

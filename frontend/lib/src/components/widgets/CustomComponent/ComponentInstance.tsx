@@ -355,7 +355,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
     const { hostConfig } = this.context
     if (hostConfig.disableIframes) {
       throw new HostConfigViolation(
-        "Usage of custom components is disabled by the security policy of the host."
+        "Custom components was removed in line with the platform security policy"
       )
     }
 

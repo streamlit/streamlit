@@ -610,7 +610,7 @@ describe("ComponentInstance", () => {
             }
           )
         ).toThrow(
-          "Usage of custom components is disabled by the security policy of the host."
+          "Custom components was removed in line with the platform security policy"
         )
         consoleErrorFn.mockRestore()
       })

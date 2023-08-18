@@ -152,10 +152,9 @@ describe("st.iframe", () => {
           disableIframes: true,
         },
       })
+    ).toThrow(
+      "The component iframe was removed in line with the platform security policy"
     )
-      .toThrow
-      // "Usage of iframes is disabled by the security policy of the host."
-      ()
     consoleErrorFn.mockRestore()
   })
 })

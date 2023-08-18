@@ -161,8 +161,7 @@ describe("BokehChart element", () => {
         },
       })
     ).toThrow(
-      "Bokeh chart allows rendering of unsafe HTML and JS. " +
-        "Unsafe script execution is disallowed by the security policy of the host. "
+      "The component st.bokehChart was removed in line with the platform security policy."
     )
     consoleErrorFn.mockRestore()
   })
