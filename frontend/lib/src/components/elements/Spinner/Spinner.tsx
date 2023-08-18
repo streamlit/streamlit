@@ -37,7 +37,7 @@ function Spinner({ width, element }: SpinnerProps): ReactElement {
   const styleProp = { width }
 
   return (
-    <div className="stSpinner" style={styleProp}>
+    <div className="stSpinner" data-testid="stSpinner" style={styleProp}>
       <StyledSpinnerContainer>
         <ThemedStyledSpinner
           $size={theme.iconSizes.twoXL}
