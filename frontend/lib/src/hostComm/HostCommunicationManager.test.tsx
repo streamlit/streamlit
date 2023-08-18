@@ -71,10 +71,10 @@ describe("HostCommunicationManager messaging", () => {
       "sendMessageToHost"
     )
 
-    hostCommunicationMgr.setAllowedOrigins({
-      allowedOrigins: ["https://devel.streamlit.test"],
-      useExternalAuthToken: false,
-    })
+    hostCommunicationMgr.setAllowedOrigins(
+      ["https://devel.streamlit.test"],
+      false
+    )
   })
 
   afterEach(() => {
@@ -82,10 +82,10 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("sets allowedOrigins properly & opens HostCommunication", () => {
-    expect(setHostConfigFunc).toHaveBeenCalledWith({
-      allowedOrigins: ["https://devel.streamlit.test"],
-      useExternalAuthToken: false,
-    })
+    expect(setHostConfigFunc).toHaveBeenCalledWith(
+      ["https://devel.streamlit.test"],
+      false
+    )
     // @ts-expect-error
     expect(hostCommunicationMgr.allowedOrigins).toEqual([
       "https://devel.streamlit.test",
@@ -424,10 +424,10 @@ describe("Test different origins", () => {
   })
 
   it("exact pattern", () => {
-    hostCommunicationMgr.setAllowedOrigins({
-      allowedOrigins: ["http://share.streamlit.io"],
-      useExternalAuthToken: false,
-    })
+    hostCommunicationMgr.setAllowedOrigins(
+      ["http://share.streamlit.io"],
+      false
+    )
 
     dispatchEvent(
       "message",
@@ -445,10 +445,10 @@ describe("Test different origins", () => {
   })
 
   it("wildcard pattern", () => {
-    hostCommunicationMgr.setAllowedOrigins({
-      allowedOrigins: ["http://*.streamlitapp.com"],
-      useExternalAuthToken: false,
-    })
+    hostCommunicationMgr.setAllowedOrigins(
+      ["http://*.streamlitapp.com"],
+      false
+    )
 
     dispatchEvent(
       "message",
@@ -466,10 +466,10 @@ describe("Test different origins", () => {
   })
 
   it("ignores non-matching origins", () => {
-    hostCommunicationMgr.setAllowedOrigins({
-      allowedOrigins: ["http://share.streamlit.io"],
-      useExternalAuthToken: false,
-    })
+    hostCommunicationMgr.setAllowedOrigins(
+      ["http://share.streamlit.io"],
+      false
+    )
 
     dispatchEvent(
       "message",
@@ -516,10 +516,10 @@ describe("HostCommunicationManager external auth token handling", () => {
       "setAllowedOrigins"
     )
 
-    hostCommunicationMgr.setAllowedOrigins({
-      allowedOrigins: ["http://devel.streamlit.test"],
-      useExternalAuthToken: false,
-    })
+    hostCommunicationMgr.setAllowedOrigins(
+      ["http://share.streamlit.io"],
+      false
+    )
 
     expect(setAllowedOriginsFunc).toHaveBeenCalled()
     // @ts-expect-error - deferredAuthToken is private
@@ -531,11 +531,10 @@ describe("HostCommunicationManager external auth token handling", () => {
   it("waits to receive SET_AUTH_TOKEN message before resolving promise if useExternalAuthToken is true", async () => {
     const dispatchEvent = mockEventListeners()
 
-    hostCommunicationMgr.setAllowedOrigins({
-      allowedOrigins: ["http://devel.streamlit.test"],
-      useExternalAuthToken: true,
-    })
-
+    hostCommunicationMgr.setAllowedOrigins(
+      ["http://devel.streamlit.test"],
+      true
+    )
     // Asynchronously send a SET_AUTH_TOKEN message to the
     // HostCommunicationManager, which won't proceed past the `await`
     // statement below until the message is received and handled.
@@ -565,10 +564,10 @@ describe("HostCommunicationManager external auth token handling", () => {
     // Simulate the browser tab disconnecting and reconnecting, which from the
     // HostCommunication's perspective is only seen as a new call to
     // setAllowedOrigins.
-    hostCommunicationMgr.setAllowedOrigins({
-      allowedOrigins: ["http://devel.streamlit.test"],
-      useExternalAuthToken: true,
-    })
+    hostCommunicationMgr.setAllowedOrigins(
+      ["http://devel.streamlit.test"],
+      true
+    )
 
     setTimeout(() => {
       dispatchEvent(

@@ -383,10 +383,10 @@ export class App extends PureComponent<Props, State> {
       claimHostAuthToken: this.hostCommunicationMgr.claimAuthToken,
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
       setAllowedOrigins: (response: IHostConfigResponse) => {
-        this.hostCommunicationMgr.setAllowedOrigins({
-          allowedOrigins: response.allowedOrigins || [],
-          useExternalAuthToken: response.useExternalAuthToken || false,
-        })
+        this.hostCommunicationMgr.setAllowedOrigins(
+          response.allowedOrigins || [],
+          response.useExternalAuthToken || false
+        )
         this.setHostConfig(response)
       },
     })

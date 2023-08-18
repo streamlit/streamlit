@@ -23,7 +23,6 @@ import {
   IMenuItem,
   IToolbarItem,
   DeployedAppMetadata,
-  IHostConfigResponse,
 } from "./types"
 
 import { isValidOrigin } from "@streamlit/lib/src/util/UriUtil"
@@ -118,10 +117,10 @@ export default class HostCommunicationManager {
    *     WebsocketConnection class waits for this promise to resolve before
    *     attempting to establish a connection with the Streamlit server.
    */
-  public setAllowedOrigins = ({
-    allowedOrigins,
-    useExternalAuthToken,
-  }: IHostConfigResponse): void => {
+  public setAllowedOrigins = (
+    allowedOrigins: string[],
+    useExternalAuthToken: boolean
+  ): void => {
     if (!useExternalAuthToken) {
       this.deferredAuthToken.resolve(undefined)
     }
