@@ -347,7 +347,7 @@ def _determine_data_kind(
 
 
 def determine_dataframe_schema(
-    data_df: pd.DataFrame, arrow_schema: pa.Schema
+    data_df: pd.DataFrame, arrow_schema: Optional[pa.Schema]
 ) -> DataframeSchema:
     """Determine the schema of a dataframe.
 
@@ -376,7 +376,7 @@ def determine_dataframe_schema(
     for i, column in enumerate(data_df.items()):
         column_name, column_data = column
         dataframe_schema[column_name] = _determine_data_kind(
-            column_data, arrow_schema.field(i)
+            column_data, arrow_schema.field(i) if arrow_schema else None
         )
     return dataframe_schema
 
