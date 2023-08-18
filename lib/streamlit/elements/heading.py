@@ -79,8 +79,12 @@ class HeadingMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> st.header('This is a header')
-        >>> st.header('A header with _italics_ :blue[colors] and emojis :sunglasses:')
+        >>> st.header('This is a header with a divider', divider='rainbow')
+        >>> st.header('_Streamlit_ is :blue[cool] :sunglasses:')
+
+        .. output::
+           https://doc-header.streamlit.app/
+           height: 220px
 
         """
         return self.dg._enqueue(
@@ -132,8 +136,12 @@ class HeadingMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> st.subheader('This is a subheader')
-        >>> st.subheader('A subheader with _italics_ :blue[colors] and emojis :sunglasses:')
+        >>> st.subheader('This is a subheader with a divider', divider='rainbow')
+        >>> st.subheader('_Streamlit_ is :blue[cool] :sunglasses:')
+
+        .. output::
+           https://doc-subheader.streamlit.app/
+           height: 220px
 
         """
         return self.dg._enqueue(
@@ -189,7 +197,11 @@ class HeadingMixin:
         >>> import streamlit as st
         >>>
         >>> st.title('This is a title')
-        >>> st.title('A title with _italics_ :blue[colors] and emojis :sunglasses:')
+        >>> st.title('_Streamlit_ is :blue[cool] :sunglasses:')
+
+        .. output::
+           https://doc-title.streamlit.app/
+           height: 220px
 
         """
         return self.dg._enqueue(
