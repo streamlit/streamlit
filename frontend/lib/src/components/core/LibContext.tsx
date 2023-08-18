@@ -76,7 +76,7 @@ export interface LibContextProps {
 
   /**
    * Set the configuration from the app's host.
-   * @see App.setAndSendTheme
+   * @see App.setHostConfig
    */
   setHostConfig: (hostConfig: HostConfig) => void
 }
