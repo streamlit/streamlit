@@ -34,6 +34,7 @@ class HeadingProtoTag(Enum):
 
 
 Anchor = Optional[Union[str, Literal[False]]]
+Divider = Optional[Union[bool, str]]
 
 
 class HeadingMixin:
@@ -44,6 +45,7 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: Optional[str] = None,
+        divider: Divider = False,
     ) -> "DeltaGenerator":
         """Display text in header formatting.
 
@@ -75,6 +77,13 @@ class HeadingMixin:
         help : str
             An optional tooltip that gets displayed next to the header.
 
+        divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
+            Shows a colored divider below the header. If True, will cycle through
+            colors for subsequent headers, i.e. the first header with divider=True
+            will have a blue line, the second one will have a green line, etc.
+            If string, can set one of the following colors: blue, green, orange,
+            red, violet, gray/grey, or rainbow.
+
         Examples
         --------
         >>> import streamlit as st
@@ -86,7 +95,11 @@ class HeadingMixin:
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.HEADER_TAG, body=body, anchor=anchor, help=help
+                tag=HeadingProtoTag.HEADER_TAG,
+                body=body,
+                anchor=anchor,
+                help=help,
+                divider=divider,
             ),
         )
 
@@ -97,6 +110,7 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: Optional[str] = None,
+        divider: Divider = False,
     ) -> "DeltaGenerator":
         """Display text in subheader formatting.
 
@@ -128,6 +142,13 @@ class HeadingMixin:
         help : str
             An optional tooltip that gets displayed next to the subheader.
 
+        divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
+            Shows a colored divider below the header. If True, will cycle through
+            colors for subsequent headers, i.e. the first header with divider=True
+            will have a blue line, the second one will have a green line, etc.
+            If string, can set one of the following colors: blue, green, orange,
+            red, violet, gray/grey, or rainbow.
+
         Examples
         --------
         >>> import streamlit as st
@@ -139,7 +160,11 @@ class HeadingMixin:
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.SUBHEADER_TAG, body=body, anchor=anchor, help=help
+                tag=HeadingProtoTag.SUBHEADER_TAG,
+                body=body,
+                anchor=anchor,
+                help=help,
+                divider=divider,
             ),
         )
 
@@ -205,15 +230,39 @@ class HeadingMixin:
         return cast("DeltaGenerator", self)
 
     @staticmethod
+    def _handle_divider_color(divider):
+        if divider is True:
+            return "auto"
+        valid_colors = [
+            "blue",
+            "green",
+            "orange",
+            "red",
+            "violet",
+            "gray",
+            "grey",
+            "rainbow",
+        ]
+        if divider in valid_colors:
+            return divider
+        else:
+            raise StreamlitAPIException(
+                f"Divider parameter has invalid value: `{divider}`. Please choose from: {', '.join(valid_colors)}."
+            )
+
+    @staticmethod
     def _create_heading_proto(
         tag: HeadingProtoTag,
         body: SupportsStr,
         anchor: Anchor = None,
         help: Optional[str] = None,
+        divider: Divider = False,
     ) -> HeadingProto:
         proto = HeadingProto()
         proto.tag = tag.value
         proto.body = clean_text(body)
+        if divider:
+            proto.divider = HeadingMixin._handle_divider_color(divider)
         if anchor is not None:
             if anchor is False:
                 proto.hide_anchor = True

@@ -15,7 +15,7 @@
  */
 
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
-import { AppNode } from "@streamlit/lib/src/AppNode"
+import { BlockNode, AppNode } from "@streamlit/lib/src/AppNode"
 import {
   FormsData,
   WidgetStateManager,
@@ -24,6 +24,7 @@ import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { ComponentRegistry } from "@streamlit/lib/src/components/widgets/CustomComponent"
 import { SessionInfo } from "@streamlit/lib/src/SessionInfo"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { EmotionTheme, getDividerColors } from "@streamlit/lib/src/theme"
 
 export function shouldComponentBeEnabled(
   elementType: string,
@@ -57,6 +58,36 @@ export function isComponentStale(
   return !enable || isElementStale(node, scriptRunState, scriptRunId)
 }
 
+export function assignDividerColor(
+  node: BlockNode,
+  theme: EmotionTheme
+): void {
+  // All available divider colors
+  const allColorMap = getDividerColors(theme)
+  const allColorKeys = Object.keys(allColorMap)
+
+  // Limited colors for auto assignment
+  const { blue, green, orange, red, violet } = allColorMap
+  const autoColorMap = { blue, green, orange, red, violet }
+  const autoColorKeys = Object.keys(autoColorMap)
+  let dividerIndex = 0
+
+  Array.from(node.getElements()).forEach(element => {
+    const divider = element.heading?.divider
+    if (element.type === "heading" && divider) {
+      if (divider === "auto") {
+        const colorKey = autoColorKeys[dividerIndex]
+        // @ts-expect-error - heading.divider is not undefined at this point
+        element.heading.divider = autoColorMap[colorKey]
+        dividerIndex += 1
+        if (dividerIndex === autoColorKeys.length) dividerIndex = 0
+      } else if (allColorKeys.includes(divider)) {
+        // @ts-expect-error
+        element.heading.divider = allColorMap[divider]
+      }
+    }
+  })
+}
 export interface BaseBlockProps {
   /**
    * The app's StreamlitEndpoints instance. Exposes non-websocket endpoint logic

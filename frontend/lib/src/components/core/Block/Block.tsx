@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+import { useTheme } from "@emotion/react"
 import { AutoSizer } from "react-virtualized"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
@@ -29,6 +30,7 @@ import {
   BaseBlockProps,
   isComponentStale,
   shouldComponentBeEnabled,
+  assignDividerColor,
 } from "./utils"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 
@@ -144,6 +146,8 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 }
 
 const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
+  // Handle cycling of colors for dividers:
+  assignDividerColor(props.node, useTheme())
   return (
     <>
       {props.node.children &&

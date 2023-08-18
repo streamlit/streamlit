@@ -16,19 +16,16 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { mount } from "@streamlit/lib/src/test_util"
+
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 import { Heading as HeadingProto } from "@streamlit/lib/src/proto"
 import Heading, { HeadingProtoProps } from "./Heading"
-
-import {
-  InlineTooltipIcon,
-  StyledLabelHelpWrapper,
-} from "@streamlit/lib/src/components/shared/TooltipIcon"
 
 const getHeadingProps = (
   elementProps: Partial<HeadingProto> = {}
 ): HeadingProtoProps => ({
-  width: 5,
+  width: 300,
   element: HeadingProto.create({
     anchor: "some-anchor",
     tag: "h1",
@@ -41,62 +38,71 @@ const getHeadingProps = (
 describe("Heading", () => {
   it("renders properly after a new line", () => {
     const props = getHeadingProps()
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("hello world")
-    expect(wrapper.find("RenderedMarkdown").at(1).text()).toEqual(
-      "this is a new line"
-    )
+    render(<Heading {...props} />)
+
+    const heading = screen.getByRole("heading")
+    expect(heading).toHaveTextContent("hello world")
+    expect(heading).not.toHaveTextContent("this is a new line")
+    expect(screen.getByText("this is a new line")).toBeInTheDocument()
+    expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
   })
 
   it("renders properly without a new line", () => {
     const props = getHeadingProps({ body: "hello" })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("hello")
-    expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(1)
+    render(<Heading {...props} />)
+
+    expect(screen.getByRole("heading")).toHaveTextContent("hello")
+    expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
   })
 
   it("renders anchor link", () => {
     const props = getHeadingProps({ body: "hello" })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("StyledLinkIcon")).toHaveLength(1)
+    render(<Heading {...props} />)
+
+    const link = screen.getByRole("link")
+    expect(link).toHaveAttribute("href", "#some-anchor")
   })
 
   it("does not renders anchor link when it is hidden", () => {
     const props = getHeadingProps({ body: "hello", hideAnchor: true })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("StyledLinkIcon")).toHaveLength(0)
+    render(<Heading {...props} />)
+
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
   })
 
   it("renders properly with help text", () => {
     const props = getHeadingProps({ body: "hello", help: "help text" })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("hello")
-    expect(wrapper.find("StyledStreamlitMarkdown")).toHaveLength(1)
-    expect(wrapper.find(StyledLabelHelpWrapper).exists()).toBe(true)
-    const inlineTooltipIcon = wrapper.find(InlineTooltipIcon)
-    expect(inlineTooltipIcon.exists()).toBe(true)
-    expect(inlineTooltipIcon.props().content).toBe("help text")
+    render(<Heading {...props} />)
+
+    expect(screen.getByRole("heading")).toHaveTextContent("hello")
+    expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
+
+    const tooltip = screen.getByTestId("stTooltipIcon")
+    expect(tooltip).toBeInTheDocument()
   })
 
   it("does not render ol block", () => {
     const props = getHeadingProps({ body: "1) hello" })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("1) hello")
-    expect(wrapper.find("ol")).toHaveLength(0)
+    render(<Heading {...props} />)
+
+    expect(screen.getByRole("heading")).toHaveTextContent("1) hello")
+    expect(screen.queryByRole("list")).not.toBeInTheDocument()
   })
 
   it("does not render ul block", () => {
     const props = getHeadingProps({ body: "* hello" })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual("* hello")
-    expect(wrapper.find("ul")).toHaveLength(0)
+    render(<Heading {...props} />)
+
+    expect(screen.getByRole("heading")).toHaveTextContent("* hello")
+    expect(screen.queryByRole("list")).not.toBeInTheDocument()
   })
 
   it("does not render blockquote with >", () => {
     const props = getHeadingProps({ body: ">hello" })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual(">hello")
-    expect(wrapper.find("blockquote")).toHaveLength(0)
+    render(<Heading {...props} />)
+
+    expect(screen.getByRole("heading")).toHaveTextContent(">hello")
+    expect(screen.queryByRole("blockquote")).not.toBeInTheDocument()
   })
 
   it("does not render tables", () => {
@@ -106,13 +112,32 @@ describe("Heading", () => {
            | Header      | Title       |
            | Paragraph   | Text        |`,
     })
-    const wrapper = mount(<Heading {...props} />)
-    expect(wrapper.find("h1").text()).toEqual(`| Syntax | Description |`)
-    expect(wrapper.find("RenderedMarkdown").at(1).text()).toEqual(
-      `| ----------- | ----------- |
-       | Header      | Title       |
-       | Paragraph   | Text        |`
+    render(<Heading {...props} />)
+
+    expect(screen.getByTestId("stMarkdownContainer")).toHaveTextContent(
+      "| Syntax | Description || ----------- | ----------- | | Header | Title | | Paragraph | Text |"
     )
-    expect(wrapper.find("table")).toHaveLength(0)
+    expect(screen.getByRole("heading")).toHaveTextContent(
+      `| Syntax | Description |`
+    )
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+    expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
+  })
+
+  it("renders no divider by default", () => {
+    const props = getHeadingProps()
+    render(<Heading {...props} />)
+
+    expect(screen.queryByTestId("stHeadingDivider")).not.toBeInTheDocument()
+  })
+
+  it("renders a divider with given color", () => {
+    // correct divider color mapping handled in Block.tsx
+    const props = getHeadingProps({ divider: "#0068c9" })
+    render(<Heading {...props} />)
+
+    const divider = screen.getByTestId("stHeadingDivider")
+    expect(divider).toBeInTheDocument()
+    expect(divider).toHaveStyle("background-color: #0068c9")
   })
 })
