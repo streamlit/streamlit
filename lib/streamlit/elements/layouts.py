@@ -423,15 +423,15 @@ class LayoutsMixin:
 
         Inserts a container into your app that is typically used to show the status and
         details of a process or task. The container can hold multiple elements and can
-        be expanded or collapsed by the user similar to st.expander.
+        be expanded or collapsed by the user similar to ``st.expander``.
         When collapsed, all that is visible is the status icon and label.
 
-        The label, state, and expanded state can all be updated by calling "update()"
+        The label, state, and expanded state can all be updated by calling ``.update()``
         on the returned object. To add elements to the returned container, you can
         use "with" notation (preferred) or just call methods directly on the returned
         object.
 
-        By default, st.status() initializes in the "running" state. When called using
+        By default, ``st.status()`` initializes in the "running" state. When called using
         "with" notation, it automatically updates to the "complete" state at the end
         of the "with" block. See examples below for more details.
 
@@ -455,7 +455,7 @@ class LayoutsMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents)
             render. Display unsupported elements as literal characters by
@@ -497,10 +497,12 @@ class LayoutsMixin:
         ...     time.sleep(1)
         ...     st.write("Downloading data...")
         ...     time.sleep(1)
+        >>>
+        >>> st.button('Rerun')
 
         .. output ::
             https://doc-status.streamlit.app/
-            height: 400px
+            height: 300px
 
         You can also use `.update()` on the container to change the label, state,
         or expanded state:
@@ -516,10 +518,13 @@ class LayoutsMixin:
         ...     st.write("Downloading data...")
         ...     time.sleep(1)
         ...     status.update(label="Download complete!", state="complete", expanded=False)
+        >>>
+        >>> st.button('Rerun')
 
         .. output ::
             https://doc-status-update.streamlit.app/
-            height: 400px
+            height: 300px
+
         """
         # We need to import StatusContainer here to avoid a circular import
         from streamlit.elements.lib.mutable_status_container import StatusContainer
