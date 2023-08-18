@@ -86,9 +86,9 @@ export interface Props {
   largerLabel?: boolean
 
   /**
-   * Does not allow links & has larger font sizing
+   * Does not allow links
    */
-  isButton?: boolean
+  disableLinks?: boolean
 
   /**
    * Toast has smaller font sizing
@@ -227,9 +227,9 @@ export interface RenderedMarkdownProps {
   isLabel?: boolean
 
   /**
-   * Does not allow links & has larger font sizing
+   * Does not allow links
    */
-  isButton?: boolean
+  disableLinks?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -264,7 +264,7 @@ export function RenderedMarkdown({
   source,
   overrideComponents,
   isLabel,
-  isButton,
+  disableLinks,
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
@@ -343,8 +343,8 @@ export function RenderedMarkdown({
     "input",
     "hr",
     "blockquote",
-    // Button labels additionally restrict links
-    ...(isButton ? ["a"] : []),
+    // additionally restrict links
+    ...(disableLinks ? ["a"] : []),
   ]
 
   return (
@@ -389,7 +389,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
       isCaption,
       isLabel,
       largerLabel,
-      isButton,
+      disableLinks,
       isToast,
     } = this.props
     const isInSidebar = this.context
@@ -400,7 +400,6 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isInSidebar={isInSidebar}
         isLabel={isLabel}
         largerLabel={largerLabel}
-        isButton={isButton}
         isToast={isToast}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
@@ -409,7 +408,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
           source={source}
           allowHTML={allowHTML}
           isLabel={isLabel}
-          isButton={isButton}
+          disableLinks={disableLinks}
         />
       </StyledStreamlitMarkdown>
     )
