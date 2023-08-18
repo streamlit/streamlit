@@ -162,7 +162,7 @@ export type VersionedMessage<Message> = {
 } & Message
 
 export type IHostConfigResponse = HostConfig & {
-  allowedOrigins: string[]
+  allowedOrigins?: string[]
   useExternalAuthToken?: boolean
 }
 
