@@ -67,5 +67,9 @@ describe("st.toast", () => {
             cy.getIndexed("[data-testid='stToast']", 0)
                 .matchImageSnapshot(`toast-expanded-${theme}`);
         });
+
+        it(`overlays toasts with st.chat_input - ${theme}`, () => {
+            cy.get(".stChatFloatingInputContainer").matchImageSnapshot(`toast+chatInput-${theme}`)
+        });
     })
 });

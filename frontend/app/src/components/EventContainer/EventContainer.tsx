@@ -41,8 +41,10 @@ function EventContainer({
         overrides={{
           Root: {
             style: {
-              // If deployed in Community Cloud, move toasts up to avoid blocking Manage App button
+              // Avoids blocking host elements at bottom of page
               bottom: toastAdjustment ? "45px" : "0px",
+              // Toasts overlap chatInput container
+              zIndex: 100,
             },
             props: {
               "data-testid": "toastContainer",
