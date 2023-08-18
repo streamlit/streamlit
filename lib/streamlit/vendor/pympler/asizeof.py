@@ -2,6 +2,11 @@
 This is a stripped-down of asizeof.py from the pympler module. It's vendored
 because pympler is unmaintained, while having a critical vulnerability.
 
+Differences from the original asizeof module:
+- Removed code for running as __main__
+- Removed `adict`
+- `__all__` only includes `asizeof`
+
 The *original* original copyright, license and disclaimer are at the end of this
 file, exactly as they appeared in the pympler code. pympler itself is under the
 Apache license, which appears in the project root.
