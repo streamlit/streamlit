@@ -238,7 +238,7 @@ export const RawElementNodeRenderer = (
     hostConfig.disableElements.includes(node.element.type)
   ) {
     throw new PlatformSecurityViolation(
-      `The component \`${node.element.type}\` was removed in line with the platform security policy.`
+      `The component, st.${node.element.type}, was removed in line with the platform security policy.`
     )
   }
 

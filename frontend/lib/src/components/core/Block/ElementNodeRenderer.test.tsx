@@ -159,7 +159,7 @@ describe("ElementNodeRenderer Block Component", () => {
           }
         )
       ).toThrow(
-        "The component `bokehChart` was removed in line with the platform security policy."
+        "The component, st.bokehChart, was removed in line with the platform security policy."
       )
 
       consoleErrorFn.mockRestore()
