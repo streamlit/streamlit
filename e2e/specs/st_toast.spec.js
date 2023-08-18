@@ -69,7 +69,7 @@ describe("st.toast", () => {
         });
 
         it(`overlays toasts with st.chat_input - ${theme}`, () => {
-            cy.get(".stChatFloatingInputContainer").matchThemedSnapshots(`toast+chatInput-${theme}`)
+            cy.get(".stChatFloatingInputContainer").matchImageSnapshot(`toast+chatInput-${theme}`)
         });
     })
 });
