@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import contextlib
+import copy
 import re
 import types
 from enum import Enum, auto
@@ -53,6 +54,7 @@ if TYPE_CHECKING:
     import sympy
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
+    from pandas.io.formats.style_renderer import StyleRenderer
     from plotly.graph_objs import Figure
     from pydeck import Deck
 
@@ -480,11 +482,31 @@ def is_sequence(seq: Any) -> bool:
     return True
 
 
+@overload
 def convert_anything_to_df(
     data: Any,
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
 ) -> DataFrame:
+    ...
+
+
+@overload
+def convert_anything_to_df(
+    data: Any,
+    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
+    ensure_copy: bool = False,
+    allow_styler: bool = False,
+) -> Union[DataFrame, "Styler"]:
+    ...
+
+
+def convert_anything_to_df(
+    data: Any,
+    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
+    ensure_copy: bool = False,
+    allow_styler: bool = False,
+) -> Union[DataFrame, "Styler"]:
     """Try to convert different formats to a Pandas Dataframe.
 
     Parameters
@@ -499,16 +521,33 @@ def convert_anything_to_df(
         If True, make sure to always return a copy of the data. If False, it depends on the
         type of the data. For example, a Pandas DataFrame will be returned as-is.
 
+    allow_styler: bool
+        If True, allows this to return a Pandas Styler object as well. If False, returns
+        a plain Pandas DataFrame (which, of course, won't contain the Styler's styles).
+
     Returns
     -------
-    pandas.DataFrame
+    pandas.DataFrame or pandas.Styler
 
     """
     if is_type(data, _PANDAS_DF_TYPE_STR):
-        return data.copy() if ensure_copy else data
+        return data.copy() if ensure_copy else cast(DataFrame, data)
 
     if is_pandas_styler(data):
-        return data.data.copy() if ensure_copy else data.data
+        # Every Styler is a StyleRenderer. I'm casting to StyleRenderer here rather than to the more
+        # correct Styler becayse MyPy doesn't like when we cast to Styler. It complains .data
+        # doesn't exist, when it does in fact exist in the parent class StyleRenderer!
+        sr = cast("StyleRenderer", data)
+
+        if allow_styler:
+            if ensure_copy:
+                out = copy.deepcopy(sr)
+                out.data = sr.data.copy()
+                return cast("Styler", out)
+            else:
+                return data
+        else:
+            return cast("Styler", sr.data.copy() if ensure_copy else sr.data)
 
     if is_type(data, "numpy.ndarray"):
         if len(data.shape) == 0:
@@ -529,13 +568,13 @@ def convert_anything_to_df(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
                 "Call `collect()` on the dataframe to show more."
             )
-        return data
+        return cast(DataFrame, data)
 
     # This is inefficient when data is a pyarrow.Table as it will be converted
     # back to Arrow when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
     if hasattr(data, "to_pandas"):
-        return data.to_pandas()
+        return cast(DataFrame, data.to_pandas())
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
@@ -563,11 +602,11 @@ def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]:
 
 
 @overload
-def ensure_iterable(obj: DataFrame) -> Iterable[Any]:
+def ensure_iterable(obj: OptionSequence[V_co]) -> Iterable[Any]:
     ...
 
 
-def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
+def ensure_iterable(obj: Union[OptionSequence[V_co], Iterable[V_co]]) -> Iterable[Any]:
     """Try to convert different formats to something iterable. Most inputs
     are assumed to be iterable, but if we have a DataFrame, we can just
     select the first column to iterate over. If the input is not iterable,
@@ -582,6 +621,7 @@ def ensure_iterable(obj: Union[DataFrame, Iterable[V_co]]) -> Iterable[Any]:
     iterable
 
     """
+
     if is_snowpark_or_pyspark_data_object(obj):
         obj = convert_anything_to_df(obj)
 
@@ -648,7 +688,7 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
+def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
     if column.dtype.kind in [
         # timedelta is supported by pyarrow but not in the Arrow JS:
@@ -776,7 +816,7 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
 
     """
     reader = pa.RecordBatchStreamReader(source)
-    return reader.read_pandas()
+    return cast(DataFrame, reader.read_pandas())
 
 
 def determine_data_format(input_data: Any) -> DataFormat:
@@ -864,7 +904,7 @@ def convert_df_to_data_format(
     df: DataFrame, data_format: DataFormat
 ) -> Union[
     DataFrame,
-    Series,
+    Series[Any],
     pa.Table,
     np.ndarray[Any, np.dtype[Any]],
     Tuple[Any],
@@ -982,3 +1022,55 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
             f"Unsupported label_visibility option '{label_visibility}'. "
             f"Valid values are 'visible', 'hidden' or 'collapsed'."
         )
+
+
+# The code below is copied from Altair, and slightly modified.
+# We copy this code here so we don't depend on private Altair functions.
+# Source: https://github.com/altair-viz/altair/blob/62ca5e37776f5cecb27e83c1fbd5d685a173095d/altair/utils/core.py#L193
+
+# STREAMLIT MOD: I changed the type for the data argument from "pd.Series" to Series,
+# and the return type to a Union including a (str, list) tuple, since the function does
+# return that in some situations.
+def infer_vegalite_type(data: Series[Any]) -> Union[str, Tuple[str, List[Any]]]:
+    """
+    From an array-like input, infer the correct vega typecode
+    ('ordinal', 'nominal', 'quantitative', or 'temporal')
+
+    Parameters
+    ----------
+    data: Numpy array or Pandas Series
+    """
+    # STREAMLIT MOD: I'm using infer_dtype directly here, rather than using Altair's wrapper. Their
+    # wrapper is only there to support Pandas < 0.20, but Streamlit requires Pandas 1.3.
+    typ = infer_dtype(data)
+
+    if typ in [
+        "floating",
+        "mixed-integer-float",
+        "integer",
+        "mixed-integer",
+        "complex",
+    ]:
+        return "quantitative"
+    elif typ == "categorical" and data.cat.ordered:
+        return ("ordinal", data.cat.categories.tolist())
+    elif typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
+        return "nominal"
+    elif typ in [
+        "datetime",
+        "datetime64",
+        "timedelta",
+        "timedelta64",
+        "date",
+        "time",
+        "period",
+    ]:
+        return "temporal"
+    else:
+        # STREAMLIT MOD: I commented this out since Streamlit doesn't have a warnings object.
+        # warnings.warn(
+        #     "I don't know how to infer vegalite type from '{}'.  "
+        #     "Defaulting to nominal.".format(typ),
+        #     stacklevel=1,
+        # )
+        return "nominal"

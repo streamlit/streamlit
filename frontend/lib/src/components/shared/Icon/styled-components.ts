@@ -17,11 +17,43 @@
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import isPropValid from "@emotion/is-prop-valid"
 import styled from "@emotion/styled"
+import { Spinner } from "baseui/spinner"
+
 import {
   IconSize,
   ThemeColor,
   computeSpacingStyle,
 } from "@streamlit/lib/src/theme"
+
+interface StyledSpinnerIconProps {
+  usingCustomTheme: boolean
+  size: IconSize
+  margin: string
+  padding: string
+}
+
+export const StyledSpinnerIcon = styled(Spinner, {
+  shouldForwardProp: (prop: string) =>
+    isPropValid(prop) && !["size"].includes(prop),
+})<StyledSpinnerIconProps>(
+  ({ usingCustomTheme, size, margin, padding, theme }) => {
+    return {
+      width: theme.iconSizes[size],
+      height: theme.iconSizes[size],
+      fontSize: theme.iconSizes[size],
+      justifyContents: "center",
+      margin: computeSpacingStyle(margin, theme),
+      padding: computeSpacingStyle(padding, theme),
+      borderColor: theme.colors.fadedText10,
+      borderTopColor: usingCustomTheme
+        ? theme.colors.primary
+        : theme.colors.blue70,
+      borderWidth: "0.15em",
+      flexGrow: 0,
+      flexShrink: 0,
+    }
+  }
+)
 
 interface StyledIconProps {
   as?: EmotionIcon

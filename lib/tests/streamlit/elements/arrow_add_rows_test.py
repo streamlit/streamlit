@@ -15,41 +15,201 @@
 """Unit test of dg._arrow_add_rows()."""
 
 import pandas as pd
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.type_util import bytes_to_data_frame
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
-DATAFRAME = pd.DataFrame({"a": [1], "b": [10]})
-NEW_ROWS = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-MELTED_DATAFRAME = pd.DataFrame(
-    {
-        "index": [1, 2, 3, 1, 2, 3],
-        "variable": ["a", "a", "a", "b", "b", "b"],
-        "value": [1, 2, 3, 4, 5, 6],
-    }
-)
+DATAFRAME = pd.DataFrame({"a": [10], "b": [20], "c": [30]})
+NEW_ROWS = pd.DataFrame({"a": [11, 12, 13], "b": [21, 22, 23], "c": [31, 32, 33]})
 
 
 class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
     """Test dg._arrow_add_rows."""
 
-    def _get_deltas_that_melt_dataframes(self):
-        return [
-            lambda df: st._arrow_line_chart(df),
-            lambda df: st._arrow_bar_chart(df),
-            lambda df: st._arrow_area_chart(df),
+    @parameterized.expand(
+        [
+            st._arrow_area_chart,
+            st._arrow_bar_chart,
+            st._arrow_line_chart,
         ]
+    )
+    def test_charts_with_implict_x_and_y(self, chart_command):
+        expected = pd.DataFrame(
+            {
+                "index--p5bJXXpQgvPz6yvQMFiy": [1, 2, 3, 1, 2, 3, 1, 2, 3],
+                "color--p5bJXXpQgvPz6yvQMFiy": [
+                    "a",
+                    "a",
+                    "a",
+                    "b",
+                    "b",
+                    "b",
+                    "c",
+                    "c",
+                    "c",
+                ],
+                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 21, 22, 23, 31, 32, 33],
+            }
+        )
 
-    def test_deltas_that_melt_dataframes(self):
-        deltas = self._get_deltas_that_melt_dataframes()
+        element = chart_command(DATAFRAME)
+        element._arrow_add_rows(NEW_ROWS)
 
-        for delta in deltas:
-            element = delta(DATAFRAME)
-            element._arrow_add_rows(NEW_ROWS)
+        proto = bytes_to_data_frame(
+            self.get_delta_from_queue().arrow_add_rows.data.data
+        )
 
-            proto = bytes_to_data_frame(
-                self.get_delta_from_queue().arrow_add_rows.data.data
-            )
+        pd.testing.assert_frame_equal(proto, expected)
 
-            pd.testing.assert_frame_equal(proto, MELTED_DATAFRAME)
+    @parameterized.expand(
+        [
+            st._arrow_area_chart,
+            st._arrow_bar_chart,
+            st._arrow_line_chart,
+        ]
+    )
+    def test_charts_with_explicit_x_and_y(self, chart_command):
+        expected = pd.DataFrame(
+            {
+                "b": [21, 22, 23],
+                "c": [31, 32, 33],
+            }
+        )
+        expected.index = pd.RangeIndex(1, 4)
+
+        element = chart_command(DATAFRAME, x="b", y="c")
+        element._arrow_add_rows(NEW_ROWS)
+
+        proto = bytes_to_data_frame(
+            self.get_delta_from_queue().arrow_add_rows.data.data
+        )
+
+        pd.testing.assert_frame_equal(proto, expected)
+
+    @parameterized.expand(
+        [
+            st._arrow_area_chart,
+            st._arrow_bar_chart,
+            st._arrow_line_chart,
+        ]
+    )
+    def test_charts_with_implict_x_and_explicit_y(self, chart_command):
+        expected = pd.DataFrame(
+            {
+                "index--p5bJXXpQgvPz6yvQMFiy": [1, 2, 3],
+                "b": [21, 22, 23],
+            }
+        )
+
+        element = chart_command(DATAFRAME, y="b")
+        element._arrow_add_rows(NEW_ROWS)
+
+        proto = bytes_to_data_frame(
+            self.get_delta_from_queue().arrow_add_rows.data.data
+        )
+
+        pd.testing.assert_frame_equal(proto, expected)
+
+    @parameterized.expand(
+        [
+            st._arrow_area_chart,
+            st._arrow_bar_chart,
+            st._arrow_line_chart,
+        ]
+    )
+    def test_charts_with_explicit_x_and_implicit_y(self, chart_command):
+        expected = pd.DataFrame(
+            {
+                "b": [21, 22, 23, 21, 22, 23],
+                "color--p5bJXXpQgvPz6yvQMFiy": ["a", "a", "a", "c", "c", "c"],
+                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 31, 32, 33],
+            }
+        )
+
+        element = chart_command(DATAFRAME, x="b")
+        element._arrow_add_rows(NEW_ROWS)
+
+        proto = bytes_to_data_frame(
+            self.get_delta_from_queue().arrow_add_rows.data.data
+        )
+
+        pd.testing.assert_frame_equal(proto, expected)
+
+    @parameterized.expand(
+        [
+            st._arrow_area_chart,
+            st._arrow_bar_chart,
+            st._arrow_line_chart,
+        ]
+    )
+    def test_charts_with_explicit_x_and_y_sequence(self, chart_command):
+        expected = pd.DataFrame(
+            {
+                "b": [21, 22, 23, 21, 22, 23],
+                "color--p5bJXXpQgvPz6yvQMFiy": ["a", "a", "a", "c", "c", "c"],
+                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 31, 32, 33],
+            }
+        )
+
+        element = chart_command(DATAFRAME, x="b", y=["a", "c"])
+        element._arrow_add_rows(NEW_ROWS)
+
+        proto = bytes_to_data_frame(
+            self.get_delta_from_queue().arrow_add_rows.data.data
+        )
+
+        pd.testing.assert_frame_equal(proto, expected)
+
+    @parameterized.expand(
+        [
+            st._arrow_area_chart,
+            st._arrow_bar_chart,
+            st._arrow_line_chart,
+        ]
+    )
+    def test_charts_with_explicit_x_and_y_sequence_and_static_color(
+        self, chart_command
+    ):
+        expected = pd.DataFrame(
+            {
+                "b": [21, 22, 23, 21, 22, 23],
+                "color--p5bJXXpQgvPz6yvQMFiy": ["a", "a", "a", "c", "c", "c"],
+                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 31, 32, 33],
+            }
+        )
+
+        element = chart_command(DATAFRAME, x="b", y=["a", "c"], color=["#f00", "#0f0"])
+        element._arrow_add_rows(NEW_ROWS)
+
+        proto = bytes_to_data_frame(
+            self.get_delta_from_queue().arrow_add_rows.data.data
+        )
+
+        pd.testing.assert_frame_equal(proto, expected)
+
+    @parameterized.expand(
+        [
+            st._arrow_area_chart,
+            st._arrow_bar_chart,
+            st._arrow_line_chart,
+        ]
+    )
+    def test_charts_with_fewer_args_than_cols(self, chart_command):
+        expected = pd.DataFrame(
+            {
+                "b": [21, 22, 23],
+                "a": [11, 12, 13],
+            }
+        )
+        expected.index = pd.RangeIndex(start=1, stop=4, step=1)
+
+        element = chart_command(DATAFRAME, x="b", y="a")
+        element._arrow_add_rows(NEW_ROWS)
+
+        proto = bytes_to_data_frame(
+            self.get_delta_from_queue().arrow_add_rows.data.data
+        )
+
+        pd.testing.assert_frame_equal(proto, expected)

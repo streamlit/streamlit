@@ -1338,7 +1338,6 @@ export class App extends PureComponent<Props, State> {
       type: DialogType.DEPLOY_DIALOG,
       onClose: this.closeDialog,
       showDeployError: this.showDeployError,
-      gitInfo: this.state.gitInfo,
       isDeployErrorModalOpen:
         this.state.dialog?.type === DialogType.DEPLOY_ERROR,
       metricsMgr: this.metricsMgr,
@@ -1551,7 +1550,6 @@ export class App extends PureComponent<Props, State> {
       scriptRunId,
       scriptRunState,
       userSettings,
-      gitInfo,
       hideTopBar,
       hideSidebarNav,
       currentPageScriptHash,
@@ -1601,6 +1599,7 @@ export class App extends PureComponent<Props, State> {
           pageLinkBaseUrl,
           sidebarChevronDownshift,
           toastAdjustment: hostToolbarItems.length > 0,
+          gitInfo: this.state.gitInfo,
         }}
       >
         <LibContext.Provider
@@ -1661,16 +1660,6 @@ export class App extends PureComponent<Props, State> {
                   developmentMode={developmentMode}
                   sendMessageToHost={
                     this.hostCommunicationMgr.sendMessageToHost
-                  }
-                  gitInfo={gitInfo}
-                  showDeployError={this.showDeployError}
-                  closeDialog={this.closeDialog}
-                  isDeployErrorModalOpen={
-                    this.state.dialog?.type === DialogType.DEPLOY_ERROR
-                  }
-                  loadGitInfo={this.sendLoadGitInfoBackMsg}
-                  canDeploy={
-                    this.sessionInfo.isSet && !this.sessionInfo.isHello
                   }
                   menuItems={menuItems}
                   metricsMgr={this.metricsMgr}

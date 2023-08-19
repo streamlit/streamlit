@@ -34,6 +34,7 @@ class HeadingProtoTag(Enum):
 
 
 Anchor = Optional[Union[str, Literal[False]]]
+Divider = Optional[Union[bool, str]]
 
 
 class HeadingMixin:
@@ -44,6 +45,7 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: Optional[str] = None,
+        divider: Divider = False,
     ) -> "DeltaGenerator":
         """Display text in header formatting.
 
@@ -65,7 +67,7 @@ class HeadingMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
@@ -75,18 +77,34 @@ class HeadingMixin:
         help : str
             An optional tooltip that gets displayed next to the header.
 
+        divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
+            Shows a colored divider below the header. If True, successive
+            headers will cycle through divider colors. That is, the first
+            header will have a blue line, the second header will have a
+            green line, and so on. If a string, the color can be set to one of
+            the following: blue, green, orange, red, violet, gray/grey, or
+            rainbow.
+
         Examples
         --------
         >>> import streamlit as st
         >>>
-        >>> st.header('This is a header')
-        >>> st.header('A header with _italics_ :blue[colors] and emojis :sunglasses:')
+        >>> st.header('This is a header with a divider', divider='rainbow')
+        >>> st.header('_Streamlit_ is :blue[cool] :sunglasses:')
+
+        .. output::
+           https://doc-header.streamlit.app/
+           height: 220px
 
         """
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.HEADER_TAG, body=body, anchor=anchor, help=help
+                tag=HeadingProtoTag.HEADER_TAG,
+                body=body,
+                anchor=anchor,
+                help=help,
+                divider=divider,
             ),
         )
 
@@ -97,6 +115,7 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: Optional[str] = None,
+        divider: Divider = False,
     ) -> "DeltaGenerator":
         """Display text in subheader formatting.
 
@@ -118,7 +137,7 @@ class HeadingMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
@@ -128,18 +147,34 @@ class HeadingMixin:
         help : str
             An optional tooltip that gets displayed next to the subheader.
 
+        divider : bool or “blue”, “green”, “orange”, “red”, “violet”, “gray”/"grey", or “rainbow”
+            Shows a colored divider below the header. If True, successive
+            headers will cycle through divider colors. That is, the first
+            header will have a blue line, the second header will have a
+            green line, and so on. If a string, the color can be set to one of
+            the following: blue, green, orange, red, violet, gray/grey, or
+            rainbow.
+
         Examples
         --------
         >>> import streamlit as st
         >>>
-        >>> st.subheader('This is a subheader')
-        >>> st.subheader('A subheader with _italics_ :blue[colors] and emojis :sunglasses:')
+        >>> st.subheader('This is a subheader with a divider', divider='rainbow')
+        >>> st.subheader('_Streamlit_ is :blue[cool] :sunglasses:')
+
+        .. output::
+           https://doc-subheader.streamlit.app/
+           height: 220px
 
         """
         return self.dg._enqueue(
             "heading",
             HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.SUBHEADER_TAG, body=body, anchor=anchor, help=help
+                tag=HeadingProtoTag.SUBHEADER_TAG,
+                body=body,
+                anchor=anchor,
+                help=help,
+                divider=divider,
             ),
         )
 
@@ -174,7 +209,7 @@ class HeadingMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
@@ -189,7 +224,11 @@ class HeadingMixin:
         >>> import streamlit as st
         >>>
         >>> st.title('This is a title')
-        >>> st.title('A title with _italics_ :blue[colors] and emojis :sunglasses:')
+        >>> st.title('_Streamlit_ is :blue[cool] :sunglasses:')
+
+        .. output::
+           https://doc-title.streamlit.app/
+           height: 220px
 
         """
         return self.dg._enqueue(
@@ -205,15 +244,39 @@ class HeadingMixin:
         return cast("DeltaGenerator", self)
 
     @staticmethod
+    def _handle_divider_color(divider):
+        if divider is True:
+            return "auto"
+        valid_colors = [
+            "blue",
+            "green",
+            "orange",
+            "red",
+            "violet",
+            "gray",
+            "grey",
+            "rainbow",
+        ]
+        if divider in valid_colors:
+            return divider
+        else:
+            raise StreamlitAPIException(
+                f"Divider parameter has invalid value: `{divider}`. Please choose from: {', '.join(valid_colors)}."
+            )
+
+    @staticmethod
     def _create_heading_proto(
         tag: HeadingProtoTag,
         body: SupportsStr,
         anchor: Anchor = None,
         help: Optional[str] = None,
+        divider: Divider = False,
     ) -> HeadingProto:
         proto = HeadingProto()
         proto.tag = tag.value
         proto.body = clean_text(body)
+        if divider:
+            proto.divider = HeadingMixin._handle_divider_color(divider)
         if anchor is not None:
             if anchor is False:
                 proto.hide_anchor = True
