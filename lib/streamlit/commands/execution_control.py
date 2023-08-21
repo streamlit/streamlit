@@ -44,6 +44,7 @@ def stop() -> None:
 
     if ctx and ctx.script_requests:
         ctx.script_requests.request_stop()
+        # Force a yield point so the runner can stop
         st.empty()
 
 
@@ -68,4 +69,5 @@ def rerun() -> None:
                 page_script_hash=page_script_hash,
             )
         )
+        # Force a yield point so the runner can do the rerun
         st.empty()
