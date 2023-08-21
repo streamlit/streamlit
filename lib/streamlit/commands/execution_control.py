@@ -58,8 +58,6 @@ def rerun() -> None:
 
     ctx = get_script_run_ctx()
 
-    query_string = ""
-    page_script_hash = ""
     if ctx and ctx.script_requests:
         query_string = ctx.query_string
         page_script_hash = ctx.page_script_hash
