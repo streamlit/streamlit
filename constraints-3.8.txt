@@ -35,7 +35,7 @@ GitPython==3.1.32
 graphviz==0.20.1
 greenlet==2.0.2
 hypothesis==6.82.6
-identify==2.5.26
+identify==2.5.27
 idna==3.4
 importlib-metadata==6.8.0
 importlib-resources==6.0.1
@@ -47,7 +47,7 @@ jsonschema==4.19.0
 jsonschema-specifications==2023.7.1
 keyring==24.2.0
 kiwisolver==1.4.4
-langchain==0.0.268
+langchain==0.0.270
 langsmith==0.0.25
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
