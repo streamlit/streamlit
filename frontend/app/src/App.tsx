@@ -600,18 +600,15 @@ export class App extends PureComponent<Props, State> {
       pageConfig
 
     if (title) {
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "SET_PAGE_TITLE",
+        title,
+      })
       if (this.state.hostConfig.disableSetPageMetadata) {
         logError(
           "Setting the page title is disabled in line with the platform security policy."
         )
       } else {
-        // TODO(lukasmasuch): Should this also prevent the host message or only
-        //                    setting of the document title?
-        this.hostCommunicationMgr.sendMessageToHost({
-          type: "SET_PAGE_TITLE",
-          title,
-        })
-
         document.title = title
       }
     }
@@ -621,13 +618,20 @@ export class App extends PureComponent<Props, State> {
         logError(
           "Setting the page favicon is disabled in line with the platform security policy."
         )
-      } else {
-        // TODO(lukasmasuch): Should this also prevent the host message or only
-        //                    setting of the document favicon?
         handleFavicon(
           favicon,
           this.hostCommunicationMgr.sendMessageToHost,
-          this.endpoints
+          this.endpoints,
+          // do not overwrite the favIcon but still send the message for debugging purposes
+          false
+        )
+      } else {
+        handleFavicon(
+          favicon,
+          this.hostCommunicationMgr.sendMessageToHost,
+          this.endpoints,
+          // overwrite the favIcon
+          true
         )
       }
     }

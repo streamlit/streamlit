@@ -42,7 +42,12 @@ describe("Favicon element", () => {
   const endpoints = mockEndpoints({ buildMediaURL: buildMediaURL })
 
   it("sets the favicon in the DOM", () => {
-    handleFavicon("https://some/random/favicon.png", jest.fn(), endpoints)
+    handleFavicon(
+      "https://some/random/favicon.png",
+      jest.fn(),
+      endpoints,
+      true
+    )
     expect(buildMediaURL).toHaveBeenCalledWith(
       "https://some/random/favicon.png"
     )
@@ -50,37 +55,52 @@ describe("Favicon element", () => {
   })
 
   it("accepts emojis directly", () => {
-    handleFavicon("🍕", jest.fn(), endpoints)
+    handleFavicon("🍕", jest.fn(), endpoints, true)
     expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
   })
 
   it("handles emoji variants correctly", () => {
-    handleFavicon("🛰", jest.fn(), endpoints)
+    handleFavicon("🛰", jest.fn(), endpoints, true)
     expect(getFaviconHref()).toBe(SATELLITE_TWEMOJI_URL)
   })
 
   it("handles emoji shortcodes containing a dash correctly", () => {
-    handleFavicon(":crescent-moon:", jest.fn(), endpoints)
+    handleFavicon(":crescent-moon:", jest.fn(), endpoints, true)
     expect(getFaviconHref()).toBe(CRESCENT_MOON_TWEMOJI_URL)
   })
 
   it("accepts emoji shortcodes", () => {
-    handleFavicon(":pizza:", jest.fn(), endpoints)
+    handleFavicon(":pizza:", jest.fn(), endpoints, true)
     expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
   })
 
   it("updates the favicon when it changes", () => {
-    handleFavicon("/media/1234567890.png", jest.fn(), endpoints)
-    handleFavicon(":pizza:", jest.fn(), endpoints)
+    handleFavicon("/media/1234567890.png", jest.fn(), endpoints, true)
+    handleFavicon(":pizza:", jest.fn(), endpoints, true)
     expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
   })
 
-  it("sends SET_PAGE_FAVICON message to host", () => {
+  it("sends SET_PAGE_FAVICON message to host when send overwriteIcon is true", () => {
     const sendMessageToHost = jest.fn()
     handleFavicon(
       "https://streamlit.io/path/to/favicon.png",
       sendMessageToHost,
-      endpoints
+      endpoints,
+      true
+    )
+    expect(sendMessageToHost).toHaveBeenCalledWith({
+      favicon: "https://mock.media.url",
+      type: "SET_PAGE_FAVICON",
+    })
+  })
+
+  it("sends SET_PAGE_FAVICON message to host eveb wgeb overwriteIcon is false", () => {
+    const sendMessageToHost = jest.fn()
+    handleFavicon(
+      "https://streamlit.io/path/to/favicon.png",
+      sendMessageToHost,
+      endpoints,
+      false
     )
     expect(sendMessageToHost).toHaveBeenCalledWith({
       favicon: "https://mock.media.url",

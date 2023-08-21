@@ -29,7 +29,8 @@ import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 export function handleFavicon(
   favicon: string,
   sendMessageToHost: (message: IGuestToHostMessage) => void,
-  endpoints: StreamlitEndpoints
+  endpoints: StreamlitEndpoints,
+  overwriteIcon: boolean
 ): void {
   const emoji = extractEmoji(favicon)
   let imageUrl
@@ -43,8 +44,9 @@ export function handleFavicon(
   } else {
     imageUrl = endpoints.buildMediaURL(favicon)
   }
-
-  overwriteFavicon(imageUrl)
+  if (overwriteIcon) {
+    overwriteFavicon(imageUrl)
+  }
 
   sendMessageToHost({
     type: "SET_PAGE_FAVICON",

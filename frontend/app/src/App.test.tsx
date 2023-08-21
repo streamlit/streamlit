@@ -1044,6 +1044,11 @@ describe("App.handlePageConfigChanged", () => {
       const log = await import("@streamlit/lib/src/util/log")
       const logErrorSpy = jest.spyOn(log, "logError")
 
+      const favicon = await import(
+        "@streamlit/lib/src/components/elements/Favicon/Favicon"
+      )
+      const handleIcon = jest.spyOn(favicon, "handleFavicon")
+
       render(
         <App
           ref={node => {
@@ -1059,6 +1064,13 @@ describe("App.handlePageConfigChanged", () => {
       )
       expect(logErrorSpy).toHaveBeenLastCalledWith(
         "Setting the page favicon is disabled in line with the platform security policy."
+      )
+      expect(handleIcon).toHaveBeenLastCalledWith(
+        "favIcon",
+        appInstance.hostCommunicationMgr.sendMessageToHost,
+        appInstance.endpoints,
+        // do not overwrite the favIcon but still send the message for debugging purposes
+        false
       )
     })
   })
