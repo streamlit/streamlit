@@ -49,10 +49,15 @@ import type { readParquet as readParquetType } from "parquet-wasm"
 // but it seems to work fine in practice.
 //
 let readParquet: typeof readParquetType | undefined = undefined
-;(async function () {
-  const parquet = await import("parquet-wasm")
-  readParquet = parquet.readParquet
-})()
+
+// `setTimeout()` is necessary for this lazy-loading to work in the mountable package,
+// where __webpack_public_path__ is set dynamically because `setTimeout()` ensures that
+// this lazy-import is executed after __webpack_public_path__ is set.
+setTimeout(() =>
+  import("parquet-wasm").then(parquet => {
+    readParquet = parquet.readParquet
+  })
+)
 
 /** Data types used by ArrowJS. */
 export type DataType =
