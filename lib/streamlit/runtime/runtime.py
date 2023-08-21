@@ -660,14 +660,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         if msg.metadata.cacheable:
             populate_hash_if_needed(msg)
 
-            if self._message_cache.has_message_reference(
-                msg, session_info.session, session_info.script_run_count
-            ):
-                # This session has probably cached this message. Send
-                # a reference instead.
-                LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
-                msg_to_send = create_reference_msg(msg)
-
             # Cache the message so it can be referenced in the future.
             # If the message is already cached, this will reset its
             # age.
@@ -675,6 +667,14 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             self._message_cache.add_message(
                 msg, session_info.session, session_info.script_run_count
             )
+
+            if self._message_cache.has_message_reference(
+                msg, session_info.session, session_info.script_run_count
+            ):
+                # This session has probably cached this message. Send
+                # a reference instead.
+                LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
+                msg_to_send = create_reference_msg(msg)
 
         # If this was a `script_finished` message, we increment the
         # script_run_count for this session, and update the cache
