@@ -14,4 +14,4 @@
  * limitations under the License.
  */
 
-export { handleFavicon } from "./Favicon"
+export { overwriteFavicon, getFaviconUrl } from "./Favicon"

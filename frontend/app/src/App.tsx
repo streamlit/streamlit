@@ -62,7 +62,8 @@ import {
   logMessage,
   AppRoot,
   ComponentRegistry,
-  handleFavicon,
+  getFaviconUrl,
+  overwriteFavicon,
   createAutoTheme,
   createTheme,
   CUSTOM_THEME_NAME,
@@ -604,6 +605,7 @@ export class App extends PureComponent<Props, State> {
         type: "SET_PAGE_TITLE",
         title,
       })
+
       if (this.state.hostConfig.disableSetPageMetadata) {
         logError(
           "Setting the page title is disabled in line with the platform security policy."
@@ -614,25 +616,17 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (favicon) {
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "SET_PAGE_FAVICON",
+        favicon: getFaviconUrl(favicon, this.endpoints),
+      })
+
       if (this.state.hostConfig.disableSetPageMetadata) {
         logError(
           "Setting the page favicon is disabled in line with the platform security policy."
         )
-        handleFavicon(
-          favicon,
-          this.hostCommunicationMgr.sendMessageToHost,
-          this.endpoints,
-          // do not overwrite the favIcon but still send the message for debugging purposes
-          false
-        )
       } else {
-        handleFavicon(
-          favicon,
-          this.hostCommunicationMgr.sendMessageToHost,
-          this.endpoints,
-          // overwrite the favIcon
-          true
-        )
+        overwriteFavicon(favicon)
       }
     }
 
@@ -910,11 +904,13 @@ export class App extends PureComponent<Props, State> {
     } else {
       // Set the title and favicon to their default values
       document.title = `${newPageName} · Streamlit`
-      handleFavicon(
-        `${process.env.PUBLIC_URL}/favicon.png`,
-        this.hostCommunicationMgr.sendMessageToHost,
-        this.endpoints
-      )
+      const favIcon = `${process.env.PUBLIC_URL}/favicon.png`
+      const imageUrl = getFaviconUrl(favIcon, this.endpoints)
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "SET_PAGE_FAVICON",
+        favicon: getFaviconUrl(imageUrl, this.endpoints),
+      })
+      overwriteFavicon(imageUrl)
     }
 
     this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
