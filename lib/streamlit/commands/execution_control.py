@@ -15,12 +15,7 @@
 
 import streamlit as st
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import (
-    RerunData,
-    RerunException,
-    StopException,
-    get_script_run_ctx,
-)
+from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
 
 
 def stop() -> None:
