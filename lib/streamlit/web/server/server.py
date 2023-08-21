@@ -47,7 +47,6 @@ from streamlit.web.server.component_request_handler import ComponentRequestHandl
 from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.routes import (
     AddSlashHandler,
-    AllowedMessageOriginsHandler,
     HealthHandler,
     HostConfigHandler,
     MessageCacheHandler,
@@ -87,7 +86,6 @@ STREAM_ENDPOINT: Final = r"_stcore/stream"
 METRIC_ENDPOINT: Final = r"(?:st-metrics|_stcore/metrics)"
 MESSAGE_ENDPOINT: Final = r"_stcore/message"
 HEALTH_ENDPOINT: Final = r"(?:healthz|_stcore/health)"
-ALLOWED_MESSAGE_ORIGIN_ENDPOINT: Final = r"_stcore/allowed-message-origins"
 HOST_CONFIG_ENDPOINT: Final = r"_stcore/host-config"
 SCRIPT_HEALTH_CHECK_ENDPOINT: Final = (
     r"(?:script-health-check|_stcore/script-health-check)"
@@ -295,10 +293,6 @@ class Server:
                 make_url_path_regex(base, METRIC_ENDPOINT),
                 StatsRequestHandler,
                 dict(stats_manager=self._runtime.stats_mgr),
-            ),
-            (
-                make_url_path_regex(base, ALLOWED_MESSAGE_ORIGIN_ENDPOINT),
-                AllowedMessageOriginsHandler,
             ),
             (
                 make_url_path_regex(base, HOST_CONFIG_ENDPOINT),

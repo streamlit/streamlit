@@ -18,7 +18,6 @@ import styled from "@emotion/styled"
 import axios from "axios"
 
 import {
-  IAllowedMessageOriginsResponse,
   IHostConfigResponse,
   ForwardMsgCache,
   logError,
@@ -49,12 +48,7 @@ const LOG = "WebsocketConnection"
 const SERVER_PING_PATH = "_stcore/health"
 
 /**
- * The path to fetch the whitelist for accepting cross-origin messages.
- */
-const ALLOWED_ORIGINS_PATH = "_stcore/allowed-message-origins"
-
-/**
- * The path to fetch the host configuration.
+ * The path to fetch the host configuration and allowed-message-origins.
  */
 const HOST_CONFIG_PATH = "_stcore/host-config"
 
@@ -140,16 +134,10 @@ export interface Args {
   resetHostAuthToken: () => void
 
   /**
-   * Function to set the list of origins that this app should accept
-   * cross-origin messages from (if in a relevant deployment scenario).
-   */
-  setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void
-
-  /**
-   * Function to set the host config for this app (if in a relevant deployment
+   * Function to set the host config and allowed-message-origins for this app (if in a relevant deployment
    * scenario).
    */
-  setHostConfigResp: (resp: IHostConfigResponse) => void
+  setAllowedOrigins: (resp: IHostConfigResponse) => void
 }
 
 interface MessageQueue {
@@ -385,8 +373,7 @@ export class WebsocketConnection {
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
       this.args.onRetry,
-      this.args.setAllowedOriginsResp,
-      this.args.setHostConfigResp,
+      this.args.setAllowedOrigins,
       userCommandLine
     )
 
@@ -624,8 +611,7 @@ export function doInitPings(
   minimumTimeoutMs: number,
   maximumTimeoutMs: number,
   retryCallback: OnRetry,
-  setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void,
-  setHostConfigResp: (resp: IHostConfigResponse) => void,
+  setAllowedOrigins: (resp: IHostConfigResponse) => void,
   userCommandLine?: string
 ): Promise<number> {
   const resolver = new Resolver<number>()
@@ -698,16 +684,16 @@ export function doInitPings(
   connect = () => {
     const uriParts = uriPartsList[uriNumber]
     const healthzUri = buildHttpUri(uriParts, SERVER_PING_PATH)
-    const allowedOriginsUri = buildHttpUri(uriParts, ALLOWED_ORIGINS_PATH)
     const hostConfigUri = buildHttpUri(uriParts, HOST_CONFIG_PATH)
 
     logMessage(LOG, `Attempting to connect to ${healthzUri}.`)
+    logMessage(LOG, `Attempting to connect to ${hostConfigUri}`)
 
     if (uriNumber === 0) {
       totalTries++
     }
 
-    // We fire off requests to the server's healthz and allowed message origins
+    // We fire off requests to the server's healthz and host-config
     // endpoints in parallel to avoid having to wait on too many sequential
     // round trip network requests before we can try to establish a WebSocket
     // connection. Technically, it would have been possible to implement a
@@ -716,12 +702,10 @@ export function doInitPings(
     // endpoint additional responsibilities.
     Promise.all([
       axios.get(healthzUri, { timeout: PING_TIMEOUT_MS }),
-      axios.get(allowedOriginsUri, { timeout: PING_TIMEOUT_MS }),
       axios.get(hostConfigUri, { timeout: PING_TIMEOUT_MS }),
     ])
-      .then(([_, originRequest, hostConfigRequest]) => {
-        setAllowedOriginsResp(originRequest.data)
-        setHostConfigResp(hostConfigRequest.data)
+      .then(([_, hostConfigResp]) => {
+        setAllowedOrigins(hostConfigResp.data)
         resolver.resolve(uriNumber)
       })
       .catch(error => {

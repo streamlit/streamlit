@@ -38,7 +38,7 @@ describe("HostCommunicationManager messaging", () => {
   let dispatchEvent: (type: string, event: Event) => void
   let originalHash: string
 
-  let setAllowedOriginsFunc: jest.SpyInstance
+  let setHostConfigFunc: jest.SpyInstance
   let openCommFunc: jest.SpyInstance
   let sendMessageToHostFunc: jest.SpyInstance
 
@@ -64,20 +64,17 @@ describe("HostCommunicationManager messaging", () => {
     originalHash = window.location.hash
     dispatchEvent = mockEventListeners()
 
-    setAllowedOriginsFunc = jest.spyOn(
-      hostCommunicationMgr,
-      "setAllowedOriginsResp"
-    )
+    setHostConfigFunc = jest.spyOn(hostCommunicationMgr, "setAllowedOrigins")
     openCommFunc = jest.spyOn(hostCommunicationMgr, "openHostCommunication")
     sendMessageToHostFunc = jest.spyOn(
       hostCommunicationMgr,
       "sendMessageToHost"
     )
 
-    hostCommunicationMgr.setAllowedOriginsResp({
-      allowedOrigins: ["https://devel.streamlit.test"],
-      useExternalAuthToken: false,
-    })
+    hostCommunicationMgr.setAllowedOrigins(
+      ["https://devel.streamlit.test"],
+      false
+    )
   })
 
   afterEach(() => {
@@ -85,10 +82,10 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("sets allowedOrigins properly & opens HostCommunication", () => {
-    expect(setAllowedOriginsFunc).toHaveBeenCalledWith({
-      allowedOrigins: ["https://devel.streamlit.test"],
-      useExternalAuthToken: false,
-    })
+    expect(setHostConfigFunc).toHaveBeenCalledWith(
+      ["https://devel.streamlit.test"],
+      false
+    )
     // @ts-expect-error
     expect(hostCommunicationMgr.allowedOrigins).toEqual([
       "https://devel.streamlit.test",
@@ -427,10 +424,10 @@ describe("Test different origins", () => {
   })
 
   it("exact pattern", () => {
-    hostCommunicationMgr.setAllowedOriginsResp({
-      allowedOrigins: ["http://share.streamlit.io"],
-      useExternalAuthToken: false,
-    })
+    hostCommunicationMgr.setAllowedOrigins(
+      ["http://share.streamlit.io"],
+      false
+    )
 
     dispatchEvent(
       "message",
@@ -448,10 +445,10 @@ describe("Test different origins", () => {
   })
 
   it("wildcard pattern", () => {
-    hostCommunicationMgr.setAllowedOriginsResp({
-      allowedOrigins: ["http://*.streamlitapp.com"],
-      useExternalAuthToken: false,
-    })
+    hostCommunicationMgr.setAllowedOrigins(
+      ["http://*.streamlitapp.com"],
+      false
+    )
 
     dispatchEvent(
       "message",
@@ -469,10 +466,10 @@ describe("Test different origins", () => {
   })
 
   it("ignores non-matching origins", () => {
-    hostCommunicationMgr.setAllowedOriginsResp({
-      allowedOrigins: ["http://share.streamlit.io"],
-      useExternalAuthToken: false,
-    })
+    hostCommunicationMgr.setAllowedOrigins(
+      ["http://share.streamlit.io"],
+      false
+    )
 
     dispatchEvent(
       "message",
@@ -516,13 +513,13 @@ describe("HostCommunicationManager external auth token handling", () => {
   it("resolves promise to undefined immediately if useExternalAuthToken is false", async () => {
     const setAllowedOriginsFunc = jest.spyOn(
       hostCommunicationMgr,
-      "setAllowedOriginsResp"
+      "setAllowedOrigins"
     )
 
-    hostCommunicationMgr.setAllowedOriginsResp({
-      allowedOrigins: ["http://devel.streamlit.test"],
-      useExternalAuthToken: false,
-    })
+    hostCommunicationMgr.setAllowedOrigins(
+      ["http://share.streamlit.io"],
+      false
+    )
 
     expect(setAllowedOriginsFunc).toHaveBeenCalled()
     // @ts-expect-error - deferredAuthToken is private
@@ -534,11 +531,10 @@ describe("HostCommunicationManager external auth token handling", () => {
   it("waits to receive SET_AUTH_TOKEN message before resolving promise if useExternalAuthToken is true", async () => {
     const dispatchEvent = mockEventListeners()
 
-    hostCommunicationMgr.setAllowedOriginsResp({
-      allowedOrigins: ["http://devel.streamlit.test"],
-      useExternalAuthToken: true,
-    })
-
+    hostCommunicationMgr.setAllowedOrigins(
+      ["http://devel.streamlit.test"],
+      true
+    )
     // Asynchronously send a SET_AUTH_TOKEN message to the
     // HostCommunicationManager, which won't proceed past the `await`
     // statement below until the message is received and handled.
@@ -567,11 +563,11 @@ describe("HostCommunicationManager external auth token handling", () => {
 
     // Simulate the browser tab disconnecting and reconnecting, which from the
     // HostCommunication's perspective is only seen as a new call to
-    // setAllowedOriginsResp.
-    hostCommunicationMgr.setAllowedOriginsResp({
-      allowedOrigins: ["http://devel.streamlit.test"],
-      useExternalAuthToken: true,
-    })
+    // setAllowedOrigins.
+    hostCommunicationMgr.setAllowedOrigins(
+      ["http://devel.streamlit.test"],
+      true
+    )
 
     setTimeout(() => {
       dispatchEvent(

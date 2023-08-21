@@ -161,11 +161,6 @@ export type VersionedMessage<Message> = {
   stCommVersion: number
 } & Message
 
-export type IAllowedMessageOriginsResponse = {
-  allowedOrigins: string[]
-  useExternalAuthToken: boolean
-}
-
 export type IHostConfigResponse = HostConfig & {
   allowedOrigins?: string[]
   useExternalAuthToken?: boolean
