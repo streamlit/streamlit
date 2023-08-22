@@ -38,7 +38,7 @@ import { notNullOrUndefined } from "src/lib/util/utils"
 
 import type { readParquet as readParquetType } from "parquet-wasm"
 
-// stlite: Use parquet to bypass the Arrow implementation which is unavailable in the Wasm Python environment.
+// Stlite: Use parquet to bypass the Arrow implementation which is unavailable in the Wasm Python environment.
 // See https://github.com/whitphx/stlite/issues/509#issuecomment-1657957887
 // NOTE: Async import is necessary for the `parquet-wasm` package to work.
 // If it's imported statically, the following error will be thrown when `readParquet` is called:
@@ -47,13 +47,11 @@ import type { readParquet as readParquetType } from "parquet-wasm"
 // HACK: Strictly speaking, there is no guarantee that the `readParquet` function
 // async-imported in the following code will be ready when it's called in the `Quiver` class's constructor,
 // but it seems to work fine in practice.
-//
 let readParquet: typeof readParquetType | undefined = undefined
-
-// `setTimeout()` is necessary for this lazy-loading to work in the mountable package,
-// where __webpack_public_path__ is set dynamically because `setTimeout()` ensures that
-// this lazy-import is executed after __webpack_public_path__ is set.
 setTimeout(() =>
+  // `setTimeout()` is required for this lazy loading to work in the mountable package
+  // where `__webpack_public_path__` is set at runtime, as this `setTimeout()` ensures that
+  // this `import()` is run after `__webpack_public_path__` is patched.
   import("parquet-wasm").then(parquet => {
     readParquet = parquet.readParquet
   })
