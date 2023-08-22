@@ -810,42 +810,6 @@ class ScriptRunnerTest(AsyncTestCase):
             return_value={
                 "hash2": {
                     "page_script_hash": "hash2",
-                    "script_path": os.path.join(
-                        os.path.dirname(__file__), "test_data", "good_script2.py"
-                    ),
-                },
-            },
-        ),
-    )
-    def test_page_script_hash_to_script_path(self):
-        scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.request_rerun(RerunData(page_script_hash="hash2"))
-        scriptrunner.start()
-        scriptrunner.join()
-
-        self._assert_no_exceptions(scriptrunner)
-        self._assert_events(
-            scriptrunner,
-            [
-                ScriptRunnerEvent.SCRIPT_STARTED,
-                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-                ScriptRunnerEvent.SHUTDOWN,
-            ],
-        )
-        self._assert_text_deltas(scriptrunner, [text_utf2])
-        self.assertEqual(
-            os.path.join(os.path.dirname(__file__), "test_data", "good_script2.py"),
-            sys.modules["__main__"].__file__,
-            (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
-        )
-
-    @patch(
-        "streamlit.source_util.get_pages",
-        MagicMock(
-            return_value={
-                "hash2": {
-                    "page_script_hash": "hash2",
                     "page_name": "good_script2",
                     "script_path": os.path.join(
                         os.path.dirname(__file__), "test_data", "good_script2.py"
