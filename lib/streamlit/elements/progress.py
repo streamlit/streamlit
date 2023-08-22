@@ -100,7 +100,7 @@ class ProgressMixin:
 
         Example
         -------
-        Here is an example of a progress bar increasing over time:
+        Here is an example of a progress bar increasing over time and disappearing when it reaches completion:
 
         >>> import streamlit as st
         >>> import time
@@ -111,6 +111,7 @@ class ProgressMixin:
         >>> for percent_complete in range(100):
         ...     time.sleep(0.1)
         ...     my_bar.progress(percent_complete + 1, text=progress_text)
+        >>> my_bar.empty()
 
         """
         # TODO: standardize numerical type checking across st.* functions.
