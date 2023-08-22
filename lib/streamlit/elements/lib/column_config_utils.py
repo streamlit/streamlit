@@ -509,6 +509,28 @@ def apply_data_specific_configs(
                             column_name,
                             {"type_config": {"type": "checkbox"}},
                         )
+                    elif inferred_type == "date":
+                        data_df[column_name] = pd.to_datetime(
+                            column_data.astype("string"), errors="coerce"
+                        )
+                        column_data = data_df[column_name]
+                        update_column_config(
+                            columns_config,
+                            column_name,
+                            {"type_config": {"type": "date"}},
+                        )
+                        continue
+                    elif inferred_type == "time":
+                        data_df[column_name] = pd.to_datetime(
+                            column_data.astype("string"), errors="coerce"
+                        )
+                        column_data = data_df[column_name]
+                        update_column_config(
+                            columns_config,
+                            column_name,
+                            {"type_config": {"type": "time"}},
+                        )
+
             if is_colum_type_arrow_incompatible(column_data):
                 update_column_config(columns_config, column_name, {"disabled": True})
                 # Convert incompatible type to string
