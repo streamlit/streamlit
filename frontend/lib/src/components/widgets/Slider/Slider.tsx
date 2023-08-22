@@ -240,6 +240,49 @@ class Slider extends React.PureComponent<Props, State> {
       thumbValue.style.left = thumbValueOverflowsLeft ? "0" : ""
       thumbValue.style.right = thumbValueOverflowsRight ? "0" : ""
     }
+
+    this.alignTwoThumbValues()
+  }
+
+  private alignTwoThumbValues(): void {
+    const sliderDiv = this.sliderRef?.current
+    const thumb1Div = this.thumbRef[0]?.current
+    const thumb2Div = this.thumbRef[1]?.current
+    const thumb1LabelDiv = this.thumbValueRef[0]?.current
+    const thumb2LabelDiv = this.thumbValueRef[1]?.current
+    const labelGap = 16
+
+    if (
+      sliderDiv &&
+      thumb1Div &&
+      thumb2Div &&
+      thumb1LabelDiv &&
+      thumb2LabelDiv
+    ) {
+      const slider = sliderDiv.getBoundingClientRect()
+      const thumb1 = thumb1Div.getBoundingClientRect()
+      const thumb2 = thumb2Div.getBoundingClientRect()
+      const thumb1Label = thumb1LabelDiv.getBoundingClientRect()
+      const thumb2Label = thumb2LabelDiv.getBoundingClientRect()
+
+      if (thumb1Label.right + labelGap > thumb2Label.left) {
+        // Check which side has room to make the adjustment
+        const moveLeft =
+          thumb2Label.left - labelGap - thumb1Label.width > slider.left
+        const moveRight =
+          thumb1Label.right + labelGap + thumb2Label.width < slider.right
+
+        if (moveLeft) {
+          thumb1LabelDiv.style.right = `${
+            thumb2Label.width + labelGap - (thumb2.right - thumb1.right)
+          }px`
+        } else if (moveRight) {
+          thumb2LabelDiv.style.left = `${
+            thumb1Label.width + labelGap - (thumb2.left - thumb1.left)
+          }px`
+        }
+      }
+    }
   }
 
   // eslint-disable-next-line react/display-name
