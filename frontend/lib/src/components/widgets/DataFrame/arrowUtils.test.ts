@@ -524,10 +524,7 @@ describe("getCellFromArrow", () => {
 
     // Call the getCellFromArrow function
     const cell = getCellFromArrow(MOCK_TIME_COLUMN, arrowCell)
-
-    // non-editable time cells just fall back to text cells
-    // So we expect the display content to be in displayData
-    expect((cell as any).displayData).toEqual("FOOO")
+    expect((cell as any).data.displayDate).toEqual("FOOO")
   })
 
   it("parses numeric timestamps for time columns into valid Date values", () => {

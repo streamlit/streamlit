@@ -57,6 +57,7 @@ import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
 
 import "@glideapps/glide-data-grid/dist/index.css"
+import "@glideapps/glide-data-grid-cells/dist/index.css"
 
 // Min column width used for manual and automatic resizing
 const MIN_COLUMN_WIDTH = 50

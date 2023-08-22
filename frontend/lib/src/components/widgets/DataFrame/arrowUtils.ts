@@ -21,6 +21,7 @@ import {
   NumberCell,
   GridCellKind,
 } from "@glideapps/glide-data-grid"
+import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import moment from "moment"
 
 import {
@@ -410,6 +411,17 @@ export function getCellFromArrow(
           ...cellTemplate,
           displayData,
         } as NumberCell
+      } else if (
+        cellTemplate.kind === GridCellKind.Custom &&
+        (cellTemplate as DatePickerType).data?.kind === "date-picker-cell"
+      ) {
+        cellTemplate = {
+          ...cellTemplate,
+          data: {
+            ...(cellTemplate as DatePickerType).data,
+            displayDate: displayData,
+          },
+        } as DatePickerType
       }
     }
 

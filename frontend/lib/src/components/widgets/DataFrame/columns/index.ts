@@ -26,7 +26,6 @@ import ProgressColumn from "./ProgressColumn"
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 import { LineChartColumn, BarChartColumn } from "./ChartColumn"
 
-import { DateTimeCellRenderer } from "./cells/DateTimeCell"
 export { ImageCellEditor } from "./cells/ImageCellEditor"
 
 import { ColumnCreator } from "./utils"
@@ -57,7 +56,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
   })
 )
 
-export const CustomCells = [DateTimeCellRenderer]
+export const CustomCells = []
 
 export {
   ObjectColumn,
