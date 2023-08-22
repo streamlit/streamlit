@@ -96,7 +96,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             email = user_obj["email"]
             is_public_cloud_app = user_obj["isPublicCloudApp"]
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
-            email = "test@localhost.com"
+            email = "test@example.com"
 
         user_info: Dict[str, Optional[str]] = dict()
         if is_public_cloud_app:
