@@ -18,6 +18,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
 
 
+@gather_metrics("stop")
 def stop() -> None:
     """Stops execution immediately.
 
