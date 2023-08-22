@@ -92,20 +92,11 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    // Check default thumb value's alignment vs. slider container
-    for (
-      let i = 0;
-      i < Math.min(this.thumbRef.length, this.thumbValueRef.length);
-      i++
-    ) {
-      // Delay the alignment to allow the page layout to complete
-      setTimeout(() => {
-        this.thumbValueAlignment(
-          this.thumbRef[i].current,
-          this.thumbValueRef[i].current
-        )
-      }, 0)
-    }
+    // Check thumb value's alignment vs. slider container
+    // Delay the alignment to allow the page layout to complete
+    setTimeout(() => {
+      this.thumbValueAlignment()
+    }, 0)
 
     if (this.props.element.setValue) {
       this.updateFromProtobuf()
@@ -220,12 +211,11 @@ class Slider extends React.PureComponent<Props, State> {
     return sprintf(format, value)
   }
 
-  private thumbValueAlignment(
+  private alignThumbValue(
+    slider: HTMLDivElement | null,
     thumb: HTMLDivElement | null,
     thumbValue: HTMLDivElement | null
   ): void {
-    const slider = this.sliderRef.current
-
     if (slider && thumb && thumbValue) {
       const sliderPosition = slider.getBoundingClientRect()
       const thumbPosition = thumb.getBoundingClientRect()
@@ -240,45 +230,46 @@ class Slider extends React.PureComponent<Props, State> {
       thumbValue.style.left = thumbValueOverflowsLeft ? "0" : ""
       thumbValue.style.right = thumbValueOverflowsRight ? "0" : ""
     }
-
-    this.alignTwoThumbValues()
   }
 
-  private alignTwoThumbValues(): void {
-    const sliderDiv = this.sliderRef?.current
+  private thumbValueAlignment(): void {
+    const sliderDiv = this.sliderRef.current
     const thumb1Div = this.thumbRef[0]?.current
     const thumb2Div = this.thumbRef[1]?.current
-    const thumb1LabelDiv = this.thumbValueRef[0]?.current
-    const thumb2LabelDiv = this.thumbValueRef[1]?.current
+    const thumb1ValueDiv = this.thumbValueRef[0]?.current
+    const thumb2ValueDiv = this.thumbValueRef[1]?.current
     const labelGap = 16
+
+    this.alignThumbValue(sliderDiv, thumb1Div, thumb1ValueDiv)
+    this.alignThumbValue(sliderDiv, thumb2Div, thumb2ValueDiv)
 
     if (
       sliderDiv &&
       thumb1Div &&
       thumb2Div &&
-      thumb1LabelDiv &&
-      thumb2LabelDiv
+      thumb1ValueDiv &&
+      thumb2ValueDiv
     ) {
       const slider = sliderDiv.getBoundingClientRect()
       const thumb1 = thumb1Div.getBoundingClientRect()
       const thumb2 = thumb2Div.getBoundingClientRect()
-      const thumb1Label = thumb1LabelDiv.getBoundingClientRect()
-      const thumb2Label = thumb2LabelDiv.getBoundingClientRect()
+      const thumb1Value = thumb1ValueDiv.getBoundingClientRect()
+      const thumb2Value = thumb2ValueDiv.getBoundingClientRect()
 
-      if (thumb1Label.right + labelGap > thumb2Label.left) {
+      if (thumb1Value.right + labelGap > thumb2Value.left) {
         // Check which side has room to make the adjustment
         const moveLeft =
-          thumb2Label.left - labelGap - thumb1Label.width > slider.left
+          thumb2Value.left - labelGap - thumb1Value.width > slider.left
         const moveRight =
-          thumb1Label.right + labelGap + thumb2Label.width < slider.right
+          thumb1Value.right + labelGap + thumb2Value.width < slider.right
 
         if (moveLeft) {
-          thumb1LabelDiv.style.right = `${
-            thumb2Label.width + labelGap - (thumb2.right - thumb1.right)
+          thumb1ValueDiv.style.right = `${
+            thumb2Value.width + labelGap - (thumb2.right - thumb1.right)
           }px`
         } else if (moveRight) {
-          thumb2LabelDiv.style.left = `${
-            thumb1Label.width + labelGap - (thumb2.left - thumb1.left)
+          thumb2ValueDiv.style.left = `${
+            thumb1Value.width + labelGap - (thumb2.left - thumb1.left)
           }px`
         }
       }
@@ -314,12 +305,6 @@ class Slider extends React.PureComponent<Props, State> {
       if (this.props.element.options.length > 0 || this.isDateTimeType()) {
         ariaValueText["aria-valuetext"] = formattedValue
       }
-
-      // Check the thumb value's alignment vs. slider container
-      this.thumbValueAlignment(
-        this.thumbRef[thumbIndex].current,
-        this.thumbValueRef[thumbIndex].current
-      )
 
       return (
         <StyledThumb
@@ -369,6 +354,9 @@ class Slider extends React.PureComponent<Props, State> {
       element.formId,
       this.onFormCleared
     )
+
+    // Check the thumb value's alignment vs. slider container
+    this.thumbValueAlignment()
 
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
