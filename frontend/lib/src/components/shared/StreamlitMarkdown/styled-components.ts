@@ -22,7 +22,6 @@ export interface StyledStreamlitMarkdownProps {
   isInSidebar: boolean
   isLabel?: boolean
   largerLabel?: boolean
-  isButton?: boolean
   isToast?: boolean
 }
 
@@ -40,18 +39,10 @@ function sharedMarkdownStyle(theme: Theme): any {
 
 export const StyledStreamlitMarkdown =
   styled.div<StyledStreamlitMarkdownProps>(
-    ({
-      theme,
-      isCaption,
-      isInSidebar,
-      isLabel,
-      largerLabel,
-      isButton,
-      isToast,
-    }) => {
+    ({ theme, isCaption, isInSidebar, isLabel, largerLabel, isToast }) => {
       // Widget Labels have smaller font size with exception of Button/Checkbox/Radio Button labels
       // Toasts also have smaller font size
-      const labelFontSize = (isLabel && !largerLabel && !isButton) || isToast
+      const labelFontSize = (isLabel && !largerLabel) || isToast
       return {
         fontFamily: theme.genericFonts.bodyFont,
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
@@ -185,3 +176,22 @@ export const StyledHeaderContent = styled.span(() => ({
   flex: "1",
   marginLeft: "calc(2.5rem + 0.5rem)",
 }))
+
+export interface StyledDividerProps {
+  rainbow: boolean
+  color: string
+}
+
+export const StyledDivider = styled.hr<StyledDividerProps>(
+  ({ rainbow, color }) => {
+    return {
+      // Height needs to be !important due to globalStyles.tsx hr height override - line #170
+      height: "2px !important",
+      marginTop: "0.5rem",
+      marginBottom: "0px",
+      border: "none",
+      borderRadius: "3px",
+      ...(rainbow ? { background: color } : { backgroundColor: color }),
+    }
+  }
+)

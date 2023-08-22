@@ -133,32 +133,32 @@ class ArrowAltairMixin:
             The color to use for different lines in this chart. This argument
             can only be supplied by keyword.
 
-            For a line chart with just 1 line, this can be:
+            For a line chart with just one line, this can be:
 
             * None, to use the default color.
             * A hex string like "#ffaa00" or "#ffaa0088".
-            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+            * An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
 
             For a line chart with multiple lines, where the dataframe is in
-            long format (that is, y is None or just 1 column), this can be:
+            long format (that is, y is None or just one column), this can be:
 
             * None, to use the default colors.
             * The name of a column in the dataset. Data points will be grouped
               into lines of the same color based on the value of this column.
-              In addition, if the values in this column in one of the color
+              In addition, if the values in this column match one of the color
               formats above (hex string or color tuple), then that color will
               be used.
 
               For example: if the dataset has 1000 rows, but this column can
-              only contains the values "adult", "child", "baby",
-              then those 1000 datapoints will be grouped into 3 lines, whose
+              only contains the values "adult", "child", "baby", then
+              those 1000 datapoints will be grouped into three lines, whose
               colors will be automatically selected from the default palette.
 
               But, if for the same 1000-row dataset, this column contained
               the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
-              datapoints would still be grouped into 3 lines, but their
+              datapoints would still be grouped into three lines, but their
               colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
 
             For a line chart with multiple lines, where the dataframe is in
@@ -167,10 +167,8 @@ class ArrowAltairMixin:
             * None, to use the default colors.
             * A list of string colors or color tuples to be used for each of
               the lines in the chart. This list should have the same length
-              as the number of y values.
-
-              For example, for a chart with have 3 lines this argument can
-              be set to ``color=["#fd0", "#f0f", "#04f"]``.
+              as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
+              for three lines).
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
@@ -194,7 +192,7 @@ class ArrowAltairMixin:
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
-        ...
+        >>>
         >>> st._arrow_line_chart(chart_data)
 
         .. output::
@@ -205,30 +203,40 @@ class ArrowAltairMixin:
         the color dynamically based on a 3rd column (assuming your dataframe is in
         long format):
 
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame({
+        ...     'col1' : np.random.randn(20),
+        ...     'col2' : np.random.randn(20),
+        ...     'col3' : np.random.choice(['A','B','C'], 20)
+        ... })
+        >>>
         >>> st._arrow_line_chart(
         ...     chart_data,
-        ...     x='col1',
-        ...     y='col2',
-        ...     color='col3',
+        ...     x = 'col1',
+        ...     y = 'col2',
+        ...     color = 'col3'
         ... )
 
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple lines with different
         colors:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        ...     np.random.randn(20, 3),
+        ...     columns = ['col1', 'col2', 'col3'])
+        >>>
         >>> st._arrow_line_chart(
         ...     chart_data,
-        ...     x='col1',
-        ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],
+        ...     x = 'col1',
+        ...     y = ['col2', 'col3'],
+        ...     color = ['#FF0000', '#0000FF']  # Optional
         ... )
 
         """
@@ -294,17 +302,17 @@ class ArrowAltairMixin:
 
             * None, to use the default color.
             * A hex string like "#ffaa00" or "#ffaa0088".
-            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+            * An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
 
             For an area chart with multiple series, where the dataframe is in
-            long format (that is, y is None or just 1 column), this can be:
+            long format (that is, y is None or just one column), this can be:
 
             * None, to use the default colors.
             * The name of a column in the dataset. Data points will be grouped
               into series of the same color based on the value of this column.
-              In addition, if the values in this column in one of the color
+              In addition, if the values in this column match one of the color
               formats above (hex string or color tuple), then that color will
               be used.
 
@@ -324,10 +332,8 @@ class ArrowAltairMixin:
             * None, to use the default colors.
             * A list of string colors or color tuples to be used for each of
               the series in the chart. This list should have the same length
-              as the number of y values.
-
-              For example, for a chart with have 3 series this argument can
-              be set to ``color=["#fd0", "#f0f", "#04f"]``.
+              as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
+              for three lines).
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
@@ -349,8 +355,8 @@ class ArrowAltairMixin:
         >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
+        ...     columns = ['a', 'b', 'c'])
+        >>>
         >>> st._arrow_area_chart(chart_data)
 
         .. output::
@@ -361,30 +367,40 @@ class ArrowAltairMixin:
         the color dynamically based on a 3rd column (assuming your dataframe is in
         long format):
 
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame({
+        ...     'col1' : np.random.randn(20),
+        ...     'col2' : np.random.randn(20),
+        ...     'col3' : np.random.choice(['A', 'B', 'C'], 20)
+        ... })
+        >>>
         >>> st._arrow_area_chart(
         ...     chart_data,
-        ...     x='col1',
-        ...     y='col2',
-        ...     color='col3',
+        ...     x = 'col1',
+        ...     y = 'col2',
+        ...     color = 'col3'
         ... )
 
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple lines with different
         colors:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
+        ...     np.random.randn(20, 3),
         ...     columns=['col1', 'col2', 'col3'])
         ...
         >>> st._arrow_area_chart(
         ...     chart_data,
         ...     x='col1',
         ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],
+        ...     color=['#FF0000','#0000FF']
         ... )
 
         """
@@ -451,17 +467,17 @@ class ArrowAltairMixin:
 
             * None, to use the default color.
             * A hex string like "#ffaa00" or "#ffaa0088".
-            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+            * An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
 
             For a bar chart with multiple series, where the dataframe is in
-            long format (that is, y is None or just 1 column), this can be:
+            long format (that is, y is None or just one column), this can be:
 
             * None, to use the default colors.
             * The name of a column in the dataset. Data points will be grouped
               into series of the same color based on the value of this column.
-              In addition, if the values in this column in one of the color
+              In addition, if the values in this column match one of the color
               formats above (hex string or color tuple), then that color will
               be used.
 
@@ -481,10 +497,8 @@ class ArrowAltairMixin:
             * None, to use the default colors.
             * A list of string colors or color tuples to be used for each of
               the series in the chart. This list should have the same length
-              as the number of y values.
-
-              For example, for a chart with have 3 series this argument can
-              be set to ``color=["#fd0", "#f0f", "#04f"]``.
+              as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
+              for three lines).
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
@@ -519,30 +533,39 @@ class ArrowAltairMixin:
         the color dynamically based on a 3rd column (assuming your dataframe is in
         long format):
 
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame({
+        ...     'col1' : np.random.randn(20),
+        ...     'col2' : np.random.randn(20),
+        ...     'col3' : np.random.choice(['A','B','C'],20)
+        ... })
+        >>>
         >>> st._arrow_bar_chart(
         ...     chart_data,
         ...     x='col1',
         ...     y='col2',
-        ...     color='col3',
+        ...     color='col3'
         ... )
-
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple lines with different
         colors:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
+        ...     np.random.randn(20, 3),
         ...     columns=['col1', 'col2', 'col3'])
         ...
         >>> st._arrow_bar_chart(
         ...     chart_data,
         ...     x='col1',
         ...     y=['col2', 'col3'],
-        ...     color=['red', 'black'],
+        ...     color=['#FF0000','#0000FF']
         ... )
 
         """
@@ -1314,7 +1337,7 @@ This does not look like a valid color argument: `{color_from_user}`.
 The color argument can be:
 
 * A hex string like "#ffaa00" or "#ffaa0088".
-* An RGB or RGBA tuple with the red, green, #04f, and alpha
+* An RGB or RGBA tuple with the red, green, blue, and alpha
   components specified as ints from 0 to 255 or floats from 0.0 to
   1.0.
 * The name of a column.
