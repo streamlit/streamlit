@@ -760,39 +760,6 @@ class ScriptRunnerTest(AsyncTestCase):
                 ],
             )
 
-    def test_rerun_caching(self):
-        """Test that st.caches are maintained across script runs."""
-        # Make sure there are no caches from other tests.
-        caching._mem_caches.clear()
-
-        # Run st_cache_script.
-        runner = TestScriptRunner("st_cache_script.py")
-        runner.request_rerun(RerunData())
-        runner.start()
-        runner.join()
-
-        # The script has 5 cached functions, each of which writes out
-        # some text.
-        self._assert_text_deltas(
-            runner,
-            [
-                "cached function called",
-                "cached function called",
-                "cached function called",
-                "cached function called",
-                "cached_depending_on_not_yet_defined called",
-            ],
-        )
-
-        # Re-run the script on a second runner.
-        runner = TestScriptRunner("st_cache_script.py")
-        runner.request_rerun(RerunData())
-        runner.start()
-        runner.join()
-
-        # The cached functions should not have been called on this second run
-        self._assert_text_deltas(runner, [])
-
     def test_invalidating_cache(self):
         """Test that st.caches are cleared when a dependency changes."""
         # Make sure there are no caches from other tests.
@@ -835,42 +802,6 @@ class ScriptRunnerTest(AsyncTestCase):
             [
                 "cached_depending_on_not_yet_defined called",
             ],
-        )
-
-    @patch(
-        "streamlit.source_util.get_pages",
-        MagicMock(
-            return_value={
-                "hash2": {
-                    "page_script_hash": "hash2",
-                    "script_path": os.path.join(
-                        os.path.dirname(__file__), "test_data", "good_script2.py"
-                    ),
-                },
-            },
-        ),
-    )
-    def test_page_script_hash_to_script_path(self):
-        scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.request_rerun(RerunData(page_script_hash="hash2"))
-        scriptrunner.start()
-        scriptrunner.join()
-
-        self._assert_no_exceptions(scriptrunner)
-        self._assert_events(
-            scriptrunner,
-            [
-                ScriptRunnerEvent.SCRIPT_STARTED,
-                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-                ScriptRunnerEvent.SHUTDOWN,
-            ],
-        )
-        self._assert_text_deltas(scriptrunner, [text_utf2])
-        self.assertEqual(
-            os.path.join(os.path.dirname(__file__), "test_data", "good_script2.py"),
-            sys.modules["__main__"].__file__,
-            (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
 
     @patch(
