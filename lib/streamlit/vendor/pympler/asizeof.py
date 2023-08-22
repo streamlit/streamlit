@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 """
 This is a stripped-down of asizeof.py from the pympler module. It's vendored
 because pympler is unmaintained, while having a critical vulnerability.
