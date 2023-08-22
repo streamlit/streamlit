@@ -82,7 +82,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
         // Add empty option if the column is not configured as required:
         ...(props.isRequired !== true ? [null] : []),
         ...parameters.options
-          .filter(opt => opt !== null) // ignore empty option if it exists
+          .filter(opt => opt !== null && opt !== "") // ignore empty option if it exists
           .map(opt => toSafeString(opt)), // convert everything to string
       ],
       value: "",
@@ -97,7 +97,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     getCell(data?: any, validate?: boolean): GridCell {
       // Empty string refers to a missing value
       let cellData = null
-      if (notNullOrUndefined(data)) {
+      if (notNullOrUndefined(data) && data !== "") {
         cellData = toSafeString(data)
       }
 
