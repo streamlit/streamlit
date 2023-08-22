@@ -15,7 +15,7 @@
  */
 
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
-import { handleFavicon } from "./Favicon"
+import { getFaviconUrl, overwriteFavicon } from "./Favicon"
 
 function getFaviconHref(): string {
   const faviconElement: HTMLLinkElement | null = document.querySelector(
@@ -37,54 +37,70 @@ test("is set up with the default favicon", () => {
   expect(getFaviconHref()).toBe("http://localhost/default.png")
 })
 
-describe("Favicon element", () => {
+describe("getFaviconUrl", () => {
   const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
   const endpoints = mockEndpoints({ buildMediaURL: buildMediaURL })
 
-  it("sets the favicon in the DOM", () => {
-    handleFavicon("https://some/random/favicon.png", jest.fn(), endpoints)
-    expect(buildMediaURL).toHaveBeenCalledWith(
-      "https://some/random/favicon.png"
-    )
-    expect(getFaviconHref()).toBe("https://mock.media.url/")
-  })
-
   it("accepts emojis directly", () => {
-    handleFavicon("🍕", jest.fn(), endpoints)
-    expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
-  })
+    const url = getFaviconUrl("🍕", endpoints)
 
-  it("handles emoji variants correctly", () => {
-    handleFavicon("🛰", jest.fn(), endpoints)
-    expect(getFaviconHref()).toBe(SATELLITE_TWEMOJI_URL)
-  })
-
-  it("handles emoji shortcodes containing a dash correctly", () => {
-    handleFavicon(":crescent-moon:", jest.fn(), endpoints)
-    expect(getFaviconHref()).toBe(CRESCENT_MOON_TWEMOJI_URL)
+    expect(url).toEqual(PIZZA_TWEMOJI_URL)
   })
 
   it("accepts emoji shortcodes", () => {
-    handleFavicon(":pizza:", jest.fn(), endpoints)
-    expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
+    const url = getFaviconUrl(":pizza:", endpoints)
+
+    expect(url).toEqual(PIZZA_TWEMOJI_URL)
   })
 
-  it("updates the favicon when it changes", () => {
-    handleFavicon("/media/1234567890.png", jest.fn(), endpoints)
-    handleFavicon(":pizza:", jest.fn(), endpoints)
-    expect(getFaviconHref()).toBe(PIZZA_TWEMOJI_URL)
+  it("handles emoji variants correctly", () => {
+    const url = getFaviconUrl("🛰", endpoints)
+
+    expect(url).toEqual(SATELLITE_TWEMOJI_URL)
   })
 
-  it("sends SET_PAGE_FAVICON message to host", () => {
-    const sendMessageToHost = jest.fn()
-    handleFavicon(
-      "https://streamlit.io/path/to/favicon.png",
-      sendMessageToHost,
-      endpoints
+  it("handles emoji shortcodes containing a dash correctly", () => {
+    const url = getFaviconUrl(":crescent-moon:", endpoints)
+    expect(url).toEqual(CRESCENT_MOON_TWEMOJI_URL)
+  })
+
+  it("should return media URL for non-emoji string", () => {
+    getFaviconUrl("https://some/random/favicon.png", endpoints)
+    expect(buildMediaURL).toHaveBeenCalledWith(
+      "https://some/random/favicon.png"
     )
-    expect(sendMessageToHost).toHaveBeenCalledWith({
-      favicon: "https://mock.media.url",
-      type: "SET_PAGE_FAVICON",
-    })
+  })
+})
+
+describe("overwriteFavicon", () => {
+  let faviconElement: HTMLLinkElement
+
+  beforeEach(() => {
+    // Set up our document body with a favicon element
+    document.body.innerHTML = `
+      <link rel="shortcut icon" href="old-icon.png">
+    `
+
+    faviconElement = document.querySelector(
+      "link[rel='shortcut icon']"
+    ) as HTMLLinkElement
+  })
+
+  it("should update the favicon href if the element exists", () => {
+    const newImageUrl = "new-icon.png"
+
+    overwriteFavicon(newImageUrl)
+
+    expect(faviconElement.href).toContain(newImageUrl)
+  })
+
+  it("should not throw error if favicon does not exist", () => {
+    faviconElement.remove()
+
+    const newImageUrl = "new-icon.png"
+
+    expect(() => {
+      overwriteFavicon(newImageUrl)
+    }).not.toThrow()
   })
 })

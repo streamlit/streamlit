@@ -816,15 +816,15 @@ describe("App.handleNewSession", () => {
         />
       )
 
-      const mockHandleFavicon = jest.fn()
-      appInstance.handleFavicon = mockHandleFavicon
+      const mockOverwriteFavicon = jest.fn()
+      appInstance.overwriteFavicon = mockOverwriteFavicon
 
       appInstance.setHostConfig({ disableSetPageMetadata: true })
       appInstance.handleNewSession(new NewSession(NEW_SESSION_JSON))
       expect(logErrorSpy).toHaveBeenLastCalledWith(
         "Setting the page metadata (title & favicon) is disabled in line with the platform security policy."
       )
-      expect(mockHandleFavicon).not.toHaveBeenCalled()
+      expect(mockOverwriteFavicon).not.toHaveBeenCalled()
     })
   })
 
@@ -1044,6 +1044,12 @@ describe("App.handlePageConfigChanged", () => {
       const log = await import("@streamlit/lib/src/util/log")
       const logErrorSpy = jest.spyOn(log, "logError")
 
+      const favicon = await import(
+        "@streamlit/lib/src/components/elements/Favicon/Favicon"
+      )
+      const getFaviconUrlSpy = jest.spyOn(favicon, "getFaviconUrl")
+      const overwriteFaviconSpy = jest.spyOn(favicon, "overwriteFavicon")
+
       render(
         <App
           ref={node => {
@@ -1060,6 +1066,11 @@ describe("App.handlePageConfigChanged", () => {
       expect(logErrorSpy).toHaveBeenLastCalledWith(
         "Setting the page favicon is disabled in line with the platform security policy."
       )
+      expect(getFaviconUrlSpy).toHaveBeenLastCalledWith(
+        "favIcon",
+        appInstance.endpoints
+      )
+      expect(overwriteFaviconSpy).not.toHaveBeenLastCalledWith("favIcon")
     })
   })
 

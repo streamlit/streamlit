@@ -62,7 +62,8 @@ import {
   logMessage,
   AppRoot,
   ComponentRegistry,
-  handleFavicon,
+  getFaviconUrl,
+  overwriteFavicon,
   createAutoTheme,
   createTheme,
   CUSTOM_THEME_NAME,
@@ -600,35 +601,33 @@ export class App extends PureComponent<Props, State> {
       pageConfig
 
     if (title) {
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "SET_PAGE_TITLE",
+        title,
+      })
+
       if (this.state.hostConfig.disableSetPageMetadata) {
         logError(
           "Setting the page title is disabled in line with the platform security policy."
         )
       } else {
-        // TODO(lukasmasuch): Should this also prevent the host message or only
-        //                    setting of the document title?
-        this.hostCommunicationMgr.sendMessageToHost({
-          type: "SET_PAGE_TITLE",
-          title,
-        })
-
         document.title = title
       }
     }
 
     if (favicon) {
+      const imageUrl = getFaviconUrl(favicon, this.endpoints)
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "SET_PAGE_FAVICON",
+        favicon: imageUrl,
+      })
+
       if (this.state.hostConfig.disableSetPageMetadata) {
         logError(
           "Setting the page favicon is disabled in line with the platform security policy."
         )
       } else {
-        // TODO(lukasmasuch): Should this also prevent the host message or only
-        //                    setting of the document favicon?
-        handleFavicon(
-          favicon,
-          this.hostCommunicationMgr.sendMessageToHost,
-          this.endpoints
-        )
+        overwriteFavicon(getFaviconUrl(favicon, this.endpoints))
       }
     }
 
@@ -899,6 +898,13 @@ export class App extends PureComponent<Props, State> {
       this.sessionInfo.current.installationId + mainScriptPath
     )
 
+    const favIcon = `${process.env.PUBLIC_URL}/favicon.png`
+    const imageUrl = getFaviconUrl(favIcon, this.endpoints)
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SET_PAGE_FAVICON",
+      favicon: getFaviconUrl(imageUrl, this.endpoints),
+    })
+
     if (this.state.hostConfig.disableSetPageMetadata) {
       logError(
         "Setting the page metadata (title & favicon) is disabled in line with the platform security policy."
@@ -906,11 +912,7 @@ export class App extends PureComponent<Props, State> {
     } else {
       // Set the title and favicon to their default values
       document.title = `${newPageName} · Streamlit`
-      handleFavicon(
-        `${process.env.PUBLIC_URL}/favicon.png`,
-        this.hostCommunicationMgr.sendMessageToHost,
-        this.endpoints
-      )
+      overwriteFavicon(imageUrl)
     }
 
     this.metricsMgr.setMetadata(this.state.deployedAppMetadata)

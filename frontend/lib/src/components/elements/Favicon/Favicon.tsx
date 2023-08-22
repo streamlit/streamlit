@@ -16,21 +16,12 @@
 
 import nodeEmoji from "node-emoji"
 import { grabTheRightIcon } from "@streamlit/lib/src/vendor/twemoji"
-import { IGuestToHostMessage } from "@streamlit/lib/src/hostComm/types"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 
-/**
- * Set the provided url/emoji as the page favicon.
- *
- * @param {string} favicon an image url, or an emoji like 🍕 or :pizza:
- * @param sendMessageToHost a function that posts messages to the app's parent iframe
- * @param endpoints
- */
-export function handleFavicon(
+export function getFaviconUrl(
   favicon: string,
-  sendMessageToHost: (message: IGuestToHostMessage) => void,
   endpoints: StreamlitEndpoints
-): void {
+): string {
   const emoji = extractEmoji(favicon)
   let imageUrl
 
@@ -43,17 +34,11 @@ export function handleFavicon(
   } else {
     imageUrl = endpoints.buildMediaURL(favicon)
   }
-
-  overwriteFavicon(imageUrl)
-
-  sendMessageToHost({
-    type: "SET_PAGE_FAVICON",
-    favicon: imageUrl,
-  })
+  return imageUrl
 }
 
 // Update the favicon in the DOM with the specified image.
-function overwriteFavicon(imageUrl: string): void {
+export function overwriteFavicon(imageUrl: string): void {
   const faviconElement: HTMLLinkElement | null = document.querySelector(
     "link[rel='shortcut icon']"
   )
