@@ -476,6 +476,10 @@ def apply_data_specific_configs(
     """
     # Deactivate editing for columns that are not compatible with arrow
     if check_arrow_compatibility:
+        # Stlite: Fix non-string column names (not supported by fastparquet):
+        if infer_dtype(data_df.columns) != "string":
+            data_df.columns = data_df.columns.astype("string")
+
         for column_name, column_data in data_df.items():
             # stlite: Configure column types for some aspects
             # that are not working out of the box with the parquet serialization.
