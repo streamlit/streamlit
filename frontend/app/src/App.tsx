@@ -616,9 +616,10 @@ export class App extends PureComponent<Props, State> {
     }
 
     if (favicon) {
+      const imageUrl = getFaviconUrl(favicon, this.endpoints)
       this.hostCommunicationMgr.sendMessageToHost({
         type: "SET_PAGE_FAVICON",
-        favicon: getFaviconUrl(favicon, this.endpoints),
+        favicon: imageUrl,
       })
 
       if (this.state.hostConfig.disableSetPageMetadata) {
