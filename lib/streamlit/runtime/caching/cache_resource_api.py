@@ -567,7 +567,7 @@ class ResourceCache(Cache):
             CacheStat(
                 category_name="st_cache_resource",
                 cache_name=self.display_name,
-                byte_length=asizeof.asizeof(entry),
+                byte_length=asizeof(entry),
             )
             for entry in cache_entries
         ]
