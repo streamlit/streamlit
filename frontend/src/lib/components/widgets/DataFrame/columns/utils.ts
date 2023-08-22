@@ -294,6 +294,10 @@ export function toSafeArray(data: any): any[] {
     }
   }
 
+  if (data instanceof Uint8Array) {
+    return Array.from(data)
+  }
+
   try {
     const parsedData = JSON.parse(
       JSON.stringify(data, (_key, value) =>

@@ -41,7 +41,13 @@ from typing import (
 import numpy as np
 import pyarrow as pa
 from pandas import DataFrame, Index, MultiIndex, Series
-from pandas.api.types import infer_dtype, is_dict_like, is_list_like
+from pandas.api.types import (
+    infer_dtype,
+    is_dict_like,
+    is_interval_dtype,
+    is_list_like,
+    is_period_dtype,
+)
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
 import streamlit as st
@@ -659,6 +665,14 @@ def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
     ]:
         return True
 
+    # Stlite: not supported by fastparquet:
+    if is_interval_dtype(column.dtype):
+        return True
+
+    # Stlite: not supported by fastparquet:
+    if is_period_dtype(column.dtype):
+        return True
+
     if column.dtype == "object":
         # The dtype of mixed type columns is always object, the actual type of the column
         # values can be determined via the infer_dtype function:
@@ -670,6 +684,10 @@ def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
             "complex",
             "timedelta",
             "timedelta64",
+            # Stlite: not supported by fastparquet (as object types):
+            "date",
+            "time",
+            "datetime",
         ]:
             return True
         elif inferred_type == "mixed":
@@ -689,6 +707,10 @@ def is_colum_type_arrow_incompatible(column: Union[Series, Index]) -> bool:
                 or is_dict_like(first_value)
                 # Frozensets are list-like, but are not compatible with pyarrow.
                 or isinstance(first_value, frozenset)
+                # Stlite: not supported by fastparquet:
+                or isinstance(first_value, set)
+                or isinstance(first_value, tuple)
+                or infer_dtype(first_value, skipna=True) in ["datetime"]
             ):
                 # This seems to be an incompatible list-like type
                 return True
@@ -726,7 +748,7 @@ def fix_arrow_incompatible_column_types(
         if is_colum_type_arrow_incompatible(df[col]):
             if df_copy is None:
                 df_copy = df.copy()
-            df_copy[col] = df[col].astype(str)
+            df_copy[col] = df[col].astype("string")
 
     # The index can also contain mixed types
     # causing Arrow issues during conversion.
@@ -741,7 +763,14 @@ def fix_arrow_incompatible_column_types(
     ):
         if df_copy is None:
             df_copy = df.copy()
-        df_copy.index = df.index.astype(str)
+        df_copy.index = df.index.astype("string")
+
+    # Stlite: fastparquet does not support non-string column names:
+    if infer_dtype(df.columns) != "string":
+        if df_copy is None:
+            df_copy = df.copy()
+        df_copy.columns = df.columns.astype("string")
+
     return df_copy if df_copy is not None else df
 
 
@@ -771,7 +800,7 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
     buf = UnclosableBytesIO()
 
     try:
-        df.to_parquet(buf)
+        df.to_parquet(buf, engine="fastparquet")
     except ValueError as ex:
         _LOGGER.info(
             "Serialization of dataframe to Parquet table was unsuccessful due to: %s. "
@@ -779,7 +808,7 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
             ex,
         )
         df = fix_arrow_incompatible_column_types(df)
-        df.to_parquet(buf)
+        df.to_parquet(buf, engine="fastparquet")
 
     data = buf.getvalue()
     buf.really_close()
