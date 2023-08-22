@@ -626,7 +626,7 @@ export class App extends PureComponent<Props, State> {
           "Setting the page favicon is disabled in line with the platform security policy."
         )
       } else {
-        overwriteFavicon(favicon)
+        overwriteFavicon(getFaviconUrl(favicon, this.endpoints))
       }
     }
 
@@ -897,6 +897,13 @@ export class App extends PureComponent<Props, State> {
       this.sessionInfo.current.installationId + mainScriptPath
     )
 
+    const favIcon = `${process.env.PUBLIC_URL}/favicon.png`
+    const imageUrl = getFaviconUrl(favIcon, this.endpoints)
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SET_PAGE_FAVICON",
+      favicon: getFaviconUrl(imageUrl, this.endpoints),
+    })
+
     if (this.state.hostConfig.disableSetPageMetadata) {
       logError(
         "Setting the page metadata (title & favicon) is disabled in line with the platform security policy."
@@ -904,12 +911,6 @@ export class App extends PureComponent<Props, State> {
     } else {
       // Set the title and favicon to their default values
       document.title = `${newPageName} · Streamlit`
-      const favIcon = `${process.env.PUBLIC_URL}/favicon.png`
-      const imageUrl = getFaviconUrl(favIcon, this.endpoints)
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_PAGE_FAVICON",
-        favicon: getFaviconUrl(imageUrl, this.endpoints),
-      })
       overwriteFavicon(imageUrl)
     }
 
