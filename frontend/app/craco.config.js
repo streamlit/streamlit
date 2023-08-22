@@ -103,6 +103,18 @@ module.exports = {
       // Resolve the path aliases.
       webpackConfig.resolve.plugins.push(new TsconfigPathsPlugin())
 
+      // For parquet-wasm, which includes .wasm files and needs async load.
+      // https://qiita.com/laiso/items/a5f7362c4a9163a878e5
+      // https://webpack.js.org/configuration/experiments/
+      webpackConfig.module.rules.push({
+        test: /\.wasm$/,
+        type: "webassembly/async",
+      })
+      webpackConfig.experiments = {
+        ...webpackConfig.experiments,
+        asyncWebAssembly: true,
+      }
+
       // Let Babel compile outside of src/.
       const oneOfRule = webpackConfig.module.rules.find(rule => rule.oneOf)
       const tsRule = oneOfRule.oneOf.find(rule =>

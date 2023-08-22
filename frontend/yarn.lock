@@ -12777,6 +12777,11 @@ parenthesis@^3.1.5:
   resolved "https://registry.yarnpkg.com/parenthesis/-/parenthesis-3.1.8.tgz#3457fccb8f05db27572b841dad9d2630b912f125"
   integrity sha512-KF/U8tk54BgQewkJPvB4s/US3VQY68BRDpH638+7O/n58TpnwiwnOtGIOsT2/i+M78s61BBpeC83STB88d8sqw==
 
+parquet-wasm@^0.4.0:
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/parquet-wasm/-/parquet-wasm-0.4.0.tgz#1ecbba337d742948b67f8a097ba1d997aaecec4c"
+  integrity sha512-oAKBE8CE88u/iKfW8afxogZAF/K9CvM9ttENkMuZvSSbXvwVdWa9p3gvHR8eaGwAG4hlakk1v0A2/UrjeLiJog==
+
 parse-entities@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/parse-entities/-/parse-entities-2.0.0.tgz#53c6eb5b9314a1f4ec99fa0fdf7ce01ecda0cbe8"

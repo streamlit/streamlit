@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import copy
+import io
 import re
 import types
 from enum import Enum, auto
@@ -41,7 +42,13 @@ from typing import (
 import numpy as np
 import pyarrow as pa
 from pandas import DataFrame, Index, MultiIndex, Series
-from pandas.api.types import infer_dtype, is_dict_like, is_list_like
+from pandas.api.types import (
+    infer_dtype,
+    is_dict_like,
+    is_interval_dtype,
+    is_list_like,
+    is_period_dtype,
+)
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
 import streamlit as st
@@ -61,6 +68,19 @@ if TYPE_CHECKING:
 
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
 MAX_UNEVALUATED_DF_ROWS = 10000
+
+
+# `pd.DataFrame.to_parquet()` always closes the file handle,
+# but we need to keep it open to get the written data.
+# So we use this custom class to prevent the closing.
+# https://github.com/dask/fastparquet/issues/868
+class UnclosableBytesIO(io.BytesIO):
+    def close(self):
+        pass
+
+    def really_close(self):
+        super().close()
+
 
 _LOGGER = _logger.get_logger("root")
 
@@ -698,17 +718,28 @@ def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
     ]:
         return True
 
+    # stlite: not supported by fastparquet:
+    if is_interval_dtype(column.dtype):
+        return True
+
+    # stlite: not supported by fastparquet:
+    if is_period_dtype(column.dtype):
+        return True
+
     if column.dtype == "object":
         # The dtype of mixed type columns is always object, the actual type of the column
         # values can be determined via the infer_dtype function:
         # https://pandas.pydata.org/docs/reference/api/pandas.api.types.infer_dtype.html
         inferred_type = infer_dtype(column, skipna=True)
-
         if inferred_type in [
             "mixed-integer",
             "complex",
             "timedelta",
             "timedelta64",
+            # stlite: not supported by fastparquet:
+            "date",
+            "time",
+            "datetime",
         ]:
             return True
         elif inferred_type == "mixed":
@@ -728,6 +759,10 @@ def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
                 or is_dict_like(first_value)
                 # Frozensets are list-like, but are not compatible with pyarrow.
                 or isinstance(first_value, frozenset)
+                # stlite: not supported by fastparquet:
+                or isinstance(first_value, set)
+                or isinstance(first_value, tuple)
+                or infer_dtype(first_value, skipna=True) in ["datetime"]
             ):
                 # This seems to be an incompatible list-like type
                 return True
@@ -759,13 +794,14 @@ def fix_arrow_incompatible_column_types(
     -------
     The fixed dataframe.
     """
+
     # Make a copy, but only initialize if necessary to preserve memory.
     df_copy = None
     for col in selected_columns or df.columns:
         if is_colum_type_arrow_incompatible(df[col]):
             if df_copy is None:
                 df_copy = df.copy()
-            df_copy[col] = df[col].astype(str)
+            df_copy[col] = df[col].astype("string")
 
     # The index can also contain mixed types
     # causing Arrow issues during conversion.
@@ -780,12 +816,20 @@ def fix_arrow_incompatible_column_types(
     ):
         if df_copy is None:
             df_copy = df.copy()
-        df_copy.index = df.index.astype(str)
+        df_copy.index = df.index.astype("string")
+
+    # stlite: fastparquet does not support non-string column names:
+    if infer_dtype(df.columns) != "string":
+        if df_copy is None:
+            df_copy = df.copy()
+        df_copy.columns = df.columns.astype("string")
     return df_copy if df_copy is not None else df
 
 
 def data_frame_to_bytes(df: DataFrame) -> bytes:
-    """Serialize pandas.DataFrame to bytes using Apache Arrow.
+    """Serialize pandas.DataFrame to bytes using Apache ~~Arrow~~ Parquet.
+    This function is customized from the original one to use Parquet instead of Arrow
+    for stlite. See https://github.com/whitphx/stlite/issues/509
 
     Parameters
     ----------
@@ -793,17 +837,23 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
         A dataframe to convert.
 
     """
+    buf = UnclosableBytesIO()
+
     try:
-        table = pa.Table.from_pandas(df)
-    except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
+        df.to_parquet(buf, engine="fastparquet")
+    except ValueError as ex:
         _LOGGER.info(
-            "Serialization of dataframe to Arrow table was unsuccessful due to: %s. "
+            "Serialization of dataframe to Parquet table was unsuccessful due to: %s. "
             "Applying automatic fixes for column types to make the dataframe Arrow-compatible.",
             ex,
         )
         df = fix_arrow_incompatible_column_types(df)
-        table = pa.Table.from_pandas(df)
-    return pyarrow_table_to_bytes(table)
+        df.to_parquet(buf, engine="fastparquet")
+
+    data = buf.getvalue()
+    buf.really_close()
+
+    return data
 
 
 def bytes_to_data_frame(source: bytes) -> DataFrame:
@@ -1027,6 +1077,7 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
 # The code below is copied from Altair, and slightly modified.
 # We copy this code here so we don't depend on private Altair functions.
 # Source: https://github.com/altair-viz/altair/blob/62ca5e37776f5cecb27e83c1fbd5d685a173095d/altair/utils/core.py#L193
+
 
 # STREAMLIT MOD: I changed the type for the data argument from "pd.Series" to Series,
 # and the return type to a Union including a (str, list) tuple, since the function does

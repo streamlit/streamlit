@@ -20,6 +20,7 @@ from typing import Dict, List, Optional, Union
 
 import pandas as pd
 import pyarrow as pa
+from pandas.api.types import infer_dtype, is_categorical_dtype
 from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
@@ -347,7 +348,7 @@ def _determine_data_kind(
 
 
 def determine_dataframe_schema(
-    data_df: pd.DataFrame, arrow_schema: pa.Schema
+    data_df: pd.DataFrame, arrow_schema: pa.Schema | None
 ) -> DataframeSchema:
     """Determine the schema of a dataframe.
 
@@ -376,7 +377,7 @@ def determine_dataframe_schema(
     for i, column in enumerate(data_df.items()):
         column_name, column_data = column
         dataframe_schema[column_name] = _determine_data_kind(
-            column_data, arrow_schema.field(i)
+            column_data, arrow_schema.field(i) if arrow_schema else None
         )
     return dataframe_schema
 
@@ -476,10 +477,38 @@ def apply_data_specific_configs(
     # Deactivate editing for columns that are not compatible with arrow
     if check_arrow_compatibility:
         for column_name, column_data in data_df.items():
+            # stlite: Configure column types for some aspects
+            # that are not working out of the box with the parquet serialization.
+            if column_name not in columns_config:
+                if is_categorical_dtype(column_data.dtype):
+                    update_column_config(
+                        columns_config,
+                        column_name,
+                        {
+                            "type_config": {
+                                "type": "selectbox",
+                                "options": column_data.cat.categories.tolist(),
+                            },
+                        },
+                    )
+                if column_data.dtype == "object":
+                    inferred_type = infer_dtype(column_data, skipna=True)
+                    if inferred_type in ["string", "empty"]:
+                        update_column_config(
+                            columns_config,
+                            column_name,
+                            {"type_config": {"type": "text"}},
+                        )
+                    elif inferred_type == "boolean":
+                        update_column_config(
+                            columns_config,
+                            column_name,
+                            {"type_config": {"type": "checkbox"}},
+                        )
             if is_colum_type_arrow_incompatible(column_data):
                 update_column_config(columns_config, column_name, {"disabled": True})
                 # Convert incompatible type to string
-                data_df[column_name] = column_data.astype(str)
+                data_df[column_name] = column_data.astype("string")
 
     # Pandas adds a range index as default to all datastructures
     # but for most of the non-pandas data objects it is unnecessary

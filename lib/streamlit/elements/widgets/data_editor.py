@@ -778,20 +778,25 @@ class DataEditorMixin:
             for column in disabled:
                 update_column_config(column_config_mapping, column, {"disabled": True})
 
-        # Convert the dataframe to an arrow table which is used as the main
-        # serialization format for sending the data to the frontend.
-        # We also utilize the arrow schema to determine the data kinds of every column.
-        arrow_table = pa.Table.from_pandas(data_df)
+        # stlite: Don't use Arrow
+        # # Convert the dataframe to an arrow table which is used as the main
+        # # serialization format for sending the data to the frontend.
+        # # We also utilize the arrow schema to determine the data kinds of every column.
+        # arrow_table = pa.Table.from_pandas(data_df)
 
-        # Determine the dataframe schema which is required for parsing edited values
-        # and for checking type compatibilities.
-        dataframe_schema = determine_dataframe_schema(data_df, arrow_table.schema)
+        # stlite: arrow_table.schema can't be used as Arrow is not available.
+        # # Determine the dataframe schema which is required for parsing edited values
+        # # and for checking type compatibilities.
+        # dataframe_schema = determine_dataframe_schema(data_df, arrow_table.schema)
+        dataframe_schema = determine_dataframe_schema(data_df, None)
 
         # Check if all configured column types are compatible with the underlying data.
         # Throws an exception if any of the configured types are incompatible.
         _check_type_compatibilities(data_df, column_config_mapping, dataframe_schema)
 
-        arrow_bytes = type_util.pyarrow_table_to_bytes(arrow_table)
+        # stlite: Don't use Arrow. `type_util.data_frame_to_bytes` is polyfilled to use Parquet instead for stlite.
+        # arrow_bytes = type_util.pyarrow_table_to_bytes(arrow_table)
+        arrow_bytes = type_util.data_frame_to_bytes(data_df)
 
         # We want to do this as early as possible to avoid introducing nondeterminism,
         # but it isn't clear how much processing is needed to have the data in a

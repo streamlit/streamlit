@@ -36,6 +36,30 @@ import numbro from "numbro"
 import { IArrow, Styler as StylerProto } from "@streamlit/lib/src/proto"
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
+import type { readParquet as readParquetType } from "parquet-wasm"
+
+// stlite: Use parquet to bypass the Arrow implementation which is unavailable in the Wasm Python environment.
+// See https://github.com/whitphx/stlite/issues/509#issuecomment-1657957887
+// NOTE: Async import is necessary for the `parquet-wasm` package to work.
+// If it's imported statically, the following error will be thrown when `readParquet` is called:
+// `TypeError: Cannot read properties of undefined (reading '__wbindgen_add_to_stack_pointer')`
+// Ref: https://github.com/kylebarron/parquet-wasm/issues/27
+// HACK: Strictly speaking, there is no guarantee that the `readParquet` function
+// async-imported in the following code will be ready when it's called in the `Quiver` class's constructor,
+// but it seems to work fine in practice.
+//
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let readParquet: typeof readParquetType | undefined = undefined
+
+// `setTimeout()` is necessary for this lazy-loading to work in the mountable package,
+// where __webpack_public_path__ is set dynamically because `setTimeout()` ensures that
+// this lazy-import is executed after __webpack_public_path__ is set.
+setTimeout(() =>
+  import("parquet-wasm").then(parquet => {
+    readParquet = parquet.readParquet
+  })
+)
+
 /** Data types used by ArrowJS. */
 export type DataType =
   | null
@@ -384,7 +408,9 @@ export class Quiver {
   private readonly _styler?: Styler
 
   constructor(element: IArrow) {
-    const table = tableFromIPC(element.data)
+    const table = tableFromIPC(
+      element.data ? readParquet!(element.data) : element.data
+    )
     const schema = Quiver.parseSchema(table)
     const rawColumns = Quiver.getRawColumns(schema)
     const fields = Quiver.parseFields(table.schema)
@@ -937,7 +963,9 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   public static getTypeName(type: Type): IndexTypeName | string {
     // For `PeriodType` and `IntervalType` types are kept in `numpy_type`,
     // for the rest of the indexes in `pandas_type`.
-    return type.pandas_type === "object" ? type.numpy_type : type.pandas_type
+    const typeName =
+      type.pandas_type === "object" ? type.numpy_type : type.pandas_type
+    return typeName.toLowerCase().trim()
   }
 
   /** Takes the data and it's type and nicely formats it. */
