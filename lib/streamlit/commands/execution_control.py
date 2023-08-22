@@ -12,23 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import NoReturn
 
+import streamlit as st
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import (
-    RerunData,
-    RerunException,
-    StopException,
-    get_script_run_ctx,
-)
+from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
 
 
-def stop() -> NoReturn:
+def stop() -> None:
     """Stops execution immediately.
 
     Streamlit will not run any statements after `st.stop()`.
     We recommend rendering a message to explain why the script has stopped.
-    When run outside of Streamlit, this will raise an Exception.
 
     Example
     -------
@@ -41,32 +35,34 @@ def stop() -> NoReturn:
     >>> st.success('Thank you for inputting a name.')
 
     """
-    raise StopException()
+    ctx = get_script_run_ctx()
+
+    if ctx and ctx.script_requests:
+        ctx.script_requests.request_stop()
+        # Force a yield point so the runner can stop
+        st.empty()
 
 
 @gather_metrics("experimental_rerun")
-def rerun() -> NoReturn:
+def rerun() -> None:
     """Rerun the script immediately.
 
     When `st.experimental_rerun()` is called, the script is halted - no
     more statements will be run, and the script will be queued to re-run
     from the top.
-
-    If this function is called outside of Streamlit, it will raise an
-    Exception.
     """
 
     ctx = get_script_run_ctx()
 
-    query_string = ""
-    page_script_hash = ""
-    if ctx is not None:
+    if ctx and ctx.script_requests:
         query_string = ctx.query_string
         page_script_hash = ctx.page_script_hash
 
-    raise RerunException(
-        RerunData(
-            query_string=query_string,
-            page_script_hash=page_script_hash,
+        ctx.script_requests.request_rerun(
+            RerunData(
+                query_string=query_string,
+                page_script_hash=page_script_hash,
+            )
         )
-    )
+        # Force a yield point so the runner can do the rerun
+        st.empty()
