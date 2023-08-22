@@ -78,12 +78,16 @@ class Multiselect extends React.PureComponent<Props, State> {
   }
 
   private getNoResultsMsg(): string {
-    if (this.props.element.maxSelections === 0) {
+    const { maxSelections } = this.props.element
+    const { value } = this.state
+
+    if (maxSelections === 0) {
       return "No results"
+    } else if (value.length === maxSelections) {
+      const option = maxSelections !== 1 ? "options" : "option"
+      return `You can only select up to ${maxSelections} ${option}. Remove an option first.`
     }
-    const option =
-      this.props.element.maxSelections !== 1 ? "options" : "option"
-    return `You can only select up to ${this.props.element.maxSelections} ${option}. Remove an option first.`
+    return "No results"
   }
 
   get initialValue(): number[] {
@@ -240,7 +244,11 @@ class Multiselect extends React.PureComponent<Props, State> {
     const showKeyboardOnMobile = options.length > 10
 
     return (
-      <div className="row-widget stMultiSelect" style={style}>
+      <div
+        className="row-widget stMultiSelect"
+        data-testid="stMultiSelect"
+        style={style}
+      >
         <WidgetLabel
           label={element.label}
           disabled={disabled}
