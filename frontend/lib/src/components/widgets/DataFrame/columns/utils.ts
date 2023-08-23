@@ -277,6 +277,14 @@ export function toSafeArray(data: any): any[] {
     return [data]
   }
 
+  if (data instanceof Uint8Array) {
+    // Stlite: Uint8Array is used for any list data in fastparquet.
+    // It stores a json string representation in the Uint8Array.
+    // We need to convert this to a string first
+    // to later have it load as json.
+    data = new TextDecoder("utf-8").decode(data)
+  }
+
   if (typeof data === "string") {
     if (data === "") {
       // Empty string
