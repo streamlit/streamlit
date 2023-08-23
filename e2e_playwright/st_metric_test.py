@@ -13,7 +13,7 @@
 # limitations under the License.
 from playwright.sync_api import Page, expect
 
-from conftest import ImageCompareFunction
+from .conftest import ImageCompareFunction
 
 
 def test_first_metric_in_first_row(app: Page):
