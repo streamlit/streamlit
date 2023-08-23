@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from conftest import ImageCompareFunction
+from .conftest import ImageCompareFunction
 
 EXPANDER_HEADER_IDENTIFIER = ".streamlit-expanderHeader"
 

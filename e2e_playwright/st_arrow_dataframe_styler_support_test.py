@@ -12,7 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO(lukasmasuch): Use package fixtures to configure the
-# Streamlit configuration via environment variables.
-# This will also require a way to set the host config via a config option
-# for internal test purposes.
+from playwright.sync_api import Page, expect
+
+from .conftest import ImageCompareFunction
+
+
+def test_dataframe_pd_styler(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that st.dataframe supports styling and display values via Pandas Styler."""
+    dataframe_elements = themed_app.locator(".stDataFrame")
+    expect(dataframe_elements).to_have_count(4)
+
+    for i, element in enumerate(dataframe_elements.all()):
+        assert_snapshot(element, name=f"dataframe-pd-styler-{i}")
