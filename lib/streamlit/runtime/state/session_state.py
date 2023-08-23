@@ -28,7 +28,6 @@ from typing import (
     cast,
 )
 
-from pympler.asizeof import asizeof
 from typing_extensions import Final, TypeAlias
 
 import streamlit as st
@@ -45,6 +44,7 @@ from streamlit.runtime.state.common import (
 )
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 from streamlit.type_util import ValueFieldName, is_array_value_field_name
+from streamlit.vendor.pympler.asizeof import asizeof
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import SessionManager

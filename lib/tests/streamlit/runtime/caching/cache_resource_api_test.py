@@ -20,7 +20,6 @@ from typing import Any, List
 from unittest.mock import Mock, patch
 
 from parameterized import parameterized
-from pympler.asizeof import asizeof
 
 import streamlit as st
 from streamlit.runtime.caching import (
@@ -32,6 +31,7 @@ from streamlit.runtime.caching.cached_message_replay import MultiCacheResults
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
+from streamlit.vendor.pympler.asizeof import asizeof
 from tests.streamlit.runtime.caching.common_cache_test import (
     as_cached_result as _as_cached_result,
 )

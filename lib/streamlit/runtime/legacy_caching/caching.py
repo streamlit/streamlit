@@ -40,7 +40,6 @@ from typing import (
 )
 
 from cachetools import TTLCache
-from pympler.asizeof import asizeof
 
 import streamlit as st
 from streamlit import config, file_util, util
@@ -58,6 +57,7 @@ from streamlit.runtime.legacy_caching.hashing import (
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.vendor.pympler.asizeof import asizeof
 
 _LOGGER = get_logger(__name__)
 
