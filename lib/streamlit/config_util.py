@@ -67,6 +67,12 @@ def show_config(
         out.append(click.style(text, fg="green"))
 
     for section, section_description in section_descriptions.items():
+        # We inject a fake config section used for unit tests that we exclude here as
+        # its options are often missing required properties, which confuses the code
+        # below.
+        if section == "_test":
+            continue
+
         section_options = {
             k: v
             for k, v in config_options.items()

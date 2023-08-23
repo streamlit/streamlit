@@ -249,7 +249,7 @@ this_is_the_last_expr()
 
 """
 
-        self._testCode(CODE_WITH_SEMICOLON, 0)
+        self._testCode(CODE_WITHOUT_SEMICOLON, 0)
 
         with patch_config_options({"magic.displayLastExprIfNoSemicolon": True}):
             self._testCode(CODE_WITHOUT_SEMICOLON, 1)
