@@ -81,7 +81,6 @@ pydeck==0.8.1b0
 pydot==1.4.2
 pyee==9.0.4
 Pygments==2.16.1
-Pympler==1.0.1
 pyodbc==4.0.39
 pyparsing==3.0.9
 pyspark==3.4.1

@@ -90,7 +90,6 @@ pydot==1.4.2
 pyee==9.0.4
 Pygments==2.16.1
 PyJWT==2.8.0
-Pympler==1.0.1
 pyodbc==4.0.39
 pyOpenSSL==23.2.0
 pyparsing==3.0.9
