@@ -243,11 +243,16 @@ describe("StreamlitMarkdown", () => {
     expect(image).not.toBeInTheDocument()
   })
 
-  it("doesn't render links when isButton is true", () => {
+  it("doesn't render links when disableLinks is true", () => {
     // Valid markdown further restricted with buttons to eliminate links
     const source = "[Link text](www.example.com)"
     render(
-      <StreamlitMarkdown source={source} allowHTML={false} isLabel isButton />
+      <StreamlitMarkdown
+        source={source}
+        allowHTML={false}
+        isLabel
+        disableLinks
+      />
     )
     const tag = screen.getByText("Link text")
     expect(tag instanceof HTMLAnchorElement).toBe(false)
@@ -284,6 +289,7 @@ describe("StreamlitMarkdown", () => {
       ["violet", colors.purple80],
       ["orange", colors.orange100],
       ["gray", colors.gray80],
+      ["grey", colors.gray80],
       ["rainbow", "transparent"],
     ])
 

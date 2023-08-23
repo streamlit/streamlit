@@ -25,4 +25,5 @@ message Heading {
 
     string help = 4;
     bool hide_anchor = 5;
+    string divider = 6;
 }

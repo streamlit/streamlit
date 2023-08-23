@@ -72,7 +72,6 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "pymssql",
     "cassandra",
     "azure",
-    "google",
     "redis",
     "sqlite3",
     "neo4j",
@@ -319,8 +318,9 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
     @wraps(non_optional_func)
     def wrapped_func(*args, **kwargs):
         exec_start = timer()
-        # get_script_run_ctx gets imported here to prevent circular dependencies
+        # Local imports to prevent circular dependencies
         from streamlit.runtime.scriptrunner import get_script_run_ctx
+        from streamlit.runtime.scriptrunner.script_runner import RerunException
 
         ctx = get_script_run_ctx(suppress_warning=True)
 
@@ -331,6 +331,8 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
             and len(ctx.tracked_commands)
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
+
+        deferred_exception: Optional[RerunException] = None
         command_telemetry: Optional[Command] = None
 
         if ctx and tracking_activated:
@@ -354,6 +356,12 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
                 _LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
         try:
             result = non_optional_func(*args, **kwargs)
+        except RerunException as ex:
+            # Duplicated from below, because static analysis tools get confused
+            # by deferring the rethrow.
+            if tracking_activated and command_telemetry:
+                command_telemetry.time = to_microseconds(timer() - exec_start)
+            raise ex
         finally:
             # Activate tracking again if command executes without any exceptions
             if ctx:
@@ -362,6 +370,7 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
         if tracking_activated and command_telemetry:
             # Set the execution time to the measured value
             command_telemetry.time = to_microseconds(timer() - exec_start)
+
         return result
 
     with contextlib.suppress(AttributeError):

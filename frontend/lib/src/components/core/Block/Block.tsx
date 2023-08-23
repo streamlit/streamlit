@@ -15,6 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
+import { useTheme } from "@emotion/react"
 import { AutoSizer } from "react-virtualized"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
@@ -29,6 +30,7 @@ import {
   BaseBlockProps,
   isComponentStale,
   shouldComponentBeEnabled,
+  assignDividerColor,
 } from "./utils"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 
@@ -52,13 +54,7 @@ interface BlockPropsWithWidth extends BaseBlockProps {
 const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const { node } = props
 
-  // Allow columns and chat messages to create the specified space regardless of empty state
-  // TODO: Maybe we can simplify this to: node.isEmpty && !node.deltaBlock.allowEmpty?
-  if (
-    node.isEmpty &&
-    !node.deltaBlock.column &&
-    !node.deltaBlock.chatMessage
-  ) {
+  if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return <></>
   }
 
@@ -144,6 +140,8 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 }
 
 const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
+  // Handle cycling of colors for dividers:
+  assignDividerColor(props.node, useTheme())
   return (
     <>
       {props.node.children &&

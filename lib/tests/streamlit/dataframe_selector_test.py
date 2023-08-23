@@ -23,10 +23,11 @@ import pytest
 
 import streamlit
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.errors import StreamlitAPIException
 from tests.streamlit import pyspark_mocks
 from tests.streamlit.snowpark_mocks import DataFrame as MockSnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Table as MockSnowparkTable
-from tests.testutil import patch_config_options, should_skip_pyspark_tests
+from tests.testutil import patch_config_options
 
 DATAFRAME = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 ALTAIR_CHART = alt.Chart(DATAFRAME).mark_bar().encode(x="a", y="b")
@@ -80,9 +81,6 @@ class DataFrameSelectorTest(unittest.TestCase):
             column_config=None,
         )
 
-    @pytest.mark.skipif(
-        should_skip_pyspark_tests(), reason="pyspark is incompatible with Python3.11"
-    )
     @patch.object(DeltaGenerator, "_legacy_dataframe")
     @patch.object(DeltaGenerator, "_arrow_dataframe")
     @patch_config_options({"global.dataFrameSerialization": "arrow"})
@@ -159,6 +157,7 @@ class DataFrameSelectorTest(unittest.TestCase):
             DATAFRAME,
             x=None,
             y=None,
+            color=None,
             width=100,
             height=200,
             use_container_width=True,
@@ -184,6 +183,7 @@ class DataFrameSelectorTest(unittest.TestCase):
             DATAFRAME,
             x=None,
             y=None,
+            color=None,
             width=100,
             height=200,
             use_container_width=True,
@@ -209,6 +209,7 @@ class DataFrameSelectorTest(unittest.TestCase):
             DATAFRAME,
             x=None,
             y=None,
+            color=None,
             width=100,
             height=200,
             use_container_width=True,
