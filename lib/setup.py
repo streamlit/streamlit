@@ -51,7 +51,6 @@ INSTALL_REQUIRES = [
     # doesn't tend to break the API on major version upgrades, so we don't put an
     # upper bound on it.
     "pyarrow>=6.0",
-    "pympler>=0.9, <2",
     "python-dateutil>=2.7.3, <3",
     "requests>=2.18, <3",
     "rich>=10.14.0, <14",
