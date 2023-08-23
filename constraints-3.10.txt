@@ -78,7 +78,7 @@ py4j==0.10.9.7
 pyarrow==12.0.1
 pycparser==2.21
 pydantic==1.10.12
-pydeck==0.8.0
+pydeck==0.8.1b0
 pydot==1.4.2
 pyee==9.0.4
 Pygments==2.16.1
