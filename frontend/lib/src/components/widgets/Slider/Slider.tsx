@@ -211,7 +211,7 @@ class Slider extends React.PureComponent<Props, State> {
     return sprintf(format, value)
   }
 
-  private alignThumbValue(
+  private alignValueOnThumb(
     slider: HTMLDivElement | null,
     thumb: HTMLDivElement | null,
     thumbValue: HTMLDivElement | null
@@ -238,11 +238,14 @@ class Slider extends React.PureComponent<Props, State> {
     const thumb2Div = this.thumbRef[1]?.current
     const thumb1ValueDiv = this.thumbValueRef[0]?.current
     const thumb2ValueDiv = this.thumbValueRef[1]?.current
+    // Minimum gap between thumb values (in px)
     const labelGap = 16
 
-    this.alignThumbValue(sliderDiv, thumb1Div, thumb1ValueDiv)
-    this.alignThumbValue(sliderDiv, thumb2Div, thumb2ValueDiv)
+    // Handles label alignment over each thumb
+    this.alignValueOnThumb(sliderDiv, thumb1Div, thumb1ValueDiv)
+    this.alignValueOnThumb(sliderDiv, thumb2Div, thumb2ValueDiv)
 
+    // Checks & handles label spacing when two thumb values & they overlap
     if (
       sliderDiv &&
       thumb1Div &&
@@ -256,8 +259,9 @@ class Slider extends React.PureComponent<Props, State> {
       const thumb1Value = thumb1ValueDiv.getBoundingClientRect()
       const thumb2Value = thumb2ValueDiv.getBoundingClientRect()
 
+      // Check if thumb values are overlapping or too close together
       if (thumb1Value.right + labelGap > thumb2Value.left) {
-        // Check which side has room to make the adjustment
+        // Check whether to shift 1st thumb value left or 2nd thumb value right
         const moveLeft =
           thumb2Value.left - labelGap - thumb1Value.width > slider.left
         const moveRight =
