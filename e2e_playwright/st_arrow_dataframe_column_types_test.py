@@ -14,18 +14,15 @@
 
 from playwright.sync_api import Page, expect
 
-from conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_renders_chat_messages_correctly_1(
+def test_dataframe_column_types(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test if the chat messages render correctly"""
-    # Wait a bit more to allow all images to load:
-    chat_message_elements = themed_app.locator(".stChatMessage")
-    expect(chat_message_elements).to_have_count(10)
-    for i, element in enumerate(chat_message_elements.all()):
-        element.scroll_into_view_if_needed()
-        # Wait a bit more to allow the avatar images to load:
-        themed_app.wait_for_timeout(100)
-        assert_snapshot(element, name=f"chat_message-{i}")
+    """Test that st.dataframe render various column types correctly."""
+    dataframe_elements = themed_app.locator(".stDataFrame")
+    expect(dataframe_elements).to_have_count(9)
+
+    for i, element in enumerate(dataframe_elements.all()):
+        assert_snapshot(element, name=f"dataframe-column-types-{i}")

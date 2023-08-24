@@ -66,10 +66,10 @@ jobs:
         if: always()
         with:
           name: playwright_snapshots
-          path: e2e/playwright/snapshots
+          path: e2e_playwright/__snapshots__
       - name: Upload failed test results
         uses: actions/upload-artifact@v3
         if: always()
         with:
           name: playwright_test_results
-          path: e2e/playwright/test-results
+          path: e2e_playwright/test-results

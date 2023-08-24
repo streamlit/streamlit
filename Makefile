@@ -227,7 +227,7 @@ clean:
 	rm -rf frontend/public/reports
 	rm -rf frontend/lib/dist
 	rm -rf ~/.cache/pre-commit
-	rm -rf e2e/playwright/test-results
+	rm -rf e2e_playwright/test-results
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
@@ -338,7 +338,7 @@ e2etest:
 # Run playwright E2E tests.
 playwright:
 	python -m playwright install --with-deps; \
-	cd e2e/playwright; \
+	cd e2e_playwright; \
 	rm -rf ./test-results; \
 	pytest --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto -v
 

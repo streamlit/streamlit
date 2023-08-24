@@ -11,18 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from playwright.sync_api import Page, expect
-
-from conftest import ImageCompareFunction
-
-
-def test_dataframe_column_types(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that st.dataframe render various column types correctly."""
-    dataframe_elements = themed_app.locator(".stDataFrame")
-    expect(dataframe_elements).to_have_count(9)
-
-    for i, element in enumerate(dataframe_elements.all()):
-        assert_snapshot(element, name=f"dataframe-column-types-{i}")

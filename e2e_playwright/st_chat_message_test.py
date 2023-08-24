@@ -14,18 +14,18 @@
 
 from playwright.sync_api import Page, expect
 
-from conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_data_editor_supports_various_configurations(
-    app: Page, assert_snapshot: ImageCompareFunction
+def test_renders_chat_messages_correctly_1(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Screenshot test that st.data_editor supports various configuration options."""
-    dataframe_elements = app.locator(".stDataFrame")
-    expect(dataframe_elements).to_have_count(23)
-
-    # The data editor might require a bit more time for rendering the canvas
-    app.wait_for_timeout(250)
-
-    for i, element in enumerate(dataframe_elements.all()):
-        assert_snapshot(element, name=f"data_editor-config-{i}")
+    """Test if the chat messages render correctly"""
+    # Wait a bit more to allow all images to load:
+    chat_message_elements = themed_app.locator(".stChatMessage")
+    expect(chat_message_elements).to_have_count(10)
+    for i, element in enumerate(chat_message_elements.all()):
+        element.scroll_into_view_if_needed()
+        # Wait a bit more to allow the avatar images to load:
+        themed_app.wait_for_timeout(100)
+        assert_snapshot(element, name=f"chat_message-{i}")
