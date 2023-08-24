@@ -19,7 +19,6 @@ import os
 import secrets
 import threading
 from collections import OrderedDict
-from collections.abc import Iterable
 from typing import Any, Callable, Dict, Optional, cast
 
 import toml
