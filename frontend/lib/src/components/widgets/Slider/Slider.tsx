@@ -264,14 +264,12 @@ class Slider extends React.PureComponent<Props, State> {
         // Check whether to shift 1st thumb value left or 2nd thumb value right
         const moveLeft =
           thumb2Value.left - labelGap - thumb1Value.width > slider.left
-        const moveRight =
-          thumb1Value.right + labelGap + thumb2Value.width < slider.right
 
         if (moveLeft) {
           thumb1ValueDiv.style.right = `${
             thumb2Value.width + labelGap - (thumb2.right - thumb1.right)
           }px`
-        } else if (moveRight) {
+        } else {
           thumb2ValueDiv.style.left = `${
             thumb1Value.width + labelGap - (thumb2.left - thumb1.left)
           }px`

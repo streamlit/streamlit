@@ -419,7 +419,7 @@ describe("Slider widget", () => {
       expect(slider).toHaveAttribute("aria-valuetext", "orange")
     })
 
-    it("updates aria-valuetext correctly", async () => {
+    it("updates aria-valuetext correctly", () => {
       const originalProps = {
         default: [1],
         min: 0,
