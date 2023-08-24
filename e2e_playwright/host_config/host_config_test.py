@@ -16,7 +16,7 @@ import os
 import pytest
 from playwright.sync_api import Page, expect
 
-from ..conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction
 
 
 @pytest.fixture(scope="package", autouse=True)
@@ -33,7 +33,6 @@ def apply_restrictive_host_config():
     os.environ["STREAMLIT_SERVER_DISABLE_SET_PAGE_METADATA"] = "True"
 
 
-# @pytest.mark.usefixtures("disable_elements")
 def test_host_config_disable_elements(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that host config options to disable features show error messages."""
     alert_containers = app.get_by_role("alert")
@@ -51,7 +50,6 @@ def test_host_config_disable_elements(app: Page, assert_snapshot: ImageCompareFu
 
 def test_host_config_disables_setting_page_metadata(app: Page):
     """Test that setting the page metadata (title and favicon) is disabled."""
-
     # "Streamlit" is the default name. The name from the app script (Limited App)
     # should not be used.
     expect(app).to_have_title("Streamlit")
@@ -69,7 +67,6 @@ def test_host_config_disables_setting_query_params(app: Page):
 
 def test_allowed_elements_still_visible(app: Page):
     """Test that other allowed elements are still visible."""
-
     expect(app.get_by_test_id("stMarkdownContainer").first).to_be_visible()
     expect(app.get_by_test_id("stArrowVegaLiteChart").first).to_be_visible()
     expect(app.get_by_test_id("stDataFrameResizable").first).to_be_visible()
