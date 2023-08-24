@@ -1,6 +1,6 @@
 {
     "name": "@streamlit/lib",
-    "version": "1.24.1",
+    "version": "1.26.0",
     "private": true,
     "license": "Apache-2.0",
     "main": "dist/index.js",
