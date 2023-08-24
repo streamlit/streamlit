@@ -77,6 +77,7 @@ const withMapboxToken =
 
       public constructor(props: WrappedMapboxProps<P>) {
         super(props)
+
         this.state = {
           isFetching: true,
           mapboxToken: undefined,
