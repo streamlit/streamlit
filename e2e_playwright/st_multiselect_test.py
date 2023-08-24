@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction
 
 
 def select_for_kth_multiselect(

@@ -15,7 +15,7 @@
 
 from playwright.sync_api import Page, expect
 
-from conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction
 
 
 def test_code_display(app: Page):
@@ -46,6 +46,9 @@ def test_code_blocks_render_correctly(
 
 def test_code_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the syntax highlighting is applied correctly to the code block."""
+    # This test seems to be a little flaky without additional timeout:
+    app.wait_for_timeout(250)
+
     expander_with_code = app.get_by_test_id("stExpander")
 
     assert_snapshot(expander_with_code.nth(0), name="expander_with_code")
