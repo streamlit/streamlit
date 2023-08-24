@@ -22,9 +22,9 @@ import tornado.testing
 import tornado.web
 import tornado.websocket
 
+from streamlit.config import _DEFAULT_ALLOWED_MESSAGE_ORIGINS
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
-from streamlit.web.server.routes import DEFAULT_ALLOWED_MESSAGE_ORIGINS
 from streamlit.web.server.server import (
     HEALTH_ENDPOINT,
     HOST_CONFIG_ENDPOINT,
@@ -190,7 +190,7 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(200, response.code)
         self.assertEqual(
             {
-                "allowedOrigins": DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+                "allowedOrigins": _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
                 "useExternalAuthToken": False,
                 "mapboxToken": "",
                 "disableSetQueryParams": False,
@@ -220,7 +220,7 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self.fetch("/_stcore/host-config")
         self.assertEqual(200, response.code)
         origins_list = json.loads(response.body)["allowedOrigins"]
-        for d in DEFAULT_ALLOWED_MESSAGE_ORIGINS:
+        for d in _DEFAULT_ALLOWED_MESSAGE_ORIGINS:
             default_in_allowed = d in origins_list
             self.assertEqual(
                 default_in_allowed,
