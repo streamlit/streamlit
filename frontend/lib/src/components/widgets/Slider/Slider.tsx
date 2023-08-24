@@ -92,20 +92,11 @@ class Slider extends React.PureComponent<Props, State> {
   }
 
   public componentDidMount(): void {
-    // Check default thumb value's alignment vs. slider container
-    for (
-      let i = 0;
-      i < Math.min(this.thumbRef.length, this.thumbValueRef.length);
-      i++
-    ) {
-      // Delay the alignment to allow the page layout to complete
-      setTimeout(() => {
-        this.thumbValueAlignment(
-          this.thumbRef[i].current,
-          this.thumbValueRef[i].current
-        )
-      }, 0)
-    }
+    // Check thumb value's alignment vs. slider container
+    // Delay the alignment to allow the page layout to complete
+    setTimeout(() => {
+      this.thumbValueAlignment()
+    }, 0)
 
     if (this.props.element.setValue) {
       this.updateFromProtobuf()
@@ -220,12 +211,11 @@ class Slider extends React.PureComponent<Props, State> {
     return sprintf(format, value)
   }
 
-  private thumbValueAlignment(
+  private alignValueOnThumb(
+    slider: HTMLDivElement | null,
     thumb: HTMLDivElement | null,
     thumbValue: HTMLDivElement | null
   ): void {
-    const slider = this.sliderRef.current
-
     if (slider && thumb && thumbValue) {
       const sliderPosition = slider.getBoundingClientRect()
       const thumbPosition = thumb.getBoundingClientRect()
@@ -239,6 +229,52 @@ class Slider extends React.PureComponent<Props, State> {
 
       thumbValue.style.left = thumbValueOverflowsLeft ? "0" : ""
       thumbValue.style.right = thumbValueOverflowsRight ? "0" : ""
+    }
+  }
+
+  private thumbValueAlignment(): void {
+    const sliderDiv = this.sliderRef.current
+    const thumb1Div = this.thumbRef[0]?.current
+    const thumb2Div = this.thumbRef[1]?.current
+    const thumb1ValueDiv = this.thumbValueRef[0]?.current
+    const thumb2ValueDiv = this.thumbValueRef[1]?.current
+    // Minimum gap between thumb values (in px)
+    const labelGap = 16
+
+    // Handles label alignment over each thumb
+    this.alignValueOnThumb(sliderDiv, thumb1Div, thumb1ValueDiv)
+    this.alignValueOnThumb(sliderDiv, thumb2Div, thumb2ValueDiv)
+
+    // Checks & handles label spacing when two thumb values & they overlap
+    if (
+      sliderDiv &&
+      thumb1Div &&
+      thumb2Div &&
+      thumb1ValueDiv &&
+      thumb2ValueDiv
+    ) {
+      const slider = sliderDiv.getBoundingClientRect()
+      const thumb1 = thumb1Div.getBoundingClientRect()
+      const thumb2 = thumb2Div.getBoundingClientRect()
+      const thumb1Value = thumb1ValueDiv.getBoundingClientRect()
+      const thumb2Value = thumb2ValueDiv.getBoundingClientRect()
+
+      // Check if thumb values are overlapping or too close together
+      if (thumb1Value.right + labelGap > thumb2Value.left) {
+        // Check whether to shift 1st thumb value left or 2nd thumb value right
+        const moveLeft =
+          thumb2Value.left - labelGap - thumb1Value.width > slider.left
+
+        if (moveLeft) {
+          thumb1ValueDiv.style.right = `${
+            thumb2Value.width + labelGap - (thumb2.right - thumb1.right)
+          }px`
+        } else {
+          thumb2ValueDiv.style.left = `${
+            thumb1Value.width + labelGap - (thumb2.left - thumb1.left)
+          }px`
+        }
+      }
     }
   }
 
@@ -271,12 +307,6 @@ class Slider extends React.PureComponent<Props, State> {
       if (this.props.element.options.length > 0 || this.isDateTimeType()) {
         ariaValueText["aria-valuetext"] = formattedValue
       }
-
-      // Check the thumb value's alignment vs. slider container
-      this.thumbValueAlignment(
-        this.thumbRef[thumbIndex].current,
-        this.thumbValueRef[thumbIndex].current
-      )
 
       return (
         <StyledThumb
@@ -326,6 +356,9 @@ class Slider extends React.PureComponent<Props, State> {
       element.formId,
       this.onFormCleared
     )
+
+    // Check the thumb value's alignment vs. slider container
+    this.thumbValueAlignment()
 
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>
