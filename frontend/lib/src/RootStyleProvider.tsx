@@ -16,13 +16,25 @@
 
 import React, { ReactElement } from "react"
 import { BaseProvider } from "baseui"
-import { Global, ThemeProvider as EmotionThemeProvider } from "@emotion/react"
+import createCache from "@emotion/cache"
+import {
+  CacheProvider,
+  Global,
+  ThemeProvider as EmotionThemeProvider,
+} from "@emotion/react"
 import { globalStyles, ThemeConfig } from "./theme"
 
 export interface RootStyleProviderProps {
   theme: ThemeConfig
   children: React.ReactNode
 }
+
+const nonce = document.currentScript?.nonce || ""
+const cache = createCache({
+  // The key field only matters if a single app
+  key: "st-emotion-cache",
+  ...(nonce && { nonce }),
+})
 
 export function RootStyleProvider(
   props: RootStyleProviderProps
@@ -33,10 +45,12 @@ export function RootStyleProvider(
       theme={theme.basewebTheme}
       zIndex={theme.emotion.zIndices.popupMenu}
     >
-      <EmotionThemeProvider theme={theme.emotion}>
-        <Global styles={globalStyles} />
-        {children}
-      </EmotionThemeProvider>
+      <CacheProvider value={cache}>
+        <EmotionThemeProvider theme={theme.emotion}>
+          <Global styles={globalStyles} />
+          {children}
+        </EmotionThemeProvider>
+      </CacheProvider>
     </BaseProvider>
   )
 }
