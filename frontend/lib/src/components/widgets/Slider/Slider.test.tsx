@@ -15,19 +15,25 @@
  */
 
 import React from "react"
+import "@testing-library/jest-dom"
 import { Slider as UISlider } from "baseui/slider"
+import { screen } from "@testing-library/react"
+
 import TimezoneMock from "timezone-mock"
 
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Slider as SliderProto,
 } from "@streamlit/lib/src/proto"
-import { mount } from "@streamlit/lib/src/test_util"
+import { render, mount } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import Slider, { Props } from "./Slider"
 
-const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<SliderProto> = {},
+  props: Partial<Props> = {}
+): Props => ({
   element: SliderProto.create({
     id: "1",
     label: "Label",
@@ -39,13 +45,14 @@ const getProps = (elementProps: Partial<SliderProto> = {}): Props => ({
     options: [],
     ...elementProps,
   }),
-  width: 0,
+  width: 600,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
   theme: mockTheme.emotion,
+  ...props,
 })
 
 describe("Slider widget", () => {
@@ -58,9 +65,10 @@ describe("Slider widget", () => {
 
   it("shows a label", () => {
     const props = getProps()
-    const wrapper = mount(<Slider {...props} />)
+    render(<Slider {...props} />)
 
-    expect(wrapper.find("StyledWidgetLabel").text()).toBe("Label")
+    const widgetLabel = screen.queryByText(`${props.element.label}`)
+    expect(widgetLabel).toBeInTheDocument()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -69,9 +77,9 @@ describe("Slider widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
-    const wrapper = mount(<Slider {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    render(<Slider {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+      "visibility: hidden"
     )
   })
 
@@ -81,69 +89,63 @@ describe("Slider widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
-    const wrapper = mount(<Slider {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
-    )
+    render(<Slider {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
   it("sets widget value on mount", async () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
-    const wrapper = mount(<Slider {...props} />)
+    render(<Slider {...props} />)
 
     // We need to do this as we are using a debounce when the widget value is set
     jest.runAllTimers()
-    wrapper.update()
 
     expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
       props.element,
       [5],
       { fromUi: false }
     )
-
-    wrapper.unmount()
   })
 
-  describe("Overrides", () => {
+  it("renders tick bar with min and max", () => {
     const props = getProps()
-    const wrapper = mount(<Slider {...props} />)
+    render(<Slider {...props} />)
 
-    it("renders tick bar with min and max", () => {
-      expect(
-        wrapper.find("StyledTickBarItem[data-testid='stTickBarMin']").text()
-      ).toBe("0")
-      expect(
-        wrapper.find("StyledTickBarItem[data-testid='stTickBarMax']").text()
-      ).toBe("10")
-    })
+    const min = screen.getByTestId("stTickBarMin")
+    const max = screen.getByTestId("stTickBarMax")
+    expect(min).toHaveTextContent("0")
+    expect(max).toHaveTextContent("10")
   })
 
   describe("Single value", () => {
     it("renders without crashing", () => {
       const props = getProps()
-      const wrapper = mount(<Slider {...props} />)
+      render(<Slider {...props} />)
 
-      expect(wrapper).toBeDefined()
+      const slider = screen.getByRole("slider")
+      expect(slider).toBeInTheDocument()
     })
 
     it("displays a thumb value", () => {
       const props = getProps()
-      const wrapper = mount(<Slider {...props} />)
+      render(<Slider {...props} />)
 
-      expect(wrapper.find("StyledThumbValue")).toHaveLength(1)
+      expect(screen.getAllByTestId("stThumbValue")).toHaveLength(1)
     })
 
     it("has the correct value", () => {
       const props = getProps()
-      const wrapper = mount(<Slider {...props} />)
-      const UISliderWrapper = wrapper.find(UISlider)
-      const propValue = UISliderWrapper.prop("value")
+      render(<Slider {...props} />)
 
-      expect(propValue).toStrictEqual(props.element.default)
-      expect(propValue[0]).toBeGreaterThanOrEqual(props.element.min)
-      expect(propValue[0]).toBeLessThan(props.element.max)
+      const slider = screen.getByRole("slider")
+      expect(slider).toHaveAttribute(
+        "aria-valuetext",
+        `${props.element.default}`
+      )
+      expect(slider).toHaveAttribute("aria-valuemin", `${props.element.min}`)
+      expect(slider).toHaveAttribute("aria-valuemax", `${props.element.max}`)
     })
 
     it("handles value changes", async () => {
@@ -213,30 +215,51 @@ describe("Slider widget", () => {
   describe("Range value", () => {
     it("renders without crashing", () => {
       const props = getProps({ default: [1, 9] })
-      const wrapper = mount(<Slider {...props} />)
+      render(<Slider {...props} />)
 
-      expect(wrapper).toBeDefined()
+      const sliders = screen.getAllByRole("slider")
+      expect(sliders).toHaveLength(2)
     })
 
     it("displays 2 thumb values", () => {
       const props = getProps({ default: [1, 9] })
-      const wrapper = mount(<Slider {...props} />)
+      render(<Slider {...props} />)
 
-      expect(wrapper.find("StyledThumbValue")).toHaveLength(2)
+      expect(screen.getAllByTestId("stThumbValue")).toHaveLength(2)
     })
 
     it("has the correct value", () => {
       const props = getProps({ default: [1, 9] })
-      const wrapper = mount(<Slider {...props} />)
-      const UISliderWrapper = wrapper.find(UISlider)
-      const propValue = UISliderWrapper.prop("value")
+      render(<Slider {...props} />)
 
-      expect(propValue).toStrictEqual(props.element.default)
+      const sliders = screen.getAllByRole("slider")
+      // First slider - max is the current value of second slider
+      expect(sliders[0]).toHaveAttribute(
+        "aria-valuetext",
+        `${props.element.default[0]}`
+      )
+      expect(sliders[0]).toHaveAttribute(
+        "aria-valuemin",
+        `${props.element.min}`
+      )
+      expect(sliders[0]).toHaveAttribute(
+        "aria-valuemax",
+        `${props.element.default[1]}`
+      )
 
-      propValue.forEach(value => {
-        expect(value).toBeGreaterThanOrEqual(props.element.min)
-        expect(value).toBeLessThan(props.element.max)
-      })
+      // Second slider - min is the current value of first slider
+      expect(sliders[1]).toHaveAttribute(
+        "aria-valuetext",
+        `${props.element.default[1]}`
+      )
+      expect(sliders[1]).toHaveAttribute(
+        "aria-valuemin",
+        `${props.element.default[0]}`
+      )
+      expect(sliders[1]).toHaveAttribute(
+        "aria-valuemax",
+        `${props.element.max}`
+      )
     })
 
     describe("value should be within bounds", () => {
@@ -329,28 +352,27 @@ describe("Slider widget", () => {
       expect(new Date().getTimezoneOffset() === 0).toBeTruthy()
     })
 
-    const DAYS_IN_MICROS = 24 * 60 * 60 * 1000 * 1000
-    const WEEK_IN_MICROS = 7 * DAYS_IN_MICROS
-
-    const props = getProps({
-      // The default value should be divisible by step.
-      // Otherwise, we get a warning from `react-range`.
-      default: [0],
-      min: 0,
-      max: 4 * WEEK_IN_MICROS,
-      step: DAYS_IN_MICROS,
-      format: "YYYY-MM-DD",
-      dataType: SliderProto.DataType.DATETIME,
-    })
-    const wrapper = mount(<Slider {...props} />)
-
     it("formats min and max as dates", () => {
-      expect(
-        wrapper.find("StyledTickBarItem[data-testid='stTickBarMin']").text()
-      ).toBe("1970-01-01")
-      expect(
-        wrapper.find("StyledTickBarItem[data-testid='stTickBarMax']").text()
-      ).toBe("1970-01-29")
+      const DAYS_IN_MICROS = 24 * 60 * 60 * 1000 * 1000
+      const WEEK_IN_MICROS = 7 * DAYS_IN_MICROS
+
+      const props = getProps({
+        // The default value should be divisible by step.
+        // Otherwise, we get a warning from `react-range`.
+        default: [0],
+        min: 0,
+        max: 4 * WEEK_IN_MICROS,
+        step: DAYS_IN_MICROS,
+        format: "YYYY-MM-DD",
+        dataType: SliderProto.DataType.DATETIME,
+      })
+      render(<Slider {...props} />)
+
+      const min = screen.getByTestId("stTickBarMin")
+      const max = screen.getByTestId("stTickBarMax")
+
+      expect(min).toHaveTextContent("1970-01-01")
+      expect(max).toHaveTextContent("1970-01-29")
     })
   })
 
@@ -371,9 +393,9 @@ describe("Slider widget", () => {
           "violet",
         ],
       })
-      const wrapper = mount(<Slider {...props} />)
+      render(<Slider {...props} />)
 
-      expect(wrapper).toBeDefined()
+      expect(screen.getByRole("slider")).toBeDefined()
     })
 
     it("sets aria-valuetext correctly", () => {
@@ -392,13 +414,9 @@ describe("Slider widget", () => {
           "violet",
         ],
       })
-      const wrapper = mount(<Slider {...props} />)
-      const sliderDOMNodes = wrapper.find("div[role='slider']")
-      sliderDOMNodes.forEach(node => {
-        expect(node.getDOMNode().getAttribute("aria-valuetext")).toEqual(
-          "orange"
-        )
-      })
+      render(<Slider {...props} />)
+      const slider = screen.getByRole("slider")
+      expect(slider).toHaveAttribute("aria-valuetext", "orange")
     })
 
     it("updates aria-valuetext correctly", () => {
@@ -450,13 +468,10 @@ describe("Slider widget", () => {
           "violet",
         ],
       })
-      const wrapper = mount(<Slider {...props} />)
-      const sliderDOMNodes = wrapper.find("div[role='slider']")
-      const ariaTexts = sliderDOMNodes.map(node =>
-        node.getDOMNode().getAttribute("aria-valuetext")
-      )
-
-      expect(ariaTexts).toEqual(["orange", "blue"])
+      render(<Slider {...props} />)
+      const sliders = screen.getAllByRole("slider")
+      expect(sliders[0]).toHaveAttribute("aria-valuetext", "orange")
+      expect(sliders[1]).toHaveAttribute("aria-valuetext", "blue")
     })
   })
 })
