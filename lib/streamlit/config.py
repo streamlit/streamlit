@@ -615,21 +615,12 @@ _create_option(
 )
 
 
-def _ensure_list(value: Any) -> Iterable[Any]:
-    """Converts a value to a list if it's not already a list."""
-    if isinstance(value, Iterable):
-        return value
-    elif isinstance(value, str):
-        return value.split(",")
-    return [value]
-
-
 _create_option(
     "server.disableElements",
     description="Disable specific elements based on their proto type name (camelCase).",
     visibility="hidden",
     default_val=[],
-    type_=_ensure_list,  # type: ignore
+    type_=config_util.ensure_list,  # type: ignore
 )
 
 
@@ -666,7 +657,7 @@ _create_option(
     """,
     visibility="hidden",
     default_val=_DEFAULT_ALLOWED_MESSAGE_ORIGINS,
-    type_=_ensure_list,  # type: ignore
+    type_=config_util.ensure_list,  # type: ignore
 )
 
 _create_option(
