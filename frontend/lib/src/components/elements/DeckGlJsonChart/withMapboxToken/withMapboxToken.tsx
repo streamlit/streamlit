@@ -16,12 +16,13 @@
 
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
 import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
-import { MapboxToken } from "@streamlit/lib/src/hocs/withMapboxToken/MapboxToken"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"
 import { SessionInfo } from "@streamlit/lib/src/SessionInfo"
 import MapboxTokenError from "./MapboxTokenError"
+import axios from "axios"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 interface InjectedProps {
   mapboxToken: string
@@ -44,6 +45,15 @@ export type WrappedMapboxProps<P extends InjectedProps> = Omit<
   width: number
 }
 
+export class MapboxTokenNotProvidedError extends Error {}
+export class MapboxTokenFetchingError extends Error {}
+
+/**
+ * A remote file that stores user-visible tokens.
+ */
+export const TOKENS_URL = "https://data.streamlit.io/tokens.json"
+const MAPBOX = "mapbox"
+
 /**
  * A higher-order component that fetches our mapbox token and passes
  * it through to the wrapped component. If the token fetch fails, an error
@@ -63,16 +73,49 @@ const withMapboxToken =
         WrappedComponent.displayName || WrappedComponent.name
       })`
 
+      static contextType = LibContext
+
       public constructor(props: WrappedMapboxProps<P>) {
         super(props)
-
         this.state = {
           isFetching: true,
           mapboxToken: undefined,
           mapboxTokenError: undefined,
         }
+      }
 
-        this.initMapboxToken()
+      /**
+       * Expose a singleton MapboxToken:
+       * - If the user specified a token in their streamlit config, return it.
+       * - Else, fetch the remote "tokens.json" and return the "mapbox" entry.
+       *
+       * (The returned value is cached in memory, so the remote resource will
+       * only be fetched once per session.)
+       */
+      public async getMapboxToken(sessionInfo: SessionInfo): Promise<string> {
+        let { userMapboxToken } = sessionInfo.current
+
+        if (userMapboxToken) {
+          return userMapboxToken
+        }
+
+        try {
+          const response = await axios.get(TOKENS_URL)
+          const { [MAPBOX]: token } = response.data
+
+          if (!token) {
+            throw new Error(`Missing token ${MAPBOX}`)
+          }
+
+          userMapboxToken = token
+        } catch (e) {
+          const error = ensureError(e)
+          throw new MapboxTokenFetchingError(
+            `${error.message} (${TOKENS_URL})`
+          )
+        }
+
+        return userMapboxToken
       }
 
       /**
@@ -80,8 +123,7 @@ const withMapboxToken =
        */
       public initMapboxToken = async (): Promise<void> => {
         try {
-          const mapboxToken = await MapboxToken.get(this.props.sessionInfo)
-
+          const mapboxToken = await this.getMapboxToken(this.props.sessionInfo)
           this.setState({
             mapboxToken,
             isFetching: false,
@@ -93,6 +135,19 @@ const withMapboxToken =
             mapboxTokenError: error,
             isFetching: false,
           })
+        }
+      }
+
+      public componentDidMount(): void {
+        const { mapboxToken } = this.context.hostConfig
+
+        if (mapboxToken) {
+          this.setState({
+            mapboxToken,
+            isFetching: false,
+          })
+        } else {
+          this.initMapboxToken()
         }
       }
 
@@ -117,7 +172,6 @@ const withMapboxToken =
             <AlertElement body={"Loading..."} kind={Kind.INFO} width={width} />
           )
         }
-
         // We have the mapbox token. Pass it through to our component.
         return (
           // (this.props as unknown as P) is required to work around a TS issue:

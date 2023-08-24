@@ -40,8 +40,7 @@ export interface Props {
   /**
    * The user-supplied mapbox token. By default, this will be the empty string,
    * which indicates that we should fetch Streamlit's mapbox token and use
-   * that instead. Do not use this value directly; use `MapboxToken.get()`
-   * instead.
+   * that instead. Do not use this value directly; wrap your component with withMapboxToken(...)
    */
   readonly userMapboxToken: string
 }
