@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind, TextCell } from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import moment, { Moment } from "moment"
 import "moment-timezone"
 
@@ -32,7 +33,6 @@ import {
   toSafeString,
   formatMoment,
 } from "./utils"
-import { DateTimeCell } from "./cells/DateTimeCell"
 
 /**
  * Apply a timezone to a MomentJS date.
@@ -134,7 +134,7 @@ function BaseDateTimeColumn(
     contentAlign: props.contentAlignment,
     style: props.isIndex ? "faded" : "normal",
     data: {
-      kind: "date-time-cell",
+      kind: "date-picker-cell",
       date: undefined,
       displayDate: "",
       step: parameters.step?.toString() || "1",
@@ -142,7 +142,7 @@ function BaseDateTimeColumn(
       min: minDate,
       max: maxDate,
     },
-  } as DateTimeCell
+  } as DatePickerType
 
   const validateInput = (data?: any): boolean | Date => {
     const cellData: Date | null | undefined = toSafeDate(data)
@@ -252,26 +252,6 @@ function BaseDateTimeColumn(
         copyData = formatMoment(momentDate, defaultFormat)
       }
 
-      if (!props.isEditable) {
-        // TODO (lukasmasuch): This is a temporary workaround until the following PR is merged:
-        // https://github.com/glideapps/glide-data-grid/pull/656
-        // The issue is that measuring custom cells is not supported yet.
-        // This results in datetime columns not correctly adapting the width to the content.
-        // Therefore, we use a text cell here so that we are not affecting the current
-        // behavior for read-only cells.
-
-        return {
-          kind: GridCellKind.Text,
-          isMissingValue: isNullOrUndefined(cellData),
-          data: copyData !== "" ? copyData : null,
-          displayData: displayDate,
-          allowOverlay: true,
-          contentAlignment: props.contentAlignment,
-          readonly: true,
-          style: props.isIndex ? "faded" : "normal",
-        } as TextCell
-      }
-
       return {
         ...cellTemplate,
         copyData,
@@ -282,12 +262,9 @@ function BaseDateTimeColumn(
           displayDate,
           timezoneOffset,
         },
-      } as DateTimeCell
+      } as DatePickerType
     },
-    getCellValue(cell: DateTimeCell | TextCell): string | null {
-      if (cell.kind === GridCellKind.Text) {
-        return cell.data === undefined ? null : cell.data
-      }
+    getCellValue(cell: DatePickerType): string | null {
       return isNullOrUndefined(cell?.data?.date)
         ? null
         : toISOString(cell.data.date)
