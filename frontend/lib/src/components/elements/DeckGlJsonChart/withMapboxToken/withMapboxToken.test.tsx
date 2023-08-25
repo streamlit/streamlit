@@ -35,14 +35,11 @@ interface TestProps {
 describe("withMapboxToken", () => {
   const token = "mockToken"
 
-  function getProps(
-    overrideProps?: Partial<WrappedMapboxProps<TestProps>>
-  ): WrappedMapboxProps<TestProps> {
+  function getProps(): WrappedMapboxProps<TestProps> {
     return {
       label: "mockLabel",
       width: 123,
       sessionInfo: mockSessionInfo({ userMapboxToken: token }),
-      ...overrideProps,
     }
   }
 
