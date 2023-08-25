@@ -58,7 +58,7 @@ const MAPBOX = "mapbox"
  * A higher-order component that fetches our mapbox token and passes
  * it through to the wrapped component.
  * This component uses tokens from config.toml or host config (LibContext) first when available.
- * Config.toml takes priority over host config.
+ * config.toml takes priority over host config.
  * If the token fetch fails, an error will be rendered in place of the wrapped component.
  * This component is necessary as it's good practice to separate data collection
  * (mapbox token retrieval) and the actual rendering of a component.
