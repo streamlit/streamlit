@@ -69,34 +69,32 @@ export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
       typeof fluidWidth == "number" ? `${fluidWidth}px` : "100%"
 
     return {
-      "&&": {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontWeight: theme.fontWeights.normal,
-        padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-        borderRadius: theme.radii.lg,
-        minHeight: "38.4px",
-        margin: 0,
-        lineHeight: theme.lineHeights.base,
-        color: "inherit",
-        textDecoration: "none",
-        width: fluidWidth ? buttonWidth : "auto",
-        userSelect: "none",
-        "&:focus": {
-          outline: "none",
-        },
-        "&:focus-visible": {
-          boxShadow: `0 0 0 0.2rem ${transparentize(
-            theme.colors.primary,
-            0.5
-          )}`,
-        },
-        "&:hover": {
-          textDecoration: "none",
-        },
-        ...getSizeStyle(size, theme),
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontWeight: theme.fontWeights.normal,
+      padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+      borderRadius: theme.radii.lg,
+      minHeight: "38.4px",
+      margin: 0,
+      lineHeight: theme.lineHeights.base,
+      color: "inherit",
+      textDecoration: "none",
+      width: fluidWidth ? buttonWidth : "auto",
+      userSelect: "none",
+      "&:visited": {
+        color: theme.colors.primary,
       },
+      "&:focus": {
+        outline: "none",
+      },
+      "&:focus-visible": {
+        boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+      },
+      "&:hover": {
+        textDecoration: "none",
+      },
+      ...getSizeStyle(size, theme),
     }
   }
 )
@@ -104,50 +102,52 @@ export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
 export const StyledPrimaryLinkButton = styled(
   StyledBaseLinkButton
 )<RequiredBaseLinkButtonProps>(({ theme }) => ({
-  "&&": {
-    backgroundColor: theme.colors.primary,
+  backgroundColor: theme.colors.primary,
+  color: theme.colors.white,
+  border: `1px solid ${theme.colors.primary}`,
+  "&:hover": {
+    backgroundColor: darken(theme.colors.primary, 0.05),
+  },
+  "&:active": {
+    backgroundColor: "transparent",
+    color: theme.colors.primary,
+  },
+  "&:visited": {
     color: theme.colors.white,
-    border: `1px solid ${theme.colors.primary}`,
-    "&:hover": {
-      backgroundColor: darken(theme.colors.primary, 0.05),
-    },
-    "&:active": {
-      backgroundColor: "transparent",
-      color: theme.colors.primary,
-    },
-    "&:disabled, &:disabled:hover, &:disabled:active": {
-      borderColor: theme.colors.fadedText10,
-      backgroundColor: theme.colors.transparent,
-      color: theme.colors.fadedText40,
-      cursor: "not-allowed",
-    },
+  },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    borderColor: theme.colors.fadedText10,
+    backgroundColor: theme.colors.transparent,
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
   },
 }))
 
 export const StyledSecondaryLinkButton = styled(
   StyledBaseLinkButton
 )<RequiredBaseLinkButtonProps>(({ theme }) => ({
-  "&&": {
-    backgroundColor: theme.colors.lightenedBg05,
-    border: `1px solid ${theme.colors.fadedText10}`,
-    "&:hover": {
-      borderColor: theme.colors.primary,
-      color: theme.colors.primary,
-    },
-    "&:active": {
-      color: theme.colors.white,
-      borderColor: theme.colors.primary,
-      backgroundColor: theme.colors.primary,
-    },
-    "&:focus:not(:active)": {
-      borderColor: theme.colors.primary,
-      color: theme.colors.primary,
-    },
-    "&:disabled, &:disabled:hover, &:disabled:active": {
-      borderColor: theme.colors.fadedText10,
-      backgroundColor: theme.colors.transparent,
-      color: theme.colors.fadedText40,
-      cursor: "not-allowed",
-    },
+  backgroundColor: theme.colors.lightenedBg05,
+  border: `1px solid ${theme.colors.fadedText10}`,
+  "&:visited": {
+    color: theme.colors.bodyText,
+  },
+  "&:hover": {
+    borderColor: theme.colors.primary,
+    color: theme.colors.primary,
+  },
+  "&:active": {
+    color: theme.colors.white,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+  },
+  "&:focus:not(:active)": {
+    borderColor: theme.colors.primary,
+    color: theme.colors.primary,
+  },
+  "&:disabled, &:disabled:hover, &:disabled:active": {
+    borderColor: theme.colors.fadedText10,
+    backgroundColor: theme.colors.transparent,
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
   },
 }))
