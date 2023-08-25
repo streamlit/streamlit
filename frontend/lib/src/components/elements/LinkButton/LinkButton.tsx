@@ -16,11 +16,13 @@
 
 import React, { ReactElement } from "react"
 import { LinkButton as LinkButtonProto } from "@streamlit/lib/src/proto"
-import BaseButton, {
+import {
   BaseButtonTooltip,
   BaseButtonKind,
   BaseButtonSize,
 } from "@streamlit/lib/src/components/shared/BaseButton"
+
+import BaseLinkButton from "./BaseLinkButton"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 export interface Props {
@@ -38,13 +40,6 @@ function LinkButton(props: Props): ReactElement {
       ? BaseButtonKind.PRIMARY
       : BaseButtonKind.SECONDARY
 
-  const handleLinkClick: () => void = () => {
-    const link = document.createElement("a")
-    link.setAttribute("href", element.url)
-    link.setAttribute("target", "_blank")
-    link.click()
-  }
-
   // When useContainerWidth true & has help tooltip,
   // we need to pass the container width down to the button
   const fluidWidth = element.help ? width : true
@@ -56,12 +51,14 @@ function LinkButton(props: Props): ReactElement {
       style={style}
     >
       <BaseButtonTooltip help={element.help}>
-        <BaseButton
+        <BaseLinkButton
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
-          onClick={handleLinkClick}
           fluidWidth={element.useContainerWidth ? fluidWidth : false}
+          href={element.url}
+          target="_blank"
+          rel="noreferrer"
         >
           <StreamlitMarkdown
             source={element.label}
@@ -70,7 +67,7 @@ function LinkButton(props: Props): ReactElement {
             largerLabel
             disableLinks
           />
-        </BaseButton>
+        </BaseLinkButton>
       </BaseButtonTooltip>
     </div>
   )
