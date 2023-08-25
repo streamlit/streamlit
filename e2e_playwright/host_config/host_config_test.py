@@ -32,6 +32,9 @@ def apply_restrictive_host_config():
     ] = "bokehChart,cameraInput,downloadButton,fileUploader"
     os.environ["STREAMLIT_SERVER_DISABLE_SET_QUERY_PARAMS"] = "True"
     os.environ["STREAMLIT_SERVER_DISABLE_SET_PAGE_METADATA"] = "True"
+    os.environ["STREAMLIT_SERVER_DISABLE_USER_THEME"] = "True"
+    # Configure a custom theme to test that it is not applied:
+    os.environ["STREAMLIT_THEME_BACKGROUND_COLOR"] = "red"
 
 
 def test_host_config_disable_elements(app: Page, assert_snapshot: ImageCompareFunction):
@@ -64,6 +67,12 @@ def test_host_config_disables_setting_query_params(app: Page):
     """Test that setting the query params from user script is disabled."""
     query_params = app.evaluate("document.location.search")
     assert query_params == "", "Query params should be empty."
+
+
+def test_host_config_disables_user_theme(app: Page):
+    """Test that a configured user theme is not applied."""
+    # Test that the app background color is the default white and not red:
+    expect(app.locator(".stApp")).to_have_css("background-color", "rgb(255, 255, 255)")
 
 
 def test_allowed_elements_still_visible(app: Page):
