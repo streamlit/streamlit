@@ -78,7 +78,7 @@ export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
       minHeight: "38.4px",
       margin: 0,
       lineHeight: theme.lineHeights.base,
-      color: "inherit",
+      color: theme.colors.primary,
       textDecoration: "none",
       width: fluidWidth ? buttonWidth : "auto",
       userSelect: "none",
@@ -127,6 +127,7 @@ export const StyledSecondaryLinkButton = styled(
   StyledBaseLinkButton
 )<RequiredBaseLinkButtonProps>(({ theme }) => ({
   backgroundColor: theme.colors.lightenedBg05,
+  color: theme.colors.bodyText,
   border: `1px solid ${theme.colors.fadedText10}`,
   "&:visited": {
     color: theme.colors.bodyText,
