@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import { customRenderLibContext, render } from "@streamlit/lib/src/test_util"
-import { mockSessionInfo } from "@streamlit/lib/src/mocks/mocks"
+import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 
 import withMapboxToken, {
   MapboxTokenFetchingError,
@@ -33,13 +33,19 @@ interface TestProps {
 }
 
 describe("withMapboxToken", () => {
-  const token = "mockToken"
+  const mockMapboxToken = "mockToken"
+  const element = DeckGlJsonChartProto.create({
+    // mock .streamlit/config.toml token
+    mapboxToken: mockMapboxToken,
+  })
+
+  const emptyElement = DeckGlJsonChartProto.create({})
 
   function getProps(): WrappedMapboxProps<TestProps> {
     return {
       label: "mockLabel",
       width: 123,
-      sessionInfo: mockSessionInfo({ userMapboxToken: token }),
+      element,
     }
   }
 
@@ -54,6 +60,7 @@ describe("withMapboxToken", () => {
   describe("withMapboxToken rendering", () => {
     const DeltaType = "testDeltaType"
     const WrappedComponent = withMapboxToken(DeltaType)(MockComponent)
+    const HOST_CONFIG_TOKEN = "HOST_CONFIG_TOKEN"
 
     beforeEach(() => {
       jest.resetAllMocks()
@@ -62,8 +69,8 @@ describe("withMapboxToken", () => {
     it("renders without crashing", async () => {
       const props = getProps()
       customRenderLibContext(<WrappedComponent {...props} />, {})
-      const alertElement = await screen.findByTestId("AlertElement")
-      expect(alertElement).not.toBeNull()
+      const mockComponent = await screen.findByTestId("mock-component")
+      expect(mockComponent.textContent).toBe(mockMapboxToken)
     })
 
     it("defines `displayName`", () => {
@@ -72,47 +79,42 @@ describe("withMapboxToken", () => {
       )
     })
 
-    it("should inject mapbox token to the wrapped component when available", async () => {
-      const mockedToken = "mockToken"
-      axios.get = jest
-        .fn()
-        .mockImplementation(() => ({ data: { userMapboxToken: mockedToken } }))
+    it("should inject mapbox token to the wrapped component when available in the config", async () => {
+      axios.get = jest.fn().mockImplementation(() => ({
+        data: { userMapboxToken: mockMapboxToken },
+      }))
 
-      render(
-        <WrappedComponent
-          sessionInfo={mockSessionInfo({ userMapboxToken: mockedToken })}
-          width={500}
-        />
+      customRenderLibContext(
+        <WrappedComponent element={element} width={500} />,
+        {
+          hostConfig: { mapboxToken: HOST_CONFIG_TOKEN },
+        }
       )
 
       await waitFor(() => {
         const element = screen.getByTestId("mock-component")
-        expect(element.textContent).toBe(mockedToken)
+        expect(element.textContent).toBe(mockMapboxToken)
       })
     })
 
     it("should render loading alert while fetching the token", async () => {
-      render(<WrappedComponent sessionInfo={mockSessionInfo()} width={500} />)
+      axios.get = jest.fn().mockReturnValue(new Promise(() => {}))
+      render(<WrappedComponent element={emptyElement} width={500} />)
 
       const loadingTextElement = await screen.findByText("Loading...")
       expect(loadingTextElement).toBeDefined()
     })
 
-    it("should fetch the token if userMapboxToken is present in the LibContext", async () => {
-      const fetchedToken = "fetchedToken"
-      const HOST_CONFIG_TOKEN = "HOST_CONFIG_TOKEN"
+    it("prioritizes the host config token if no config.toml token and don't fetch our token", async () => {
       axios.get = jest
         .fn()
-        .mockResolvedValue({ data: { mapbox: fetchedToken } })
+        .mockResolvedValue({ data: { mapbox: mockMapboxToken } })
 
       customRenderLibContext(
-        <WrappedComponent
-          sessionInfo={mockSessionInfo({
-            userMapboxToken: "",
-          })}
-          width={500}
-        />,
-        { hostConfig: { mapboxToken: HOST_CONFIG_TOKEN } }
+        <WrappedComponent element={emptyElement} width={500} />,
+        {
+          hostConfig: { mapboxToken: HOST_CONFIG_TOKEN },
+        }
       )
 
       await waitFor(() => {
@@ -121,81 +123,43 @@ describe("withMapboxToken", () => {
       })
     })
 
-    describe("withMapboxToken methods", () => {
-      describe("getMapboxToken", () => {
-        const userToken = "userToken"
-        it("should return userMapboxToken if present in sessionInfo", async () => {
-          let wrappedComponentInstance: any
+    it("should fetch the token if userMapboxToken is not present in host config or config.toml", async () => {
+      axios.get = jest
+        .fn()
+        .mockResolvedValue({ data: { mapbox: mockMapboxToken } })
 
-          render(
-            <WrappedComponent
-              ref={ref => {
-                wrappedComponentInstance = ref
-              }}
-              sessionInfo={mockSessionInfo({
-                userMapboxToken: userToken,
-              })}
-              width={500}
-            />
-          )
-          expect(
-            await wrappedComponentInstance.getMapboxToken(
-              mockSessionInfo({
-                userMapboxToken: userToken,
-              })
-            )
-          ).toBe(userToken)
-        })
+      customRenderLibContext(
+        <WrappedComponent element={emptyElement} width={500} />,
+        {
+          hostConfig: { mapboxToken: "" },
+        }
+      )
 
-        it("should fetch the token if userMapboxToken is not present in sessionInfo", async () => {
-          const fetchedToken = "fetchedToken"
-          axios.get = jest
-            .fn()
-            .mockResolvedValue({ data: { mapbox: fetchedToken } })
-
-          render(
-            <WrappedComponent
-              sessionInfo={mockSessionInfo({
-                userMapboxToken: "",
-              })}
-              width={500}
-            />
-          )
-
-          await waitFor(() => {
-            expect(axios.get).toHaveBeenCalledWith(TOKENS_URL)
-          })
-        })
-
-        it("should throw an error if fetched token is not present", async () => {
-          let wrappedComponentInstance: any
-          axios.get = jest.fn().mockResolvedValue({ data: {} })
-
-          render(
-            <WrappedComponent
-              ref={ref => {
-                wrappedComponentInstance = ref
-              }}
-              sessionInfo={mockSessionInfo({
-                userMapboxToken: userToken,
-              })}
-              width={500}
-            />
-          )
-
-          await expect(
-            wrappedComponentInstance.getMapboxToken(
-              mockSessionInfo({
-                userMapboxToken: "",
-              })
-            )
-          ).rejects.toThrowError(
-            new MapboxTokenFetchingError(
-              `Missing token mapbox (${TOKENS_URL})`
-            )
-          )
-        })
+      await waitFor(() => {
+        expect(axios.get).toHaveBeenCalledWith(TOKENS_URL)
       })
+    })
+
+    it("should throw an error if fetched token is not present", async () => {
+      let wrappedComponentInstance: any
+      axios.get = jest
+        .fn()
+        .mockReturnValueOnce({ data: { mapbox: mockMapboxToken } })
+
+      render(
+        <WrappedComponent
+          ref={ref => {
+            wrappedComponentInstance = ref
+          }}
+          element={emptyElement}
+          width={500}
+        />
+      )
+
+      axios.get = jest.fn().mockRejectedValueOnce("ERROR")
+      await expect(wrappedComponentInstance.initMapboxToken()).rejects.toThrow(
+        new MapboxTokenFetchingError(`ERROR (${TOKENS_URL})`)
+      )
     })
   })
 })

@@ -19,10 +19,10 @@ import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"
-import { SessionInfo } from "@streamlit/lib/src/SessionInfo"
 import MapboxTokenError from "./MapboxTokenError"
 import axios from "axios"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { DeckGlJsonChart } from "@streamlit/lib/src/proto"
 
 interface InjectedProps {
   mapboxToken: string
@@ -41,7 +41,7 @@ export type WrappedMapboxProps<P extends InjectedProps> = Omit<
   P,
   "mapboxToken"
 > & {
-  sessionInfo: SessionInfo
+  element: DeckGlJsonChart
   width: number
 }
 
@@ -89,19 +89,12 @@ const withMapboxToken =
 
       /**
        * Expose a singleton MapboxToken:
-       * - If the user specified a token in their streamlit config, return it.
-       * - Else, fetch the remote "tokens.json" and return the "mapbox" entry.
+       * fetch the remote "tokens.json" and return the "mapbox" entry.
        *
        * (The returned value is cached in memory, so the remote resource will
        * only be fetched once per session.)
        */
-      public async getMapboxToken(sessionInfo: SessionInfo): Promise<string> {
-        let { userMapboxToken } = sessionInfo.current
-
-        if (userMapboxToken) {
-          return userMapboxToken
-        }
-
+      public initMapboxToken = async (): Promise<void> => {
         try {
           const response = await axios.get(TOKENS_URL)
           const { [MAPBOX]: token } = response.data
@@ -110,25 +103,8 @@ const withMapboxToken =
             throw new Error(`Missing token ${MAPBOX}`)
           }
 
-          userMapboxToken = token
-        } catch (e) {
-          const error = ensureError(e)
-          throw new MapboxTokenFetchingError(
-            `${error.message} (${TOKENS_URL})`
-          )
-        }
-
-        return userMapboxToken
-      }
-
-      /**
-       * Fetch our MapboxToken.
-       */
-      public initMapboxToken = async (): Promise<void> => {
-        try {
-          const mapboxToken = await this.getMapboxToken(this.props.sessionInfo)
           this.setState({
-            mapboxToken,
+            mapboxToken: token,
             isFetching: false,
           })
         } catch (e) {
@@ -138,11 +114,15 @@ const withMapboxToken =
             mapboxTokenError: error,
             isFetching: false,
           })
+          throw new MapboxTokenFetchingError(
+            `${error.message} (${TOKENS_URL})`
+          )
         }
       }
 
       public componentDidMount(): void {
-        const { mapboxToken } = this.context.hostConfig
+        const mapboxToken =
+          this.props.element.mapboxToken || this.context.hostConfig.mapboxToken
 
         if (mapboxToken) {
           this.setState({
