@@ -56,7 +56,7 @@ export default function AlertElement({
   width,
 }: AlertElementProps): ReactElement {
   return (
-    <div className="stAlert" data-testid="AlertElement">
+    <div className="stAlert">
       <AlertContainer width={width} kind={kind}>
         <StyledIconAlertContent>
           {icon && <EmojiIcon size="lg">{icon}</EmojiIcon>}
