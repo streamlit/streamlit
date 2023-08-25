@@ -71,7 +71,8 @@ class ChartType(Enum):
 
 # Color and size legends need different title paddings in order for them
 # to be vertically aligned.
-# (The color legend's padding is defined in Pl
+# (The color legend's padding is defined in:
+# frontend/lib/src/components/elements/ArrowVegaLiteChart/CustomTheme.tsx)
 # NOTE: I don't think it's possible to *perfectly* align the size and
 # color legends in all instances, since the "size" circles vary in size based
 # on the data, and their container is top-aligned with the color container. But
