@@ -194,14 +194,14 @@ class HostConfigHandler(_SpecialRequestHandler):
             {
                 "allowedOrigins": self._allowed_origins,
                 "useExternalAuthToken": False,
+                "mapboxToken": "",
                 "disableSetQueryParams": self._disable_set_query_params,
                 "disableSetPageMetadata": self._disable_set_page_metadata,
                 "disableUnsafeHtmlExecution": self._disable_unsafe_html_execution,
+                "disableSvgImages": False,
                 "disableIframes": self._disable_unsafe_iframes,
                 "disableElements": self._disable_elements,
                 "disableUserTheme": self._disable_user_theme,
-                "disableSvgImages": False,
-                "mapboxToken": "",
             }
         )
         self.set_status(200)
