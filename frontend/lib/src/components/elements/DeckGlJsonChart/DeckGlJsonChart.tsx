@@ -73,8 +73,8 @@ const jsonConverter = new JSONConverter({ configuration })
 export interface DeckGLProps {
   width: number
   theme: EmotionTheme
-  element: DeckGlJsonChartProto
   mapboxToken: string
+  element: DeckGlJsonChartProto
   isFullScreen?: boolean
 }
 
@@ -235,9 +235,6 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
   }
 
   render(): ReactNode {
-    const mapboxToken =
-      this.props.element.mapboxToken || this.props.mapboxToken
-
     const deck = DeckGlJsonChart.getDeckObject(this.props, this.state)
     const { viewState } = this.state
     return (
@@ -266,7 +263,9 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
                 ? deck.mapStyle
                 : deck.mapStyle[0])
             }
-            mapboxApiAccessToken={mapboxToken}
+            mapboxApiAccessToken={
+              this.props.element.mapboxToken || this.props.mapboxToken
+            }
           />
           <StyledNavigationControlContainer>
             <NavigationControl className="zoomButton" showCompass={false} />

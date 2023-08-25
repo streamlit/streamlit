@@ -34,9 +34,9 @@ interface State {
   isFetching: boolean
 }
 
-// We consume a Component that takes a "mapboxToken" prop, and create
-// a wrapped Component that takes a "sessionInfo" prop, and omits
-// the "mapboxToken" prop
+// Wraps a Component expecting a "mapboxToken" prop.
+// The wrapped Component accepts a DeckGLJsonChart prop, which
+// incorporates the config.toml token (if provided) and omits the "mapboxToken" prop.
 export type WrappedMapboxProps<P extends InjectedProps> = Omit<
   P,
   "mapboxToken"
@@ -56,8 +56,10 @@ const MAPBOX = "mapbox"
 
 /**
  * A higher-order component that fetches our mapbox token and passes
- * it through to the wrapped component. If the token fetch fails, an error
- * will be rendered in place of the wrapped component.
+ * it through to the wrapped component.
+ * This component uses tokens from config.toml or host config (LibContext) first when available.
+ * Config.toml takes priority over host config.
+ * If the token fetch fails, an error will be rendered in place of the wrapped component.
  * This component is necessary as it's good practice to separate data collection
  * (mapbox token retrieval) and the actual rendering of a component.
  *
@@ -88,11 +90,8 @@ const withMapboxToken =
       }
 
       /**
-       * Expose a singleton MapboxToken:
-       * fetch the remote "tokens.json" and return the "mapbox" entry.
-       *
-       * (The returned value is cached in memory, so the remote resource will
-       * only be fetched once per session.)
+       * Fetch the remote "tokens.json" set the "mapbox" in state.
+       * Throw an error if we can't contact TOKENS_URL or the token is missing.
        */
       public initMapboxToken = async (): Promise<void> => {
         try {
