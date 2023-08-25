@@ -58,6 +58,8 @@ const MAPBOX = "mapbox"
  * A higher-order component that fetches our mapbox token and passes
  * it through to the wrapped component. If the token fetch fails, an error
  * will be rendered in place of the wrapped component.
+ * This component is necessary as it's good practice to separate data collection
+ * (mapbox token retrieval) and the actual rendering of a component.
  *
  * @param {string} deltaType In case of an exception we show an error with this
  */

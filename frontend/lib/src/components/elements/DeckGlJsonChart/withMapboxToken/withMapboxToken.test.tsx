@@ -14,12 +14,19 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { shallow } from "@streamlit/lib/src/test_util"
+import React, { ReactElement } from "react"
+import { mount, render } from "@streamlit/lib/src/test_util"
 import { mockSessionInfo } from "@streamlit/lib/src/mocks/mocks"
-import { MapboxToken } from "./MapboxToken"
 
-import withMapboxToken, { WrappedMapboxProps } from "./withMapboxToken"
+import withMapboxToken, {
+  MapboxTokenFetchingError,
+  TOKENS_URL,
+  WrappedMapboxProps,
+} from "./withMapboxToken"
+import axios from "axios"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import { baseTheme } from "@streamlit/lib/src/theme"
+import { screen, waitFor } from "@testing-library/react"
 
 interface TestProps {
   label: string
@@ -27,7 +34,11 @@ interface TestProps {
   mapboxToken: string
 }
 
-class TestComponent extends React.PureComponent<TestProps> {}
+class TestComponent extends React.PureComponent<TestProps> {
+  public render(): ReactElement {
+    return <></>
+  }
+}
 
 function waitOneTick(): Promise<void> {
   return new Promise(resolve => {
@@ -37,52 +48,175 @@ function waitOneTick(): Promise<void> {
 
 describe("withMapboxToken", () => {
   const token = "mockToken"
-  const commandLine = "streamlit run test.py"
 
-  function getProps(): WrappedMapboxProps<TestProps> {
+  function getProps(
+    overrideProps?: Partial<WrappedMapboxProps<TestProps>>
+  ): WrappedMapboxProps<TestProps> {
     return {
       label: "mockLabel",
       width: 123,
-      sessionInfo: mockSessionInfo({ commandLine, userMapboxToken: token }),
+      sessionInfo: mockSessionInfo({ userMapboxToken: token }),
+      ...overrideProps,
     }
   }
 
-  // Install a mock token in our token fetcher so that we don't hit
-  // the network.
-  beforeEach(() => {
-    MapboxToken.token = token
-    MapboxToken.commandLine = commandLine
-  })
+  jest.mock("axios")
 
-  afterEach(() => {
-    MapboxToken.token = undefined
-    MapboxToken.commandLine = undefined
-  })
+  // A mock component to wrap
+  const MockComponent = (props: {
+    mapboxToken: string | undefined
+  }): ReactElement => (
+    <div data-testid="mock-component">{props.mapboxToken}</div>
+  )
 
-  it("renders without crashing", async () => {
-    const props = getProps()
-    const WrappedComponent = withMapboxToken("st.test")(TestComponent)
-    const wrapper = shallow(<WrappedComponent {...props} />)
+  describe("withMapboxToken rendering", () => {
+    const DeltaType = "testDeltaType"
 
-    expect(wrapper.find("AlertElement").exists()).toBe(true)
-  })
+    beforeEach(() => {
+      jest.resetAllMocks()
+    })
 
-  it("passes mapboxToken to wrapped component", async () => {
-    const props = getProps()
-    const WrappedComponent = withMapboxToken("st.test")(TestComponent)
-    const wrapper = shallow(<WrappedComponent {...props} />)
+    it("renders without crashing", async () => {
+      const defaultLibContextProps = {
+        isFullScreen: false,
+        setFullScreen: jest.fn(),
+        addScriptFinishedHandler: jest.fn(),
+        removeScriptFinishedHandler: jest.fn(),
+        activeTheme: baseTheme,
+        setTheme: jest.fn(),
+        availableThemes: [],
+        addThemes: jest.fn(),
+        hideFullScreenButtons: false,
+        hostConfig: {},
+        setHostConfig: jest.fn(),
+        disableUserTheme: false,
+      }
+      const props = getProps()
+      const WrappedComponent = withMapboxToken("st.test")(TestComponent)
+      render(
+        <LibContext.Provider value={{ ...defaultLibContextProps }}>
+          <WrappedComponent {...props} />
+        </LibContext.Provider>
+      )
+      const alertElement = await screen.findByTestId("AlertElement")
+      expect(alertElement).not.toBeNull()
+    })
 
-    // Wait one tick for our MapboxToken promise to resolve
-    await waitOneTick()
+    it("defines `displayName`", () => {
+      const WrappedComponent = withMapboxToken("st.test")(TestComponent)
+      expect(WrappedComponent.displayName).toEqual(
+        "withMapboxToken(TestComponent)"
+      )
+    })
 
-    expect(wrapper.props().label).toBe("mockLabel")
-    expect(wrapper.props().mapboxToken).toBe("mockToken")
-  })
+    it("should inject mapbox token to the wrapped component when available", async () => {
+      const mockedToken = "mockToken"
+      axios.get = jest
+        .fn()
+        .mockImplementation(() => ({ data: { userMapboxToken: mockedToken } }))
 
-  it("defines `displayName`", () => {
-    const WrappedComponent = withMapboxToken("st.test")(TestComponent)
-    expect(WrappedComponent.displayName).toEqual(
-      "withMapboxToken(TestComponent)"
-    )
+      const WrappedComponent = withMapboxToken(DeltaType)(MockComponent)
+      render(
+        <WrappedComponent
+          sessionInfo={mockSessionInfo({ userMapboxToken: mockedToken })}
+          width={500}
+        />
+      )
+
+      await waitFor(() => {
+        const element = screen.getByTestId("mock-component")
+        expect(element.textContent).toBe(mockedToken)
+      })
+    })
+
+    it("should render loading alert while fetching the token", async () => {
+      const WrappedComponent = withMapboxToken(DeltaType)(MockComponent)
+      render(<WrappedComponent sessionInfo={mockSessionInfo()} width={500} />)
+
+      const loadingTextElement = await screen.findByText("Loading...")
+      expect(loadingTextElement).toBeDefined()
+    })
+
+    describe("withMapboxToken methods", () => {
+      const MockComponent = (): ReactElement => (
+        <div data-testid="mock-component">Mock Component</div>
+      )
+      const WrappedComponent = withMapboxToken(DeltaType)(MockComponent)
+
+      describe("getMapboxToken", () => {
+        const userToken = "userToken"
+        it("should return userMapboxToken if present in sessionInfo", async () => {
+          let wrappedComponentInstance: any
+
+          render(
+            <WrappedComponent
+              ref={ref => {
+                wrappedComponentInstance = ref
+              }}
+              sessionInfo={mockSessionInfo({
+                userMapboxToken: userToken,
+              })}
+              width={500}
+            />
+          )
+          expect(
+            await wrappedComponentInstance.getMapboxToken(
+              mockSessionInfo({
+                userMapboxToken: userToken,
+              })
+            )
+          ).toBe(userToken)
+        })
+
+        it("should fetch the token if userMapboxToken is not present in sessionInfo", async () => {
+          const fetchedToken = "fetchedToken"
+          axios.get = jest
+            .fn()
+            .mockResolvedValue({ data: { mapbox: fetchedToken } })
+
+          render(
+            <WrappedComponent
+              sessionInfo={mockSessionInfo({
+                userMapboxToken: "",
+              })}
+              width={500}
+            />
+          )
+
+          await waitFor(() => {
+            expect(axios.get).toHaveBeenCalledWith(TOKENS_URL)
+          })
+        })
+
+        it("should throw an error if fetched token is not present", async () => {
+          let wrappedComponentInstance: any
+          axios.get = jest.fn().mockResolvedValue({ data: {} })
+
+          render(
+            <WrappedComponent
+              ref={ref => {
+                wrappedComponentInstance = ref
+              }}
+              sessionInfo={mockSessionInfo({
+                userMapboxToken: userToken,
+              })}
+              width={500}
+            />
+          )
+
+          await expect(
+            wrappedComponentInstance.getMapboxToken(
+              mockSessionInfo({
+                userMapboxToken: "",
+              })
+            )
+          ).rejects.toThrowError(
+            new MapboxTokenFetchingError(
+              `Missing token mapbox (${TOKENS_URL})`
+            )
+          )
+        })
+      })
+    })
   })
 })
