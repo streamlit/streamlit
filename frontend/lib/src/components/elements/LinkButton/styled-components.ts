@@ -94,6 +94,9 @@ export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
       "&:hover": {
         textDecoration: "none",
       },
+      "&:active": {
+        textDecoration: "none",
+      },
       ...getSizeStyle(size, theme),
     }
   }
@@ -112,7 +115,7 @@ export const StyledPrimaryLinkButton = styled(
     backgroundColor: "transparent",
     color: theme.colors.primary,
   },
-  "&:visited": {
+  "&:visited:not(:active)": {
     color: theme.colors.white,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
