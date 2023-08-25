@@ -11,8 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# TODO(lukasmasuch): Use package fixtures to configure the
-# Streamlit configuration via environment variables.
-# This will also require a way to set the host config via a config option
-# for internal test purposes.

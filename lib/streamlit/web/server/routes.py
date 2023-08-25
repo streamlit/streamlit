@@ -162,42 +162,28 @@ class HealthHandler(_SpecialRequestHandler):
             self.write(msg)
 
 
-# NOTE: We eventually want to get rid of this hard-coded list entirely as we don't want
-# to have links to Community Cloud live in the open source library in a way that affects
-# functionality (links advertising Community Cloud are probably okay 🙂). In the long
-# run, this list will most likely be replaced by a config option allowing us to more
-# granularly control what domains a Streamlit app should accept cross-origin iframe
-# messages from.
-DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
-    "https://devel.streamlit.test",
-    "https://*.streamlit.apptest",
-    "https://*.streamlitapp.test",
-    "https://*.streamlitapp.com",
-    "https://share.streamlit.io",
-    "https://share-demo.streamlit.io",
-    "https://share-head.streamlit.io",
-    "https://share-staging.streamlit.io",
-    "https://*.demo.streamlit.run",
-    "https://*.head.streamlit.run",
-    "https://*.staging.streamlit.run",
-    "https://*.streamlit.run",
-    "https://*.demo.streamlit.app",
-    "https://*.head.streamlit.app",
-    "https://*.staging.streamlit.app",
-    "https://*.streamlit.app",
-]
-
-
 class HostConfigHandler(_SpecialRequestHandler):
     def initialize(self):
-        user_defined_origins = config.get_option("server.allowedMessageOrigins")
-        if len(user_defined_origins) == 0:
-            self.allowed_message_origins = DEFAULT_ALLOWED_MESSAGE_ORIGINS
-        else:
-            self.allowed_message_origins = user_defined_origins
-        if config.get_option("global.developmentMode"):
+        self._allowed_origins = config.get_option("server.allowedOrigins")
+        self._disable_unsafe_html_execution = config.get_option(
+            "server.disableUnsafeHtmlExecution"
+        )
+        self._disable_set_query_params = config.get_option(
+            "server.disableSetQueryParams"
+        )
+        self._disable_set_page_metadata = config.get_option(
+            "server.disableSetPageMetadata"
+        )
+        self._disable_unsafe_iframes = config.get_option("server.disableUnsafeIframes")
+        self._disable_elements = config.get_option("server.disableElements")
+        self._disable_user_theme = config.get_option("server.disableUserTheme")
+
+        if (
+            config.get_option("global.developmentMode")
+            and "http://localhost" not in self._allowed_origins
+        ):
             # Allow messages from localhost in dev mode for testing of host <-> guest communication
-            self.allowed_message_origins.append("http://localhost")
+            self._allowed_origins.append("http://localhost")
 
     async def get(self) -> None:
         # ALLOWED_MESSAGE_ORIGINS must be wrapped in a dictionary because Tornado
@@ -206,16 +192,16 @@ class HostConfigHandler(_SpecialRequestHandler):
         # See https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write
         self.write(
             {
-                "allowedOrigins": self.allowed_message_origins,
+                "allowedOrigins": self._allowed_origins,
                 "useExternalAuthToken": False,
                 "mapboxToken": "",
-                "disableSetQueryParams": False,
-                "disableSetPageMetadata": False,
-                "disableUnsafeHtmlExecution": False,
+                "disableSetQueryParams": self._disable_set_query_params,
+                "disableSetPageMetadata": self._disable_set_page_metadata,
+                "disableUnsafeHtmlExecution": self._disable_unsafe_html_execution,
                 "disableSvgImages": False,
-                "disableIframes": False,
-                "disableElements": [],
-                "disableUserTheme": False,
+                "disableIframes": self._disable_unsafe_iframes,
+                "disableElements": self._disable_elements,
+                "disableUserTheme": self._disable_user_theme,
             }
         )
         self.set_status(200)

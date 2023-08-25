@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from typing import Dict
+from typing import Any, Dict, Iterable
 
 import click
 import toml
@@ -171,3 +171,13 @@ def _clean_paragraphs(txt):
         for paragraph in paragraphs
     ]
     return cleaned_paragraphs
+
+
+def ensure_list(value: Any) -> Iterable[Any]:
+    """Converts a value to a list if it's not already a list."""
+
+    if isinstance(value, Iterable):
+        return value
+    elif isinstance(value, str):
+        return value.split(",")
+    return [value]

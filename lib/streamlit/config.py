@@ -574,14 +574,90 @@ _create_option(
 
 _create_section("server", "Settings for the Streamlit server")
 
+_create_option(
+    "server.disableUnsafeHtmlExecution",
+    description="Disables unsafe HTML execution (e.g. via st.markdown(..., unsafe_allow_html=True).",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
 
 _create_option(
-    "server.allowedMessageOrigins",
+    "server.disableSetQueryParams",
+    description="Disables setting the URL query parameters.",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "server.disableSetPageMetadata",
+    description="Disables setting HTML page metadata (title & favicon).",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "server.disableUnsafeIframes",
+    description="Disables usage of iframes based on untrusted content (e.g. custom components, components iframe/html).",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "server.disableUserTheme",
+    description="Disables the usage of user-defined themes defined in the config.toml.",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+
+_create_option(
+    "server.disableElements",
+    description="Disable specific elements based on their proto type name (camelCase).",
+    visibility="hidden",
+    default_val=[],
+    type_=config_util.ensure_list,  # type: ignore
+)
+
+
+# NOTE: We eventually want to get rid of this hard-coded list entirely as we don't want
+# to have links to Community Cloud live in the open source library in a way that affects
+# functionality (links advertising Community Cloud are probably okay 🙂). In the long
+# run, this list will most likely be replaced by a config option allowing us to more
+# granularly control what domains a Streamlit app should accept cross-origin iframe
+# messages from.
+_DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
+    "https://devel.streamlit.test",
+    "https://*.streamlit.apptest",
+    "https://*.streamlitapp.test",
+    "https://*.streamlitapp.com",
+    "https://share.streamlit.io",
+    "https://share-demo.streamlit.io",
+    "https://share-head.streamlit.io",
+    "https://share-staging.streamlit.io",
+    "https://*.demo.streamlit.run",
+    "https://*.head.streamlit.run",
+    "https://*.staging.streamlit.run",
+    "https://*.streamlit.run",
+    "https://*.demo.streamlit.app",
+    "https://*.head.streamlit.app",
+    "https://*.staging.streamlit.app",
+    "https://*.streamlit.app",
+]
+
+_create_option(
+    "server.allowedOrigins",
     description="""This list is an allow-list of origins from which a deployed Streamlit app can receive cross-origin messages from.
     If not specified, a default list of origins will be used, which are designed for Community Cloud deployments.
     Example: ['https://*.streamlit.app, "https://*.demo.streamlit.app",]
     """,
-    default_val=[],
+    visibility="hidden",
+    default_val=_DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+    type_=config_util.ensure_list,  # type: ignore
 )
 
 _create_option(
