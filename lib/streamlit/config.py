@@ -610,7 +610,8 @@ _create_option(
     "server.disableUserTheme",
     description="Disables the usage of user-defined themes defined in the config.toml.",
     visibility="hidden",
-    default_val=[],
+    default_val=False,
+    type_=bool,
 )
 
 

@@ -213,7 +213,7 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
     @patch_config_options(
         {
             "global.developmentMode": False,
-            "server.allowedMessageOrigins": ["https://*.google.com"],
+            "server.allowedOrigins": ["https://*.google.com"],
         }
     )
     def test_custom_message_origins(self):
