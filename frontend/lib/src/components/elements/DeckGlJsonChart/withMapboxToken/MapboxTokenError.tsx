@@ -35,7 +35,6 @@ const MapboxTokenError = ({
   if (error instanceof MapboxTokenNotProvidedError) {
     return (
       <ErrorElement
-        data-testid="MapboxTokenNotProvidedError"
         width={width}
         name="No Mapbox token provided"
         message={
@@ -74,7 +73,6 @@ const MapboxTokenError = ({
   if (error instanceof MapboxTokenFetchingError) {
     return (
       <ErrorElement
-        data-testid="MapboxTokenFetchingError"
         width={width}
         name="Error fetching Streamlit Mapbox token"
         message={
