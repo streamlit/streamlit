@@ -28,7 +28,7 @@ pytest-playwright>=0.1.2
 pixelmatch>=0.3.0
 pytest-xdist
 
-mypy-protobuf>=3.2
+mypy-protobuf>=3.2, <3.4
 
 # These requirements exist only for `@st.cache` tests. st.cache is deprecated, and
 # we're not going to update its associated tests anymore. Please don't modify

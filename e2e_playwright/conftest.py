@@ -46,7 +46,7 @@ class AsyncSubprocess:
     def __init__(self, args, cwd=None, env=None):
         self.args = args
         self.cwd = cwd
-        self.env = env
+        self.env = env or {}
         self._proc = None
         self._stdout_file = None
 
@@ -84,7 +84,7 @@ class AsyncSubprocess:
             stdout=self._stdout_file,
             stderr=subprocess.STDOUT,
             text=True,
-            env={**os.environ.copy(), **self.env} if self.env else None,
+            env={**os.environ.copy(), **self.env},
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -98,8 +98,8 @@ class AsyncSubprocess:
 
 def resolve_test_to_script(test_module: ModuleType) -> str:
     """Resolve the test module to the corresponding test script filename."""
-    module_name = test_module.__name__
-    return module_name.replace("_test", ".py")
+    assert test_module.__file__ is not None
+    return test_module.__file__.replace("_test.py", ".py")
 
 
 def find_available_port(host: str = "localhost") -> int:
@@ -234,7 +234,7 @@ def themed_app(page: Page, app_port: int, app_theme: str) -> Page:
 class ImageCompareFunction(Protocol):
     def __call__(
         self,
-        element: ElementHandle | Locator,
+        element: ElementHandle | Locator | Page,
         *,
         image_threshold: float = 0.001,
         pixel_threshold: float = 0.05,
@@ -278,12 +278,13 @@ def assert_snapshot(
     request: FixtureRequest, output_folder: Path
 ) -> Generator[ImageCompareFunction, None, None]:
     """Fixture that compares a screenshot with screenshot from a past run."""
+    root_path = Path(os.getcwd()).resolve()
     platform = str(sys.platform)
-    module_name = request.module.__name__
+    # TODO(lukasmasuch): Is there a better way to get the module name?
+    module_name = request.module.__name__.split(".")[-1]
     test_function_name = request.node.originalname
-    root_path = Path(request.node.fspath).parent.resolve()
 
-    snapshot_dir: Path = root_path / "snapshots" / platform / module_name
+    snapshot_dir: Path = root_path / "__snapshots__" / platform / module_name
 
     module_snapshot_failures_dir: Path = (
         output_folder / "snapshot-tests-failures" / platform / module_name
@@ -303,7 +304,7 @@ def assert_snapshot(
     test_failure_messages: List[str] = []
 
     def compare(
-        element: ElementHandle | Locator,
+        element: ElementHandle | Locator | Page,
         *,
         image_threshold: float = 0.001,
         pixel_threshold: float = 0.05,
