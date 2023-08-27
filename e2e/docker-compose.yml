@@ -23,7 +23,6 @@ services:
 
     volumes:
       - .:/home/circleci/repo/e2e
-      - ../component-template:/home/circleci/repo/component-template
       - ../frontend/craco.config.js:/home/circleci/repo/frontend/craco.config.js
       - ../frontend/cypress:/home/circleci/repo/frontend/cypress
       - ../frontend/public:/home/circleci/repo/frontend/public
