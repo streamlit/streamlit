@@ -71,14 +71,18 @@ class ChartType(Enum):
 
 # Color and size legends need different title paddings in order for them
 # to be vertically aligned.
-# (The color legend's padding is defined in:
-# frontend/lib/src/components/elements/ArrowVegaLiteChart/CustomTheme.tsx)
+#
 # NOTE: I don't think it's possible to *perfectly* align the size and
 # color legends in all instances, since the "size" circles vary in size based
 # on the data, and their container is top-aligned with the color container. But
 # through trial-and-error I found this value to be a good enough middle ground.
 # See e2e/scripts/st_arrow_scatter_chart.py for some alignment tests.
-SIZE_LEGEND_SETTINGS = dict(titlePadding=0.5)
+#
+# NOTE #2: In theory, we could move COLOR_LEGEND_SETTINGS into
+# ArrowVegaLiteChart/CustomTheme.tsx, but this would impact existing behavior.
+# (See https://github.com/streamlit/streamlit/pull/7164#discussion_r1307707345)
+COLOR_LEGEND_SETTINGS = dict(titlePadding=5, offset=5, orient="bottom")
+SIZE_LEGEND_SETTINGS = dict(titlePadding=0.5, offset=5, orient="bottom")
 
 # User-readable names to give the index and melted columns.
 SEPARATED_INDEX_COLUMN_TITLE = "index"
@@ -1363,6 +1367,7 @@ def _get_color_encoding(
                 return alt.Color(
                     field=color_column,
                     scale=alt.Scale(range=[to_css_color(c) for c in color_values]),
+                    legend=COLOR_LEGEND_SETTINGS,
                     type="nominal",
                     title=" ",
                 )
@@ -1377,7 +1382,9 @@ def _get_color_encoding(
         else:
             column_type = type_util.infer_vegalite_type(df[color_column])
 
-        color_enc = alt.Color(field=color_column, type=column_type)
+        color_enc = alt.Color(
+            field=color_column, legend=COLOR_LEGEND_SETTINGS, type=column_type
+        )
 
         # Fix title if DF was melted
         if color_column == MELTED_COLOR_COLUMN_NAME:

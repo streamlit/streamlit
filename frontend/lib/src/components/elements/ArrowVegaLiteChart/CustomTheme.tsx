@@ -91,8 +91,6 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       labelPadding: theme.spacing.lgPx,
       columnPadding: theme.spacing.smPx,
       rowPadding: theme.spacing.twoXSPx,
-      offset: 5,
-      orient: "bottom",
       padding: 7,
       symbolStrokeWidth: 4,
     },
