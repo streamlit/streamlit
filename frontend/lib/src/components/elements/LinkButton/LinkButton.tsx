@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, MouseEvent } from "react"
 import { LinkButton as LinkButtonProto } from "@streamlit/lib/src/proto"
 import {
   BaseButtonTooltip,
@@ -44,6 +44,12 @@ function LinkButton(props: Props): ReactElement {
   // we need to pass the container width down to the button
   const fluidWidth = element.help ? width : true
 
+  const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (props.disabled) {
+      e.preventDefault()
+    }
+  }
+
   return (
     <div
       className="row-widget stLinkButton"
@@ -55,10 +61,12 @@ function LinkButton(props: Props): ReactElement {
           kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
+          onClick={handleClick}
           fluidWidth={element.useContainerWidth ? fluidWidth : false}
           href={element.url}
           target="_blank"
           rel="noreferrer"
+          aria-disabled={disabled}
         >
           <StreamlitMarkdown
             source={element.label}

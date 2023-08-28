@@ -33,6 +33,7 @@ function BaseLinkButton({
   href,
   rel,
   target,
+  onClick,
 }: BaseLinkButtonPropsT): ReactElement {
   let ComponentType = StyledPrimaryLinkButton
 
@@ -51,6 +52,8 @@ function BaseLinkButton({
       href={href}
       target={target}
       rel={rel}
+      onClick={onClick}
+      tabIndex={disabled ? -1 : 0}
     >
       {children}
     </ComponentType>
