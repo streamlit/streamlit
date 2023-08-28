@@ -517,13 +517,8 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         # Automatically-specified colors should have no legend title.
         self.assertEqual(chart_spec["encoding"]["color"]["title"], " ")
 
-        # Automatically-specified colors should have a legend.
-        # Since the legend is specified in the frontend, we just need to make sure it's
-        # defined here.
-        self.assertEqual(
-            chart_spec["encoding"]["color"].get("legend", "NOT DEFINED!"),
-            "NOT DEFINED!",
-        )
+        # Automatically-specified colors should have a legend
+        self.assertNotEqual(chart_spec["encoding"]["color"]["legend"], None)
 
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
