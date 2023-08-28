@@ -80,6 +80,7 @@ jobs:
           persist-credentials: false
           repository: streamlit/component-template
           ref: 23a4ace86e0b8bc63a7a837e44c3732e4a007e8f
+          path: ./component-template
 
       - name: Build components wheels
         uses: ./.github/actions/build_component_wheels
