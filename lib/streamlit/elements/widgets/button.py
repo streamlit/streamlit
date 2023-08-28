@@ -349,6 +349,48 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> "DeltaGenerator":
+        r"""Display a link button element.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this button is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+        url : str
+            The url TODO Add better description
+        help : str
+            An optional tooltip that gets displayed when the button is
+            hovered over.
+        type : "secondary" or "primary"
+            An optional string that specifies the button type. Can be "primary" for a
+            button with additional emphasis or "secondary" for a normal button. This
+            argument can only be supplied by keyword. Defaults to "secondary".
+        disabled : bool
+            An optional boolean, which disables the download button if set to
+            True. The default is False. This argument can only be supplied by
+            keyword.
+        use_container_width: bool
+            An optional boolean, which makes the button stretch its width to match the parent container.
+        """
         # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
         if type not in ["primary", "secondary"]:
             raise StreamlitAPIException(
