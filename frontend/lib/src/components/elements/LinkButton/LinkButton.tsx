@@ -44,7 +44,7 @@ function LinkButton(props: Props): ReactElement {
   // we need to pass the container width down to the button
   const fluidWidth = element.help ? width : true
 
-  const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = (e: MouseEvent<HTMLAnchorElement>): void => {
     if (props.disabled) {
       e.preventDefault()
     }
