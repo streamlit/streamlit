@@ -14,11 +14,9 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.ref_name }}
-          # Save the access token to the local git config, so
-          # later git commands can work.
-          persist-credentials: true
+          persist-credentials: false
           submodules: "recursive"
+          fetch-depth: 2
 
       - name: Setup Node
         uses: actions/setup-node@v3
