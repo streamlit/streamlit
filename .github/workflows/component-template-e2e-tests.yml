@@ -1,4 +1,4 @@
-name: Component-template e2e tests
+name: Component-template E2E
 
 on:
   push:
@@ -46,7 +46,6 @@ jobs:
           make package
 
       - name: Return path to Streamlit wheel
-        working-directory: component-lib
         id: streamlit_wheel
         shell: bash
         run: |
