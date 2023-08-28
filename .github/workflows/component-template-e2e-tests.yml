@@ -79,17 +79,17 @@ jobs:
         with:
           persist-credentials: false
           repository: streamlit/component-template
-          path: ./component-template
+          ref: 23a4ace86e0b8bc63a7a837e44c3732e4a007e8f
 
       - name: Build components wheels
-        uses: ./component-template/.github/actions/build_component_wheels@23a4ace86e0b8bc63a7a837e44c3732e4a007e8f
+        uses: ./component-template/.github/actions/build_component_wheels
         id: component_wheels
         with:
           custom_streamlit_component_lib_file: >-
             ${{ steps.component_library.outputs.output_file }}
 
       - name: Run E2E tests
-        uses: ./component-template/.github/actions/run_e2e@23a4ace86e0b8bc63a7a837e44c3732e4a007e8f
+        uses: ./component-template/.github/actions/run_e2e
         with:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
           streamlit_wheel_file: ${{ steps.streamlit_wheel.outputs.output_file }}
