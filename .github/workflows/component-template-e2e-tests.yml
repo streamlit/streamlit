@@ -83,14 +83,14 @@ jobs:
           path: ./component-template
 
       - name: Build components wheels
-        uses: ./.github/actions/build_component_wheels
+        uses: ./component-template/.github/actions/build_component_wheels
         id: component_wheels
         with:
           custom_streamlit_component_lib_file: >-
             ${{ steps.component_library.outputs.output_file }}
 
       - name: Run E2E tests
-        uses: ./.github/actions/run_e2e
+        uses: ./component-template/.github/actions/run_e2e
         with:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
           streamlit_wheel_file: ${{ steps.streamlit_wheel.outputs.output_file }}
