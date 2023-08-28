@@ -376,7 +376,7 @@ class ButtonMixin:
             Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
         url : str
-            The url TODO Add better description
+            The url to be opened on user click
         help : str
             An optional tooltip that gets displayed when the button is
             hovered over.
