@@ -34,12 +34,14 @@ describe("st._arrow_scatter_chart", () => {
       5
     );
 
-    const charts = cy.get(".element-container [data-testid='stArrowVegaLiteChart']")
+    const getChart = (index) => (
+      cy.get(".element-container [data-testid='stArrowVegaLiteChart']").eq(index)
+    );
 
-    charts.eq(0).matchThemedSnapshots("arrow_scatter_chart_snowpark");
-    charts.eq(1).matchThemedSnapshots("arrow_scatter_chart_no_data");
-    charts.eq(2).matchThemedSnapshots("arrow_scatter_chart_align_color_and_few_sizes");
-    charts.eq(3).matchThemedSnapshots("arrow_scatter_chart_align_color_and_many_sizes");
-    charts.eq(4).matchThemedSnapshots("arrow_scatter_chart_align_quant_color_and_size");
+    getChart(0).matchThemedSnapshots("arrow_scatter_chart_snowpark");
+    getChart(1).matchThemedSnapshots("arrow_scatter_chart_no_data");
+    getChart(2).matchThemedSnapshots("arrow_scatter_chart_align_color_and_few_sizes");
+    getChart(3).matchThemedSnapshots("arrow_scatter_chart_align_color_and_many_sizes");
+    getChart(4).matchThemedSnapshots("arrow_scatter_chart_align_quant_color_and_size");
   });
 });
