@@ -386,8 +386,7 @@ class ButtonMixin:
             argument can only be supplied by keyword. Defaults to "secondary".
         disabled : bool
             An optional boolean, which disables the link button if set to
-            True. The default is False. This argument can only be supplied by
-            keyword.
+            True. The default is False.
         use_container_width: bool
             An optional boolean, which makes the button stretch its width to match the parent container.
         """

@@ -26,3 +26,18 @@ st.link_button(
     type="primary",
     disabled=True,
 )
+
+st.link_button(
+    "Container **full width** *markdown*",
+    "https://streamlit.io",
+    use_container_width=True,
+    help="help text",
+)
+
+st.link_button(
+    "Container **full width** *markdown* ~~primary~~",
+    "https://streamlit.io",
+    type="primary",
+    use_container_width=True,
+    help="help text here",
+)

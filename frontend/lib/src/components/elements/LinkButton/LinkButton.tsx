@@ -45,6 +45,7 @@ function LinkButton(props: Props): ReactElement {
   const fluidWidth = element.help ? width : true
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>): void => {
+    // Prevent the link from being followed if the button is disabled.
     if (props.disabled) {
       e.preventDefault()
     }

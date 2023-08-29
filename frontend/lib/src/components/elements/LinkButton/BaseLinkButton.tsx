@@ -48,7 +48,7 @@ function BaseLinkButton({
       fluidWidth={fluidWidth || false}
       disabled={disabled || false}
       autoFocus={autoFocus || false}
-      data-testid={`baseButton-${kind}`}
+      data-testid={`baseLinkButton-${kind}`}
       href={href}
       target={target}
       rel={rel}
