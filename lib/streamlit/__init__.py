@@ -147,6 +147,7 @@ info = _main.info
 json = _main.json
 latex = _main.latex
 line_chart = _main.line_chart
+link_button = _main.link_button
 map = _main.map
 markdown = _main.markdown
 metric = _main.metric

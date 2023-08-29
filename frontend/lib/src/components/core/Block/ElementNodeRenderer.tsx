@@ -45,6 +45,7 @@ import {
   IFrame as IFrameProto,
   ImageList as ImageListProto,
   Json as JsonProto,
+  LinkButton as LinkButtonProto,
   Markdown as MarkdownProto,
   Metric as MetricProto,
   PlotlyChart as PlotlyChartProto,
@@ -135,6 +136,11 @@ const IFrame = React.lazy(
 const ImageList = React.lazy(
   () => import("@streamlit/lib/src/components/elements/ImageList")
 )
+
+const LinkButton = React.lazy(
+  () => import("@streamlit/lib/src/components/elements/LinkButton")
+)
+
 const PlotlyChart = React.lazy(
   () => import("@streamlit/lib/src/components/elements/PlotlyChart")
 )
@@ -494,6 +500,13 @@ const RawElementNodeRenderer = (
           width={width}
           {...widgetProps}
         />
+      )
+    }
+    case "linkButton": {
+      const linkButtonProto = node.element.linkButton as LinkButtonProto
+      widgetProps.disabled = widgetProps.disabled || linkButtonProto.disabled
+      return (
+        <LinkButton element={linkButtonProto} width={width} {...widgetProps} />
       )
     }
     case "cameraInput": {

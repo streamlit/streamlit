@@ -98,6 +98,7 @@ class StreamlitTest(unittest.TestCase):
                 "json",
                 "latex",
                 "line_chart",
+                "link_button",
                 "map",
                 "markdown",
                 "metric",
