@@ -1,4 +1,4 @@
-name: Component-template E2E
+name: Component-template repository
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  component-template-e2e-tests:
+  e2e-tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Streamlit code
