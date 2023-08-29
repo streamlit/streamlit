@@ -23,6 +23,8 @@ import {
   StyledSecondaryLinkButton,
 } from "./styled-components"
 
+// We define separate BaseLinkButton, and not use BaseButton for st.link_button,
+// because link behavior requires tag <a> instead of <button>.
 function BaseLinkButton({
   kind,
   size,
