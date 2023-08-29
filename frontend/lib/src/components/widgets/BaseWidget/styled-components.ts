@@ -16,15 +16,12 @@
 
 import styled from "@emotion/styled"
 
+import { sizes } from "@streamlit/lib/src/theme/primitives/sizes"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 
 export interface StyledWidgetProps {
   disabled?: boolean | null
   labelVisibility?: LabelVisibilityOptions
-}
-
-export interface StyledWidgetInstructionsProps {
-  isVisible?: boolean | null
 }
 
 export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
@@ -51,17 +48,19 @@ export const StyledWidgetLabelHelp = styled.div(() => ({
   flex: 1,
 }))
 
-export const StyledWidgetInstructions =
-  styled.div<StyledWidgetInstructionsProps>(({ theme, isVisible }) => ({
-    display: isVisible ? "block" : "none",
-    fontSize: theme.fontSizes.twoSm,
-    color: theme.colors.fadedText60,
-    margin: theme.spacing.none,
-    textAlign: "right",
-    position: "absolute",
-    bottom: 0,
-    right: theme.spacing.halfSmFont,
-  }))
+export const StyledWidgetInstructions = styled.div(({ theme }) => ({
+  fontSize: theme.fontSizes.twoSm,
+  color: theme.colors.fadedText60,
+  margin: theme.spacing.none,
+  textAlign: "right",
+  position: "absolute",
+  bottom: 0,
+  right: theme.spacing.halfSmFont,
+
+  [`@container (width < ${sizes.shouldInputHide}px)`]: {
+    display: "none",
+  },
+}))
 
 export const StyledWidgetLabelHelpInline = styled.label(({ theme }) => ({
   marginLeft: theme.spacing.xs,

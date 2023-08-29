@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useRef, useEffect, useState } from "react"
+import { ReactElement } from "react"
 import { isFromMac } from "@streamlit/lib/src/util/utils"
 import { StyledWidgetInstructions } from "@streamlit/lib/src/components/widgets/BaseWidget"
-import { sizes } from "@streamlit/lib/src/theme/primitives/sizes"
 import { StyledMessage } from "./styled-components"
 
 export interface Props {
@@ -37,9 +36,6 @@ const InputInstructions = ({
   type = "single",
   inForm,
 }: Props): ReactElement => {
-  const [isVisible, setIsVisible] = useState<boolean>(true)
-  const instructionsRef = useRef(null)
-
   const messages: ReactElement[] = []
   const addMessage = (text: string, shouldBlink = false): void => {
     messages.push(
@@ -70,24 +66,10 @@ const InputInstructions = ({
     )
   }
 
-  const shouldInstructionsHide = (parent: HTMLDivElement): void => {
-    // Only show the input instructions if the parent's width is bigger than the minimum input width
-    setIsVisible(parent.offsetWidth > sizes.shouldInputHide)
-  }
-
-  useEffect(() => {
-    if (instructionsRef.current) {
-      const { parentElement } = instructionsRef.current
-      return shouldInstructionsHide(parentElement)
-    }
-  }, [instructionsRef])
-
   return (
     <StyledWidgetInstructions
       data-testid="InputInstructions"
       className={className}
-      ref={instructionsRef}
-      isVisible={isVisible}
     >
       {messages}
     </StyledWidgetInstructions>

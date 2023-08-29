@@ -57,6 +57,7 @@ export interface StyledElementContainerProps {
 const GLOBAL_ELEMENTS = ["balloons", "snow", "chatInput"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, width, elementType }) => ({
+    containerType: "inline-size",
     width,
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
