@@ -31,7 +31,9 @@ export interface RootStyleProviderProps {
 
 const nonce = document.currentScript?.nonce || ""
 const cache = createCache({
-  // The key field only matters if a single app
+  // The key field is required but only matters if there's more than one
+  // emotion cache in use. This will probably never be true for us, so we just
+  // set it arbitrarily.
   key: "st-emotion-cache",
   ...(nonce && { nonce }),
 })
