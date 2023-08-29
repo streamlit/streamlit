@@ -58,6 +58,8 @@ function LinkButton(props: Props): ReactElement {
       style={style}
     >
       <BaseButtonTooltip help={element.help}>
+        {/* We use separate BaseLinkButton instead of BaseButton here, because
+        link behavior requires tag <a> instead of <button>.*/}
         <BaseLinkButton
           kind={kind}
           size={BaseButtonSize.SMALL}
