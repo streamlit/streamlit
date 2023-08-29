@@ -186,10 +186,6 @@ class HostConfigHandler(_SpecialRequestHandler):
             self._allowed_origins.append("http://localhost")
 
     async def get(self) -> None:
-        # ALLOWED_MESSAGE_ORIGINS must be wrapped in a dictionary because Tornado
-        # disallows writing lists directly into responses due to potential XSS
-        # vulnerabilities.
-        # See https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write
         self.write(
             {
                 "allowedOrigins": self._allowed_origins,

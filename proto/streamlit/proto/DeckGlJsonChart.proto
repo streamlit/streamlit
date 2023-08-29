@@ -27,4 +27,11 @@ message DeckGlJsonChart {
 
   // the hash of the json so the the frontend doesn't always have to parse the pydeck json object
   string id = 5;
+
+  /**
+  * Represents the user-provided Mapbox token.
+  * Refer to [Mapbox documentation](https://docs.mapbox.com/help/getting-started/access-tokens/) for details.
+  * Defaults to an empty string, signifying the need to fetch Streamlit's Mapbox token as a fallback.
+   */
+  string mapbox_token = 6;
 }
