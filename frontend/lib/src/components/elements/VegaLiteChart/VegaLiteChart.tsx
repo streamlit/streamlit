@@ -288,6 +288,11 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
       // Adds interpreter support for Vega expressions that is compliant with CSP
       ast: true,
       expr: expressionInterpreter,
+      // Disable default styles so that vega doesn't inject <style> tags in the
+      // DOM. We set these styles manually for finer control over them and to
+      // avoid inlining styles.
+      tooltip: { disableDefaultStyle: true },
+      defaultStyle: false,
     }
 
     const { vgSpec, view, finalize } = await embed(this.element, spec, options)
