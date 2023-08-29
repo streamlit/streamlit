@@ -385,7 +385,7 @@ class ButtonMixin:
             button with additional emphasis or "secondary" for a normal button. This
             argument can only be supplied by keyword. Defaults to "secondary".
         disabled : bool
-            An optional boolean, which disables the download button if set to
+            An optional boolean, which disables the link button if set to
             True. The default is False. This argument can only be supplied by
             keyword.
         use_container_width: bool
