@@ -32,7 +32,6 @@ message DeckGlJsonChart {
   * Represents the user-provided Mapbox token.
   * Refer to [Mapbox documentation](https://docs.mapbox.com/help/getting-started/access-tokens/) for details.
   * Defaults to an empty string, signifying the need to fetch Streamlit's Mapbox token as a fallback.
-  * Avoid direct usage. Instead, utilize `withMapboxToken(<YourComponent>)`.
    */
   string mapbox_token = 6;
 }

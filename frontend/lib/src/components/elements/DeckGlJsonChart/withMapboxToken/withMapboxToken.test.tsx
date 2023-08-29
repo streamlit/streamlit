@@ -51,6 +51,7 @@ describe("withMapboxToken", () => {
 
   jest.mock("axios")
 
+  // This component is only used to test whether or not the mapbox is correctly set
   const MockComponent = (props: {
     mapboxToken: string | undefined
   }): ReactElement => (
