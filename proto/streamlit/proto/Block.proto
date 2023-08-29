@@ -44,7 +44,8 @@ message Block {
 
   message Expandable {
     string label = 1;
-    bool expanded = 2;
+    optional bool expanded = 2;
+    string icon = 3;
   }
 
   message Form {

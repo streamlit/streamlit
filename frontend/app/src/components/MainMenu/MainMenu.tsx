@@ -14,19 +14,12 @@
  * limitations under the License.
  */
 
-import React, {
-  forwardRef,
-  memo,
-  MouseEvent,
-  ReactElement,
-  ReactNode,
-  useCallback,
-  useEffect,
-} from "react"
+import React, { forwardRef, memo, MouseEvent, ReactElement } from "react"
 import { StatefulMenu } from "baseui/menu"
+import { PLACEMENT, StatefulPopover } from "baseui/popover"
 import { MoreVert } from "@emotion-icons/material-rounded"
-
 import { useTheme } from "@emotion/react"
+
 import {
   EmotionTheme,
   BaseButton,
@@ -35,18 +28,10 @@ import {
   IGuestToHostMessage,
   IMenuItem,
   Config,
-  GitInfo,
-  IGitInfo,
   PageConfig,
 } from "@streamlit/lib"
-import { PLACEMENT, StatefulPopover } from "baseui/popover"
-import {
-  DetachedHead,
-  ModuleIsNotAdded,
-  NoRepositoryDetected,
-} from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs"
-import { DEPLOY_URL, STREAMLIT_CLOUD_URL } from "@streamlit/app/src/urls"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
+
 import {
   StyledCoreItem,
   StyledDevItem,
@@ -59,8 +44,6 @@ import {
   StyledMainMenuContainer,
 } from "./styled-components"
 
-const { GitStates } = GitInfo
-
 const SCREENCAST_LABEL: { [s: string]: string } = {
   COUNTDOWN: "Cancel screencast",
   RECORDING: "Stop recording",
@@ -72,9 +55,6 @@ export interface Props {
 
   /** Rerun the current script. */
   quickRerunCallback: () => void
-
-  /** Reload git information message */
-  loadGitInfo: () => void
 
   /** Clear the cache. */
   clearCacheCallback: () => void
@@ -97,20 +77,6 @@ export interface Props {
 
   sendMessageToHost: (message: IGuestToHostMessage) => void
 
-  gitInfo: IGitInfo | null
-
-  showDeployError: (
-    title: string,
-    errorNode: ReactNode,
-    onContinue?: () => void
-  ) => void
-
-  closeDialog: () => void
-
-  isDeployErrorModalOpen: boolean
-
-  canDeploy: boolean
-
   menuItems?: PageConfig.IMenuItems | null
 
   developmentMode: boolean
@@ -122,23 +88,6 @@ export interface Props {
 
 const getOpenInWindowCallback = (url: string) => (): void => {
   window.open(url, "_blank")
-}
-
-export const getDeployAppUrl = (gitInfo: IGitInfo | null): (() => void) => {
-  // If the app was run inside a GitHub repo, autofill for a one-click deploy.
-  // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
-  if (gitInfo) {
-    const deployUrl = new URL(DEPLOY_URL)
-
-    deployUrl.searchParams.set("repository", gitInfo.repository || "")
-    deployUrl.searchParams.set("branch", gitInfo.branch || "")
-    deployUrl.searchParams.set("mainModule", gitInfo.module || "")
-
-    return getOpenInWindowCallback(deployUrl.toString())
-  }
-
-  // Otherwise, just direct them to the Streamlit Cloud page.
-  return getOpenInWindowCallback(STREAMLIT_CLOUD_URL)
 }
 
 export const isLocalhost = (): boolean => {
@@ -287,15 +236,11 @@ const SubMenu = (props: SubMenuProps): ReactElement => {
   )
 }
 
-function getDevMenuItems(
-  coreDevMenuItems: Record<string, any>,
-  showDeploy: boolean
-): any[] {
+function getDevMenuItems(coreDevMenuItems: Record<string, any>): any[] {
   const devMenuItems = []
   const preferredDevMenuOrder: any[] = [
     coreDevMenuItems.developerOptions,
     coreDevMenuItems.clearCache,
-    showDeploy && coreDevMenuItems.deployApp,
   ]
 
   let devLastMenuItem = null
@@ -377,67 +322,6 @@ function getPreferredMenuOrder(
 function MainMenu(props: Props): ReactElement {
   const isServerDisconnected = !props.isServerConnected
 
-  const onClickDeployApp = useCallback((): void => {
-    const { showDeployError, isDeployErrorModalOpen, gitInfo, closeDialog } =
-      props
-
-    if (!gitInfo) {
-      const dialog = NoRepositoryDetected()
-
-      showDeployError(dialog.title, dialog.body)
-
-      return
-    }
-
-    const {
-      repository,
-      branch,
-      module,
-      untrackedFiles,
-      state: gitState,
-    } = gitInfo
-    const hasMissingGitInfo = !repository || !branch || !module
-
-    if (hasMissingGitInfo && gitState === GitStates.DEFAULT) {
-      const dialog = NoRepositoryDetected()
-
-      showDeployError(dialog.title, dialog.body)
-
-      return
-    }
-
-    if (gitState === GitStates.HEAD_DETACHED) {
-      const dialog = DetachedHead()
-
-      showDeployError(dialog.title, dialog.body)
-
-      return
-    }
-
-    if (module && untrackedFiles?.includes(module)) {
-      const dialog = ModuleIsNotAdded(module)
-
-      showDeployError(dialog.title, dialog.body)
-
-      return
-    }
-
-    // We should close the modal when we try again and everything goes fine
-    if (isDeployErrorModalOpen) {
-      closeDialog()
-    }
-
-    getDeployAppUrl(gitInfo)()
-  }, [props])
-
-  useEffect(() => {
-    if (!props.gitInfo || !props.isDeployErrorModalOpen) {
-      return
-    }
-
-    onClickDeployApp()
-  }, [props.gitInfo, props.isDeployErrorModalOpen, onClickDeployApp])
-
   const showAboutMenu =
     props.toolbarMode != Config.ToolbarMode.MINIMAL ||
     (props.toolbarMode == Config.ToolbarMode.MINIMAL &&
@@ -484,10 +368,6 @@ function MainMenu(props: Props): ReactElement {
 
   const coreDevMenuItems = {
     DIVIDER: { isDivider: true },
-    deployApp: {
-      onClick: onClickDeployApp,
-      label: "Deploy this app",
-    },
     developerOptions: {
       label: "Developer options",
       noHighlight: true,
@@ -534,8 +414,6 @@ function MainMenu(props: Props): ReactElement {
     }
   }, [] as any[])
 
-  const shouldShowHostMenu = !!hostMenuItems.length
-  const showDeploy = isLocalhost() && !shouldShowHostMenu && props.canDeploy
   const preferredMenuOrder = getPreferredMenuOrder(
     props,
     hostMenuItems,
@@ -560,7 +438,7 @@ function MainMenu(props: Props): ReactElement {
   }
 
   const devMenuItems: any[] = props.developmentMode
-    ? getDevMenuItems(coreDevMenuItems, showDeploy)
+    ? getDevMenuItems(coreDevMenuItems)
     : []
 
   if (menuItems.length == 0 && devMenuItems.length == 0) {
@@ -571,11 +449,6 @@ function MainMenu(props: Props): ReactElement {
   return (
     <StatefulPopover
       focusLock
-      onOpen={() => {
-        if (showDeploy) {
-          props.loadGitInfo()
-        }
-      }}
       placement={PLACEMENT.bottomRight}
       content={({ close }) => (
         <StyledMenuContainer>

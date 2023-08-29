@@ -15,10 +15,14 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
-
 import { BaseProvider, LightTheme } from "baseui"
+import { screen } from "@testing-library/react"
+
+import "@testing-library/jest-dom"
+
 import { Spinner as SpinnerProto } from "@streamlit/lib/src/proto"
+import { render } from "@streamlit/lib/src/test_util"
+
 import Spinner, { SpinnerProps } from "./Spinner"
 
 const getProps = (
@@ -33,26 +37,28 @@ const getProps = (
 
 describe("Spinner component", () => {
   it("renders without crashing", () => {
-    const wrapper = mount(
+    render(
       <BaseProvider theme={LightTheme}>
         <Spinner {...getProps()} />
       </BaseProvider>
     )
 
-    expect(wrapper.find("StyledSpinnerContainer").length).toBe(1)
-    expect(wrapper.find("StyledSpinnerContainer").html()).toMatchSnapshot()
+    const spinnerContainer = screen.getByTestId("stSpinner")
+    expect(spinnerContainer).toBeInTheDocument()
   })
 
   it("sets the text and width correctly", () => {
-    const wrapper = mount(
+    render(
       <BaseProvider theme={LightTheme}>
         <Spinner {...getProps({ width: 100 })} />
       </BaseProvider>
     )
 
-    expect(wrapper.find("StreamlitMarkdown").prop("source")).toEqual(
-      "Loading..."
-    )
-    expect(wrapper.find("Spinner").prop("width")).toEqual(100)
+    const markdownText = screen.getByText("Loading...")
+    expect(markdownText).toBeInTheDocument()
+
+    // For the width, as it's a style attribute, we can test it this way:
+    const spinnerElement = screen.getByTestId("stSpinner")
+    expect(spinnerElement).toHaveStyle(`width: 100px`)
   })
 })

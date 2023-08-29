@@ -85,11 +85,15 @@ class CheckboxMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         value : bool
             Preselect the checkbox when it first renders. This will be
             cast to bool internally.
@@ -184,11 +188,15 @@ class CheckboxMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
+            For accessibility reasons, you should never set an empty label (label="")
+            but hide it with label_visibility if needed. In the future, we may disallow
+            empty labels by raising an exception.
         value : bool
             Preselect the toggle when it first renders. This will be
             cast to bool internally.
@@ -226,7 +234,7 @@ class CheckboxMixin:
         >>> on = st.toggle('Activate feature')
         >>>
         >>> if on:
-        ...     st.write('Feature activated!")
+        ...     st.write('Feature activated!')
 
         .. output::
            https://doc-toggle.streamlit.app/
@@ -272,7 +280,7 @@ class CheckboxMixin:
         maybe_raise_label_warnings(label, label_visibility)
 
         id = compute_widget_id(
-            "checkbox",
+            "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
             user_key=key,
             label=label,
             value=bool(value),
