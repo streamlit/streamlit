@@ -131,6 +131,7 @@ class BaseColorPicker extends React.PureComponent<
           )}
         </WidgetLabel>
         <UIPopover
+          data-testid="stColorPickerPopover"
           onClose={this.onColorClose}
           content={() => (
             <StyledChromePicker>
@@ -143,7 +144,7 @@ class BaseColorPicker extends React.PureComponent<
           )}
         >
           <StyledColorPreview style={previewStyle}>
-            <StyledColorBlock style={blockStyle} />
+            <StyledColorBlock style={blockStyle} data-testid="stColorBlock" />
             {showValue && (
               <StyledColorValue>{value.toUpperCase()}</StyledColorValue>
             )}

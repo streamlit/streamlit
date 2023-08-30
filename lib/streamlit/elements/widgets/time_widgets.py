@@ -265,7 +265,7 @@ class TimeWidgetsMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -468,7 +468,7 @@ class TimeWidgetsMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -620,6 +620,7 @@ class TimeWidgetsMixin:
             max_value=parsed_max_date,
             key=key,
             help=help,
+            format=format,
             form_id=current_form_id(self.dg),
         )
         if not bool(ALLOWED_DATE_FORMATS.match(format)):

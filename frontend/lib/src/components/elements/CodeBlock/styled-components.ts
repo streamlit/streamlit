@@ -123,21 +123,29 @@ export const StyledCopyButtonContainer = styled.div(({ theme }) => ({
   pointerEvents: "none",
 }))
 
-export const StyledCodeBlock = styled.div(({ theme }) => ({
-  position: "relative",
-  marginLeft: theme.spacing.none,
-  marginRight: theme.spacing.none,
-  marginTop: theme.spacing.none,
-  "&:not(:last-child)": {
-    marginBottom: theme.spacing.lg,
-  },
+export interface StyledCodeBlockProps {
+  /**
+   * The code-block behaves a bit differently if it is
+   * used inside markdown.
+   */
+  isMarkdown: boolean
+}
 
-  "&:hover": {
-    [`${StyledCopyButtonContainer}`]: {
-      opacity: 1,
+export const StyledCodeBlock = styled.div<StyledCodeBlockProps>(
+  ({ theme, isMarkdown }) => ({
+    position: "relative",
+    marginLeft: theme.spacing.none,
+    marginRight: theme.spacing.none,
+    marginTop: theme.spacing.none,
+    marginBottom: isMarkdown ? theme.spacing.lg : undefined,
+
+    "&:hover": {
+      [`${StyledCopyButtonContainer}`]: {
+        opacity: 1,
+      },
     },
-  },
-}))
+  })
+)
 
 export const StyledCopyButton = styled.button(({ theme }) => ({
   pointerEvents: "auto",

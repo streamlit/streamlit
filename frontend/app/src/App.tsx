@@ -51,13 +51,11 @@ import {
   isPaddingDisplayed,
   isScrollingHidden,
   isToolbarDisplayed,
-  isTesting,
   notUndefined,
   setCookie,
   extractPageNameFromPathName,
   BaseUriParts,
   RERUN_PROMPT_MODAL_DIALOG,
-  SHOW_DEPLOY_BUTTON,
   SessionInfo,
   FileUploadClient,
   logError,
@@ -1340,7 +1338,6 @@ export class App extends PureComponent<Props, State> {
       type: DialogType.DEPLOY_DIALOG,
       onClose: this.closeDialog,
       showDeployError: this.showDeployError,
-      gitInfo: this.state.gitInfo,
       isDeployErrorModalOpen:
         this.state.dialog?.type === DialogType.DEPLOY_ERROR,
       metricsMgr: this.metricsMgr,
@@ -1512,19 +1509,17 @@ export class App extends PureComponent<Props, State> {
 
   showDeployButton = (): boolean => {
     return (
-      isTesting() ||
-      (SHOW_DEPLOY_BUTTON &&
-        showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode) &&
-        !this.isInCloudEnvironment() &&
-        this.sessionInfo.isSet &&
-        !this.sessionInfo.isHello)
+      showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode) &&
+      !this.isInCloudEnvironment() &&
+      this.sessionInfo.isSet &&
+      !this.sessionInfo.isHello
     )
   }
 
   deployButtonClicked = (): void => {
-    if (!isTesting()) {
-      this.metricsMgr.enqueue("deployButtonInApp", { clicked: true })
-    }
+    this.metricsMgr.enqueue("menuClick", {
+      label: "deployButtonInApp",
+    })
     this.sendLoadGitInfoBackMsg()
     this.openDeployDialog()
   }
@@ -1555,7 +1550,6 @@ export class App extends PureComponent<Props, State> {
       scriptRunId,
       scriptRunState,
       userSettings,
-      gitInfo,
       hideTopBar,
       hideSidebarNav,
       currentPageScriptHash,
@@ -1605,6 +1599,7 @@ export class App extends PureComponent<Props, State> {
           pageLinkBaseUrl,
           sidebarChevronDownshift,
           toastAdjustment: hostToolbarItems.length > 0,
+          gitInfo: this.state.gitInfo,
         }}
       >
         <LibContext.Provider
@@ -1665,16 +1660,6 @@ export class App extends PureComponent<Props, State> {
                   developmentMode={developmentMode}
                   sendMessageToHost={
                     this.hostCommunicationMgr.sendMessageToHost
-                  }
-                  gitInfo={gitInfo}
-                  showDeployError={this.showDeployError}
-                  closeDialog={this.closeDialog}
-                  isDeployErrorModalOpen={
-                    this.state.dialog?.type === DialogType.DEPLOY_ERROR
-                  }
-                  loadGitInfo={this.sendLoadGitInfoBackMsg}
-                  canDeploy={
-                    this.sessionInfo.isSet && !this.sessionInfo.isHello
                   }
                   menuItems={menuItems}
                   metricsMgr={this.metricsMgr}

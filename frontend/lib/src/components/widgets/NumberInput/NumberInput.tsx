@@ -479,6 +479,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
                 className="step-down"
                 onClick={this.modifyValueUsingStep("decrement")}
                 disabled={disableDecrement}
+                tabIndex={-1}
               >
                 <Icon
                   content={Minus}
@@ -490,6 +491,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
                 className="step-up"
                 onClick={this.modifyValueUsingStep("increment")}
                 disabled={disableIncrement}
+                tabIndex={-1}
               >
                 <Icon
                   content={Plus}

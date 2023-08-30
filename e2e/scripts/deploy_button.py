@@ -12,7 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
-
-# no need to set it using this since we add ?_stcore_testing=true to the url param
-# st.experimental_set_query_params(_stcore_testing="true")
+# Nothing to do here since the deploy button is part of the frontend even
+# without any Streamlit element being rendered.

@@ -21,6 +21,7 @@ import { Face, SmartToy } from "@emotion-icons/material-outlined"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
+import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 
 import {
   StyledChatMessageContainer,
@@ -34,16 +35,22 @@ interface ChatMessageAvatarProps {
   name: string
   avatar?: string
   avatarType?: BlockProto.ChatMessage.AvatarType
+  endpoints: StreamlitEndpoints
 }
 
 function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
-  const { avatar, avatarType, name } = props
+  const { avatar, avatarType, name, endpoints } = props
   const theme: EmotionTheme = useTheme()
 
   if (avatar) {
     switch (avatarType) {
       case BlockProto.ChatMessage.AvatarType.IMAGE:
-        return <StyledAvatarImage src={avatar} alt={`${name} avatar`} />
+        return (
+          <StyledAvatarImage
+            src={endpoints.buildMediaURL(avatar)}
+            alt={`${name} avatar`}
+          />
+        )
       case BlockProto.ChatMessage.AvatarType.EMOJI:
         return <StyledAvatarBackground>{avatar}</StyledAvatarBackground>
       case BlockProto.ChatMessage.AvatarType.ICON:
@@ -78,10 +85,12 @@ function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
 }
 
 export interface ChatMessageProps {
+  endpoints: StreamlitEndpoints
   element: BlockProto.ChatMessage
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({
+  endpoints,
   element,
   children,
 }): ReactElement => {
@@ -93,7 +102,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       data-testid="stChatMessage"
       background={["user", "human"].includes(name.toLowerCase())}
     >
-      <ChatMessageAvatar name={name} avatar={avatar} avatarType={avatarType} />
+      <ChatMessageAvatar
+        name={name}
+        avatar={avatar}
+        avatarType={avatarType}
+        endpoints={endpoints}
+      />
       <StyledMessageContent
         data-testid="stChatMessageContent"
         aria-label={`Chat message from ${name}`}
