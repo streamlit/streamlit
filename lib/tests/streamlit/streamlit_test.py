@@ -135,6 +135,7 @@ class StreamlitTest(unittest.TestCase):
                 "spinner",
                 "set_page_config",
                 "stop",
+                "rerun",
                 "cache",
                 "secrets",
                 "session_state",
