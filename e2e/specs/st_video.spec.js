@@ -33,6 +33,9 @@ describe("st.video", () => {
     // Change the start time from 6 to 5
     cy.get(".element-container .stNumberInput .step-down").click();
 
+    // Wait for the video start time to update
+    cy.wait(3000);
+
     // Confirm video updated
     cy.getIndexed(".element-container .stVideo", 1).matchImageSnapshot("video-with-updated-start");
   });
