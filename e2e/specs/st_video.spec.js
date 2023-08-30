@@ -37,6 +37,6 @@ describe("st.video", () => {
     cy.wait(3000);
 
     // Confirm video updated
-    cy.getIndexed(".element-container .stVideo", 1).matchImageSnapshot("video-with-updated-start");
+    cy.getIndexed(".element-container .stVideo", 1).matchImageSnapshot("video-updated-start");
   });
 });

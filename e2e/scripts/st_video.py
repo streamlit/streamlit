@@ -22,4 +22,4 @@ st.video(file)
 
 # Test start time with widget
 timestamp = st.number_input("Start Time (in seconds)", min_value=0, value=6)
-st.video(url, start_time=timestamp)
+st.video(url, start_time=int(timestamp))
