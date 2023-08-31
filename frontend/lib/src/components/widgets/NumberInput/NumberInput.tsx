@@ -419,9 +419,9 @@ export class NumberInput extends React.PureComponent<Props, State> {
                         // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
                         // Let's use a scale transform effect to make it bigger.
                         // The width property only enlarges its bounding box, so it's easier to click.
-                        transform: "scale(1.20)",
+                        transform: "scale(1.4)",
                         width: theme.spacing.twoXL,
-                        marginRight: "-1.3em",
+                        marginRight: "-1.25em",
 
                         ":hover": {
                           fill: theme.colors.bodyText,
