@@ -71,14 +71,9 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
     }
 )
 
-
-class DefaultValue:
-    """Used as default value for element parameters to indicate that the user
-    didn't explicitly specify a value. This usually means that the user wants
-    to use a default value.
-    """
-
-    pass
+# Used to indicate that an element value should be set to its default value.
+# This needs to be type via `builtins.ellipsis`.
+DefaultValue = Ellipsis  # same as ...
 
 
 class NoValue:

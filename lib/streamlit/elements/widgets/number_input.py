@@ -17,7 +17,7 @@ from __future__ import annotations
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Union, cast, overload
+from typing import TYPE_CHECKING, Union, cast, overload
 
 import streamlit
 from streamlit.elements.form import current_form_id
@@ -42,6 +42,9 @@ from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 Number = Union[int, float]
+
+if TYPE_CHECKING:
+    from builtins import ellipsis
 
 
 @dataclass
@@ -70,7 +73,7 @@ class NumberInputMixin:
         label: str,
         min_value: Number | None = None,
         max_value: Number | None = None,
-        value: DefaultValue | Number = DefaultValue(),
+        value: ellipsis | Number = ...,
         step: Number | None = None,
         format: str | None = None,
         key: Key | None = None,
@@ -110,7 +113,7 @@ class NumberInputMixin:
         label: str,
         min_value: Number | None = None,
         max_value: Number | None = None,
-        value: DefaultValue | Number | None = DefaultValue(),
+        value: ellipsis | Number | None = ...,
         step: Number | None = None,
         format: str | None = None,
         key: Key | None = None,
@@ -240,7 +243,7 @@ class NumberInputMixin:
         label: str,
         min_value: Number | None = None,
         max_value: Number | None = None,
-        value: DefaultValue | Number | None = DefaultValue(),
+        value: ellipsis | Number | None = ...,
         step: Number | None = None,
         format: str | None = None,
         key: Key | None = None,
@@ -256,7 +259,7 @@ class NumberInputMixin:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
-            default_value=None if isinstance(value, DefaultValue) else value, key=key
+            default_value=None if value is DefaultValue else value, key=key
         )
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -278,12 +281,13 @@ class NumberInputMixin:
         number_input_args = [min_value, max_value, value, step]
 
         int_args = all(
-            isinstance(a, (numbers.Integral, type(None), DefaultValue))
+            isinstance(a, (numbers.Integral, type(None), type(DefaultValue)))
             for a in number_input_args
         )
 
         float_args = all(
-            isinstance(a, (float, type(None), DefaultValue)) for a in number_input_args
+            isinstance(a, (float, type(None), type(DefaultValue)))
+            for a in number_input_args
         )
 
         if not int_args and not float_args:
@@ -295,7 +299,7 @@ class NumberInputMixin:
                 f"\n`step` has {type(step).__name__} type."
             )
 
-        if isinstance(value, DefaultValue):
+        if value is DefaultValue:
             if min_value is not None:
                 value = min_value
             elif int_args and float_args:

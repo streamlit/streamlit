@@ -57,7 +57,9 @@ from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.type_util import ValueFieldName
 
 if TYPE_CHECKING:
-    from streamlit.runtime.state.widgets import DefaultValue, NoValue
+    from builtins import ellipsis
+
+    from streamlit.runtime.state.widgets import NoValue
 
 
 # Protobuf types for all widgets.
@@ -163,7 +165,7 @@ SAFE_VALUES = Union[
     timedelta,
     None,
     "NoValue",
-    "DefaultValue",
+    "ellipsis",
     Message,
     PROTO_SCALAR_VALUE,
 ]
