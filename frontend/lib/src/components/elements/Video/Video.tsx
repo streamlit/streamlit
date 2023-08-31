@@ -35,7 +35,14 @@ export default function Video({
 
   /* Element may contain "url" or "data" property. */
 
-  const { type, url } = element
+  const { type, url, startTime } = element
+
+  // Handle startTime changes
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = startTime
+    }
+  }, [startTime])
 
   useEffect(() => {
     const videoNode = videoRef.current
@@ -43,17 +50,12 @@ export default function Video({
     const setStartTime: () => void = () => {
       if (videoNode) {
         // setStartTime
-        videoNode.currentTime = element.startTime
+        videoNode.currentTime = startTime
       }
     }
 
     if (videoNode) {
       videoNode.addEventListener("loadedmetadata", setStartTime)
-
-      // Handle startTime change after video load
-      if (element.startTime !== videoNode.currentTime) {
-        setStartTime()
-      }
     }
 
     return () => {
