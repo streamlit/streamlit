@@ -549,31 +549,42 @@ class NumberInput(Widget):
         self.disabled = proto.disabled
         self.key = user_key_from_widget_id(self.id)
 
-    def set_value(self, v: Number) -> NumberInput:
+    def set_value(self, v: Number | None) -> NumberInput:
         self._value = v
         return self
 
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
-        ws.double_value = self.value
+        if self.value is not None:
+            ws.double_value = self.value
         return ws
 
     @property
-    def value(self) -> Number:
+    def value(self) -> Number | None:
         if self._value is not None:
             return self._value
         else:
             state = self.root.session_state
             assert state
+
+            if self.id not in state:
+                return None
+
             # Awkward to do this with `cast`
             return state[self.id]  # type: ignore
 
     def increment(self) -> NumberInput:
+        if self.value is None:
+            return self
+
         v = min(self.value + self.step, self.max_value)
         return self.set_value(v)
 
     def decrement(self) -> NumberInput:
+        if self.value is None:
+            return self
+
         v = max(self.value - self.step, self.min_value)
         return self.set_value(v)
 
