@@ -57,7 +57,7 @@ from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.type_util import ValueFieldName
 
 if TYPE_CHECKING:
-    from streamlit.runtime.state.widgets import NoValue
+    from streamlit.runtime.state.widgets import DefaultValue, NoValue
 
 
 # Protobuf types for all widgets.
@@ -157,7 +157,15 @@ class RegisterWidgetResult(Generic[T_co]):
 
 PROTO_SCALAR_VALUE = Union[float, int, bool, str, bytes]
 SAFE_VALUES = Union[
-    date, time, datetime, timedelta, None, "NoValue", Message, PROTO_SCALAR_VALUE
+    date,
+    time,
+    datetime,
+    timedelta,
+    None,
+    "NoValue",
+    "DefaultValue",
+    Message,
+    PROTO_SCALAR_VALUE,
 ]
 
 

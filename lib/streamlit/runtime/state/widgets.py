@@ -72,6 +72,15 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
 )
 
 
+class DefaultValue:
+    """Used as default value for element parameters to indicate that the user
+    didn't explicitly specify a value. This usually means that the user wants
+    to use a default value.
+    """
+
+    pass
+
+
 class NoValue:
     """Return this from DeltaGenerator.foo_widget() when you want the st.foo_widget()
     call to return None. This is needed because `DeltaGenerator._enqueue`
