@@ -286,32 +286,32 @@ class SessionStateInteractionTest(InteractiveScriptTests):
     def test_updates(self):
         script = self.script_from_filename("test_data/linked_sliders.py")
         sr = script.run()
-        assert sr.get("slider")[0].value == -100.0
-        assert sr.get("markdown")[0].value == "Celsius `-100.0`"
-        assert sr.get("slider")[1].value == -148.0
-        assert sr.get("markdown")[1].value == "Fahrenheit `-148.0`"
+        assert sr.slider[0].value == -100.0
+        assert sr.markdown[0].value == "Celsius `-100.0`"
+        assert sr.slider[1].value == -148.0
+        assert sr.markdown[1].value == "Fahrenheit `-148.0`"
 
         # Both sliders update when first is changed
-        sr2 = sr.get("slider")[0].set_value(0.0).run()
-        assert sr2.get("slider")[0].value == 0.0
-        assert sr2.get("markdown")[0].value == "Celsius `0.0`"
-        assert sr2.get("slider")[1].value == 32.0
-        assert sr2.get("markdown")[1].value == "Fahrenheit `32.0`"
+        sr2 = sr.slider[0].set_value(0.0).run()
+        assert sr2.slider[0].value == 0.0
+        assert sr2.markdown[0].value == "Celsius `0.0`"
+        assert sr2.slider[1].value == 32.0
+        assert sr2.markdown[1].value == "Fahrenheit `32.0`"
 
         # Both sliders update when second is changed
-        sr3 = sr2.get("slider")[1].set_value(212.0).run()
-        assert sr3.get("slider")[0].value == 100.0
-        assert sr3.get("markdown")[0].value == "Celsius `100.0`"
-        assert sr3.get("slider")[1].value == 212.0
-        assert sr3.get("markdown")[1].value == "Fahrenheit `212.0`"
+        sr3 = sr2.slider[1].set_value(212.0).run()
+        assert sr3.slider[0].value == 100.0
+        assert sr3.markdown[0].value == "Celsius `100.0`"
+        assert sr3.slider[1].value == 212.0
+        assert sr3.markdown[1].value == "Fahrenheit `212.0`"
 
         # Sliders update when one is changed repeatedly
-        sr4 = sr3.get("slider")[0].set_value(0.0).run()
-        assert sr4.get("slider")[0].value == 0.0
-        assert sr4.get("slider")[1].value == 32.0
-        sr5 = sr4.get("slider")[0].set_value(100.0).run()
-        assert sr5.get("slider")[0].value == 100.0
-        assert sr5.get("slider")[1].value == 212.0
+        sr4 = sr3.slider[0].set_value(0.0).run()
+        assert sr4.slider[0].value == 0.0
+        assert sr4.slider[1].value == 32.0
+        sr5 = sr4.slider[0].set_value(100.0).run()
+        assert sr5.slider[0].value == 100.0
+        assert sr5.slider[1].value == 212.0
 
     def test_serializable_check(self):
         """When the config option is on, adding unserializable data to session
@@ -329,8 +329,8 @@ class SessionStateInteractionTest(InteractiveScriptTests):
                 """,
             )
             sr = script.run()
-            assert sr.get("exception")
-            assert "pickle" in sr.get("exception")[0].value
+            assert sr.exception
+            assert "pickle" in sr.exception[0].value
 
     def test_serializable_check_off(self):
         """When the config option is off, adding unserializable data to session
@@ -348,7 +348,7 @@ class SessionStateInteractionTest(InteractiveScriptTests):
                 """,
             )
             sr = script.run()
-            assert not sr.get("exception")
+            assert not sr.exception
 
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
