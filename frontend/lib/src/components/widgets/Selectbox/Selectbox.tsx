@@ -15,6 +15,8 @@
  */
 
 import React from "react"
+
+import { withTheme } from "@emotion/react"
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
@@ -23,12 +25,14 @@ import {
 } from "@streamlit/lib/src/WidgetStateManager"
 import UISelectbox from "@streamlit/lib/src/components/shared/Dropdown"
 import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface Props {
   disabled: boolean
   element: SelectboxProto
   widgetMgr: WidgetStateManager
   width: number
+  theme: EmotionTheme
 }
 
 interface State {
@@ -36,7 +40,7 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: number
+  value: number | null
 }
 
 class Selectbox extends React.PureComponent<Props, State> {
@@ -46,11 +50,11 @@ class Selectbox extends React.PureComponent<Props, State> {
     value: this.initialValue,
   }
 
-  get initialValue(): number {
+  get initialValue(): number | null {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
     const storedValue = this.props.widgetMgr.getIntValue(this.props.element)
-    return storedValue !== undefined ? storedValue : this.props.element.default
+    return storedValue ?? this.props.element.default ?? null
   }
 
   public componentDidMount(): void {
@@ -79,7 +83,7 @@ class Selectbox extends React.PureComponent<Props, State> {
   private updateFromProtobuf(): void {
     const { value } = this.props.element
     this.props.element.setValue = false
-    this.setState({ value }, () => {
+    this.setState({ value: value ?? null }, () => {
       this.commitWidgetValue({ fromUi: false })
     })
   }
@@ -100,7 +104,7 @@ class Selectbox extends React.PureComponent<Props, State> {
   private onFormCleared = (): void => {
     this.setState(
       (_, prevProps) => {
-        return { value: prevProps.element.default }
+        return { value: prevProps.element.default ?? null }
       },
       () => this.commitWidgetValue({ fromUi: true })
     )
@@ -140,4 +144,4 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 }
 
-export default Selectbox
+export default withTheme(Selectbox)
