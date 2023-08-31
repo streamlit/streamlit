@@ -21,7 +21,10 @@ import {
 } from "@streamlit/lib/src/proto"
 import React from "react"
 import { mount, shallow } from "@streamlit/lib/src/test_util"
-import { StyledInputControls } from "@streamlit/lib/src/components/widgets/NumberInput/styled-components"
+import {
+  StyledInputControls,
+  StyledInstructionsContainer,
+} from "@streamlit/lib/src/components/widgets/NumberInput/styled-components"
 import { Input as UIInput } from "baseui/input"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
@@ -454,18 +457,36 @@ describe("NumberInput widget", () => {
       expect(stepUpButton(wrapper).prop("disabled")).toBe(true)
     })
 
-    it("hides stepUp and stepDown buttons when width is smaller than 120px", () => {
+    it("hides stepUp and stepDown buttons when width is smaller than 180px", () => {
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
       const wrapper = shallow(<NumberInput {...props} width={100} />)
 
       expect(wrapper.find(StyledInputControls).exists()).toBe(false)
     })
 
-    it("shows stepUp and stepDown buttons when width is bigger than 120px", () => {
+    it("shows stepUp and stepDown buttons when width is bigger than 180px", () => {
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-      const wrapper = shallow(<NumberInput {...props} width={125} />)
+      const wrapper = shallow(<NumberInput {...props} width={185} />)
 
       expect(wrapper.find(StyledInputControls).exists()).toBe(true)
+    })
+
+    it("hides Please enter to apply text when width is smaller than 180px", () => {
+      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
+      const wrapper = shallow(<NumberInput {...props} width={100} />)
+
+      wrapper.setState({ dirty: true })
+
+      expect(wrapper.find(StyledInstructionsContainer).exists()).toBe(false)
+    })
+
+    it("shows Please enter to apply text when width is bigger than 180px", () => {
+      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
+      const wrapper = shallow(<NumberInput {...props} width={185} />)
+
+      wrapper.setState({ dirty: true })
+
+      expect(wrapper.find(StyledInstructionsContainer).exists()).toBe(true)
     })
   })
 })
