@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+import JSON5 from "json5"
 import { render } from "@streamlit/lib/src/test_util"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
@@ -177,7 +178,7 @@ describe("DeckGlJsonChart element", () => {
     const mockJsonParse = jest.fn().mockReturnValue(newJson)
 
     beforeEach(() => {
-      JSON.parse = mockJsonParse
+      JSON5.parse = mockJsonParse
     })
 
     afterEach(() => {
@@ -193,26 +194,26 @@ describe("DeckGlJsonChart element", () => {
       it(description, () => {
         DeckGlJsonChart.getDeckObject(getProps(), originalState)
 
-        expect(JSON.parse).not.toHaveBeenCalled()
+        expect(JSON5.parse).not.toHaveBeenCalled()
 
         DeckGlJsonChart.getDeckObject(getProps(), {
           ...originalState,
           ...stateOverride,
         })
 
-        expect(JSON.parse).toHaveBeenCalledTimes(1)
+        expect(JSON5.parse).toHaveBeenCalledTimes(1)
       })
     }
 
     testJsonParsing(
-      "should call JSON.parse when the element id is different",
+      "should call JSON5.parse when the element id is different",
       { id: newId }
     )
-    testJsonParsing("should call JSON.parse when FullScreen state changes", {
+    testJsonParsing("should call JSON5.parse when FullScreen state changes", {
       id: mockId,
       isFullScreen: true,
     })
-    testJsonParsing("should call JSON.parse when theme state changes", {
+    testJsonParsing("should call JSON5.parse when theme state changes", {
       id: mockId,
       isLightTheme: true,
     })

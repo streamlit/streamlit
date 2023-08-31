@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 from typing import Any, cast
 
 import numpy as np
@@ -63,3 +64,15 @@ st.pydeck_chart(
         ],
     )
 )
+
+# Chart w/ invalid JSON - issue #5799.
+data = pd.DataFrame({"lng": [-109.037673], "lat": [36.994672], "weight": [math.nan]})
+layer = pdk.Layer(
+    "ScatterplotLayer", data=data, get_position=["lng", "lat"], radius_min_pixels=4
+)
+deck = pdk.Deck(
+    layers=[layer],
+    map_style=pdk.map_styles.CARTO_LIGHT,
+    tooltip={"text": "weight: {weight}"},
+)
+st.pydeck_chart(deck, use_container_width=True)
