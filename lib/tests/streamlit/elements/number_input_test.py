@@ -58,6 +58,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
             LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
         )
         self.assertEqual(c.default, 0.0)
+        self.assertEqual(c.HasField("default"), True)
         self.assertEqual(c.has_min, False)
         self.assertEqual(c.has_max, False)
         self.assertEqual(c.disabled, False)
@@ -68,6 +69,32 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.disabled, True)
+
+    def test_none_value(self):
+        """Test that it can be called with None as value."""
+        st.number_input("the label", value=None)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(c.label, "the label")
+        # If a proto property is null is not determined by this value,
+        # but by the check via the HasField method:
+        self.assertEqual(c.default, 0.0)
+        self.assertEqual(c.HasField("default"), False)
+
+    def test_none_value_with_int_min(self):
+        """Test that it can be called with None as value and
+        will be interpreted as integer if min_value is set to int."""
+        st.number_input("the label", value=None, min_value=1)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(c.label, "the label")
+        # If a proto property is null is not determined by this value,
+        # but by the check via the HasField method:
+        self.assertEqual(c.default, 0.0)
+        self.assertEqual(c.HasField("default"), False)
+        self.assertEqual(c.has_min, True)
+        self.assertEqual(c.min, 1)
+        self.assertEqual(c.data_type, NumberInput.INT)
 
     def test_default_value_when_min_is_passed(self):
         st.number_input("the label", min_value=1, max_value=10)

@@ -61,7 +61,7 @@ def test_number_input_has_correct_default_values(app: Page):
         "number input 9 (on_change) - changed: False",
         "number input 10 (small width) - value: 0",
         "number input 11 (value=None) - value: None",
-        "number input 12 (value=None & min=1) - value: None",
+        "number input 12 (value from state & min=1) - value: 10",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
@@ -94,7 +94,7 @@ def test_number_input_has_correct_value_on_increment_click(app: Page):
     number_input_up_buttons = app.locator(".stNumberInput button.step-up")
     expect(number_input_up_buttons).to_have_count(11)
     for i, button in enumerate(number_input_up_buttons.all()):
-        if i not in [5, 9, 10]:
+        if i not in [5, 9]:
             button.click()
 
     markdown_elements = app.locator(".stMarkdown")
@@ -112,7 +112,7 @@ def test_number_input_has_correct_value_on_increment_click(app: Page):
         "number input 9 (on_change) - changed: True",
         "number input 10 (small width) - value: 0",
         "number input 11 (value=None) - value: None",
-        "number input 12 (value=None & min=1) - value: None",
+        "number input 12 (value from state & min=1) - value: 11",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
@@ -161,7 +161,7 @@ def test_empty_number_input_behaves_correctly(
     empty_number_input = app.locator(".stNumberInput").nth(10)
     empty_number_input.focus()
     empty_number_input.press("Escape")
-    empty_number_input.blur()
+    empty_number_input.press("Enter")
 
     # Should be empty again:
     expect(app.locator(".stMarkdown").nth(11)).to_have_text(
@@ -171,9 +171,9 @@ def test_empty_number_input_behaves_correctly(
     # Check with second empty input, this one should be integer since the min_value was
     # set to an integer:
     empty_number_input_with_min = app.locator(".stNumberInput input").nth(11)
-    empty_number_input_with_min.fill("10")
+    empty_number_input_with_min.fill("15")
     empty_number_input_with_min.press("Enter")
 
     expect(app.locator(".stMarkdown").nth(12)).to_have_text(
-        "number input 12 (value=None & min=1) - value: 10", use_inner_text=True
+        "number input 12 (value from state & min=1) - value: 15", use_inner_text=True
     )

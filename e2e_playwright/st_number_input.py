@@ -62,5 +62,13 @@ with col1:
 i11 = st.number_input("number input 11 (value=None)", value=None)
 st.write("number input 11 (value=None) - value: ", i11)
 
-i12 = st.number_input("number input 12 (value=None & min=1)", value=None, min_value=1)
-st.write("number input 12 (value=None & min=1) - value: ", i12)
+if "number_input12" not in st.session_state:
+    st.session_state["number_input12"] = 10
+
+i12 = st.number_input(
+    "number input 12 (value from state & min=1)",
+    value=None,
+    min_value=1,
+    key="number_input12",
+)
+st.write("number input 12 (value from state & min=1) - value: ", i12)
