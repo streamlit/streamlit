@@ -797,6 +797,7 @@ class DataEditorMixin:
         # but it isn't clear how much processing is needed to have the data in a
         # format that will hash consistently, so we do it late here to have it
         # as close as possible to how it used to be.
+        ctx = get_script_run_ctx()
         id = compute_widget_id(
             "data_editor",
             user_key=key,
@@ -809,6 +810,7 @@ class DataEditorMixin:
             num_rows=num_rows,
             key=key,
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
 
         proto = ArrowProto()
@@ -865,7 +867,7 @@ class DataEditorMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
-            ctx=get_script_run_ctx(),
+            ctx=ctx,
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)

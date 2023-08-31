@@ -179,6 +179,7 @@ class ColorPickerMixin:
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
 
         # set value default
