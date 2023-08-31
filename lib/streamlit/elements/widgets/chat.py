@@ -283,12 +283,14 @@ class ChatMixin:
         check_callback_rules(self.dg, on_submit)
         check_session_state_rules(default_value=default, key=key, writes_allowed=False)
 
+        ctx = get_script_run_ctx()
         id = compute_widget_id(
             "chat_input",
             user_key=key,
             key=key,
             placeholder=placeholder,
             max_chars=max_chars,
+            page=ctx.page_script_hash if ctx else None,
         )
 
         # We omit this check for scripts running outside streamlit, because
@@ -315,8 +317,6 @@ class ChatMixin:
 
         chat_input_proto.default = default
         chat_input_proto.position = ChatInputProto.Position.BOTTOM
-
-        ctx = get_script_run_ctx()
 
         serde = ChatInputSerde()
         widget_state = register_widget(

@@ -43,10 +43,15 @@ describe("multipage apps", () => {
   });
 
   it("can switch between pages and edit widgets", () => {
+    cy.get('.stSlider [role="slider"]')
+      .click()
+      .type("{rightarrow}", { force: true });
+
     cy.getIndexed('[data-testid="stSidebarNav"] a', 2).click();
 
     cy.get(".element-container .stMarkdown h2").should("contain", "Page 3");
 
+    // Identical widget on different page should be considered different
     cy.get(".element-container .stMarkdown p").should("contain", "x is 0");
 
     cy.get('.stSlider [role="slider"]')

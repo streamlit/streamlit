@@ -15,3 +15,4 @@
 import streamlit as st
 
 st.header("Main Page")
+st.slider("x")
