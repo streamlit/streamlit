@@ -62,6 +62,12 @@ from streamlit.runtime.state.session_state import SessionState
 T = TypeVar("T")
 
 
+class InitialValue:
+    """This class is used to represent the initial value of a widget."""
+
+    pass
+
+
 # TODO This class serves as a fallback option for elements that have not
 # been implemented yet, as well as providing implementations of some
 # trivial methods. It may have significantly reduced scope, or be removed
@@ -527,22 +533,22 @@ Number = Union[int, float]
 
 @dataclass(repr=False)
 class NumberInput(Widget):
-    _value: Number | None
+    _value: Number | None | InitialValue
     proto: NumberInputProto
-    min_value: Number
-    max_value: Number
+    min_value: Number | None
+    max_value: Number | None
     step: Number
 
     def __init__(self, proto: NumberInputProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "number_input"
         self.id = proto.id
         self.label = proto.label
-        self.min_value = proto.min
-        self.max_value = proto.max
+        self.min_value = proto.min if proto.has_min else None
+        self.max_value = proto.max if proto.has_max else None
         self.step = proto.step
         self.help = proto.help
         self.form_id = proto.form_id
@@ -562,14 +568,11 @@ class NumberInput(Widget):
 
     @property
     def value(self) -> Number | None:
-        if self._value is not None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         else:
             state = self.root.session_state
             assert state
-
-            if self.id not in state:
-                return None
 
             # Awkward to do this with `cast`
             return state[self.id]  # type: ignore
@@ -578,14 +581,14 @@ class NumberInput(Widget):
         if self.value is None:
             return self
 
-        v = min(self.value + self.step, self.max_value)
+        v = min(self.value + self.step, self.max_value or float("inf"))
         return self.set_value(v)
 
     def decrement(self) -> NumberInput:
         if self.value is None:
             return self
 
-        v = max(self.value - self.step, self.min_value)
+        v = max(self.value - self.step, self.min_value or float("-inf"))
         return self.set_value(v)
 
 
