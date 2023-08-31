@@ -145,7 +145,7 @@ class ChatMixin:
             * A single emoji, e.g. "🧑‍💻", "🤖", "🦖". Shortcodes are not supported.
 
             * An image using one of the formats allowed for ``st.image``: path of a local
-                image file; URL to fetch the image from; and SVG image; array of shape
+                image file; URL to fetch the image from; an SVG image; array of shape
                 (w,h) or (w,h,1) for a monochrome image, (w,h,3) for a color image,
                 or (w,h,4) for an RGBA image.
 
