@@ -50,7 +50,7 @@ export default function Video({
     const setStartTime: () => void = () => {
       if (videoNode) {
         // setStartTime
-        videoNode.currentTime = startTime
+        videoNode.currentTime = element.startTime
       }
     }
 
