@@ -16,7 +16,6 @@
 
 import styled from "@emotion/styled"
 
-import { sizes } from "@streamlit/lib/src/theme/primitives/sizes"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
 
 export interface StyledWidgetProps {
@@ -56,10 +55,6 @@ export const StyledWidgetInstructions = styled.div(({ theme }) => ({
   position: "absolute",
   bottom: 0,
   right: theme.spacing.halfSmFont,
-
-  [`@container (width < ${sizes.shouldInputHide}px)`]: {
-    display: "none",
-  },
 }))
 
 export const StyledWidgetLabelHelpInline = styled.label(({ theme }) => ({
