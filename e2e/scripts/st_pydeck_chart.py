@@ -75,5 +75,4 @@ deck = pdk.Deck(
     map_style=pdk.map_styles.CARTO_LIGHT,
     tooltip={"text": "weight: {weight}"},
 )
-deck.to_html("test.html")
 st.pydeck_chart(deck, use_container_width=True)
