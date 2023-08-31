@@ -363,23 +363,6 @@ class NumberInputTest(DeltaGeneratorTestCase):
             st.number_input("My Label", value=value, max_value=max_value)
 
 
-class SliderInteractiveTest(InteractiveScriptTests):
-    def test_id_stability(self):
-        script = self.script_from_string(
-            """
-        import streamlit as st
-
-        st.slider("slider", key="slider")
-        """
-        )
-        sr = script.run()
-        s1 = sr.slider[0]
-        sr2 = s1.set_value(5).run()
-        s2 = sr2.slider[0]
-
-        assert s1.id == s2.id
-
-
 class NumberInputInteractiveTest(InteractiveScriptTests):
     def test_number_input_interaction(self):
         """Test interactions with an empty number input widget."""
