@@ -61,6 +61,44 @@ describe("Expander container", () => {
     expect(screen.getByText(props.element.label)).toBeInTheDocument()
   })
 
+  it("renders no collapse/expand icon if empty", () => {
+    const props = getProps({}, { empty: true })
+    render(<Expander {...props}></Expander>)
+    expect(
+      screen.queryByTestId("stExpanderToggleIcon")
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders expander with a spinner icon", () => {
+    const props = getProps({ icon: "spinner" })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    expect(screen.getByTestId("stExpanderIconSpinner")).toBeInTheDocument()
+  })
+
+  it("renders expander with a check icon", () => {
+    const props = getProps({ icon: "check" })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    expect(screen.getByTestId("stExpanderIconCheck")).toBeInTheDocument()
+  })
+
+  it("renders expander with a error icon", () => {
+    const props = getProps({ icon: "error" })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    expect(screen.getByTestId("stExpanderIconError")).toBeInTheDocument()
+  })
+
   it("should render a expanded component", () => {
     const props = getProps()
     render(
