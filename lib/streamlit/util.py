@@ -21,7 +21,7 @@ import functools
 import hashlib
 import os
 import subprocess
-from typing import Any, Dict, Iterable, List, Mapping, Set, TypeVar, Union, cast
+from typing import Any, Dict, Iterable, List, Mapping, Set, TypeVar, Union
 
 from typing_extensions import Final
 
@@ -173,9 +173,7 @@ def calc_md5(s: Union[bytes, str]) -> str:
     """Return the md5 hash of the given string."""
     h = hashlib.new("md5")
 
-    # mypy seems to have trouble inferring that the type of the if/else expression is
-    # always bytes.
-    b = cast(bytes, s.encode("utf-8") if type(s) is str else s)
+    b = s.encode("utf-8") if isinstance(s, str) else s
 
     h.update(b)
     return h.hexdigest()
