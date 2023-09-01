@@ -87,7 +87,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       titleFontWeight: theme.fontWeights.normal,
       titleFontStyle: "normal",
       titleColor: getGray70(theme),
-      titlePadding: theme.spacing.mdPx,
+      titlePadding: 5,
       labelPadding: theme.spacing.lgPx,
       columnPadding: theme.spacing.smPx,
       rowPadding: theme.spacing.twoXSPx,

@@ -28,6 +28,7 @@ class PrepDataColumns(TypedDict):
     x_column: Optional[str]
     y_column_list: List[str]
     color_column: Optional[str]
+    size_column: Optional[str]
 
 
 @dataclass
