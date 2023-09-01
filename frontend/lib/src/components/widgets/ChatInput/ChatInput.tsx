@@ -219,7 +219,7 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
               },
             }}
           />
-          {/* Hide the "Please enter to apply" text in small widget sizes */}
+          {/* Hide the character limit in small widget sizes */}
           {width > breakpoints.hideWidgetDetails && (
             <StyledInputInstructionsContainer>
               <InputInstructions
