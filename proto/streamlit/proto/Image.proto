@@ -18,9 +18,12 @@ syntax = "proto3";
 
 // An image which can be displayed on the screen.
 message Image {
-  string markup = 4;
   string url = 3;
   string caption = 2;
+
+  // DEPRECATED: markup is not used anymore.
+  // SVGs are added as data uris in the url field.
+  string markup = 4;
 
   reserved 1;
   reserved "data";
