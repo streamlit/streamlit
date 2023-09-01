@@ -590,12 +590,11 @@ class TimeWidgetsMixin:
         maybe_raise_label_warnings(label, label_visibility)
 
         def parse_date_deterministic(v: SingleDateValue | ellipsis) -> str | None:
-            if v is None or v is Ellipsis:
-                return None
-            elif isinstance(v, datetime):
+            if isinstance(v, datetime):
                 return date.strftime(v.date(), "%Y/%m/%d")
             elif isinstance(v, date):
                 return date.strftime(v, "%Y/%m/%d")
+            return None
 
         parsed_min_date = parse_date_deterministic(min_value)
         parsed_max_date = parse_date_deterministic(max_value)
