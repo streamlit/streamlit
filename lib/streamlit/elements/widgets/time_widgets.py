@@ -213,7 +213,7 @@ class DateInputSerde:
             return_value = self.value.value
 
         if return_value is None or len(return_value) == 0:
-            return None
+            return () if self.value.is_range else None
 
         if not self.value.is_range:
             return return_value[0]
