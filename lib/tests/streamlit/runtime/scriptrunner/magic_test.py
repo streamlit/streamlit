@@ -18,6 +18,7 @@ import ast
 import unittest
 
 import streamlit.runtime.scriptrunner.magic as magic
+from tests.testutil import patch_config_options
 
 
 class MagicTest(unittest.TestCase):
@@ -185,10 +186,100 @@ def myfunc(a):
         self._testCode(CODE, 0)
 
     def test_docstring_is_ignored_async_func(self):
-        """Test that async function docstrings don't print in the app"""
+        """Test that async function docstrings don't print in the app by default"""
         CODE = """
 async def myfunc(a):
     '''This is the docstring for async func'''
     return 43
 """
         self._testCode(CODE, 0)
+
+    def test_display_root_docstring_config_option(self):
+        """Test that magic.displayRootDocString skips/includes docstrings when True/False."""
+
+        CODE = """
+'''This is a top-level docstring'''
+
+'this is a string that should always be magicked'
+
+def my_func():
+    '''This is a function docstring'''
+
+    'this is a string that should always be magicked'
+
+class MyClass:
+    '''This is a class docstring'''
+
+    'this is a string that should never be magicked'
+
+    def __init__(self):
+        '''This is a method docstring'''
+
+        'this is a string that should always be magicked'
+"""
+
+        self._testCode(CODE, 3)
+
+        with patch_config_options({"magic.displayRootDocString": True}):
+            self._testCode(CODE, 4)
+
+        with patch_config_options({"magic.displayRootDocString": False}):
+            self._testCode(CODE, 3)
+
+    def test_display_last_expr_config_option(self):
+        """Test that magic.displayLastExprIfNoSemicolon causes the last function ast.Expr
+        node in a file to be wrapped in st.write()."""
+
+        CODE_WITHOUT_SEMICOLON = """
+this_should_not_be_magicked()
+
+def my_func():
+    this_should_not_be_magicked()
+
+class MyClass:
+    this_should_not_be_magicked()
+
+    def __init__(self):
+        this_should_not_be_magicked()
+
+this_is_the_last_expr()
+
+# Some newlines for good measure
+
+
+"""
+
+        self._testCode(CODE_WITHOUT_SEMICOLON, 0)
+
+        with patch_config_options({"magic.displayLastExprIfNoSemicolon": True}):
+            self._testCode(CODE_WITHOUT_SEMICOLON, 1)
+
+        with patch_config_options({"magic.displayLastExprIfNoSemicolon": False}):
+            self._testCode(CODE_WITHOUT_SEMICOLON, 0)
+
+        CODE_WITH_SEMICOLON = """
+this_should_not_be_magicked()
+
+def my_func():
+    this_should_not_be_magicked()
+
+class MyClass:
+    this_should_not_be_magicked()
+
+    def __init__(self):
+        this_should_not_be_magicked()
+
+this_is_the_last_expr();
+
+# Some newlines for good measure
+
+
+"""
+
+        self._testCode(CODE_WITH_SEMICOLON, 0)
+
+        with patch_config_options({"magic.displayLastExprIfNoSemicolon": True}):
+            self._testCode(CODE_WITH_SEMICOLON, 0)
+
+        with patch_config_options({"magic.displayLastExprIfNoSemicolon": False}):
+            self._testCode(CODE_WITH_SEMICOLON, 0)

@@ -44,8 +44,6 @@ def show_config(
     config_options: Dict[str, ConfigOption],
 ) -> None:
     """Print the given config sections/options to the terminal."""
-    SKIP_SECTIONS = {"_test", "ui"}
-
     out = []
     out.append(
         _clean(
@@ -69,23 +67,27 @@ def show_config(
         out.append(click.style(text, fg="green"))
 
     for section, section_description in section_descriptions.items():
-        if section in SKIP_SECTIONS:
+        # We inject a fake config section used for unit tests that we exclude here as
+        # its options are often missing required properties, which confuses the code
+        # below.
+        if section == "_test":
+            continue
+
+        section_options = {
+            k: v
+            for k, v in config_options.items()
+            if v.section == section and v.visibility == "visible" and not v.is_expired()
+        }
+
+        # Only show config header if section is non-empty.
+        if len(section_options) == 0:
             continue
 
         out.append("")
         append_section("[%s]" % section)
         out.append("")
 
-        for key, option in config_options.items():
-            if option.section != section:
-                continue
-
-            if option.visibility == "hidden":
-                continue
-
-            if option.is_expired():
-                continue
-
+        for key, option in section_options.items():
             key = option.key.split(".")[1]
             description_paragraphs = _clean_paragraphs(option.description)
 
