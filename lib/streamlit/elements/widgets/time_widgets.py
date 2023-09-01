@@ -34,6 +34,7 @@ from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    DefaultValue,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -65,7 +66,7 @@ def _parse_date_value(value: DateValue | ellipsis) -> Tuple[List[date] | None, b
     range_value: bool = False
     if value is None:
         return None, range_value
-    if value is Ellipsis:
+    if value is DefaultValue:
         # Set value default.
         parsed_dates = [datetime.now().date()]
     elif isinstance(value, datetime):
@@ -601,7 +602,7 @@ class TimeWidgetsMixin:
         parsed_max_date = parse_date_deterministic(max_value)
 
         parsed: str | None | List[str | None]
-        if value is Ellipsis or value is None:
+        if value is DefaultValue or value is None:
             parsed = None
         elif isinstance(value, (datetime, date)):
             parsed = parse_date_deterministic(value)
