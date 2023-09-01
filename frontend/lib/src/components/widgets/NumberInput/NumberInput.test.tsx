@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import React from "react"
 import { ShallowWrapper } from "enzyme"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   NumberInput as NumberInputProto,
 } from "@streamlit/lib/src/proto"
-import React from "react"
+
 import { mount, shallow } from "@streamlit/lib/src/test_util"
 import {
   StyledInputControls,
@@ -27,18 +27,21 @@ import {
 } from "@streamlit/lib/src/components/widgets/NumberInput/styled-components"
 import { Input as UIInput } from "baseui/input"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
-import NumberInput, { Props, State } from "./NumberInput"
+import { NumberInput, Props, State } from "./NumberInput"
 
 const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
   element: NumberInputProto.create({
     label: "Label",
+    default: 0,
     hasMin: false,
     hasMax: false,
     ...elementProps,
   }),
   width: 300,
   disabled: false,
+  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
