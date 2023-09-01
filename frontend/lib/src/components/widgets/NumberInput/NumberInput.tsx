@@ -16,7 +16,9 @@
 
 import React from "react"
 import { Plus, Minus } from "@emotion-icons/open-iconic"
+import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
+
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { logWarning } from "@streamlit/lib/src/util/log"
 import { NumberInput as NumberInputProto } from "@streamlit/lib/src/proto"
@@ -27,7 +29,6 @@ import {
 } from "@streamlit/lib/src/WidgetStateManager"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
-
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { Input as UIInput } from "baseui/input"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
@@ -35,10 +36,12 @@ import {
   WidgetLabel,
   StyledWidgetLabelHelp,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
-
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   isInForm,
   labelVisibilityProtoValueToEnum,
+  isNullOrUndefined,
+  notNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 
 import {
@@ -53,6 +56,7 @@ export interface Props {
   element: NumberInputProto
   widgetMgr: WidgetStateManager
   width: number
+  theme: EmotionTheme
 }
 
 export interface State {
@@ -65,12 +69,12 @@ export interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: number
+  value: number | null
 
   /**
    * The value with applied format that is going to be shown to the user
    */
-  formattedValue: string
+  formattedValue: string | null
 
   /**
    * True if the input is selected
@@ -78,7 +82,7 @@ export interface State {
   isFocused: boolean
 }
 
-class NumberInput extends React.PureComponent<Props, State> {
+export class NumberInput extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
   private inputRef = React.createRef<HTMLInputElement | HTMLTextAreaElement>()
@@ -94,14 +98,14 @@ class NumberInput extends React.PureComponent<Props, State> {
     }
   }
 
-  get initialValue(): number {
+  get initialValue(): number | null {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf
     const storedValue = this.isIntData()
       ? this.props.widgetMgr.getIntValue(this.props.element)
       : this.props.widgetMgr.getDoubleValue(this.props.element)
 
-    return storedValue !== undefined ? storedValue : this.props.element.default
+    return storedValue ?? this.props.element.default ?? null
   }
 
   public componentDidMount(): void {
@@ -130,12 +134,22 @@ class NumberInput extends React.PureComponent<Props, State> {
   private updateFromProtobuf(): void {
     const { value } = this.props.element
     this.props.element.setValue = false
-    this.setState({ value, formattedValue: this.formatValue(value) }, () => {
-      this.commitWidgetValue({ fromUi: false })
-    })
+    this.setState(
+      {
+        value: value ?? null,
+        formattedValue: this.formatValue(value ?? null),
+      },
+      () => {
+        this.commitWidgetValue({ fromUi: false })
+      }
+    )
   }
 
-  private formatValue = (value: number): string => {
+  private formatValue = (value: number | null): string | null => {
+    if (isNullOrUndefined(value)) {
+      return null
+    }
+
     const format = getNonEmptyString(this.props.element.format)
     if (format == null) {
       return value.toString()
@@ -183,13 +197,13 @@ class NumberInput extends React.PureComponent<Props, State> {
     const min = this.getMin()
     const max = this.getMax()
 
-    if (min > value || value > max) {
+    if (notNullOrUndefined(value) && (min > value || value > max)) {
       const node = this.inputRef.current
       if (node) {
         node.reportValidity()
       }
     } else {
-      const valueToBeSaved = value || value === 0 ? value : data.default
+      const valueToBeSaved = value ?? data.default ?? null
 
       if (this.isIntData()) {
         widgetMgr.setIntValue(element, valueToBeSaved, source)
@@ -212,7 +226,7 @@ class NumberInput extends React.PureComponent<Props, State> {
   private onFormCleared = (): void => {
     this.setState(
       (_, prevProps) => {
-        return { value: prevProps.element.default }
+        return { value: prevProps.element.default ?? null }
       },
       () => this.commitWidgetValue({ fromUi: true })
     )
@@ -235,19 +249,27 @@ class NumberInput extends React.PureComponent<Props, State> {
   ): void => {
     const { value } = e.target
 
-    let numValue: number
-
-    if (this.isIntData()) {
-      numValue = parseInt(value, 10)
+    if (value === "") {
+      this.setState({
+        dirty: true,
+        value: null,
+        formattedValue: null,
+      })
     } else {
-      numValue = parseFloat(value)
-    }
+      let numValue: number
 
-    this.setState({
-      dirty: true,
-      value: numValue,
-      formattedValue: value,
-    })
+      if (this.isIntData()) {
+        numValue = parseInt(value, 10)
+      } else {
+        numValue = parseFloat(value)
+      }
+
+      this.setState({
+        dirty: true,
+        value: numValue,
+        formattedValue: value,
+      })
+    }
   }
 
   private onKeyDown = (
@@ -285,11 +307,19 @@ class NumberInput extends React.PureComponent<Props, State> {
 
   /** True if the input's current value can be decremented by its step. */
   private get canDecrement(): boolean {
+    if (isNullOrUndefined(this.state.value)) {
+      return false
+    }
+
     return this.state.value - this.getStep() >= this.getMin()
   }
 
   /** True if the input's current value can be incremented by its step. */
   private get canIncrement(): boolean {
+    if (isNullOrUndefined(this.state.value)) {
+      return false
+    }
+
     return this.state.value + this.getStep() <= this.getMax()
   }
 
@@ -305,7 +335,7 @@ class NumberInput extends React.PureComponent<Props, State> {
             this.setState(
               {
                 dirty: true,
-                value: value + step,
+                value: (value ?? this.getMin()) + step,
               },
               () => {
                 this.commitWidgetValue({ fromUi: true })
@@ -318,7 +348,7 @@ class NumberInput extends React.PureComponent<Props, State> {
             this.setState(
               {
                 dirty: true,
-                value: value - step,
+                value: (value ?? this.getMax()) - step,
               },
               () => {
                 this.commitWidgetValue({ fromUi: true })
@@ -331,13 +361,14 @@ class NumberInput extends React.PureComponent<Props, State> {
     }
 
   public render(): React.ReactNode {
-    const { element, width, disabled, widgetMgr } = this.props
+    const { element, width, disabled, widgetMgr, theme } = this.props
     const { formattedValue, dirty, isFocused } = this.state
 
     const style = { width }
 
     const disableDecrement = !this.canDecrement || disabled
     const disableIncrement = !this.canIncrement || disabled
+    const clearable = isNullOrUndefined(element.default) && !disabled
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -347,7 +378,7 @@ class NumberInput extends React.PureComponent<Props, State> {
     )
 
     return (
-      <div className="stNumberInput" style={style}>
+      <div className="stNumberInput" style={style} data-testid="stNumberInput">
         <WidgetLabel
           label={element.label}
           disabled={disabled}
@@ -368,15 +399,38 @@ class NumberInput extends React.PureComponent<Props, State> {
           <UIInput
             type="number"
             inputRef={this.inputRef}
-            value={formattedValue}
+            value={formattedValue || undefined}
             onBlur={this.onBlur}
             onFocus={this.onFocus}
             onChange={this.onChange}
             onKeyPress={this.onKeyPress}
             onKeyDown={this.onKeyDown}
+            clearable={clearable}
+            clearOnEscape={clearable}
             disabled={disabled}
             aria-label={element.label}
             overrides={{
+              ClearIcon: {
+                props: {
+                  overrides: {
+                    Svg: {
+                      style: {
+                        color: theme.colors.darkGray,
+                        // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
+                        // Let's use a scale transform effect to make it bigger.
+                        // The width property only enlarges its bounding box, so it's easier to click.
+                        transform: "scale(1.4)",
+                        width: theme.spacing.twoXL,
+                        marginRight: "-1.25em",
+
+                        ":hover": {
+                          fill: theme.colors.bodyText,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
               Input: {
                 props: {
                   step: this.getStep(),
@@ -447,7 +501,7 @@ class NumberInput extends React.PureComponent<Props, State> {
           <StyledInstructionsContainer>
             <InputInstructions
               dirty={dirty}
-              value={formattedValue}
+              value={formattedValue ?? ""}
               className="input-instructions"
               inForm={isInForm({ formId: element.formId })}
             />
@@ -468,4 +522,4 @@ function getNonEmptyString(
   return value == null || value === "" ? undefined : value
 }
 
-export default NumberInput
+export default withTheme(NumberInput)
