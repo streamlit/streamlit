@@ -22,6 +22,21 @@ describe("st.video", () => {
   });
 
   it("displays a video player", () => {
-    cy.get(".element-container .stVideo").should("have.attr", "src");
+    cy.getIndexed(".element-container .stVideo", 0).should("have.attr", "src");
+  });
+
+  it("handles a start time", () => {
+    cy.getIndexed(".element-container .stVideo", 1).should("have.attr", "src");
+  });
+
+  it("handles changes in start time", () => {
+    // Change the start time from 6 to 5
+    cy.get(".element-container .stNumberInput .step-down").click();
+
+    // Wait for the video start time to update
+    cy.wait(3000);
+
+    // Confirm video updated
+    cy.getIndexed(".element-container .stVideo", 1).matchImageSnapshot("video-updated-start");
   });
 });
