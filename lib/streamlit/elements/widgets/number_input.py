@@ -169,8 +169,8 @@ class NumberInputMixin:
             If None, there will be no maximum.
         value : int, float, or None
             The value of this widget when it first renders. If ``None``, the widget
-            will be  initialized as empty and returns ``None`` as long as the viewer
-            didn't provide input. Defaults to min_value, or 0.0 if min_value is None.
+            will be initialized empty and returns ``None`` as long as the user
+            didn't provide an input. Defaults to min_value, or 0.0 if min_value is None.
         step : int, float, or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
