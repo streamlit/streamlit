@@ -32,7 +32,7 @@ const getProps = (elementProps: Partial<ChatInputProto> = {}): Props => ({
     position: ChatInputProto.Position.BOTTOM,
     ...elementProps,
   }),
-  width: 0,
+  width: 300,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),

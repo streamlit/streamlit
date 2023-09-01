@@ -16,9 +16,8 @@
 
 export const breakpoints = {
   toast: "68px",
-  // This value is used to determine whether we should show/hide the - and + buttons in st.number_input.
-  // We use 120px because at ~100px three-digit numbers (like 0.00) start to be hidden by these controls.
-  numberInputControls: 120,
+  // This value is used to determine whether we should show/hide the - and + buttons in st.number_input, and the "Please enter to apply" in all widgets.
+  hideWidgetDetails: 180,
   sm: "576px",
   columns: "640px",
   md: "768px",

@@ -413,7 +413,7 @@ class NumberInput extends React.PureComponent<Props, State> {
           />
 
           {/* We only want to show the increment/decrement controls when there is sufficient room to display the value and these controls. */}
-          {width > breakpoints.numberInputControls && (
+          {width > breakpoints.hideWidgetDetails && (
             <StyledInputControls>
               <StyledInputControl
                 className="step-down"
@@ -442,14 +442,17 @@ class NumberInput extends React.PureComponent<Props, State> {
             </StyledInputControls>
           )}
         </StyledInputContainer>
-        <StyledInstructionsContainer>
-          <InputInstructions
-            dirty={dirty}
-            value={formattedValue}
-            className="input-instructions"
-            inForm={isInForm({ formId: element.formId })}
-          />
-        </StyledInstructionsContainer>
+        {/* Hide the "Please enter to apply" text in small widget sizes */}
+        {width > breakpoints.hideWidgetDetails && (
+          <StyledInstructionsContainer>
+            <InputInstructions
+              dirty={dirty}
+              value={formattedValue}
+              className="input-instructions"
+              inForm={isInForm({ formId: element.formId })}
+            />
+          </StyledInstructionsContainer>
+        )}
       </div>
     )
   }

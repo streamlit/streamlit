@@ -30,6 +30,7 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
+import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 
 import {
   StyledChatInputContainer,
@@ -218,16 +219,19 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
               },
             }}
           />
-          <StyledInputInstructionsContainer>
-            <InputInstructions
-              dirty={dirty}
-              value={value}
-              maxLength={maxChars}
-              type="chat"
-              // Chat Input are not able to be used in forms
-              inForm={false}
-            />
-          </StyledInputInstructionsContainer>
+          {/* Hide the character limit in small widget sizes */}
+          {width > breakpoints.hideWidgetDetails && (
+            <StyledInputInstructionsContainer>
+              <InputInstructions
+                dirty={dirty}
+                value={value}
+                maxLength={maxChars}
+                type="chat"
+                // Chat Input are not able to be used in forms
+                inForm={false}
+              />
+            </StyledInputInstructionsContainer>
+          )}
           <StyledSendIconButtonContainer>
             <StyledSendIconButton
               onClick={handleSubmit}
