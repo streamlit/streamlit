@@ -17,13 +17,14 @@
 import React from "react"
 import "@testing-library/jest-dom"
 import { screen, fireEvent } from "@testing-library/react"
-import { render } from "@streamlit/lib/src/test_util"
+import { render, shallow } from "@streamlit/lib/src/test_util"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextArea as TextAreaProto,
 } from "@streamlit/lib/src/proto"
 
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 
 import TextArea, { Props } from "./TextArea"
 
@@ -38,7 +39,7 @@ const getProps = (
     placeholder: "Placeholder",
     ...elementProps,
   }),
-  width: 0,
+  width: 300,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
@@ -200,6 +201,24 @@ describe("TextArea widget", () => {
         fromUi: false,
       }
     )
+  })
+
+  it("hides Please enter to apply text when width is smaller than 180px", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextArea {...props} width={100} />)
+
+    wrapper.setState({ dirty: true })
+
+    expect(wrapper.find(InputInstructions).exists()).toBe(false)
+  })
+
+  it("shows Please enter to apply text when width is bigger than 180px", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextArea {...props} width={190} />)
+
+    wrapper.setState({ dirty: true })
+
+    expect(wrapper.find(InputInstructions).exists()).toBe(true)
   })
 
   it("resets its value when form is cleared", () => {
