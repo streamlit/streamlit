@@ -108,6 +108,7 @@ class ElementUtilsTest(unittest.TestCase):
         mock_session_state = MagicMock()
         mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
+        # Reset globale flag:
         utils._shown_default_value_warning = False
 
         check_session_state_rules(5, key="the key")
