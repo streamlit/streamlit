@@ -21,52 +21,86 @@ describe("st.image", () => {
     cy.prepForElementSnapshots();
   });
 
-
-  it("displays red circle without width, height, xmlns as svg", () => {
-    cy.get(".element-container [data-testid='stImage'] svg circle")
+  it("displays red circle with added xmlns as img", () => {
+    cy.get(".element-container [data-testid='stImage'] img")
       .eq(0)
-      .should("have.attr", "fill")
+      .should("have.attr", "src");
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(0)
+      .should("have.attr", "style", "max-width: 100%;");
   });
 
   it("displays red circle with width, height and xmlns as img", () => {
-    cy.get(".element-container [data-testid='stImage'] img").eq(0).should("have.attr", "src")
-    cy.get(".element-container [data-testid='stImage'] img").eq(0).should("have.attr", "style", "max-width: 100%;")
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(1)
+      .should("have.attr", "src");
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(1)
+      .should("have.attr", "style", "max-width: 100%;");
   });
 
   it("scales red circle with width, height and xmlns as img", () => {
-    cy.get(".element-container [data-testid='stImage'] img").eq(1).should("have.attr", "src")
-    cy.get(".element-container [data-testid='stImage'] img").eq(1).should("have.attr", "style", "width: 300px;")
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(2)
+      .should("have.attr", "src");
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(2)
+      .should("have.attr", "style", "width: 300px;");
   });
 
   it("displays yellow green rectangle as img", () => {
-    cy.get(".element-container [data-testid='stImage'] img").eq(2).should("have.attr", "src");
-    cy.get(".element-container [data-testid='stImage'] img").eq(2).should("have.attr", "style", "width: 100px;")
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(3)
+      .should("have.attr", "src");
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(3)
+      .should("have.attr", "style", "width: 100px;");
   });
 
   it("scales yellow green rectangle", () => {
-    cy.get(".element-container [data-testid='stImage'] img").eq(3).should("have.attr", "src");
-    cy.get(".element-container [data-testid='stImage'] img").eq(3).should("have.attr", "style", "width: 300px;")
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(4)
+      .should("have.attr", "src");
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(4)
+      .should("have.attr", "style", "width: 300px;");
   });
 
   // rectangle is yellow, which means viewbox is respected
   it("displays yellow rectangle (respects viewbox) as img", () => {
-    cy.get(".element-container [data-testid='stImage'] img").eq(4).should("have.attr", "src");
-    cy.get(".element-container [data-testid='stImage'] img").eq(4).should("have.attr", "style", "width: 100px;")
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(5)
+      .should("have.attr", "src");
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(5)
+      .should("have.attr", "style", "width: 100px;");
   });
 
   it("scales yellow rectangle (respects viewbox)", () => {
-    cy.get(".element-container [data-testid='stImage'] img").eq(5).should("have.attr", "src");
-    cy.get(".element-container [data-testid='stImage'] img").eq(5).should("have.attr", "style", "width: 300px;")
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(6)
+      .should("have.attr", "src");
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(6)
+      .should("have.attr", "style", "width: 300px;");
   });
 
   // rectangle is green, which means viewbox is respected
   it("displays green rectangle (respects viewbox) as img", () => {
-    cy.get(".element-container [data-testid='stImage'] img").eq(6).should("have.attr", "src");
-    cy.get(".element-container [data-testid='stImage'] img").eq(6).should("have.attr", "style", "width: 100px;")
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(7)
+      .should("have.attr", "src");
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(7)
+      .should("have.attr", "style", "width: 100px;");
   });
 
   it("scales green rectangle (respects viewbox)", () => {
-    cy.get(".element-container [data-testid='stImage'] img").eq(7).should("have.attr", "src");
-    cy.get(".element-container [data-testid='stImage'] img").eq(7).should("have.attr", "style", "width: 300px;")
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(8)
+      .should("have.attr", "src");
+    cy.get(".element-container [data-testid='stImage'] img")
+      .eq(8)
+      .should("have.attr", "style", "width: 300px;");
   });
 });

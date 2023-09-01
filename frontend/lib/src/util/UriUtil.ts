@@ -17,7 +17,6 @@
 import { take } from "lodash"
 
 import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "@streamlit/lib/src/baseconsts"
-import DOMPurify from "dompurify"
 
 /**
  * host:port tuple
@@ -30,7 +29,6 @@ export interface BaseUriParts {
 
 const FINAL_SLASH_RE = /\/+$/
 const INITIAL_SLASH_RE = /^\/+/
-export const SVG_PREFIX = "data:image/svg+xml,"
 
 /**
  * Return the BaseUriParts for the global window
@@ -136,15 +134,6 @@ function makePath(basePath: string, subPath: string): string {
  */
 function isHttps(): boolean {
   return window.location.href.startsWith("https://")
-}
-
-/**
- * Run SVG strings through DOMPurify to prevent Javascript execution
- */
-export function xssSanitizeSvg(uri: string): string {
-  const SVG_PREFIX = "data:image/svg+xml,"
-  const unsafe = uri.substring(SVG_PREFIX.length)
-  return DOMPurify.sanitize(unsafe, {})
 }
 
 /**

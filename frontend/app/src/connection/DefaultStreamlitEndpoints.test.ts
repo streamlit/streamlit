@@ -95,13 +95,6 @@ describe("DefaultStreamlitEndpoints", () => {
       const uri = endpoints.buildMediaURL("http://example/blah.png")
       expect(uri).toBe("http://example/blah.png")
     })
-
-    it("sanitizes SVG uris", () => {
-      const url = endpoints.buildMediaURL(
-        `data:image/svg+xml,<svg><script>alert('evil')</script></svg>`
-      )
-      expect(url).toBe(`data:image/svg+xml,<svg></svg>`)
-    })
   })
 
   describe("buildFileUploadURL", () => {

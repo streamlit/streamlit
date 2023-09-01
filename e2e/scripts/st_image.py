@@ -80,16 +80,6 @@ col2.image(img, use_column_width=True)  # column
 col2.image(img800, use_column_width="auto")  # column
 
 st.image(
-    """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100">
-    <clipPath id="clipCircle">
-        <circle r="25" cx="25" cy="25"/>
-    </clipPath>
-    <image href="https://avatars.githubusercontent.com/karriebear" width="50" height="50" clipPath="url(#clipCircle)"/>
-</svg>
-"""
-)
-
-st.image(
     """
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="500" height="100">
 <text x="0" y="50">"I am a quote" - https://avatars.githubusercontent.com/karriebear</text>
