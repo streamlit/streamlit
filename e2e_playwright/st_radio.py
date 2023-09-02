@@ -28,42 +28,45 @@ markdown_options = (
     "`code text`",
     ":red[red] :blue[blue] :green[green] :violet[violet] :orange[orange]",
 )
+
 i1 = st.radio("radio 1", options, 1)
 st.write("value 1:", i1)
 
-i2 = st.radio("radio 2", options, 0, format_func=lambda x: x.capitalize())
+i2 = st.radio(
+    "radio 2 (Formatted options)", options, 0, format_func=lambda x: x.capitalize()
+)
 st.write("value 2:", i2)
 
-i3 = st.radio("radio 3", [])
+i3 = st.radio("radio 3 (no options)", [])
 st.write("value 3:", i3)
 
-i4 = st.radio("radio 4", options, disabled=True)
+i4 = st.radio("radio 4 (disabled)", options, disabled=True)
 st.write("value 4:", i4)
 
-i5 = st.radio("radio 5", options, horizontal=True)
+i5 = st.radio("radio 5 (horizontal)", options, horizontal=True)
 st.write("value 5:", i5)
 
-i6 = st.radio("radio 6", pd.DataFrame({"foo": list(options)}))
+i6 = st.radio("radio 6 (options from dataframe)", pd.DataFrame({"foo": list(options)}))
 st.write("value 6:", i6)
 
-i7 = st.radio("radio 7", options, label_visibility="hidden")
+i7 = st.radio("radio 7 (hidden label)", options, label_visibility="hidden")
 st.write("value 7:", i7)
 
-i8 = st.radio("radio 8", options, label_visibility="collapsed")
+i8 = st.radio("radio 8 (collapsed label)", options, label_visibility="collapsed")
 st.write("value 8:", i8)
 
-i9 = st.radio("radio 9", markdown_options)
+i9 = st.radio("radio 9 (markdown options)", options=markdown_options)
 st.write("value 9:", i9)
 
 i10 = st.radio(
-    "radio 10 - captions",
+    "radio 10 (with captions)",
     ["A", "B", "C", "D", "E", "F", "G"],
     captions=markdown_options,
 )
 st.write("value 10:", i10)
 
 i11 = st.radio(
-    "radio 11 - horizontal, captions",
+    "radio 11 (horizontal, captions)",
     ["yes", "maybe", "no"],
     captions=["Opt in", "", "Opt out"],
     horizontal=True,
@@ -74,9 +77,18 @@ if runtime.exists():
 
     def on_change():
         st.session_state.radio_changed = True
+        st.text("Radio widget callback triggered")
 
-    st.radio("radio 12", options, 1, key="radio10", on_change=on_change)
-    st.write("value 12:", st.session_state.radio10)
+    st.radio(
+        "radio 12 (with callback, help)",
+        options,
+        1,
+        key="radio12",
+        on_change=on_change,
+        help="help text",
+    )
+    st.write("value 12:", st.session_state.radio12)
     st.write("radio changed:", "radio_changed" in st.session_state)
 
-st.radio("Empty radio", options, index=None)
+i13 = st.radio("radio 13 (empty selection)", options, index=None)
+st.write("value 13:", i13)
