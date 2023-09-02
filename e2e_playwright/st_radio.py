@@ -29,11 +29,14 @@ markdown_options = (
     ":red[red] :blue[blue] :green[green] :violet[violet] :orange[orange]",
 )
 
-i1 = st.radio("radio 1", options, 1)
+i1 = st.radio("radio 1 (default)", options)
 st.write("value 1:", i1)
 
 i2 = st.radio(
-    "radio 2 (Formatted options)", options, 0, format_func=lambda x: x.capitalize()
+    "radio 2 (Formatted options)",
+    options,
+    1,
+    format_func=lambda x: x.capitalize(),
 )
 st.write("value 2:", i2)
 
