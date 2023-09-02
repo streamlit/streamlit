@@ -24,7 +24,10 @@ import {
   Source,
 } from "@streamlit/lib/src/WidgetStateManager"
 import UISelectbox from "@streamlit/lib/src/components/shared/Dropdown"
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+import {
+  labelVisibilityProtoValueToEnum,
+  isNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 export interface Props {
@@ -110,7 +113,7 @@ class Selectbox extends React.PureComponent<Props, State> {
     )
   }
 
-  private onChange = (value: number): void => {
+  private onChange = (value: number | null): void => {
     this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
   }
 
@@ -118,6 +121,8 @@ class Selectbox extends React.PureComponent<Props, State> {
     const { options, help, label, labelVisibility, formId, placeholder } =
       this.props.element
     const { disabled, widgetMgr } = this.props
+    const clearable =
+      isNullOrUndefined(this.props.element.default) && !disabled
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -139,6 +144,7 @@ class Selectbox extends React.PureComponent<Props, State> {
         value={this.state.value}
         help={help}
         placeholder={placeholder}
+        clearable={clearable}
       />
     )
   }

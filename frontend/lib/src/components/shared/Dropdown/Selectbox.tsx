@@ -107,8 +107,6 @@ export class Selectbox extends React.PureComponent<Props, State> {
 
   private onChange = (params: OnChangeParams): void => {
     if (params.value.length === 0) {
-      // TODO(lukasmasuch): Remove this warning?
-      logWarning("No value selected!")
       this.setState({ value: null }, () => this.props.onChange(null))
       return
     }
@@ -185,7 +183,7 @@ export class Selectbox extends React.PureComponent<Props, State> {
     return (
       <div
         className="row-widget stSelectbox"
-        data-test-id="stSelectbox"
+        data-testid="stSelectbox"
         style={style}
       >
         <WidgetLabel

@@ -272,7 +272,7 @@ class SelectboxMixin:
                 "Selectbox Value has invalid type: %s" % type(index).__name__
             )
 
-        if len(opt) > 0 and not 0 <= index < len(opt):
+        if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
             raise StreamlitAPIException(
                 "Selectbox index must be between 0 and length of options"
             )
