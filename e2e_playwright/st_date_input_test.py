@@ -102,10 +102,16 @@ def test_empty_date_input_behaves_correctly(
         "Value 13: 1970-01-02", use_inner_text=True
     )
 
-    assert_snapshot(empty_number_input, name="st_date_input-clearable_input")
+    # Click outside to remove focus:
+    app.get_by_test_id("stMarkdown").nth(13).click()
+
+    # Screenshot match clearable input:
+    assert_snapshot(
+        app.get_by_test_id("stDateInput").nth(12), name="st_date_input-clearable_input"
+    )
 
     # Press escape to clear value:
-    empty_number_input = app.locator(".stDateInput").nth(12)
+    empty_number_input = app.locator(".stDateInput input").nth(12)
     empty_number_input.focus()
     empty_number_input.press("Escape")
     # Click outside to enter value:
@@ -227,10 +233,12 @@ def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
     )
 
     # Close calendar without selecting a date
-    app.locator(".stDateInput input").first.clear()
+    date_input_field = app.locator(".stDateInput input").first
+    date_input_field.focus()
+    date_input_field.clear()
 
     # Click outside of the calendar to submit value
-    app.get_by_test_id("stMarkdown").first.click()
+    app.get_by_test_id("stMarkdown").first.click(delay=100)
 
     # Value should be reset to default
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(
@@ -263,7 +271,9 @@ def test_range_is_empty_if_calendar_closed_empty(app: Page):
     )
 
     # Close calendar without selecting a date
-    app.locator(".stDateInput input").nth(4).clear()
+    date_input_field = app.locator(".stDateInput input").nth(4)
+    date_input_field.focus()
+    date_input_field.clear()
 
     # Click outside of the calendar to submit value
     app.get_by_test_id("stMarkdown").nth(4).click()

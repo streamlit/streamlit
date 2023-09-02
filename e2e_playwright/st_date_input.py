@@ -20,7 +20,7 @@ from streamlit import runtime
 d1 = st.date_input("Single date", date(1970, 1, 1), min_value=date(1970, 1, 1))
 st.write("Value 1:", d1)
 
-d2 = st.date_input("Single datetime", datetime(2019, 7, 6, 21, 15))
+d2 = st.date_input("Single datetime", datetime(2019, 7, 6, 21, 15), help="Help text")
 st.write("Value 2:", d2)
 
 d3 = st.date_input("Range, no date", [])
