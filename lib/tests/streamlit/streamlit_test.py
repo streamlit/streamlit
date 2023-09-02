@@ -108,6 +108,7 @@ class StreamlitTest(unittest.TestCase):
                 "progress",
                 "pyplot",
                 "radio",
+                "scatter_chart",
                 "selectbox",
                 "select_slider",
                 "slider",

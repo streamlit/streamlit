@@ -57,7 +57,7 @@ INSTALL_REQUIRES = [
     "tenacity>=8.1.0, <9",
     "toml>=0.10.1, <2",
     "typing-extensions>=4.1.0, <5",
-    "tzlocal>=1.1, <5",
+    "tzlocal>=1.1, <6",
     "validators>=0.2, <1",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
