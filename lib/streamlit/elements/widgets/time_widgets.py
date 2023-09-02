@@ -476,9 +476,9 @@ class TimeWidgetsMixin:
         value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime or None
             The value of this widget when it first renders. If a list/tuple with
             0 to 2 date/datetime values is provided, the datepicker will allow
-            users to provide a range. If ``None``, the widget will be initialized empty
-            and returns ``None`` as long as the user didn't provide an input.
-            Defaults to today as a single-date picker.
+            users to provide a range. If ``None``, will initialize empty and
+            return ``None`` until the user provides input. Defaults to today as
+            a single-date picker.
         min_value : datetime.date or datetime.datetime
             The minimum selectable date. If value is a date, defaults to value - 10 years.
             If value is the interval [start, end], defaults to start - 10 years.
