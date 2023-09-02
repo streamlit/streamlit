@@ -19,11 +19,10 @@ import { isMobile } from "react-device-detect"
 import { ChevronDown } from "baseui/icon"
 import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { withTheme } from "@emotion/react"
-
-import { logWarning } from "@streamlit/lib/src/util/log"
-import VirtualDropdown from "@streamlit/lib/src/components/shared/Dropdown/VirtualDropdown"
 import { hasMatch, score } from "fzy.js"
 import _ from "lodash"
+
+import VirtualDropdown from "@streamlit/lib/src/components/shared/Dropdown/VirtualDropdown"
 import {
   LabelVisibilityOptions,
   isNullOrUndefined,
