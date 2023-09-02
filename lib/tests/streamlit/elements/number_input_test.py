@@ -26,6 +26,7 @@ from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
+from streamlit.testing.script_interactions import InteractiveScriptTests
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -360,3 +361,33 @@ class NumberInputTest(DeltaGeneratorTestCase):
         max_value = 10
         with pytest.raises(StreamlitAPIException):
             st.number_input("My Label", value=value, max_value=max_value)
+
+
+class NumberInputInteractiveTest(InteractiveScriptTests):
+    def test_number_input_interaction(self):
+        """Test interactions with an empty number input widget."""
+        script = self.script_from_string(
+            """
+        import streamlit as st
+
+        st.number_input("the label", value=None)
+        """
+        )
+        sr = script.run()
+        number_input = sr.number_input[0]
+        assert number_input.value is None
+
+        # Set the value to 10
+        sr2 = number_input.set_value(10).run()
+        number_input = sr2.number_input[0]
+        assert number_input.value == 10
+
+        # # Increment the value
+        sr3 = number_input.increment().run()
+        number_input = sr3.number_input[0]
+        assert number_input.value == 10.01
+
+        # # Clear the value
+        sr4 = number_input.set_value(None).run()
+        number_input = sr4.number_input[0]
+        assert number_input.value is None

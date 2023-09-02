@@ -84,28 +84,17 @@ describe("st.image", () => {
     }
   });
 
-  it("displays SVG images that load external images", () => {
-    cy.get("[data-testid='stImage'] svg")
-      .eq(0)
-      .matchImageSnapshot("karriebear-avatar");
-  });
-
-  it("displays links in text as text", () => {
-    cy.getIndexed("[data-testid='stImage'] svg", 1).should(
-      "contain",
-      "avatars.githubusercontent"
-    );
-  });
-
-  it("displays SVG tags prefixed with meta xml tags", () => {
-    cy.getIndexed("[data-testid='stImage'] svg", 2).should(
-      "contain",
-      "I am prefixed with some meta tags"
-    );
+  it("displays SVG images correctly", () => {
+    for (const index of [11, 12]) {
+      cy.getIndexed(
+        ".element-container [data-testid='stImage'] img",
+        index
+      ).matchImageSnapshot(`svg-image-${index}`);
+    }
   });
 
   it("displays a GIF image", () => {
-    cy.getIndexed(".element-container [data-testid='stImage'] img", 11)
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 13)
       .should("have.css", "height", "100px")
       .should("have.css", "width", "100px")
       .should("have.attr", "src")
@@ -113,13 +102,14 @@ describe("st.image", () => {
   });
 
   it("displays a GIF image and a caption together", () => {
-    cy.get(".element-container [data-testid='stImage']")
-      .eq(15)
-      .matchImageSnapshot("gif-with-caption");
+    cy.getIndexed(
+      ".element-container [data-testid='stImage']",
+      14
+    ).matchImageSnapshot("gif-with-caption");
   });
 
   it("displays a GIF as PNG", () => {
-    cy.getIndexed(".element-container [data-testid='stImage'] img", 13)
+    cy.getIndexed(".element-container [data-testid='stImage'] img", 15)
       .should("have.attr", "src")
       .should("match", /^.*\.png$/);
   });

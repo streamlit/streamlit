@@ -17,7 +17,7 @@ from __future__ import annotations
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Union, cast, overload
+from typing import TYPE_CHECKING, Union, cast, overload
 
 import streamlit
 from streamlit.elements.form import current_form_id
@@ -42,6 +42,9 @@ from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 Number = Union[int, float]
+
+if TYPE_CHECKING:
+    from builtins import ellipsis
 
 
 @dataclass
@@ -70,7 +73,7 @@ class NumberInputMixin:
         label: str,
         min_value: Number | None = None,
         max_value: Number | None = None,
-        value: DefaultValue | Number = DefaultValue(),
+        value: ellipsis | Number = ...,
         step: Number | None = None,
         format: str | None = None,
         key: Key | None = None,
@@ -110,7 +113,7 @@ class NumberInputMixin:
         label: str,
         min_value: Number | None = None,
         max_value: Number | None = None,
-        value: DefaultValue | Number | None = DefaultValue(),
+        value: ellipsis | Number | None = ...,
         step: Number | None = None,
         format: str | None = None,
         key: Key | None = None,
@@ -166,8 +169,8 @@ class NumberInputMixin:
             If None, there will be no maximum.
         value : int, float, or None
             The value of this widget when it first renders. If ``None``, the widget
-            will be  initialized as empty and returns ``None`` as long as the viewer
-            didn't provide input. Defaults to min_value, or 0.0 if min_value is None.
+            will be initialized empty and returns ``None`` as long as the user didn't
+            provide an input. Defaults to min_value, or 0.0 if min_value is None.
         step : int, float, or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
@@ -240,7 +243,7 @@ class NumberInputMixin:
         label: str,
         min_value: Number | None = None,
         max_value: Number | None = None,
-        value: DefaultValue | Number | None = DefaultValue(),
+        value: ellipsis | Number | None = ...,
         step: Number | None = None,
         format: str | None = None,
         key: Key | None = None,
@@ -256,7 +259,7 @@ class NumberInputMixin:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
-            default_value=None if isinstance(value, DefaultValue) else value, key=key
+            default_value=None if value is DefaultValue else value, key=key
         )
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -272,18 +275,20 @@ class NumberInputMixin:
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
 
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]
 
         int_args = all(
-            isinstance(a, (numbers.Integral, type(None), DefaultValue))
+            isinstance(a, (numbers.Integral, type(None), type(DefaultValue)))
             for a in number_input_args
         )
 
         float_args = all(
-            isinstance(a, (float, type(None), DefaultValue)) for a in number_input_args
+            isinstance(a, (float, type(None), type(DefaultValue)))
+            for a in number_input_args
         )
 
         if not int_args and not float_args:
@@ -295,7 +300,7 @@ class NumberInputMixin:
                 f"\n`step` has {type(step).__name__} type."
             )
 
-        if isinstance(value, DefaultValue):
+        if value is DefaultValue:
             if min_value is not None:
                 value = min_value
             elif int_args and float_args:
