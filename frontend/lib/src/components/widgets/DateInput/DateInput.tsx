@@ -241,7 +241,7 @@ class DateInput extends React.PureComponent<Props, State> {
     )
 
     return (
-      <div className="stDateInput" style={style}>
+      <div className="stDateInput" style={style} data-testid="stDateInput">
         <WidgetLabel
           label={element.label}
           disabled={disabled}
