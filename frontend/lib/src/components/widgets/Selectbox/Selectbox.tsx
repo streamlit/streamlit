@@ -46,7 +46,7 @@ interface State {
   value: number | null
 }
 
-class Selectbox extends React.PureComponent<Props, State> {
+export class Selectbox extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
   public state: State = {
