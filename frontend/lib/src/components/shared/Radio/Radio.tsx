@@ -35,6 +35,7 @@ export interface Props {
   value: number
   onChange: (selectedIndex: number) => any
   options: any[]
+  captions: any[]
   label?: string
   labelVisibility?: LabelVisibilityOptions
   help?: string
@@ -79,6 +80,15 @@ class Radio extends React.PureComponent<Props, State> {
     const { colors, radii } = theme
     const style = { width }
     const options = [...this.props.options]
+    const captions = [...this.props.captions]
+    const hasCaptions = captions.length > 0
+
+    const spacerNeeded = (caption: string): string => {
+      // When captions are provided for only some options in horizontal
+      // layout we need to add a spacer for the options without captions
+      const spacer = caption == "" && horizontal && hasCaptions
+      return spacer ? "&nbsp;" : caption
+    }
 
     if (options.length === 0) {
       options.push("No options to select.")
@@ -105,6 +115,13 @@ class Radio extends React.PureComponent<Props, State> {
           align={horizontal ? ALIGN.horizontal : ALIGN.vertical}
           aria-label={label}
           data-testid="stRadioGroup"
+          overrides={{
+            RadioGroupRoot: {
+              style: {
+                gap: hasCaptions ? "0.5rem" : "0",
+              },
+            },
+          }}
         >
           {options.map((option: string, index: number) => (
             <UIRadio
@@ -119,7 +136,7 @@ class Radio extends React.PureComponent<Props, State> {
                   }) => ({
                     marginBottom: 0,
                     marginTop: 0,
-                    marginRight: "1rem",
+                    marginRight: hasCaptions ? "0.5rem" : "1rem",
                     // Make left and right padding look the same visually.
                     paddingLeft: 0,
                     alignItems: "start",
@@ -164,8 +181,17 @@ class Radio extends React.PureComponent<Props, State> {
                 source={option}
                 allowHTML={false}
                 isLabel
-                isButton
+                largerLabel
+                disableLinks
               />
+              {hasCaptions && (
+                <StreamlitMarkdown
+                  source={spacerNeeded(captions[index])}
+                  allowHTML={false}
+                  isCaption
+                  isLabel
+                />
+              )}
             </UIRadio>
           ))}
         </RadioGroup>

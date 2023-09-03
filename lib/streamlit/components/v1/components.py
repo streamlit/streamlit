@@ -178,6 +178,8 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 element.component_instance.json_args = serialized_json_args
                 element.component_instance.special_args.extend(special_args)
 
+            ctx = get_script_run_ctx()
+
             if key is None:
                 marshall_element_args()
                 id = compute_widget_id(
@@ -189,6 +191,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                     key=key,
                     json_args=serialized_json_args,
                     special_args=special_args,
+                    page=ctx.page_script_hash if ctx else None,
                 )
             else:
                 id = compute_widget_id(
@@ -198,6 +201,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                     form_id=current_form_id(dg),
                     url=self.url,
                     key=key,
+                    page=ctx.page_script_hash if ctx else None,
                 )
             element.component_instance.id = id
 
@@ -205,7 +209,6 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 # ui_value is an object from json, an ArrowTable proto, or a bytearray
                 return ui_value
 
-            ctx = get_script_run_ctx()
             component_state = register_widget(
                 element_type="component_instance",
                 element_proto=element.component_instance,

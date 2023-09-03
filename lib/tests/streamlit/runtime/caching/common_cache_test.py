@@ -994,19 +994,19 @@ class WidgetReplayInteractionTest(InteractiveScriptTests):
         script = self.script_from_filename("test_data/cached_widget_replay_dynamic.py")
 
         sr = script.run()
-        assert len(sr.get("checkbox")) == 1
-        assert sr.get("text")[0].value == "['foo']"
+        assert len(sr.checkbox) == 1
+        assert sr.text[0].value == "['foo']"
 
-        sr2 = sr.get("checkbox")[0].check().run()
-        assert len(sr2.get("multiselect")) == 1
-        assert sr2.get("text")[0].value == "[]"
+        sr2 = sr.checkbox[0].check().run()
+        assert len(sr2.multiselect) == 1
+        assert sr2.text[0].value == "[]"
 
-        sr3 = sr2.get("multiselect")[0].select("baz").run()
-        assert sr3.get("text")[0].value == "['baz']"
+        sr3 = sr2.multiselect[0].select("baz").run()
+        assert sr3.text[0].value == "['baz']"
 
-        sr4 = sr3.get("checkbox")[0].uncheck().run()
-        sr5 = sr4.get("button")[0].click().run()
-        assert sr5.get("text")[0].value == "['foo']"
+        sr4 = sr3.checkbox[0].uncheck().run()
+        sr5 = sr4.button[0].click().run()
+        assert sr5.text[0].value == "['foo']"
 
 
 class WidgetReplayTest(InteractiveScriptTests):
@@ -1015,4 +1015,4 @@ class WidgetReplayTest(InteractiveScriptTests):
         script = self.script_from_filename("test_data/arrow_replay.py")
 
         sr = script.run()
-        assert len(sr.get("exception")) == 0
+        assert len(sr.exception) == 0

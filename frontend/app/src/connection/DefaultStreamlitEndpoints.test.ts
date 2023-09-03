@@ -95,13 +95,6 @@ describe("DefaultStreamlitEndpoints", () => {
       const uri = endpoints.buildMediaURL("http://example/blah.png")
       expect(uri).toBe("http://example/blah.png")
     })
-
-    it("sanitizes SVG uris", () => {
-      const url = endpoints.buildMediaURL(
-        `data:image/svg+xml,<svg><script>alert('evil')</script></svg>`
-      )
-      expect(url).toBe(`data:image/svg+xml,<svg></svg>`)
-    })
   })
 
   describe("buildFileUploadURL", () => {
@@ -179,7 +172,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
     it("properly constructs the correct endpoint when given a relative URL", async () => {
       axiosMock
-        .onPost(
+        .onPut(
           "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
         )
         .reply(() => [200, 1])
@@ -203,7 +196,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
       expect(spyRequest).toHaveBeenCalledWith({
         url: "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1",
-        method: "POST",
+        method: "PUT",
         responseType: "text",
         data: expectedData,
         cancelToken: mockCancelToken,
@@ -213,7 +206,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
     it("Uses the endpoint unchanged when given an absolute url", async () => {
       axiosMock
-        .onPost("http://example.com/upload_file/file_2")
+        .onPut("http://example.com/upload_file/file_2")
         .reply(() => [200, 1])
 
       const mockOnUploadProgress = (_: any): void => {}
@@ -235,7 +228,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
       expect(spyRequest).toHaveBeenCalledWith({
         url: "http://example.com/upload_file/file_2",
-        method: "POST",
+        method: "PUT",
         responseType: "text",
         data: expectedData,
         cancelToken: mockCancelToken,
@@ -245,7 +238,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
     it("errors on bad status", async () => {
       axiosMock
-        .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
+        .onPut("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
         .reply(() => [400])
 
       await expect(

@@ -31,4 +31,4 @@ st._arrow_line_chart(df, x="a", y="b")
 st._arrow_line_chart(df, x="b", y="a")
 st._arrow_line_chart(df, x="a", y=["b", "c"])
 
-st._arrow_line_chart(pyspark_mocks.DataFrame())
+st._arrow_line_chart(pyspark_mocks.DataFrame(is_numpy_arr=True))

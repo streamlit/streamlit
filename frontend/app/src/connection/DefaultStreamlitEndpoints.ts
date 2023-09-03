@@ -18,8 +18,6 @@ import axios, { AxiosRequestConfig, AxiosResponse, CancelToken } from "axios"
 import {
   BaseUriParts,
   buildHttpUri,
-  SVG_PREFIX,
-  xssSanitizeSvg,
   StreamlitEndpoints,
   getCookie,
   IAppPage,
@@ -61,9 +59,6 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
    * appropriately. Otherwise leave it alone.
    */
   public buildMediaURL(url: string): string {
-    if (url.startsWith(SVG_PREFIX)) {
-      return `${SVG_PREFIX}${xssSanitizeSvg(url)}`
-    }
     return url.startsWith(MEDIA_ENDPOINT)
       ? buildHttpUri(this.requireServerUri(), url)
       : url
@@ -120,7 +115,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
     return this.csrfRequest<number>(this.buildFileUploadURL(fileUploadUrl), {
       cancelToken,
-      method: "POST",
+      method: "PUT",
       data: form,
       responseType: "text",
       onUploadProgress,

@@ -108,7 +108,7 @@ class TextWidgetsMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -227,6 +227,7 @@ class TextWidgetsMixin:
             autocomplete=autocomplete,
             placeholder=str(placeholder),
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
 
         text_input_proto = TextInputProto()
@@ -323,7 +324,7 @@ class TextWidgetsMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -435,6 +436,7 @@ class TextWidgetsMixin:
             help=help,
             placeholder=str(placeholder),
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
 
         text_area_proto = TextAreaProto()

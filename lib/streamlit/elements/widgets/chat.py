@@ -51,7 +51,7 @@ class PresetNames(str, Enum):
 
 
 def _process_avatar_input(
-    avatar: str | AtomicImage | None = None,
+    avatar: str | AtomicImage | None, delta_path: str
 ) -> Tuple[BlockProto.ChatMessage.AvatarType.ValueType, str]:
     """Detects the avatar type and prepares the avatar data for the frontend.
 
@@ -59,6 +59,9 @@ def _process_avatar_input(
     ----------
     avatar :
         The avatar that was provided by the user.
+    delta_path : str
+        The delta path is used as media ID when a local image is served via the media
+        file manager.
 
     Returns
     -------
@@ -81,15 +84,13 @@ def _process_avatar_input(
         return AvatarType.EMOJI, avatar
     else:
         try:
-            # TODO(lukasmasuch): Pure SVGs are not yet supported here.
-            # They have a special handling in `st.image` and might require some refactoring.
             return AvatarType.IMAGE, image_to_url(
                 avatar,
                 width=WidthBehaviour.ORIGINAL,
                 clamp=False,
                 channels="RGB",
                 output_format="auto",
-                image_id="",
+                image_id=delta_path,
             )
         except Exception as ex:
             raise StreamlitAPIException(
@@ -131,8 +132,8 @@ class ChatMixin:
         Parameters
         ----------
         name : "user", "assistant", "ai", "human", or str
-            The name of the message author. Can be “user”, “assistant”, “ai”, or “human”
-            to enable preset styling and avatars.
+            The name of the message author. Can be "human"/"user" or
+            "ai"/"assistant" to enable preset styling and avatars.
 
             Currently, the name is not shown in the UI but is only set as an
             accessibility label. For accessibility reasons, you should not use
@@ -144,8 +145,9 @@ class ChatMixin:
             * A single emoji, e.g. "🧑‍💻", "🤖", "🦖". Shortcodes are not supported.
 
             * An image using one of the formats allowed for ``st.image``: path of a local
-                image file; URL to fetch the image from; array of shape (w,h) or (w,h,1)
-                for a monochrome image, (w,h,3) for a color image, or (w,h,4) for an RGBA image.
+                image file; URL to fetch the image from; an SVG image; array of shape
+                (w,h) or (w,h,1) for a monochrome image, (w,h,3) for a color image,
+                or (w,h,4) for an RGBA image.
 
             If None (default), uses default icons if ``name`` is "user",
             "assistant", "ai", "human" or the first letter of the ``name`` value.
@@ -194,7 +196,9 @@ class ChatMixin:
         ):
             # For selected labels, we are mapping the label to an avatar
             avatar = name.lower()
-        avatar_type, converted_avatar = _process_avatar_input(avatar)
+        avatar_type, converted_avatar = _process_avatar_input(
+            avatar, self.dg._get_delta_path_str()
+        )
 
         message_container_proto = BlockProto.ChatMessage()
         message_container_proto.name = name
@@ -278,12 +282,14 @@ class ChatMixin:
         check_callback_rules(self.dg, on_submit)
         check_session_state_rules(default_value=default, key=key, writes_allowed=False)
 
+        ctx = get_script_run_ctx()
         id = compute_widget_id(
             "chat_input",
             user_key=key,
             key=key,
             placeholder=placeholder,
             max_chars=max_chars,
+            page=ctx.page_script_hash if ctx else None,
         )
 
         # We omit this check for scripts running outside streamlit, because
@@ -310,8 +316,6 @@ class ChatMixin:
 
         chat_input_proto.default = default
         chat_input_proto.position = ChatInputProto.Position.BOTTOM
-
-        ctx = get_script_run_ctx()
 
         serde = ChatInputSerde()
         widget_state = register_widget(

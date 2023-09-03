@@ -15,10 +15,11 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import "@testing-library/jest-dom"
 
-import { Select as UISelect, TYPE } from "baseui/select"
+import { screen, fireEvent } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   MultiSelect as MultiSelectProto,
@@ -26,7 +27,10 @@ import {
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import Multiselect, { Props } from "./Multiselect"
 
-const getProps = (elementProps: Partial<MultiSelectProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<MultiSelectProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: MultiSelectProto.create({
     id: "1",
     label: "Label",
@@ -42,20 +46,23 @@ const getProps = (elementProps: Partial<MultiSelectProto> = {}): Props => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  ...widgetProps,
 })
 
 describe("Multiselect widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<Multiselect {...props} />)
-    expect(wrapper.find(UISelect).length).toBeTruthy()
+    render(<Multiselect {...props} />)
+
+    const multiSelect = screen.getByRole("combobox")
+    expect(multiSelect).toBeInTheDocument()
   })
 
   it("sets widget value on mount", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setIntArrayValue")
 
-    mount(<Multiselect {...props} />)
+    render(<Multiselect {...props} />)
     expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
@@ -67,24 +74,20 @@ describe("Multiselect widget", () => {
 
   it("has correct className and style", () => {
     const props = getProps()
-    const wrapper = mount(<Multiselect {...props} />)
-    const wrappedDiv = wrapper.find("div").first()
+    render(<Multiselect {...props} />)
+    const multiSelect = screen.getByTestId("stMultiSelect")
 
-    const { className, style } = wrappedDiv.props()
-    // @ts-expect-error
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("row-widget")
-    expect(splittedClassName).toContain("stMultiSelect")
-
-    // @ts-expect-error
-    expect(style.width).toBe(getProps().width)
+    expect(multiSelect).toHaveClass("row-widget")
+    expect(multiSelect).toHaveClass("stMultiSelect")
+    expect(multiSelect).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label", () => {
     const props = getProps()
-    const wrapper = mount(<Multiselect {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+    render(<Multiselect {...props} />)
+
+    const widgetLabel = screen.queryByText(`${props.element.label}`)
+    expect(widgetLabel).toBeInTheDocument()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -93,9 +96,9 @@ describe("Multiselect widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
-    const wrapper = mount(<Multiselect {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    render(<Multiselect {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+      "visibility: hidden"
     )
   })
 
@@ -105,135 +108,113 @@ describe("Multiselect widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
-    const wrapper = mount(<Multiselect {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
-    )
+    render(<Multiselect {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
   describe("placeholder", () => {
-    it("renders when it's not empty", () => {
-      const props = getProps()
-      const wrapper = mount(<Multiselect {...props} />)
-      expect(wrapper.find(UISelect).prop("placeholder")).toBe("Please select")
+    it("renders when it's empty", () => {
+      const props = getProps({ default: [] })
+      render(<Multiselect {...props} />)
+
+      const placeholder = screen.getByText("Please select")
+      expect(placeholder).toBeInTheDocument()
     })
 
     it("renders with empty options", () => {
-      const props = getProps({ options: [] })
-      const wrapper = mount(<Multiselect {...props} />)
+      const props = getProps({ default: [], options: [] })
+      render(<Multiselect {...props} />)
 
-      expect(wrapper.find(UISelect).prop("placeholder")).toBe(
-        "No options to select."
-      )
+      const placeholder = screen.getByText("No options to select.")
+      expect(placeholder).toBeInTheDocument()
     })
   })
 
   it("renders options", () => {
-    const props = getProps()
-    const wrapper = mount(<Multiselect {...props} />)
-    // @ts-expect-error
-    const options = (wrapper.find(UISelect).prop("options") as string[]) || []
+    const props = getProps({ default: [] })
+    render(<Multiselect {...props} />)
 
-    options.forEach(option => {
-      expect(option).toHaveProperty("label")
-      expect(option).toHaveProperty("value")
-    })
+    const expandListButton = screen.getAllByTitle("open")[0]
+    fireEvent.click(expandListButton)
 
+    const options = screen.getAllByRole("option")
     expect(options.length).toBe(props.element.options.length)
-    expect(wrapper.find(UISelect).prop("labelKey")).toBe("label")
-    expect(wrapper.find(UISelect).prop("valueKey")).toBe("value")
+    options.forEach((option, idx) => {
+      expect(option).toHaveTextContent(props.element.options[idx])
+    })
   })
 
   it("filters based on label, not value", () => {
-    const props = getProps()
-    const wrapper = mount(<Multiselect {...props} />)
+    const props = getProps({ default: [] })
+    render(<Multiselect {...props} />)
 
-    const options = wrapper.find(UISelect).prop("options") || []
-    const filterOptionsFn =
-      wrapper.find(UISelect).prop("filterOptions") || (() => [])
+    const multiSelect = screen.getByRole("combobox")
 
-    // @ts-expect-error filterOptionsFn expects readonly options
-    expect(filterOptionsFn(options, "1").length).toEqual(0)
-    // @ts-expect-error filterOptionsFn expects readonly options
-    expect(filterOptionsFn(options, "b").length).toEqual(1)
-  })
+    fireEvent.change(multiSelect, { target: { value: "1" } })
+    expect(screen.getByText("No results")).toBeInTheDocument()
 
-  it("has multi attr", () => {
-    const props = getProps()
-    const wrapper = mount(<Multiselect {...props} />)
-    expect(wrapper.find(UISelect).prop("multi")).toBeDefined()
-  })
-
-  it("has correct type", () => {
-    const props = getProps()
-    const wrapper = mount(<Multiselect {...props} />)
-    expect(wrapper.find(UISelect).prop("type")).toBe(TYPE.select)
+    fireEvent.change(multiSelect, { target: { value: "a" } })
+    const match = screen.getByRole("option")
+    expect(match).toHaveTextContent("a")
   })
 
   it("can be disabled", () => {
-    const props = getProps()
-    const wrapper = mount(<Multiselect {...props} />)
-    expect(wrapper.find(UISelect).prop("disabled")).toBe(props.disabled)
+    const props = getProps({}, { disabled: true })
+    render(<Multiselect {...props} />)
+    const multiSelect = screen.getByRole("combobox")
+    expect(multiSelect).toBeDisabled()
   })
 
   it("can select multiple options", () => {
     const props = getProps()
-    const wrapper = mount(<Multiselect {...props} />)
+    render(<Multiselect {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UISelect).prop("onChange")({
-      type: "select",
-      option: {
-        value: 1,
-      },
-    })
-    wrapper.update()
+    const multiSelect = screen.getByRole("combobox")
+    fireEvent.change(multiSelect, { target: { value: "b" } })
+    const match = screen.getByRole("option")
+    fireEvent.click(match)
 
-    expect(wrapper.find(UISelect).prop("value")).toStrictEqual([
-      { label: "a", value: "0" },
-      { label: "b", value: "1" },
-    ])
+    const selections = screen.getAllByRole("button")
+    expect(selections[0]).toHaveTextContent("a")
+    expect(selections[1]).toHaveTextContent("b")
   })
 
   it("can remove options", () => {
     const props = getProps()
-    const wrapper = mount(<Multiselect {...props} />)
+    render(<Multiselect {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UISelect).prop("onChange")({
-      type: "remove",
-      option: {
-        value: 1,
-      },
+    // Clear current selection
+    const deleteOptionButton = screen.getAllByTitle("Delete")[0]
+    fireEvent.click(deleteOptionButton)
+
+    // Should now see all options available again
+    const expandListButton = screen.getAllByTitle("open")[0]
+    fireEvent.click(expandListButton)
+
+    const options = screen.getAllByRole("option")
+    expect(options.length).toBe(props.element.options.length)
+    options.forEach((option, idx) => {
+      expect(option).toHaveTextContent(props.element.options[idx])
     })
-    wrapper.update()
-
-    expect(wrapper.find(UISelect).prop("value")).toStrictEqual([
-      { label: "a", value: "0" },
-    ])
   })
 
-  it("can clear", () => {
+  it("can clear all", () => {
     const props = getProps()
-    const wrapper = mount(<Multiselect {...props} />)
+    render(<Multiselect {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UISelect).prop("onChange")({ type: "clear" })
-    wrapper.update()
+    // Clear all selections
+    const clearAllButton = screen.getByRole("button", { name: "Clear all" })
+    fireEvent.click(clearAllButton)
 
-    expect(wrapper.find(UISelect).prop("value")).toStrictEqual([])
-  })
+    // Should now see all options available again
+    const expandListButton = screen.getAllByTitle("open")[0]
+    fireEvent.click(expandListButton)
 
-  it("throws an exception when state transition is unknown", () => {
-    const props = getProps()
-    const wrapper = mount(<Multiselect {...props} />)
-    const UNKNOWN_TRANSITION = "UNKNOWN_TRANSITION"
-    const onChange = wrapper.find(UISelect).prop("onChange")
-
-    // @ts-expect-error
-    expect(() => onChange({ type: UNKNOWN_TRANSITION })).toThrow(
-      `State transition is unknown: ${UNKNOWN_TRANSITION}`
-    )
+    const options = screen.getAllByRole("option")
+    expect(options.length).toBe(props.element.options.length)
+    options.forEach((option, idx) => {
+      expect(option).toHaveTextContent(props.element.options[idx])
+    })
   })
 
   it("resets its value when form is cleared", () => {
@@ -243,22 +224,19 @@ describe("Multiselect widget", () => {
 
     jest.spyOn(props.widgetMgr, "setIntArrayValue")
 
-    const wrapper = mount(<Multiselect {...props} />)
+    render(<Multiselect {...props} />)
 
     // Change the widget value
-    // @ts-expect-error
-    wrapper.find(UISelect).prop("onChange")({
-      type: "select",
-      option: {
-        value: 1,
-      },
-    })
-    wrapper.update()
+    const multiSelect = screen.getByRole("combobox")
+    fireEvent.change(multiSelect, { target: { value: "b" } })
+    const match = screen.getByRole("option")
+    // Select b
+    fireEvent.click(match)
 
-    expect(wrapper.find(UISelect).prop("value")).toStrictEqual([
-      { label: "a", value: "0" },
-      { label: "b", value: "1" },
-    ])
+    // Options list should only have c available - a & b selected
+    const remainingOptions = screen.getAllByRole("option")
+    expect(remainingOptions.length).toBe(1)
+    expect(remainingOptions[0]).toHaveTextContent("c")
 
     expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
       props.element,
@@ -270,14 +248,16 @@ describe("Multiselect widget", () => {
 
     // "Submit" the form
     props.widgetMgr.submitForm("form")
-    wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated
-    const defaultValue = props.element.default.map(value => ({
-      label: props.element.options[value],
-      value: value.toString(),
-    }))
-    expect(wrapper.find(UISelect).prop("value")).toStrictEqual(defaultValue)
+    const expandListButton = screen.getAllByTitle("open")[0]
+    fireEvent.click(expandListButton)
+    // Options list should only have b & c available - default a selected
+    const updatedOptions = screen.getAllByRole("option")
+    expect(updatedOptions.length).toBe(2)
+    expect(updatedOptions[0]).toHaveTextContent("b")
+    expect(updatedOptions[1]).toHaveTextContent("c")
+
     expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,
@@ -286,6 +266,7 @@ describe("Multiselect widget", () => {
       }
     )
   })
+
   describe("properly invalidates going over max selections", () => {
     it("has correct noResultsMsg when maxSelections is not passed", () => {
       const props = getProps(
@@ -296,50 +277,60 @@ describe("Multiselect widget", () => {
           options: ["a", "b", "c"],
         })
       )
-      const wrapper = mount(<Multiselect {...props} />)
+      render(<Multiselect {...props} />)
 
-      expect(wrapper.find(UISelect).props()).toHaveProperty(
-        "noResultsMsg",
-        "No results"
-      )
+      // Type something with no matches
+      const multiSelect = screen.getByRole("combobox")
+      fireEvent.change(multiSelect, { target: { value: "z" } })
+
+      expect(screen.getByText("No results")).toBeInTheDocument()
     })
 
-    it("has correct noResultsMsg when maxSelections is passed", () => {
+    it("has correct noResultsMsg when no match and selections < maxSelections", () => {
       const props = getProps(
         MultiSelectProto.create({
           id: "1",
           label: "Label",
-          default: [0, 1],
+          default: [0],
+          options: ["a", "b", "c"],
+          maxSelections: 3,
+        })
+      )
+      render(<Multiselect {...props} />)
+
+      // Type something with no matches
+      const multiSelect = screen.getByRole("combobox")
+      fireEvent.change(multiSelect, { target: { value: "z" } })
+
+      expect(screen.getByText("No results")).toBeInTheDocument()
+    })
+
+    it("has correct noResultsMsg when maxSelections reached", () => {
+      const props = getProps(
+        MultiSelectProto.create({
+          id: "1",
+          label: "Label",
+          default: [0],
           options: ["a", "b", "c"],
           maxSelections: 2,
         })
       )
-      const wrapper = mount(<Multiselect {...props} />)
+      render(<Multiselect {...props} />)
 
-      expect(wrapper.find(UISelect).props()).toHaveProperty(
-        "noResultsMsg",
-        "You can only select up to 2 options. Remove an option first."
-      )
+      // Select another option, b
+      const multiSelect = screen.getByRole("combobox")
+      fireEvent.change(multiSelect, { target: { value: "b" } })
+      const match = screen.getByRole("option")
+      fireEvent.click(match)
+
+      expect(
+        screen.getByText(
+          "You can only select up to 2 options. Remove an option first."
+        )
+      ).toBeInTheDocument()
     })
 
-    it("has correct noResultsMsg when maxSelections === 1", () => {
-      const props = getProps(
-        MultiSelectProto.create({
-          id: "1",
-          label: "Label",
-          default: [0, 1],
-          options: ["a", "b", "c"],
-          maxSelections: 1,
-        })
-      )
-      const wrapper = mount(<Multiselect {...props} />)
-
-      expect(wrapper.find(UISelect).prop("noResultsMsg")).toBe(
-        "You can only select up to 1 option. Remove an option first."
-      )
-    })
-
-    it("does not allow for more selection when an option is picked", () => {
+    it("does not allow for more selection when an option is picked & maxSelections === 1", () => {
       const props = getProps(
         MultiSelectProto.create({
           id: "1",
@@ -349,20 +340,16 @@ describe("Multiselect widget", () => {
           maxSelections: 1,
         })
       )
-      const wrapper = mount(<Multiselect {...props} />)
+      render(<Multiselect {...props} />)
 
-      // @ts-expect-error
-      wrapper.find(UISelect).prop("onChange")({
-        type: "select",
-        option: {
-          value: 1,
-        },
-      })
-      wrapper.update()
+      const multiSelect = screen.getByRole("combobox")
+      fireEvent.click(multiSelect)
 
-      expect(wrapper.find(UISelect).prop("value")).toStrictEqual([
-        { label: "a", value: "0" },
-      ])
+      expect(
+        screen.getByText(
+          "You can only select up to 1 option. Remove an option first."
+        )
+      ).toBeInTheDocument()
     })
 
     it("does allow an option to be removed when we are at max selections", () => {
@@ -375,20 +362,19 @@ describe("Multiselect widget", () => {
           maxSelections: 2,
         })
       )
-      const wrapper = mount(<Multiselect {...props} />)
+      render(<Multiselect {...props} />)
 
-      // @ts-expect-error
-      wrapper.find(UISelect).prop("onChange")({
-        type: "remove",
-        option: {
-          value: 1,
-        },
-      })
-      wrapper.update()
+      // Clear a selection
+      const deleteOptionButton = screen.getAllByTitle("Delete")[0]
+      fireEvent.click(deleteOptionButton)
 
-      expect(wrapper.find(UISelect).prop("value")).toStrictEqual([
-        { label: "a", value: "0" },
-      ])
+      // Options list should only have a & c available - b selected
+      const expandListButton = screen.getAllByTitle("open")[0]
+      fireEvent.click(expandListButton)
+      const updatedOptions = screen.getAllByRole("option")
+      expect(updatedOptions.length).toBe(2)
+      expect(updatedOptions[0]).toHaveTextContent("a")
+      expect(updatedOptions[1]).toHaveTextContent("c")
     })
   })
 })

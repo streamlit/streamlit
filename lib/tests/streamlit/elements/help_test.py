@@ -394,9 +394,6 @@ class GetVariableNameFromCodeStrTest(unittest.TestCase):
                 actual = _get_variable_name_from_code_str(code)
                 self.assertEqual(actual, None)
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 8), reason="Walrus was introduced in Python 3.8"
-    )
     def test_walrus_should_return_var_name(self):
         for st_call in st_calls:
             # Wrap test in an st call.

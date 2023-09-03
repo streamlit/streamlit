@@ -34,6 +34,7 @@ from streamlit.runtime.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
 )
+from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.web.server.server import MEDIA_ENDPOINT, UPLOAD_FILE_ENDPOINT
 
@@ -54,6 +55,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             uploaded_file_mgr=MemoryUploadedFileManager(UPLOAD_FILE_ENDPOINT),
             page_script_hash="",
             user_info={"email": "test@test.com"},
+            script_requests=ScriptRequests(),
         )
         add_script_run_ctx(threading.current_thread(), self.script_run_ctx)
 

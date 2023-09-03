@@ -15,21 +15,22 @@
  */
 
 import React, { ReactElement } from "react"
+import { useTheme } from "@emotion/react"
 import { AutoSizer } from "react-virtualized"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import ExpandableProto = BlockProto.Expandable
 import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import { getElementWidgetID } from "@streamlit/lib/src/util/utils"
-import withExpandable from "@streamlit/lib/src/hocs/withExpandable"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
 import Tabs, { TabProps } from "@streamlit/lib/src/components/elements/Tabs"
 import ChatMessage from "@streamlit/lib/src/components/elements/ChatMessage"
+import Expander from "@streamlit/lib/src/components/elements/Expander"
 
 import {
   BaseBlockProps,
   isComponentStale,
   shouldComponentBeEnabled,
+  assignDividerColor,
 } from "./utils"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 
@@ -39,8 +40,6 @@ import {
   StyledVerticalBlock,
   styledVerticalBlockWrapperStyles,
 } from "./styled-components"
-
-const ExpandableLayoutBlock = withExpandable(LayoutBlock)
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
@@ -55,13 +54,7 @@ interface BlockPropsWithWidth extends BaseBlockProps {
 const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const { node } = props
 
-  // Allow columns and chat messages to create the specified space regardless of empty state
-  // TODO: Maybe we can simplify this to: node.isEmpty && !node.deltaBlock.allowEmpty?
-  if (
-    node.isEmpty &&
-    !node.deltaBlock.column &&
-    !node.deltaBlock.chatMessage
-  ) {
+  if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return <></>
   }
 
@@ -73,20 +66,20 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     props.scriptRunId
   )
 
-  let child: ReactElement
   const childProps = { ...props, ...{ node } }
+  const child: ReactElement = <LayoutBlock {...childProps} />
+
   if (node.deltaBlock.expandable) {
-    // Handle expandable blocks
-    const expandableProps = {
-      ...childProps,
-      empty: node.isEmpty,
-      isStale,
-      expandable: true,
-      ...(node.deltaBlock.expandable as ExpandableProto),
-    }
-    child = <ExpandableLayoutBlock {...expandableProps} />
-  } else {
-    child = <LayoutBlock {...childProps} />
+    return (
+      <Expander
+        empty={node.isEmpty}
+        isStale={isStale}
+        widgetsDisabled={props.widgetsDisabled}
+        element={node.deltaBlock.expandable as BlockProto.Expandable}
+      >
+        {child}
+      </Expander>
+    )
   }
 
   if (node.deltaBlock.type === "form") {
@@ -112,6 +105,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     return (
       <ChatMessage
         element={node.deltaBlock.chatMessage as BlockProto.ChatMessage}
+        endpoints={props.endpoints}
       >
         {child}
       </ChatMessage>
@@ -146,6 +140,8 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 }
 
 const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
+  // Handle cycling of colors for dividers:
+  assignDividerColor(props.node, useTheme())
   return (
     <>
       {props.node.children &&
