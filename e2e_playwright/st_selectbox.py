@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pandas as pd
+
 import streamlit as st
 from streamlit import runtime
 
@@ -82,3 +84,8 @@ i10 = st.selectbox(
     placeholder="Select one of the options...",
 )
 st.write("value 10:", i10)
+
+i11 = st.selectbox(
+    "selectbox 1 (options from dataframe)", pd.DataFrame({"foo": list(options)})
+)
+st.write("value 1:", i11)
