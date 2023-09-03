@@ -25,7 +25,7 @@ def test_radio_widget_rendering(
     expect(radio_widgets).to_have_count(13)
 
     assert_snapshot(radio_widgets.nth(0), name="st_radio-default")
-    assert_snapshot(radio_widgets.nth(1), name="st_number_formatted_options")
+    assert_snapshot(radio_widgets.nth(1), name="st_radio-formatted_options")
     assert_snapshot(radio_widgets.nth(2), name="st_radio-no_options")
     assert_snapshot(radio_widgets.nth(3), name="st_radio-disabled")
     assert_snapshot(radio_widgets.nth(4), name="st_radio-horizontal")
