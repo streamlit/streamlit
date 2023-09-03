@@ -92,7 +92,7 @@ def test_handles_option_selection_via_typing(app: Page):
     )
 
 
-def test_shows_correct_options_via_fuzz_search(
+def test_shows_correct_options_via_fuzzy_search(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the fuzzy matching of options via typing works correctly."""
@@ -106,7 +106,9 @@ def test_shows_correct_options_via_fuzz_search(
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
 
-def test_empty_selectbox_behaves_correctly(app: Page):
+def test_empty_selectbox_behaves_correctly(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test that st.selectbox behaves correctly when empty (no initial selection)."""
     # Enter 10 in the first empty input:
     empty_selectbox_input = app.get_by_test_id("stSelectbox").locator("input").nth(8)
@@ -119,6 +121,10 @@ def test_empty_selectbox_behaves_correctly(app: Page):
         "value 9: male", use_inner_text=True
     )
 
+    assert_snapshot(
+        app.get_by_test_id("stSelectbox").nth(8), name="st_selectbox-clearable_input"
+    )
+
     empty_selectbox_input.focus()
     empty_selectbox_input.press("Escape")
 
@@ -128,6 +134,57 @@ def test_empty_selectbox_behaves_correctly(app: Page):
     )
 
 
-# TODO:
-# test_handles_callback_correctly
-# test_keeps_value_on_selection_close
+def test_keeps_value_on_selection_close(app: Page):
+    """Test that the fuzzy matching of options via typing works correctly."""
+    app.get_by_test_id("stSelectbox").nth(3).locator("input").click()
+
+    # Take a snapshot of the selection dropdown:
+    expect(app.locator('[data-baseweb="popover"]').first).to_be_visible()
+
+    # Click outside to close the dropdown:
+    app.locator(".stMarkdown").first.click()
+
+    # Check if value is still initial value:
+    expect(app.locator(".stMarkdown").nth(3)).to_have_text(
+        "value 4: e2e/scripts/components_iframe.py", use_inner_text=True
+    )
+
+
+def test_handles_callback_on_change_correctly(app: Page):
+    """Test that it correctly calls the callback on change."""
+    # Check initial state:
+    expect(app.locator(".stMarkdown").nth(7)).to_have_text(
+        "value 8: female", use_inner_text=True
+    )
+    expect(app.locator(".stMarkdown").nth(8)).to_have_text(
+        "selectbox changed: False", use_inner_text=True
+    )
+
+    app.get_by_test_id("stSelectbox").nth(7).locator("input").click()
+
+    # Take a snapshot of the selection dropdown:
+    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    # Select last option:
+    selection_dropdown.locator("li").first.click()
+
+    # Check that selection worked:
+    expect(app.locator(".stMarkdown").nth(7)).to_have_text(
+        "value 8: male", use_inner_text=True
+    )
+    expect(app.locator(".stMarkdown").nth(8)).to_have_text(
+        "selectbox changed: True", use_inner_text=True
+    )
+
+    # Change different date input to trigger delta path change
+    empty_selectbox_input = app.get_by_test_id("stSelectbox").locator("input").first
+
+    # Type an option:
+    empty_selectbox_input.type("female")
+    empty_selectbox_input.press("Enter")
+
+    expect(app.locator(".stMarkdown").first).to_have_text(
+        "value 1: female", use_inner_text=True
+    )
+    expect(app.locator(".stMarkdown").nth(7)).to_have_text(
+        "value 8: male", use_inner_text=True
+    )
