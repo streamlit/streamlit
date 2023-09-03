@@ -32,6 +32,7 @@ st.write("value 3:", i3)
 more_options = [
     "e2e/scripts/components_iframe.py",
     "e2e/scripts/st_warning.py",
+    "This is a very very very long option label that should be truncated when it is showing in the dropdown menu.",
     "e2e/scripts/st_container.py",
     "e2e/scripts/st_dataframe_sort_column.py",
     "e2e/scripts/app_hotkeys.py",

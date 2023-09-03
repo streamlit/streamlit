@@ -61,4 +61,4 @@ if runtime.exists():
     st.write("value 8:", st.session_state.selectbox8)
     st.write("select box changed:", "selectbox_changed" in st.session_state)
 
-st.selectbox("PySpark Selectbox", pyspark_mocks.DataFrame())
+st.selectbox("PySpark Selectbox", pyspark_mocks.DataFrame())  # type: ignore

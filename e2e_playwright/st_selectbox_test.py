@@ -39,7 +39,7 @@ def test_selectbox_widget_rendering(
     assert_snapshot(selectbox_widgets.nth(10), name="st_radio-dataframe_options")
 
 
-def test_selectbox_has_correct_default_values(app: Page):
+def test_selectbox_has_correct_initial_values(app: Page):
     """Test that st.selectbox returns the correct initial values."""
     markdown_elements = app.locator(".stMarkdown")
     expect(markdown_elements).to_have_count(14)
@@ -60,3 +60,13 @@ def test_selectbox_has_correct_default_values(app: Page):
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
         expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
+
+
+# TODO:
+# test_handles_option_selection
+# test_handles_option_selection_via_typing
+# test_empty_selection_behaves_correctly
+# test_handles_callback_correctly
+# test_keeps_value_on_selection_close
+# test_option_dropdown_rendering
+# test_shows_correct_options_via_fuzzy_search
