@@ -16,13 +16,15 @@ import streamlit as st
 from streamlit import runtime
 
 options = ("male", "female")
-i1 = st.selectbox("selectbox 1", options, 1)
+i1 = st.selectbox("selectbox 1 (default)", options)
 st.write("value 1:", i1)
 
-i2 = st.selectbox("selectbox 2", options, 0, format_func=lambda x: x.capitalize())
+i2 = st.selectbox(
+    "selectbox 2 (formatted options)", options, 1, format_func=lambda x: x.capitalize()
+)
 st.write("value 2:", i2)
 
-i3: None = st.selectbox("selectbox 3", [])
+i3: None = st.selectbox("selectbox 3 (no options)", [])
 st.write("value 3:", i3)
 
 more_options = [
@@ -39,26 +41,44 @@ more_options = [
     "e2e/scripts/st_color_picker.py",
     "e2e/scripts/st_expander.py",
 ]
-i4 = st.selectbox("selectbox 4", more_options, 0)
+i4 = st.selectbox("selectbox 4 (more options)", more_options, 0)
 st.write("value 4:", i4)
 
-i5 = st.selectbox("selectbox 5", options, disabled=True)
+i5 = st.selectbox("selectbox 5 (disabled)", options, disabled=True)
 st.write("value 5:", i5)
 
-i6 = st.selectbox("selectbox 6", options, label_visibility="hidden")
+i6 = st.selectbox("selectbox 6 (hidden label)", options, label_visibility="hidden")
 st.write("value 6:", i6)
 
-i7 = st.selectbox("selectbox 7", options, label_visibility="collapsed")
+i7 = st.selectbox(
+    "selectbox 7 (collapsed label)", options, label_visibility="collapsed"
+)
 st.write("value 7:", i7)
 
 if runtime.exists():
 
     def on_change():
         st.session_state.selectbox_changed = True
+        st.text("Selectbox widget callback triggered")
 
-    st.selectbox("selectbox 8", options, 1, key="selectbox8", on_change=on_change)
+    st.selectbox(
+        "selectbox 8 (with callback, help)",
+        options,
+        1,
+        key="selectbox8",
+        on_change=on_change,
+        help="Help text",
+    )
     st.write("value 8:", st.session_state.selectbox8)
-    st.write("select box changed:", "selectbox_changed" in st.session_state)
+    st.write("selectbox changed:", "selectbox_changed" in st.session_state)
 
 i9 = st.selectbox("selectbox 9 (empty selection)", options, index=None)
 st.write("value 9:", i9)
+
+i10 = st.selectbox(
+    "selectbox 10 (empty, custom placeholder)",
+    options,
+    index=None,
+    placeholder="Select one of the options...",
+)
+st.write("value 10:", i10)
