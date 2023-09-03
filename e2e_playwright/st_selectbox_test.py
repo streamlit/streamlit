@@ -26,23 +26,23 @@ def test_selectbox_widget_rendering(
 
     assert_snapshot(selectbox_widgets.nth(0), name="st_selectbox-default")
     assert_snapshot(selectbox_widgets.nth(1), name="st_selectbox-formatted_options")
-    assert_snapshot(selectbox_widgets.nth(2), name="st_radio-no_options")
-    assert_snapshot(selectbox_widgets.nth(3), name="st_radio-more_options")
-    assert_snapshot(selectbox_widgets.nth(4), name="st_radio-disabled")
-    assert_snapshot(selectbox_widgets.nth(5), name="st_radio-hidden_label")
-    assert_snapshot(selectbox_widgets.nth(6), name="st_radio-collapsed_label")
-    assert_snapshot(selectbox_widgets.nth(7), name="st_radio-callback_help")
-    assert_snapshot(selectbox_widgets.nth(8), name="st_radio-empty_selection")
+    assert_snapshot(selectbox_widgets.nth(2), name="st_selectbox-no_options")
+    assert_snapshot(selectbox_widgets.nth(3), name="st_selectbox-more_options")
+    assert_snapshot(selectbox_widgets.nth(4), name="st_selectbox-disabled")
+    assert_snapshot(selectbox_widgets.nth(5), name="st_selectbox-hidden_label")
+    assert_snapshot(selectbox_widgets.nth(6), name="st_selectbox-collapsed_label")
+    assert_snapshot(selectbox_widgets.nth(7), name="st_selectbox-callback_help")
+    assert_snapshot(selectbox_widgets.nth(8), name="st_selectbox-empty_selection")
     assert_snapshot(
-        selectbox_widgets.nth(9), name="st_radio-empty_selection_placeholder"
+        selectbox_widgets.nth(9), name="st_selectbox-empty_selection_placeholder"
     )
-    assert_snapshot(selectbox_widgets.nth(10), name="st_radio-dataframe_options")
+    assert_snapshot(selectbox_widgets.nth(10), name="st_selectbox-dataframe_options")
 
 
 def test_selectbox_has_correct_initial_values(app: Page):
     """Test that st.selectbox returns the correct initial values."""
     markdown_elements = app.locator(".stMarkdown")
-    expect(markdown_elements).to_have_count(14)
+    expect(markdown_elements).to_have_count(12)
 
     expected = [
         "value 1: male",
@@ -53,6 +53,7 @@ def test_selectbox_has_correct_initial_values(app: Page):
         "value 6: male",
         "value 7: male",
         "value 8: female",
+        "selectbox changed: False",
         "value 9: None",
         "value 10: None",
         "value 11: male",
@@ -62,11 +63,71 @@ def test_selectbox_has_correct_initial_values(app: Page):
         expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
 
 
+def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that selection of an option via the dropdown works correctly."""
+    app.get_by_test_id("stSelectbox").nth(3).locator("input").click()
+
+    # Take a snapshot of the selection dropdown:
+    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    assert_snapshot(selection_dropdown, name="st_selectbox-selection_dropdown")
+    # Select last option:
+    selection_dropdown.locator("li").nth(1).click()
+    # Check that selection worked:
+    expect(app.locator(".stMarkdown").nth(3)).to_have_text(
+        "value 4: e2e/scripts/st_warning.py", use_inner_text=True
+    )
+
+
+def test_handles_option_selection_via_typing(app: Page):
+    """Test that selection of an option via typing works correctly."""
+    selectbox_input = app.get_by_test_id("stSelectbox").nth(3).locator("input")
+
+    # Type an option:
+    selectbox_input.type("e2e/scripts/st_warning.py")
+    selectbox_input.press("Enter")
+
+    # Check that selection worked:
+    expect(app.locator(".stMarkdown").nth(3)).to_have_text(
+        "value 4: e2e/scripts/st_warning.py", use_inner_text=True
+    )
+
+
+def test_shows_correct_options_via_fuzz_search(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the fuzzy matching of options via typing works correctly."""
+    selectbox_input = app.get_by_test_id("stSelectbox").nth(3).locator("input")
+
+    # Start typing:
+    selectbox_input.type("exp")
+
+    # Check filtered options
+    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
+
+
+def test_empty_selectbox_behaves_correctly(app: Page):
+    """Test that st.selectbox behaves correctly when empty (no initial selection)."""
+    # Enter 10 in the first empty input:
+    empty_selectbox_input = app.get_by_test_id("stSelectbox").locator("input").nth(8)
+
+    # Type an option:
+    empty_selectbox_input.type("male")
+    empty_selectbox_input.press("Enter")
+
+    expect(app.locator(".stMarkdown").nth(9)).to_have_text(
+        "value 9: male", use_inner_text=True
+    )
+
+    empty_selectbox_input.focus()
+    empty_selectbox_input.press("Escape")
+
+    # Should be empty again:
+    expect(app.locator(".stMarkdown").nth(9)).to_have_text(
+        "value 9: None", use_inner_text=True
+    )
+
+
 # TODO:
-# test_handles_option_selection
-# test_handles_option_selection_via_typing
-# test_empty_selection_behaves_correctly
 # test_handles_callback_correctly
 # test_keeps_value_on_selection_close
-# test_option_dropdown_rendering
-# test_shows_correct_options_via_fuzzy_search
