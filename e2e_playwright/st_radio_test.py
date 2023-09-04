@@ -41,7 +41,7 @@ def test_radio_widget_rendering(
 
 def test_radio_has_correct_default_values(app: Page):
     """Test that st.radio returns the correct initial values."""
-    markdown_elements = app.get_by_test_id(".stMarkdown")
+    markdown_elements = app.get_by_test_id("stMarkdown")
     expect(markdown_elements).to_have_count(14)
 
     expected = [
