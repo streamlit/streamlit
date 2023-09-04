@@ -551,6 +551,8 @@ class TimeWidgetsMixin:
            https://doc-date-input1.streamlit.app/
            height: 380px
 
+        To initialize an empty date input, use ``None`` as the value:
+
         >>> import datetime
         >>> import streamlit as st
         >>>

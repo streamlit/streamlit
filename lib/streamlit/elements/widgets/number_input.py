@@ -204,9 +204,9 @@ class NumberInputMixin:
 
         Returns
         -------
-        int or float
-            The current value of the numeric input widget. The return type
-            will match the data type of the value parameter.
+        int or float or None
+            The current value of the numeric input widget or ``None`` if the widget
+            is empty. The return type will match the data type of the value parameter.
 
         Example
         -------
@@ -217,6 +217,17 @@ class NumberInputMixin:
 
         .. output::
            https://doc-number-input.streamlit.app/
+           height: 260px
+
+        To initialize an empty number input, use ``None`` as the value:
+
+        >>> import streamlit as st
+        >>>
+        >>> number = st.number_input('Insert a number', value=None)
+        >>> st.write('The current number is ', number)
+
+        .. output::
+           https://doc-number-input-empty.streamlit.app/
            height: 260px
 
         """
