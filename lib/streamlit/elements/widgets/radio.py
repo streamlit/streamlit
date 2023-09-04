@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -78,6 +78,46 @@ class RadioSerde(Generic[T]):
 
 
 class RadioMixin:
+    @overload
+    def radio(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: int = 0,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only args:
+        disabled: bool = False,
+        horizontal: bool = False,
+        captions: Sequence[str] | None = None,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T:
+        pass
+
+    @overload
+    def radio(
+        self,
+        label: str,
+        options: OptionSequence[T],
+        index: None = None,
+        format_func: Callable[[Any], Any] = str,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only args:
+        disabled: bool = False,
+        horizontal: bool = False,
+        captions: Sequence[str] | None = None,
+        label_visibility: LabelVisibility = "visible",
+    ) -> T | None:
+        pass
+
     @gather_metrics("radio")
     def radio(
         self,
@@ -133,8 +173,8 @@ class RadioMixin:
             selected.
         index : int or None
             The index of the preselected option on first render. If ``None``,
-            the widget will initialize empty and return ``None`` until the user
-            selects an option. Defaults to 0 (the first option).
+            will initialize empty and return ``None`` until the user selects an option.
+            Defaults to 0 (the first option).
         format_func : function
             Function to modify the display of radio options. It receives
             the raw option as an argument and should output the label to be
@@ -173,7 +213,7 @@ class RadioMixin:
         Returns
         -------
         any
-            The selected option.
+            The selected option or ``None`` if no option is selected.
 
         Example
         -------
@@ -191,6 +231,22 @@ class RadioMixin:
 
         .. output::
            https://doc-radio.streamlit.app/
+           height: 300px
+
+        To initialize an empty radio widget, use ``None`` as the index value:
+
+        >>> import streamlit as st
+        >>>
+        >>> genre = st.radio(
+        ...     "What's your favorite movie genre",
+        ...     [":rainbow[Comedy]", "***Drama***", "Documentary :movie_camera:"],
+        ...     index=None,
+        ... )
+        >>>
+        >>> st.write("You selected:", genre)
+
+        .. output::
+           https://doc-radio-empty.streamlit.app/
            height: 300px
 
         """
