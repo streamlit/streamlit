@@ -41,7 +41,7 @@ def test_selectbox_widget_rendering(
 
 def test_selectbox_has_correct_initial_values(app: Page):
     """Test that st.selectbox returns the correct initial values."""
-    markdown_elements = app.locator(".stMarkdown")
+    markdown_elements = app.get_by_test_id("stMarkdown")
     expect(markdown_elements).to_have_count(12)
 
     expected = [
@@ -73,7 +73,7 @@ def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFuncti
     # Select last option:
     selection_dropdown.locator("li").nth(1).click()
     # Check that selection worked:
-    expect(app.locator(".stMarkdown").nth(3)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
         "value 4: e2e/scripts/st_warning.py", use_inner_text=True
     )
 
@@ -87,7 +87,7 @@ def test_handles_option_selection_via_typing(app: Page):
     selectbox_input.press("Enter")
 
     # Check that selection worked:
-    expect(app.locator(".stMarkdown").nth(3)).to_have_text(
+    expect(app.get_by_test_id(".tMarkdown").nth(3)).to_have_text(
         "value 4: e2e/scripts/st_warning.py", use_inner_text=True
     )
 
@@ -117,7 +117,7 @@ def test_empty_selectbox_behaves_correctly(
     empty_selectbox_input.type("male")
     empty_selectbox_input.press("Enter")
 
-    expect(app.locator(".stMarkdown").nth(9)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(9)).to_have_text(
         "value 9: male", use_inner_text=True
     )
 
@@ -129,7 +129,7 @@ def test_empty_selectbox_behaves_correctly(
     empty_selectbox_input.press("Escape")
 
     # Should be empty again:
-    expect(app.locator(".stMarkdown").nth(9)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(9)).to_have_text(
         "value 9: None", use_inner_text=True
     )
 
@@ -142,10 +142,10 @@ def test_keeps_value_on_selection_close(app: Page):
     expect(app.locator('[data-baseweb="popover"]').first).to_be_visible()
 
     # Click outside to close the dropdown:
-    app.locator(".stMarkdown").first.click()
+    app.get_by_test_id("stMarkdown").first.click()
 
     # Check if value is still initial value:
-    expect(app.locator(".stMarkdown").nth(3)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
         "value 4: e2e/scripts/components_iframe.py", use_inner_text=True
     )
 
@@ -153,10 +153,10 @@ def test_keeps_value_on_selection_close(app: Page):
 def test_handles_callback_on_change_correctly(app: Page):
     """Test that it correctly calls the callback on change."""
     # Check initial state:
-    expect(app.locator(".stMarkdown").nth(7)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(7)).to_have_text(
         "value 8: female", use_inner_text=True
     )
-    expect(app.locator(".stMarkdown").nth(8)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(8)).to_have_text(
         "selectbox changed: False", use_inner_text=True
     )
 
@@ -168,10 +168,10 @@ def test_handles_callback_on_change_correctly(app: Page):
     selection_dropdown.locator("li").first.click()
 
     # Check that selection worked:
-    expect(app.locator(".stMarkdown").nth(7)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(7)).to_have_text(
         "value 8: male", use_inner_text=True
     )
-    expect(app.locator(".stMarkdown").nth(8)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(8)).to_have_text(
         "selectbox changed: True", use_inner_text=True
     )
 
@@ -182,9 +182,9 @@ def test_handles_callback_on_change_correctly(app: Page):
     empty_selectbox_input.type("female")
     empty_selectbox_input.press("Enter")
 
-    expect(app.locator(".stMarkdown").first).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").first).to_have_text(
         "value 1: female", use_inner_text=True
     )
-    expect(app.locator(".stMarkdown").nth(7)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(7)).to_have_text(
         "value 8: male", use_inner_text=True
     )
