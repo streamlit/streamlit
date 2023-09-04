@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Optional, cast
+from typing import cast
 
 from typing_extensions import Literal
 
@@ -48,9 +50,9 @@ from streamlit.type_util import (
 
 @dataclass
 class TextInputSerde:
-    value: SupportsStr
+    value: SupportsStr | None
 
-    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str:
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> str:
         return str(ui_value if ui_value is not None else self.value)
 
     def serialize(self, v: str) -> str:
@@ -59,9 +61,9 @@ class TextInputSerde:
 
 @dataclass
 class TextAreaSerde:
-    value: SupportsStr
+    value: SupportsStr | None
 
-    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str:
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> str:
         return str(ui_value if ui_value is not None else self.value)
 
     def serialize(self, v: str) -> str:
@@ -73,17 +75,17 @@ class TextWidgetsMixin:
     def text_input(
         self,
         label: str,
-        value: SupportsStr = "",
-        max_chars: Optional[int] = None,
-        key: Optional[Key] = None,
+        value: SupportsStr | None = "",
+        max_chars: int | None = None,
+        key: Key | None = None,
         type: Literal["default", "password"] = "default",
-        help: Optional[str] = None,
-        autocomplete: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        help: str | None = None,
+        autocomplete: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        placeholder: Optional[str] = None,
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> str:
@@ -195,19 +197,19 @@ class TextWidgetsMixin:
         self,
         label: str,
         value: SupportsStr = "",
-        max_chars: Optional[int] = None,
-        key: Optional[Key] = None,
+        max_chars: int | None = None,
+        key: Key | None = None,
         type: str = "default",
-        help: Optional[str] = None,
-        autocomplete: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        help: str | None = None,
+        autocomplete: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        placeholder: Optional[str] = None,
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
+        ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
@@ -290,16 +292,16 @@ class TextWidgetsMixin:
     def text_area(
         self,
         label: str,
-        value: SupportsStr = "",
-        height: Optional[int] = None,
-        max_chars: Optional[int] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        value: SupportsStr | None = "",
+        height: int | None = None,
+        max_chars: int | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        placeholder: Optional[str] = None,
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> str:
@@ -405,19 +407,19 @@ class TextWidgetsMixin:
     def _text_area(
         self,
         label: str,
-        value: SupportsStr = "",
-        height: Optional[int] = None,
-        max_chars: Optional[int] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        value: SupportsStr | None = "",
+        height: int | None = None,
+        max_chars: int | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        placeholder: Optional[str] = None,
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
+        ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
