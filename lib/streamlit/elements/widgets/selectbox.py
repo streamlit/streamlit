@@ -160,7 +160,9 @@ class SelectboxMixin:
             Labels for the select options. This will be cast to str internally
             by default. For pandas.DataFrame, the first column is selected.
         index : int
-            The index of the preselected option on first render.
+            The index of the preselected option on first render. If ``None``,
+            will initialize empty and return ``None`` until the user provides input.
+            Defaults to 0 (the first option).
         format_func : function
             Function to modify the display of the labels. It receives the option
             as an argument and its output will be cast to str.
@@ -209,6 +211,23 @@ class SelectboxMixin:
 
         .. output::
            https://doc-selectbox.streamlit.app/
+           height: 320px
+
+        To initialize an empty selectbox, use ``None`` as the index value:
+
+        >>> import streamlit as st
+        >>>
+        >>> option = st.selectbox(
+        ...    "How would you like to be contacted?",
+        ...    ("Email", "Home phone", "Mobile phone"),
+        ...    index=None,
+        ...    placeholder="Select contact method...",
+        ... )
+        >>>
+        >>> st.write('You selected:', option)
+
+        .. output::
+           https://doc-selectbox-empty.streamlit.app/
            height: 320px
 
         """
