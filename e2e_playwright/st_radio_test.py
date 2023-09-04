@@ -41,7 +41,7 @@ def test_radio_widget_rendering(
 
 def test_radio_has_correct_default_values(app: Page):
     """Test that st.radio returns the correct initial values."""
-    markdown_elements = app.locator(".stMarkdown")
+    markdown_elements = app.get_by_test_id(".stMarkdown")
     expect(markdown_elements).to_have_count(14)
 
     expected = [
@@ -89,7 +89,7 @@ def test_set_value_correctly_when_click(app: Page):
     ]
 
     for markdown_element, expected_text in zip(
-        app.locator(".stMarkdown").all(), expected
+        app.get_by_test_id("stMarkdown").all(), expected
     ):
         expect(markdown_element).to_have_text(expected_text, use_inner_text=True)
 
@@ -100,11 +100,11 @@ def test_calls_callback_on_change(app: Page):
 
     radio_widget.locator('label[data-baseweb="radio"]').first.click(force=True)
 
-    expect(app.locator(".stMarkdown").nth(11)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
         "value 12: female",
         use_inner_text=True,
     )
-    expect(app.locator(".stMarkdown").nth(12)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(12)).to_have_text(
         "radio changed: True",
         use_inner_text=True,
     )
@@ -113,12 +113,12 @@ def test_calls_callback_on_change(app: Page):
     first_date_input_field = app.get_by_test_id("stRadio").first
     first_date_input_field.locator('label[data-baseweb="radio"]').last.click(force=True)
 
-    expect(app.locator(".stMarkdown").first).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").first).to_have_text(
         "value 1: male", use_inner_text=True
     )
 
     # Test if value is still correct after delta path change
-    expect(app.locator(".stMarkdown").nth(11)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
         "value 12: female",
         use_inner_text=True,
     )
