@@ -161,7 +161,7 @@ class SelectboxMixin:
             by default. For pandas.DataFrame, the first column is selected.
         index : int
             The index of the preselected option on first render. If ``None``,
-            will initialize empty and return ``None`` until the user provides input.
+            will initialize empty and return ``None`` until the user selects an option.
             Defaults to 0 (the first option).
         format_func : function
             Function to modify the display of the labels. It receives the option
@@ -197,7 +197,7 @@ class SelectboxMixin:
         Returns
         -------
         any
-            The selected option
+            The selected option or ``None`` if no option is selected.
 
         Example
         -------
