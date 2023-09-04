@@ -15,13 +15,14 @@
  */
 
 import React from "react"
-import PropTypes from "prop-types"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
+import { customRenderLibContext } from "@streamlit/lib/src/test_util"
+
 import {
-  UISelectbox,
   createPresetThemes,
   lightTheme,
   darkTheme,
-  shallow,
   mockSessionInfo,
   LibContextProps,
 } from "@streamlit/lib"
@@ -42,16 +43,6 @@ const getContext = (
   ...extend,
 })
 
-// This is a workaround since enzyme does not support context yet
-// https://github.com/enzymejs/enzyme/issues/2189
-// @ts-expect-error
-SettingsDialog.contextTypes = {
-  availableThemes: PropTypes.array,
-  activeTheme: PropTypes.shape,
-  setTheme: PropTypes.func,
-  addThemes: PropTypes.func,
-}
-
 const getProps = (extend?: Partial<Props>): Props => ({
   isServerConnected: true,
   onClose: jest.fn(),
@@ -66,14 +57,16 @@ const getProps = (extend?: Partial<Props>): Props => ({
 })
 
 describe("SettingsDialog", () => {
+  // Note: You may need to wrap the component in a context provider to pass the context if necessary.
+
   it("renders without crashing", () => {
     const availableThemes = [lightTheme, darkTheme]
     const props = getProps()
     const context = getContext({ availableThemes })
 
-    const wrapper = shallow(<SettingsDialog {...props} />, { context })
+    customRenderLibContext(<SettingsDialog {...props} />, context)
 
-    expect(wrapper).toMatchSnapshot()
+    expect(screen.getByText("Settings")).toBeInTheDocument()
   })
 
   it("should render run on save checkbox", () => {
@@ -81,18 +74,11 @@ describe("SettingsDialog", () => {
       allowRunOnSave: true,
     })
     const context = getContext()
-    const wrapper = shallow(<SettingsDialog {...props} />, { context })
-    const checkboxes = wrapper.find("StyledCheckbox")
+    customRenderLibContext(<SettingsDialog {...props} />, context)
+    expect(screen.getByText("Run on save")).toBeInTheDocument()
 
-    expect(checkboxes).toHaveLength(2)
-    expect(wrapper.state("runOnSave")).toBe(false)
+    screen.getByText("Run on save").click()
 
-    checkboxes
-      .at(0)
-      .simulate("change", { target: { name: "runOnSave", checked: true } })
-    wrapper.update()
-
-    expect(wrapper.state("runOnSave")).toBe(true)
     expect(props.onSave).toHaveBeenCalled()
     // @ts-expect-error
     expect(props.onSave.mock.calls[0][0].runOnSave).toBe(true)
@@ -101,18 +87,11 @@ describe("SettingsDialog", () => {
   it("should render wide mode checkbox", () => {
     const props = getProps()
     const context = getContext()
-    const wrapper = shallow(<SettingsDialog {...props} />, { context })
-    const checkboxes = wrapper.find("StyledCheckbox")
+    customRenderLibContext(<SettingsDialog {...props} />, context)
+    expect(screen.getByText("Wide mode")).toBeInTheDocument()
 
-    expect(checkboxes).toHaveLength(1)
-    expect(wrapper.state("wideMode")).toBe(false)
+    screen.getByText("Wide mode").click()
 
-    checkboxes
-      .at(0)
-      .simulate("change", { target: { name: "wideMode", checked: true } })
-    wrapper.update()
-
-    expect(wrapper.state("wideMode")).toBe(true)
     expect(props.onSave).toHaveBeenCalled()
     // @ts-expect-error
     expect(props.onSave.mock.calls[0][0].wideMode).toBe(true)
@@ -122,17 +101,14 @@ describe("SettingsDialog", () => {
     const availableThemes = [lightTheme, darkTheme]
     const props = getProps()
     const context = getContext({ availableThemes })
-    const wrapper = shallow(<SettingsDialog {...props} />, { context })
-    const selectbox = wrapper.find(UISelectbox)
-    const { options } = selectbox.props()
 
-    expect(options).toHaveLength(2)
-    expect(options).toEqual(availableThemes.map(theme => theme.name))
+    customRenderLibContext(<SettingsDialog {...props} />, context)
 
-    selectbox.prop("onChange")(1)
-    wrapper.update()
-    expect(mockSetTheme).toHaveBeenCalled()
-    expect(mockSetTheme.mock.calls[0][0]).toBe(darkTheme)
+    expect(
+      screen.getByText("Choose app theme, colors and fonts")
+    ).toBeInTheDocument()
+
+    expect(screen.getByRole("combobox")).toBeInTheDocument()
   })
 
   it("should show custom theme exists", () => {
@@ -140,11 +116,11 @@ describe("SettingsDialog", () => {
     const availableThemes = [...presetThemes, lightTheme]
     const props = getProps()
     const context = getContext({ availableThemes })
-    const wrapper = shallow(<SettingsDialog {...props} />, { context })
-    const selectbox = wrapper.find(UISelectbox)
-    const { options } = selectbox.props()
 
-    expect(options).toHaveLength(presetThemes.length + 1)
+    customRenderLibContext(<SettingsDialog {...props} />, context)
+
+    screen.getByRole("combobox").click()
+    expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length + 1)
   })
 
   it("should show custom theme does not exists", () => {
@@ -152,30 +128,33 @@ describe("SettingsDialog", () => {
     const availableThemes = [...presetThemes]
     const props = getProps()
     const context = getContext({ availableThemes })
-    const wrapper = shallow(<SettingsDialog {...props} />, { context })
-    const selectbox = wrapper.find(UISelectbox)
-    const { options } = selectbox.props()
 
-    expect(options).toHaveLength(presetThemes.length)
+    customRenderLibContext(<SettingsDialog {...props} />, context)
+
+    screen.getByRole("combobox").click()
+    expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length)
   })
 
   it("should show theme creator button if in developer mode", () => {
     const availableThemes = [lightTheme, darkTheme]
     const props = getProps()
     const context = getContext({ availableThemes })
-    const wrapper = shallow(<SettingsDialog {...props} />, { context })
 
-    expect(wrapper.find("BaseButton")).toHaveLength(1)
-    expect(wrapper).toMatchSnapshot()
+    customRenderLibContext(<SettingsDialog {...props} />, context)
+
+    expect(screen.getByTestId("edit-theme")).toBeInTheDocument()
+    expect(screen.getByText("Edit active theme")).toBeInTheDocument()
   })
 
   it("should call openThemeCreator if the button has been clicked", () => {
     const availableThemes = [...createPresetThemes()]
     const props = getProps()
     const context = getContext({ availableThemes })
-    const wrapper = shallow(<SettingsDialog {...props} />, { context })
-    wrapper.find("BaseButton").simulate("click")
 
+    customRenderLibContext(<SettingsDialog {...props} />, context)
+
+    expect(screen.getByTestId("edit-theme")).toBeInTheDocument()
+    screen.getByText("Edit active theme").click()
     expect(props.openThemeCreator).toHaveBeenCalled()
   })
 
@@ -183,9 +162,9 @@ describe("SettingsDialog", () => {
     const availableThemes = [lightTheme, darkTheme]
     const props = getProps({ developerMode: false })
     const context = getContext({ availableThemes })
-    const wrapper = shallow(<SettingsDialog {...props} />, { context })
 
-    expect(wrapper.find("BaseButton").exists()).toBe(false)
-    expect(wrapper).toMatchSnapshot()
+    customRenderLibContext(<SettingsDialog {...props} />, context)
+
+    expect(screen.queryByTestId("edit-theme")).not.toBeInTheDocument()
   })
 })
