@@ -514,8 +514,9 @@ class TimeWidgetsMixin:
 
         Returns
         -------
-        datetime.date or a tuple with 0-2 dates
-            The current value of the date input widget.
+        datetime.date or a tuple with 0-2 dates or None
+            The current value of the date input widget or ``None`` if no date has been
+            selected.
 
         Examples
         --------
@@ -548,6 +549,16 @@ class TimeWidgetsMixin:
 
         .. output::
            https://doc-date-input1.streamlit.app/
+           height: 380px
+
+        >>> import datetime
+        >>> import streamlit as st
+        >>>
+        >>> d = st.date_input("When's your birthday", value=None)
+        >>> st.write('Your birthday is:', d)
+
+        .. output::
+           https://doc-date-input-empty.streamlit.app/
            height: 380px
 
         """
