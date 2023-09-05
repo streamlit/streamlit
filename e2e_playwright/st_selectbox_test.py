@@ -87,7 +87,7 @@ def test_handles_option_selection_via_typing(app: Page):
     selectbox_input.press("Enter")
 
     # Check that selection worked:
-    expect(app.get_by_test_id(".tMarkdown").nth(3)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
         "value 4: e2e/scripts/st_warning.py", use_inner_text=True
     )
 
