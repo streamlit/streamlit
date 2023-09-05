@@ -179,7 +179,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     params.url = url
 
     if (this.csrfEnabled) {
-      const xsrfCookie = getCookie("_xsrf")
+      const xsrfCookie = getCookie("_streamlit_xsrf")
       if (xsrfCookie != null) {
         params.headers = {
           "X-Xsrftoken": xsrfCookie,

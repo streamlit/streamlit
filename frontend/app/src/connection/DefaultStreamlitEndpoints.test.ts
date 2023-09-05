@@ -306,7 +306,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
     beforeEach(() => {
       prevDocumentCookie = document.cookie
-      document.cookie = "_xsrf=mockXsrfCookie;"
+      document.cookie = "_streamlit_xsrf=mockXsrfCookie;"
     })
 
     afterEach(() => {
