@@ -359,6 +359,18 @@ class TimeWidgetsMixin:
            https://doc-time-input.streamlit.app/
            height: 260px
 
+        To initialize an empty time input, use ``None`` as the value:
+
+        >>> import datetime
+        >>> import streamlit as st
+        >>>
+        >>> t = st.time_input('Set an alarm for', value=None)
+        >>> st.write('Alarm is set for', t)
+
+        .. output::
+           https://doc-time-input-empty.streamlit.app/
+           height: 260px
+
         """
         ctx = get_script_run_ctx()
         return self._time_input(
