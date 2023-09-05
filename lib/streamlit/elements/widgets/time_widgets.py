@@ -48,7 +48,6 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
-TimeValue: TypeAlias = Union[time, datetime, None]
 SingleDateValue: TypeAlias = Union[date, datetime, None]
 DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
 DateWidgetReturn: TypeAlias = Union[
@@ -193,7 +192,6 @@ class TimeInputSerde:
     def serialize(self, v: datetime | time | None) -> str | None:
         if v is None:
             return None
-
         if isinstance(v, datetime):
             v = v.time()
         return time.strftime(v, "%H:%M")
