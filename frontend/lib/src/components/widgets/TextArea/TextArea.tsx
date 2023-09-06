@@ -34,6 +34,7 @@ import {
   isInForm,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
+import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 import { StyledTextAreaContainer } from "./styled-components"
 
 export interface Props {
@@ -239,13 +240,16 @@ class TextArea extends React.PureComponent<Props, State> {
             }}
           />
         </StyledTextAreaContainer>
-        <InputInstructions
-          dirty={dirty}
-          value={value}
-          maxLength={element.maxChars}
-          type={"multiline"}
-          inForm={isInForm({ formId: element.formId })}
-        />
+        {/* Hide the "Please enter to apply" text in small widget sizes */}
+        {width > breakpoints.hideWidgetDetails && (
+          <InputInstructions
+            dirty={dirty}
+            value={value}
+            maxLength={element.maxChars}
+            type={"multiline"}
+            inForm={isInForm({ formId: element.formId })}
+          />
+        )}
       </div>
     )
   }

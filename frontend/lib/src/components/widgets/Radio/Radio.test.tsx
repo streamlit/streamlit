@@ -91,6 +91,7 @@ describe("Radio widget", () => {
     const radioOptions = screen.getAllByRole("radio")
     expect(radioOptions).toHaveLength(3)
 
+    // @ts-expect-error
     const checked = radioOptions[props.element.default]
     expect(checked).toBeChecked()
   })
@@ -192,6 +193,7 @@ describe("Radio widget", () => {
     props.widgetMgr.submitForm("form")
 
     // Our widget should be reset, and the widgetMgr should be updated
+    // @ts-expect-error
     const defaultValue = radioOptions[props.element.default]
     expect(defaultValue).toBeChecked()
 

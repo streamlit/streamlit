@@ -50,7 +50,7 @@ from streamlit.color_util import (
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
 from streamlit.elements.utils import last_index_for_melted_dataframes
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import Error, StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
@@ -63,12 +63,26 @@ if TYPE_CHECKING:
 
 
 class ChartType(Enum):
-    AREA = "area"
-    BAR = "bar"
-    LINE = "line"
+    AREA = {"mark_type": "area"}
+    BAR = {"mark_type": "bar"}
+    LINE = {"mark_type": "line"}
+    SCATTER = {"mark_type": "circle"}
 
 
-COLOR_LEGEND_SETTINGS = dict(titlePadding=0, offset=10, orient="bottom")
+# Color and size legends need different title paddings in order for them
+# to be vertically aligned.
+#
+# NOTE: I don't think it's possible to *perfectly* align the size and
+# color legends in all instances, since the "size" circles vary in size based
+# on the data, and their container is top-aligned with the color container. But
+# through trial-and-error I found this value to be a good enough middle ground.
+# See e2e/scripts/st_arrow_scatter_chart.py for some alignment tests.
+#
+# NOTE #2: In theory, we could move COLOR_LEGEND_SETTINGS into
+# ArrowVegaLiteChart/CustomTheme.tsx, but this would impact existing behavior.
+# (See https://github.com/streamlit/streamlit/pull/7164#discussion_r1307707345)
+COLOR_LEGEND_SETTINGS = dict(titlePadding=5, offset=5, orient="bottom")
+SIZE_LEGEND_SETTINGS = dict(titlePadding=0.5, offset=5, orient="bottom")
 
 # User-readable names to give the index and melted columns.
 SEPARATED_INDEX_COLUMN_TITLE = "index"
@@ -215,9 +229,9 @@ class ArrowAltairMixin:
         >>>
         >>> st._arrow_line_chart(
         ...     chart_data,
-        ...     x = 'col1',
-        ...     y = 'col2',
-        ...     color = 'col3'
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3'
         ... )
 
         Finally, if your dataframe is in wide format, you can group multiple
@@ -234,9 +248,9 @@ class ArrowAltairMixin:
         >>>
         >>> st._arrow_line_chart(
         ...     chart_data,
-        ...     x = 'col1',
-        ...     y = ['col2', 'col3'],
-        ...     color = ['#FF0000', '#0000FF']  # Optional
+        ...     x='col1',
+        ...     y=['col2', 'col3'],
+        ...     color=['#FF0000', '#0000FF']  # Optional
         ... )
 
         """
@@ -247,6 +261,7 @@ class ArrowAltairMixin:
             x_from_user=x,
             y_from_user=y,
             color_from_user=color,
+            size_from_user=None,
             width=width,
             height=height,
         )
@@ -379,9 +394,9 @@ class ArrowAltairMixin:
         >>>
         >>> st._arrow_area_chart(
         ...     chart_data,
-        ...     x = 'col1',
-        ...     y = 'col2',
-        ...     color = 'col3'
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3'
         ... )
 
         Finally, if your dataframe is in wide format, you can group multiple
@@ -412,6 +427,7 @@ class ArrowAltairMixin:
             x_from_user=x,
             y_from_user=y,
             color_from_user=color,
+            size_from_user=None,
             width=width,
             height=height,
         )
@@ -577,6 +593,7 @@ class ArrowAltairMixin:
             x_from_user=x,
             y_from_user=y,
             color_from_user=color,
+            size_from_user=None,
             width=width,
             height=height,
         )
@@ -584,6 +601,173 @@ class ArrowAltairMixin:
 
         return self.dg._enqueue(
             "arrow_bar_chart", proto, add_rows_metadata=add_rows_metadata
+        )
+
+    @gather_metrics("_arrow_scatter_chart")
+    def _arrow_scatter_chart(
+        self,
+        data: Data = None,
+        *,
+        x: Optional[str] = None,
+        y: Union[str, Sequence[str], None] = None,
+        color: Union[str, Color, List[Color], None] = None,
+        size: Union[str, float, None] = None,
+        width: int = 0,
+        height: int = 0,
+        use_container_width: bool = True,
+    ) -> "DeltaGenerator":
+        """Display a scatterplot chart.
+
+        This is syntax-sugar around st.altair_chart. The main difference
+        is this command uses the data's own column and indices to figure out
+        the chart's spec. As a result this is easier to use for many "just plot
+        this" scenarios, while being less customizable.
+
+        If st.scatter_chart does not guess the data specification correctly,
+        try specifying your desired chart using st.altair_chart.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict or None
+            Data to be plotted.
+            Pyarrow tables are not supported by Streamlit's legacy DataFrame
+            serialization (i.e. with `config.dataFrameSerialization = "legacy"`).
+            To use pyarrow tables, please enable pyarrow by changing the config
+            setting, `config.dataFrameSerialization = "arrow"`.
+
+        x : str or None
+            Column name to use for the x-axis. If None, uses the data index for
+            the x-axis. This argument can only be supplied by keyword.
+
+        y : str, sequence of str, or None
+            Column name(s) to use for the y-axis. If a sequence of strings,
+            draws several series on the same chart by melting your wide-format
+            table into a long-format table behind the scenes. If None, draws
+            the data of all remaining columns as data series. This argument can
+            only be supplied by keyword.
+
+        color : str, tuple, sequence of str, sequence of tuple, or None
+            The color of the circles representing each datapoint. This argument
+            can only be supplied by keyword.
+
+            This can be:
+
+            * None, to use the default color.
+            * A hex string like "#ffaa00" or "#ffaa0088".
+            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+              components specified as ints from 0 to 255 or floats from 0.0 to
+              1.0.
+            * The name of a column in the dataset where the color of that
+              datapoint will come from.
+
+              If the values in this column are in one of the color formats
+              above (hex string or color tuple), then that color will be used.
+
+              Otherwise, the color will be automatically picked from the
+              default palette.
+
+              For example: if the dataset has 1000 rows, but this column can
+              only contains the values "adult", "child", "baby", then those
+              1000 datapoints be shown using 3 colors from the default palette.
+
+              But if this column only contains floats or ints, then those
+              1000 datapoints will be shown using a colors from a continuous
+              color gradient.
+
+              Finally, if this column only contains the values "#ffaa00",
+              "#f0f", "#0000ff", then then each of those 1000 datapoints will
+              be assigned "#ffaa00", "#f0f", or "#0000ff" as appropriate.
+
+            If the dataframe is in wide format (that is, y is a sequence of
+            columns), this can also be:
+
+            * A list of string colors or color tuples to be used for each of
+              the series in the chart. This list should have the same length
+              as the number of y values.
+
+              For example, for a chart with have 3 series this argument can
+              be set to ``color=["#fd0", "#f0f", "#04f"]``.
+
+        size : str, float, or None
+            The size of the circles representing each point. This argument can
+            only be supplied by keyword.
+
+            This can be:
+
+            * A number like 100, to specify a single size to use for all
+              datapoints.
+            * The name of the column to use for the size. This allows each
+              datapoint to be represented by a circle of a different size.
+
+        width : int
+            The chart width in pixels. If 0, selects the width automatically.
+            This argument can only be supplied by keyword.
+
+        height : int
+            The chart height in pixels. If 0, selects the height automatically.
+            This argument can only be supplied by keyword.
+
+        use_container_width : bool
+            If True, set the chart width to the column width. This takes
+            precedence over the width argument.
+            This argument can only be supplied by keyword.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 3),
+        ...     columns=['a', 'b', 'c'])
+        ...
+        >>> st._arrow_scatter_chart(chart_data)
+
+        You can also choose different columns to use for x and y, as well as set
+        the color dynamically based on a 3rd column (assuming your dataframe is in
+        long format):
+
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3', 'col4'])
+        ...
+        >>> st._arrow_scatter_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y='col2',
+        ...     color='col3',
+        ...     size='col4',
+        ... )
+
+        Finally, if your dataframe is in wide format, you can group multiple
+        columns under the y argument to show multiple series with different
+        colors:
+
+        >>> st._arrow_scatter_chart(
+        ...     chart_data,
+        ...     x='col1',
+        ...     y=['col2', 'col3'],
+        ...     size='col4',
+        ...     color=['#FF0000', '#0000FF'],  # Optional
+        ... )
+
+        """
+        proto = ArrowVegaLiteChartProto()
+        chart, add_rows_metadata = _generate_chart(
+            chart_type=ChartType.SCATTER,
+            data=data,
+            x_from_user=x,
+            y_from_user=y,
+            color_from_user=color,
+            size_from_user=size,
+            width=width,
+            height=height,
+        )
+        marshall(proto, chart, use_container_width, theme="streamlit")
+
+        return self.dg._enqueue(
+            "arrow_scatter_chart", proto, add_rows_metadata=add_rows_metadata
         )
 
     @gather_metrics("_arrow_altair_chart")
@@ -677,8 +861,8 @@ def _is_date_column(df: pd.DataFrame, name: Optional[str]) -> bool:
 
 def _melt_data(
     df: pd.DataFrame,
-    x_column: str,
-    y_column_list: Optional[List[str]],
+    columns_to_leave_alone: List[str],
+    columns_to_melt: Optional[List[str]],
     new_y_column_name: str,
     new_color_column_name: str,
 ) -> pd.DataFrame:
@@ -686,8 +870,8 @@ def _melt_data(
 
     melted_df = pd.melt(
         df,
-        id_vars=[x_column],
-        value_vars=y_column_list,
+        id_vars=columns_to_leave_alone,
+        value_vars=columns_to_melt,
         var_name=new_color_column_name,
         value_name=new_y_column_name,
     )
@@ -705,7 +889,12 @@ def _melt_data(
     # Arrow has problems with object types after melting two different dtypes
     # pyarrow.lib.ArrowTypeError: "Expected a <TYPE> object, got a object"
     fixed_df = type_util.fix_arrow_incompatible_column_types(
-        melted_df, selected_columns=[x_column, new_color_column_name, new_y_column_name]
+        melted_df,
+        selected_columns=[
+            *columns_to_leave_alone,
+            new_color_column_name,
+            new_y_column_name,
+        ],
     )
 
     return fixed_df
@@ -716,11 +905,12 @@ def prep_data(
     x_column: Optional[str],
     y_column_list: List[str],
     color_column: Optional[str],
-) -> Tuple[pd.DataFrame, Optional[str], Optional[str], Optional[str]]:
+    size_column: Optional[str],
+) -> Tuple[pd.DataFrame, Optional[str], Optional[str], Optional[str], Optional[str]]:
     """Prepares the data for charting. This is also used in add_rows.
 
     Returns the prepared dataframe and the new names of the x column (taking the index reset into
-    consideration) as well as the y and color columns.
+    consideration) and y, color, and size columns.
     """
 
     # If y is provided, but x is not, we'll use the index as x.
@@ -728,23 +918,30 @@ def prep_data(
     x_column = _maybe_reset_index_in_place(df, x_column, y_column_list)
 
     # Drop columns we're not using.
-    selected_data = _drop_unused_columns(df, x_column, color_column, *y_column_list)
+    selected_data = _drop_unused_columns(
+        df, x_column, color_column, size_column, *y_column_list
+    )
 
     # Maybe convert color to Vega colors.
     _maybe_convert_color_column_in_place(selected_data, color_column)
 
     # Make sure all columns have string names.
-    x_column, y_column_list, color_column = _convert_col_names_to_str_in_place(
-        selected_data, x_column, y_column_list, color_column
+    (
+        x_column,
+        y_column_list,
+        color_column,
+        size_column,
+    ) = _convert_col_names_to_str_in_place(
+        selected_data, x_column, y_column_list, color_column, size_column
     )
 
     # Maybe melt data from wide format into long format.
     melted_data, y_column, color_column = _maybe_melt(
-        selected_data, x_column, y_column_list, color_column
+        selected_data, x_column, y_column_list, color_column, size_column
     )
 
     # Return the data, but also the new names to use for x, y, and color.
-    return melted_data, x_column, y_column, color_column
+    return melted_data, x_column, y_column, color_column, size_column
 
 
 def _generate_chart(
@@ -753,6 +950,7 @@ def _generate_chart(
     x_from_user: Optional[str] = None,
     y_from_user: Union[str, Sequence[str], None] = None,
     color_from_user: Union[str, Color, List[Color], None] = None,
+    size_from_user: Union[str, float, None] = None,
     width: int = 0,
     height: int = 0,
 ) -> alt.Chart:
@@ -770,7 +968,9 @@ def _generate_chart(
     # Get name of columns to use for y.
     y_column_list = _parse_y_columns(df, y_from_user, x_column)
     # Get name of column to use for color, or constant value to use. Any/both could be None.
-    color_column, color_value = _parse_color_column(df, color_from_user)
+    color_column, color_value = _parse_generic_column(df, color_from_user)
+    # Get name of column to use for size, or constant value to use. Any/both could be None.
+    size_column, size_value = _parse_generic_column(df, size_from_user)
 
     # Store some info so we can use it in add_rows.
     add_rows_metadata = AddRowsMetadata(
@@ -781,14 +981,15 @@ def _generate_chart(
             x_column=x_column,
             y_column_list=y_column_list,
             color_column=color_column,
+            size_column=size_column,
         ),
     )
 
     # At this point, all foo_column variables are either None/empty or contain actual
     # columns that are guaranteed to exist.
 
-    df, x_column, y_column, color_column = prep_data(
-        df, x_column, y_column_list, color_column
+    df, x_column, y_column, color_column, size_column = prep_data(
+        df, x_column, y_column_list, color_column, size_column
     )
 
     # At this point, x_column is only None if user did not provide one AND df is empty.
@@ -796,7 +997,7 @@ def _generate_chart(
     # Create a Chart with x and y encodings.
     chart = alt.Chart(
         data=df,
-        mark=chart_type.value,
+        mark=chart_type.value["mark_type"],
         width=width,
         height=height,
     ).encode(
@@ -816,12 +1017,18 @@ def _generate_chart(
     if color_enc is not None:
         chart = chart.encode(color=color_enc)
 
+    # Set up size encoding.
+    size_enc = _get_size_encoding(chart_type, size_column, size_value)
+    if size_enc is not None:
+        chart = chart.encode(size=size_enc)
+
     # Set up tooltip encoding.
     if x_column is not None and y_column is not None:
         chart = chart.encode(
             tooltip=_get_tooltip_encoding(
                 x_column,
                 y_column,
+                size_column,
                 color_column,
                 color_enc,
             )
@@ -894,7 +1101,8 @@ def _convert_col_names_to_str_in_place(
     x_column: Optional[str],
     y_column_list: List[str],
     color_column: Optional[str],
-) -> Tuple[Optional[str], List[str], Optional[str]]:
+    size_column: Optional[str],
+) -> Tuple[Optional[str], List[str], Optional[str], Optional[str]]:
     """Converts column names to strings, since Vega-Lite does not accept ints, etc."""
     column_names = list(df.columns)  # list() converts RangeIndex, etc, to regular list.
     str_column_names = [str(c) for c in column_names]
@@ -904,10 +1112,11 @@ def _convert_col_names_to_str_in_place(
         None if x_column is None else str(x_column),
         [str(c) for c in y_column_list],
         None if color_column is None else str(color_column),
+        None if size_column is None else str(size_column),
     )
 
 
-def _parse_color_column(
+def _parse_generic_column(
     df: pd.DataFrame, column_or_value: Any
 ) -> Tuple[Optional[str], Any]:
     if isinstance(column_or_value, str) and column_or_value in df.columns:
@@ -1015,6 +1224,7 @@ def _maybe_melt(
     x_column: Optional[str],
     y_column_list: List[str],
     color_column: Optional[str],
+    size_column: Optional[str],
 ) -> Tuple[pd.DataFrame, Optional[str], Optional[str]]:
     """If multiple columns are set for y, melt the dataframe into long format."""
     y_column: Optional[str]
@@ -1028,10 +1238,14 @@ def _maybe_melt(
         y_column = MELTED_Y_COLUMN_NAME
         color_column = MELTED_COLOR_COLUMN_NAME
 
+        columns_to_leave_alone = [x_column]
+        if size_column:
+            columns_to_leave_alone.append(size_column)
+
         df = _melt_data(
             df=df,
-            x_column=x_column,
-            y_column_list=y_column_list,
+            columns_to_leave_alone=columns_to_leave_alone,
+            columns_to_melt=y_column_list,
             new_y_column_name=y_column,
             new_color_column_name=color_column,
         )
@@ -1199,9 +1413,42 @@ def _get_color_encoding(
     return None
 
 
+def _get_size_encoding(
+    chart_type: ChartType,
+    size_column: Optional[str],
+    size_value: Union[str, float, None],
+) -> alt.Size:
+    import altair as alt
+
+    if chart_type == ChartType.SCATTER:
+        if size_column is not None:
+            return alt.Size(
+                size_column,
+                legend=SIZE_LEGEND_SETTINGS,
+            )
+
+        elif isinstance(size_value, (float, int)):
+            return alt.SizeValue(size_value)
+        elif size_value is None:
+            return alt.SizeValue(100)
+        else:
+            raise StreamlitAPIException(
+                f"This does not look like a valid size: {repr(size_value)}"
+            )
+
+    elif size_column is not None or size_value is not None:
+        raise Error(
+            f"Chart type {chart_type.name} does not support size argument. "
+            "This should never happen!"
+        )
+
+    return None
+
+
 def _get_tooltip_encoding(
     x_column: str,
     y_column: str,
+    size_column: Optional[str],
     color_column: Optional[str],
     color_enc: alt.Color,
 ) -> list[alt.Tooltip]:
@@ -1244,6 +1491,9 @@ def _get_tooltip_encoding(
             )
         else:
             tooltip.append(alt.Tooltip(color_column))
+
+    if size_column:
+        tooltip.append(alt.Tooltip(size_column))
 
     return tooltip
 

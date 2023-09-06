@@ -39,6 +39,12 @@ describe("st.slider", () => {
     );
   });
 
+  it("looks right when labels overlapping", () => {
+    cy.getIndexed(".stSlider", 10).matchThemedSnapshots(
+      "labels-overlap-slider"
+    );
+  });
+
   it("shows labels", () => {
     cy.get(".stSlider label").should(
       "have.text",
@@ -52,7 +58,8 @@ describe("st.slider", () => {
       "Label 4" +
       "Label 5" +
       "Label 6" +
-      "Label 7"
+      "Label 7" +
+      "Label 8"
     );
   });
 
@@ -107,7 +114,8 @@ describe("st.slider", () => {
       "Value 4: 10000" +
       "Value 5: 25" +
       "Value 6: 36" +
-      "Value 7: 25" +
+      "Value 7: 2019-08-01 2019-09-01" +
+      "Value 8: 25" +
       "Slider changed: False"
     );
   });
@@ -148,7 +156,7 @@ describe("st.slider", () => {
   it("calls callback if one is registered", () => {
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 7: 25" + "Slider changed: False"
+      "Value 8: 25" + "Slider changed: False"
     );
 
     cy.get('.stSlider [role="slider"]')
@@ -158,7 +166,7 @@ describe("st.slider", () => {
 
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 7: 26" + "Slider changed: True"
+      "Value 8: 26" + "Slider changed: True"
     );
   });
 });

@@ -19,7 +19,7 @@ import "@testing-library/jest-dom"
 
 import { screen, fireEvent, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { render } from "@streamlit/lib/src/test_util"
+import { render, shallow } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import {
@@ -27,6 +27,7 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
 import TextInput, { Props } from "./TextInput"
+import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 
 const getProps = (
   elementProps: Partial<TextInputProto> = {},
@@ -39,7 +40,7 @@ const getProps = (
     type: TextInputProto.Type.DEFAULT,
     ...elementProps,
   }),
-  width: 0,
+  width: 300,
   disabled: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
@@ -293,5 +294,23 @@ describe("TextInput widget", () => {
         fromUi: true,
       }
     )
+  })
+
+  it("hides Please enter to apply text when width is smaller than 180px", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextInput {...props} width={100} />)
+
+    wrapper.setState({ dirty: true })
+
+    expect(wrapper.find(InputInstructions).exists()).toBe(false)
+  })
+
+  it("shows Please enter to apply text when width is bigger than 180px", () => {
+    const props = getProps()
+    const wrapper = shallow(<TextInput {...props} width={190} />)
+
+    wrapper.setState({ dirty: true })
+
+    expect(wrapper.find(InputInstructions).exists()).toBe(true)
   })
 })
