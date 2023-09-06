@@ -403,6 +403,7 @@ class SessionState:
         At least one of the arguments must have a value.
         """
         assert user_key is not None or widget_id is not None
+
         if user_key is not None:
             try:
                 return self._new_session_state[user_key]
