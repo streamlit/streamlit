@@ -262,7 +262,7 @@ class TimeInput extends PureComponent<Props, State> {
           <div
             style={{
               position: "absolute",
-              top: "2.45em",
+              top: "50%",
               right: "2em",
               // zIndex: 1000,
             }}
