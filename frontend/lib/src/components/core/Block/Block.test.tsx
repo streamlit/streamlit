@@ -22,6 +22,14 @@ import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 
 import VerticalBlock from "./Block"
 
+class ResizeObserver {
+  observe(): void {}
+
+  unobserve(): void {}
+
+  disconnect(): void {}
+}
+
 function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   return new BlockNode(
     children,
@@ -43,6 +51,7 @@ function makeVerticalBlock(children: BlockNode[] = []): BlockNode {
 }
 
 describe("Vertical Block Component", () => {
+  window.ResizeObserver = ResizeObserver
   it("should render a horizontal block with empty columns", () => {
     const block: BlockNode = makeVerticalBlock([makeHorizontalBlock(4)])
     const wrapper = mount(
