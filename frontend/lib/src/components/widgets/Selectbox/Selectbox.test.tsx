@@ -20,7 +20,8 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import { Select as UISelect } from "baseui/select"
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
-import Selectbox, { Props } from "./Selectbox"
+import { Selectbox, Props } from "./Selectbox"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
   element: SelectboxProto.create({
@@ -32,6 +33,7 @@ const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
   }),
   width: 0,
   disabled: false,
+  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
