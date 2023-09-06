@@ -141,3 +141,11 @@ export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
     gap: theme.spacing.lg,
   })
 )
+
+export const StyledVerticalBlockWrapper = styled.div<StyledVerticalBlockProps>(
+  {
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
+  }
+)
