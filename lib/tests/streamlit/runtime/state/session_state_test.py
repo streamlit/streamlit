@@ -531,8 +531,8 @@ def _sorted_items(state: SessionState) -> List[Tuple[str, Any]]:
 
 class SessionStateMethodTests(unittest.TestCase):
     def setUp(self):
-        old_state = {"foo": "bar", "baz": "qux", "corge": "grault"}
-        new_session_state = {"foo": "bar2"}
+        self.old_state = {"foo": "bar", "baz": "qux", "corge": "grault"}
+        self.new_session_state = {"foo": "bar2"}
         new_widget_state = WStates(
             {
                 "baz": Value("qux2"),
@@ -540,7 +540,7 @@ class SessionStateMethodTests(unittest.TestCase):
             },
         )
         self.session_state = SessionState(
-            old_state, new_session_state, new_widget_state
+            self.old_state, self.new_session_state, new_widget_state
         )
 
     def test_compact(self):
