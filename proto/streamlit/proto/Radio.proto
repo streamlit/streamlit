@@ -21,11 +21,11 @@ import "streamlit/proto/LabelVisibilityMessage.proto";
 message Radio {
   string id = 1;
   string label = 2;
-  int32 default = 3;
+  optional int32 default = 3;
   repeated string options = 4;
   string help = 5;
   string form_id = 6;
-  int32 value = 7;
+  optional int32 value = 7;
   bool set_value = 8;
   bool disabled = 9;
   bool horizontal = 10;

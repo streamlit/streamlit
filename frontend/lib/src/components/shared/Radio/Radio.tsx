@@ -32,7 +32,7 @@ export interface Props {
   horizontal: boolean
   theme: EmotionTheme
   width?: number
-  value: number
+  value: number | null
   onChange: (selectedIndex: number) => any
   options: any[]
   captions: any[]
@@ -46,12 +46,12 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: number
+  value: number | null
 }
 
 class Radio extends React.PureComponent<Props, State> {
   public state: State = {
-    value: this.props.value,
+    value: this.props.value ?? null,
   }
 
   public componentDidUpdate(prevProps: Props): void {
@@ -61,7 +61,7 @@ class Radio extends React.PureComponent<Props, State> {
       this.props.value !== this.state.value
     ) {
       this.setState((_, prevProps) => {
-        return { value: prevProps.value }
+        return { value: prevProps.value ?? null }
       })
     }
   }
@@ -110,7 +110,9 @@ class Radio extends React.PureComponent<Props, State> {
         </WidgetLabel>
         <RadioGroup
           onChange={this.onChange}
-          value={this.state.value.toString()}
+          value={
+            this.state.value !== null ? this.state.value.toString() : undefined
+          }
           disabled={disabled}
           align={horizontal ? ALIGN.horizontal : ALIGN.vertical}
           aria-label={label}
