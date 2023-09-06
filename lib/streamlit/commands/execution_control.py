@@ -14,8 +14,12 @@
 
 
 import streamlit as st
+from streamlit.deprecation_util import make_deprecated_name_warning
+from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
+
+_LOGGER = get_logger(__name__)
 
 
 @gather_metrics("stop")
@@ -44,13 +48,12 @@ def stop() -> None:
         st.empty()
 
 
-@gather_metrics("experimental_rerun")
+@gather_metrics("rerun")
 def rerun() -> None:
     """Rerun the script immediately.
 
-    When `st.experimental_rerun()` is called, the script is halted - no
-    more statements will be run, and the script will be queued to re-run
-    from the top.
+    When `st.rerun()` is called, the script is halted - no more statements will
+    be run, and the script will be queued to re-run from the top.
     """
 
     ctx = get_script_run_ctx()
@@ -67,3 +70,19 @@ def rerun() -> None:
         )
         # Force a yield point so the runner can do the rerun
         st.empty()
+
+
+@gather_metrics("experimental_rerun")
+def experimental_rerun() -> None:
+    """Rerun the script immediately.
+
+    When `st.experimental_rerun()` is called, the script is halted - no
+    more statements will be run, and the script will be queued to re-run
+    from the top.
+    """
+    msg = make_deprecated_name_warning("experimental_rerun", "rerun", "2024-04-01")
+    # Log warning before the rerun, or else it would be interrupted
+    # by the rerun. We do not send a frontend warning because it wouldn't
+    # be seen.
+    _LOGGER.warning(msg)
+    rerun()

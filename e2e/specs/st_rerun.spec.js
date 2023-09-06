@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-describe("st.experimental_rerun", () => {
+describe("st.rerun", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
   });

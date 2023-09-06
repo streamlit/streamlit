@@ -261,8 +261,8 @@ class SessionStateTest(DeltaGeneratorTestCase):
 
 
 class SessionStateCallbackTest(InteractiveScriptTests):
-    def test_callbacks_with_experimental_rerun(self):
-        """Calling 'experimental_rerun' from within a widget callback
+    def test_callbacks_with_rerun(self):
+        """Calling 'rerun' from within a widget callback
         is disallowed and results in a warning.
         """
         script = self.script_from_string(
@@ -271,7 +271,7 @@ class SessionStateCallbackTest(InteractiveScriptTests):
 
         def callback():
             st.session_state["message"] = "ran callback"
-            st.experimental_rerun()
+            st.rerun()
         st.checkbox("cb", on_change=callback)
         """
         )

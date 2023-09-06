@@ -82,7 +82,8 @@ from streamlit.elements.spinner import spinner as spinner
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
     stop as stop,
-    rerun as _rerun,
+    rerun as rerun,
+    experimental_rerun as _experimental_rerun,
 )
 
 # We add the metrics tracking for caching here,
@@ -222,6 +223,6 @@ experimental_singleton = _experimental_singleton
 experimental_memo = _experimental_memo
 experimental_get_query_params = _get_query_params
 experimental_set_query_params = _set_query_params
-experimental_rerun = _rerun
+experimental_rerun = _experimental_rerun
 experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _connection_factory
