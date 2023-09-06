@@ -507,9 +507,7 @@ class SessionState:
             try:
                 self._new_widget_state.call_callback(wid)
             except RerunException:
-                st.warning(
-                    "Calling st.experimental_rerun() within a callback is a no-op."
-                )
+                st.warning("Calling st.rerun() within a callback is a no-op.")
 
     def _widget_changed(self, widget_id: str) -> bool:
         """True if the given widget's value changed between the previous
