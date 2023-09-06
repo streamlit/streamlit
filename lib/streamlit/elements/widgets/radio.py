@@ -78,46 +78,6 @@ class RadioSerde(Generic[T]):
 
 
 class RadioMixin:
-    @overload
-    def radio(
-        self,
-        label: str,
-        options: OptionSequence[T],
-        index: int = 0,
-        format_func: Callable[[Any], Any] = str,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only args:
-        disabled: bool = False,
-        horizontal: bool = False,
-        captions: Sequence[str] | None = None,
-        label_visibility: LabelVisibility = "visible",
-    ) -> T:
-        pass
-
-    @overload
-    def radio(
-        self,
-        label: str,
-        options: OptionSequence[T],
-        index: None = None,
-        format_func: Callable[[Any], Any] = str,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only args:
-        disabled: bool = False,
-        horizontal: bool = False,
-        captions: Sequence[str] | None = None,
-        label_visibility: LabelVisibility = "visible",
-    ) -> T | None:
-        pass
-
     @gather_metrics("radio")
     def radio(
         self,
