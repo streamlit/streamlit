@@ -40,7 +40,7 @@ i2 = st.radio(
 )
 st.write("value 2:", i2)
 
-i3: None = st.radio("radio 3 (no options)", [])
+i3 = st.radio("radio 3 (no options)", [])
 st.write("value 3:", i3)
 
 i4 = st.radio("radio 4 (disabled)", options, disabled=True)
