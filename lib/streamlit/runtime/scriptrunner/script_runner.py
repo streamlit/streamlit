@@ -201,6 +201,7 @@ class ScriptRunner:
         """
         self._requests.request_stop()
 
+        self._session_state._state._reset_triggers()
         # "Disconnect" our SafeSessionState wrapper from its underlying
         # SessionState instance. This will cause all further session_state
         # operations in this ScriptRunner to no-op.
