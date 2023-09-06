@@ -145,9 +145,6 @@ class ScriptRunner:
         self._script_cache = script_cache
         self._user_info = user_info
 
-        # Initialize SessionState with the latest widget states
-        session_state.set_widgets_from_proto(client_state.widget_states)
-
         self._client_state = client_state
         self._session_state = SafeSessionState(session_state)
 
