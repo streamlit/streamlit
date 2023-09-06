@@ -304,10 +304,8 @@ class ScriptRunner:
 
         assert request.type == ScriptRequestType.STOP
 
-        # Send a SHUTDOWN event before exiting. This includes the widget values
-        # as they existed after our last successful script run, which the
-        # AppSession will pass on to the next ScriptRunner that gets
-        # created.
+        # Send a SHUTDOWN event before exiting, so some state can be saved
+        # for use in a future script run when not triggered by the client.
         client_state = ClientState()
         client_state.query_string = ctx.query_string
         client_state.page_script_hash = ctx.page_script_hash
