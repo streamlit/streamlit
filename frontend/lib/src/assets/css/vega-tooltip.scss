@@ -1,0 +1,92 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// NOTE: These styles are copied from https://github.com/vega/vega-tooltip/blob/main/vega-tooltip.scss
+// so that vega doesn't need to inject inline <style /> tags into the DOM at
+// runtime, which doesn't play nicely with CSPs. We keep the styles more or
+// less the same as the vega defaults for now but may choose to tweak them
+// later so that vega charts are more consistent with Streamlit's overall look
+// and feel.
+//
+// When modifying these styles, the compiled .css also needs to be updated by
+// running `yarn -s sass lib/src/assets/css/vega-tooltip.scss lib/src/assets/css/vega-tooltip.css`
+// from the `frontend` directory.
+
+#vg-tooltip-element {
+  visibility: hidden;
+  padding: 8px;
+  position: fixed;
+  z-index: 1000;
+  font-family: sans-serif;
+  font-size: 11px;
+  border-radius: 3px;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+
+  &.visible {
+    visibility: visible;
+  }
+
+  h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+
+  table {
+    border-spacing: 0;
+
+    tr {
+      border: none;
+
+      td {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding-top: 2px;
+        padding-bottom: 2px;
+        &.key {
+          color: #808080;
+          max-width: 150px;
+          text-align: right;
+          padding-right: 4px;
+        }
+        &.value {
+          display: block;
+          max-width: 300px;
+          max-height: 7em;
+          text-align: left;
+        }
+      }
+    }
+  }
+
+  // NOTE: We comment out the code below as it overwrites theming we do
+  // on the Streamlit side, which isn't always noticeable with the default
+  // light and dark themes but can obviously conflict with a custom
+  // theme.
+  // /* The default theme is the light theme. */
+  // background-color: rgba(255, 255, 255, 0.95);
+  // border: 1px solid #d9d9d9;
+  // color: black;
+  //
+  // &.dark-theme {
+  // background-color: rgba(32, 32, 32, 0.9);
+  // border: 1px solid #f5f5f5;
+  // color: white;
+  // td.key {
+  // color: #bfbfbf;
+  // }
+  // }
+}

@@ -31,6 +31,7 @@
     "@emotion-icons/material-outlined": "^3.14.0",
     "@emotion-icons/material-rounded": "^3.14.0",
     "@emotion-icons/open-iconic": "^3.14.0",
+    "@emotion/cache": "^11.10.5",
     "@emotion/is-prop-valid": "^1.2.0",
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
