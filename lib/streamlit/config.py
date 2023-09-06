@@ -566,7 +566,7 @@ _create_option(
         State, so it may be useful to detect incompatibility during development,
         or when the execution environment will stop supporting it in the future.
     """,
-    default_val=False,
+    default_val=True,
     type_=bool,
 )
 

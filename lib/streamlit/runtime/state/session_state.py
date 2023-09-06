@@ -310,9 +310,9 @@ class SessionState:
         for key_or_wid in self:
             try:
                 self._old_state[key_or_wid] = self[key_or_wid]
-            # handle key errors from widget state not having metadata gracefully
-            # https://github.com/streamlit/streamlit/issues/7206
             except KeyError:
+                # handle key errors from widget state not having metadata gracefully
+                # https://github.com/streamlit/streamlit/issues/7206
                 pass
         self._new_session_state.clear()
         self._new_widget_state.clear()

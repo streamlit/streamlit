@@ -531,8 +531,8 @@ def _sorted_items(state: SessionState) -> List[Tuple[str, Any]]:
 
 class SessionStateMethodTests(unittest.TestCase):
     def setUp(self):
-        old_state = {"foo": "bar", "baz": "qux", "corge": "grault"}
-        new_session_state = {"foo": "bar2"}
+        self.old_state = {"foo": "bar", "baz": "qux", "corge": "grault"}
+        self.new_session_state = {"foo": "bar2"}
         new_widget_state = WStates(
             {
                 "baz": Value("qux2"),
@@ -540,7 +540,7 @@ class SessionStateMethodTests(unittest.TestCase):
             },
         )
         self.session_state = SessionState(
-            old_state, new_session_state, new_widget_state
+            self.old_state, self.new_session_state, new_widget_state
         )
 
     def test_compact(self):
@@ -556,18 +556,18 @@ class SessionStateMethodTests(unittest.TestCase):
 
     # https://github.com/streamlit/streamlit/issues/7206
     def test_ignore_key_error_within_compact_state(self):
-        # Arrange: Mock __getitem__ to throw a KeyError when it sees the key 'bad_key'
-        with patch.object(
-            WStates,
-            "__getitem__",
-            side_effect=lambda key: {"bad_key": KeyError("Key not found")}[key],
-        ):
-            try:
-                self.session_state._compact_state()
-            # KeyError should be thrown from grabbing a key with no metadata
-            # but we handle it so no KeyError should be thrown
-            except KeyError:
-                pytest.fail("_compact_state should not propagate KeyError")
+        wstates = WStates()
+
+        widget_state = WidgetStateProto()
+        widget_state.id = "widget_id_1"
+        widget_state.int_value = 5
+        wstates.set_widget_from_proto(widget_state)
+        session_state = SessionState(self.old_state, self.new_session_state, wstates)
+        # KeyError should be thrown from grabbing a key with no metadata
+        # but _compact_state catches it so no KeyError should be thrown
+        session_state._compact_state()
+        with pytest.raises(KeyError):
+            wstates["baz"]
 
     def test_clear_state(self):
         # Sanity test
