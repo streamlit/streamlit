@@ -967,9 +967,10 @@ class TimeInput(Widget):
         ws = WidgetState()
         ws.id = self.id
 
-        if self.value is not None:
-            serde = TimeInputSerde(None)  # type: ignore
-            ws.string_value = serde.serialize(self.value)
+        serde = TimeInputSerde(None)  # type: ignore
+        serialized_value = serde.serialize(self.value)
+        if serialized_value is not None:
+            ws.string_value = serialized_value
         return ws
 
     @property
