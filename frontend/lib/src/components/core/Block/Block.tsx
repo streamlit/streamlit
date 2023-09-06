@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react"
+import React, { ReactElement, useEffect, useMemo, useRef } from "react"
 import { useTheme } from "@emotion/react"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
