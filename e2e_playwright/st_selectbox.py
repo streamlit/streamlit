@@ -26,7 +26,7 @@ i2 = st.selectbox(
 )
 st.write("value 2:", i2)
 
-i3: None = st.selectbox("selectbox 3 (no options)", [])
+i3 = st.selectbox("selectbox 3 (no options)", [])
 st.write("value 3:", i3)
 
 more_options = [
