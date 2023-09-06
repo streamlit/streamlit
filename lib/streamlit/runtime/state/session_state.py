@@ -308,7 +308,12 @@ class SessionState:
         widget_state.
         """
         for key_or_wid in self:
-            self._old_state[key_or_wid] = self[key_or_wid]
+            try:
+                self._old_state[key_or_wid] = self[key_or_wid]
+            # handle key errors from widget state not having metadata gracefully
+            # https://github.com/streamlit/streamlit/issues/7206
+            except KeyError:
+                pass
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
@@ -398,7 +403,6 @@ class SessionState:
         At least one of the arguments must have a value.
         """
         assert user_key is not None or widget_id is not None
-
         if user_key is not None:
             try:
                 return self._new_session_state[user_key]

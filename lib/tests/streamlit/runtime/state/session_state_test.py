@@ -28,7 +28,6 @@ import tests.streamlit.runtime.state.strategies as stst
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
-from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX
@@ -554,6 +553,21 @@ class SessionStateMethodTests(unittest.TestCase):
         }
         assert self.session_state._new_session_state == {}
         assert self.session_state._new_widget_state == WStates()
+
+    # https://github.com/streamlit/streamlit/issues/7206
+    def test_ignore_key_error_within_compact_state(self):
+        # Arrange: Mock __getitem__ to throw a KeyError when it sees the key 'bad_key'
+        with patch.object(
+            WStates,
+            "__getitem__",
+            side_effect=lambda key: {"bad_key": KeyError("Key not found")}[key],
+        ):
+            try:
+                self.session_state._compact_state()
+            # KeyError should be thrown from grabbing a key with no metadata
+            # but we handle it so no KeyError should be thrown
+            except KeyError:
+                pytest.fail("_compact_state should not propagate KeyError")
 
     def test_clear_state(self):
         # Sanity test
