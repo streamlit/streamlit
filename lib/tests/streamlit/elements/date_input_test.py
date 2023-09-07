@@ -281,7 +281,7 @@ class DateInputInteractiveTest(InteractiveScriptTests):
         date_input = sr.date_input[0]
         assert date_input.value is None
 
-        # Set the value to 10
+        # Set the value to a specific date
         sr2 = date_input.set_value(date(2012, 1, 3)).run()
         date_input = sr2.date_input[0]
         assert date_input.value == date(2012, 1, 3)

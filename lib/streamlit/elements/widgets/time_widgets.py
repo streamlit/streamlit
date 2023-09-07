@@ -17,7 +17,17 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, List, Sequence, Tuple, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    List,
+    Literal,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+    overload,
+)
 
 from dateutil import relativedelta
 from typing_extensions import TypeAlias
@@ -34,7 +44,6 @@ from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
-    DefaultValue,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -44,8 +53,6 @@ from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
-    from builtins import ellipsis
-
     from streamlit.delta_generator import DeltaGenerator
 
 SingleDateValue: TypeAlias = Union[date, datetime, None]
@@ -60,12 +67,14 @@ ALLOWED_DATE_FORMATS = re.compile(
 )
 
 
-def _parse_date_value(value: DateValue | ellipsis) -> Tuple[List[date] | None, bool]:
+def _parse_date_value(
+    value: DateValue | Literal["today"],
+) -> Tuple[List[date] | None, bool]:
     parsed_dates: List[date]
     range_value: bool = False
     if value is None:
         return None, range_value
-    if value is DefaultValue:
+    if value == "today":
         # Set value default.
         parsed_dates = [datetime.now().date()]
     elif isinstance(value, datetime):
@@ -141,7 +150,7 @@ class _DateInputValues:
     @classmethod
     def from_raw_values(
         cls,
-        value: DateValue | ellipsis,
+        value: DateValue | Literal["today"],
         min_value: SingleDateValue,
         max_value: SingleDateValue,
     ) -> "_DateInputValues":
@@ -234,7 +243,7 @@ class TimeWidgetsMixin:
     def time_input(
         self,
         label: str,
-        value: time | datetime | ellipsis = ...,
+        value: time | datetime | Literal["now"] = "now",
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -268,7 +277,7 @@ class TimeWidgetsMixin:
     def time_input(
         self,
         label: str,
-        value: time | datetime | ellipsis | None = ...,
+        value: time | datetime | Literal["now"] | None = "now",
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -388,7 +397,7 @@ class TimeWidgetsMixin:
     def _time_input(
         self,
         label: str,
-        value: time | datetime | ellipsis | None = ...,
+        value: time | datetime | Literal["now"] | None = "now",
         key: Key | None = None,
         help: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -403,14 +412,14 @@ class TimeWidgetsMixin:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
-            default_value=value if value is not DefaultValue else None, key=key
+            default_value=value if value != "now" else None, key=key
         )
         maybe_raise_label_warnings(label, label_visibility)
 
         parsed_time: time | None
         if value is None:
             parsed_time = None
-        elif value is DefaultValue:
+        elif value == "now":
             # Set value default.
             parsed_time = datetime.now().time().replace(second=0, microsecond=0)
         elif isinstance(value, datetime):
@@ -486,7 +495,7 @@ class TimeWidgetsMixin:
     def date_input(
         self,
         label: str,
-        value: DateValue | ellipsis = ...,
+        value: DateValue | Literal["today"] = "today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
@@ -529,12 +538,12 @@ class TimeWidgetsMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime or None
+        value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime, "today", or None
             The value of this widget when it first renders. If a list/tuple with
             0 to 2 date/datetime values is provided, the datepicker will allow
             users to provide a range. If ``None``, will initialize empty and
-            return ``None`` until the user provides input. Defaults to today as
-            a single-date picker.
+            return ``None`` until the user provides input. If "today" (default),
+            will initialize with today as a single-date picker.
         min_value : datetime.date or datetime.datetime
             The minimum selectable date. If value is a date, defaults to value - 10 years.
             If value is the interval [start, end], defaults to start - 10 years.
@@ -640,7 +649,7 @@ class TimeWidgetsMixin:
     def _date_input(
         self,
         label: str,
-        value: DateValue | ellipsis = ...,
+        value: DateValue | Literal["today"] = "today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
@@ -660,7 +669,9 @@ class TimeWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
-        def parse_date_deterministic(v: SingleDateValue | ellipsis) -> str | None:
+        def parse_date_deterministic(
+            v: SingleDateValue | Literal["today"],
+        ) -> str | None:
             if isinstance(v, datetime):
                 return date.strftime(v.date(), "%Y/%m/%d")
             elif isinstance(v, date):
@@ -671,7 +682,7 @@ class TimeWidgetsMixin:
         parsed_max_date = parse_date_deterministic(max_value)
 
         parsed: str | None | List[str | None]
-        if value is DefaultValue or value is None:
+        if value == "today" or value is None:
             parsed = None
         elif isinstance(value, (datetime, date)):
             parsed = parse_date_deterministic(value)
