@@ -35,11 +35,8 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
-from streamlit.runtime.forward_msg_cache import (
-    ForwardMsgCache,
-    create_reference_msg,
-    populate_hash_if_needed,
-)
+from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
+from streamlit.runtime.forward_msg_cache_minimalistic_storage import MinimalisticStorage
 from streamlit.runtime.legacy_caching.caching import _mem_caches
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.media_file_storage import MediaFileStorage
@@ -89,6 +86,8 @@ class RuntimeConfig:
 
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
+
+    minimalistic_storage: MinimalisticStorage
 
     # The upload file manager
     uploaded_file_manager: UploadedFileManager
@@ -188,7 +187,9 @@ class Runtime:
         self._state = RuntimeState.INITIAL
 
         # Initialize managers
-        self._message_cache = ForwardMsgCache()
+        self._message_cache = ForwardMsgCache(
+            minimalistic_storage=config.minimalistic_storage
+        )
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._cache_storage_manager = config.cache_storage_manager
@@ -674,7 +675,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                 # This session has probably cached this message. Send
                 # a reference instead.
                 LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
-                msg_to_send = create_reference_msg(msg)
+                msg_to_send = self.message_cache.create_reference_msg(msg)
 
         # If this was a `script_finished` message, we increment the
         # script_run_count for this session, and update the cache
