@@ -46,6 +46,15 @@ function Tabs(props: TabProps): ReactElement {
 
   const [isOverflowing, setIsOverflowing] = useState(false)
 
+  // Reconciles active key & tab name
+  useEffect(() => {
+    const newTabKey = allTabLabels.indexOf(activeTabName)
+    if (newTabKey === -1) {
+      setActiveTabKey(0)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allTabLabels])
+
   useEffect(() => {
     if (tabListRef.current) {
       const { scrollWidth, clientWidth } = tabListRef.current
