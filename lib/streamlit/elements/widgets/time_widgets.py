@@ -318,11 +318,11 @@ class TimeWidgetsMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        value : datetime.time/datetime.datetime or None
+        value : datetime.time/datetime.datetime, "now" or None
             The value of this widget when it first renders. This will be
             cast to str internally. If ``None``, will initialize empty and
-            return ``None`` until the user provides input. Defaults to the
-            current time.
+            return ``None`` until the user selects a time. If "now" (default),
+            will initialize with the current time.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
