@@ -62,6 +62,7 @@ from streamlit.runtime.state.session_state import SessionState
 T = TypeVar("T")
 
 
+@dataclass
 class InitialValue:
     """This class is used to represent the initial value of a widget."""
 
@@ -594,7 +595,7 @@ class NumberInput(Widget):
 
 @dataclass(repr=False)
 class Radio(Widget, Generic[T]):
-    _value: T | None
+    _value: T | None | InitialValue
 
     proto: RadioProto
     options: list[str]
@@ -603,7 +604,7 @@ class Radio(Widget, Generic[T]):
     def __init__(self, proto: RadioProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "radio"
         self.id = proto.id
@@ -616,20 +617,22 @@ class Radio(Widget, Generic[T]):
         self.key = user_key_from_widget_id(self.id)
 
     @property
-    def index(self) -> int:
+    def index(self) -> int | None:
+        if self.value is None:
+            return None
         return self.options.index(str(self.value))
 
     @property
-    def value(self) -> T:
+    def value(self) -> T | None:
         """The currently selected value from the options."""
-        if self._value is not None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         else:
             state = self.root.session_state
             assert state
             return cast(T, state[self.id])
 
-    def set_value(self, v: T) -> Radio[T]:
+    def set_value(self, v: T | None) -> Radio[T]:
         self._value = v
         return self
 
@@ -640,13 +643,14 @@ class Radio(Widget, Generic[T]):
         """
         ws = WidgetState()
         ws.id = self.id
-        ws.int_value = self.index
+        if self.index is not None:
+            ws.int_value = self.index
         return ws
 
 
 @dataclass(repr=False)
 class Selectbox(Widget, Generic[T]):
-    _value: T | None
+    _value: T | None | InitialValue
 
     proto: SelectboxProto = field(repr=False)
     options: list[str]
@@ -654,7 +658,7 @@ class Selectbox(Widget, Generic[T]):
     def __init__(self, proto: SelectboxProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "selectbox"
         self.id = proto.id
@@ -666,22 +670,25 @@ class Selectbox(Widget, Generic[T]):
         self.key = user_key_from_widget_id(self.id)
 
     @property
-    def index(self) -> int:
+    def index(self) -> int | None:
+        if self.value is None:
+            return None
+
         if len(self.options) == 0:
             return 0
         return self.options.index(str(self.value))
 
     @property
-    def value(self) -> T:
+    def value(self) -> T | None:
         """The currently selected value from the options."""
-        if self._value is not None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         else:
             state = self.root.session_state
             assert state
             return cast(T, state[self.id])
 
-    def set_value(self, v: T) -> Selectbox[T]:
+    def set_value(self, v: T | None) -> Selectbox[T]:
         """
         Set the value of the selectbox.
         Implementation note: set_value not work correctly if `format_func` is also
@@ -691,10 +698,12 @@ class Selectbox(Widget, Generic[T]):
         self._value = v
         return self
 
-    def select(self, v: T) -> Selectbox[T]:
+    def select(self, v: T | None) -> Selectbox[T]:
         return self.set_value(v)
 
-    def select_index(self, index: int) -> Selectbox[T]:
+    def select_index(self, index: int | None) -> Selectbox[T]:
+        if index is None:
+            return self.set_value(None)
         return self.set_value(cast(T, self.options[index]))
 
     def widget_state(self) -> WidgetState:
@@ -704,7 +713,8 @@ class Selectbox(Widget, Generic[T]):
         """
         ws = WidgetState()
         ws.id = self.id
-        ws.int_value = self.index
+        if self.index is not None:
+            ws.int_value = self.index
         return ws
 
 

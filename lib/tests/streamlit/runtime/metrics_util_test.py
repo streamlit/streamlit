@@ -262,8 +262,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # publicly-exported function, which causes it not to be executed before an
             # Exception is raised due to a lack of required arguments.
             "experimental_connection",
-            "experimental_rerun",
-            "stop",
             "spinner",
             "empty",
             "progress",

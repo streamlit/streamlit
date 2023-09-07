@@ -174,10 +174,10 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     this.changeSingleSetting(e.target.name, e.target.checked)
   }
 
-  private handleThemeChange = (index: number): void => {
+  private handleThemeChange = (index: number | null): void => {
     const { activeTheme: oldTheme, availableThemes }: LibContextProps =
       this.context
-    const newTheme = availableThemes[index]
+    const newTheme = availableThemes[index ?? 0]
 
     this.props.metricsMgr.enqueue("themeChanged", {
       oldThemeName: oldTheme.name,
