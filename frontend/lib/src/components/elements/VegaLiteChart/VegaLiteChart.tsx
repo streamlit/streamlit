@@ -16,9 +16,13 @@
 
 import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
-import { logMessage } from "@streamlit/lib/src/util/log"
 import { Map as ImmutableMap } from "immutable"
 import merge from "lodash/merge"
+import * as vega from "vega"
+import embed from "vega-embed"
+import { expressionInterpreter } from "vega-interpreter"
+
+import { logMessage } from "@streamlit/lib/src/util/log"
 import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
 import {
   tableGetRowsAndCols,
@@ -27,9 +31,10 @@ import {
 } from "@streamlit/lib/src/dataframes/dataFrameProto"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
-import embed from "vega-embed"
-import * as vega from "vega"
-import { expressionInterpreter } from "vega-interpreter"
+
+import "@streamlit/lib/src/assets/css/vega-embed.css"
+import "@streamlit/lib/src/assets/css/vega-tooltip.css"
+
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
 const MagicFields = {
@@ -288,6 +293,20 @@ export class VegaLiteChart extends PureComponent<PropsWithHeight, State> {
       // Adds interpreter support for Vega expressions that is compliant with CSP
       ast: true,
       expr: expressionInterpreter,
+
+      // Disable default styles so that vega doesn't inject <style> tags in the
+      // DOM. We set these styles manually for finer control over them and to
+      // avoid inlining styles.
+      tooltip: { disableDefaultStyle: true },
+      // NOTE: We pass the empty string to the `defaultStyle` field here
+      // because setting it to false causes vega-embed to omit menu options on
+      // the chart entirely, which we don't want. Setting `defaultStyle` to the
+      // empty string causes vega-embed to inject an empty <style /> tag into
+      // the DOM, which may be harmlessly blocked by a CSP. This is fine as
+      // we're providing our own styles for vega components. While this works
+      // for now, we'll be submitting an upstream PR to vega-embed to make
+      // things less hacky.
+      defaultStyle: "",
     }
 
     const { vgSpec, view, finalize } = await embed(this.element, spec, options)
