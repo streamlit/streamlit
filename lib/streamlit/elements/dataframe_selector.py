@@ -292,10 +292,10 @@ class DataFrameSelectorMixin:
               formats above (hex string or color tuple), then that color will
               be used.
 
-              For example: if the dataset has 1000 rows, but this column can
-              only contains the values "adult", "child", "baby", then
-              those 1000 datapoints will be grouped into three lines, whose
-              colors will be automatically selected from the default palette.
+              For example: if the dataset has 1000 rows, but this column only
+              contains the values "adult", "child", and "baby", then those 1000
+              datapoints will be grouped into three lines whose colors will be
+              automatically selected from the default palette.
 
               But, if for the same 1000-row dataset, this column contained
               the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
@@ -324,8 +324,8 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
@@ -421,7 +421,7 @@ class DataFrameSelectorMixin:
     ) -> "DeltaGenerator":
         """Display an area chart.
 
-        This is just syntax-sugar around st.altair_chart. The main difference
+        This is syntax-sugar around st.altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
@@ -470,10 +470,10 @@ class DataFrameSelectorMixin:
               formats above (hex string or color tuple), then that color will
               be used.
 
-              For example: if the dataset has 1000 rows, but this column can
-              only contains the values "adult", "child", "baby",
-              then those 1000 datapoints will be grouped into 3 series, whose
-              colors will be automatically selected from the default palette.
+              For example: if the dataset has 1000 rows, but this column only
+              contains the values "adult", "child", and "baby", then those 1000
+              datapoints will be grouped into three series whose colors will be
+              automatically selected from the default palette.
 
               But, if for the same 1000-row dataset, this column contained
               the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
@@ -502,8 +502,8 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
@@ -599,7 +599,7 @@ class DataFrameSelectorMixin:
     ) -> "DeltaGenerator":
         """Display a bar chart.
 
-        This is just syntax-sugar around st.altair_chart. The main difference
+        This is syntax-sugar around st.altair_chart. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
@@ -630,7 +630,7 @@ class DataFrameSelectorMixin:
             The color to use for different series in this chart. This argument
             can only be supplied by keyword.
 
-            For a bar chart with just 1 series, this can be:
+            For a bar chart with just one series, this can be:
 
             * None, to use the default color.
             * A hex string like "#ffaa00" or "#ffaa0088".
@@ -648,10 +648,10 @@ class DataFrameSelectorMixin:
               formats above (hex string or color tuple), then that color will
               be used.
 
-              For example: if the dataset has 1000 rows, but this column can
-              only contains the values "adult", "child", "baby",
-              then those 1000 datapoints will be grouped into 3 series, whose
-              colors will be automatically selected from the default palette.
+              For example: if the dataset has 1000 rows, but this column only
+              contains the values "adult", "child", and "baby", then those 1000
+              datapoints will be grouped into three series whose colors will be
+              automatically selected from the default palette.
 
               But, if for the same 1000-row dataset, this column contained
               the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
@@ -680,8 +680,8 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
@@ -814,7 +814,7 @@ class DataFrameSelectorMixin:
 
             * None, to use the default color.
             * A hex string like "#ffaa00" or "#ffaa0088".
-            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+            * An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
             * The name of a column in the dataset where the color of that
@@ -826,9 +826,9 @@ class DataFrameSelectorMixin:
               Otherwise, the color will be automatically picked from the
               default palette.
 
-              For example: if the dataset has 1000 rows, but this column can
-              only contains the values "adult", "child", "baby", then those
-              1000 datapoints be shown using 3 colors from the default palette.
+              For example: if the dataset has 1000 rows, but this column only
+              contains the values "adult", "child", and "baby", then those 1000
+              datapoints be shown using three colors from the default palette.
 
               But if this column only contains floats or ints, then those
               1000 datapoints will be shown using a colors from a continuous
@@ -843,10 +843,8 @@ class DataFrameSelectorMixin:
 
             * A list of string colors or color tuples to be used for each of
               the series in the chart. This list should have the same length
-              as the number of y values.
-
-              For example, for a chart with have 3 series this argument can
-              be set to ``color=["#fd0", "#f0f", "#04f"]``.
+              as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
+              for three series).
 
         size : str, float, or None
             The size of the circles representing each point. This argument can
@@ -872,8 +870,8 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
@@ -881,29 +879,50 @@ class DataFrameSelectorMixin:
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
         ...     columns=['a', 'b', 'c'])
-        ...
+        >>>
         >>> st.scatter_chart(chart_data)
+
+        .. output::
+           https://doc-scatter-chart.streamlit.app/
+           height: 440px
 
         You can also choose different columns to use for x and y, as well as set
         the color dynamically based on a 3rd column (assuming your dataframe is in
         long format):
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3', 'col4'])
-        ...
+        ...     np.random.randn(20, 3),
+        ...     columns=['col1', 'col2', 'col3'])
+        >>> chart_data['col4'] = np.random.choice(['A','B','C'], 20)
+        >>>
         >>> st.scatter_chart(
         ...     chart_data,
         ...     x='col1',
         ...     y='col2',
-        ...     color='col3',
-        ...     size='col4',
+        ...     color='col4',
+        ...     size='col3',
         ... )
+
+        .. output::
+           https://doc-scatter-chart1.streamlit.app/
+           height: 440px
 
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple series with different
         colors:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame(
+        ...     np.random.randn(20, 4),
+        ...     columns=['col1', 'col2', 'col3', 'col4'])
+        >>>
         >>> st.scatter_chart(
         ...     chart_data,
         ...     x='col1',
@@ -911,6 +930,10 @@ class DataFrameSelectorMixin:
         ...     size='col4',
         ...     color=['#FF0000', '#0000FF'],  # Optional
         ... )
+
+        .. output::
+           https://doc-scatter-chart2.streamlit.app/
+           height: 440px
 
         """
         if _use_arrow():
