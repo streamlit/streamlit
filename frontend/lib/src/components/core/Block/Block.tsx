@@ -188,7 +188,12 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
       nonce={document.currentScript?.nonce || ""}
     >
       {({ width }) => {
-        const propsWithNewWidth = { ...props, ...{ width } }
+        const propsWithNewWidth = {
+          ...props,
+          // tabs are special case where width passed in props; autosizer causes jitter w/ width = 0 - issue #5820
+          // @ts-expect-error
+          ...{ width: props.width ? props.width : width },
+        }
 
         return (
           <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
