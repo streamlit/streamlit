@@ -278,8 +278,7 @@ class TimeInput extends PureComponent<Props, State> {
             style={{
               position: "absolute",
               top: "50%",
-              right: "2em",
-              // zIndex: 1000,
+              right: "2.05em",
             }}
             onClick={() => {
               this.handleChange(null)
