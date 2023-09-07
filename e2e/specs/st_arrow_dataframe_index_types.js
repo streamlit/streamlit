@@ -20,9 +20,6 @@ describe("st.dataframe supports a variety of index types", () => {
     cy.prepForElementSnapshots();
     // Make the toolbar disappear to not interfere with snapshots (in wide mode)
     cy.get("[data-testid='stToolbar']").invoke("css", "opacity", 0);
-    // This comment below SHOULD be removed.
-    // Testing to wait a little longer as autosizer is removed and snapshots are not working
-    cy.wait(10000)
   });
 
   it("renders element correctly", () => {
