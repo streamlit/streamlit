@@ -16,7 +16,7 @@
 
 import React from "react"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import { mount, render } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import { screen } from "@testing-library/react"
 import { BlockNode } from "@streamlit/lib/src/AppNode"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"

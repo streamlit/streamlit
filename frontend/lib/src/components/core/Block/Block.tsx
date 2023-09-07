@@ -192,6 +192,8 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     if (wrapperElement.current) {
       setWidth(wrapperElement.current.getBoundingClientRect().width)
       observer.observe(wrapperElement.current)
+    } else {
+      observer.disconnect()
     }
   }, [wrapperElement, observer])
 
