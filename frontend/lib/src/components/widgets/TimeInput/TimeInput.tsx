@@ -17,6 +17,7 @@
 import React, { PureComponent, ReactNode } from "react"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
 import { StyledClearIcon } from "baseui/input/styled-components"
+import { ChevronDown } from "baseui/icon"
 import { withTheme } from "@emotion/react"
 
 import { TimeInput as TimeInputProto } from "@streamlit/lib/src/proto"
@@ -209,6 +210,20 @@ class TimeInput extends PureComponent<Props, State> {
                   Body: {
                     style: () => ({
                       marginTop: "1px",
+                    }),
+                  },
+                },
+              },
+            },
+            SelectArrow: {
+              component: ChevronDown,
+
+              props: {
+                overrides: {
+                  Svg: {
+                    style: () => ({
+                      width: theme.iconSizes.xl,
+                      height: theme.iconSizes.xl,
                     }),
                   },
                 },
