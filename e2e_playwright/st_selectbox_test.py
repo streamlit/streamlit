@@ -110,7 +110,6 @@ def test_empty_selectbox_behaves_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.selectbox behaves correctly when empty (no initial selection)."""
-    # Enter 10 in the first empty input:
     empty_selectbox_input = app.get_by_test_id("stSelectbox").locator("input").nth(8)
 
     # Type an option:
@@ -135,7 +134,7 @@ def test_empty_selectbox_behaves_correctly(
 
 
 def test_keeps_value_on_selection_close(app: Page):
-    """Test that the fuzzy matching of options via typing works correctly."""
+    """Test that the selection is kept when the dropdown is closed."""
     app.get_by_test_id("stSelectbox").nth(3).locator("input").click()
 
     # Take a snapshot of the selection dropdown:
@@ -162,9 +161,8 @@ def test_handles_callback_on_change_correctly(app: Page):
 
     app.get_by_test_id("stSelectbox").nth(7).locator("input").click()
 
-    # Take a snapshot of the selection dropdown:
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
     # Select last option:
+    selection_dropdown = app.locator('[data-baseweb="popover"]').first
     selection_dropdown.locator("li").first.click()
 
     # Check that selection worked:
@@ -175,7 +173,7 @@ def test_handles_callback_on_change_correctly(app: Page):
         "selectbox changed: True", use_inner_text=True
     )
 
-    # Change different date input to trigger delta path change
+    # Change different input to trigger delta path change
     empty_selectbox_input = app.get_by_test_id("stSelectbox").locator("input").first
 
     # Type an option:

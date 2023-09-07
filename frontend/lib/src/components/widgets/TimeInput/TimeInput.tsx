@@ -283,6 +283,7 @@ class TimeInput extends PureComponent<Props, State> {
             onClick={() => {
               this.handleChange(null)
             }}
+            data-testid="stTimeInputClearButton"
           >
             <StyledClearIcon
               overrides={{
