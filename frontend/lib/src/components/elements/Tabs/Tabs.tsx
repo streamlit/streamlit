@@ -34,7 +34,13 @@ export interface TabProps extends BlockPropsWithoutWidth {
 function Tabs(props: TabProps): ReactElement {
   const { widgetsDisabled, node, isStale } = props
 
-  const [activeKey, setActiveKey] = useState<React.Key>(0)
+  let allTabLabels: string[] = []
+  const [activeTabKey, setActiveTabKey] = useState<React.Key>(0)
+  const [activeTabName, setActiveTabName] = useState<string>(
+    // @ts-expect-error
+    node.children[0].deltaBlock.tab.label || "0"
+  )
+
   const tabListRef = useRef<HTMLUListElement>(null)
   const theme = useTheme()
 
@@ -45,6 +51,16 @@ function Tabs(props: TabProps): ReactElement {
       const { scrollWidth, clientWidth } = tabListRef.current
       setIsOverflowing(scrollWidth > clientWidth)
     }
+
+    // If tab # changes, match the selected tab label, otherwise default to first tab
+    const newTabKey = allTabLabels.indexOf(activeTabName)
+    if (newTabKey !== -1) {
+      setActiveTabKey(newTabKey)
+    } else {
+      setActiveTabKey(0)
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node.children.length])
 
   const TAB_HEIGHT = "2.5rem"
@@ -56,9 +72,11 @@ function Tabs(props: TabProps): ReactElement {
       className="stTabs"
     >
       <UITabs
-        activeKey={activeKey}
+        activateOnFocus
+        activeKey={activeTabKey}
         onChange={({ activeKey }) => {
-          setActiveKey(activeKey)
+          setActiveTabKey(activeKey)
+          setActiveTabName(allTabLabels[activeKey as number])
         }}
         /* renderAll on UITabs should always be set to true to avoid scrolling issue
            https://github.com/streamlit/streamlit/issues/5069
@@ -72,8 +90,6 @@ function Tabs(props: TabProps): ReactElement {
                 ? theme.colors.fadedText40
                 : theme.colors.primary,
               height: TAB_BORDER_HEIGHT,
-              // Requires bottom offset to align with the TabBorder
-              // bottom: "3px",
             }),
           },
           TabBorder: {
@@ -104,9 +120,11 @@ function Tabs(props: TabProps): ReactElement {
             }),
           },
         }}
-        activateOnFocus
       >
         {node.children.map((appNode: AppNode, index: number): ReactElement => {
+          // Reset available tab labels when rerendering
+          if (index === 0) allTabLabels = []
+
           const childProps = {
             ...props,
             node: appNode as BlockNode,
@@ -115,7 +133,9 @@ function Tabs(props: TabProps): ReactElement {
           if (childProps.node.deltaBlock?.tab?.label) {
             nodeLabel = childProps.node.deltaBlock.tab.label
           }
-          const isSelected = activeKey.toString() === index.toString()
+          allTabLabels[index] = nodeLabel
+
+          const isSelected = activeTabKey.toString() === index.toString()
           const isLast = index === node.children.length - 1
 
           return (
