@@ -103,7 +103,7 @@ export interface Props {
 export function createAnchorFromText(text: string | null): string {
   const newAnchor = text
     ?.toLowerCase()
-    .split(/[^A-Za-z0-9]/)
+    .split(/[^\p{L}\p{N}]+/gu) // split on non-alphanumeric characters across languages
     .filter(Boolean)
     .join("-")
   return newAnchor || ""
