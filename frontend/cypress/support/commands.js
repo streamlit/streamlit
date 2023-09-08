@@ -112,7 +112,7 @@ Cypress.Commands.add(
     cy.changeTheme("Light")
     setStates()
     cy.wrap(subject).matchImageSnapshot(name, { ...options, force: false })
-    cy.screenshot({ scale: true })
+    cy.screenshot({ capture: "viewport" })
   }
 )
 
