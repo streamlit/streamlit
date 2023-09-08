@@ -99,7 +99,6 @@ class ScriptRunner:
         self,
         session_id: str,
         main_script_path: str,
-        client_state: ClientState,
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
         script_cache: ScriptCache,
@@ -117,9 +116,6 @@ class ScriptRunner:
 
         main_script_path
             Path to our main app script.
-
-        client_state
-            The current state from the client (widgets and query params).
 
         uploaded_file_mgr
             The File manager to store the data uploaded by the file_uploader widget.
@@ -145,7 +141,6 @@ class ScriptRunner:
         self._script_cache = script_cache
         self._user_info = user_info
 
-        self._client_state = client_state
         self._session_state = SafeSessionState(session_state)
 
         self._requests = ScriptRequests()
@@ -284,10 +279,10 @@ class ScriptRunner:
             session_id=self._session_id,
             _enqueue=self._enqueue_forward_msg,
             script_requests=self._requests,
-            query_string=self._client_state.query_string,
+            query_string="",
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
-            page_script_hash=self._client_state.page_script_hash,
+            page_script_hash="",
             user_info=self._user_info,
             gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
         )
