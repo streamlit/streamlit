@@ -15,6 +15,7 @@
 """A wrapper for simple PyDeck scatter charts."""
 
 import copy
+import hashlib
 import json
 from typing import (
     TYPE_CHECKING,
@@ -240,10 +241,15 @@ class MapMixin:
         map_style = None
 
         map_proto = DeckGlJsonChartProto()
-        map_proto.json = to_deckgl_json(
+        deck_gl_json = to_deckgl_json(
             data, latitude, longitude, size, color, map_style, zoom
         )
+        map_proto.json = deck_gl_json
         map_proto.use_container_width = use_container_width
+        json_string = json.dumps(deck_gl_json)
+        json_bytes = json_string.encode("utf-8")
+        id = hashlib.md5(json_bytes).hexdigest()
+        map_proto.id = id
         return self.dg._enqueue("deck_gl_json_chart", map_proto)
 
     @property
