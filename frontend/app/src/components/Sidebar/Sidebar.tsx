@@ -213,6 +213,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     } = this.props
 
     const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
+    const isEmbedded = isEmbed() && !isColoredLineDisplayed()
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
@@ -244,7 +245,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           handleComponent={{
             right: <StyledResizeHandle onClick={this.resetSidebarWidth} />,
           }}
-          size={{ width: sidebarWidth, height: "100%" }}
+          size={{
+            width: sidebarWidth,
+            height: isEmbedded ? "100%" : window.innerHeight - 2,
+          }}
           as={StyledSidebar}
           onResizeStop={(e, direction, ref, d) => {
             const newWidth = parseInt(sidebarWidth, 10) + d.width
@@ -253,7 +257,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           // Props part of StyledSidebar, but not Resizable component
           // @ts-expect-error
           isCollapsed={collapsedSidebar}
-          isEmbed={isEmbed() && !isColoredLineDisplayed()}
+          isEmbed={isEmbedded}
           sidebarWidth={sidebarWidth}
         >
           <StyledSidebarContent
