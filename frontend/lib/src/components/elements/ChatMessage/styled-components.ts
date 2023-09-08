@@ -95,5 +95,6 @@ export const StyledAvatarImage = styled.img(({ theme }) => {
     height: "2rem",
     borderRadius: theme.radii.lg,
     objectFit: "cover",
+    display: "flex",
   }
 })
