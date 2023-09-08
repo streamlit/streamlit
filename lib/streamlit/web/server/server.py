@@ -35,7 +35,7 @@ from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
-from streamlit.runtime.forward_msg_cache_minimalistic_storage import MinimalisticStorage
+from streamlit.runtime.forward_msg_cache import MemoryForwardMsgCacheStorage
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
@@ -228,7 +228,7 @@ class Server:
         media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)
         MediaFileHandler.initialize_storage(media_file_storage)
 
-        minimalistic_storage = MinimalisticStorage(base_url=MESSAGE_ENDPOINT)
+        forward_msg_cache_storage = MemoryForwardMsgCacheStorage(MESSAGE_ENDPOINT)
 
         uploaded_file_mgr = MemoryUploadedFileManager(UPLOAD_FILE_ENDPOINT)
 
@@ -238,7 +238,7 @@ class Server:
                 command_line=command_line,
                 media_file_storage=media_file_storage,
                 uploaded_file_manager=uploaded_file_mgr,
-                minimalistic_storage=minimalistic_storage,
+                forward_msg_cache_storage=forward_msg_cache_storage,
                 cache_storage_manager=create_default_cache_storage_manager(),
             ),
         )

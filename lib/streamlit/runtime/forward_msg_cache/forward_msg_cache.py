@@ -20,7 +20,9 @@ from weakref import WeakKeyDictionary
 from streamlit import config, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.forward_msg_cache_minimalistic_storage import MinimalisticStorage
+from streamlit.runtime.forward_msg_cache.storage_protocol import (
+    ForwardMsgCacheStorageProtocol,
+)
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 
 if TYPE_CHECKING:
@@ -64,31 +66,6 @@ def populate_hash_if_needed(msg: ForwardMsg) -> str:
         msg.metadata.CopyFrom(metadata)
 
     return msg.hash
-
-
-#
-# def create_reference_msg(msg: ForwardMsg) -> ForwardMsg:
-#     """Create a ForwardMsg that refers to the given message via its hash.
-#
-#     The reference message will also get a copy of the source message's
-#     metadata.
-#
-#     Parameters
-#     ----------
-#     msg : ForwardMsg
-#         The ForwardMsg to create the reference to.
-#
-#     Returns
-#     -------
-#     ForwardMsg
-#         A new ForwardMsg that "points" to the original message via the
-#         ref_hash field.
-#
-#     """
-#     ref_msg = ForwardMsg()
-#     ref_msg.ref_hash = populate_hash_if_needed(msg)
-#     ref_msg.metadata.CopyFrom(msg.metadata)
-#     return ref_msg
 
 
 class ForwardMsgCache(CacheStatsProvider):
@@ -164,9 +141,9 @@ class ForwardMsgCache(CacheStatsProvider):
             """
             return len(self._session_script_run_counts) > 0
 
-    def __init__(self, minimalistic_storage: MinimalisticStorage):
+    def __init__(self, forward_msg_cache_storage: ForwardMsgCacheStorageProtocol):
         self._entries: Dict[str, "ForwardMsgCache.Entry"] = {}
-        self.minimalistic_storage = minimalistic_storage
+        self.forward_msg_cache_storage = forward_msg_cache_storage
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -199,17 +176,17 @@ class ForwardMsgCache(CacheStatsProvider):
         populate_hash_if_needed(msg)
         entry = self._entries.get(msg.hash, None)
         if entry is None:
-            ref_url = self.minimalistic_storage.add_message(msg)
+            ref_url = self.forward_msg_cache_storage.add_message(msg)
             entry = ForwardMsgCache.Entry(msg.hash, ref_url=ref_url)
             self._entries[msg.hash] = entry
         entry.add_session_ref(session, script_run_count)
 
-    def get_message(self, hash: str) -> Optional[ForwardMsg]:
+    def get_message(self, msg_hash: str) -> Optional[ForwardMsg]:
         """Return the message with the given ID if it exists in the cache.
 
         Parameters
         ----------
-        hash : string
+        msg_hash : string
             The id of the message to retrieve.
 
         Returns
@@ -217,8 +194,11 @@ class ForwardMsgCache(CacheStatsProvider):
         ForwardMsg | None
 
         """
-        entry = self._entries.get(hash, None)
-        return self.minimalistic_storage.get_message(entry.ref_hash) if entry else None
+        entry = self._entries.get(msg_hash, None)
+        if entry:
+            return self.forward_msg_cache_storage.get_message(entry.ref_hash)
+        else:
+            return None
 
     def has_message_reference(
         self, msg: ForwardMsg, session: "AppSession", script_run_count: int
@@ -254,7 +234,7 @@ class ForwardMsgCache(CacheStatsProvider):
                 # The entry has no more references. Remove it from
                 # the cache completely.
                 del self._entries[msg_hash]
-                self.minimalistic_storage.delete_message(msg_hash)
+                self.forward_msg_cache_storage.delete_message(msg_hash)
 
     def remove_expired_entries_for_session(
         self, session: "AppSession", script_run_count: int
@@ -291,12 +271,12 @@ class ForwardMsgCache(CacheStatsProvider):
                     # The entry has no more references. Remove it from
                     # the cache completely.
                     del self._entries[msg_hash]
-                    self.minimalistic_storage.delete_message(msg_hash)
+                    self.forward_msg_cache_storage.delete_message(msg_hash)
 
     def clear(self) -> None:
         """Remove all entries from the cache"""
         self._entries.clear()
-        self.minimalistic_storage.clear()
+        self.forward_msg_cache_storage.clear()
 
     def get_stats(self) -> List[CacheStat]:
         stats: List[CacheStat] = []
@@ -305,7 +285,7 @@ class ForwardMsgCache(CacheStatsProvider):
                 CacheStat(
                     category_name="ForwardMessageCache",
                     cache_name="",
-                    byte_length=self.minimalistic_storage.get_message(
+                    byte_length=self.forward_msg_cache_storage.get_message(
                         entry.ref_hash
                     ).ByteSize(),
                 )

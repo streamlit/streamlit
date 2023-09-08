@@ -11,26 +11,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from typing import Dict, Optional
+from abc import abstractmethod
+from typing import Optional, Protocol, TypeAlias
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
+RefHash: TypeAlias = str
+RefURL: TypeAlias = str
 
-class MinimalisticStorage:
-    def __init__(self, base_url: str):
-        self.base_url = base_url
-        self._messages_by_hash: Dict[str, ForwardMsg] = {}
 
-    def add_message(self, msg: ForwardMsg) -> str:
-        self._messages_by_hash[msg.hash] = msg
-        return f"{self.base_url}?hash={msg.hash}"
+class ForwardMsgCacheStorageProtocol(Protocol):
+    @abstractmethod
+    def add_message(self, msg: ForwardMsg) -> RefURL:
+        raise NotImplementedError
 
-    def get_message(self, msg_hash: str) -> Optional[ForwardMsg]:
-        return self._messages_by_hash.get(msg_hash)
+    @abstractmethod
+    def delete_message(self, msg_hash: RefHash) -> None:
+        raise NotImplementedError
 
-    def delete_message(self, msg_hash: str) -> None:
-        self._messages_by_hash.pop(msg_hash, None)
-
+    @abstractmethod
     def clear(self):
-        self._messages_by_hash.clear()
+        raise NotImplementedError
+
+    def get_message(self, msg_hash: RefHash) -> Optional[ForwardMsg]:
+        return None

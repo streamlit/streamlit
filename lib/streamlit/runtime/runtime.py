@@ -35,8 +35,11 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
-from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
-from streamlit.runtime.forward_msg_cache_minimalistic_storage import MinimalisticStorage
+from streamlit.runtime.forward_msg_cache import (
+    ForwardMsgCache,
+    ForwardMsgCacheStorageProtocol,
+    populate_hash_if_needed,
+)
 from streamlit.runtime.legacy_caching.caching import _mem_caches
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.media_file_storage import MediaFileStorage
@@ -87,7 +90,7 @@ class RuntimeConfig:
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
 
-    minimalistic_storage: MinimalisticStorage
+    forward_msg_cache_storage: ForwardMsgCacheStorageProtocol
 
     # The upload file manager
     uploaded_file_manager: UploadedFileManager
@@ -188,7 +191,7 @@ class Runtime:
 
         # Initialize managers
         self._message_cache = ForwardMsgCache(
-            minimalistic_storage=config.minimalistic_storage
+            forward_msg_cache_storage=config.forward_msg_cache_storage
         )
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
