@@ -135,12 +135,12 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     }).then(() => undefined) // If the request succeeds, we don't care about the response body
   }
 
-  public async fetchCachedForwardMsg(ref_url: string): Promise<Uint8Array> {
+  public async fetchCachedForwardMsg(refUrl: string): Promise<Uint8Array> {
     const serverURI = this.requireServerUri()
 
-    const messageUrl = ref_url.startsWith(FORWARD_MSG_CACHE_ENDPOINT)
-      ? buildHttpUri(this.requireServerUri(), ref_url)
-      : ref_url
+    const messageUrl = refUrl.startsWith(FORWARD_MSG_CACHE_ENDPOINT)
+      ? buildHttpUri(serverURI, refUrl)
+      : refUrl
     const rsp = await axios.request({
       url: messageUrl,
       method: "GET",
