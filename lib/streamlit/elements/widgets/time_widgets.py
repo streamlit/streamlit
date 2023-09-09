@@ -17,7 +17,17 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 
 from dateutil import relativedelta
 from typing_extensions import TypeAlias
@@ -48,7 +58,9 @@ if TYPE_CHECKING:
 TimeValue: TypeAlias = Union[time, datetime, None]
 SingleDateValue: TypeAlias = Union[date, datetime, None]
 DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
-DateWidgetReturn: TypeAlias = Union[date, Tuple[()], Tuple[date], Tuple[date, date]]
+DateWidgetReturn: TypeAlias = Union[
+    date, Tuple[()], Tuple[date], Tuple[date, date], None
+]
 
 DEFAULT_STEP_MINUTES = 15
 ALLOWED_DATE_FORMATS = re.compile(
@@ -56,10 +68,14 @@ ALLOWED_DATE_FORMATS = re.compile(
 )
 
 
-def _parse_date_value(value: DateValue) -> Tuple[List[date], bool]:
+def _parse_date_value(
+    value: DateValue | Literal["today"],
+) -> Tuple[List[date] | None, bool]:
     parsed_dates: List[date]
     range_value: bool = False
     if value is None:
+        return None, range_value
+    if value == "today":
         # Set value default.
         parsed_dates = [datetime.now().date()]
     elif isinstance(value, datetime):
@@ -85,7 +101,7 @@ def _parse_date_value(value: DateValue) -> Tuple[List[date], bool]:
 
 def _parse_min_date(
     min_value: SingleDateValue,
-    parsed_dates: Sequence[date],
+    parsed_dates: Sequence[date] | None,
 ) -> date:
     parsed_min_date: date
     if isinstance(min_value, datetime):
@@ -106,7 +122,7 @@ def _parse_min_date(
 
 def _parse_max_date(
     max_value: SingleDateValue,
-    parsed_dates: Sequence[date],
+    parsed_dates: Sequence[date] | None,
 ) -> date:
     parsed_max_date: date
     if isinstance(max_value, datetime):
@@ -127,7 +143,7 @@ def _parse_max_date(
 
 @dataclass(frozen=True)
 class _DateInputValues:
-    value: Sequence[date]
+    value: Sequence[date] | None
     is_range: bool
     max: date
     min: date
@@ -135,7 +151,7 @@ class _DateInputValues:
     @classmethod
     def from_raw_values(
         cls,
-        value: DateValue,
+        value: DateValue | Literal["today"],
         min_value: SingleDateValue,
         max_value: SingleDateValue,
     ) -> "_DateInputValues":
@@ -198,7 +214,7 @@ class DateInputSerde:
         ui_value: Any,
         widget_id: str = "",
     ) -> DateWidgetReturn:
-        return_value: Sequence[date]
+        return_value: Sequence[date] | None
         if ui_value is not None:
             return_value = tuple(
                 datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
@@ -206,11 +222,17 @@ class DateInputSerde:
         else:
             return_value = self.value.value
 
+        if return_value is None or len(return_value) == 0:
+            return () if self.value.is_range else None
+
         if not self.value.is_range:
             return return_value[0]
         return cast(DateWidgetReturn, tuple(return_value))
 
     def serialize(self, v: DateWidgetReturn) -> List[str]:
+        if v is None:
+            return []
+
         to_serialize = list(v) if isinstance(v, (list, tuple)) else [v]
         return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
 
@@ -417,14 +439,14 @@ class TimeWidgetsMixin:
     def date_input(
         self,
         label: str,
-        value: DateValue = None,
+        value: DateValue | Literal["today"] = "today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
@@ -460,10 +482,12 @@ class TimeWidgetsMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime or None
+        value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime, "today", or None
             The value of this widget when it first renders. If a list/tuple with
             0 to 2 date/datetime values is provided, the datepicker will allow
-            users to provide a range. Defaults to today as a single-date picker.
+            users to provide a range. If ``None``, will initialize empty and
+            return ``None`` until the user provides input. If "today" (default),
+            will initialize with today as a single-date picker.
         min_value : datetime.date or datetime.datetime
             The minimum selectable date. If value is a date, defaults to value - 10 years.
             If value is the interval [start, end], defaults to start - 10 years.
@@ -499,8 +523,9 @@ class TimeWidgetsMixin:
 
         Returns
         -------
-        datetime.date or a tuple with 0-2 dates
-            The current value of the date input widget.
+        datetime.date or a tuple with 0-2 dates or None
+            The current value of the date input widget or ``None`` if no date has been
+            selected.
 
         Examples
         --------
@@ -535,6 +560,18 @@ class TimeWidgetsMixin:
            https://doc-date-input1.streamlit.app/
            height: 380px
 
+        To initialize an empty date input, use ``None`` as the value:
+
+        >>> import datetime
+        >>> import streamlit as st
+        >>>
+        >>> d = st.date_input("When's your birthday", value=None)
+        >>> st.write('Your birthday is:', d)
+
+        .. output::
+           https://doc-date-input-empty.streamlit.app/
+           height: 380px
+
         """
         ctx = get_script_run_ctx()
         return self._date_input(
@@ -556,19 +593,19 @@ class TimeWidgetsMixin:
     def _date_input(
         self,
         label: str,
-        value: DateValue = None,
+        value: DateValue | Literal["today"] = "today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
+        ctx: ScriptRunContext | None = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
@@ -576,19 +613,23 @@ class TimeWidgetsMixin:
 
         maybe_raise_label_warnings(label, label_visibility)
 
-        def parse_date_deterministic(v: SingleDateValue) -> str | None:
-            if v is None:
-                return None
-            elif isinstance(v, datetime):
+        def parse_date_deterministic(
+            v: SingleDateValue | Literal["today"],
+        ) -> str | None:
+            if isinstance(v, datetime):
                 return date.strftime(v.date(), "%Y/%m/%d")
             elif isinstance(v, date):
                 return date.strftime(v, "%Y/%m/%d")
+            return None
 
         parsed_min_date = parse_date_deterministic(min_value)
         parsed_max_date = parse_date_deterministic(max_value)
 
-        if isinstance(value, datetime) or isinstance(value, date) or value is None:
-            parsed: str | None | List[str | None] = parse_date_deterministic(value)
+        parsed: str | None | List[str | None]
+        if value == "today" or value is None:
+            parsed = None
+        elif isinstance(value, (datetime, date)):
+            parsed = parse_date_deterministic(value)
         else:
             parsed = [parse_date_deterministic(v) for v in value]
 
@@ -630,9 +671,15 @@ class TimeWidgetsMixin:
         )
         date_input_proto.format = format
         date_input_proto.label = label
-        date_input_proto.default[:] = [
-            date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
-        ]
+        if parsed_values.value is None:
+            # An empty array represents the empty state. The reason for using an empty
+            # array here is that we cannot optional keyword for repeated fields
+            # in protobuf.
+            date_input_proto.default[:] = []
+        else:
+            date_input_proto.default[:] = [
+                date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
+            ]
         date_input_proto.min = date.strftime(parsed_values.min, "%Y/%m/%d")
         date_input_proto.max = date.strftime(parsed_values.max, "%Y/%m/%d")
         date_input_proto.form_id = current_form_id(self.dg)
