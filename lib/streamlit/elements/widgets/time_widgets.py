@@ -728,6 +728,9 @@ class TimeWidgetsMixin:
         date_input_proto.format = format
         date_input_proto.label = label
         if parsed_values.value is None:
+            # An empty array represents the empty state. The reason for using an empty
+            # array here is that we cannot optional keyword for repeated fields
+            # in protobuf.
             date_input_proto.default[:] = []
         else:
             date_input_proto.default[:] = [
