@@ -293,12 +293,12 @@ class ColorPicker(Widget):
 
 
 SingleDateValue: TypeAlias = Union[date, datetime]
-DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
+DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue], None]
 
 
 @dataclass(repr=False)
 class DateInput(Widget):
-    _value: DateValue | None
+    _value: DateValue | None | InitialValue
     proto: DateInputProto
     min: date
     max: date
@@ -307,7 +307,7 @@ class DateInput(Widget):
     def __init__(self, proto: DateInputProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "date_input"
         self.id = proto.id
@@ -334,9 +334,9 @@ class DateInput(Widget):
 
     @property
     def value(self) -> DateWidgetReturn:
-        if self._value is not None:
+        if not isinstance(self._value, InitialValue):
             parsed, _ = _parse_date_value(self._value)
-            return tuple(parsed)  # type: ignore
+            return tuple(parsed) if parsed is not None else None  # type: ignore
         else:
             state = self.root.session_state
             assert state

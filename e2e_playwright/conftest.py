@@ -396,7 +396,7 @@ def assert_snapshot(
             # Update this in updates folder:
             snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
             snapshot_updates_file_path.write_bytes(img_bytes)
-            pytest.fail(f"Snapshot matching failed: {ex}")
+            pytest.fail(f"Snapshot matching for {snapshot_file_name} failed: {ex}")
         max_diff_pixels = int(image_threshold * img_a.size[0] * img_a.size[1])
 
         if mismatch < max_diff_pixels:
