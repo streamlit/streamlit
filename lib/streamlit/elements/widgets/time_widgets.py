@@ -665,7 +665,9 @@ class TimeWidgetsMixin:
     ) -> DateWidgetReturn:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
+        check_session_state_rules(
+            default_value=value if value != "today" else None, key=key
+        )
 
         maybe_raise_label_warnings(label, label_visibility)
 
