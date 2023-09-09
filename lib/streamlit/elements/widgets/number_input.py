@@ -17,7 +17,7 @@ from __future__ import annotations
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Union, cast, overload
+from typing import Literal, Union, cast, overload
 
 import streamlit
 from streamlit.elements.form import current_form_id
@@ -32,7 +32,6 @@ from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
-    DefaultValue,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -42,9 +41,6 @@ from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 Number = Union[int, float]
-
-if TYPE_CHECKING:
-    from builtins import ellipsis
 
 
 @dataclass
@@ -73,7 +69,7 @@ class NumberInputMixin:
         label: str,
         min_value: Number | None = None,
         max_value: Number | None = None,
-        value: ellipsis | Number = ...,
+        value: Number | Literal["min"] = "min",
         step: Number | None = None,
         format: str | None = None,
         key: Key | None = None,
@@ -113,7 +109,7 @@ class NumberInputMixin:
         label: str,
         min_value: Number | None = None,
         max_value: Number | None = None,
-        value: ellipsis | Number | None = ...,
+        value: Number | Literal["min"] | None = "min",
         step: Number | None = None,
         format: str | None = None,
         key: Key | None = None,
@@ -167,10 +163,11 @@ class NumberInputMixin:
         max_value : int, float, or None
             The maximum permitted value.
             If None, there will be no maximum.
-        value : int, float, or None
-            The value of this widget when it first renders. If ``None``, the widget
-            will initialize empty and return ``None`` until the user provides input.
-            Defaults to min_value, or 0.0 if min_value is None.
+        value : int, float, "min" or None
+            The value of this widget when it first renders. If ``None``, will initialize
+            empty and return ``None`` until the user provides input.
+            If "min" (default), will initialize with min_value, or 0.0 if
+            min_value is None.
         step : int, float, or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
@@ -254,7 +251,7 @@ class NumberInputMixin:
         label: str,
         min_value: Number | None = None,
         max_value: Number | None = None,
-        value: ellipsis | Number | None = ...,
+        value: Number | Literal["min"] | None = "min",
         step: Number | None = None,
         format: str | None = None,
         key: Key | None = None,
@@ -270,7 +267,7 @@ class NumberInputMixin:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
-            default_value=None if value is DefaultValue else value, key=key
+            default_value=value if value != "min" else None, key=key
         )
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -293,13 +290,12 @@ class NumberInputMixin:
         number_input_args = [min_value, max_value, value, step]
 
         int_args = all(
-            isinstance(a, (numbers.Integral, type(None), type(DefaultValue)))
+            isinstance(a, (numbers.Integral, type(None), str))
             for a in number_input_args
         )
 
         float_args = all(
-            isinstance(a, (float, type(None), type(DefaultValue)))
-            for a in number_input_args
+            isinstance(a, (float, type(None), str)) for a in number_input_args
         )
 
         if not int_args and not float_args:
@@ -311,7 +307,7 @@ class NumberInputMixin:
                 f"\n`step` has {type(step).__name__} type."
             )
 
-        if value is DefaultValue:
+        if value == "min":
             if min_value is not None:
                 value = min_value
             elif int_args and float_args:

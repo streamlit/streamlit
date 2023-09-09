@@ -71,10 +71,6 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
     }
 )
 
-# Used to indicate that an element parameter should be set to its default value.
-# This needs to be type via `builtins.ellipsis`.
-DefaultValue = Ellipsis  # same as ...
-
 
 class NoValue:
     """Return this from DeltaGenerator.foo_widget() when you want the st.foo_widget()
