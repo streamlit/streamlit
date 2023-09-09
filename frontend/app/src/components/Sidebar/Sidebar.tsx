@@ -200,6 +200,20 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ hideScrollbar: newValue })
   }
 
+  // Additional safeguard for sidebar height sizing
+  headerDecorationVisible(): boolean {
+    let coloredLineExists = false
+    const headerDecoration = document.getElementById("stDecoration")
+    if (headerDecoration) {
+      const decorationStyles = window.getComputedStyle(headerDecoration)
+      coloredLineExists =
+        decorationStyles.visibility !== "hidden" &&
+        decorationStyles.visibility !== "collapse" &&
+        decorationStyles.display !== "none"
+    }
+    return coloredLineExists
+  }
+
   public render(): ReactNode {
     const { collapsedSidebar, sidebarWidth, hideScrollbar } = this.state
     const {
@@ -214,6 +228,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
     const isEmbedded = isEmbed() && !isColoredLineDisplayed()
+    const sidebarAdjust = !isEmbedded && this.headerDecorationVisible()
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
@@ -247,7 +262,8 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           }}
           size={{
             width: sidebarWidth,
-            height: isEmbedded ? "100%" : window.innerHeight - 2,
+            // Addresses height glitch when anchor used - issue #6264
+            height: sidebarAdjust ? window.innerHeight - 2 : "100%",
           }}
           as={StyledSidebar}
           onResizeStop={(e, direction, ref, d) => {
@@ -257,7 +273,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           // Props part of StyledSidebar, but not Resizable component
           // @ts-expect-error
           isCollapsed={collapsedSidebar}
-          isEmbed={isEmbedded}
+          adjustTop={sidebarAdjust}
           sidebarWidth={sidebarWidth}
         >
           <StyledSidebarContent
