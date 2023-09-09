@@ -274,6 +274,8 @@ class TimeInput extends PureComponent<Props, State> {
           aria-label={element.label}
         />
         {clearable && !isNullOrUndefined(this.state.value) && (
+          // The time picker doesn't have a built-in clearable functionality.
+          // Therefore, we are adding the clear button here.
           <div
             style={{
               position: "absolute",
