@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useMemo, useRef } from "react"
+import React, {
+  ReactElement,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react"
 import { useTheme } from "@emotion/react"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
@@ -183,16 +189,21 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   const observer = useMemo(
     () =>
       new ResizeObserver(([entry]) => {
-        setWidth(entry.target.getBoundingClientRect().width)
+        const newWidth = entry.target.getBoundingClientRect().width
+        if (newWidth !== width) {
+          setWidth(newWidth)
+        }
       }),
-    [setWidth]
+    [width, setWidth]
   )
 
   useEffect(() => {
     if (wrapperElement.current) {
-      setWidth(wrapperElement.current.getBoundingClientRect().width)
       observer.observe(wrapperElement.current)
     } else {
+      return
+    }
+    return () => {
       observer.disconnect()
     }
   }, [wrapperElement, observer])
