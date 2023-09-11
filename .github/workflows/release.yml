@@ -63,7 +63,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
           # Save the access token to the local git config, so
@@ -146,7 +146,7 @@ jobs:
           python scripts/create_release.py
 
       - name: Checkout branch "${{ env.CONSTRAINTS_BRANCH }}"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.CONSTRAINTS_BRANCH }}
           # Save the access token to the local git config, so
