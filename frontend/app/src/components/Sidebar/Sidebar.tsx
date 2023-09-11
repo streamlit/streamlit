@@ -227,7 +227,9 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     } = this.props
 
     const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
+    // Handles checking the URL params
     const isEmbedded = isEmbed() && !isColoredLineDisplayed()
+    // If header decoration visible, move sidebar down so decoration doesn't go below it
     const sidebarAdjust = !isEmbedded && this.headerDecorationVisible()
 
     // The tabindex is required to support scrolling by arrow keys.
