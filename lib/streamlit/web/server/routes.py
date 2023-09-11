@@ -164,19 +164,20 @@ class HealthHandler(_SpecialRequestHandler):
 
 class HostConfigHandler(_SpecialRequestHandler):
     def initialize(self):
-        self._allowed_origins = config.get_option("server.allowedOrigins")
-        self._disable_unsafe_html_execution = config.get_option(
-            "server.disableUnsafeHtmlExecution"
+        host_options = config.get_options_for_section("host")
+        self._allowed_origins = list(host_options.get("allowedOrigins", []))
+        self._disable_unsafe_html_execution = host_options.get(
+            "disableUnsafeHtmlExecution", False
         )
-        self._disable_set_query_params = config.get_option(
-            "server.disableSetQueryParams"
+        self._disable_set_query_params = host_options.get(
+            "disableSetQueryParams", False
         )
-        self._disable_set_page_metadata = config.get_option(
-            "server.disableSetPageMetadata"
+        self._disable_set_page_metadata = host_options.get(
+            "disableSetPageMetadata", False
         )
-        self._disable_unsafe_iframes = config.get_option("server.disableUnsafeIframes")
-        self._disable_elements = config.get_option("server.disableElements")
-        self._disable_user_theme = config.get_option("server.disableUserTheme")
+        self._disable_unsafe_iframes = host_options.get("disableUnsafeIframes", False)
+        self._disable_elements = host_options.get("disableElements", False)
+        self._disable_user_theme = host_options.get("disableUserTheme", False)
 
         if (
             config.get_option("global.developmentMode")
