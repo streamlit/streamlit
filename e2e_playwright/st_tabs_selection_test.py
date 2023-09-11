@@ -28,10 +28,12 @@ def test_maintains_selection_when_other_tab_added(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test st.tabs maintains selected tab if additional tab added."""
+    control_buttons = app.locator(".stButton")
+    tab_buttons = app.locator(".stTabs button[role=tab]")
     # Select Tab 2
-    app.getByRole("tab", {name: "Tab 2"}).click()
+    tab_buttons[1].click()
     # Select Add Tab 3 button
-    app.getByLabel("Add Tab 3").click()
+    control_buttons[0].click()
     assert_snapshot(app.locator(".stTabs"), name="tabs-selection-add-tab")
 
 
@@ -39,14 +41,16 @@ def test_maintains_selection_when_other_tab_removed(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test st.tabs maintains selected tab if non-selected tab removed."""
+    control_buttons = app.locator(".stButton")
     # Reset Tabs
-    app.getByLabel("Reset Tabs").click()
+    control_buttons[5].click()
     # Add Tab 3
-    app.getByLabel("Add Tab 3").click()
+    control_buttons[0].click()
     # Select Tab 3
-    app.getByRole("tab", {name: "Tab 3"}).click()
+    tab_buttons = app.locator(".stTabs button[role=tab]")
+    tab_buttons[2].click()
     # Select Remove Tab 1 button
-    app.getByLabel("Remove Tab 1").click()
+    control_buttons[1].click()
     assert_snapshot(app.locator(".stTabs"), name="tabs-selection-remove-tab")
 
 
@@ -54,12 +58,14 @@ def test_resets_selection_when_selected_tab_removed(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test st.tabs resets selected tab to 1 if previously selected tab removed."""
+    control_buttons = app.locator(".stButton")
     # Reset Tabs
-    app.getByLabel("Reset Tabs").click()
+    control_buttons[5].click()
     # Select Tab 2
-    app.getByRole("tab", {name: "Tab 2"}).click()
+    tab_buttons = app.locator(".stTabs button[role=tab]")
+    tab_buttons[1].click()
     # Select Remove Tab 2 button
-    app.getByLabel("Remove Tab 2").click()
+    control_buttons[2].click()
     assert_snapshot(app.locator(".stTabs"), name="tabs-remove-selected")
 
 
@@ -67,12 +73,13 @@ def test_maintains_selection_when_same_name_exists(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test when tabs names change, keeps selected tab if matching label still exists."""
+    control_buttons = app.locator(".stButton")
     # Reset Tabs
-    app.getByLabel("Reset Tabs").click()
+    control_buttons[5].click()
     # Add Tab 3
-    app.getByLabel("Add Tab 3").click()
+    control_buttons[0].click()
     # Change Tab 1 & 3 Names
-    app.getByLabel("Change Tab 1 & 3").click()
+    control_buttons[3].click()
     assert_snapshot(app.locator(".stTabs"), name="tabs-change-some-names")
 
 
@@ -80,8 +87,9 @@ def test_resets_selection_when_tab_names_change(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test when tabs names change, reset selected tab if no matching label exists."""
+    control_buttons = app.locator(".stButton")
     # Reset Tabs
-    app.getByLabel("Reset Tabs").click()
+    control_buttons[5].click()
     # Change All Tab Names
-    app.getByLabel("Change All Tabs").click()
+    control_buttons[4].click()
     assert_snapshot(app.locator(".stTabs"), name="tabs-change-all-names")
