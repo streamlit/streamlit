@@ -434,7 +434,7 @@ describe("App.handleNewSession", () => {
     expect(props.theme.setTheme).not.toHaveBeenCalled()
   })
 
-  it("should not process theme and log a warning if disableUserTheme is true", async () => {
+  it("should not process theme and log a error if hostConfig.disableUserTheme is true", async () => {
     let appInstance: any
     const log = await import("@streamlit/lib/src/util/log")
     const logErrorSpy = jest.spyOn(log, "logError")
@@ -802,7 +802,7 @@ describe("App.handleNewSession", () => {
       window.history.pushState.mockClear()
     })
 
-    it("logs a warning when hostConfig.disableSetPageMetadata is true", async () => {
+    it("logs a error when hostConfig.disableSetPageMetadata is true", async () => {
       let appInstance: any
       const log = await import("@streamlit/lib/src/util/log")
       const logErrorSpy = jest.spyOn(log, "logError")
@@ -1020,7 +1020,7 @@ describe("App.handlePageConfigChanged", () => {
   describe("test disableSetPageMetadata", () => {
     let appInstance: any
 
-    it("should log a warning if hostConfig.disableSetPageMetadata is true and title exists", async () => {
+    it("should log a error if hostConfig.disableSetPageMetadata is true and title exists", async () => {
       const log = await import("@streamlit/lib/src/util/log")
       const logErrorSpy = jest.spyOn(log, "logError")
 
@@ -1040,7 +1040,7 @@ describe("App.handlePageConfigChanged", () => {
       expect(logErrorSpy).toHaveBeenCalled()
     })
 
-    it("should log a warning if hostConfig.disableSetPageMetadata is true and favicon exists", async () => {
+    it("should log a error if hostConfig.disableSetPageMetadata is true and favicon exists", async () => {
       const log = await import("@streamlit/lib/src/util/log")
       const logErrorSpy = jest.spyOn(log, "logError")
 
@@ -1162,10 +1162,10 @@ describe("App.handlePageInfoChanged", () => {
     expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
   })
 
-  describe("checks for host config properties and logs warnings for them", () => {
+  describe("checks for host config properties and logs error for them", () => {
     let appInstance: any
 
-    it("should log a warning if hostConfig.disableSetQueryParams is true", async () => {
+    it("should log a error if hostConfig.disableSetQueryParams is true", async () => {
       const log = await import("@streamlit/lib/src/util/log")
       const logErrorSpy = jest.spyOn(log, "logError")
       const queryString = "testingDisableSetQueryParams"
