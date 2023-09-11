@@ -78,7 +78,7 @@ interface Props {
    * Function to set the host config for this app (if in a relevant deployment
    * scenario).
    */
-  setAllowedOrigins: (resp: IHostConfigResponse) => void
+  onHostConfigResp: (resp: IHostConfigResponse) => void
 }
 
 /**
@@ -192,7 +192,7 @@ export class ConnectionManager {
       onRetry: this.showRetryError,
       claimHostAuthToken: this.props.claimHostAuthToken,
       resetHostAuthToken: this.props.resetHostAuthToken,
-      setAllowedOrigins: this.props.setAllowedOrigins,
+      onHostConfigResp: this.props.onHostConfigResp,
     })
   }
 }

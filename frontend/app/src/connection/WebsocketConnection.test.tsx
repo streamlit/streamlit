@@ -60,7 +60,7 @@ function createMockArgs(overrides?: Partial<Args>): Args {
     onRetry: jest.fn(),
     claimHostAuthToken: () => Promise.resolve(undefined),
     resetHostAuthToken: jest.fn(),
-    setAllowedOrigins: jest.fn(),
+    onHostConfigResp: jest.fn(),
     ...overrides,
   }
 }

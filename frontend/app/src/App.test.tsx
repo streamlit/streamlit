@@ -1528,10 +1528,10 @@ describe("handles HostCommunication messaging", () => {
     instance = wrapper.instance() as App
 
     // @ts-expect-error - hostCommunicationMgr is private
-    instance.hostCommunicationMgr.setAllowedOrigins(
-      ["https://devel.streamlit.test"],
-      false
-    )
+    instance.hostCommunicationMgr.setAllowedOrigins({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
 
     sendMessageFunc = jest.spyOn(
       // @ts-expect-error
