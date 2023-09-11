@@ -219,11 +219,7 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(200, response.code)
         origins_list = json.loads(response.body)["allowedOrigins"]
         for d in _DEFAULT_ALLOWED_MESSAGE_ORIGINS:
-            default_in_allowed = d in origins_list
-            self.assertEqual(
-                default_in_allowed,
-                False,
-            )
+            self.assertIn(d, origins_list)
 
     @patch_config_options({"global.developmentMode": True})
     def test_allowed_message_origins_dev_mode(self):
