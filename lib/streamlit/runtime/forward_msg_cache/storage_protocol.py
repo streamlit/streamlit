@@ -23,15 +23,19 @@ RefURL: TypeAlias = str
 class ForwardMsgCacheStorageProtocol(Protocol):
     @abstractmethod
     def add_message(self, msg: ForwardMsg) -> RefURL:
+        """Add message to storage, return message URL"""
         raise NotImplementedError
 
     @abstractmethod
     def delete_message(self, msg_hash: RefHash) -> None:
+        """Delete message"""
         raise NotImplementedError
 
     @abstractmethod
     def clear(self):
+        """Clear storage"""
         raise NotImplementedError
 
     def get_message(self, msg_hash: RefHash) -> Optional[ForwardMsg]:
+        """Get message by it hash, return None if message not found"""
         return None
