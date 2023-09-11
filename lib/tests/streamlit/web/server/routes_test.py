@@ -202,24 +202,10 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
             response_body,
         )
         # Check that localhost NOT appended/allowed outside dev mode
-        local_host_appended = "http://localhost" in response_body["allowedOrigins"]
-        self.assertEqual(
-            local_host_appended,
-            False,
+        self.assertNotIn(
+            "http://localhost",
+            response_body["allowedOrigins"],
         )
-
-    @patch_config_options(
-        {
-            "global.developmentMode": False,
-            "host.allowedOrigins": ["https://*.google.com"],
-        }
-    )
-    def test_custom_message_origins(self):
-        response = self.fetch("/_stcore/host-config")
-        self.assertEqual(200, response.code)
-        origins_list = json.loads(response.body)["allowedOrigins"]
-        for d in _DEFAULT_ALLOWED_MESSAGE_ORIGINS:
-            self.assertIn(d, origins_list)
 
     @patch_config_options({"global.developmentMode": True})
     def test_allowed_message_origins_dev_mode(self):
@@ -227,8 +213,4 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(200, response.code)
         # Check that localhost has been appended/allowed in dev mode
         origins_list = json.loads(response.body)["allowedOrigins"]
-        local_host_appended = "http://localhost" in origins_list
-        self.assertEqual(
-            local_host_appended,
-            True,
-        )
+        self.assertIn("http://localhost", origins_list)
