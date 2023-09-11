@@ -113,8 +113,7 @@ export default class HostCommunicationManager {
   }
 
   /**
-   * Function to set the response body received from hitting the Streamlit
-   * server's /_stcore/host-config endpoint. The response contains
+   * Sets the allowed origins configuration:
    *   - allowedOrigins: A list of origins that we're allowed to receive
    *     cross-iframe messages from via the browser's window.postMessage API.
    *   - useExternalAuthToken: Whether to wait until we've received a
