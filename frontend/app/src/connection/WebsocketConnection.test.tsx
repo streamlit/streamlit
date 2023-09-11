@@ -114,9 +114,11 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.userCommandLine
     )
     expect(uriIndex).toEqual(0)
-    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
-      MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data
-    )
+    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith({
+      allowedOrigins: MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data.allowedOrigins,
+      useExternalAuthToken:
+        MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data.useExternalAuthToken,
+    })
   })
 
   it("returns the uri index and sets hostConfig for the first successful ping (0)", async () => {
@@ -134,9 +136,11 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.userCommandLine
     )
     expect(uriIndex).toEqual(0)
-    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
-      MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data
-    )
+    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith({
+      allowedOrigins: MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data.allowedOrigins,
+      useExternalAuthToken:
+        MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data.useExternalAuthToken,
+    })
   })
 
   it("returns the uri index and sets hostConfig for the first successful ping (1)", async () => {
@@ -154,9 +158,11 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.userCommandLine
     )
     expect(uriIndex).toEqual(1)
-    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
-      MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data
-    )
+    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith({
+      allowedOrigins: MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data.allowedOrigins,
+      useExternalAuthToken:
+        MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data.useExternalAuthToken,
+    })
   })
 
   it("calls retry with the corresponding error message if there was an error", async () => {

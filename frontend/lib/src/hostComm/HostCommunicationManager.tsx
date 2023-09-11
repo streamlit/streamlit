@@ -56,6 +56,11 @@ export interface HostCommunicationProps {
   ) => void
 }
 
+type IAllowedMessageOriginsConfig = {
+  allowedOrigins: string[]
+  useExternalAuthToken: boolean
+}
+
 /**
  * Manages host communication & messaging
  */
@@ -117,10 +122,10 @@ export default class HostCommunicationManager {
    *     WebsocketConnection class waits for this promise to resolve before
    *     attempting to establish a connection with the Streamlit server.
    */
-  public setAllowedOrigins = (
-    allowedOrigins: string[],
-    useExternalAuthToken: boolean
-  ): void => {
+  public setAllowedOrigins = ({
+    allowedOrigins,
+    useExternalAuthToken,
+  }: IAllowedMessageOriginsConfig): void => {
     if (!useExternalAuthToken) {
       this.deferredAuthToken.resolve(undefined)
     }
