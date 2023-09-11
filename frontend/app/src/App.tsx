@@ -941,12 +941,6 @@ export class App extends PureComponent<Props, State> {
   handleOneTimeInitialization = (newSessionProto: NewSession): void => {
     const initialize = newSessionProto.initialize as Initialize
     const config = newSessionProto.config as Config
-    if (this.state.hostConfig.mapboxToken && !config.mapboxToken) {
-      // Use mapbox token from host config.
-      config.mapboxToken = this.state.hostConfig.mapboxToken
-      // TODO(lukasmasuch): Should we move this into the mapbox component?
-      // Otherwise it might not be usable by streamlit-lib users.
-    }
 
     this.sessionInfo.setCurrent(
       SessionInfo.propsFromNewSessionMessage(newSessionProto)
