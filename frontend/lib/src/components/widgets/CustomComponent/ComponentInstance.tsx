@@ -353,7 +353,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
 
   public render(): ReactNode {
     const { hostConfig } = this.context
-    if (hostConfig.disableIframes) {
+    if (hostConfig.disableUnsafeIframes) {
       throw new PlatformSecurityViolation(
         "The usage of custom components was disabled in line with the platform security policy."
       )

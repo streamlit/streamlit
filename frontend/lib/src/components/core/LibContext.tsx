@@ -23,7 +23,7 @@ export type HostConfig = {
   disableSetQueryParams?: boolean
   disableSetPageMetadata?: boolean
   disableUnsafeHtmlExecution?: boolean
-  disableIframes?: boolean
+  disableUnsafeIframes?: boolean
   disableElements?: string[]
   disableUserTheme?: boolean
   // TODO(lukasmasuch): move the hideFullScreenButtons setting to this config?: disableFullScreenMode?: false

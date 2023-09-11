@@ -195,7 +195,7 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 "disableSetQueryParams": False,
                 "disableSetPageMetadata": False,
                 "disableUnsafeHtmlExecution": False,
-                "disableIframes": False,
+                "disableUnsafeIframes": False,
                 "disableElements": [],
                 "disableUserTheme": False,
             },

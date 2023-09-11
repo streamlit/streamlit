@@ -584,7 +584,7 @@ describe("ComponentInstance", () => {
     })
 
     describe("Properly checks LibContext", () => {
-      it("throws an error if disableIframes is true", () => {
+      it("throws an error if disableUnsafeIframes is true", () => {
         const consoleErrorFn = jest
           .spyOn(console, "error")
           .mockImplementation(() => jest.fn())
@@ -605,7 +605,7 @@ describe("ComponentInstance", () => {
             />,
             {
               hostConfig: {
-                disableIframes: true,
+                disableUnsafeIframes: true,
               },
             }
           )

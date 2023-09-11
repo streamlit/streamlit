@@ -34,7 +34,7 @@ export default function IFrame({
   width: propWidth,
 }: IFrameProps): ReactElement {
   const { hostConfig } = React.useContext(LibContext)
-  if (hostConfig.disableIframes) {
+  if (hostConfig.disableUnsafeIframes) {
     throw new PlatformSecurityViolation(
       "The usage of iframes was disabled in line with the platform security policy."
     )

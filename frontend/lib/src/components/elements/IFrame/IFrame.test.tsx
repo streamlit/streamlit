@@ -141,7 +141,7 @@ describe("st.iframe", () => {
     })
   })
 
-  it("should throw an error if hostConfig.disableIframes is true", () => {
+  it("should throw an error if hostConfig.disableUnsafeIframes is true", () => {
     // turn off console.error logs
     const consoleErrorFn = jest
       .spyOn(console, "error")
@@ -149,7 +149,7 @@ describe("st.iframe", () => {
     expect(() =>
       customRenderLibContext(<IFrame {...getProps()} />, {
         hostConfig: {
-          disableIframes: true,
+          disableUnsafeIframes: true,
         },
       })
     ).toThrow(

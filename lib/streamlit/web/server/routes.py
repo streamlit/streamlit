@@ -194,7 +194,7 @@ class HostConfigHandler(_SpecialRequestHandler):
                 "disableSetQueryParams": self._disable_set_query_params,
                 "disableSetPageMetadata": self._disable_set_page_metadata,
                 "disableUnsafeHtmlExecution": self._disable_unsafe_html_execution,
-                "disableIframes": self._disable_unsafe_iframes,
+                "disableUnsafeIframes": self._disable_unsafe_iframes,
                 "disableElements": self._disable_elements,
                 "disableUserTheme": self._disable_user_theme,
             }
