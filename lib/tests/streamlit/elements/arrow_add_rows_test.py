@@ -24,17 +24,23 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 DATAFRAME = pd.DataFrame({"a": [10], "b": [20], "c": [30]})
 NEW_ROWS = pd.DataFrame({"a": [11, 12, 13], "b": [21, 22, 23], "c": [31, 32, 33]})
 
+DATAFRAME2 = pd.DataFrame({"a": [10], "b": [20], "c": [30], "d": [40]})
+NEW_ROWS2 = pd.DataFrame(
+    {"a": [11, 12, 13], "b": [21, 22, 23], "c": [31, 32, 33], "d": [41, 42, 43]}
+)
+
+ST_CHART_ARGS = [
+    st._arrow_area_chart,
+    st._arrow_bar_chart,
+    st._arrow_line_chart,
+    st._arrow_scatter_chart,
+]
+
 
 class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
     """Test dg._arrow_add_rows."""
 
-    @parameterized.expand(
-        [
-            st._arrow_area_chart,
-            st._arrow_bar_chart,
-            st._arrow_line_chart,
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_charts_with_implict_x_and_y(self, chart_command):
         expected = pd.DataFrame(
             {
@@ -63,13 +69,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
 
         pd.testing.assert_frame_equal(proto, expected)
 
-    @parameterized.expand(
-        [
-            st._arrow_area_chart,
-            st._arrow_bar_chart,
-            st._arrow_line_chart,
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_charts_with_explicit_x_and_y(self, chart_command):
         expected = pd.DataFrame(
             {
@@ -88,13 +88,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
 
         pd.testing.assert_frame_equal(proto, expected)
 
-    @parameterized.expand(
-        [
-            st._arrow_area_chart,
-            st._arrow_bar_chart,
-            st._arrow_line_chart,
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_charts_with_implict_x_and_explicit_y(self, chart_command):
         expected = pd.DataFrame(
             {
@@ -112,13 +106,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
 
         pd.testing.assert_frame_equal(proto, expected)
 
-    @parameterized.expand(
-        [
-            st._arrow_area_chart,
-            st._arrow_bar_chart,
-            st._arrow_line_chart,
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_charts_with_explicit_x_and_implicit_y(self, chart_command):
         expected = pd.DataFrame(
             {
@@ -137,13 +125,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
 
         pd.testing.assert_frame_equal(proto, expected)
 
-    @parameterized.expand(
-        [
-            st._arrow_area_chart,
-            st._arrow_bar_chart,
-            st._arrow_line_chart,
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_charts_with_explicit_x_and_y_sequence(self, chart_command):
         expected = pd.DataFrame(
             {
@@ -162,13 +144,7 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
 
         pd.testing.assert_frame_equal(proto, expected)
 
-    @parameterized.expand(
-        [
-            st._arrow_area_chart,
-            st._arrow_bar_chart,
-            st._arrow_line_chart,
-        ]
-    )
+    @parameterized.expand(ST_CHART_ARGS)
     def test_charts_with_explicit_x_and_y_sequence_and_static_color(
         self, chart_command
     ):
@@ -189,13 +165,26 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
 
         pd.testing.assert_frame_equal(proto, expected)
 
-    @parameterized.expand(
-        [
-            st._arrow_area_chart,
-            st._arrow_bar_chart,
-            st._arrow_line_chart,
-        ]
-    )
+    def test_charts_with_explicit_x_and_y_sequence_and_size_set(self):
+        expected = pd.DataFrame(
+            {
+                "b": [21, 22, 23, 21, 22, 23],
+                "d": [41, 42, 43, 41, 42, 43],
+                "color--p5bJXXpQgvPz6yvQMFiy": ["a", "a", "a", "c", "c", "c"],
+                "value--p5bJXXpQgvPz6yvQMFiy": [11, 12, 13, 31, 32, 33],
+            }
+        )
+
+        element = st._arrow_scatter_chart(DATAFRAME2, x="b", y=["a", "c"], size="d")
+        element._arrow_add_rows(NEW_ROWS2)
+
+        proto = bytes_to_data_frame(
+            self.get_delta_from_queue().arrow_add_rows.data.data
+        )
+
+        pd.testing.assert_frame_equal(proto, expected)
+
+    @parameterized.expand(ST_CHART_ARGS)
     def test_charts_with_fewer_args_than_cols(self, chart_command):
         expected = pd.DataFrame(
             {

@@ -186,7 +186,6 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_allowed_message_origins(self):
         response = self.fetch("/_stcore/host-config")
         response_body = json.loads(response.body)
-        print(f"RESPONSE_BODY: {response_body}")
         self.assertEqual(200, response.code)
         self.assertEqual(
             {
@@ -196,7 +195,6 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 "disableSetQueryParams": False,
                 "disableSetPageMetadata": False,
                 "disableUnsafeHtmlExecution": False,
-                "disableSvgImages": False,
                 "disableIframes": False,
                 "disableElements": [],
                 "disableUserTheme": False,

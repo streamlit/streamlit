@@ -26,6 +26,7 @@ from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
+from streamlit.testing.script_interactions import InteractiveScriptTests
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -58,6 +59,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
             LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
         )
         self.assertEqual(c.default, 0.0)
+        self.assertEqual(c.HasField("default"), True)
         self.assertEqual(c.has_min, False)
         self.assertEqual(c.has_max, False)
         self.assertEqual(c.disabled, False)
@@ -68,6 +70,32 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.disabled, True)
+
+    def test_none_value(self):
+        """Test that it can be called with None as value."""
+        st.number_input("the label", value=None)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(c.label, "the label")
+        # If a proto property is null is not determined by this value,
+        # but by the check via the HasField method:
+        self.assertEqual(c.default, 0.0)
+        self.assertEqual(c.HasField("default"), False)
+
+    def test_none_value_with_int_min(self):
+        """Test that it can be called with None as value and
+        will be interpreted as integer if min_value is set to int."""
+        st.number_input("the label", value=None, min_value=1)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(c.label, "the label")
+        # If a proto property is null is not determined by this value,
+        # but by the check via the HasField method:
+        self.assertEqual(c.default, 0.0)
+        self.assertEqual(c.HasField("default"), False)
+        self.assertEqual(c.has_min, True)
+        self.assertEqual(c.min, 1)
+        self.assertEqual(c.data_type, NumberInput.INT)
 
     def test_default_value_when_min_is_passed(self):
         st.number_input("the label", min_value=1, max_value=10)
@@ -333,3 +361,33 @@ class NumberInputTest(DeltaGeneratorTestCase):
         max_value = 10
         with pytest.raises(StreamlitAPIException):
             st.number_input("My Label", value=value, max_value=max_value)
+
+
+class NumberInputInteractiveTest(InteractiveScriptTests):
+    def test_number_input_interaction(self):
+        """Test interactions with an empty number input widget."""
+        script = self.script_from_string(
+            """
+        import streamlit as st
+
+        st.number_input("the label", value=None)
+        """
+        )
+        sr = script.run()
+        number_input = sr.number_input[0]
+        assert number_input.value is None
+
+        # Set the value to 10
+        sr2 = number_input.set_value(10).run()
+        number_input = sr2.number_input[0]
+        assert number_input.value == 10
+
+        # # Increment the value
+        sr3 = number_input.increment().run()
+        number_input = sr3.number_input[0]
+        assert number_input.value == 10.01
+
+        # # Clear the value
+        sr4 = number_input.set_value(None).run()
+        number_input = sr4.number_input[0]
+        assert number_input.value is None

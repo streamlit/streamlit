@@ -13,29 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import React from "react"
 import { ShallowWrapper } from "enzyme"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   NumberInput as NumberInputProto,
 } from "@streamlit/lib/src/proto"
-import React from "react"
+
 import { mount, shallow } from "@streamlit/lib/src/test_util"
-import { StyledInputControls } from "@streamlit/lib/src/components/widgets/NumberInput/styled-components"
+import {
+  StyledInputControls,
+  StyledInstructionsContainer,
+} from "@streamlit/lib/src/components/widgets/NumberInput/styled-components"
 import { Input as UIInput } from "baseui/input"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
-import NumberInput, { Props, State } from "./NumberInput"
+import { NumberInput, Props, State } from "./NumberInput"
 
 const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
   element: NumberInputProto.create({
     label: "Label",
+    default: 0,
     hasMin: false,
     hasMax: false,
     ...elementProps,
   }),
   width: 300,
   disabled: false,
+  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
@@ -454,18 +460,36 @@ describe("NumberInput widget", () => {
       expect(stepUpButton(wrapper).prop("disabled")).toBe(true)
     })
 
-    it("hides stepUp and stepDown buttons when width is smaller than 120px", () => {
+    it("hides stepUp and stepDown buttons when width is smaller than 180px", () => {
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
       const wrapper = shallow(<NumberInput {...props} width={100} />)
 
       expect(wrapper.find(StyledInputControls).exists()).toBe(false)
     })
 
-    it("shows stepUp and stepDown buttons when width is bigger than 120px", () => {
+    it("shows stepUp and stepDown buttons when width is bigger than 180px", () => {
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-      const wrapper = shallow(<NumberInput {...props} width={125} />)
+      const wrapper = shallow(<NumberInput {...props} width={185} />)
 
       expect(wrapper.find(StyledInputControls).exists()).toBe(true)
+    })
+
+    it("hides Please enter to apply text when width is smaller than 180px", () => {
+      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
+      const wrapper = shallow(<NumberInput {...props} width={100} />)
+
+      wrapper.setState({ dirty: true })
+
+      expect(wrapper.find(StyledInstructionsContainer).exists()).toBe(false)
+    })
+
+    it("shows Please enter to apply text when width is bigger than 180px", () => {
+      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
+      const wrapper = shallow(<NumberInput {...props} width={185} />)
+
+      wrapper.setState({ dirty: true })
+
+      expect(wrapper.find(StyledInstructionsContainer).exists()).toBe(true)
     })
   })
 })

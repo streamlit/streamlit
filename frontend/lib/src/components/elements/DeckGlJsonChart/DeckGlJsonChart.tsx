@@ -16,6 +16,7 @@
 
 import React, { PureComponent, ReactNode } from "react"
 import { DeckGL } from "deck.gl"
+import JSON5 from "json5"
 import isEqual from "lodash/isEqual"
 import { MapContext, StaticMap, NavigationControl } from "react-map-gl"
 import { withTheme } from "@emotion/react"
@@ -165,7 +166,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
       state.isFullScreen !== currFullScreen ||
       state.isLightTheme !== hasLightBackgroundColor(theme)
     ) {
-      state.pydeckJson = JSON.parse(element.json)
+      state.pydeckJson = JSON5.parse(element.json)
       state.id = element.id
     }
 
@@ -204,7 +205,7 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
       return false
     }
 
-    const tooltip = JSON.parse(element.tooltip)
+    const tooltip = JSON5.parse(element.tooltip)
 
     // NB: https://deckgl.readthedocs.io/en/latest/tooltip.html
     if (tooltip.html) {
