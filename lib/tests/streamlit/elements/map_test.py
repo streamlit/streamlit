@@ -382,3 +382,14 @@ class StMapTest(DeltaGeneratorTestCase):
 
         """Check if map data has 5 rows"""
         self.assertEqual(len(c["layers"][0]["data"]), 5)
+
+    def test_id_changes_when_data_changes(self):
+        st.map()
+
+        orig_id = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
+        np.random.seed(0)
+
+        df = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
+        st.map(df)
+        new_id = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
+        self.assertNotEquals(orig_id, new_id)
