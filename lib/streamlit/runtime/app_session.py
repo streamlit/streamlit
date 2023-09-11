@@ -386,7 +386,6 @@ class AppSession:
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
             main_script_path=self._script_data.main_script_path,
-            client_state=self._client_state,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
             script_cache=self._script_cache,

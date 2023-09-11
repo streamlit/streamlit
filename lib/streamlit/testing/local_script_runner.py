@@ -51,7 +51,6 @@ class LocalScriptRunner(ScriptRunner):
         super().__init__(
             session_id="test session id",
             main_script_path=script_path,
-            client_state=ClientState(),
             session_state=self.session_state,
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             script_cache=ScriptCache(),
