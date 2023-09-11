@@ -299,7 +299,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                 onPageChange={onPageChange}
               />
             )}
-            <StyledSidebarUserContent hasPageNavAbove={hasPageNavAbove}>
+            <StyledSidebarUserContent
+              data-testid="stSidebarUserContent"
+              hasPageNavAbove={hasPageNavAbove}
+            >
               {children}
             </StyledSidebarUserContent>
           </StyledSidebarContent>
