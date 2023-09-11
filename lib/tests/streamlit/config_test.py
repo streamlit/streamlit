@@ -320,6 +320,7 @@ class ConfigTest(unittest.TestCase):
                 "theme",
                 "deprecation",
                 "global",
+                "host",
                 "logger",
                 "magic",
                 "mapbox",
