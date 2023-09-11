@@ -165,6 +165,7 @@ class HealthHandler(_SpecialRequestHandler):
 class HostConfigHandler(_SpecialRequestHandler):
     def initialize(self):
         host_options = config.get_options_for_section("host")
+        # Make a copy of the allowedOrigins list, since we might modify it later:
         self._allowed_origins = list(host_options.get("allowedOrigins", []))
         self._disable_unsafe_html_execution = host_options.get(
             "disableUnsafeHtmlExecution", False
