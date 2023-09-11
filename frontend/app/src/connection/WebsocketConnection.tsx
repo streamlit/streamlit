@@ -687,7 +687,6 @@ export function doInitPings(
     const hostConfigUri = buildHttpUri(uriParts, HOST_CONFIG_PATH)
 
     logMessage(LOG, `Attempting to connect to ${healthzUri}.`)
-    logMessage(LOG, `Attempting to connect to ${hostConfigUri}`)
 
     if (uriNumber === 0) {
       totalTries++
