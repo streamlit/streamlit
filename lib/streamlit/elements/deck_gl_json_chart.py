@@ -156,7 +156,6 @@ def marshall(
     pydeck_obj: Optional["Deck"],
     use_container_width: bool,
 ) -> None:
-
     if pydeck_obj is None:
         spec = json.dumps(EMPTY_MAP)
         id = ""
@@ -174,4 +173,7 @@ def marshall(
     tooltip = _get_pydeck_tooltip(pydeck_obj)
     if tooltip:
         pydeck_proto.tooltip = json.dumps(tooltip)
-    pydeck_proto.mapbox_token = config.get_option("mapbox.token")
+
+    mapbox_token = config.get_option("mapbox.token")
+    if mapbox_token:
+        pydeck_proto.mapbox_token = mapbox_token
