@@ -82,10 +82,10 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("sets allowedOrigins properly & opens HostCommunication", () => {
-    expect(setHostConfigFunc).toHaveBeenCalledWith(
-      ["https://devel.streamlit.test"],
-      false
-    )
+    expect(setHostConfigFunc).toHaveBeenCalledWith({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
     // @ts-expect-error
     expect(hostCommunicationMgr.allowedOrigins).toEqual([
       "https://devel.streamlit.test",
