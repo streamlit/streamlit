@@ -239,17 +239,11 @@ class MapMixin:
         #       for information on how to get one and set it up in Streamlit.
         #
         map_style = None
-
         map_proto = DeckGlJsonChartProto()
         deck_gl_json = to_deckgl_json(
             data, latitude, longitude, size, color, map_style, zoom
         )
-        map_proto.json = deck_gl_json
-        map_proto.use_container_width = use_container_width
-        json_string = json.dumps(deck_gl_json)
-        json_bytes = json_string.encode("utf-8")
-        id = hashlib.md5(json_bytes).hexdigest()
-        map_proto.id = id
+        marshall(map_proto, deck_gl_json, use_container_width)
         return self.dg._enqueue("deck_gl_json_chart", map_proto)
 
     @property
@@ -489,3 +483,17 @@ def _get_zoom_level(distance: float) -> int:
 
     # For small number of points the default zoom level will be used.
     return _DEFAULT_ZOOM_LEVEL
+
+
+def marshall(
+    pydeck_proto: DeckGlJsonChartProto,
+    pydeck_json: str,
+    use_container_width: bool,
+) -> None:
+    json_bytes = pydeck_json.encode("utf-8")
+    id = hashlib.md5(json_bytes).hexdigest()
+
+    pydeck_proto.json = pydeck_json
+    pydeck_proto.use_container_width = use_container_width
+
+    pydeck_proto.id = id
