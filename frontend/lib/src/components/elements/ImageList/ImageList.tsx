@@ -15,7 +15,6 @@
  */
 
 import React, { ReactElement } from "react"
-import ReactHtmlParser from "react-html-parser"
 
 import {
   IImage,
@@ -23,10 +22,7 @@ import {
   ImageList as ImageListProto,
 } from "@streamlit/lib/src/proto"
 import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
-import { xssSanitizeSvg } from "@streamlit/lib/src/util/UriUtil"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import { PlatformSecurityViolation } from "@streamlit/lib/src/hostComm/types"
 
 import {
   StyledCaption,
@@ -58,19 +54,6 @@ export function ImageList({
   height,
   endpoints,
 }: ImageListProps): ReactElement {
-  const { hostConfig } = React.useContext(LibContext)
-
-  // TODO(willhuang1997): This check can be removed after
-  // https://github.com/streamlit/streamlit/pull/7183 is merged
-  const isSvgAllowed = React.useCallback(() => {
-    if (hostConfig.disableSvgImages) {
-      throw new PlatformSecurityViolation(
-        "Usage of SVG images was disabled in line with the platform security policy."
-      )
-    }
-    return true
-  }, [hostConfig])
-
   // The width field in the proto sets the image width, but has special
   // cases for -1, -2, and -3.
   let containerWidth: number | undefined
@@ -112,16 +95,11 @@ export function ImageList({
         const image = iimage as ImageProto
         return (
           <StyledImageContainer key={idx} data-testid="stImage">
-            {image.markup && isSvgAllowed() ? (
-              // SVGs are received unsanitized
-              ReactHtmlParser(xssSanitizeSvg(image.markup))
-            ) : (
-              <img
-                style={imgStyle}
-                src={endpoints.buildMediaURL(image.url)}
-                alt={idx.toString()}
-              />
-            )}
+            <img
+              style={imgStyle}
+              src={endpoints.buildMediaURL(image.url)}
+              alt={idx.toString()}
+            />
             {image.caption && (
               <StyledCaption data-testid="caption" style={imgStyle}>
                 {` ${image.caption} `}

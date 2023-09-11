@@ -112,7 +112,11 @@ class WStates(MutableMapping[str, Any]):
             ValueFieldName,
             wstate.value.WhichOneof("value"),
         )
-        value = wstate.value.__getattribute__(value_field_name)
+        value = (
+            wstate.value.__getattribute__(value_field_name)
+            if value_field_name  # Field name is None if the widget value was cleared
+            else None
+        )
 
         if is_array_value_field_name(value_field_name):
             # Array types are messages with data in a `data` field
@@ -210,6 +214,7 @@ class WStates(MutableMapping[str, Any]):
 
         field = metadata.value_type
         serialized = metadata.serializer(item.value)
+
         if is_array_value_field_name(field):
             arr = getattr(widget, field)
             arr.data.extend(serialized)
@@ -219,7 +224,11 @@ class WStates(MutableMapping[str, Any]):
             widget.file_uploader_state_value.CopyFrom(serialized)
         elif field == "string_trigger_value":
             widget.string_trigger_value.CopyFrom(serialized)
-        else:
+        elif field is not None and serialized is not None:
+            # If the field is None, the widget value was cleared
+            # by the user and therefore is None. But we cannot
+            # set it to None here, since the proto properties are
+            # not nullable. So we just don't set it.
             setattr(widget, field, serialized)
 
         return widget
@@ -299,7 +308,12 @@ class SessionState:
         widget_state.
         """
         for key_or_wid in self:
-            self._old_state[key_or_wid] = self[key_or_wid]
+            try:
+                self._old_state[key_or_wid] = self[key_or_wid]
+            except KeyError:
+                # handle key errors from widget state not having metadata gracefully
+                # https://github.com/streamlit/streamlit/issues/7206
+                pass
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
@@ -498,9 +512,7 @@ class SessionState:
             try:
                 self._new_widget_state.call_callback(wid)
             except RerunException:
-                st.warning(
-                    "Calling st.experimental_rerun() within a callback is a no-op."
-                )
+                st.warning("Calling st.rerun() within a callback is a no-op.")
 
     def _widget_changed(self, widget_id: str) -> bool:
         """True if the given widget's value changed between the previous

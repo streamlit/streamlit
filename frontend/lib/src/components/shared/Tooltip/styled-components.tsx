@@ -24,14 +24,9 @@ export const StyledWrapper = styled.div({
 })
 
 export const StyledEllipsizedDiv = styled.div({
-  // We only want it to to be truncated on desktop,
-  // where we can use the tooltip to show the whole content.
-  // On mobile, we'll let it wrap
-  [`@media (min-width: 768px)`]: {
-    overflow: "hidden",
-    whiteSpace: "nowrap",
-    textOverflow: "ellipsis",
-  },
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
   display: "table-cell",
 })
 

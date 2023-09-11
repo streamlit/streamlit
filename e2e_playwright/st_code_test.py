@@ -47,7 +47,7 @@ def test_code_blocks_render_correctly(
 def test_code_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the syntax highlighting is applied correctly to the code block."""
     # This test seems to be a little flaky without additional timeout:
-    app.wait_for_timeout(250)
+    app.wait_for_timeout(1000)
 
     expander_with_code = app.get_by_test_id("stExpander")
 

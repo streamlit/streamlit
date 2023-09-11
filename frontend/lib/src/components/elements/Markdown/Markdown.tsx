@@ -47,7 +47,7 @@ export default function Markdown({
   const styleProp = { width }
 
   return (
-    <div className="stMarkdown" style={styleProp}>
+    <div className="stMarkdown" style={styleProp} data-testid="stMarkdown">
       {element.help ? (
         <StyledLabelHelpWrapper>
           <StreamlitMarkdown

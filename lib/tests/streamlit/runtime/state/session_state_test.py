@@ -28,7 +28,6 @@ import tests.streamlit.runtime.state.strategies as stst
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
-from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX
@@ -261,8 +260,8 @@ class SessionStateTest(DeltaGeneratorTestCase):
 
 
 class SessionStateCallbackTest(InteractiveScriptTests):
-    def test_callbacks_with_experimental_rerun(self):
-        """Calling 'experimental_rerun' from within a widget callback
+    def test_callbacks_with_rerun(self):
+        """Calling 'rerun' from within a widget callback
         is disallowed and results in a warning.
         """
         script = self.script_from_string(
@@ -271,7 +270,7 @@ class SessionStateCallbackTest(InteractiveScriptTests):
 
         def callback():
             st.session_state["message"] = "ran callback"
-            st.experimental_rerun()
+            st.rerun()
         st.checkbox("cb", on_change=callback)
         """
         )
@@ -286,32 +285,32 @@ class SessionStateInteractionTest(InteractiveScriptTests):
     def test_updates(self):
         script = self.script_from_filename("test_data/linked_sliders.py")
         sr = script.run()
-        assert sr.get("slider")[0].value == -100.0
-        assert sr.get("markdown")[0].value == "Celsius `-100.0`"
-        assert sr.get("slider")[1].value == -148.0
-        assert sr.get("markdown")[1].value == "Fahrenheit `-148.0`"
+        assert sr.slider[0].value == -100.0
+        assert sr.markdown[0].value == "Celsius `-100.0`"
+        assert sr.slider[1].value == -148.0
+        assert sr.markdown[1].value == "Fahrenheit `-148.0`"
 
         # Both sliders update when first is changed
-        sr2 = sr.get("slider")[0].set_value(0.0).run()
-        assert sr2.get("slider")[0].value == 0.0
-        assert sr2.get("markdown")[0].value == "Celsius `0.0`"
-        assert sr2.get("slider")[1].value == 32.0
-        assert sr2.get("markdown")[1].value == "Fahrenheit `32.0`"
+        sr2 = sr.slider[0].set_value(0.0).run()
+        assert sr2.slider[0].value == 0.0
+        assert sr2.markdown[0].value == "Celsius `0.0`"
+        assert sr2.slider[1].value == 32.0
+        assert sr2.markdown[1].value == "Fahrenheit `32.0`"
 
         # Both sliders update when second is changed
-        sr3 = sr2.get("slider")[1].set_value(212.0).run()
-        assert sr3.get("slider")[0].value == 100.0
-        assert sr3.get("markdown")[0].value == "Celsius `100.0`"
-        assert sr3.get("slider")[1].value == 212.0
-        assert sr3.get("markdown")[1].value == "Fahrenheit `212.0`"
+        sr3 = sr2.slider[1].set_value(212.0).run()
+        assert sr3.slider[0].value == 100.0
+        assert sr3.markdown[0].value == "Celsius `100.0`"
+        assert sr3.slider[1].value == 212.0
+        assert sr3.markdown[1].value == "Fahrenheit `212.0`"
 
         # Sliders update when one is changed repeatedly
-        sr4 = sr3.get("slider")[0].set_value(0.0).run()
-        assert sr4.get("slider")[0].value == 0.0
-        assert sr4.get("slider")[1].value == 32.0
-        sr5 = sr4.get("slider")[0].set_value(100.0).run()
-        assert sr5.get("slider")[0].value == 100.0
-        assert sr5.get("slider")[1].value == 212.0
+        sr4 = sr3.slider[0].set_value(0.0).run()
+        assert sr4.slider[0].value == 0.0
+        assert sr4.slider[1].value == 32.0
+        sr5 = sr4.slider[0].set_value(100.0).run()
+        assert sr5.slider[0].value == 100.0
+        assert sr5.slider[1].value == 212.0
 
     def test_serializable_check(self):
         """When the config option is on, adding unserializable data to session
@@ -329,8 +328,8 @@ class SessionStateInteractionTest(InteractiveScriptTests):
                 """,
             )
             sr = script.run()
-            assert sr.get("exception")
-            assert "pickle" in sr.get("exception")[0].value
+            assert sr.exception
+            assert "pickle" in sr.exception[0].value
 
     def test_serializable_check_off(self):
         """When the config option is off, adding unserializable data to session
@@ -348,7 +347,7 @@ class SessionStateInteractionTest(InteractiveScriptTests):
                 """,
             )
             sr = script.run()
-            assert not sr.get("exception")
+            assert not sr.exception
 
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
@@ -532,8 +531,8 @@ def _sorted_items(state: SessionState) -> List[Tuple[str, Any]]:
 
 class SessionStateMethodTests(unittest.TestCase):
     def setUp(self):
-        old_state = {"foo": "bar", "baz": "qux", "corge": "grault"}
-        new_session_state = {"foo": "bar2"}
+        self.old_state = {"foo": "bar", "baz": "qux", "corge": "grault"}
+        self.new_session_state = {"foo": "bar2"}
         new_widget_state = WStates(
             {
                 "baz": Value("qux2"),
@@ -541,7 +540,7 @@ class SessionStateMethodTests(unittest.TestCase):
             },
         )
         self.session_state = SessionState(
-            old_state, new_session_state, new_widget_state
+            self.old_state, self.new_session_state, new_widget_state
         )
 
     def test_compact(self):
@@ -554,6 +553,21 @@ class SessionStateMethodTests(unittest.TestCase):
         }
         assert self.session_state._new_session_state == {}
         assert self.session_state._new_widget_state == WStates()
+
+    # https://github.com/streamlit/streamlit/issues/7206
+    def test_ignore_key_error_within_compact_state(self):
+        wstates = WStates()
+
+        widget_state = WidgetStateProto()
+        widget_state.id = "widget_id_1"
+        widget_state.int_value = 5
+        wstates.set_widget_from_proto(widget_state)
+        session_state = SessionState(self.old_state, self.new_session_state, wstates)
+        # KeyError should be thrown from grabbing a key with no metadata
+        # but _compact_state catches it so no KeyError should be thrown
+        session_state._compact_state()
+        with pytest.raises(KeyError):
+            wstates["baz"]
 
     def test_clear_state(self):
         # Sanity test

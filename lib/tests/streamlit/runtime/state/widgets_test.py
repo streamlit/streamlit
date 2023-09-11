@@ -336,7 +336,7 @@ class ComputeWidgetIdTests(DeltaGeneratorTestCase):
 
         # Add some kwargs that are passed to compute_widget_id but don't appear in widget
         # signatures.
-        for kwarg in ["form_id", "user_key"]:
+        for kwarg in ["form_id", "user_key", "page"]:
             kwargs[kwarg] = ANY
 
         return kwargs
