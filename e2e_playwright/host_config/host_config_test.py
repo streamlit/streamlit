@@ -25,14 +25,14 @@ def apply_restrictive_host_config():
     """Apply a restrictive host config for all tests in this package."""
     # We need to do this in a package scope fixture to ensure that its applied
     # before the app server is started.
-    os.environ["STREAMLIT_SERVER_DISABLE_UNSAFE_HTML_EXECUTION"] = "True"
-    os.environ["STREAMLIT_SERVER_DISABLE_UNSAFE_IFRAMES"] = "True"
+    os.environ["STREAMLIT_HOST_DISABLE_UNSAFE_HTML_EXECUTION"] = "True"
+    os.environ["STREAMLIT_HOST_DISABLE_UNSAFE_IFRAMES"] = "True"
     os.environ[
-        "STREAMLIT_SERVER_DISABLE_ELEMENTS"
+        "STREAMLIT_HOST_DISABLE_ELEMENTS"
     ] = "bokehChart,cameraInput,downloadButton,fileUploader"
-    os.environ["STREAMLIT_SERVER_DISABLE_SET_QUERY_PARAMS"] = "True"
-    os.environ["STREAMLIT_SERVER_DISABLE_SET_PAGE_METADATA"] = "True"
-    os.environ["STREAMLIT_SERVER_DISABLE_USER_THEME"] = "True"
+    os.environ["STREAMLIT_HOST_DISABLE_SET_QUERY_PARAMS"] = "True"
+    os.environ["STREAMLIT_HOST_DISABLE_SET_PAGE_METADATA"] = "True"
+    os.environ["STREAMLIT_HOST_DISABLE_USER_THEME"] = "True"
     # Configure a custom theme to test that it is not applied:
     os.environ["STREAMLIT_THEME_BACKGROUND_COLOR"] = "red"
 
