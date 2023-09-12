@@ -308,7 +308,12 @@ class SessionState:
         widget_state.
         """
         for key_or_wid in self:
-            self._old_state[key_or_wid] = self[key_or_wid]
+            try:
+                self._old_state[key_or_wid] = self[key_or_wid]
+            except KeyError:
+                # handle key errors from widget state not having metadata gracefully
+                # https://github.com/streamlit/streamlit/issues/7206
+                pass
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
@@ -507,9 +512,7 @@ class SessionState:
             try:
                 self._new_widget_state.call_callback(wid)
             except RerunException:
-                st.warning(
-                    "Calling st.experimental_rerun() within a callback is a no-op."
-                )
+                st.warning("Calling st.rerun() within a callback is a no-op.")
 
     def _widget_changed(self, widget_id: str) -> bool:
         """True if the given widget's value changed between the previous
