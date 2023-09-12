@@ -187,3 +187,7 @@ def test_handles_callback_on_change_correctly(app: Page):
     expect(app.get_by_test_id("stMarkdown").nth(5)).to_have_text(
         "Value 6: 00:00:00", use_inner_text=True
     )
+    # The flag should be reset to False:
+    expect(app.get_by_test_id("stMarkdown").nth(6)).to_have_text(
+        "time input changed: False", use_inner_text=True
+    )

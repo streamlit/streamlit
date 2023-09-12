@@ -52,7 +52,9 @@ if runtime.exists():
     )
 
     st.write("Value 6:", st.session_state.time_input6)
-    st.write("time input changed:", "time_input_changed" in st.session_state)
+    st.write("time input changed:", st.session_state.get("time_input_changed") is True)
+    # Reset to False:
+    st.session_state.time_input_changed = False
 
 w7 = st.time_input("Time input 7 (step=60)", time(8, 45), step=60)
 st.write("Value 7:", w7)
