@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -74,6 +74,9 @@ def test_text_area_shows_instructions_when_dirty(
     assert_snapshot(text_area, name="st_text_area-input_instructions")
 
 
+@pytest.mark.skip_browser(
+    "firefox"  # The meta key + enter press doesn't work in the playwright firefox test
+)
 def test_text_area_limits_input_via_max_chars(app: Page):
     """Test that st.text_area correctly limits the number of characters via max_chars."""
     first_text_area_field = (
