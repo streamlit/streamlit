@@ -145,6 +145,11 @@ def test_text_input_has_correct_value_on_click_outside(app: Page):
 
 def test_empty_text_input_behaves_correctly(app: Page):
     """Test that st.text_input behaves correctly when empty."""
+    # Should return None as value:
+    expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
+        "value 4: None", use_inner_text=True
+    )
+
     # Enter value in the empty widget:
     empty_text_input = app.get_by_test_id("stTextInput").nth(3)
     empty_text_input_field = empty_text_input.locator("input").first
@@ -160,7 +165,7 @@ def test_empty_text_input_behaves_correctly(app: Page):
     empty_text_input_field.clear()
     empty_text_input_field.press("Enter")
 
-    # Should be empty again:
+    # Should be set to empty string (we don't clear to None for text input):
     expect(app.get_by_test_id("stMarkdown").nth(3)).to_have_text(
         "value 4: ", use_inner_text=True
     )
@@ -182,7 +187,7 @@ def test_calls_callback_on_change(app: Page):
         use_inner_text=True,
     )
 
-    # Change different date input to trigger delta path change
+    # Change differentwidget to trigger delta path change
     first_text_input_field = (
         app.get_by_test_id("stTextInput").first.locator("input").first
     )
