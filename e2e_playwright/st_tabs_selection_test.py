@@ -36,6 +36,8 @@ def test_maintains_selection_when_other_tab_added(
     control_buttons.nth(0).click()
     # Wait for tabs to properly load
     wait_for_app_run(app)
+    # Tab add/remove/switch can still be in process despite app run finishing.
+    app.wait_for_timeout(1000)
     assert_snapshot(app.locator(".stTabs"), name="tabs-selection-add-tab")
 
 
@@ -56,6 +58,7 @@ def test_maintains_selection_when_other_tab_removed(
     control_buttons.nth(1).click()
     # Wait for tabs to properly load
     wait_for_app_run(app)
+    app.wait_for_timeout(1000)
     assert_snapshot(app.locator(".stTabs"), name="tabs-selection-remove-tab")
 
 
@@ -74,6 +77,7 @@ def test_resets_selection_when_selected_tab_removed(
     control_buttons.nth(2).click()
     # Wait for tabs to properly load
     wait_for_app_run(app)
+    app.wait_for_timeout(1000)
     assert_snapshot(app.locator(".stTabs"), name="tabs-remove-selected")
 
 
@@ -94,6 +98,7 @@ def test_maintains_selection_when_same_name_exists(
     control_buttons.nth(3).click()
     # Wait for tabs to properly load
     wait_for_app_run(app)
+    app.wait_for_timeout(1000)
     assert_snapshot(app.locator(".stTabs"), name="tabs-change-some-names")
 
 
@@ -112,4 +117,5 @@ def test_resets_selection_when_tab_names_change(
     control_buttons.nth(4).click()
     # Wait for tabs to properly load
     wait_for_app_run(app)
+    app.wait_for_timeout(1000)
     assert_snapshot(app.locator(".stTabs"), name="tabs-change-all-names")
