@@ -21,7 +21,7 @@ def test_data_editor_column_types(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.data_editor render various column types correctly."""
-    data_editor_elements = themed_app.locator(".stDataframe")
+    data_editor_elements = themed_app.locator(".stDataFrame")
     expect(data_editor_elements).to_have_count(8)
 
     for i, element in enumerate(data_editor_elements.all()):
