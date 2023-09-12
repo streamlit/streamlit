@@ -36,7 +36,7 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: number
+  value: number | null
 }
 
 class Radio extends React.PureComponent<Props, State> {
@@ -46,11 +46,11 @@ class Radio extends React.PureComponent<Props, State> {
     value: this.initialValue,
   }
 
-  get initialValue(): number {
+  get initialValue(): number | null {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
     const storedValue = this.props.widgetMgr.getIntValue(this.props.element)
-    return storedValue !== undefined ? storedValue : this.props.element.default
+    return storedValue ?? this.props.element.default ?? null
   }
 
   public componentDidMount(): void {
@@ -79,7 +79,7 @@ class Radio extends React.PureComponent<Props, State> {
   private updateFromProtobuf(): void {
     const { value } = this.props.element
     this.props.element.setValue = false
-    this.setState({ value }, () => {
+    this.setState({ value: value ?? null }, () => {
       this.commitWidgetValue({ fromUi: false })
     })
   }
@@ -100,7 +100,7 @@ class Radio extends React.PureComponent<Props, State> {
   private onFormCleared = (): void => {
     this.setState(
       (_, prevProps) => {
-        return { value: prevProps.element.default }
+        return { value: prevProps.element.default ?? null }
       },
       () => this.commitWidgetValue({ fromUi: true })
     )

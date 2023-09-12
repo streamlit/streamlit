@@ -182,7 +182,11 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
   return (
-    <AutoSizer disableHeight={true} style={styledVerticalBlockWrapperStyles}>
+    <AutoSizer
+      disableHeight={true}
+      style={styledVerticalBlockWrapperStyles}
+      nonce={document.currentScript?.nonce || ""}
+    >
       {({ width }) => {
         const propsWithNewWidth = { ...props, ...{ width } }
 

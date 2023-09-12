@@ -101,6 +101,7 @@ describe("Radio widget", () => {
     const radioOptions = screen.getAllByRole("radio")
     expect(radioOptions).toHaveLength(3)
 
+    // @ts-expect-error
     const checked = radioOptions[props.value]
     expect(checked).toBeChecked()
   })

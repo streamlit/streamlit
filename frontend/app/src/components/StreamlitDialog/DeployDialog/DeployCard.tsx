@@ -48,10 +48,10 @@ function DeployCard(
             borderLeftColor: colors.fadedText10,
             borderRightColor: colors.fadedText10,
 
-            borderRadiusBottom: radii.lg,
-            borderRadiusTop: radii.lg,
-            borderRadiusLeft: radii.lg,
-            borderRadiusRight: radii.lg,
+            borderTopLeftRadius: radii.lg,
+            borderTopRightRadius: radii.lg,
+            borderBottomLeftRadius: radii.lg,
+            borderBottomRightRadius: radii.lg,
           },
         },
         Contents: {
