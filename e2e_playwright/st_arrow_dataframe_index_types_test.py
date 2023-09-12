@@ -18,9 +18,9 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 
 def test_dataframe_index_types(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that st.dataframe render various column types correctly."""
+    """Test that st.dataframe render various index types correctly."""
     dataframe_elements = themed_app.locator(".stDataFrame")
-    expect(dataframe_elements).to_have_count(9)
+    expect(dataframe_elements).to_have_count(10)
 
     for i, element in enumerate(dataframe_elements.all()):
-        assert_snapshot(element, name=f"dataframe-column-types-{i}")
+        assert_snapshot(element, name=f"dataframe-index-types-{i}")
