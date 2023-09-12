@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,19 +14,10 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+import styled from "@emotion/styled"
 
-import "streamlit/proto/LabelVisibilityMessage.proto";
-
-message TimeInput {
-  string id = 1;
-  string label = 2;
-  optional string default = 3;
-  string help = 4;
-  string form_id = 5;
-  optional string value = 6;
-  bool set_value = 7;
-  bool disabled = 8;
-  LabelVisibilityMessage label_visibility = 9;
-  int64 step = 10;
-}
+export const StyledClearIconContainer = styled.div(() => ({
+  position: "absolute",
+  top: "50%",
+  right: "2.05em",
+}))
