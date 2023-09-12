@@ -73,9 +73,10 @@ describe("st.tabs", () => {
 
     tabs.forEach((_, index) => {
       // the selected tab does not have the disabled prop as true in baseweb
-      if (index !== 0) {
-        expect(tabs[index]).toBeDisabled()
+      if (index == 0) {
+        return
       }
+      expect(tabs[index]).toBeDisabled()
     })
   })
 })
