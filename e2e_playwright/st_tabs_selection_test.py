@@ -54,8 +54,8 @@ def test_maintains_selection_when_other_tab_removed(
     tab_buttons.nth(2).click()
     # Select Remove Tab 1 button
     control_buttons.nth(1).click()
-    # Wait for tabs to properly load
-    wait_for_app_run(app)
+    # Test a little flaky - needs extra time to remove old tab content
+    app.wait_for_timeout(1000)
     assert_snapshot(app.locator(".stTabs"), name="tabs-selection-remove-tab")
 
 
