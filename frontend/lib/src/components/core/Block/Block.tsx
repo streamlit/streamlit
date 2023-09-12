@@ -183,7 +183,10 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   const observer = useMemo(
     () =>
       new ResizeObserver(([entry]) => {
-        setWidth(entry.target.getBoundingClientRect().width)
+        const el = entry.target as HTMLElement
+        const scrollbarWidth = el.offsetWidth - el.clientWidth
+        // DataFrame shows a scrollbar on hover; include its width in layout calculations.
+        setWidth(entry.target.getBoundingClientRect().width - scrollbarWidth)
       }),
     [setWidth]
   )
