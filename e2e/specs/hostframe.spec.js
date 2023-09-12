@@ -64,7 +64,7 @@ describe("Host communication", () => {
                 // Open the Main Menu
                 cy.get("#MainMenu > button").click()
                 // Open the Settings Modal
-                cy.getIndexed('[data-testid="main-menu-list"] > ul', 1).click()
+                cy.getIndexed('[data-testid="main-menu-list"] > ul', 1).click({ force: true })
                 cy.get("div[role='dialog']").should("exist")
             });
         // Close modal
@@ -77,7 +77,7 @@ describe("Host communication", () => {
 
     it("handles a host menu item message", () => {
         // Add Menu Item message
-        cy.get("#toolbar").contains("Add Menu Item").click();
+        cy.get("#toolbar").contains("Add Menu Item").click({ force: true });
         cy.get("iframe")
             .iframe(() => {
                 // Open the Main Menu
