@@ -169,8 +169,8 @@ class NumberInputMixin:
             If None, there will be no maximum.
         value : int, float, or None
             The value of this widget when it first renders. If ``None``, the widget
-            will be initialized empty and returns ``None`` as long as the user didn't
-            provide an input. Defaults to min_value, or 0.0 if min_value is None.
+            will initialize empty and return ``None`` until the user provides input.
+            Defaults to min_value, or 0.0 if min_value is None.
         step : int, float, or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
@@ -204,9 +204,9 @@ class NumberInputMixin:
 
         Returns
         -------
-        int or float
-            The current value of the numeric input widget. The return type
-            will match the data type of the value parameter.
+        int or float or None
+            The current value of the numeric input widget or ``None`` if the widget
+            is empty. The return type will match the data type of the value parameter.
 
         Example
         -------
@@ -217,6 +217,17 @@ class NumberInputMixin:
 
         .. output::
            https://doc-number-input.streamlit.app/
+           height: 260px
+
+        To initialize an empty number input, use ``None`` as the value:
+
+        >>> import streamlit as st
+        >>>
+        >>> number = st.number_input('Insert a number', value=None)
+        >>> st.write('The current number is ', number)
+
+        .. output::
+           https://doc-number-input-empty.streamlit.app/
            height: 260px
 
         """

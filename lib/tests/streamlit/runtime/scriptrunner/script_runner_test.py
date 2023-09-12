@@ -998,7 +998,6 @@ class TestScriptRunner(ScriptRunner):
         super().__init__(
             session_id="test session id",
             main_script_path=main_script_path,
-            client_state=ClientState(),
             session_state=SessionState(),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             script_cache=ScriptCache(),
