@@ -58,7 +58,7 @@ if runtime.exists():
     st.write("value 9:", st.session_state.text_input9)
     st.write("text input changed:", "text_input_changed" in st.session_state)
 
-i10 = st.text_input("text input 10 (max_chars=5)", "1234", max_chars=10)
+i10 = st.text_input("text input 10 (max_chars=5)", "1234", max_chars=5)
 st.write("value 10:", i10)
 
 i11 = st.text_input("text input 11 (type=password)", "my password", type="password")
