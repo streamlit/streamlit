@@ -100,5 +100,5 @@ export const StyledInstructionsContainer =
     position: "absolute",
     marginRight: theme.spacing.twoXS,
     left: 0,
-    right: `${CONTROLS_WIDTH * 2 + (clearable ? 4 : 0)}px`,
+    right: `${CONTROLS_WIDTH * 2 + (clearable ? 12 : 0)}px`,
   }))
