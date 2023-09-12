@@ -399,7 +399,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
           <UIInput
             type="number"
             inputRef={this.inputRef}
-            value={formattedValue || undefined}
+            value={formattedValue ?? ""}
             onBlur={this.onBlur}
             onFocus={this.onFocus}
             onChange={this.onChange}
