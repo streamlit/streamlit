@@ -64,7 +64,7 @@ class TextAreaSerde:
     value: str | None
 
     def deserialize(self, ui_value: str | None, widget_id: str = "") -> str | None:
-        return str(ui_value if ui_value is not None else self.value)
+        return ui_value if ui_value is not None else self.value
 
     def serialize(self, v: str | None) -> str | None:
         return v

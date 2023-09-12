@@ -22,6 +22,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.testing.script_interactions import InteractiveScriptTests
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -177,3 +178,27 @@ This is a test
 
 class SomeObj(object):
     pass
+
+
+class TextAreaInteractiveTest(InteractiveScriptTests):
+    def test_text_input_interaction(self):
+        """Test interactions with an empty text_area widget."""
+        script = self.script_from_string(
+            """
+        import streamlit as st
+        st.text_area("the label", value=None)
+        """
+        )
+        sr = script.run()
+        text_area = sr.text_area[0]
+        assert text_area.value is None
+
+        # Input a value:
+        sr2 = text_area.input("Foo").run()
+        text_area = sr2.text_area[0]
+        assert text_area.value == "Foo"
+
+        # # Clear the value
+        sr3 = text_area.set_value(None).run()
+        text_area = sr3.text_area[0]
+        assert text_area.value is None
