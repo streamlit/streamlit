@@ -22,7 +22,7 @@ def test_data_editor_column_types(
 ):
     """Test that st.data_editor render various column types correctly."""
     data_editor_elements = themed_app.locator(".stDataframe")
-    expect(data_editor_elements).to_have_count(9)
+    expect(data_editor_elements).to_have_count(8)
 
     for i, element in enumerate(data_editor_elements.all()):
         assert_snapshot(element, name=f"data_editor-column-types-{i}")
