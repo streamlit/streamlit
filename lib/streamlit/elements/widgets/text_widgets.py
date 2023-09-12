@@ -238,7 +238,7 @@ class TextWidgetsMixin:
     def _text_input(
         self,
         label: str,
-        value: SupportsStr = "",
+        value: SupportsStr | None = "",
         max_chars: int | None = None,
         key: Key | None = None,
         type: str = "default",
