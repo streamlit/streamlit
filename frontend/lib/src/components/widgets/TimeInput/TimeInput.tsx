@@ -38,6 +38,8 @@ import {
   isNullOrUndefined,
 } from "@streamlit/lib/src/util/utils"
 
+import { StyledClearIconContainer } from "./styled-components"
+
 export interface Props {
   disabled: boolean
   element: TimeInputProto
@@ -276,12 +278,7 @@ class TimeInput extends PureComponent<Props, State> {
         {clearable && !isNullOrUndefined(this.state.value) && (
           // The time picker doesn't have a built-in clearable functionality.
           // Therefore, we are adding the clear button here.
-          <div
-            style={{
-              position: "absolute",
-              top: "50%",
-              right: "2.05em",
-            }}
+          <StyledClearIconContainer
             onClick={() => {
               this.handleChange(null)
             }}
@@ -306,7 +303,7 @@ class TimeInput extends PureComponent<Props, State> {
               }}
               $isFocusVisible={false}
             />
-          </div>
+          </StyledClearIconContainer>
         )}
       </div>
     )
