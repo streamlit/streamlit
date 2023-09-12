@@ -483,8 +483,7 @@ class TimeWidgetsMixin:
         )
 
         if widget_state.value_changed:
-            serialized_value = serde.serialize(widget_state.value)
-            if serialized_value is not None:
+            if (serialized_value := serde.serialize(widget_state.value)) is not None:
                 time_input_proto.value = serialized_value
             time_input_proto.set_value = True
 
