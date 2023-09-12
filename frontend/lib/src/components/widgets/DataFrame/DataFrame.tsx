@@ -463,7 +463,6 @@ function DataFrame({
           experimental={{
             // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
             scrollbarWidthOverride: 1,
-            paddingRight: 1,
           }}
           // Apply custom rendering (e.g. for missing or required cells):
           drawCell={drawCell}
