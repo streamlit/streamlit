@@ -202,8 +202,8 @@ class TextWidgetsMixin:
         Returns
         -------
         str or None
-            The current value of the text input widget or ``None`` if the user
-            has not provided a value yet.
+            The current value of the text input widget or ``None`` if no value has been
+            provided by the user.
 
         Example
         -------
@@ -457,8 +457,8 @@ class TextWidgetsMixin:
         Returns
         -------
         str or None
-            The current value of the text area widget or ``None`` if the user
-            has not provided a value yet.
+            The current value of the text area widget or ``None`` if no value has been
+            provided by the user.
 
         Example
         -------
