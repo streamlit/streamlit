@@ -76,22 +76,20 @@ def test_text_area_shows_instructions_when_dirty(
 
 def test_text_area_limits_input_via_max_chars(app: Page):
     """Test that st.text_area correctly limits the number of characters via max_chars."""
-    first_text_area_field = (
-        app.get_by_test_id("stTextArea").nth(9).locator("textarea").first
-    )
+    text_area_field = app.get_by_test_id("stTextArea").nth(9).locator("textarea").first
     # Try typing in char by char:
-    first_text_area_field.clear()
-    first_text_area_field.type("12345678")
-    first_text_area_field.press("Control+Enter")
+    text_area_field.clear()
+    text_area_field.type("12345678")
+    text_area_field.press("Control+Enter")
 
     expect(app.get_by_test_id("stMarkdown").nth(10)).to_have_text(
         "value 10: 12345", use_inner_text=True
     )
 
     # Try filling in everything at once:
-    first_text_area_field.focus()
-    first_text_area_field.fill("12345678")
-    first_text_area_field.press("Control+Enter")
+    text_area_field.focus()
+    text_area_field.fill("12345678")
+    text_area_field.press("Control+Enter")
 
     expect(app.get_by_test_id("stMarkdown").nth(10)).to_have_text(
         "value 10: 12345", use_inner_text=True
@@ -214,5 +212,9 @@ def test_calls_callback_on_change(app: Page):
     # Test if value is still correct after delta path change
     expect(app.get_by_test_id("stMarkdown").nth(8)).to_have_text(
         "value 9: hello world",
+        use_inner_text=True,
+    )
+    expect(app.get_by_test_id("stMarkdown").nth(9)).to_have_text(
+        "text area changed: False",
         use_inner_text=True,
     )

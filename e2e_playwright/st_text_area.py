@@ -56,7 +56,9 @@ if runtime.exists():
         help="Help text",
     )
     st.write("value 9:", st.session_state.text_area9)
-    st.write("text area changed:", "text_area_changed" in st.session_state)
+    st.write("text area changed:", st.session_state.get("text_area_changed") is True)
+    # Reset to False:
+    st.session_state.text_area_changed = False
 
 i10 = st.text_area("text area 10 (max_chars=5)", "1234", max_chars=5)
 st.write("value 10:", i10)
