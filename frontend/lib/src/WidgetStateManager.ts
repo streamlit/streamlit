@@ -347,7 +347,7 @@ export class WidgetStateManager {
 
   public setStringValue(
     widget: WidgetInfo,
-    value: string,
+    value: string | null,
     source: Source
   ): void {
     this.createWidgetState(widget, source).stringValue = value

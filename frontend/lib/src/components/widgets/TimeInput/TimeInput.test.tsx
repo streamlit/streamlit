@@ -24,6 +24,8 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TimeInput as TimeInputProto,
 } from "@streamlit/lib/src/proto"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+
 import TimeInput, { Props } from "./TimeInput"
 
 const getProps = (
@@ -39,6 +41,7 @@ const getProps = (
   }),
   width: 0,
   disabled: disabled,
+  theme: mockTheme.emotion,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
