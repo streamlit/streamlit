@@ -76,22 +76,20 @@ def test_text_input_shows_instructions_when_dirty(
 
 def test_text_input_limits_input_via_max_chars(app: Page):
     """Test that st.text_input correctly limits the number of characters via max_chars."""
-    first_text_input_field = (
-        app.get_by_test_id("stTextInput").nth(9).locator("input").first
-    )
+    text_input_field = app.get_by_test_id("stTextInput").nth(9).locator("input").first
     # Try typing in char by char:
-    first_text_input_field.clear()
-    first_text_input_field.type("12345678")
-    first_text_input_field.press("Enter")
+    text_input_field.clear()
+    text_input_field.type("12345678")
+    text_input_field.press("Enter")
 
     expect(app.get_by_test_id("stMarkdown").nth(10)).to_have_text(
         "value 10: 12345", use_inner_text=True
     )
 
     # Try filling in everything at once:
-    first_text_input_field.focus()
-    first_text_input_field.fill("12345678")
-    first_text_input_field.press("Enter")
+    text_input_field.focus()
+    text_input_field.fill("12345678")
+    text_input_field.press("Enter")
 
     expect(app.get_by_test_id("stMarkdown").nth(10)).to_have_text(
         "value 10: 12345", use_inner_text=True
@@ -201,5 +199,9 @@ def test_calls_callback_on_change(app: Page):
     # Test if value is still correct after delta path change
     expect(app.get_by_test_id("stMarkdown").nth(8)).to_have_text(
         "value 9: hello world",
+        use_inner_text=True,
+    )
+    expect(app.get_by_test_id("stMarkdown").nth(9)).to_have_text(
+        "text input changed: False",
         use_inner_text=True,
     )
