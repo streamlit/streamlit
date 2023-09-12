@@ -194,8 +194,6 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   useEffect(() => {
     if (wrapperElement.current) {
       observer.observe(wrapperElement.current)
-    } else {
-      return
     }
     return () => {
       observer.disconnect()
