@@ -183,12 +183,9 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   const observer = useMemo(
     () =>
       new ResizeObserver(([entry]) => {
-        const newWidth = entry.target.getBoundingClientRect().width
-        if (newWidth !== width) {
-          setWidth(newWidth)
-        }
+        setWidth(entry.target.getBoundingClientRect().width)
       }),
-    [width, setWidth]
+    [setWidth]
   )
 
   useEffect(() => {
