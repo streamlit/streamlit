@@ -28,27 +28,27 @@ if "change" not in st.session_state:
     st.session_state["change"] = False
 
 
-def onClick1():
+def on_click_1():
     st.session_state.add_tab = True
 
 
-def onClick2():
+def on_click_2():
     st.session_state.remove_1 = True
 
 
-def onClick3():
+def on_click_3():
     st.session_state.remove_2 = True
 
 
-def onClick4():
+def on_click_4():
     st.session_state.change = True
-    onClick1()
-    onClick2()
-    onClick3()
+    on_click_1()
+    on_click_2()
+    on_click_3()
 
 
-def onClick5():
-    onClick4()
+def on_click_5():
+    on_click_4()
 
 
 def reset():
@@ -59,34 +59,34 @@ col1, col2, col3, col4, col5 = st.columns([0.8, 1, 1, 1.2, 1], gap="small")
 with col1:
     add_tab = st.button(
         "Add Tab 3",
-        on_click=onClick1,
+        on_click=on_click_1,
         disabled=st.session_state.add_tab,
         use_container_width=True,
     )
 with col2:
     remove_1 = st.button(
         "Remove Tab 1",
-        on_click=onClick2,
+        on_click=on_click_2,
         disabled=st.session_state.remove_1,
         use_container_width=True,
     )
 with col3:
     remove_2 = st.button(
         "Remove Tab 2",
-        on_click=onClick3,
+        on_click=on_click_3,
         disabled=st.session_state.remove_2,
         use_container_width=True,
     )
 with col4:
     change_some = st.button(
         "Change Tab 1 & 3",
-        on_click=onClick4,
+        on_click=on_click_4,
         disabled=st.session_state.change,
         use_container_width=True,
     )
     change = st.button(
         "Change All Tabs",
-        on_click=onClick4,
+        on_click=on_click_5,
         disabled=st.session_state.change,
         use_container_width=True,
     )
