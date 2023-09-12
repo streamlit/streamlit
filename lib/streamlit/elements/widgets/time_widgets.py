@@ -22,11 +22,11 @@ from typing import (
     Any,
     List,
     Literal,
-    Optional,
     Sequence,
     Tuple,
     Union,
     cast,
+    overload,
 )
 
 from dateutil import relativedelta
@@ -55,7 +55,6 @@ from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-TimeValue: TypeAlias = Union[time, datetime, None]
 SingleDateValue: TypeAlias = Union[date, datetime, None]
 DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
 DateWidgetReturn: TypeAlias = Union[
@@ -190,16 +189,18 @@ class _DateInputValues:
 
 @dataclass
 class TimeInputSerde:
-    value: time
+    value: time | None
 
-    def deserialize(self, ui_value: Optional[str], widget_id: Any = "") -> time:
+    def deserialize(self, ui_value: str | None, widget_id: Any = "") -> time | None:
         return (
             datetime.strptime(ui_value, "%H:%M").time()
             if ui_value is not None
             else self.value
         )
 
-    def serialize(self, v: Union[datetime, time]) -> str:
+    def serialize(self, v: datetime | time | None) -> str | None:
+        if v is None:
+            return None
         if isinstance(v, datetime):
             v = v.time()
         return time.strftime(v, "%H:%M")
@@ -238,21 +239,55 @@ class DateInputSerde:
 
 
 class TimeWidgetsMixin:
-    @gather_metrics("time_input")
+    @overload
     def time_input(
         self,
         label: str,
-        value: TimeValue = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        value: time | datetime | Literal["now"] = "now",
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
     ) -> time:
+        pass
+
+    @overload
+    def time_input(
+        self,
+        label: str,
+        value: None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
+    ) -> time | None:
+        pass
+
+    @gather_metrics("time_input")
+    def time_input(
+        self,
+        label: str,
+        value: time | datetime | Literal["now"] | None = "now",
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
+    ) -> time | None:
         r"""Display a time input widget.
 
         Parameters
@@ -283,9 +318,11 @@ class TimeWidgetsMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        value : datetime.time/datetime.datetime
+        value : datetime.time/datetime.datetime, "now" or None
             The value of this widget when it first renders. This will be
-            cast to str internally. Defaults to the current time.
+            cast to str internally. If ``None``, will initialize empty and
+            return ``None`` until the user selects a time. If "now" (default),
+            will initialize with the current time.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -313,8 +350,9 @@ class TimeWidgetsMixin:
 
         Returns
         -------
-        datetime.time
-            The current value of the time input widget.
+        datetime.time or None
+            The current value of the time input widget or ``None`` if no time has been
+            selected.
 
         Example
         -------
@@ -326,6 +364,18 @@ class TimeWidgetsMixin:
 
         .. output::
            https://doc-time-input.streamlit.app/
+           height: 260px
+
+        To initialize an empty time input, use ``None`` as the value:
+
+        >>> import datetime
+        >>> import streamlit as st
+        >>>
+        >>> t = st.time_input('Set an alarm for', value=None)
+        >>> st.write('Alarm is set for', t)
+
+        .. output::
+           https://doc-time-input-empty.streamlit.app/
            height: 260px
 
         """
@@ -347,26 +397,29 @@ class TimeWidgetsMixin:
     def _time_input(
         self,
         label: str,
-        value: Union[time, datetime, None] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        value: time | datetime | Literal["now"] | None = "now",
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
-        ctx: Optional[ScriptRunContext] = None,
-    ) -> time:
+        ctx: ScriptRunContext | None = None,
+    ) -> time | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
-
+        check_session_state_rules(
+            default_value=value if value != "now" else None, key=key
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
-        parsed_time: time
+        parsed_time: time | None
         if value is None:
+            parsed_time = None
+        elif value == "now":
             # Set value default.
             parsed_time = datetime.now().time().replace(second=0, microsecond=0)
         elif isinstance(value, datetime):
@@ -382,7 +435,7 @@ class TimeWidgetsMixin:
             "time_input",
             user_key=key,
             label=label,
-            value=(None if value is None else parsed_time),
+            value=parsed_time if isinstance(value, (datetime, time)) else value,
             key=key,
             help=help,
             step=step,
@@ -394,7 +447,8 @@ class TimeWidgetsMixin:
         time_input_proto = TimeInputProto()
         time_input_proto.id = id
         time_input_proto.label = label
-        time_input_proto.default = time.strftime(parsed_time, "%H:%M")
+        if parsed_time is not None:
+            time_input_proto.default = time.strftime(parsed_time, "%H:%M")
         time_input_proto.form_id = current_form_id(self.dg)
         if not isinstance(step, (int, timedelta)):
             raise StreamlitAPIException(
@@ -429,7 +483,8 @@ class TimeWidgetsMixin:
         )
 
         if widget_state.value_changed:
-            time_input_proto.value = serde.serialize(widget_state.value)
+            if (serialized_value := serde.serialize(widget_state.value)) is not None:
+                time_input_proto.value = serialized_value
             time_input_proto.set_value = True
 
         self.dg._enqueue("time_input", time_input_proto)
@@ -609,7 +664,9 @@ class TimeWidgetsMixin:
     ) -> DateWidgetReturn:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
+        check_session_state_rules(
+            default_value=value if value != "today" else None, key=key
+        )
 
         maybe_raise_label_warnings(label, label_visibility)
 

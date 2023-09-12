@@ -15,8 +15,12 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { TimeInput as TimeInputProto } from "@streamlit/lib/src/proto"
 import { TimePicker as UITimePicker } from "baseui/timepicker"
+import { StyledClearIcon } from "baseui/input/styled-components"
+import { ChevronDown } from "baseui/icon"
+import { withTheme } from "@emotion/react"
+
+import { TimeInput as TimeInputProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import {
   WidgetStateManager,
@@ -28,14 +32,20 @@ import {
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+import {
+  labelVisibilityProtoValueToEnum,
+  isNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 
-import { labelVisibilityProtoValueToEnum } from "@streamlit/lib/src/util/utils"
+import { StyledClearIconContainer } from "./styled-components"
 
 export interface Props {
   disabled: boolean
   element: TimeInputProto
   widgetMgr: WidgetStateManager
   width: number
+  theme: EmotionTheme
 }
 
 interface State {
@@ -43,7 +53,7 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: string
+  value: string | null
 }
 
 class TimeInput extends PureComponent<Props, State> {
@@ -53,11 +63,11 @@ class TimeInput extends PureComponent<Props, State> {
     value: this.initialValue,
   }
 
-  get initialValue(): string {
+  get initialValue(): string | null {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
     const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
-    return storedValue !== undefined ? storedValue : this.props.element.default
+    return storedValue ?? this.props.element.default ?? null
   }
 
   public componentDidMount(): void {
@@ -86,7 +96,7 @@ class TimeInput extends PureComponent<Props, State> {
   private updateFromProtobuf(): void {
     const { value } = this.props.element
     this.props.element.setValue = false
-    this.setState({ value }, () => {
+    this.setState({ value: value ?? null }, () => {
       this.commitWidgetValue({ fromUi: false })
     })
   }
@@ -107,24 +117,26 @@ class TimeInput extends PureComponent<Props, State> {
   private onFormCleared = (): void => {
     this.setState(
       (_, prevProps) => {
-        return { value: prevProps.element.default }
+        return { value: prevProps.element.default ?? null }
       },
       () => this.commitWidgetValue({ fromUi: true })
     )
   }
 
   private handleChange = (newDate: Date | null): void => {
-    let value: string
+    let value: string | null
     if (newDate === null) {
-      // This case is not supposed to happen since time picker cannot be cleared.
-      value = this.initialValue
+      value = null
     } else {
       value = this.dateToString(newDate)
     }
     this.setState({ value }, () => this.commitWidgetValue({ fromUi: true }))
   }
 
-  private stringToDate = (value: string): Date => {
+  private stringToDate = (value: string | null): Date | null => {
+    if (value === null) {
+      return null
+    }
     const [hours, minutes] = value.split(":").map(Number)
     const date = new Date()
 
@@ -142,7 +154,9 @@ class TimeInput extends PureComponent<Props, State> {
   }
 
   public render(): ReactNode {
-    const { disabled, width, element, widgetMgr } = this.props
+    const { disabled, width, element, widgetMgr, theme } = this.props
+    const clearable = isNullOrUndefined(element.default) && !disabled
+
     const style = { width }
 
     const selectOverrides = {
@@ -203,6 +217,20 @@ class TimeInput extends PureComponent<Props, State> {
                 },
               },
             },
+            SelectArrow: {
+              component: ChevronDown,
+
+              props: {
+                overrides: {
+                  Svg: {
+                    style: () => ({
+                      width: theme.iconSizes.xl,
+                      height: theme.iconSizes.xl,
+                    }),
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -236,15 +264,50 @@ class TimeInput extends PureComponent<Props, State> {
         <UITimePicker
           format="24"
           step={element.step ? Number(element.step) : 900} // step in seconds, defaults to 900s (15 minutes)
-          value={this.stringToDate(this.state.value)}
+          value={
+            isNullOrUndefined(this.state.value)
+              ? undefined
+              : this.stringToDate(this.state.value)
+          }
           onChange={this.handleChange}
           overrides={selectOverrides}
+          nullable={clearable}
           creatable
           aria-label={element.label}
         />
+        {clearable && !isNullOrUndefined(this.state.value) && (
+          // The time picker doesn't have a built-in clearable functionality.
+          // Therefore, we are adding the clear button here.
+          <StyledClearIconContainer
+            onClick={() => {
+              this.handleChange(null)
+            }}
+            data-testid="stTimeInputClearButton"
+          >
+            <StyledClearIcon
+              overrides={{
+                Svg: {
+                  style: {
+                    color: theme.colors.darkGray,
+                    // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
+                    // Let's use a scale transform effect to make it bigger.
+                    // The width property only enlarges its bounding box, so it's easier to click.
+                    transform: "scale(1.41)",
+                    width: theme.spacing.twoXL,
+
+                    ":hover": {
+                      fill: theme.colors.bodyText,
+                    },
+                  },
+                },
+              }}
+              $isFocusVisible={false}
+            />
+          </StyledClearIconContainer>
+        )}
       </div>
     )
   }
 }
 
-export default TimeInput
+export default withTheme(TimeInput)
