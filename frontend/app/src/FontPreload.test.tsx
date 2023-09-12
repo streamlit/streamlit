@@ -17,6 +17,8 @@
 import fs from "fs"
 import path from "path"
 
+jest.dontMock("fs")
+
 // Current hashes for our preloaded font assets:
 const REGULAR_HASH = "0d69e5ff5e92ac64a0c9"
 const SEMI_BOLD_HASH = "5c1d378dd5990ef334ca"
