@@ -36,6 +36,7 @@ def test_maintains_selection_when_other_tab_added(
     control_buttons.nth(0).click()
     # Wait for tabs to properly load
     wait_for_app_run(app)
+    # Tab add/remove/switch can still be in process despite app run finishing.
     app.wait_for_timeout(1000)
     assert_snapshot(app.locator(".stTabs"), name="tabs-selection-add-tab")
 
