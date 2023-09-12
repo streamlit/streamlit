@@ -45,7 +45,7 @@ function Header({ isStale, children }: HeaderProps): ReactElement {
       data-testid="stHeader"
     >
       {showColoredLine && (
-        <StyledHeaderDecoration data-testid="stDecoration" />
+        <StyledHeaderDecoration data-testid="stDecoration" id="stDecoration" />
       )}
       {showToolbar && (
         <StyledHeaderToolbar data-testid="stToolbar">

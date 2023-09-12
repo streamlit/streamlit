@@ -42,7 +42,7 @@ describe("st.expander", () => {
     // See https://github.com/streamlit/streamlit/issues/2437
     cy.get(".stButton button").focus();
     cy.get(".main").matchThemedSnapshots("expanders-in-main");
-    cy.get("[data-testid='stSidebar']").matchThemedSnapshots(
+    cy.get("[data-testid='stSidebarUserContent']").matchThemedSnapshots(
       "expanders-in-sidebar"
     );
   });
