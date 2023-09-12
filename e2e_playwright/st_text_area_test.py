@@ -128,10 +128,10 @@ def test_text_area_has_correct_value_on_enter(app: Page):
         "value 1: hello world", use_inner_text=True
     )
 
-    # Test command + enter:
+    # Test command (Meta key) + enter:
     first_text_area_field.focus()
     first_text_area_field.fill("different value")
-    first_text_area_field.press("Command+Enter")
+    first_text_area_field.press("Meta+Enter")
 
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(
         "value 1: different value", use_inner_text=True
