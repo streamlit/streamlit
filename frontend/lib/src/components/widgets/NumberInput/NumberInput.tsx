@@ -498,7 +498,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
         </StyledInputContainer>
         {/* Hide the "Please enter to apply" text in small widget sizes */}
         {width > breakpoints.hideWidgetDetails && (
-          <StyledInstructionsContainer>
+          <StyledInstructionsContainer clearable={clearable}>
             <InputInstructions
               dirty={dirty}
               value={formattedValue ?? ""}
