@@ -75,7 +75,7 @@ describe("DataFrame widget", () => {
   it("should have correct className", () => {
     render(<DataFrame {...props} />)
 
-    const styledResizableContainer = screen.getByTestId("stDataFrameContainer")
+    const styledResizableContainer = screen.getByTestId("stDataFrame")
 
     expect(styledResizableContainer).toHaveClass("stDataFrame")
   })
