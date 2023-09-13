@@ -110,10 +110,7 @@ function DataFrame({
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
 
   // Determine if the device is primary using touch as input:
-  const isTouchDevice = React.useMemo<boolean>(
-    () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
-    []
-  )
+  const isTouchDevice = React.useMemo<boolean>(() => true, [])
 
   const [gridSelection, setGridSelection] = React.useState<GridSelection>({
     columns: CompactSelection.empty(),
@@ -338,6 +335,7 @@ function DataFrame({
   return (
     <StyledResizableContainer
       className="stDataFrame"
+      data-testid="stDataFrameContainer"
       onBlur={() => {
         // If the container loses focus, clear the current selection.
         // Touch screen devices have issues with this, so we don't clear

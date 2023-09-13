@@ -21,6 +21,7 @@ import { render } from "@streamlit/lib/src/test_util"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
 
 import DataFrame, { DataFrameProps } from "./DataFrame"
 
@@ -69,6 +70,14 @@ describe("DataFrame widget", () => {
   it("renders without crashing", () => {
     render(<DataFrame {...props} />)
     expect(screen.getAllByTestId("stDataFrameResizable").length).toBe(1)
+  })
+
+  it("should have correct className", () => {
+    render(<DataFrame {...props} />)
+
+    const styledResizableContainer = screen.getByTestId("stDataFrameContainer")
+
+    expect(styledResizableContainer).toHaveClass("stDataFrame")
   })
 
   it("grid container should use full width when useContainerWidth is used", () => {
