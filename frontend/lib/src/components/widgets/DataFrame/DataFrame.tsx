@@ -337,6 +337,7 @@ function DataFrame({
 
   return (
     <StyledResizableContainer
+      data-testid="stDataFrameContainer"
       className="stDataFrame"
       onBlur={() => {
         // If the container loses focus, clear the current selection.
