@@ -138,8 +138,19 @@ function Tabs(props: TabProps): ReactElement {
           // Reset available tab labels when rerendering
           if (index === 0) allTabLabels = []
 
+          // If the tab is stale, disable it
+          const isStaleTab = isElementStale(
+            appNode,
+            scriptRunState,
+            scriptRunId
+          )
+          const disabled = widgetsDisabled || isStaleTab
+
+          // Ensure stale tab's elements are also marked stale/disabled
           const childProps = {
             ...props,
+            isStale: isStale || isStaleTab,
+            widgetsDisabled: disabled,
             node: appNode as BlockNode,
           }
           let nodeLabel = index.toString()
@@ -147,17 +158,6 @@ function Tabs(props: TabProps): ReactElement {
             nodeLabel = childProps.node.deltaBlock.tab.label
           }
           allTabLabels[index] = nodeLabel
-
-          // If the tab is stale, disable it
-          const isStaleTab = isElementStale(
-            childProps.node,
-            scriptRunState,
-            scriptRunId
-          )
-          const disabled = widgetsDisabled || isStaleTab
-          // Ensure stale tab's elements are also marked stale/disabled
-          childProps.isStale = isStaleTab
-          childProps.widgetsDisabled = disabled
 
           const isSelected =
             activeTabKey.toString() === index.toString() && !isStaleTab
