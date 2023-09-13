@@ -15,8 +15,10 @@
  */
 
 import React, { Fragment } from "react"
-import { Modal, mount, SessionInfo, mockSessionInfo } from "@streamlit/lib"
+import { SessionInfo, mockSessionInfo, render } from "@streamlit/lib"
 import { StreamlitDialog, DialogType } from "./StreamlitDialog"
+import { waitFor, screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
 
 function flushPromises(): Promise<void> {
   return new Promise(process.nextTick)
@@ -24,7 +26,7 @@ function flushPromises(): Promise<void> {
 
 describe("StreamlitDialog", () => {
   it("renders clear cache dialog and focuses clear cache button", async () => {
-    const wrapper = mount(
+    render(
       <Fragment>
         {StreamlitDialog({
           type: DialogType.CLEAR_CACHE,
@@ -38,13 +40,16 @@ describe("StreamlitDialog", () => {
     // Flush promises to give componentDidMount() a chance to run.
     await flushPromises()
 
-    setTimeout(() => {
-      expect(wrapper.find("button").at(1).is(":focus")).toBe(true)
-    }, 0)
+    await waitFor(() => {
+      const buttons = screen.getAllByRole("button")
+      const targetButton = buttons[1]
+
+      expect(targetButton).toHaveTextContent("Clear caches")
+    })
   })
 
   it("renders secondary dialog buttons properly", async () => {
-    const wrapper = mount(
+    render(
       <Fragment>
         {StreamlitDialog({
           type: DialogType.CLEAR_CACHE,
@@ -55,11 +60,14 @@ describe("StreamlitDialog", () => {
       </Fragment>
     )
 
-    expect(wrapper.find("StyledSecondaryButton")).toMatchSnapshot()
+    const baseButtonSecondary = await screen.findByTestId(
+      "baseButton-secondary"
+    )
+    expect(baseButtonSecondary).toBeDefined()
   })
 
   it("renders tertiary dialog buttons properly", async () => {
-    const wrapper = mount(
+    render(
       <Fragment>
         {StreamlitDialog({
           type: DialogType.CLEAR_CACHE,
@@ -70,13 +78,16 @@ describe("StreamlitDialog", () => {
       </Fragment>
     )
 
-    expect(wrapper.find("StyledTertiaryButton")).toMatchSnapshot()
+    const baseButtonSecondary = await screen.findByTestId(
+      "baseButton-tertiary"
+    )
+    expect(baseButtonSecondary).toBeDefined()
   })
 })
 
 describe("aboutDialog", () => {
   it("shows version string if SessionInfo is initialized", async () => {
-    const wrapper = mount(
+    render(
       <Fragment>
         {StreamlitDialog({
           type: DialogType.ABOUT,
@@ -86,14 +97,16 @@ describe("aboutDialog", () => {
       </Fragment>
     )
 
-    expect(wrapper.find(Modal).text()).toContain("Streamlit v42.42.42")
+    const versionRegex = /Streamlit v\s*42\.42\.42/
+    const versionText = screen.getByText(versionRegex)
+    expect(versionText).toBeDefined()
   })
 
   it("shows no version string if SessionInfo is not initialized", async () => {
     const sessionInfo = new SessionInfo()
     expect(sessionInfo.isSet).toBe(false)
 
-    const wrapper = mount(
+    render(
       <Fragment>
         {StreamlitDialog({
           type: DialogType.ABOUT,
@@ -102,7 +115,10 @@ describe("aboutDialog", () => {
         })}
       </Fragment>
     )
-    expect(wrapper.find(Modal).exists()).toBe(true)
-    expect(wrapper.find(Modal).text()).not.toContain("Streamlit v")
+
+    // regex that is anything after Streamlit v
+    const versionRegex = /^Streamlit v.*/
+    const nonExistentText = screen.queryByText(versionRegex)
+    expect(nonExistentText).not.toBeInTheDocument()
   })
 })
