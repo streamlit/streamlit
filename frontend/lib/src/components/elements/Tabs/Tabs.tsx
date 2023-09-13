@@ -52,6 +52,7 @@ function Tabs(props: TabProps): ReactElement {
     const newTabKey = allTabLabels.indexOf(activeTabName)
     if (newTabKey === -1) {
       setActiveTabKey(0)
+      setActiveTabName(allTabLabels[0])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allTabLabels])
@@ -66,8 +67,10 @@ function Tabs(props: TabProps): ReactElement {
     const newTabKey = allTabLabels.indexOf(activeTabName)
     if (newTabKey !== -1) {
       setActiveTabKey(newTabKey)
+      setActiveTabName(allTabLabels[newTabKey])
     } else {
       setActiveTabKey(0)
+      setActiveTabName(allTabLabels[0])
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
