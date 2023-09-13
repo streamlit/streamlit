@@ -86,8 +86,14 @@ export default function AlertContainer({
             borderTopLeftRadius: radii.lg,
             borderBottomLeftRadius: radii.lg,
           },
+          props: {
+            "data-testid": "stNotification",
+          },
         },
         InnerContainer: {
+          props: {
+            "data-testid": "stNotificationInnerContainer",
+          },
           style: {
             width: "100%",
             lineHeight: "1.5",
@@ -95,7 +101,9 @@ export default function AlertContainer({
         },
       }}
     >
-      <StyledAlertContent>{children}</StyledAlertContent>
+      <StyledAlertContent data-testid="stStyledAlertContent">
+        {children}
+      </StyledAlertContent>
     </Notification>
   )
 }
