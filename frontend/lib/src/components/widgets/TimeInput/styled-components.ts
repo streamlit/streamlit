@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,30 +14,10 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+import styled from "@emotion/styled"
 
-import "streamlit/proto/LabelVisibilityMessage.proto";
-
-message TextInput {
-  enum Type {
-    // A normal text input.
-    DEFAULT = 0;
-
-    // A password text input. Typed values are obscured by default.
-    PASSWORD = 1;
-  }
-
-  string id = 1;
-  string label = 2;
-  optional string default = 3;
-  Type type = 4;
-  uint32 max_chars = 5;
-  string help = 6;
-  string form_id = 7;
-  optional string value = 8;
-  bool set_value = 9;
-  string autocomplete = 10;
-  string placeholder = 11;
-  bool disabled = 12;
-  LabelVisibilityMessage label_visibility = 13;
-}
+export const StyledClearIconContainer = styled.div(() => ({
+  position: "absolute",
+  top: "50%",
+  right: "2.05em",
+}))

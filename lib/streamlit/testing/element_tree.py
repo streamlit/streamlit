@@ -847,7 +847,7 @@ class Text(Element):
 
 @dataclass(repr=False)
 class TextArea(Widget):
-    _value: str | None
+    _value: str | None | InitialValue
 
     proto: TextAreaProto
     max_chars: int
@@ -856,7 +856,7 @@ class TextArea(Widget):
     def __init__(self, proto: TextAreaProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "text_area"
         self.id = proto.id
@@ -868,19 +868,20 @@ class TextArea(Widget):
         self.disabled = proto.disabled
         self.key = user_key_from_widget_id(self.id)
 
-    def set_value(self, v: str) -> TextArea:
+    def set_value(self, v: str | None) -> TextArea:
         self._value = v
         return self
 
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
-        ws.string_value = self.value
+        if self.value is not None:
+            ws.string_value = self.value
         return ws
 
     @property
-    def value(self) -> str:
-        if self._value is not None:
+    def value(self) -> str | None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         else:
             state = self.root.session_state
@@ -897,7 +898,7 @@ class TextArea(Widget):
 
 @dataclass(repr=False)
 class TextInput(Widget):
-    _value: str | None
+    _value: str | None | InitialValue
     proto: TextInputProto
     max_chars: int
     autocomplete: str
@@ -906,7 +907,7 @@ class TextInput(Widget):
     def __init__(self, proto: TextInputProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "text_input"
         self.id = proto.id
@@ -919,19 +920,20 @@ class TextInput(Widget):
         self.disabled = proto.disabled
         self.key = user_key_from_widget_id(self.id)
 
-    def set_value(self, v: str) -> TextInput:
+    def set_value(self, v: str | None) -> TextInput:
         self._value = v
         return self
 
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
-        ws.string_value = self.value
+        if self.value is not None:
+            ws.string_value = self.value
         return ws
 
     @property
-    def value(self) -> str:
-        if self._value is not None:
+    def value(self) -> str | None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         else:
             state = self.root.session_state
@@ -951,14 +953,14 @@ TimeValue: TypeAlias = Union[time, datetime]
 
 @dataclass(repr=False)
 class TimeInput(Widget):
-    _value: TimeValue | None
+    _value: TimeValue | None | InitialValue
     proto: TimeInputProto
     step: int
 
     def __init__(self, proto: TimeInputProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "time_input"
         self.id = proto.id
@@ -969,7 +971,7 @@ class TimeInput(Widget):
         self.disabled = proto.disabled
         self.key = user_key_from_widget_id(self.id)
 
-    def set_value(self, v: TimeValue) -> TimeInput:
+    def set_value(self, v: TimeValue | None) -> TimeInput:
         self._value = v
         return self
 
@@ -977,13 +979,15 @@ class TimeInput(Widget):
         ws = WidgetState()
         ws.id = self.id
 
-        serde = TimeInputSerde(None)  # type: ignore
-        ws.string_value = serde.serialize(self.value)
+        serde = TimeInputSerde(None)
+        serialized_value = serde.serialize(self.value)
+        if serialized_value is not None:
+            ws.string_value = serialized_value
         return ws
 
     @property
-    def value(self) -> time:
-        if self._value is not None:
+    def value(self) -> time | None:
+        if not isinstance(self._value, InitialValue):
             v = self._value
             v = v.time() if isinstance(v, datetime) else v
             return v
@@ -994,11 +998,15 @@ class TimeInput(Widget):
 
     def increment(self) -> TimeInput:
         """Select the next available time."""
+        if self.value is None:
+            return self
         dt = datetime.combine(date.today(), self.value) + timedelta(seconds=self.step)
         return self.set_value(dt.time())
 
     def decrement(self) -> TimeInput:
         """Select the previous available time."""
+        if self.value is None:
+            return self
         dt = datetime.combine(date.today(), self.value) - timedelta(seconds=self.step)
         return self.set_value(dt.time())
 
