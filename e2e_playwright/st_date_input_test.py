@@ -195,6 +195,10 @@ def test_calls_callback_on_change(app: Page):
         "Value 12: 1970-01-02",
         use_inner_text=True,
     )
+    expect(app.get_by_test_id("stMarkdown").nth(12)).to_have_text(
+        "Date Input Changed: False",
+        use_inner_text=True,
+    )
 
 
 def test_single_date_calendar_picker_rendering(

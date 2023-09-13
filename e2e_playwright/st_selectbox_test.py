@@ -186,3 +186,6 @@ def test_handles_callback_on_change_correctly(app: Page):
     expect(app.get_by_test_id("stMarkdown").nth(7)).to_have_text(
         "value 8: male", use_inner_text=True
     )
+    expect(app.get_by_test_id("stMarkdown").nth(8)).to_have_text(
+        "selectbox changed: False", use_inner_text=True
+    )

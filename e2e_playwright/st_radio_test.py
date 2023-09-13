@@ -122,3 +122,7 @@ def test_calls_callback_on_change(app: Page):
         "value 12: female",
         use_inner_text=True,
     )
+    expect(app.get_by_test_id("stMarkdown").nth(12)).to_have_text(
+        "radio changed: False",
+        use_inner_text=True,
+    )
