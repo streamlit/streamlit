@@ -52,8 +52,6 @@ if runtime.exists():
         "number input 9 (on_change) - changed:",
         st.session_state.get("number_input_changed") is True,
     )
-    # Reset to False:
-    st.session_state.number_input_changed = False
 
 [col1, col2, col3, col4, col5, col6] = st.columns(6)
 
