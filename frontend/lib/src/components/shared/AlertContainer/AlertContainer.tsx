@@ -91,9 +91,6 @@ export default function AlertContainer({
           },
         },
         InnerContainer: {
-          props: {
-            "data-testid": "stNotificationInnerContainer",
-          },
           style: {
             width: "100%",
             lineHeight: "1.5",
@@ -101,9 +98,7 @@ export default function AlertContainer({
         },
       }}
     >
-      <StyledAlertContent data-testid="stStyledAlertContent">
-        {children}
-      </StyledAlertContent>
+      <StyledAlertContent>{children}</StyledAlertContent>
     </Notification>
   )
 }
