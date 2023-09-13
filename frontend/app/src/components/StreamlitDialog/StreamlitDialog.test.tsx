@@ -40,14 +40,10 @@ describe("StreamlitDialog", () => {
     // Flush promises to give componentDidMount() a chance to run.
     await flushPromises()
 
-    await waitFor(() => {
-      const buttons = screen.getAllByRole("button")
-      const targetButton = buttons[1]
-
-      expect(targetButton).toHaveTextContent("Clear caches")
-      // eslint-disable-next-line testing-library/no-wait-for-multiple-assertions
-      expect(targetButton).toHaveFocus()
-    })
+    const buttons = await screen.findAllByRole("button")
+    const targetButton = buttons[1]
+    expect(targetButton).toHaveTextContent("Clear caches")
+    expect(targetButton).toHaveFocus()
   })
 
   it("renders secondary dialog buttons properly", async () => {
