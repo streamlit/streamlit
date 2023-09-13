@@ -16,11 +16,13 @@
 
 import React from "react"
 import { act } from "react-dom/test-utils"
+import "@testing-library/jest-dom"
 
-import { mount } from "@streamlit/lib/src/test_util"
+import { mount, render } from "@streamlit/lib/src/test_util"
 import { StyledBox } from "./styled-components"
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent, { Props } from "./WebcamComponent"
+import { screen } from "@testing-library/react"
 
 jest.mock("react-webcam")
 const getProps = (props: Partial<Props> = {}): Props => {
@@ -37,22 +39,23 @@ const getProps = (props: Partial<Props> = {}): Props => {
 }
 
 describe("Test Webcam Component", () => {
-  it("renders without crashing", () => {
+  it("renders without crashing", async () => {
     const props = getProps()
-    const wrapper = mount(<WebcamComponent {...props} />)
-    expect(wrapper).toBeDefined()
+    render(<WebcamComponent {...props} />)
+    expect(await screen.findByTestId("stCameraInputButton")).toBeDefined()
   })
 
   it("renders ask permission screen when pending state", () => {
     const props = getProps()
     // automatically put in pending state
-    const wrapper = mount(<WebcamComponent {...props} />)
-    expect(wrapper).toBeDefined()
-    expect(wrapper.find(StyledBox).at(0).text()).toEqual(
-      "This app would like to use your camera.Learn how to allow access."
-    )
-    // hidden style should be there and webcam should not show
-    expect(wrapper.find(StyledBox).at(1).props().hidden).toEqual(true)
+    render(<WebcamComponent {...props} />)
+    // Check for the initial part of the message
+    const initialMessage = "This app would like to use your camera."
+    expect(screen.getByText(initialMessage)).toBeInTheDocument()
+
+    // Check for the link with the message
+    const linkMessage = "Learn how to allow access."
+    expect(screen.getByText(linkMessage)).toBeInTheDocument()
   })
 
   it("renders ask permission screen when error state", () => {

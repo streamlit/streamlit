@@ -126,6 +126,7 @@ const WebcamComponent = ({
         isMobile && <SwitchFacingModeButton switchFacingMode={setFacingMode} />
       )}
       <StyledBox
+        data-testid="stStyledBox"
         hidden={
           webcamPermission !== WebcamPermission.SUCCESS &&
           !disabled &&
@@ -135,6 +136,7 @@ const WebcamComponent = ({
       >
         {!disabled && (
           <Webcam
+            data-test-id="stWebcam"
             audio={false}
             ref={videoRef}
             screenshotFormat="image/jpeg"
