@@ -45,6 +45,8 @@ describe("StreamlitDialog", () => {
       const targetButton = buttons[1]
 
       expect(targetButton).toHaveTextContent("Clear caches")
+      // eslint-disable-next-line testing-library/no-wait-for-multiple-assertions
+      expect(targetButton).toHaveFocus()
     })
   })
 
@@ -63,7 +65,6 @@ describe("StreamlitDialog", () => {
     const baseButtonSecondary = await screen.findByTestId(
       "baseButton-secondary"
     )
-    expect(baseButtonSecondary).toHaveFocus()
     expect(baseButtonSecondary).toBeDefined()
   })
 
