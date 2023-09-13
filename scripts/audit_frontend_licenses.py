@@ -104,15 +104,6 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "Unknown",
     ),
     (
-        # MIT license: https://github.com/dy/image-palette
-        "image-palette",
-        "2.1.0",
-        "MIT*",
-        "https://github.com/dy/image-palette.git",
-        "Unknown",
-        "Dmitry Yv",
-    ),
-    (
         # CC-BY-3.0 license: https://github.com/cartodb/cartocolor#licensing
         "cartocolor",
         "4.0.2",
