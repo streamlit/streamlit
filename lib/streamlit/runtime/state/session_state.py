@@ -33,6 +33,7 @@ from typing_extensions import Final, TypeAlias
 import streamlit as st
 from streamlit import config, util
 from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
+from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.state.common import (
@@ -48,6 +49,8 @@ from streamlit.vendor.pympler.asizeof import asizeof
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import SessionManager
+
+_LOGGER = get_logger(__name__)
 
 
 STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
@@ -494,6 +497,7 @@ class SessionState:
         between the previous and current script runs.
         """
         # Clear any triggers that weren't reset because the script was disconnected
+        _LOGGER.debug(f"on_script_will_rerun session state: {self}")
         self._reset_triggers()
         self._compact_state()
         self.set_widgets_from_proto(latest_widget_states)
