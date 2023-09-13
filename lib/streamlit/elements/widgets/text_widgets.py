@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Optional, cast
+from typing import cast, overload
 
 from typing_extensions import Literal
 
@@ -48,45 +50,85 @@ from streamlit.type_util import (
 
 @dataclass
 class TextInputSerde:
-    value: SupportsStr
+    value: str | None
 
-    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str:
-        return str(ui_value if ui_value is not None else self.value)
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> str | None:
+        return ui_value if ui_value is not None else self.value
 
-    def serialize(self, v: str) -> str:
+    def serialize(self, v: str | None) -> str | None:
         return v
 
 
 @dataclass
 class TextAreaSerde:
-    value: SupportsStr
+    value: str | None
 
-    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str:
-        return str(ui_value if ui_value is not None else self.value)
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> str | None:
+        return ui_value if ui_value is not None else self.value
 
-    def serialize(self, v: str) -> str:
+    def serialize(self, v: str | None) -> str | None:
         return v
 
 
 class TextWidgetsMixin:
+    @overload
+    def text_input(
+        self,
+        label: str,
+        value: str = "",
+        max_chars: int | None = None,
+        key: Key | None = None,
+        type: Literal["default", "password"] = "default",
+        help: str | None = None,
+        autocomplete: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> str:
+        pass
+
+    @overload
+    def text_input(
+        self,
+        label: str,
+        value: SupportsStr | None = None,
+        max_chars: int | None = None,
+        key: Key | None = None,
+        type: Literal["default", "password"] = "default",
+        help: str | None = None,
+        autocomplete: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> str | None:
+        pass
+
     @gather_metrics("text_input")
     def text_input(
         self,
         label: str,
-        value: SupportsStr = "",
-        max_chars: Optional[int] = None,
-        key: Optional[Key] = None,
+        value: str | SupportsStr | None = "",
+        max_chars: int | None = None,
+        key: Key | None = None,
         type: Literal["default", "password"] = "default",
-        help: Optional[str] = None,
-        autocomplete: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        help: str | None = None,
+        autocomplete: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        placeholder: Optional[str] = None,
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> str:
+    ) -> str | None:
         r"""Display a single-line text input widget.
 
         Parameters
@@ -117,9 +159,10 @@ class TextWidgetsMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        value : object
+        value : object or None
             The text value of this widget when it first renders. This will be
-            cast to str internally.
+            cast to str internally. If ``None``, will initialize empty and
+            return ``None`` until the user provides input. Defaults to empty string.
         max_chars : int or None
             Max number of characters allowed in text input.
         key : str or int
@@ -158,8 +201,9 @@ class TextWidgetsMixin:
 
         Returns
         -------
-        str
-            The current value of the text input widget.
+        str or None
+            The current value of the text input widget or ``None`` if no value has been
+            provided by the user.
 
         Example
         -------
@@ -194,32 +238,35 @@ class TextWidgetsMixin:
     def _text_input(
         self,
         label: str,
-        value: SupportsStr = "",
-        max_chars: Optional[int] = None,
-        key: Optional[Key] = None,
+        value: SupportsStr | None = "",
+        max_chars: int | None = None,
+        key: Key | None = None,
         type: str = "default",
-        help: Optional[str] = None,
-        autocomplete: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        help: str | None = None,
+        autocomplete: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        placeholder: Optional[str] = None,
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
-    ) -> str:
+        ctx: ScriptRunContext | None = None,
+    ) -> str | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        # Make sure value is always string or None:
+        value = str(value) if value is not None else None
+
         id = compute_widget_id(
             "text_input",
             user_key=key,
             label=label,
-            value=str(value),
+            value=value,
             max_chars=max_chars,
             key=key,
             type=type,
@@ -233,7 +280,8 @@ class TextWidgetsMixin:
         text_input_proto = TextInputProto()
         text_input_proto.id = id
         text_input_proto.label = label
-        text_input_proto.default = str(value)
+        if value is not None:
+            text_input_proto.default = value
         text_input_proto.form_id = current_form_id(self.dg)
         text_input_proto.disabled = disabled
         text_input_proto.label_visibility.value = get_label_visibility_proto_value(
@@ -280,29 +328,68 @@ class TextWidgetsMixin:
         )
 
         if widget_state.value_changed:
-            text_input_proto.value = widget_state.value
+            if widget_state.value is not None:
+                text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
 
         self.dg._enqueue("text_input", text_input_proto)
         return widget_state.value
 
+    @overload
+    def text_area(
+        self,
+        label: str,
+        value: str = "",
+        height: int | None = None,
+        max_chars: int | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> str:
+        pass
+
+    @overload
+    def text_area(
+        self,
+        label: str,
+        value: SupportsStr | None = None,
+        height: int | None = None,
+        max_chars: int | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> str | None:
+        pass
+
     @gather_metrics("text_area")
     def text_area(
         self,
         label: str,
-        value: SupportsStr = "",
-        height: Optional[int] = None,
-        max_chars: Optional[int] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        value: str | SupportsStr | None = "",
+        height: int | None = None,
+        max_chars: int | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        placeholder: Optional[str] = None,
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> str:
+    ) -> str | None:
         r"""Display a multi-line text input widget.
 
         Parameters
@@ -333,9 +420,10 @@ class TextWidgetsMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        value : object
+        value : object or None
             The text value of this widget when it first renders. This will be
-            cast to str internally.
+            cast to str internally. If ``None``, will initialize empty and
+            return ``None`` until the user provides input. Defaults to empty string.
         height : int or None
             Desired height of the UI element expressed in pixels. If None, a
             default height is used.
@@ -368,8 +456,9 @@ class TextWidgetsMixin:
 
         Returns
         -------
-        str
-            The current value of the text input widget.
+        str or None
+            The current value of the text area widget or ``None`` if no value has been
+            provided by the user.
 
         Example
         -------
@@ -405,31 +494,33 @@ class TextWidgetsMixin:
     def _text_area(
         self,
         label: str,
-        value: SupportsStr = "",
-        height: Optional[int] = None,
-        max_chars: Optional[int] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        value: SupportsStr | None = "",
+        height: int | None = None,
+        max_chars: int | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        placeholder: Optional[str] = None,
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
-    ) -> str:
+        ctx: ScriptRunContext | None = None,
+    ) -> str | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
 
         maybe_raise_label_warnings(label, label_visibility)
 
+        value = str(value) if value is not None else None
+
         id = compute_widget_id(
             "text_area",
             user_key=key,
             label=label,
-            value=str(value),
+            value=value,
             height=height,
             max_chars=max_chars,
             key=key,
@@ -442,7 +533,8 @@ class TextWidgetsMixin:
         text_area_proto = TextAreaProto()
         text_area_proto.id = id
         text_area_proto.label = label
-        text_area_proto.default = str(value)
+        if value is not None:
+            text_area_proto.default = value
         text_area_proto.form_id = current_form_id(self.dg)
         text_area_proto.disabled = disabled
         text_area_proto.label_visibility.value = get_label_visibility_proto_value(
@@ -475,7 +567,8 @@ class TextWidgetsMixin:
         )
 
         if widget_state.value_changed:
-            text_area_proto.value = widget_state.value
+            if widget_state.value is not None:
+                text_area_proto.value = widget_state.value
             text_area_proto.set_value = True
 
         self.dg._enqueue("text_area", text_area_proto)

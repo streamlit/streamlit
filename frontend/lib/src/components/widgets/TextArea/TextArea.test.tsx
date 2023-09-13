@@ -72,7 +72,7 @@ describe("TextArea widget", () => {
   it("has correct className and style", () => {
     const props = getProps()
     render(<TextArea {...props} />)
-    const textArea = screen.getByTestId("stTextAreaContainer")
+    const textArea = screen.getByTestId("stTextArea")
 
     expect(textArea).toHaveClass("stTextArea")
     expect(textArea).toHaveStyle(`width: ${props.width}px`)

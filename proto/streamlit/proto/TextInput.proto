@@ -29,12 +29,12 @@ message TextInput {
 
   string id = 1;
   string label = 2;
-  string default = 3;
+  optional string default = 3;
   Type type = 4;
   uint32 max_chars = 5;
   string help = 6;
   string form_id = 7;
-  string value = 8;
+  optional string value = 8;
   bool set_value = 9;
   string autocomplete = 10;
   string placeholder = 11;

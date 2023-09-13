@@ -53,7 +53,7 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: string
+  value: string | null
 }
 
 class TextInput extends React.PureComponent<Props, State> {
@@ -64,11 +64,11 @@ class TextInput extends React.PureComponent<Props, State> {
     value: this.initialValue,
   }
 
-  private get initialValue(): string {
+  private get initialValue(): string | null {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
     const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
-    return storedValue !== undefined ? storedValue : this.props.element.default
+    return storedValue ?? this.props.element.default ?? null
   }
 
   public componentDidMount(): void {
@@ -97,7 +97,7 @@ class TextInput extends React.PureComponent<Props, State> {
   private updateFromProtobuf(): void {
     const { value } = this.props.element
     this.props.element.setValue = false
-    this.setState({ value }, () => {
+    this.setState({ value: value ?? null }, () => {
       this.commitWidgetValue({ fromUi: false })
     })
   }
@@ -128,7 +128,7 @@ class TextInput extends React.PureComponent<Props, State> {
   private onFormCleared = (): void => {
     this.setState(
       (_, prevProps) => {
-        return { value: prevProps.element.default }
+        return { value: prevProps.element.default ?? null }
       },
       () => this.commitWidgetValue({ fromUi: true })
     )
@@ -224,7 +224,7 @@ class TextInput extends React.PureComponent<Props, State> {
           )}
         </WidgetLabel>
         <UIInput
-          value={value}
+          value={value ?? ""}
           placeholder={placeholder}
           onBlur={this.onBlur}
           onChange={this.onChange}
@@ -270,7 +270,7 @@ class TextInput extends React.PureComponent<Props, State> {
         {width > breakpoints.hideWidgetDetails && (
           <InputInstructions
             dirty={dirty}
-            value={value}
+            value={value ?? ""}
             maxLength={element.maxChars}
             inForm={isInForm({ formId: element.formId })}
           />
