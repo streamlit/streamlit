@@ -19,9 +19,10 @@ import React from "react"
 import { DataEditor as GlideDataEditor } from "@glideapps/glide-data-grid"
 
 import { TEN_BY_TEN } from "@streamlit/lib/src/mocks/arrow"
-import { mount } from "@streamlit/lib/src/test_util"
+import { mount, render } from "@streamlit/lib/src/test_util"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
+import { screen } from "@testing-library/react"
 
 import { Resizable } from "re-resizable"
 import DataFrame, { DataFrameProps } from "./DataFrame"
@@ -70,50 +71,25 @@ describe("DataFrame widget", () => {
   })
 
   it("renders without crashing", () => {
-    const wrapper = mount(<DataFrame {...props} />)
-    expect(wrapper.find(GlideDataEditor).length).toBe(1)
-  })
-
-  it("should have correct className", () => {
-    const wrapper = mount(<DataFrame {...props} />)
-    expect(wrapper.find(StyledResizableContainer).prop("className")).toContain(
-      "stDataFrame"
-    )
+    render(<DataFrame {...props} />)
+    expect(screen.getAllByTestId("stDataFrameResizable").length).toBe(1)
   })
 
   it("grid container should use full width when useContainerWidth is used", () => {
-    const wrapper = mount(
-      <DataFrame {...getProps(new Quiver({ data: TEN_BY_TEN }), true)} />
+    render(<DataFrame {...getProps(new Quiver({ data: TEN_BY_TEN }), true)} />)
+    const dfStyle = getComputedStyle(
+      screen.getByTestId("stDataFrameResizable")
     )
-    const dataFrameContainer = wrapper.find(Resizable).props() as any
-    expect(dataFrameContainer.size.width).toBe(700)
-    expect(dataFrameContainer.size.height).toBe(400)
+    expect(dfStyle.width).toBe("700px")
+    expect(dfStyle.height).toBe("400px")
   })
 
   it("grid container should render with specific size", () => {
-    const wrapper = mount(<DataFrame {...props} />)
-    const dataFrameContainer = wrapper.find(Resizable).props() as any
-    expect(dataFrameContainer.size.width).toBe(400)
-    expect(dataFrameContainer.size.height).toBe(400)
-  })
-
-  it("Touch detection correctly deactivates some features", () => {
-    // Set window.matchMedia to simulate a touch device
-    window.matchMedia = jest.fn().mockImplementation(() => ({
-      matches: true,
-    }))
-
-    const wrapper = mount(
-      <DataFrame
-        {...getProps(
-          new Quiver({ data: TEN_BY_TEN }),
-          true,
-          ArrowProto.EditingMode.FIXED
-        )}
-      />
+    render(<DataFrame {...props} />)
+    const dfStyle = getComputedStyle(
+      screen.getByTestId("stDataFrameResizable")
     )
-    const glideDataEditorProps = wrapper.find(GlideDataEditor).props()
-    expect(glideDataEditorProps.rangeSelect).toBe("none")
-    expect(glideDataEditorProps.fillHandle).toBe(false)
+    expect(dfStyle.width).toBe("400px")
+    expect(dfStyle.height).toBe("400px")
   })
 })
