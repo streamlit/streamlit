@@ -15,7 +15,7 @@
  */
 
 const path = require("path");
-const NO_OF_BUTTONS = 6
+const NO_OF_BUTTONS = 7
 
 describe("st.download_button", () => {
   beforeEach(() => {
@@ -74,5 +74,15 @@ describe("st.download_button", () => {
     cy.getIndexed(".stDownloadButton", 5).matchThemedSnapshots(
       "primary-download-button"
     );
+  });
+
+  it("sets value correctly when user clicks", () => {
+    cy.get(".stMarkdown").contains("value: False");
+
+    cy.get(".stDownloadButton button")
+      .last()
+      .click();
+
+    cy.get(".stMarkdown").contains("value: True");
   });
 });

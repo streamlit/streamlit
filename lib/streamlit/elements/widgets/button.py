@@ -430,7 +430,6 @@ class ButtonMixin:
             "download_button",
             user_key=key,
             label=label,
-            data=str(data),
             file_name=file_name,
             mime=mime,
             key=key,
