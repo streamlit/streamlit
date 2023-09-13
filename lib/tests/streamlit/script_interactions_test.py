@@ -136,7 +136,8 @@ class InteractiveScriptTest(InteractiveScriptTests):
         sr = script.run()
         assert sr.get_widget("r")
         assert sr.get_widget("r") == sr.radio[1]
-        assert sr.get_widget("s") is None
+        with pytest.raises(KeyError):
+            sr.get_widget("s")
 
     def test_widget_added_removed(self):
         """
@@ -154,7 +155,8 @@ class InteractiveScriptTest(InteractiveScriptTests):
         )
         sr = script.run()
         assert len(sr.radio) == 1
-        assert sr.get_widget("conditional") == None
+        with pytest.raises(KeyError):
+            sr.get_widget("conditional")
 
         sr2 = sr.get_widget("cb").set_value("on").run()
         assert len(sr2.radio) == 2
@@ -166,7 +168,8 @@ class InteractiveScriptTest(InteractiveScriptTests):
 
         sr4 = sr3.get_widget("cb").set_value("off").run()
         assert len(sr4.radio) == 1
-        assert sr4.get_widget("conditional") == None
+        with pytest.raises(KeyError):
+            sr4.get_widget("conditional")
 
         sr5 = sr4.get_widget("cb").set_value("on").run()
         assert len(sr5.radio) == 2
