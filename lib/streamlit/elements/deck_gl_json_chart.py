@@ -52,7 +52,10 @@ class PydeckMixin:
 
         When using this command, Mapbox provides the map tiles to render map
         content. Note that Mapbox is a third-party product, the use of which is
-        governed by Mapbox's Terms of Use.
+        governed by Mapbox's Terms of Use. Further, if you are running ``st.pydeck_chart``
+        inside of Snowflake, Mapbox constitutes an "External Offering" and is
+        subject to Snowflake's `External Offerings Terms
+        <https://www.snowflake.com/legal/third-party-terms/>`_.
 
         Mapbox requires users to register and provide a token before users can
         request map tiles. Currently, Streamlit provides this token for you, but
@@ -62,7 +65,9 @@ class PydeckMixin:
 
         To get a token for yourself, create an account at https://mapbox.com.
         For more info on how to set config options, see
-        https://docs.streamlit.io/library/advanced-features/configuration
+        https://docs.streamlit.io/library/advanced-features/configuration. Note
+        that the ability to set your config options is not yet available for
+        ``st.pydeck_chart`` inside of Snowflake.
 
         Parameters
         ----------
