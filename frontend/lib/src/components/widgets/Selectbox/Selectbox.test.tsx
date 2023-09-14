@@ -15,13 +15,15 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import { mount, render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import { Select as UISelect } from "baseui/select"
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
 import { Selectbox, Props } from "./Selectbox"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+import "@testing-library/jest-dom"
+import { fireEvent, screen } from "@testing-library/react"
 
 const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
   element: SelectboxProto.create({
@@ -40,18 +42,24 @@ const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
   }),
 })
 
+const pickOption = (selectbox: HTMLElement, value: string): void => {
+  fireEvent.click(selectbox)
+  const valueElement = screen.getByText(value)
+  fireEvent.click(valueElement)
+}
+
 describe("Selectbox widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<Selectbox {...props} />)
-    expect(wrapper.find(UISelect).length).toBeTruthy()
+    render(<Selectbox {...props} />)
+    expect(screen.getByTestId("stSelectbox")).toBeInTheDocument()
   })
 
   it("sets widget value on mount", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setIntValue")
 
-    mount(<Selectbox {...props} />)
+    render(<Selectbox {...props} />)
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
@@ -63,21 +71,18 @@ describe("Selectbox widget", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setIntValue")
 
-    const wrapper = mount(<Selectbox {...props} />)
+    render(<Selectbox {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UISelect).prop("onChange")({
-      value: [{ label: "b", value: "1" }],
-      option: { label: "b", value: "1" },
-      type: "select",
-    })
+    const selectbox = screen.getByRole("combobox")
+    pickOption(selectbox, "b")
 
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       1,
       { fromUi: true }
     )
-    expect(wrapper.state("value")).toBe(1)
+    expect(screen.queryAllByText("a").length).toBe(0)
+    expect(screen.queryAllByText("b").length).toBe(1)
   })
 
   it("resets its value when form is cleared", () => {
@@ -87,17 +92,11 @@ describe("Selectbox widget", () => {
 
     jest.spyOn(props.widgetMgr, "setIntValue")
 
-    const wrapper = mount(<Selectbox {...props} />)
+    render(<Selectbox {...props} />)
 
-    // Change the widget value
-    // @ts-expect-error
-    wrapper.find(UISelect).prop("onChange")({
-      value: [{ label: "b", value: "1" }],
-      option: { label: "b", value: "1" },
-      type: "select",
-    })
+    const selectbox = screen.getByRole("combobox")
+    pickOption(selectbox, "b")
 
-    expect(wrapper.state("value")).toBe(1)
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       1,
@@ -106,10 +105,10 @@ describe("Selectbox widget", () => {
 
     // "Submit" the form
     props.widgetMgr.submitForm("form")
-    wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(wrapper.state("value")).toBe(props.element.default)
+    expect(screen.queryAllByText("a").length).toBe(1)
+    expect(screen.queryAllByText("b").length).toBe(0)
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,
