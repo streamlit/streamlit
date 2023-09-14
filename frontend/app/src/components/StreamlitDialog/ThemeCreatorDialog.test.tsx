@@ -16,8 +16,6 @@
 
 import React from "react"
 import {
-  UISelectbox,
-  shallow,
   baseTheme,
   darkTheme,
   lightTheme,
