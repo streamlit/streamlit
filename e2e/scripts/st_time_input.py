@@ -17,20 +17,20 @@ from datetime import datetime, time
 import streamlit as st
 from streamlit import runtime
 
-w1 = st.time_input("Label 1", time(8, 45))
-st.write("Value 1:", w1)
+v1 = st.time_input("Label 1", time(8, 45))
+st.write("Value 1:", v1)
 
-w2 = st.time_input("Label 2", datetime(2019, 7, 6, 21, 15))
-st.write("Value 2:", w2)
+v2 = st.time_input("Label 2", datetime(2019, 7, 6, 21, 15))
+st.write("Value 2:", v2)
 
-w3 = st.time_input("Label 3", time(8, 45), disabled=True)
-st.write("Value 3:", w3)
+v3 = st.time_input("Label 3", time(8, 45), disabled=True)
+st.write("Value 3:", v3)
 
-w4 = st.time_input("Label 4", time(8, 45), label_visibility="hidden")
-st.write("Value 4:", w4)
+v4 = st.time_input("Label 4", time(8, 45), label_visibility="hidden")
+st.write("Value 4:", v4)
 
-w5 = st.time_input("Label 5", time(8, 45), label_visibility="collapsed")
-st.write("Value 5:", w5)
+v5 = st.time_input("Label 5", time(8, 45), label_visibility="collapsed")
+st.write("Value 5:", v5)
 
 if runtime.exists():
 
