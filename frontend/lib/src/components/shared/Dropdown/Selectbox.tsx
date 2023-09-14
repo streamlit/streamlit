@@ -215,9 +215,6 @@ export class Selectbox extends React.PureComponent<Props, State> {
               style: () => ({
                 lineHeight: 1.4,
               }),
-              props: {
-                "data-testid": "stSelectboxRoot",
-              },
             },
             Dropdown: { component: VirtualDropdown },
             ClearIcon: {

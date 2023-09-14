@@ -51,7 +51,7 @@ describe("Selectbox widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<Selectbox {...props} />)
-    expect(screen.getByTestId("stSelectboxRoot")).toBeInTheDocument()
+    expect(screen.getByTestId("stSelectbox")).toBeInTheDocument()
   })
 
   it("sets widget value on mount", () => {
@@ -80,8 +80,8 @@ describe("Selectbox widget", () => {
       1,
       { fromUi: true }
     )
-    expect(screen.queryAllByText("a").length).toBe(0)
-    expect(screen.queryAllByText("b").length).toBe(1)
+    expect(screen.queryByText("a")).not.toBeInTheDocument()
+    expect(screen.getByText("b")).toBeInTheDocument()
   })
 
   it("resets its value when form is cleared", () => {
@@ -106,8 +106,8 @@ describe("Selectbox widget", () => {
     props.widgetMgr.submitForm("form")
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(screen.queryAllByText("a").length).toBe(1)
-    expect(screen.queryAllByText("b").length).toBe(0)
+    expect(screen.getByText("a")).toBeInTheDocument()
+    expect(screen.queryByText("b")).not.toBeInTheDocument()
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,
