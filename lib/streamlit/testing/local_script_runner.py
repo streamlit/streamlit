@@ -118,9 +118,11 @@ class LocalScriptRunner(ScriptRunner):
         if not self._script_thread:
             self.start()
         require_widgets_deltas(self, timeout)
+
         tree = parse_tree_from_messages(self.forward_msgs())
         tree.script_path = self.script_path
         tree._session_state = self.session_state
+        tree._default_timeout = self.default_timeout
         return tree
 
     def script_stopped(self) -> bool:
