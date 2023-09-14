@@ -41,39 +41,41 @@ const FileDropzone = ({
   disabled,
   label,
 }: Props): React.ReactElement => (
-  <Dropzone
-    onDrop={onDrop}
-    multiple={multiple}
-    accept={acceptedExtensions.length ? acceptedExtensions : undefined}
-    maxSize={maxSizeBytes}
-    disabled={disabled}
-    // react-dropzone v12+ uses the File System Access API by default,
-    // causing the bug described in https://github.com/streamlit/streamlit/issues/6176.
-    useFsAccessApi={false}
-  >
-    {({ getRootProps, getInputProps }) => (
-      <StyledFileDropzoneSection
-        {...getRootProps()}
-        data-testid="stFileUploadDropzone"
-        isDisabled={disabled}
-        aria-label={label}
-      >
-        <input {...getInputProps()} />
-        <FileDropzoneInstructions
-          multiple={multiple}
-          acceptedExtensions={acceptedExtensions}
-          maxSizeBytes={maxSizeBytes}
-        />
-        <BaseButton
-          kind={BaseButtonKind.SECONDARY}
-          disabled={disabled}
-          size={BaseButtonSize.SMALL}
+  <div data-testid="stDropzone">
+    <Dropzone
+      onDrop={onDrop}
+      multiple={multiple}
+      accept={acceptedExtensions.length ? acceptedExtensions : undefined}
+      maxSize={maxSizeBytes}
+      disabled={disabled}
+      // react-dropzone v12+ uses the File System Access API by default,
+      // causing the bug described in https://github.com/streamlit/streamlit/issues/6176.
+      useFsAccessApi={false}
+    >
+      {({ getRootProps, getInputProps }) => (
+        <StyledFileDropzoneSection
+          {...getRootProps()}
+          data-testid="stFileUploadDropzone"
+          isDisabled={disabled}
+          aria-label={label}
         >
-          Browse files
-        </BaseButton>
-      </StyledFileDropzoneSection>
-    )}
-  </Dropzone>
+          <input data-testid="stDropzoneInput" {...getInputProps()} />
+          <FileDropzoneInstructions
+            multiple={multiple}
+            acceptedExtensions={acceptedExtensions}
+            maxSizeBytes={maxSizeBytes}
+          />
+          <BaseButton
+            kind={BaseButtonKind.SECONDARY}
+            disabled={disabled}
+            size={BaseButtonSize.SMALL}
+          >
+            Browse files
+          </BaseButton>
+        </StyledFileDropzoneSection>
+      )}
+    </Dropzone>
+  </div>
 )
 
 export default FileDropzone
