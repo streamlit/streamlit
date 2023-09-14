@@ -15,10 +15,9 @@
  */
 
 import React from "react"
-import { mount, render } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
-import { Select as UISelect } from "baseui/select"
 import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
 import { Selectbox, Props } from "./Selectbox"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
