@@ -15,11 +15,13 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 
 import { UNICODE, EMPTY } from "@streamlit/lib/src/mocks/arrow"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { ArrowTable, TableProps } from "./ArrowTable"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 
 const getProps = (data: Uint8Array): TableProps => ({
   element: new Quiver({ data }),
@@ -28,19 +30,23 @@ const getProps = (data: Uint8Array): TableProps => ({
 describe("st._arrow_table", () => {
   it("renders without crashing", () => {
     const props = getProps(UNICODE)
-    const wrapper = mount(<ArrowTable {...props} />)
+    render(<ArrowTable {...props} />)
 
-    expect(wrapper.find("StyledTable").length).toBe(1)
-    expect(wrapper.find("StyledTableContainer").length).toBe(1)
-    expect(wrapper.find("StyledEmptyTableCell").exists()).toBeFalsy()
+    expect(screen.getByTestId("stTable")).toBeInTheDocument()
+    expect(screen.getByTestId("stTableStyledTable")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTableStyledEmptyTableCell")
+    ).not.toBeInTheDocument()
   })
 
   it("renders an empty row", () => {
     const props = getProps(EMPTY)
-    const wrapper = mount(<ArrowTable {...props} />)
+    render(<ArrowTable {...props} />)
 
-    expect(wrapper.find("StyledTable").length).toBe(1)
-    expect(wrapper.find("StyledTableContainer").length).toBe(1)
-    expect(wrapper.find("StyledEmptyTableCell").exists()).toBeTruthy()
+    expect(screen.getByTestId("stTable")).toBeInTheDocument()
+    expect(screen.getByTestId("stTableStyledTable")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stTableStyledEmptyTableCell")
+    ).toBeInTheDocument()
   })
 })
