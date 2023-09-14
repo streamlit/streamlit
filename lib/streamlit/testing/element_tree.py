@@ -155,7 +155,7 @@ class Widget(ABC, Element):
         return self
 
     @property
-    def is_multiselect(self) -> Multiselect:
+    def is_multiselect(self) -> Multiselect[Any]:
         assert isinstance(self, Multiselect)
         return self
 
@@ -165,22 +165,22 @@ class Widget(ABC, Element):
         return self
 
     @property
-    def is_radio(self) -> Radio:
+    def is_radio(self) -> Radio[Any]:
         assert isinstance(self, Radio)
         return self
 
     @property
-    def is_select_slider(self) -> SelectSlider:
+    def is_select_slider(self) -> SelectSlider[Any]:
         assert isinstance(self, SelectSlider)
         return self
 
     @property
-    def is_selectbox(self) -> Selectbox:
+    def is_selectbox(self) -> Selectbox[Any]:
         assert isinstance(self, Selectbox)
         return self
 
     @property
-    def is_slider(self) -> Slider:
+    def is_slider(self) -> Slider[Any]:
         assert isinstance(self, Slider)
         return self
 
