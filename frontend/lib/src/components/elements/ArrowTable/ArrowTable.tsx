@@ -42,7 +42,7 @@ export function ArrowTable(props: TableProps): ReactElement {
   return (
     <StyledTableContainer data-testid="stTable">
       {cssStyles && <style>{cssStyles}</style>}
-      <StyledTable id={cssId}>
+      <StyledTable id={cssId} data-testid="stStyledTable">
         {caption && (
           <caption>
             <small>{caption}</small>
@@ -58,7 +58,10 @@ export function ArrowTable(props: TableProps): ReactElement {
         <tbody>
           {dataRows.length === 0 ? (
             <tr>
-              <StyledEmptyTableCell colSpan={columns || 1}>
+              <StyledEmptyTableCell
+                data-testid="stStyledEmptyTableCell"
+                colSpan={columns || 1}
+              >
                 empty
               </StyledEmptyTableCell>
             </tr>
