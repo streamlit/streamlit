@@ -22,7 +22,7 @@ def test_time_input_widget_rendering(
 ):
     """Test that the time input widgets are correctly rendered via screenshot matching."""
     time_input_widgets = themed_app.get_by_test_id("stTimeInput")
-    expect(time_input_widgets).to_have_count(8)
+    expect(time_input_widgets).to_have_count(9)
 
     assert_snapshot(time_input_widgets.nth(0), name="st_time_input-8_45")
     assert_snapshot(time_input_widgets.nth(1), name="st_time_input-21_15_help")
@@ -32,12 +32,13 @@ def test_time_input_widget_rendering(
     assert_snapshot(time_input_widgets.nth(5), name="st_time_input-callback")
     assert_snapshot(time_input_widgets.nth(6), name="st_time_input-step_60")
     assert_snapshot(time_input_widgets.nth(7), name="st_time_input-empty")
+    assert_snapshot(time_input_widgets.nth(8), name="st_time_input-value_from_state")
 
 
 def test_time_input_has_correct_initial_values(app: Page):
     """Test that st.time_input returns the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(9)
+    expect(markdown_elements).to_have_count(10)
 
     expected = [
         "Value 1: 08:45:00",
@@ -49,6 +50,7 @@ def test_time_input_has_correct_initial_values(app: Page):
         "time input changed: False",
         "Value 7: 08:45:00",
         "Value 8: None",
+        "Value 9: 08:50:00",
     ]
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
         expect(markdown_element).to_have_text(expected_text, use_inner_text=True)

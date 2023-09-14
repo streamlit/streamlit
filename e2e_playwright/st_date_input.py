@@ -69,10 +69,10 @@ if runtime.exists():
         "Single date with callback",
         date(1970, 1, 1),
         min_value=date(1970, 1, 1),
-        key="date_input12",
+        key="date_input_12",
         on_change=on_change,
     )
-    st.write("Value 12:", st.session_state.date_input12)
+    st.write("Value 12:", st.session_state.date_input_12)
     st.write("Date Input Changed:", st.session_state.get("date_input_changed") is True)
     # Reset to False:
     st.session_state.date_input_changed = False

@@ -45,9 +45,9 @@ if runtime.exists():
         st.session_state.number_input_changed = True
 
     st.number_input(
-        "number input 9 (on_change)", key="number_input9", on_change=on_change
+        "number input 9 (on_change)", key="number_input_9", on_change=on_change
     )
-    st.write("number input 9 (on_change) - value: ", st.session_state.number_input9)
+    st.write("number input 9 (on_change) - value: ", st.session_state.number_input_9)
     st.write(
         "number input 9 (on_change) - changed:",
         st.session_state.get("number_input_changed") is True,
@@ -64,13 +64,13 @@ v11 = st.number_input(
 )
 st.write("number input 11 (value=None) - value: ", v11)
 
-if "number_input12" not in st.session_state:
-    st.session_state["number_input12"] = 10
+if "number_input_12" not in st.session_state:
+    st.session_state["number_input_12"] = 10
 
 v12 = st.number_input(
     "number input 12 (value from state & min=1)",
     value=None,
     min_value=1,
-    key="number_input12",
+    key="number_input_12",
 )
 st.write("number input 12 (value from state & min=1) - value: ", v12)
