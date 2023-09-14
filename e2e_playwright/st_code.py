@@ -29,6 +29,8 @@ st.code(code, language="python", line_numbers=True)
 
 st.code("PLAIN TEXT", language=None, line_numbers=True)
 
+st.markdown("```python\n" + code + "\n```")
+
 with st.expander("`st.code` usage", expanded=True):
     st.code(code, language="python")
     st.code(code, language="python")
