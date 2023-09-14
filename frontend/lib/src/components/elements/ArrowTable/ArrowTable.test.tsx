@@ -34,9 +34,9 @@ describe("st._arrow_table", () => {
 
     expect(screen.getByTestId("stTable")).toBeInTheDocument()
     expect(screen.getByTestId("stTableStyledTable")).toBeInTheDocument()
-    expect(screen.queryAllByTestId("stTableStyledEmptyTableCell").length).toBe(
-      0
-    )
+    expect(
+      screen.queryByTestId("stTableStyledEmptyTableCell")
+    ).not.toBeInTheDocument()
   })
 
   it("renders an empty row", () => {
@@ -45,8 +45,8 @@ describe("st._arrow_table", () => {
 
     expect(screen.getByTestId("stTable")).toBeInTheDocument()
     expect(screen.getByTestId("stTableStyledTable")).toBeInTheDocument()
-    expect(screen.queryAllByTestId("stTableStyledEmptyTableCell").length).toBe(
-      1
-    )
+    expect(
+      screen.getByTestId("stTableStyledEmptyTableCell")
+    ).toBeInTheDocument()
   })
 })
