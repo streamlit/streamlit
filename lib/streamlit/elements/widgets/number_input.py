@@ -194,7 +194,7 @@ class NumberInputMixin:
             An optional dict of kwargs to pass to the callback.
         placeholder : str or None
             An optional string displayed when the number input is empty.
-            If None, no text is displayed.
+            If None, no placeholder is displayed.
         disabled : bool
             An optional boolean, which disables the number input if set to
             True. The default is False. This argument can only be supplied by

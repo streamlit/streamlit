@@ -93,7 +93,7 @@ export const StyledInputControl = styled.button(({ theme }) => ({
 
 export interface StyledInstructionsContainerProps {
   // If widget is clearable, the instruction needs to be moved a couple
-  // pixels to the right to avoid overlapping with the clear button.
+  // pixels to the left to avoid overlapping with the clear button.
   clearable: boolean
 }
 
