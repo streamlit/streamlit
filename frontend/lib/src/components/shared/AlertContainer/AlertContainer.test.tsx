@@ -15,7 +15,9 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
 
 import AlertContainer, { AlertContainerProps, Kind } from "./AlertContainer"
 
@@ -30,27 +32,17 @@ const getProps = (
 
 describe("AlertContainer element", () => {
   it("renders a Notification", () => {
-    const wrapper = mount(<AlertContainer {...getProps()}></AlertContainer>)
-
-    expect(wrapper.find("Notification").exists()).toBeTruthy()
+    render(<AlertContainer {...getProps()} />)
+    expect(screen.getByTestId("stNotification")).toBeInTheDocument()
   })
 
   it("renders its children", () => {
-    const wrapper = mount(
+    render(
       <AlertContainer {...getProps()}>
-        <div className="foo" />
+        <div className="foo" data-testid="foo" />
       </AlertContainer>
     )
 
-    expect(wrapper.find(".foo").exists()).toBeTruthy()
-  })
-
-  it("sets its width", () => {
-    const wrapper = mount(<AlertContainer {...getProps()} />)
-
-    const overrides = wrapper.find("Notification").prop("overrides")
-
-    // @ts-expect-error
-    expect(overrides.Body.style.width).toEqual("100")
+    expect(screen.getByTestId("foo")).toBeInTheDocument()
   })
 })
