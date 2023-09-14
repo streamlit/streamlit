@@ -252,13 +252,7 @@ def _key(obj: Optional[Any]) -> Any:
         if all(map(is_simple, obj)):
             return ("__l", tuple(obj))
 
-    if (
-        type_util.is_type(obj, "pandas.core.frame.DataFrame")
-        or type_util.is_type(obj, "numpy.ndarray")
-        or inspect.isbuiltin(obj)
-        or inspect.isroutine(obj)
-        or inspect.iscode(obj)
-    ):
+    if inspect.isbuiltin(obj) or inspect.isroutine(obj) or inspect.iscode(obj):
         return id(obj)
 
     return NoResult
@@ -402,15 +396,26 @@ class _CacheFuncHasher:
         elif isinstance(obj, Enum):
             return str(obj).encode()
 
-        elif type_util.is_type(obj, "pandas.core.frame.DataFrame") or type_util.is_type(
-            obj, "pandas.core.series.Series"
-        ):
+        elif type_util.is_type(obj, "pandas.core.series.Series"):
             import pandas as pd
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
                 obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
             try:
                 return b"%s" % pd.util.hash_pandas_object(obj).sum()
+            except TypeError:
+                # Use pickle if pandas cannot hash the object for example if
+                # it contains unhashable objects.
+                return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+
+        elif type_util.is_type(obj, "pandas.core.frame.DataFrame"):
+            import pandas as pd
+
+            if len(obj) >= _PANDAS_ROWS_LARGE:
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+            try:
+                column_hash = self.to_bytes(obj.columns.to_numpy())
+                return b"%s:%s" % (pd.util.hash_pandas_object(obj).sum(), column_hash)
             except TypeError:
                 # Use pickle if pandas cannot hash the object for example if
                 # it contains unhashable objects.
