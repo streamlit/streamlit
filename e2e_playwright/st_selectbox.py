@@ -92,3 +92,11 @@ v11 = st.selectbox(
     "selectbox 11 (options from dataframe)", pd.DataFrame({"foo": list(options)})
 )
 st.write("value 11:", v11)
+
+if "selectbox_12" not in st.session_state:
+    st.session_state["selectbox_12"] = "female"
+
+v12 = st.selectbox(
+    "selectbox 12 (evalue from state)", options, index=None, key="selectbox_12"
+)
+st.write("value 12:", v12)
