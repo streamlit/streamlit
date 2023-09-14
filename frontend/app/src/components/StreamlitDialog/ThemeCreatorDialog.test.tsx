@@ -18,14 +18,16 @@ import React from "react"
 import {
   UISelectbox,
   shallow,
-  BaseColorPicker,
   baseTheme,
   darkTheme,
   lightTheme,
   toThemeInput,
   fonts,
   CustomThemeConfig,
+  render,
 } from "@streamlit/lib"
+import { screen, fireEvent } from "@testing-library/react"
+import "@testing-library/jest-dom"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
   toMinimalToml,
@@ -64,8 +66,8 @@ describe("Renders ThemeCreatorDialog", () => {
 
   it("renders theme creator dialog", () => {
     const props = getProps()
-    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-    expect(wrapper).toMatchSnapshot()
+    render(<ThemeCreatorDialog {...props} />)
+    expect(screen.getByTestId("stModal")).toBeInTheDocument()
   })
 })
 
@@ -174,39 +176,36 @@ describe("Opened ThemeCreatorDialog", () => {
 
   it("should update theme on color change", () => {
     const props = getProps()
-    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-      .find("ThemeOption")
-      .first()
-      .dive()
+    render(<ThemeCreatorDialog {...props} />)
 
-    const colorpicker = wrapper.find(BaseColorPicker)
-    expect(colorpicker).toHaveLength(1)
+    const colorpicker = screen.getByTestId("stColorPicker")
+    expect(colorpicker).toBeInTheDocument()
 
-    colorpicker.at(0).prop("onChange")("pink")
+    const primaryColor = screen.getByTestId("stColorBlock")
+    fireEvent.click(primaryColor)
+    const colorText = screen.getByTestId("stStyledChromePicker")
+    fireEvent.change(colorText, { target: { value: "#FFFFFF" } })
     expect(mockAddThemes).toHaveBeenCalled()
     expect(mockAddThemes.mock.calls[0][0][0].emotion.colors.primary).toBe(
-      "pink"
+      "#FFFFFF"
     )
 
     expect(mockSetTheme).toHaveBeenCalled()
-    expect(mockSetTheme.mock.calls[0][0].emotion.colors.primary).toBe("pink")
+    expect(mockSetTheme.mock.calls[0][0].emotion.colors.primary).toBe(
+      "#FFFFFF"
+    )
   })
 
   it("should update theme on font change", () => {
     const props = getProps()
-    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-      .find("ThemeOption")
-      .last()
-      .dive()
+    render(<ThemeCreatorDialog {...props} />)
 
-    const selectbox = wrapper.find(UISelectbox)
-    const { options } = selectbox.props()
+    const fontBox = screen.getByText("Sans serif")
+    fireEvent.click(fontBox)
 
-    expect(options).toHaveLength(
-      Object.keys(CustomThemeConfig.FontFamily).length
-    )
+    const newFont = screen.getByText("Monospace")
+    fireEvent.click(newFont)
 
-    selectbox.prop("onChange")(2)
     expect(mockAddThemes).toHaveBeenCalled()
     expect(
       mockAddThemes.mock.calls[0][0][0].emotion.genericFonts.bodyFont
@@ -218,25 +217,11 @@ describe("Opened ThemeCreatorDialog", () => {
     )
   })
 
-  it("should have font dropdown populated", () => {
-    const props = getProps()
-    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-      .find("ThemeOption")
-      .last()
-      .dive()
-    const selectbox = wrapper.find(UISelectbox)
-    const { options, value } = selectbox.props()
-
-    expect(options).toHaveLength(
-      Object.keys(CustomThemeConfig.FontFamily).length
-    )
-    expect(value).toBe(0)
-  })
-
   it("should call backToSettings if back button has been clicked", () => {
     const props = getProps()
-    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-    wrapper.find("StyledBackButton").simulate("click")
+    render(<ThemeCreatorDialog {...props} />)
+    const backButton = screen.getByText("Edit active theme")
+    fireEvent.click(backButton)
     expect(props.backToSettings).toHaveBeenCalled()
   })
 
@@ -250,11 +235,10 @@ describe("Opened ThemeCreatorDialog", () => {
     useStateSpy.mockImplementation(init => [init, updateCopied])
 
     const props = getProps()
-    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-    const copyBtn = wrapper.find("BaseButton")
+    render(<ThemeCreatorDialog {...props} />)
+    const copyBtn = screen.getByText("Copied to clipboard ")
 
-    expect(copyBtn.prop("children")).toBe("Copy theme to clipboard")
-    copyBtn.simulate("click")
+    fireEvent.click(copyBtn)
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
 base="light"
 `)

@@ -134,7 +134,7 @@ class BaseColorPicker extends React.PureComponent<
           data-testid="stColorPickerPopover"
           onClose={this.onColorClose}
           content={() => (
-            <StyledChromePicker>
+            <StyledChromePicker data-testid="stStyledChromePicker">
               <ChromePicker
                 color={value}
                 onChange={this.onColorChange}
