@@ -40,9 +40,9 @@ export function ArrowTable(props: TableProps): ReactElement {
   const dataRows = allRows.slice(headerRows)
 
   return (
-    <StyledTableContainer data-testid="stTable">
+    <StyledTableContainer data-testid="stTableStyledTableContainer">
       {cssStyles && <style>{cssStyles}</style>}
-      <StyledTable id={cssId} data-testid="stStyledTable">
+      <StyledTable id={cssId} data-testid="stTableStyledTable">
         {caption && (
           <caption>
             <small>{caption}</small>
@@ -59,7 +59,7 @@ export function ArrowTable(props: TableProps): ReactElement {
           {dataRows.length === 0 ? (
             <tr>
               <StyledEmptyTableCell
-                data-testid="stStyledEmptyTableCell"
+                data-testid="stTableStyledEmptyTableCell"
                 colSpan={columns || 1}
               >
                 empty
