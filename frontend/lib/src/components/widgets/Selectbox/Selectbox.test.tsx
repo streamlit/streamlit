@@ -51,7 +51,7 @@ describe("Selectbox widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<Selectbox {...props} />)
-    expect(screen.getByTestId("stSelectbox")).toBeInTheDocument()
+    expect(screen.getByTestId("stSelectboxRoot")).toBeInTheDocument()
   })
 
   it("sets widget value on mount", () => {
