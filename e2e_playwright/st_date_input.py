@@ -79,3 +79,13 @@ if runtime.exists():
 
 v13 = st.date_input("Empty value", value=None)
 st.write("Value 13:", v13)
+
+if "date_input_14" not in st.session_state:
+    st.session_state["date_input_14"] = date(1970, 2, 3)
+
+v14 = st.date_input(
+    "Value from state",
+    value=None,
+    key="date_input_14",
+)
+st.write("Value 14:", v14)
