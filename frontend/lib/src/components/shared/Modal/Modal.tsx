@@ -132,6 +132,9 @@ function Modal(props: ModalProps): ReactElement {
       style: {
         background: colors.darkenedBgMix25,
       },
+      props: {
+        "data-testid": "stModal",
+      },
     },
     DialogContainer: {
       style: {
