@@ -22,6 +22,12 @@ import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import { screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
+import * as glideDataGridModule from "@glideapps/glide-data-grid"
+
+jest.mock("@glideapps/glide-data-grid", () => ({
+  ...jest.requireActual("@glideapps/glide-data-grid"),
+  DataEditor: jest.fn(props => <div {...props} />),
+}))
 
 import DataFrame, { DataFrameProps } from "./DataFrame"
 
@@ -96,5 +102,27 @@ describe("DataFrame widget", () => {
     )
     expect(dfStyle.width).toBe("400px")
     expect(dfStyle.height).toBe("400px")
+  })
+
+  it("Touch detection correctly deactivates some features", () => {
+    // Set window.matchMedia to simulate a touch device
+    window.matchMedia = jest.fn().mockImplementation(() => ({
+      matches: true,
+    }))
+
+    render(
+      <DataFrame
+        {...getProps(
+          new Quiver({ data: TEN_BY_TEN }),
+          true,
+          ArrowProto.EditingMode.FIXED
+        )}
+      />
+    )
+    // You have to set a second arg with {} to test work and get the received props
+    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+      expect.objectContaining({ rangeSelect: "none", fillHandle: false }),
+      {}
+    )
   })
 })
