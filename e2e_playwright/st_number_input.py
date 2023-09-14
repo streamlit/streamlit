@@ -25,7 +25,7 @@ v3 = st.number_input("number input 3 (min & max)", 1, 10)
 st.write("number input 3 (min & max) - value: ", v3)
 
 v4 = st.number_input("number input 4 (step=2)", step=2)
-st.write("number input 4 (step=2) - value: ", v3)
+st.write("number input 4 (step=2) - value: ", v4)
 
 v5 = st.number_input("number input 5 (max=10)", max_value=10)
 st.write("number input 5 (max=10) - value: ", v5)
