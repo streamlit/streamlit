@@ -40,7 +40,7 @@ export function ArrowTable(props: TableProps): ReactElement {
   const dataRows = allRows.slice(headerRows)
 
   return (
-    <StyledTableContainer data-testid="stTableStyledTableContainer">
+    <StyledTableContainer data-testid="stTable">
       {cssStyles && <style>{cssStyles}</style>}
       <StyledTable id={cssId} data-testid="stTableStyledTable">
         {caption && (

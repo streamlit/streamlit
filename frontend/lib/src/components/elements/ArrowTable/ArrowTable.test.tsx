@@ -32,9 +32,7 @@ describe("st._arrow_table", () => {
     const props = getProps(UNICODE)
     render(<ArrowTable {...props} />)
 
-    expect(
-      screen.getByTestId("stTableStyledTableContainer")
-    ).toBeInTheDocument()
+    expect(screen.getByTestId("stTable")).toBeInTheDocument()
     expect(screen.getByTestId("stTableStyledTable")).toBeInTheDocument()
     expect(screen.queryAllByTestId("stTableStyledEmptyTableCell").length).toBe(
       0
@@ -45,9 +43,7 @@ describe("st._arrow_table", () => {
     const props = getProps(EMPTY)
     render(<ArrowTable {...props} />)
 
-    expect(
-      screen.getByTestId("stTableStyledTableContainer")
-    ).toBeInTheDocument()
+    expect(screen.getByTestId("stTable")).toBeInTheDocument()
     expect(screen.getByTestId("stTableStyledTable")).toBeInTheDocument()
     expect(screen.queryAllByTestId("stTableStyledEmptyTableCell").length).toBe(
       1
