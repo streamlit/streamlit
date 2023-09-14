@@ -400,6 +400,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
             type="number"
             inputRef={this.inputRef}
             value={formattedValue ?? ""}
+            placeholder={element.placeholder}
             onBlur={this.onBlur}
             onFocus={this.onFocus}
             onChange={this.onChange}

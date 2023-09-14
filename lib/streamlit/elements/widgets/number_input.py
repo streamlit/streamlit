@@ -78,6 +78,7 @@ class NumberInputMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> Number:
@@ -98,6 +99,7 @@ class NumberInputMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> Number | None:
@@ -118,6 +120,7 @@ class NumberInputMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> Number | None:
@@ -189,6 +192,9 @@ class NumberInputMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        placeholder : str or None
+            An optional string displayed when the number input is empty.
+            If None, no text is displayed.
         disabled : bool
             An optional boolean, which disables the number input if set to
             True. The default is False. This argument can only be supplied by
@@ -220,7 +226,11 @@ class NumberInputMixin:
 
         >>> import streamlit as st
         >>>
-        >>> number = st.number_input('Insert a number', value=None)
+        >>> number = st.number_input(
+        ...     'Insert a number',
+        ...     value=None,
+        ...     placeholder="Type a number..."
+        ... )
         >>> st.write('The current number is ', number)
 
         .. output::
@@ -241,6 +251,7 @@ class NumberInputMixin:
             on_change=on_change,
             args=args,
             kwargs=kwargs,
+            placeholder=placeholder,
             disabled=disabled,
             label_visibility=label_visibility,
             ctx=ctx,
@@ -260,6 +271,7 @@ class NumberInputMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: ScriptRunContext | None = None,
@@ -282,6 +294,7 @@ class NumberInputMixin:
             format=format,
             key=key,
             help=help,
+            placeholder=None if placeholder is None else str(placeholder),
             form_id=current_form_id(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
@@ -406,6 +419,8 @@ class NumberInputMixin:
         number_input_proto.label = label
         if value is not None:
             number_input_proto.default = value
+        if placeholder is not None:
+            number_input_proto.placeholder = str(placeholder)
         number_input_proto.form_id = current_form_id(self.dg)
         number_input_proto.disabled = disabled
         number_input_proto.label_visibility.value = get_label_visibility_proto_value(

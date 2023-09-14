@@ -59,7 +59,9 @@ with col1:
     v10 = st.number_input("number input 10 (small width)", max_value=10)
     st.write("number input 10 (small width) - value: ", v10)
 
-v11 = st.number_input("number input 11 (value=None)", value=None)
+v11 = st.number_input(
+    "number input 11 (value=None)", value=None, placeholder="Type a number..."
+)
 st.write("number input 11 (value=None) - value: ", v11)
 
 if "number_input12" not in st.session_state:
