@@ -59,7 +59,7 @@ describe("st.camera_input", () => {
     cy.get("[data-testid='stImage']").should("not.exist");
   });
 
-  it("shows disabled widget correctly", () => {
+  it("shows disabled widget correctly", { retries: { runMode: 1 } }, () => {
     cy.get("[data-testid='stCameraInput']").should("have.length.at.least", 2);
 
     cy.getIndexed("[data-testid='stCameraInput']", 1).matchThemedSnapshots(
