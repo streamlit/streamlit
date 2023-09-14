@@ -110,7 +110,7 @@ class Element:
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self, timeout: float = 3) -> ElementTree:
+    def run(self, timeout: float | None = None) -> ElementTree:
         """Run the script with updated widget values.
         Timeout is a number of seconds, or None to use the default.
         """
@@ -1257,7 +1257,7 @@ class Block:
 
     def run(self, timeout: float | None = None) -> ElementTree:
         """Run the script with updated widget values.
-        Timeout is a number of seconds.
+        Timeout is a number of seconds, or None to use the default.
         """
         return self.root.run(timeout=timeout)
 
