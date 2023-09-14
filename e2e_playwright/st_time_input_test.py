@@ -113,7 +113,8 @@ def test_empty_time_input_behaves_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.time_input behaves correctly when empty (no initial value)."""
-    empty_time_input_field = app.get_by_test_id("stTimeInput").locator("input").nth(7)
+    empty_time_input = app.get_by_test_id("stTimeInput").nth(7)
+    empty_time_input_field = empty_time_input.locator("input")
 
     # Type an option:
     empty_time_input_field.type("00:15")
@@ -123,12 +124,10 @@ def test_empty_time_input_behaves_correctly(
         "Value 8: 00:15:00", use_inner_text=True
     )
 
-    assert_snapshot(
-        app.get_by_test_id("stTimeInput").nth(7), name="st_time_input-clearable_input"
-    )
+    assert_snapshot(empty_time_input, name="st_time_input-clearable_input")
 
     # Clear the input:
-    app.get_by_test_id("stTimeInputClearButton").click()
+    empty_time_input.get_by_test_id("stTimeInputClearButton").click()
 
     # Should be empty again:
     expect(app.get_by_test_id("stMarkdown").nth(8)).to_have_text(
