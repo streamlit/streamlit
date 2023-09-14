@@ -86,6 +86,9 @@ export default function AlertContainer({
             borderTopLeftRadius: radii.lg,
             borderBottomLeftRadius: radii.lg,
           },
+          props: {
+            "data-testid": "stNotification",
+          },
         },
         InnerContainer: {
           style: {
