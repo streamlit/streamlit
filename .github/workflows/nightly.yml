@@ -98,7 +98,7 @@ jobs:
   run-playwright-tests:
     uses: ./.github/workflows/playwright.yml
     with:
-      ref: ${{ github.ref_name }}
+      ref: ${{needs.create-nightly-tag.outputs.tag}}
 
   test-status-notification:
     runs-on: ubuntu-latest
