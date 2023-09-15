@@ -265,18 +265,81 @@ class HashTest(unittest.TestCase):
         self.assertEqual(get_hash(p1), get_hash(p2))
         self.assertNotEqual(get_hash(p1), get_hash(p3))
 
-    def test_pandas_dataframe(self):
-        df1 = pd.DataFrame({"foo": [12]})
-        df2 = pd.DataFrame({"foo": [42]})
-        df3 = pd.DataFrame({"foo": [12]})
+    def test_pandas_large_dataframe(self):
+
+        df1 = pd.DataFrame(np.zeros((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
+        df2 = pd.DataFrame(np.ones((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
+        df3 = pd.DataFrame(np.zeros((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
 
         self.assertEqual(get_hash(df1), get_hash(df3))
         self.assertNotEqual(get_hash(df1), get_hash(df2))
 
-        df4 = pd.DataFrame(np.zeros((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
-        df5 = pd.DataFrame(np.zeros((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
-
-        self.assertEqual(get_hash(df4), get_hash(df5))
+    @parameterized.expand(
+        [
+            (pd.DataFrame({"foo": [12]}), pd.DataFrame({"foo": [12]}), True),
+            (pd.DataFrame({"foo": [12]}), pd.DataFrame({"foo": [42]}), False),
+            (
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 4]}),
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 4]}),
+                True,
+            ),
+            # Extra column
+            (
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 4]}),
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 4], "C": [1, 2, 3]}),
+                False,
+            ),
+            # Different values
+            (
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 4]}),
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 5]}),
+                False,
+            ),
+            # Different order
+            (
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 4]}),
+                pd.DataFrame(data={"B": [1, 2, 3], "A": [2, 3, 4]}),
+                False,
+            ),
+            # Different index
+            (
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 4]}, index=[1, 2, 3]),
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 4]}, index=[1, 2, 4]),
+                False,
+            ),
+            # Missing column
+            (
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 4]}),
+                pd.DataFrame(data={"A": [1, 2, 3]}),
+                False,
+            ),
+            # Different sort
+            (
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 4]}).sort_values(
+                    by=["A"]
+                ),
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 4]}).sort_values(
+                    by=["B"], ascending=False
+                ),
+                False,
+            ),
+            # Different headers
+            (
+                pd.DataFrame(data={"A": [1, 2, 3], "C": [2, 3, 4]}),
+                pd.DataFrame(data={"A": [1, 2, 3], "B": [2, 3, 4]}),
+                False,
+            ),
+            # Reordered columns
+            (
+                pd.DataFrame(data={"A": [1, 2, 3], "C": [2, 3, 4]}),
+                pd.DataFrame(data={"C": [2, 3, 4], "A": [1, 2, 3]}),
+                False,
+            ),
+        ]
+    )
+    def test_pandas_dataframe(self, df1, df2, expected):
+        result = get_hash(df1) == get_hash(df2)
+        self.assertEqual(result, expected)
 
     def test_pandas_series(self):
         series1 = pd.Series([1, 2])

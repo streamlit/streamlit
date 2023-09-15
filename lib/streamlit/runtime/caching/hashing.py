@@ -399,10 +399,15 @@ class _CacheFuncHasher:
         elif type_util.is_type(obj, "pandas.core.series.Series"):
             import pandas as pd
 
+            h = hashlib.new("md5")
+            self.update(h, obj.size)
+
             if len(obj) >= _PANDAS_ROWS_LARGE:
                 obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+
             try:
-                return b"%s" % pd.util.hash_pandas_object(obj).sum()
+                self.update(h, pd.util.hash_pandas_object(obj).values.tobytes())
+                return h.digest()
             except TypeError:
                 # Use pickle if pandas cannot hash the object for example if
                 # it contains unhashable objects.
@@ -411,11 +416,18 @@ class _CacheFuncHasher:
         elif type_util.is_type(obj, "pandas.core.frame.DataFrame"):
             import pandas as pd
 
+            h = hashlib.new("md5")
+
             if len(obj) >= _PANDAS_ROWS_LARGE:
                 obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
             try:
-                column_hash = self.to_bytes(obj.columns.to_numpy())
-                return b"%s:%s" % (pd.util.hash_pandas_object(obj).sum(), column_hash)
+                column_hash_bytes = self.to_bytes(
+                    pd.util.hash_pandas_object(obj.columns)
+                )
+                self.update(h, column_hash_bytes)
+                values_hash_bytes = self.to_bytes(pd.util.hash_pandas_object(obj))
+                self.update(h, values_hash_bytes)
+                return h.digest()
             except TypeError:
                 # Use pickle if pandas cannot hash the object for example if
                 # it contains unhashable objects.
