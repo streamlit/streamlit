@@ -43,9 +43,9 @@ describe("FileDropzone widget", () => {
       acceptedExtensions: [],
     })
     render(<FileDropzone {...props} />)
-    expect(
-      screen.queryByTestId("stDropzoneInput")?.getAttribute("accept")
-    ).toBeNull()
+    expect(screen.queryByTestId("stDropzoneInput")).not.toHaveAttribute(
+      "accept"
+    )
   })
 
   it("renders dropzone with extensions", () => {
