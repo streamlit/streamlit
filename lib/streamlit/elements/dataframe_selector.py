@@ -349,9 +349,9 @@ class DataFrameSelectorMixin:
         >>> import numpy as np
         >>>
         >>> chart_data = pd.DataFrame({
-        ...     'col1' : np.random.randn(20),
-        ...     'col2' : np.random.randn(20),
-        ...     'col3' : np.random.choice(['A','B','C'], 20)
+        ...     'col1': np.random.randn(20),
+        ...     'col2': np.random.randn(20),
+        ...     'col3': np.random.choice(['A','B','C'], 20)
         ... })
         >>>
         >>> st.line_chart(
@@ -375,7 +375,7 @@ class DataFrameSelectorMixin:
         >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
-        ...     columns = ['col1', 'col2', 'col3'])
+        ...     columns=['col1', 'col2', 'col3'])
         >>>
         >>> st.line_chart(
         ...     chart_data,
@@ -510,7 +510,7 @@ class DataFrameSelectorMixin:
         >>>
         >>> chart_data = pd.DataFrame(
         ...     np.random.randn(20, 3),
-        ...     columns = ['a', 'b', 'c'])
+        ...     columns=['a', 'b', 'c'])
         >>>
         >>> st.area_chart(chart_data)
 
@@ -527,9 +527,9 @@ class DataFrameSelectorMixin:
         >>> import numpy as np
         >>>
         >>> chart_data = pd.DataFrame({
-        ...     'col1' : np.random.randn(20),
-        ...     'col2' : np.random.randn(20),
-        ...     'col3' : np.random.choice(['A', 'B', 'C'], 20)
+        ...     'col1': np.random.randn(20),
+        ...     'col2': np.random.randn(20),
+        ...     'col3': np.random.choice(['A', 'B', 'C'], 20)
         ... })
         >>>
         >>> st.area_chart(
@@ -705,9 +705,9 @@ class DataFrameSelectorMixin:
         >>> import numpy as np
         >>>
         >>> chart_data = pd.DataFrame({
-        ...     'col1' : np.random.randn(20),
-        ...     'col2' : np.random.randn(20),
-        ...     'col3' : np.random.choice(['A','B','C'],20)
+        ...     'col1': list(range(20))*3,
+        ...     'col2': np.random.randn(60),
+        ...     'col3': ['A']*20 + ['B']*20 + ['C']*20
         ... })
         >>>
         >>> st.bar_chart(
@@ -729,10 +729,12 @@ class DataFrameSelectorMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        >>> chart_data = pd.DataFrame({
+        ...     'col1': list(range(20)),
+        ...     'col2': np.random.randn(20),
+        ...     'col3': np.random.randn(20)
+        ...     })
+        >>>
         >>> st.bar_chart(
         ...     chart_data,
         ...     x='col1',
