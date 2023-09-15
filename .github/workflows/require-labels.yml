@@ -43,7 +43,7 @@ jobs:
         with:
           mode: exactly
           count: 1
-          labels: "change:breaking,change:feature,change:bugfix,change:refactor,change:chore,change:docs,change:other"
+          labels: "change:feature,change:bugfix,change:refactor,change:chore,change:docs,change:other"
   impact-defined:
     runs-on: ubuntu-latest
 
