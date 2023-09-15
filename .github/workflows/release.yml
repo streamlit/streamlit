@@ -30,6 +30,11 @@ jobs:
     with:
       ref: ${{ github.ref_name }}
 
+  run-playwright-tests:
+    uses: ./.github/workflows/playwright.yml
+    with:
+      ref: ${{ github.ref_name }}
+
   build-release:
     runs-on: ubuntu-latest
 
@@ -38,6 +43,7 @@ jobs:
       - run-javascript-tests
       - run-py-prod-deps-smoke-test
       - run-cypress-tests
+      - run-playwright-tests
 
     defaults:
       run:

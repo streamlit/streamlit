@@ -34,6 +34,7 @@ def send_notification():
         "js": "on javascript tests",
         "py_prod": "on python prod dependencies test",
         "cypress": "on cypress tests",
+        "playwright": "on playwright tests",
         "build": "to release",
     }
 
@@ -74,7 +75,6 @@ def send_notification():
 
 
 def main():
-
     send_notification()
 
 
