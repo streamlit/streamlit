@@ -115,10 +115,8 @@ class DataFrameSelectorMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
+        >>> df = pd.DataFrame(np.random.randn(50, 20), columns=("col %d" % i for i in range(20)))
+        >>>
         >>> st.dataframe(df)  # Same as st.write(df)
 
         .. output::
@@ -132,10 +130,8 @@ class DataFrameSelectorMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(10, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
+        >>> df = pd.DataFrame(np.random.randn(10, 20), columns=("col %d" % i for i in range(20)))
+        >>>
         >>> st.dataframe(df.style.highlight_max(axis=0))
 
         .. output::
@@ -195,7 +191,7 @@ class DataFrameSelectorMixin:
     def table(self, data: "Data" = None) -> "DeltaGenerator":
         """Display a static table.
 
-        This differs from `st.dataframe` in that the table in this case is
+        This differs from ``st.dataframe`` in that the table in this case is
         static: its entire contents are laid out directly on the page.
 
         Parameters
@@ -213,10 +209,8 @@ class DataFrameSelectorMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(10, 5),
-        ...    columns=('col %d' % i for i in range(5)))
-        ...
+        >>> df = pd.DataFrame(np.random.randn(10, 5), columns=("col %d" % i for i in range(5)))
+        >>>
         >>> st.table(df)
 
         .. output::
@@ -243,13 +237,13 @@ class DataFrameSelectorMixin:
     ) -> "DeltaGenerator":
         """Display a line chart.
 
-        This is syntax-sugar around st.altair_chart. The main difference
+        This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.line_chart does not guess the data specification
-        correctly, try specifying your desired chart using st.altair_chart.
+        If ``st.line_chart`` does not guess the data specification
+        correctly, try specifying your desired chart using ``st.altair_chart``.
 
         Parameters
         ----------
@@ -292,10 +286,10 @@ class DataFrameSelectorMixin:
               formats above (hex string or color tuple), then that color will
               be used.
 
-              For example: if the dataset has 1000 rows, but this column can
-              only contains the values "adult", "child", "baby", then
-              those 1000 datapoints will be grouped into three lines, whose
-              colors will be automatically selected from the default palette.
+              For example: if the dataset has 1000 rows, but this column only
+              contains the values "adult", "child", and "baby", then those 1000
+              datapoints will be grouped into three lines whose colors will be
+              automatically selected from the default palette.
 
               But, if for the same 1000-row dataset, this column contained
               the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
@@ -324,15 +318,13 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns=['a', 'b', 'c'])
+        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
         >>>
         >>> st.line_chart(chart_data)
 
@@ -348,18 +340,15 @@ class DataFrameSelectorMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame({
-        ...     'col1' : np.random.randn(20),
-        ...     'col2' : np.random.randn(20),
-        ...     'col3' : np.random.choice(['A','B','C'], 20)
-        ... })
-        >>>
-        >>> st.line_chart(
-        ...     chart_data,
-        ...     x='col1',
-        ...     y='col2',
-        ...     color='col3'
+        >>> chart_data = pd.DataFrame(
+        ...    {
+        ...        "col1": np.random.randn(20),
+        ...        "col2": np.random.randn(20),
+        ...        "col3": np.random.choice(["A", "B", "C"], 20),
+        ...    }
         ... )
+        >>>
+        >>> st.line_chart(chart_data, x="col1", y="col2", color="col3")
 
         .. output::
            https://doc-line-chart1.streamlit.app/
@@ -373,15 +362,10 @@ class DataFrameSelectorMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns = ['col1', 'col2', 'col3'])
+        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["col1", "col2", "col3"])
         >>>
         >>> st.line_chart(
-        ...     chart_data,
-        ...     x='col1',
-        ...     y=['col2', 'col3'],
-        ...     color=['#FF0000', '#0000FF']  # Optional
+        ...    chart_data, x="col1", y=["col2", "col3"], color=["#FF0000", "#0000FF"]  # Optional
         ... )
 
         .. output::
@@ -421,13 +405,13 @@ class DataFrameSelectorMixin:
     ) -> "DeltaGenerator":
         """Display an area chart.
 
-        This is just syntax-sugar around st.altair_chart. The main difference
+        This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.area_chart does not guess the data specification
-        correctly, try specifying your desired chart using st.altair_chart.
+        If ``st.area_chart`` does not guess the data specification
+        correctly, try specifying your desired chart using ``st.altair_chart``.
 
         Parameters
         ----------
@@ -470,10 +454,10 @@ class DataFrameSelectorMixin:
               formats above (hex string or color tuple), then that color will
               be used.
 
-              For example: if the dataset has 1000 rows, but this column can
-              only contains the values "adult", "child", "baby",
-              then those 1000 datapoints will be grouped into 3 series, whose
-              colors will be automatically selected from the default palette.
+              For example: if the dataset has 1000 rows, but this column only
+              contains the values "adult", "child", and "baby", then those 1000
+              datapoints will be grouped into three series whose colors will be
+              automatically selected from the default palette.
 
               But, if for the same 1000-row dataset, this column contained
               the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
@@ -502,15 +486,13 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns = ['a', 'b', 'c'])
+        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
         >>>
         >>> st.area_chart(chart_data)
 
@@ -526,18 +508,15 @@ class DataFrameSelectorMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame({
-        ...     'col1' : np.random.randn(20),
-        ...     'col2' : np.random.randn(20),
-        ...     'col3' : np.random.choice(['A', 'B', 'C'], 20)
-        ... })
-        >>>
-        >>> st.area_chart(
-        ...     chart_data,
-        ...     x='col1',
-        ...     y='col2',
-        ...     color='col3'
+        >>> chart_data = pd.DataFrame(
+        ...    {
+        ...        "col1": np.random.randn(20),
+        ...        "col2": np.random.randn(20),
+        ...        "col3": np.random.choice(["A", "B", "C"], 20),
+        ...    }
         ... )
+        >>>
+        >>> st.area_chart(chart_data, x="col1", y="col2", color="col3")
 
         .. output::
            https://doc-area-chart1.streamlit.app/
@@ -551,15 +530,10 @@ class DataFrameSelectorMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["col1", "col2", "col3"])
+        >>>
         >>> st.area_chart(
-        ...     chart_data,
-        ...     x='col1',
-        ...     y=['col2', 'col3'],
-        ...     color=['#FF0000','#0000FF']  # Optional
+        ...    chart_data, x="col1", y=["col2", "col3"], color=["#FF0000", "#0000FF"]  # Optional
         ... )
 
         .. output::
@@ -599,13 +573,13 @@ class DataFrameSelectorMixin:
     ) -> "DeltaGenerator":
         """Display a bar chart.
 
-        This is just syntax-sugar around st.altair_chart. The main difference
+        This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.bar_chart does not guess the data specification
-        correctly, try specifying your desired chart using st.altair_chart.
+        If ``st.bar_chart`` does not guess the data specification
+        correctly, try specifying your desired chart using ``st.altair_chart``.
 
         Parameters
         ----------
@@ -630,7 +604,7 @@ class DataFrameSelectorMixin:
             The color to use for different series in this chart. This argument
             can only be supplied by keyword.
 
-            For a bar chart with just 1 series, this can be:
+            For a bar chart with just one series, this can be:
 
             * None, to use the default color.
             * A hex string like "#ffaa00" or "#ffaa0088".
@@ -648,10 +622,10 @@ class DataFrameSelectorMixin:
               formats above (hex string or color tuple), then that color will
               be used.
 
-              For example: if the dataset has 1000 rows, but this column can
-              only contains the values "adult", "child", "baby",
-              then those 1000 datapoints will be grouped into 3 series, whose
-              colors will be automatically selected from the default palette.
+              For example: if the dataset has 1000 rows, but this column only
+              contains the values "adult", "child", and "baby", then those 1000
+              datapoints will be grouped into three series whose colors will be
+              automatically selected from the default palette.
 
               But, if for the same 1000-row dataset, this column contained
               the values "#ffaa00", "#f0f", "#0000ff", then then those 1000
@@ -680,16 +654,14 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns=["a", "b", "c"])
-        ...
+        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
+        >>>
         >>> st.bar_chart(chart_data)
 
         .. output::
@@ -704,18 +676,15 @@ class DataFrameSelectorMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame({
-        ...     'col1' : np.random.randn(20),
-        ...     'col2' : np.random.randn(20),
-        ...     'col3' : np.random.choice(['A','B','C'],20)
-        ... })
-        >>>
-        >>> st.bar_chart(
-        ...     chart_data,
-        ...     x='col1',
-        ...     y='col2',
-        ...     color='col3'
+        >>> chart_data = pd.DataFrame(
+        ...    {
+        ...        "col1": list(range(20)) * 3,
+        ...        "col2": np.random.randn(60),
+        ...        "col3": ["A"] * 20 + ["B"] * 20 + ["C"] * 20,
+        ...    }
         ... )
+        >>>
+        >>> st.bar_chart(chart_data, x="col1", y="col2", color="col3")
 
         .. output::
            https://doc-bar-chart1.streamlit.app/
@@ -730,14 +699,11 @@ class DataFrameSelectorMixin:
         >>> import numpy as np
         >>>
         >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns=['col1', 'col2', 'col3'])
-        ...
+        ...    {"col1": list(range(20)), "col2": np.random.randn(20), "col3": np.random.randn(20)}
+        ... )
+        >>>
         >>> st.bar_chart(
-        ...     chart_data,
-        ...     x='col1',
-        ...     y=['col2', 'col3'],
-        ...     color=['#FF0000','#0000FF']  # Optional
+        ...    chart_data, x="col1", y=["col2", "col3"], color=["#FF0000", "#0000FF"]  # Optional
         ... )
 
         .. output::
@@ -779,22 +745,22 @@ class DataFrameSelectorMixin:
     ) -> "DeltaGenerator":
         """Display a scatterplot chart.
 
-        This is syntax-sugar around st.altair_chart. The main difference
+        This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's spec. As a result this is easier to use for many "just plot
         this" scenarios, while being less customizable.
 
-        If st.scatter_chart does not guess the data specification correctly,
-        try specifying your desired chart using st.altair_chart.
+        If ``st.scatter_chart`` does not guess the data specification correctly,
+        try specifying your desired chart using ``st.altair_chart``.
 
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict or None
             Data to be plotted.
             Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with `config.dataFrameSerialization = "legacy"`).
+            (i.e. with ``config.dataFrameSerialization = "legacy"``).
             To use pyarrow tables, please enable pyarrow by changing the config setting,
-            `config.dataFrameSerialization = "arrow"`.
+            ``config.dataFrameSerialization = "arrow"``.
 
         x : str or None
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
@@ -814,7 +780,7 @@ class DataFrameSelectorMixin:
 
             * None, to use the default color.
             * A hex string like "#ffaa00" or "#ffaa0088".
-            * An RGB or RGBA tuple with the red, green, #04f, and alpha
+            * An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
             * The name of a column in the dataset where the color of that
@@ -826,9 +792,9 @@ class DataFrameSelectorMixin:
               Otherwise, the color will be automatically picked from the
               default palette.
 
-              For example: if the dataset has 1000 rows, but this column can
-              only contains the values "adult", "child", "baby", then those
-              1000 datapoints be shown using 3 colors from the default palette.
+              For example: if the dataset has 1000 rows, but this column only
+              contains the values "adult", "child", and "baby", then those 1000
+              datapoints be shown using three colors from the default palette.
 
               But if this column only contains floats or ints, then those
               1000 datapoints will be shown using a colors from a continuous
@@ -843,10 +809,8 @@ class DataFrameSelectorMixin:
 
             * A list of string colors or color tuples to be used for each of
               the series in the chart. This list should have the same length
-              as the number of y values.
-
-              For example, for a chart with have 3 series this argument can
-              be set to ``color=["#fd0", "#f0f", "#04f"]``.
+              as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
+              for three series).
 
         size : str, float, or None
             The size of the circles representing each point. This argument can
@@ -872,38 +836,53 @@ class DataFrameSelectorMixin:
             precedence over the width argument.
             This argument can only be supplied by keyword.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
+        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
+        >>>
         >>> st.scatter_chart(chart_data)
+
+        .. output::
+           https://doc-scatter-chart.streamlit.app/
+           height: 440px
 
         You can also choose different columns to use for x and y, as well as set
         the color dynamically based on a 3rd column (assuming your dataframe is in
         long format):
 
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 4),
-        ...     columns=['col1', 'col2', 'col3', 'col4'])
-        ...
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["col1", "col2", "col3"])
+        >>> chart_data['col4'] = np.random.choice(['A','B','C'], 20)
+        >>>
         >>> st.scatter_chart(
         ...     chart_data,
         ...     x='col1',
         ...     y='col2',
-        ...     color='col3',
-        ...     size='col4',
+        ...     color='col4',
+        ...     size='col3',
         ... )
+
+        .. output::
+           https://doc-scatter-chart1.streamlit.app/
+           height: 440px
 
         Finally, if your dataframe is in wide format, you can group multiple
         columns under the y argument to show multiple series with different
         colors:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> chart_data = pd.DataFrame(np.random.randn(20, 4), columns=["col1", "col2", "col3", "col4"])
+        >>>
         >>> st.scatter_chart(
         ...     chart_data,
         ...     x='col1',
@@ -911,6 +890,10 @@ class DataFrameSelectorMixin:
         ...     size='col4',
         ...     color=['#FF0000', '#0000FF'],  # Optional
         ... )
+
+        .. output::
+           https://doc-scatter-chart2.streamlit.app/
+           height: 440px
 
         """
         if _use_arrow():
@@ -945,7 +928,7 @@ class DataFrameSelectorMixin:
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
-            precedence over Altair's native `width` value.
+            precedence over Altair's native ``width`` value.
 
         theme : "streamlit" or None
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
@@ -959,12 +942,13 @@ class DataFrameSelectorMixin:
         >>> import numpy as np
         >>> import altair as alt
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(20, 3),
-        ...     columns=['a', 'b', 'c'])
-        ...
-        >>> c = alt.Chart(chart_data).mark_circle().encode(
-        ...     x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
+        >>> chart_data = pd.DataFrame(np.random.randn(20, 3), columns=["a", "b", "c"])
+        >>>
+        >>> c = (
+        ...    alt.Chart(chart_data)
+        ...    .mark_circle()
+        ...    .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
+        ... )
         >>>
         >>> st.altair_chart(c, use_container_width=True)
 
@@ -1025,19 +1009,20 @@ class DataFrameSelectorMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> chart_data = pd.DataFrame(
-        ...     np.random.randn(200, 3),
-        ...     columns=['a', 'b', 'c'])
+        >>> chart_data = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
         >>>
-        >>> st.vega_lite_chart(chart_data, {
-        ...     'mark': {'type': 'circle', 'tooltip': True},
-        ...     'encoding': {
-        ...         'x': {'field': 'a', 'type': 'quantitative'},
-        ...         'y': {'field': 'b', 'type': 'quantitative'},
-        ...         'size': {'field': 'c', 'type': 'quantitative'},
-        ...         'color': {'field': 'c', 'type': 'quantitative'},
-        ...     },
-        ... })
+        >>> st.vega_lite_chart(
+        ...    chart_data,
+        ...    {
+        ...        "mark": {"type": "circle", "tooltip": True},
+        ...        "encoding": {
+        ...            "x": {"field": "a", "type": "quantitative"},
+        ...            "y": {"field": "b", "type": "quantitative"},
+        ...            "size": {"field": "c", "type": "quantitative"},
+        ...            "color": {"field": "c", "type": "quantitative"},
+        ...        },
+        ...    },
+        ... )
 
         .. output::
            https://doc-vega-lite-chart.streamlit.app/
@@ -1080,16 +1065,12 @@ class DataFrameSelectorMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df1 = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
+        >>> df1 = pd.DataFrame(np.random.randn(50, 20), columns=("col %d" % i for i in range(20)))
+        >>>
         >>> my_table = st.table(df1)
         >>>
-        >>> df2 = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
+        >>> df2 = pd.DataFrame(np.random.randn(50, 20), columns=("col %d" % i for i in range(20)))
+        >>>
         >>> my_table.add_rows(df2)
         >>> # Now the table shown in the Streamlit app contains the data for
         >>> # df1 followed by the data for df2.

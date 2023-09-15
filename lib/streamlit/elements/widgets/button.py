@@ -389,6 +389,17 @@ class ButtonMixin:
             True. The default is False.
         use_container_width: bool
             An optional boolean, which makes the button stretch its width to match the parent container.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> st.link_button('Go to gallery', 'https://streamlit.io/gallery')
+
+        .. output::
+           https://doc-link-button.streamlit.app/
+           height: 200px
+
         """
         # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
         if type not in ["primary", "secondary"]:
