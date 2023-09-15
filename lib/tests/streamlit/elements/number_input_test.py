@@ -63,6 +63,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         self.assertEqual(c.has_min, False)
         self.assertEqual(c.has_max, False)
         self.assertEqual(c.disabled, False)
+        self.assertEqual(c.placeholder, "")
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -70,6 +71,13 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.disabled, True)
+
+    def test_placeholder(self):
+        """Test that it can be called with placeholder param."""
+        st.number_input("the label", placeholder="Type a number...")
+
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(c.placeholder, "Type a number...")
 
     def test_none_value(self):
         """Test that it can be called with None as value."""
