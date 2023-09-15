@@ -351,6 +351,9 @@ class ButtonMixin:
     ) -> "DeltaGenerator":
         r"""Display a link button element.
 
+        When clicked, a new tab will be opened to the specified URL. This will
+        create a new session for the user if directed within the app.
+
         Parameters
         ----------
         label : str
