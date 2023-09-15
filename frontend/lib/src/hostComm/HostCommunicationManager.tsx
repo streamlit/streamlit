@@ -110,7 +110,7 @@ export default class HostCommunicationManager {
 
   /**
    * Sets the allowed origins configuration.
-
+   * See the AllowedMessageOriginsConfig type for more information.
    */
   public setAllowedOrigins = ({
     allowedOrigins,
@@ -119,7 +119,7 @@ export default class HostCommunicationManager {
     if (!useExternalAuthToken) {
       this.deferredAuthToken.resolve(undefined)
     }
-    if (!allowedOrigins || !allowedOrigins.length) {
+    if (!allowedOrigins?.length) {
       return
     }
     this.allowedOrigins = allowedOrigins

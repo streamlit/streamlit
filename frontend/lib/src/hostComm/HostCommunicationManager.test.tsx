@@ -517,7 +517,7 @@ describe("HostCommunicationManager external auth token handling", () => {
     )
 
     hostCommunicationMgr.setAllowedOrigins({
-      allowedOrigins: ["http://share.streamlit.io"],
+      allowedOrigins: ["http://devel.streamlit.test"],
       useExternalAuthToken: false,
     })
 
