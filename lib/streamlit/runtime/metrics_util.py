@@ -77,6 +77,15 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "neo4j",
     "duckdb",
     "opensearch-py",
+    # Dataframe Libraries:
+    "polars",
+    "dask",
+    "vaex",
+    "modin",
+    "pyspark",
+    "cudf",
+    "xarray",
+    "ray",
     # LLM Tools:
     "openai",
     "langchain",
