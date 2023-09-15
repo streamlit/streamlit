@@ -397,7 +397,7 @@ class ButtonMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> st.link_button('Go to gallery', 'https://streamlit.io/gallery')
+        >>> st.link_button("Go to gallery", "https://streamlit.io/gallery")
 
         .. output::
            https://doc-link-button.streamlit.app/
