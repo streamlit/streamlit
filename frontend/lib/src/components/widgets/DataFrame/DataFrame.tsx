@@ -55,6 +55,7 @@ import {
 } from "./columns"
 import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
+import Toolbar from "./Toolbar"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
@@ -108,6 +109,7 @@ function DataFrame({
   const theme = useCustomTheme()
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
+  const [showSearch, setShowSearch] = React.useState(false)
 
   // Determine if the device is primary using touch as input:
   const isTouchDevice = React.useMemo<boolean>(
@@ -335,6 +337,10 @@ function DataFrame({
     }
   }, [element.formId, resetEditingState, widgetMgr])
 
+  const isDynamicAndEditable =
+    !isEmptyTable && element.editingMode === DYNAMIC && !disabled
+  const isRowSelected = gridSelection.rows.length > 0
+
   return (
     <StyledResizableContainer
       data-testid="stDataFrame"
@@ -348,6 +354,32 @@ function DataFrame({
         }
       }}
     >
+      <Toolbar
+        onSearch={() => {
+          setIsFocused(true)
+          setShowSearch(true)
+        }}
+        onAddRow={
+          isDynamicAndEditable
+            ? () => {
+                setIsFocused(true)
+                if (onRowAppended) {
+                  onRowAppended()
+                }
+              }
+            : undefined
+        }
+        onDeleteRow={
+          isDynamicAndEditable && isRowSelected
+            ? () => {
+                setIsFocused(true)
+                if (onDelete) {
+                  onDelete(gridSelection)
+                }
+              }
+            : undefined
+        }
+      />
       <Resizable
         data-testid="stDataFrameResizable"
         ref={resizableRef}
@@ -428,6 +460,11 @@ function DataFrame({
           onItemHovered={onItemHovered}
           // Activate search:
           keybindings={{ search: true, downFill: true }}
+          showSearch={showSearch}
+          onSearchClose={() => {
+            setShowSearch(false)
+            clearTooltip()
+          }}
           // Header click is used for column sorting:
           onHeaderClicked={
             // Deactivate sorting for empty state and for large dataframes:
