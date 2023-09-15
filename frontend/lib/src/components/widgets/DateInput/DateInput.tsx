@@ -120,9 +120,11 @@ class DateInput extends React.PureComponent<Props, State> {
   private updateFromProtobuf(): void {
     const { value: values } = this.props.element
     this.props.element.setValue = false
+    const dateValues = values.map((v: string) => new Date(v))
     this.setState(
       {
-        values: values.map((v: string) => new Date(v)),
+        values: dateValues,
+        isEmpty: !dateValues,
       },
       () => {
         this.commitWidgetValue({ fromUi: false })
@@ -145,8 +147,12 @@ class DateInput extends React.PureComponent<Props, State> {
    */
   private onFormCleared = (): void => {
     const defaultValue = stringsToDates(this.props.element.default)
-    this.setState({ values: defaultValue }, () =>
-      this.commitWidgetValue({ fromUi: true })
+    this.setState(
+      {
+        values: defaultValue,
+        isEmpty: !defaultValue,
+      },
+      () => this.commitWidgetValue({ fromUi: true })
     )
   }
 

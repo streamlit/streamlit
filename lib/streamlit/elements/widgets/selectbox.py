@@ -84,7 +84,7 @@ class SelectboxMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        placeholder: str = "Select...",
+        placeholder: str = "Choose an option",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
     ) -> T | None:
@@ -142,7 +142,8 @@ class SelectboxMixin:
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
         placeholder : str
-            A string to display when no options are selected. Defaults to 'Select...'.
+            A string to display when no options are selected.
+            Defaults to 'Choose an option'.
         disabled : bool
             An optional boolean, which disables the selectbox if set to True.
             The default is False. This argument can only be supplied by keyword.
@@ -218,7 +219,7 @@ class SelectboxMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        placeholder: str = "Select...",
+        placeholder: str = "Choose an option",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: ScriptRunContext | None = None,

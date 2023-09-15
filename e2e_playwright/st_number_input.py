@@ -15,29 +15,29 @@
 import streamlit as st
 from streamlit import runtime
 
-i1 = st.number_input("number input 1 (default)")
-st.write("number input 1 (default) - value: ", i1)
+v1 = st.number_input("number input 1 (default)")
+st.write("number input 1 (default) - value: ", v1)
 
-i2 = st.number_input("number input 2 (value=1)", value=1)
-st.write("number input 2 (value=1) - value: ", i2)
+v2 = st.number_input("number input 2 (value=1)", value=1)
+st.write("number input 2 (value=1) - value: ", v2)
 
-i3 = st.number_input("number input 3 (min & max)", 1, 10)
-st.write("number input 3 (min & max) - value: ", i3)
+v3 = st.number_input("number input 3 (min & max)", 1, 10)
+st.write("number input 3 (min & max) - value: ", v3)
 
-i4 = st.number_input("number input 4 (step=2)", step=2)
-st.write("number input 4 (step=2) - value: ", i4)
+v4 = st.number_input("number input 4 (step=2)", step=2)
+st.write("number input 4 (step=2) - value: ", v4)
 
-i5 = st.number_input("number input 5 (max=10)", max_value=10)
-st.write("number input 5 (max=10) - value: ", i5)
+v5 = st.number_input("number input 5 (max=10)", max_value=10)
+st.write("number input 5 (max=10) - value: ", v5)
 
-i6 = st.number_input("number input 6 (disabled=True)", disabled=True)
-st.write("number input 6 (disabled=True) - value: ", i6)
+v6 = st.number_input("number input 6 (disabled=True)", disabled=True)
+st.write("number input 6 (disabled=True) - value: ", v6)
 
-i7 = st.number_input("number input 7 (label=hidden)", label_visibility="hidden")
-st.write("number input 7 (label=hidden) - value: ", i7)
+v7 = st.number_input("number input 7 (label=hidden)", label_visibility="hidden")
+st.write("number input 7 (label=hidden) - value: ", v7)
 
-i8 = st.number_input("number input 8 (label=collapsed)", label_visibility="collapsed")
-st.write("number input 8 (label=collapsed) - value: ", i8)
+v8 = st.number_input("number input 8 (label=collapsed)", label_visibility="collapsed")
+st.write("number input 8 (label=collapsed) - value: ", v8)
 
 if runtime.exists():
 
@@ -45,30 +45,32 @@ if runtime.exists():
         st.session_state.number_input_changed = True
 
     st.number_input(
-        "number input 9 (on_change)", key="number_input9", on_change=on_change
+        "number input 9 (on_change)", key="number_input_9", on_change=on_change
     )
-    st.write("number input 9 (on_change) - value: ", st.session_state.number_input9)
+    st.write("number input 9 (on_change) - value: ", st.session_state.number_input_9)
     st.write(
         "number input 9 (on_change) - changed:",
-        "number_input_changed" in st.session_state,
+        st.session_state.get("number_input_changed") is True,
     )
 
 [col1, col2, col3, col4, col5, col6] = st.columns(6)
 
 with col1:
-    i10 = st.number_input("number input 10 (small width)", max_value=10)
-    st.write("number input 10 (small width) - value: ", i10)
+    v10 = st.number_input("number input 10 (small width)", max_value=10)
+    st.write("number input 10 (small width) - value: ", v10)
 
-i11 = st.number_input("number input 11 (value=None)", value=None)
-st.write("number input 11 (value=None) - value: ", i11)
+v11 = st.number_input(
+    "number input 11 (value=None)", value=None, placeholder="Type a number..."
+)
+st.write("number input 11 (value=None) - value: ", v11)
 
-if "number_input12" not in st.session_state:
-    st.session_state["number_input12"] = 10
+if "number_input_12" not in st.session_state:
+    st.session_state["number_input_12"] = 10
 
-i12 = st.number_input(
+v12 = st.number_input(
     "number input 12 (value from state & min=1)",
     value=None,
     min_value=1,
-    key="number_input12",
+    key="number_input_12",
 )
-st.write("number input 12 (value from state & min=1) - value: ", i12)
+st.write("number input 12 (value from state & min=1) - value: ", v12)

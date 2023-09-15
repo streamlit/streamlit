@@ -18,16 +18,16 @@ import streamlit as st
 from streamlit import runtime
 
 options = ("male", "female")
-i1 = st.selectbox("selectbox 1 (default)", options)
-st.write("value 1:", i1)
+v1 = st.selectbox("selectbox 1 (default)", options)
+st.write("value 1:", v1)
 
-i2 = st.selectbox(
+v2 = st.selectbox(
     "selectbox 2 (formatted options)", options, 1, format_func=lambda x: x.capitalize()
 )
-st.write("value 2:", i2)
+st.write("value 2:", v2)
 
-i3 = st.selectbox("selectbox 3 (no options)", [])
-st.write("value 3:", i3)
+v3 = st.selectbox("selectbox 3 (no options)", [])
+st.write("value 3:", v3)
 
 more_options = [
     "e2e/scripts/components_iframe.py",
@@ -44,19 +44,19 @@ more_options = [
     "e2e/scripts/st_color_picker.py",
     "e2e/scripts/st_expander.py",
 ]
-i4 = st.selectbox("selectbox 4 (more options)", more_options, 0)
-st.write("value 4:", i4)
+v4 = st.selectbox("selectbox 4 (more options)", more_options, 0)
+st.write("value 4:", v4)
 
-i5 = st.selectbox("selectbox 5 (disabled)", options, disabled=True)
-st.write("value 5:", i5)
+v5 = st.selectbox("selectbox 5 (disabled)", options, disabled=True)
+st.write("value 5:", v5)
 
-i6 = st.selectbox("selectbox 6 (hidden label)", options, label_visibility="hidden")
-st.write("value 6:", i6)
+v6 = st.selectbox("selectbox 6 (hidden label)", options, label_visibility="hidden")
+st.write("value 6:", v6)
 
-i7 = st.selectbox(
+v7 = st.selectbox(
     "selectbox 7 (collapsed label)", options, label_visibility="collapsed"
 )
-st.write("value 7:", i7)
+st.write("value 7:", v7)
 
 if runtime.exists():
 
@@ -73,20 +73,30 @@ if runtime.exists():
         help="Help text",
     )
     st.write("value 8:", st.session_state.selectbox8)
-    st.write("selectbox changed:", "selectbox_changed" in st.session_state)
+    st.write("selectbox changed:", st.session_state.get("selectbox_changed") is True)
+    # Reset to False:
+    st.session_state.selectbox_changed = False
 
-i9 = st.selectbox("selectbox 9 (empty selection)", options, index=None)
-st.write("value 9:", i9)
+v9 = st.selectbox("selectbox 9 (empty selection)", options, index=None)
+st.write("value 9:", v9)
 
-i10 = st.selectbox(
+v10 = st.selectbox(
     "selectbox 10 (empty, custom placeholder)",
     options,
     index=None,
     placeholder="Select one of the options...",
 )
-st.write("value 10:", i10)
+st.write("value 10:", v10)
 
-i11 = st.selectbox(
+v11 = st.selectbox(
     "selectbox 11 (options from dataframe)", pd.DataFrame({"foo": list(options)})
 )
-st.write("value 11:", i11)
+st.write("value 11:", v11)
+
+if "selectbox_12" not in st.session_state:
+    st.session_state["selectbox_12"] = "female"
+
+v12 = st.selectbox(
+    "selectbox 12 (empty, value from state)", options, index=None, key="selectbox_12"
+)
+st.write("value 12:", v12)

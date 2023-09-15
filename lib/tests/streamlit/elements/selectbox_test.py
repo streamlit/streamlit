@@ -43,7 +43,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         self.assertEqual(c.default, 0)
         self.assertEqual(c.HasField("default"), True)
         self.assertEqual(c.disabled, False)
-        self.assertEqual(c.placeholder, "Select...")
+        self.assertEqual(c.placeholder, "Choose an option")
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""

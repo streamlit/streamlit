@@ -22,7 +22,7 @@ def test_selectbox_widget_rendering(
 ):
     """Test that the selectbox widgets are correctly rendered via screenshot matching."""
     selectbox_widgets = themed_app.get_by_test_id("stSelectbox")
-    expect(selectbox_widgets).to_have_count(11)
+    expect(selectbox_widgets).to_have_count(12)
 
     assert_snapshot(selectbox_widgets.nth(0), name="st_selectbox-default")
     assert_snapshot(selectbox_widgets.nth(1), name="st_selectbox-formatted_options")
@@ -37,12 +37,13 @@ def test_selectbox_widget_rendering(
         selectbox_widgets.nth(9), name="st_selectbox-empty_selection_placeholder"
     )
     assert_snapshot(selectbox_widgets.nth(10), name="st_selectbox-dataframe_options")
+    assert_snapshot(selectbox_widgets.nth(11), name="st_selectbox-value_from_state")
 
 
 def test_selectbox_has_correct_initial_values(app: Page):
     """Test that st.selectbox returns the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(12)
+    expect(markdown_elements).to_have_count(13)
 
     expected = [
         "value 1: male",
@@ -57,6 +58,7 @@ def test_selectbox_has_correct_initial_values(app: Page):
         "value 9: None",
         "value 10: None",
         "value 11: male",
+        "value 12: female",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
@@ -110,7 +112,6 @@ def test_empty_selectbox_behaves_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.selectbox behaves correctly when empty (no initial selection)."""
-    # Enter 10 in the first empty input:
     empty_selectbox_input = app.get_by_test_id("stSelectbox").locator("input").nth(8)
 
     # Type an option:
@@ -135,7 +136,7 @@ def test_empty_selectbox_behaves_correctly(
 
 
 def test_keeps_value_on_selection_close(app: Page):
-    """Test that the fuzzy matching of options via typing works correctly."""
+    """Test that the selection is kept when the dropdown is closed."""
     app.get_by_test_id("stSelectbox").nth(3).locator("input").click()
 
     # Take a snapshot of the selection dropdown:
@@ -162,9 +163,8 @@ def test_handles_callback_on_change_correctly(app: Page):
 
     app.get_by_test_id("stSelectbox").nth(7).locator("input").click()
 
-    # Take a snapshot of the selection dropdown:
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
     # Select last option:
+    selection_dropdown = app.locator('[data-baseweb="popover"]').first
     selection_dropdown.locator("li").first.click()
 
     # Check that selection worked:
@@ -175,7 +175,7 @@ def test_handles_callback_on_change_correctly(app: Page):
         "selectbox changed: True", use_inner_text=True
     )
 
-    # Change different date input to trigger delta path change
+    # Change different input to trigger delta path change
     empty_selectbox_input = app.get_by_test_id("stSelectbox").locator("input").first
 
     # Type an option:
@@ -187,4 +187,7 @@ def test_handles_callback_on_change_correctly(app: Page):
     )
     expect(app.get_by_test_id("stMarkdown").nth(7)).to_have_text(
         "value 8: male", use_inner_text=True
+    )
+    expect(app.get_by_test_id("stMarkdown").nth(8)).to_have_text(
+        "selectbox changed: False", use_inner_text=True
     )

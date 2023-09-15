@@ -47,11 +47,11 @@ if runtime.exists():
     st.time_input(
         "Time input 6 (with callback)",
         time(8, 45),
-        key="time_input6",
+        key="time_input_6",
         on_change=on_change,
     )
 
-    st.write("Value 6:", st.session_state.time_input6)
+    st.write("Value 6:", st.session_state.time_input_6)
     st.write("time input changed:", st.session_state.get("time_input_changed") is True)
     # Reset to False:
     st.session_state.time_input_changed = False
@@ -62,3 +62,13 @@ st.write("Value 7:", v7)
 
 v8 = st.time_input("Time input 8 (empty)", value=None)
 st.write("Value 8:", v8)
+
+if "time_input_9" not in st.session_state:
+    st.session_state["time_input_9"] = time(8, 50)
+
+v9 = st.time_input(
+    "Time input 9 (empty, from state)",
+    value=None,
+    key="time_input_9",
+)
+st.write("Value 9:", v9)

@@ -29,52 +29,52 @@ markdown_options = (
     ":red[red] :blue[blue] :green[green] :violet[violet] :orange[orange]",
 )
 
-i1 = st.radio("radio 1 (default)", options)
-st.write("value 1:", i1)
+v1 = st.radio("radio 1 (default)", options)
+st.write("value 1:", v1)
 
-i2 = st.radio(
+v2 = st.radio(
     "radio 2 (Formatted options)",
     options,
     1,
     format_func=lambda x: x.capitalize(),
 )
-st.write("value 2:", i2)
+st.write("value 2:", v2)
 
-i3 = st.radio("radio 3 (no options)", [])
-st.write("value 3:", i3)
+v3 = st.radio("radio 3 (no options)", [])
+st.write("value 3:", v3)
 
-i4 = st.radio("radio 4 (disabled)", options, disabled=True)
-st.write("value 4:", i4)
+v4 = st.radio("radio 4 (disabled)", options, disabled=True)
+st.write("value 4:", v4)
 
-i5 = st.radio("radio 5 (horizontal)", options, horizontal=True)
-st.write("value 5:", i5)
+v5 = st.radio("radio 5 (horizontal)", options, horizontal=True)
+st.write("value 5:", v5)
 
-i6 = st.radio("radio 6 (options from dataframe)", pd.DataFrame({"foo": list(options)}))
-st.write("value 6:", i6)
+v6 = st.radio("radio 6 (options from dataframe)", pd.DataFrame({"foo": list(options)}))
+st.write("value 6:", v6)
 
-i7 = st.radio("radio 7 (hidden label)", options, label_visibility="hidden")
-st.write("value 7:", i7)
+v7 = st.radio("radio 7 (hidden label)", options, label_visibility="hidden")
+st.write("value 7:", v7)
 
-i8 = st.radio("radio 8 (collapsed label)", options, label_visibility="collapsed")
-st.write("value 8:", i8)
+v8 = st.radio("radio 8 (collapsed label)", options, label_visibility="collapsed")
+st.write("value 8:", v8)
 
-i9 = st.radio("radio 9 (markdown options)", options=markdown_options)
-st.write("value 9:", i9)
+v9 = st.radio("radio 9 (markdown options)", options=markdown_options)
+st.write("value 9:", v9)
 
-i10 = st.radio(
+v10 = st.radio(
     "radio 10 (with captions)",
     ["A", "B", "C", "D", "E", "F", "G"],
     captions=markdown_options,
 )
-st.write("value 10:", i10)
+st.write("value 10:", v10)
 
-i11 = st.radio(
+v11 = st.radio(
     "radio 11 (horizontal, captions)",
     ["yes", "maybe", "no"],
     captions=["Opt in", "", "Opt out"],
     horizontal=True,
 )
-st.write("value 11:", i11)
+st.write("value 11:", v11)
 
 if runtime.exists():
 
@@ -91,7 +91,9 @@ if runtime.exists():
         help="help text",
     )
     st.write("value 12:", st.session_state.radio12)
-    st.write("radio changed:", "radio_changed" in st.session_state)
+    st.write("radio changed:", st.session_state.get("radio_changed") is True)
+    # Reset to False:
+    st.session_state.radio_changed = False
 
-i13 = st.radio("radio 13 (empty selection)", options, index=None)
-st.write("value 13:", i13)
+v13 = st.radio("radio 13 (empty selection)", options, index=None)
+st.write("value 13:", v13)

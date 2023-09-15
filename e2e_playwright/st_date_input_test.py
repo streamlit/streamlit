@@ -20,7 +20,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.date_input renders correctly via screenshots matching."""
     date_time_widgets = themed_app.get_by_test_id("stDateInput")
-    expect(date_time_widgets).to_have_count(13)
+    expect(date_time_widgets).to_have_count(14)
 
     assert_snapshot(date_time_widgets.nth(0), name="date_input-single_date")
     assert_snapshot(date_time_widgets.nth(1), name="date_input-single_datetime")
@@ -35,12 +35,13 @@ def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
     assert_snapshot(date_time_widgets.nth(10), name="date_input-range_no_date_format")
     assert_snapshot(date_time_widgets.nth(11), name="date_input-single_date_callback")
     assert_snapshot(date_time_widgets.nth(12), name="date_input-empty_value")
+    assert_snapshot(date_time_widgets.nth(13), name="date_input-value_from_state")
 
 
 def test_date_input_has_correct_initial_values(app: Page):
     """Test that st.date_input has the correct initial values."""
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(14)
+    expect(markdown_elements).to_have_count(15)
 
     expected = [
         "Value 1: 1970-01-01",
@@ -57,6 +58,7 @@ def test_date_input_has_correct_initial_values(app: Page):
         "Value 12: 1970-01-01",
         "Date Input Changed: False",
         "Value 13: None",
+        "Value 14: 1970-02-03",
     ]
 
     for markdown_element, expected_text in zip(markdown_elements.all(), expected):
@@ -193,6 +195,10 @@ def test_calls_callback_on_change(app: Page):
     # Test if value is still correct after delta path change
     expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
         "Value 12: 1970-01-02",
+        use_inner_text=True,
+    )
+    expect(app.get_by_test_id("stMarkdown").nth(12)).to_have_text(
+        "Date Input Changed: False",
         use_inner_text=True,
     )
 
