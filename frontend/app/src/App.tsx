@@ -104,6 +104,8 @@ import {
   createFormsData,
   FormsData,
   WidgetStateManager,
+  IHostConfigResponse,
+  HostConfig,
 } from "@streamlit/lib"
 import { concat, noop, without } from "lodash"
 
@@ -165,6 +167,7 @@ interface State {
   pageLinkBaseUrl: string
   queryParams: string
   deployedAppMetadata: DeployedAppMetadata
+  hostConfig: HostConfig
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -274,6 +277,7 @@ export class App extends PureComponent<Props, State> {
       pageLinkBaseUrl: "",
       queryParams: "",
       deployedAppMetadata: {},
+      hostConfig: {},
     }
 
     this.connectionManager = null
@@ -378,7 +382,12 @@ export class App extends PureComponent<Props, State> {
       connectionStateChanged: this.handleConnectionStateChanged,
       claimHostAuthToken: this.hostCommunicationMgr.claimAuthToken,
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
-      setAllowedOriginsResp: this.hostCommunicationMgr.setAllowedOriginsResp,
+      onHostConfigResp: (response: IHostConfigResponse) => {
+        // Set the allowed origins configuration for the host communication:
+        this.hostCommunicationMgr.setAllowedOrigins(response)
+        // Set the host config settings in LibContext:
+        this.setHostConfig(response)
+      },
     })
 
     if (isScrollingHidden()) {
@@ -1467,6 +1476,10 @@ export class App extends PureComponent<Props, State> {
     this.setState({ isFullScreen })
   }
 
+  setHostConfig = (hostConfig: HostConfig): void => {
+    this.setState({ hostConfig })
+  }
+
   addScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
@@ -1558,6 +1571,7 @@ export class App extends PureComponent<Props, State> {
       sidebarChevronDownshift,
       hostMenuItems,
       hostToolbarItems,
+      hostConfig,
     } = this.state
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
@@ -1613,6 +1627,8 @@ export class App extends PureComponent<Props, State> {
             availableThemes: this.props.theme.availableThemes,
             addThemes: this.props.theme.addThemes,
             hideFullScreenButtons: false,
+            hostConfig,
+            setHostConfig: this.setHostConfig,
           }}
         >
           <HotKeys

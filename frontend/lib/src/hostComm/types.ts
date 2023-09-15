@@ -17,6 +17,7 @@
 import { ICustomThemeConfig, IAppPage } from "@streamlit/lib/src/proto"
 import { ExportedTheme } from "@streamlit/lib/src/theme"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
+import { HostConfig } from "@streamlit/lib/src/components/core/LibContext"
 
 export type DeployedAppMetadata = {
   hostedAt?: string
@@ -160,7 +161,19 @@ export type VersionedMessage<Message> = {
   stCommVersion: number
 } & Message
 
-export type IAllowedMessageOriginsResponse = {
-  allowedOrigins: string[]
-  useExternalAuthToken: boolean
+export type AllowedMessageOriginsConfig = {
+  /**
+   * A list of origins that we're allowed to receive cross-iframe messages
+   * from via the browser's window.postMessage API.
+   */
+  allowedOrigins?: string[]
+  /**
+   * Whether to wait until we've received a SET_AUTH_TOKEN message before
+   * resolving deferredAuthToken.promise. The WebsocketConnection class waits
+   * for this promise to resolve before attempting to establish a connection
+   * with the Streamlit server.
+   */
+  useExternalAuthToken?: boolean
 }
+
+export type IHostConfigResponse = HostConfig & AllowedMessageOriginsConfig
