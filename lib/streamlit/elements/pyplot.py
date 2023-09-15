@@ -144,7 +144,7 @@ def marshall(
         if clear_figure is None:
             clear_figure = True
 
-        fig = plt
+        fig = cast("Figure", plt)
 
     # Normally, dpi is set to 'figure', and the figure's dpi is set to 100.
     # So here we pick double of that to make things look good in a high
