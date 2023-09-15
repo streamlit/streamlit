@@ -351,6 +351,9 @@ class ButtonMixin:
     ) -> "DeltaGenerator":
         r"""Display a link button element.
 
+        When clicked, a new tab will be opened to the specified URL. This will
+        create a new session for the user if directed within the app.
+
         Parameters
         ----------
         label : str
@@ -394,7 +397,7 @@ class ButtonMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> st.link_button('Go to gallery', 'https://streamlit.io/gallery')
+        >>> st.link_button("Go to gallery", "https://streamlit.io/gallery")
 
         .. output::
            https://doc-link-button.streamlit.app/
