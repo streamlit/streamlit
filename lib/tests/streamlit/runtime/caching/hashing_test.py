@@ -335,6 +335,16 @@ class HashTest(unittest.TestCase):
                 pd.DataFrame(data={"C": [2, 3, 4], "A": [1, 2, 3]}),
                 False,
             ),
+            # Slightly different dtypes
+            (
+                pd.DataFrame(
+                    data={"A": [1, 2, 3], "C": pd.array([1, 2, 3], dtype="UInt64")}
+                ),
+                pd.DataFrame(
+                    data={"A": [1, 2, 3], "C": pd.array([1, 2, 3], dtype="Int64")}
+                ),
+                False,
+            ),
         ]
     )
     def test_pandas_dataframe(self, df1, df2, expected):

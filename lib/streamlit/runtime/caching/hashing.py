@@ -422,7 +422,7 @@ class _CacheFuncHasher:
                 obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
             try:
                 column_hash_bytes = self.to_bytes(
-                    pd.util.hash_pandas_object(obj.columns)
+                    pd.util.hash_pandas_object(obj.dtypes)
                 )
                 self.update(h, column_hash_bytes)
                 values_hash_bytes = self.to_bytes(pd.util.hash_pandas_object(obj))
