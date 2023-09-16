@@ -34,6 +34,8 @@ from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
+    maybe_coerce_enum,
+    maybe_coerce_enum_sequence,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
@@ -330,6 +332,10 @@ class SelectSliderMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
+        if isinstance(widget_state.value, tuple):
+            widget_state = maybe_coerce_enum_sequence(widget_state, options)
+        else:
+            widget_state = maybe_coerce_enum(widget_state, options)
 
         if widget_state.value_changed:
             slider_proto.value[:] = serde.serialize(widget_state.value)

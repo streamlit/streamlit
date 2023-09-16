@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Any, Hashable, Optional, Union, cast
+from enum import Enum, EnumType
+from typing import TYPE_CHECKING, Any, Hashable, Optional, Sequence, Union, cast
 
 import streamlit
 from streamlit import config, runtime, type_util
@@ -20,6 +21,7 @@ from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state import WidgetCallback, get_session_state
+from streamlit.runtime.state.common import RegisterWidgetResult
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -96,3 +98,39 @@ def get_label_visibility_proto_value(
         return LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
 
     raise ValueError(f"Unknown label visibility value: {label_visibility_string}")
+
+
+def maybe_coerce_enum(
+    register_widget_result: RegisterWidgetResult[type_util.T],
+    options: type_util.OptionSequence[type_util.T],
+) -> RegisterWidgetResult[type_util.T]:
+    """Maybe Coerce a RegisterWidgetResult with an Enum member value to RegisterWidgetResult[option] if option
+    is an EnumType, otherwise just return the original RegisterWidgetResult."""
+
+    if isinstance(register_widget_result.value, Enum) and isinstance(options, EnumType):
+        return RegisterWidgetResult(
+            type_util.coerce_enum(register_widget_result.value, options),
+            register_widget_result.value_changed,
+        )
+    return register_widget_result
+
+
+def maybe_coerce_enum_sequence(
+    register_widget_result: RegisterWidgetResult[Sequence[type_util.T]],
+    options: type_util.OptionSequence[type_util.T],
+) -> RegisterWidgetResult[Sequence[type_util.T]]:
+    """Maybe Coerce a RegisterWidgetResult with a sequence of Enum members as value
+    to RegisterWidgetResult[Sequence[option]] if option is an EnumType, otherwise just return
+    the original RegisterWidgetResult."""
+
+    if all(
+        isinstance(val, Enum) for val in register_widget_result.value
+    ) and isinstance(options, EnumType):
+        return RegisterWidgetResult(
+            type(register_widget_result.value)(
+                type_util.coerce_enum(val, options)
+                for val in register_widget_result.value
+            ),
+            register_widget_result.value_changed,
+        )
+    return register_widget_result

@@ -20,7 +20,7 @@ import contextlib
 import copy
 import re
 import types
-from enum import Enum, auto
+from enum import Enum, EnumType, auto
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -32,6 +32,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    Type,
     TypeVar,
     Union,
     cast,
@@ -45,7 +46,7 @@ from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
 import streamlit as st
-from streamlit import errors
+from streamlit import config, errors
 from streamlit import logger as _logger
 from streamlit import string_util
 
@@ -1075,3 +1076,55 @@ def infer_vegalite_type(data: Series[Any]) -> Union[str, Tuple[str, List[Any]]]:
         #     stacklevel=1,
         # )
         return "nominal"
+
+
+E1 = TypeVar("E1", bound=Enum)
+E2 = TypeVar("E2", bound=Enum)
+
+ALLOWED_ENUM_COERCION_CONFIG_SETTINGS = ("off", "nameOnly", "nameAndValue")
+
+
+def coerce_enum(from_enum_value: E1, to_enum_class: Type[E2]) -> E1 | E2:
+    """Attempt to coerce an Enum value to another EnumType.
+
+    An Enum value of EnumType E1 is considered coercable to EnumType E2
+    if the EnumType __qualname__ match and the names of their members
+    match as well. (This is configurable in streamlist configs)
+    """
+    if not isinstance(from_enum_value, Enum):
+        raise ValueError("Expected an Enum")
+    if not isinstance(to_enum_class, EnumType):
+        raise ValueError("Expected an EnumType (i.e. the class of an Enum)")
+    if isinstance(from_enum_value, to_enum_class):
+        return from_enum_value  # Enum is already a member, no coersion necessary
+
+    coercion_type = config.get_option("runner.enumCoercion")
+    if coercion_type not in ALLOWED_ENUM_COERCION_CONFIG_SETTINGS:
+        raise errors.StreamlitAPIException(
+            "Invalid value for config option runner.enumCoercion. "
+            f"Expected one of {ALLOWED_ENUM_COERCION_CONFIG_SETTINGS}, "
+            f"but got '{coercion_type}'."
+        )
+    if coercion_type == "off":
+        return from_enum_value  # do not attempt to coerce
+
+    from_enum_class = from_enum_value.__class__
+    if (
+        not from_enum_class.__qualname__ == to_enum_class.__qualname__
+        or (
+            coercion_type == "nameOnly"
+            and set(to_enum_class._member_names_) != set(from_enum_class._member_names_)
+        )
+        or (
+            coercion_type == "nameAndValue"
+            and set(to_enum_class._value2member_map_)
+            != set(from_enum_class._value2member_map_)
+        )
+    ):
+        _LOGGER.debug("Failed to coerce %s to class %s", from_enum_value, to_enum_class)
+        return from_enum_value  # do not attempt to coerce
+    # At this point we think the Enum is coercable, and we know
+    # E1 and E2 have the same member names. We convert from E1 to E2 using _name_
+    # (since user Enum subclasses can override the .name property in 3.11)
+    _LOGGER.debug("Coerced %s to class %s", from_enum_value, to_enum_class)
+    return to_enum_class[from_enum_value._name_]
