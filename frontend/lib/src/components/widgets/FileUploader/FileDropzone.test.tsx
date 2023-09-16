@@ -35,7 +35,7 @@ describe("FileDropzone widget", () => {
     const props = getProps()
     render(<FileDropzone {...props} />)
 
-    expect(screen.getByTestId("stDropzone")).toBeInTheDocument()
+    expect(screen.getByTestId("stFileUploadDropzone")).toBeInTheDocument()
   })
 
   it("renders dropzone without extensions", () => {
@@ -53,7 +53,8 @@ describe("FileDropzone widget", () => {
       acceptedExtensions: [".jpg"],
     })
     render(<FileDropzone {...props} />)
-    expect(screen.getByTestId("stDropzoneInput").getAttribute("accept")).toBe(
+    expect(screen.queryByTestId("stDropzoneInput")).toHaveAttribute(
+      "accept",
       ".jpg"
     )
   })
