@@ -13,7 +13,7 @@ cfgv==3.4.0
 charset-normalizer==3.2.0
 chart-studio==1.1.0
 click==8.1.7
-contourpy==1.1.0
+contourpy==1.1.1
 coverage==7.3.1
 cryptography==41.0.3
 cx-Oracle==7.3.0
@@ -30,7 +30,7 @@ gitdb==4.0.10
 GitPython==3.1.36
 graphviz==0.20.1
 greenlet==2.0.2
-hypothesis==6.84.3
+hypothesis==6.86.0
 identify==2.5.29
 idna==3.4
 importlib-metadata==6.8.0
@@ -58,7 +58,7 @@ mysqlclient==2.2.0
 nh3==0.2.14
 nodeenv==1.8.0
 numexpr==2.8.6
-numpy==1.25.2
+numpy==1.26.0
 opencv-python==4.8.0.76
 packaging==23.1
 pandas==2.1.0
