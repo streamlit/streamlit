@@ -24,7 +24,7 @@ jobs:
 
             ![Visits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fstreamlit%2Fstreamlit%2Fissues%2F${{ github.event.issue.number }}&title=visits&edge_flat=false)
       - name: Upvote issue
-        uses: aidan-mundy/react-to-issue@14d172c22f28fabdd86b3458b1701ba1a684bc19
+        uses: aidan-mundy/react-to-issue@b2a9194cf1ea483d633bc2834ed6c4c41c2a45f0
         with:
           issue-number: ${{ github.event.issue.number }}
           reactions: "+1"
@@ -45,7 +45,7 @@ jobs:
 
             ![Visits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fstreamlit%2Fstreamlit%2Fissues%2F${{ github.event.issue.number }}&title=visits&edge_flat=false)
       - name: Upvote issue
-        uses: aidan-mundy/react-to-issue@14d172c22f28fabdd86b3458b1701ba1a684bc19
+        uses: aidan-mundy/react-to-issue@b2a9194cf1ea483d633bc2834ed6c4c41c2a45f0
         with:
           issue-number: ${{ github.event.issue.number }}
           reactions: "+1"
