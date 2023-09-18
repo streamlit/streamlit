@@ -15,13 +15,20 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import {
+  customRenderLibContext,
+  mount,
+  render,
+} from "@streamlit/lib/src/test_util"
 import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 
 import Figure from "./mock"
 
-import { BokehChartProps } from "./BokehChart"
+import { BokehChartProps, BokehChart } from "./BokehChart"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
 import Bokeh from "@streamlit/lib/src/vendor/bokeh/bokeh.esm.js"
+
 jest.mock("@streamlit/lib/src/vendor/bokeh/bokeh.esm.js", () => ({
   // needed to parse correctly
   __esModule: true,
@@ -36,9 +43,6 @@ jest.mock("@streamlit/lib/src/vendor/bokeh/bokeh.esm.js", () => ({
 }))
 
 const mockBokehEmbed = jest.mocked(Bokeh)
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { BokehChart } = require("./BokehChart")
 
 const getProps = (
   elementProps: Partial<BokehChartProto> = {}
@@ -95,20 +99,15 @@ describe("BokehChart element", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<BokehChart {...props} />, {
-      attachTo: div,
-    })
+    render(<BokehChart {...props} />)
 
-    expect(wrapper.find("div").length).toBe(1)
+    expect(screen.getByTestId("stBokehChart")).toBeInTheDocument()
   })
 
   describe("Chart dimensions", () => {
     it("should use height if not useContainerWidth", () => {
       const props = getProps()
-      mount(<BokehChart {...props} />, {
-        attachTo: div,
-      })
-
+      render(<BokehChart {...props} />)
       expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
         // @ts-expect-error
         expect.toMatchBokehDimensions(400, 400),
@@ -124,9 +123,7 @@ describe("BokehChart element", () => {
         height: 0,
       }
 
-      mount(<BokehChart {...props} />, {
-        attachTo: div,
-      })
+      render(<BokehChart {...props} />)
 
       expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledWith(
         // @ts-expect-error
@@ -138,14 +135,8 @@ describe("BokehChart element", () => {
 
   it("should re-render the chart when the component updates", () => {
     const props = getProps()
-    // shallow does not work with useEffect hooks
-    const wrapper = mount(<BokehChart {...props} />, {
-      attachTo: div,
-    })
-    wrapper.setProps({
-      width: 500,
-      height: 500,
-    })
+    const { rerender } = render(<BokehChart {...props} />)
+    rerender(<BokehChart {...props} width={500} height={500} />)
     expect(mockBokehEmbed.embed.embed_item).toHaveBeenCalledTimes(2)
   })
 })
