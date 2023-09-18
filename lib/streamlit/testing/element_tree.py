@@ -110,9 +110,9 @@ class Element:
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self, timeout: float = 3) -> ElementTree:
+    def run(self, timeout: float | None = None) -> ElementTree:
         """Run the script with updated widget values.
-        Timeout is a number of seconds.
+        Timeout is a number of seconds, or None to use the default.
         """
         return self.root.run(timeout=timeout)
 
@@ -1255,9 +1255,9 @@ class Block:
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self, timeout: float = 3) -> ElementTree:
+    def run(self, timeout: float | None = None) -> ElementTree:
         """Run the script with updated widget values.
-        Timeout is a number of seconds.
+        Timeout is a number of seconds, or None to use the default.
         """
         return self.root.run(timeout=timeout)
 
@@ -1298,6 +1298,7 @@ class ElementTree(Block):
 
     script_path: str | None = field(repr=False, default=None)
     _session_state: SessionState | None = field(repr=False, default=None)
+    _default_timeout: float = field(repr=False, default=3)
 
     def __init__(self):
         # Expect script_path and session_state to be filled in afterwards
@@ -1331,15 +1332,17 @@ class ElementTree(Block):
 
         return ws
 
-    def run(self, timeout: float = 3) -> ElementTree:
+    def run(self, timeout: float | None = None) -> ElementTree:
         """Run the script with updated widget values.
-        Timeout is a number of seconds.
+        Timeout is a number of seconds, or None to use the default.
         """
         assert self.script_path is not None
         from streamlit.testing.local_script_runner import LocalScriptRunner
 
         widget_states = self.get_widget_states()
-        runner = LocalScriptRunner(self.script_path, self.session_state)
+        runner = LocalScriptRunner(
+            self.script_path, self.session_state, default_timeout=self._default_timeout
+        )
         return runner.run(widget_states, timeout=timeout)
 
 
