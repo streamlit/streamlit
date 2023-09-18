@@ -50,9 +50,6 @@ function OverflowTooltip({
     }
   }, [children, allowTooltip])
 
-  console.log("Returning!")
-  console.log(content)
-  console.log("Content!")
   return (
     <Tooltip
       content={allowTooltip ? content : ""}
