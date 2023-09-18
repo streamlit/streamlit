@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-import { shallow } from "@streamlit/lib/src/test_util"
 import React from "react"
-import { StyledCameraInputBaseButton } from "./styled-components"
+import { render } from "@streamlit/lib/src/test_util"
+import { fireEvent, screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
 import CameraInputButton, { CameraInputButtonProps } from "./CameraInputButton"
+
+let mockOnClick: any
 
 const getProps = (
   props: Partial<CameraInputButtonProps> = {}
 ): CameraInputButtonProps => {
+  mockOnClick = jest.fn(() => props.progress)
   return {
-    onClick: jest.fn(),
+    onClick: mockOnClick,
     disabled: false,
     children: jest.fn(),
     progress: 0,
@@ -32,18 +36,25 @@ const getProps = (
 }
 
 describe("Testing Camera Input Button", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<CameraInputButton {...props} />)
-    expect(wrapper).toBeDefined()
+    render(<CameraInputButton {...props} />)
+    expect(screen.getByTestId("stCameraInputButton")).toBeInTheDocument()
   })
 
   it("plumbs progress properly", () => {
     const props = getProps({ progress: 50 })
-    const wrapper = shallow(<CameraInputButton {...props} />)
-    const styledCameraInputBaseButton = wrapper.find(
-      StyledCameraInputBaseButton
+
+    render(<CameraInputButton {...props} />)
+    const styledCameraInputBaseButton = screen.getByTestId(
+      "stCameraInputButton"
     )
-    expect(styledCameraInputBaseButton.props().progress).toEqual(50)
+
+    fireEvent.click(styledCameraInputBaseButton)
+    expect(mockOnClick.mock.results[0].value).toBe(50)
   })
 })
