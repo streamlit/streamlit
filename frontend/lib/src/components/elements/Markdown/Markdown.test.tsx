@@ -43,10 +43,6 @@ describe("Markdown element", () => {
     expect(markdown).toBeInTheDocument()
     expect(getComputedStyle(markdown).width).toBe("100px")
   })
-  /* MAYBE ADD TESTS?
-  a) unit tests with different Markdown formatted text
-  b) allow_html property
-  */
 })
 
 describe("Markdown element with help", () => {
