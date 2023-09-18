@@ -15,21 +15,17 @@
  */
 
 import React from "react"
-import {
-  customRenderLibContext,
-  mount,
-  render,
-} from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 
 import Figure from "./mock"
 
-import { BokehChartProps, BokehChart } from "./BokehChart"
+import { BokehChartProps } from "./BokehChart"
 import { screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
-import Bokeh from "@streamlit/lib/src/vendor/bokeh/bokeh.esm.js"
+import Bokeh from "@streamlit/lib/src/vendor/bokeh/bokeh.esm"
 
-jest.mock("@streamlit/lib/src/vendor/bokeh/bokeh.esm.js", () => ({
+jest.mock("@streamlit/lib/src/vendor/bokeh/bokeh.esm", () => ({
   // needed to parse correctly
   __esModule: true,
   default: {
@@ -41,6 +37,9 @@ jest.mock("@streamlit/lib/src/vendor/bokeh/bokeh.esm.js", () => ({
     },
   },
 }))
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { BokehChart } = require("./BokehChart")
 
 const mockBokehEmbed = jest.mocked(Bokeh)
 
@@ -100,7 +99,6 @@ describe("BokehChart element", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<BokehChart {...props} />)
-
     expect(screen.getByTestId("stBokehChart")).toBeInTheDocument()
   })
 
