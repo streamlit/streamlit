@@ -20,10 +20,6 @@ import "@testing-library/jest-dom"
 import { render } from "@streamlit/lib/src/test_util"
 import { Markdown as MarkdownProto } from "@streamlit/lib/src/proto"
 import Markdown, { MarkdownProps } from "./Markdown"
-import {
-  InlineTooltipIcon,
-  StyledLabelHelpWrapper,
-} from "@streamlit/lib/src/components/shared/TooltipIcon"
 
 const getProps = (
   elementProps: Partial<MarkdownProps> = {}
