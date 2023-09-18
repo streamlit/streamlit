@@ -15,7 +15,9 @@
  */
 
 import React from "react"
-import { shallow, mount } from "@streamlit/lib/src/test_util"
+import { fireEvent, screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
+import { render } from "@streamlit/lib/src/test_util"
 import { Markdown as MarkdownProto } from "@streamlit/lib/src/proto"
 import Markdown, { MarkdownProps } from "./Markdown"
 import {
@@ -40,10 +42,10 @@ const getProps = (
 describe("Markdown element", () => {
   it("renders markdown as expected", () => {
     const props = getProps()
-    const wrap = shallow(<Markdown {...props} />)
-    const elem = wrap.get(0)
-    expect(elem.props.className.includes("stMarkdown")).toBeTruthy()
-    expect(elem.props.style.width).toBe(100)
+    render(<Markdown {...props} />)
+    const markdown = screen.getByTestId("stMarkdown")
+    expect(markdown).toBeInTheDocument()
+    expect(getComputedStyle(markdown).width).toBe("100px")
   })
   /* MAYBE ADD TESTS?
   a) unit tests with different Markdown formatted text
@@ -52,12 +54,14 @@ describe("Markdown element", () => {
 })
 
 describe("Markdown element with help", () => {
-  it("renders markdown with help tooltip as expected", () => {
+  it("renders markdown with help tooltip as expected", async () => {
     const props = getProps({ help: "help text" })
-    const wrapper = mount(<Markdown {...props} />)
-    const inlineTooltipIcon = wrapper.children().find(InlineTooltipIcon)
-    expect(inlineTooltipIcon.exists()).toBe(true)
-    expect(inlineTooltipIcon.props().content).toBe("help text")
-    expect(wrapper.children().find(StyledLabelHelpWrapper).exists()).toBe(true)
+    render(<Markdown {...props} />)
+    const tooltip = screen.getByTestId("tooltipHoverTarget")
+    expect(tooltip).toBeInTheDocument()
+    fireEvent.mouseOver(tooltip)
+
+    const helpText = await screen.findAllByText("help text")
+    expect(helpText[0].textContent).toBe("help text")
   })
 })
