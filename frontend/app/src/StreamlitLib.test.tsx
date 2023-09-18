@@ -16,20 +16,17 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { ReactWrapper } from "enzyme"
 import React, { PureComponent, ReactElement } from "react"
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 import {
   AppRoot,
   VerticalBlock,
-  AlertElement,
   ComponentRegistry,
   FileUploadClient,
   ScriptRunState,
   SessionInfo,
   StreamlitEndpoints,
-  mount,
   createFormsData,
   FormsData,
   WidgetStateManager,
@@ -37,7 +34,6 @@ import {
   Element as ElementProto,
   ForwardMsgMetadata as ForwardMsgMetadataProto,
   Text as TextProto,
-  TextElement,
   render,
 } from "@streamlit/lib"
 
@@ -220,7 +216,7 @@ describe("StreamlitLibExample", () => {
   it("handles Delta messages", () => {
     // there's nothing within the app ui to cycle through script run messages so we need a reference
     let streamlitLibInstance: any
-    const { rerender } = render(
+    render(
       <StreamlitLibExample
         ref={ref => {
           streamlitLibInstance = ref
@@ -244,14 +240,6 @@ describe("StreamlitLibExample", () => {
     streamlitLibInstance.beginScriptRun("newScriptRun")
     streamlitLibInstance.handleDeltaMsg(delta, metadata)
     streamlitLibInstance.endScriptRun()
-
-    rerender(
-      <StreamlitLibExample
-        ref={ref => {
-          streamlitLibInstance = ref
-        }}
-      />
-    )
 
     // our "Please wait..." alert should be gone, because it
     // belonged to a previous "script run"
