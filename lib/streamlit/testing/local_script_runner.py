@@ -108,7 +108,7 @@ class LocalScriptRunner(ScriptRunner):
         """Run the script, and parse the output messages for querying
         and interaction.
 
-        Timeout is in seconds, or None to use the default.
+        Timeout is in seconds, or None to use the default timeout of the runner.
         """
         if timeout is None:
             timeout = self.default_timeout
