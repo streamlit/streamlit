@@ -15,14 +15,14 @@
  */
 
 import React from "react"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 
 import Figure from "./mock"
 
 import { BokehChartProps } from "./BokehChart"
-import { screen } from "@testing-library/react"
-import "@testing-library/jest-dom"
 import Bokeh from "@streamlit/lib/src/vendor/bokeh/bokeh.esm"
 
 jest.mock("@streamlit/lib/src/vendor/bokeh/bokeh.esm", () => ({

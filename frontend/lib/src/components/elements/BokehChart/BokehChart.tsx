@@ -79,9 +79,6 @@ export function BokehChart({
 
   const updateChart = (data: any): void => {
     const chart = document.getElementById(chartId)
-    if (chart) {
-      chart.setAttribute("data-testid", "stBokehChart")
-    }
 
     /**
      * When you create a bokeh chart in your python script, you can specify
@@ -127,7 +124,9 @@ export function BokehChart({
     memoizedUpdateChart(memoizedGetChartData())
   }, [width, height, element, memoizedGetChartData, memoizedUpdateChart])
 
-  return <div id={chartId} className="stBokehChart" />
+  return (
+    <div id={chartId} className="stBokehChart" data-testid="stBokehChart" />
+  )
 }
 
 export default withFullScreenWrapper(BokehChart)
