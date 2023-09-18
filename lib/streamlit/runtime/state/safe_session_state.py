@@ -28,8 +28,7 @@ class SafeSessionState:
     ScriptRunner and spin up a new ScriptRunner to handle the request.
     When this happens, the existing ScriptRunner will continue executing
     its script until it reaches a yield point - but during this time, it
-    must not mutate its SessionState. An interrupted ScriptRunner assigns
-    a dummy SessionState instance to its wrapper to prevent further mutation.
+    must not mutate its SessionState.
     """
 
     def __init__(self, state: SessionState, yield_callback: Callable[[], None]):
