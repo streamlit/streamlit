@@ -141,7 +141,9 @@ class ScriptRunner:
         self._script_cache = script_cache
         self._user_info = user_info
 
-        self._session_state = SafeSessionState(session_state)
+        self._session_state = SafeSessionState(
+            session_state, yield_callback=self._maybe_handle_execution_control_request
+        )
 
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)

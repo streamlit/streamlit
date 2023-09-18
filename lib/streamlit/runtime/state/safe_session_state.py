@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import threading
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -32,12 +32,13 @@ class SafeSessionState:
     a dummy SessionState instance to its wrapper to prevent further mutation.
     """
 
-    def __init__(self, state: SessionState):
+    def __init__(self, state: SessionState, yield_callback: Callable[[], None]):
         self._state = state
         # TODO: we'd prefer this be a threading.Lock instead of RLock -
         #  but `call_callbacks` first needs to be rewritten.
         self._lock = threading.RLock()
         self._disconnected = False
+        self._yield_callback = yield_callback
 
     def disconnect(self) -> None:
         """Disconnect the wrapper from its underlying SessionState.
@@ -50,6 +51,7 @@ class SafeSessionState:
     def register_widget(
         self, metadata: WidgetMetadata[T], user_key: Optional[str]
     ) -> RegisterWidgetResult[T]:
+        self._yield_callback()
         with self._lock:
             if self._disconnected:
                 return RegisterWidgetResult.failure(metadata.deserializer)
@@ -57,6 +59,7 @@ class SafeSessionState:
             return self._state.register_widget(metadata, user_key)
 
     def on_script_will_rerun(self, latest_widget_states: WidgetStatesProto) -> None:
+        self._yield_callback()
         with self._lock:
             if self._disconnected:
                 return
@@ -106,6 +109,7 @@ class SafeSessionState:
             return self._state.filtered_state
 
     def __getitem__(self, key: str) -> Any:
+        self._yield_callback()
         with self._lock:
             if self._disconnected:
                 raise KeyError(key)
@@ -113,6 +117,7 @@ class SafeSessionState:
             return self._state[key]
 
     def __setitem__(self, key: str, value: Any) -> None:
+        self._yield_callback()
         with self._lock:
             if self._disconnected:
                 return
@@ -120,6 +125,7 @@ class SafeSessionState:
             self._state[key] = value
 
     def __delitem__(self, key: str) -> None:
+        self._yield_callback()
         with self._lock:
             if self._disconnected:
                 raise KeyError(key)
@@ -127,6 +133,7 @@ class SafeSessionState:
             del self._state[key]
 
     def __contains__(self, key: str) -> bool:
+        self._yield_callback()
         with self._lock:
             if self._disconnected:
                 return False

@@ -47,7 +47,7 @@ def _create_state_spy(
     session_state_spy.__iter__ = Mock(wraps=session_state.__iter__)
     session_state_spy.__len__ = Mock(wraps=session_state.__len__)
 
-    safe_state = SafeSessionState(session_state_spy)
+    safe_state = SafeSessionState(session_state_spy, lambda: None)
     if disconnect:
         safe_state.disconnect()
 
