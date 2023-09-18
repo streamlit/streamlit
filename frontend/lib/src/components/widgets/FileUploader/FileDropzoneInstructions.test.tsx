@@ -19,7 +19,6 @@ import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 
-import { Small } from "@streamlit/lib/src/components/shared/TextElements"
 import FileDropzoneInstructions, { Props } from "./FileDropzoneInstructions"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
