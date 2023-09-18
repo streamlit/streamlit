@@ -364,6 +364,12 @@ class HashTest(unittest.TestCase):
 
         self.assertEqual(get_hash(series4), get_hash(series5))
 
+    def test_pandas_series_similar_dtypes(self):
+        series1 = pd.Series([1, 2], dtype="UInt64")
+        series2 = pd.Series([1, 2], dtype="Int64")
+
+        self.assertNotEqual(get_hash(series1), get_hash(series2))
+
     def test_numpy(self):
         np1 = np.zeros(10)
         np2 = np.zeros(11)
@@ -376,6 +382,16 @@ class HashTest(unittest.TestCase):
         np5 = np.zeros(_NP_SIZE_LARGE)
 
         self.assertEqual(get_hash(np4), get_hash(np5))
+
+    def test_numpy_similar_dtypes(self):
+        np1 = np.ones(10, dtype="u8")
+        np2 = np.ones(10, dtype="i8")
+
+        np3 = np.ones(10, dtype=[("a", "u8"), ("b", "i8")])
+        np4 = np.ones(10, dtype=[("a", "i8"), ("b", "u8")])
+
+        self.assertNotEqual(get_hash(np1), get_hash(np2))
+        self.assertNotEqual(get_hash(np3), get_hash(np4))
 
     def test_PIL_image(self):
         im1 = Image.new("RGB", (50, 50), (220, 20, 60))

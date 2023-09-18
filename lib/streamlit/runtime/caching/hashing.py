@@ -401,6 +401,7 @@ class _CacheFuncHasher:
 
             h = hashlib.new("md5")
             self.update(h, obj.size)
+            self.update(h, obj.dtype.name)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
                 obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
@@ -417,6 +418,7 @@ class _CacheFuncHasher:
             import pandas as pd
 
             h = hashlib.new("md5")
+            self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
                 obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
@@ -436,6 +438,7 @@ class _CacheFuncHasher:
         elif type_util.is_type(obj, "numpy.ndarray"):
             h = hashlib.new("md5")
             self.update(h, obj.shape)
+            self.update(h, str(obj.dtype))
 
             if obj.size >= _NP_SIZE_LARGE:
                 import numpy as np
