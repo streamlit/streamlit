@@ -24,5 +24,13 @@ def test_data_editor_column_types(
     data_editor_elements = themed_app.get_by_test_id("stDataFrame")
     expect(data_editor_elements).to_have_count(8)
 
-    for i, element in enumerate(data_editor_elements.all()):
-        assert_snapshot(element, name=f"data_editor-column-types-{i}")
+    assert_snapshot(data_editor_elements.nth(0), name=f"st_data_editor-base_types")
+    assert_snapshot(data_editor_elements.nth(1), name=f"st_data_editor-numerical_types")
+    assert_snapshot(data_editor_elements.nth(2), name=f"st_data_editor-datetime_types")
+    assert_snapshot(data_editor_elements.nth(3), name=f"st_data_editor-list_types")
+    assert_snapshot(data_editor_elements.nth(4), name=f"st_data_editor-interval_types")
+    assert_snapshot(data_editor_elements.nth(5), name=f"st_data_editor-special_types")
+    assert_snapshot(data_editor_elements.nth(6), name=f"st_data_editor-period_types")
+    assert_snapshot(
+        data_editor_elements.nth(7), name=f"st_data_editor-unsupported_types"
+    )
