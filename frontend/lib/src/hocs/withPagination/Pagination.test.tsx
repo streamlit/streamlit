@@ -18,8 +18,6 @@ import React from "react"
 import { fireEvent, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import { render } from "@streamlit/lib/src/test_util"
-import BaseButton from "@streamlit/lib/src/components/shared/BaseButton"
-import { Small } from "@streamlit/lib/src/components/shared/TextElements"
 import Pagination, { Props } from "./Pagination"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
