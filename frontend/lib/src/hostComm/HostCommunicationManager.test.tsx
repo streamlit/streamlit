@@ -38,7 +38,7 @@ describe("HostCommunicationManager messaging", () => {
   let dispatchEvent: (type: string, event: Event) => void
   let originalHash: string
 
-  let setHostConfigFunc: jest.SpyInstance
+  let setAllowedOriginsFunc: jest.SpyInstance
   let openCommFunc: jest.SpyInstance
   let sendMessageToHostFunc: jest.SpyInstance
 
@@ -64,7 +64,10 @@ describe("HostCommunicationManager messaging", () => {
     originalHash = window.location.hash
     dispatchEvent = mockEventListeners()
 
-    setHostConfigFunc = jest.spyOn(hostCommunicationMgr, "setAllowedOrigins")
+    setAllowedOriginsFunc = jest.spyOn(
+      hostCommunicationMgr,
+      "setAllowedOrigins"
+    )
     openCommFunc = jest.spyOn(hostCommunicationMgr, "openHostCommunication")
     sendMessageToHostFunc = jest.spyOn(
       hostCommunicationMgr,
@@ -82,7 +85,7 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("sets allowedOrigins properly & opens HostCommunication", () => {
-    expect(setHostConfigFunc).toHaveBeenCalledWith({
+    expect(setAllowedOriginsFunc).toHaveBeenCalledWith({
       allowedOrigins: ["https://devel.streamlit.test"],
       useExternalAuthToken: false,
     })

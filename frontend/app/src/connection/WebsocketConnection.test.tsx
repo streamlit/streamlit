@@ -34,11 +34,13 @@ import {
   Args,
 } from "@streamlit/app/src/connection/WebsocketConnection"
 
-const MOCK_ALLOWED_HOST_CONFIG_RESPONSE = {
-  data: {
-    allowedOrigins: ["list", "of", "allowed", "origins"],
-    useExternalAuthToken: false,
-  },
+const MOCK_ALLOWED_ORIGINS_CONFIG = {
+  allowedOrigins: ["list", "of", "allowed", "origins"],
+  useExternalAuthToken: false,
+}
+
+const MOCK_HOST_CONFIG_RESPONSE = {
+  data: MOCK_ALLOWED_ORIGINS_CONFIG,
 }
 
 const MOCK_HEALTH_RESPONSE = { status: "ok" }
@@ -100,7 +102,7 @@ describe("doInitPings", () => {
         return MOCK_HEALTH_RESPONSE
       }
       if (url.endsWith("_stcore/host-config")) {
-        return MOCK_ALLOWED_HOST_CONFIG_RESPONSE
+        return MOCK_HOST_CONFIG_RESPONSE
       }
       return {}
     })
@@ -115,14 +117,14 @@ describe("doInitPings", () => {
     )
     expect(uriIndex).toEqual(0)
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
-      MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data
+      MOCK_ALLOWED_ORIGINS_CONFIG
     )
   })
 
   it("returns the uri index and sets hostConfig for the first successful ping (0)", async () => {
     Promise.all = jest
       .fn()
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     const uriIndex = await doInitPings(
       MOCK_PING_DATA.uri,
@@ -134,7 +136,7 @@ describe("doInitPings", () => {
     )
     expect(uriIndex).toEqual(0)
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
-      MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data
+      MOCK_ALLOWED_ORIGINS_CONFIG
     )
   })
 
@@ -142,7 +144,7 @@ describe("doInitPings", () => {
     Promise.all = jest
       .fn()
       .mockRejectedValueOnce(new Error(""))
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     const uriIndex = await doInitPings(
       MOCK_PING_DATA.uri,
@@ -154,7 +156,7 @@ describe("doInitPings", () => {
     )
     expect(uriIndex).toEqual(1)
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
-      MOCK_ALLOWED_HOST_CONFIG_RESPONSE.data
+      MOCK_ALLOWED_ORIGINS_CONFIG
     )
   })
 
@@ -165,7 +167,7 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(new Error(TEST_ERROR_MESSAGE))
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
@@ -190,7 +192,7 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
@@ -219,7 +221,7 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
@@ -246,7 +248,7 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
@@ -297,7 +299,7 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA_LOCALHOST.uri,
@@ -337,7 +339,7 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
@@ -367,7 +369,7 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
@@ -396,7 +398,7 @@ describe("doInitPings", () => {
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
@@ -421,7 +423,7 @@ describe("doInitPings", () => {
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     const timeouts: number[] = []
     const callback = (
@@ -464,7 +466,7 @@ describe("doInitPings", () => {
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     const timeouts: number[] = []
     const callback = (
@@ -499,11 +501,11 @@ describe("doInitPings", () => {
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // Reset after second doInitPings call
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     const timeouts: number[] = []
     const callback = (
@@ -563,7 +565,7 @@ describe("WebsocketConnection", () => {
     originalPromiseAll = Promise.all
     Promise.all = jest
       .fn()
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_HOST_CONFIG_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     client = new WebsocketConnection(createMockArgs())
   })
