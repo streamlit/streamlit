@@ -41,7 +41,7 @@ describe("Markdown element", () => {
     render(<Markdown {...props} />)
     const markdown = screen.getByTestId("stMarkdown")
     expect(markdown).toBeInTheDocument()
-    expect(getComputedStyle(markdown).width).toBe("100px")
+    expect(markdown).toHaveStyle("width: 100px")
   })
 })
 
@@ -53,7 +53,7 @@ describe("Markdown element with help", () => {
     expect(tooltip).toBeInTheDocument()
     fireEvent.mouseOver(tooltip)
 
-    const helpText = await screen.findAllByText("help text")
-    expect(helpText[0].textContent).toBe("help text")
+    const helpText = await screen.findByText("help text")
+    expect(helpText).toBeInTheDocument()
   })
 })
