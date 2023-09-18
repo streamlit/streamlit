@@ -40,7 +40,7 @@ const Pagination = ({
   onPrevious,
 }: Props): React.ReactElement => {
   return (
-    <StyledPagination className={className}>
+    <StyledPagination className={className} data-testid="stPagination">
       <Small>{`Showing page ${currentPage} of ${totalPages}`}</Small>
       <StyledPaginators>
         <BaseButton onClick={onPrevious} kind={BaseButtonKind.MINIMAL}>

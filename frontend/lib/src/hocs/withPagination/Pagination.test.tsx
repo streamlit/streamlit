@@ -15,9 +15,9 @@
  */
 
 import React from "react"
-import { shallow } from "@streamlit/lib/src/test_util"
-import BaseButton from "@streamlit/lib/src/components/shared/BaseButton"
-import { Small } from "@streamlit/lib/src/components/shared/TextElements"
+import "@testing-library/jest-dom"
+import { fireEvent, screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 import Pagination, { Props } from "./Pagination"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
@@ -32,10 +32,10 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 
 describe("Pagination widget", () => {
   const props = getProps()
-  const wrapper = shallow(<Pagination {...props} />)
+  render(<Pagination {...props} />)
 
   it("renders without crashing", () => {
-    expect(wrapper).toBeDefined()
+    expect(screen.getByTestId("stPagination")).toBeInTheDocument()
   })
 
   it("should show current and total pages", () => {
@@ -43,19 +43,21 @@ describe("Pagination widget", () => {
       currentPage: 1,
       totalPages: 10,
     })
-    const pagination = shallow(<Pagination {...defaultProps} />)
-    expect(pagination.find(Small).text()).toBe(`Showing page 1 of 10`)
+    render(<Pagination {...defaultProps} />)
+    expect(screen.getByText("Showing page 1 of 10")).toBeInTheDocument()
   })
 
   it("should be able to go to previous page", () => {
-    const wrapper = shallow(<Pagination {...props} />)
-    wrapper.find(BaseButton).at(0).simulate("click")
+    render(<Pagination {...props} />)
+    const prevPaginationButton = screen.getAllByTestId("baseButton-minimal")[0]
+    fireEvent.click(prevPaginationButton)
     expect(props.onPrevious).toHaveBeenCalledTimes(1)
   })
 
   it("should be able to go to next page", () => {
-    const wrapper = shallow(<Pagination {...props} />)
-    wrapper.find(BaseButton).at(1).simulate("click")
+    render(<Pagination {...props} />)
+    const nextPaginationButton = screen.getAllByTestId("baseButton-minimal")[1]
+    fireEvent.click(nextPaginationButton)
     expect(props.onNext).toHaveBeenCalledTimes(1)
   })
 })
