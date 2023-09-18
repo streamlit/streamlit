@@ -16,20 +16,20 @@
 
 import React from "react"
 import {
-  baseTheme,
   darkTheme,
   lightTheme,
   toThemeInput,
   fonts,
   CustomThemeConfig,
-  render,
 } from "@streamlit/lib"
-import { screen, fireEvent } from "@testing-library/react"
+import { screen, fireEvent, waitFor } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
   toMinimalToml,
 } from "./ThemeCreatorDialog"
+import { customRenderLibContext } from "@streamlit/lib/src/test_util"
+import userEvent from "@testing-library/user-event"
 
 const mockSetTheme = jest.fn()
 const mockAddThemes = jest.fn()
@@ -49,22 +49,12 @@ Object.assign(navigator, {
 })
 
 describe("Renders ThemeCreatorDialog", () => {
-  beforeEach(() =>
-    jest.spyOn(React, "useContext").mockImplementation(() => ({
-      activeTheme: baseTheme,
-      setTheme: mockSetTheme,
-      availableThemes: [],
-      addThemes: mockAddThemes,
-    }))
-  )
-
-  afterEach(() => {
-    jest.clearAllMocks()
-  })
-
   it("renders theme creator dialog", () => {
     const props = getProps()
-    render(<ThemeCreatorDialog {...props} />)
+    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
+      setTheme: mockSetTheme,
+      addThemes: mockAddThemes,
+    })
     expect(screen.getByTestId("stModal")).toBeInTheDocument()
   })
 })
@@ -159,30 +149,31 @@ font="monospace"
 })
 
 describe("Opened ThemeCreatorDialog", () => {
-  beforeEach(() => {
-    jest.spyOn(React, "useContext").mockImplementation(() => ({
-      activeTheme: baseTheme,
-      setTheme: mockSetTheme,
-      availableThemes: [],
-      addThemes: mockAddThemes,
-    }))
-  })
-
-  afterEach(() => {
-    jest.clearAllMocks()
-  })
-
-  it("should update theme on color change", () => {
+  it("should update theme on color change", async () => {
+    const user = userEvent.setup()
     const props = getProps()
-    render(<ThemeCreatorDialog {...props} />)
+    const { container } = customRenderLibContext(
+      <ThemeCreatorDialog {...props} />,
+      {
+        setTheme: mockSetTheme,
+        addThemes: mockAddThemes,
+      }
+    )
 
-    const colorpicker = screen.getByTestId("stColorPicker")
-    expect(colorpicker).toBeInTheDocument()
+    const primaryColorPicker = screen.queryAllByTestId("stColorPicker")[0]
+    expect(primaryColorPicker).toBeInTheDocument()
 
-    const primaryColor = screen.getByTestId("stColorBlock")
-    fireEvent.click(primaryColor)
-    const colorText = screen.getByTestId("stStyledChromePicker")
-    fireEvent.change(colorText, { target: { value: "#FFFFFF" } })
+    const primaryColor = screen.getByText("#FF4B4B")
+    userEvent.click(primaryColor)
+    expect(
+      await screen.findByTestId("stStyledChromePicker")
+    ).toBeInTheDocument()
+    const labelElement = container.querySelector(
+      'label[for="rc-editable-input-1"]'
+    )
+    console.log(screen.debug())
+    console.log(labelElement)
+    fireEvent.change(labelElement, { target: { value: "#FFFFFF" } })
     expect(mockAddThemes).toHaveBeenCalled()
     expect(mockAddThemes.mock.calls[0][0][0].emotion.colors.primary).toBe(
       "#FFFFFF"
@@ -196,7 +187,10 @@ describe("Opened ThemeCreatorDialog", () => {
 
   it("should update theme on font change", () => {
     const props = getProps()
-    render(<ThemeCreatorDialog {...props} />)
+    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
+      setTheme: mockSetTheme,
+      addThemes: mockAddThemes,
+    })
 
     const fontBox = screen.getByText("Sans serif")
     fireEvent.click(fontBox)
@@ -215,11 +209,16 @@ describe("Opened ThemeCreatorDialog", () => {
     )
   })
 
-  it("should call backToSettings if back button has been clicked", () => {
+  it("should call backToSettings if back button has been clicked", async () => {
     const props = getProps()
-    render(<ThemeCreatorDialog {...props} />)
-    const backButton = screen.getByText("Edit active theme")
+    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
+      setTheme: mockSetTheme,
+      addThemes: mockAddThemes,
+    })
+    const backButton = screen.getByTestId("stModalStyledBackButton")
     fireEvent.click(backButton)
+    // need to wait a little so check for an element that should appear
+    expect(await screen.findByText("Edit active theme")).toBeInTheDocument()
     expect(props.backToSettings).toHaveBeenCalled()
   })
 
@@ -233,8 +232,11 @@ describe("Opened ThemeCreatorDialog", () => {
     useStateSpy.mockImplementation(init => [init, updateCopied])
 
     const props = getProps()
-    render(<ThemeCreatorDialog {...props} />)
-    const copyBtn = screen.getByText("Copied to clipboard ")
+    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
+      setTheme: mockSetTheme,
+      addThemes: mockAddThemes,
+    })
+    const copyBtn = screen.queryByText("Copy theme to clipboard")
 
     fireEvent.click(copyBtn)
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
