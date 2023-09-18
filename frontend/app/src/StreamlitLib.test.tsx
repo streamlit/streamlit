@@ -240,6 +240,7 @@ describe("StreamlitLibExample", () => {
     })
 
     // Send the delta to our app
+    // there's nothing within the app ui to run these messages so we need a reference
     streamlitLibInstance.beginScriptRun("newScriptRun")
     streamlitLibInstance.handleDeltaMsg(delta, metadata)
     streamlitLibInstance.endScriptRun()
