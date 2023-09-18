@@ -16,7 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import CameraInputButton, { CameraInputButtonProps } from "./CameraInputButton"
 
@@ -46,11 +46,8 @@ describe("Testing Camera Input Button", () => {
     const props = getProps({ progress: 50 })
 
     render(<CameraInputButton {...props} />)
-    const styledCameraInputBaseButton = screen.getByTestId(
-      "stCameraInputButton"
-    )
 
-    fireEvent.click(styledCameraInputBaseButton)
-    expect(mockOnClick.mock.results[0].value).toBe(50)
+    const progress = screen.getByRole("progressbar")
+    expect(progress).toHaveAttribute("aria-valuenow", "50")
   })
 })
