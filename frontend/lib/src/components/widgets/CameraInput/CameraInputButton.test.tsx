@@ -36,10 +36,6 @@ const getProps = (
 }
 
 describe("Testing Camera Input Button", () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-  })
-
   it("renders without crashing", () => {
     const props = getProps()
     render(<CameraInputButton {...props} />)
