@@ -351,6 +351,9 @@ class ButtonMixin:
     ) -> "DeltaGenerator":
         r"""Display a link button element.
 
+        When clicked, a new tab will be opened to the specified URL. This will
+        create a new session for the user if directed within the app.
+
         Parameters
         ----------
         label : str
@@ -389,6 +392,17 @@ class ButtonMixin:
             True. The default is False.
         use_container_width: bool
             An optional boolean, which makes the button stretch its width to match the parent container.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> st.link_button("Go to gallery", "https://streamlit.io/gallery")
+
+        .. output::
+           https://doc-link-button.streamlit.app/
+           height: 200px
+
         """
         # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
         if type not in ["primary", "secondary"]:
