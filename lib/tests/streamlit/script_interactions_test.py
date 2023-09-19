@@ -239,3 +239,17 @@ class InteractiveScriptTest(InteractiveScriptTests):
     def test_script_not_found(self):
         with pytest.raises(AssertionError):
             self.script_from_filename("doesntexist.py")
+
+    def test_timeout(self):
+        script = self.script_from_string(
+            """
+            import time
+            time.sleep(0.5)
+            """,
+            default_timeout=0.2,
+        )
+        with pytest.raises(RuntimeError, match=r".*timed out.*"):
+            script.run()
+
+        # Overrides the default, doesn't raise
+        script.run(timeout=1)
