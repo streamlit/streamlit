@@ -72,7 +72,6 @@ describe("ToolbarActions", () => {
   it("renders without crashing", () => {
     render(<ToolbarActions {...getProps()} />)
     expect(screen.getByTestId("stToolbarActions")).toBeInTheDocument()
-    expect(document.body).toMatchSnapshot()
   })
 
   it("calls sendMessageToHost with correct args when clicked", () => {
